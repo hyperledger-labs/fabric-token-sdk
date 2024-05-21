@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
@@ -150,7 +149,7 @@ func (r *WalletRegistry) RegisterWallet(id string, w driver.Wallet) error {
 
 // BindIdentity binds the passed identity to the passed wallet identifier.
 // Additional metadata can be bound to the identity.
-func (r *WalletRegistry) BindIdentity(identity view.Identity, eID string, wID string, meta any) error {
+func (r *WalletRegistry) BindIdentity(identity driver.Identity, eID string, wID string, meta any) error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
 	}
@@ -163,7 +162,7 @@ func (r *WalletRegistry) BindIdentity(identity view.Identity, eID string, wID st
 
 // ContainsIdentity returns true if the passed identity belongs to the passed wallet,
 // false otherwise
-func (r *WalletRegistry) ContainsIdentity(identity view.Identity, wID string) bool {
+func (r *WalletRegistry) ContainsIdentity(identity driver.Identity, wID string) bool {
 	return r.Storage.IdentityExists(identity, wID, int(r.Role.ID()))
 }
 
@@ -193,7 +192,7 @@ func (r *WalletRegistry) WalletIDs() ([]string, error) {
 }
 
 // GetIdentityMetadata loads metadata bound to the passed identity into the passed meta argument
-func (r *WalletRegistry) GetIdentityMetadata(identity view.Identity, wID string, meta any) error {
+func (r *WalletRegistry) GetIdentityMetadata(identity driver.Identity, wID string, meta any) error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("get recipient identity metadata [%s]->[%s]", identity, wID)
 	}
@@ -205,7 +204,7 @@ func (r *WalletRegistry) GetIdentityMetadata(identity view.Identity, wID string,
 }
 
 // GetWalletID returns the wallet identifier bound to the passed identity
-func (r *WalletRegistry) GetWalletID(identity view.Identity) (string, error) {
+func (r *WalletRegistry) GetWalletID(identity driver.Identity) (string, error) {
 	wID, err := r.Storage.GetWalletID(identity, int(r.Role.ID()))
 	if err != nil {
 		return "", nil
@@ -224,9 +223,9 @@ func toString(w string) string {
 	return fmt.Sprintf("%s~%s", strings.ToValidUTF8(w[:20], "X"), hash.Hashable(w).String())
 }
 
-func toViewIdentity(id driver.WalletLookupID) (view.Identity, bool) {
+func toViewIdentity(id driver.WalletLookupID) (driver.Identity, bool) {
 	switch v := id.(type) {
-	case view.Identity:
+	case driver.Identity:
 		return v, true
 	case []byte:
 		return v, true

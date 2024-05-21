@@ -81,6 +81,10 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("token_info1"),
 					[]byte("token_info2"),
 				},
+				OutputAuditInfos: [][]byte{
+					[]byte("output_token_audit_info1"),
+					[]byte("output_token_audit_info2"),
+				},
 				Senders: []view.Identity{
 					[]byte("sender1"),
 					[]byte("sender2"),

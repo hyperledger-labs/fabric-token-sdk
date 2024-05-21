@@ -12,9 +12,7 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -42,12 +40,12 @@ type SignerEntry struct {
 type Service struct {
 	signers      map[string]SignerEntry
 	verifiers    map[string]VerifierEntry
-	deserializer deserializer.Deserializer
+	deserializer Deserializer
 	viewsSync    sync.RWMutex
 	storage      Storage
 }
 
-func NewService(deserializer deserializer.Deserializer, storage Storage) *Service {
+func NewService(deserializer Deserializer, storage Storage) *Service {
 	return &Service{
 		signers:      map[string]SignerEntry{},
 		verifiers:    map[string]VerifierEntry{},
@@ -56,7 +54,7 @@ func NewService(deserializer deserializer.Deserializer, storage Storage) *Servic
 	}
 }
 
-func (o *Service) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
+func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
 	if signer == nil {
 		return errors.New("invalid signer, expected a valid instance")
 	}
@@ -100,7 +98,7 @@ func (o *Service) RegisterSigner(identity view.Identity, signer driver.Signer, v
 	return nil
 }
 
-func (o *Service) RegisterVerifier(identity view.Identity, verifier driver.Verifier) error {
+func (o *Service) RegisterVerifier(identity driver.Identity, verifier driver.Verifier) error {
 	if verifier == nil {
 		return errors.New("invalid verifier, expected a valid instance")
 	}
@@ -127,7 +125,7 @@ func (o *Service) RegisterVerifier(identity view.Identity, verifier driver.Verif
 	return nil
 }
 
-func (o *Service) IsMe(identity view.Identity) bool {
+func (o *Service) IsMe(identity driver.Identity) bool {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("is me [%s]?", identity)
 	}
@@ -171,7 +169,7 @@ func (o *Service) IsMe(identity view.Identity) bool {
 	return false
 }
 
-func (o *Service) GetSigner(identity view.Identity) (driver.Signer, error) {
+func (o *Service) GetSigner(identity driver.Identity) (driver.Signer, error) {
 	idHash := identity.UniqueID()
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("get signer for [%s]", idHash)
@@ -216,11 +214,11 @@ func (o *Service) GetSigner(identity view.Identity) (driver.Signer, error) {
 	return entry.Signer, nil
 }
 
-func (o *Service) GetSignerInfo(identity view.Identity) ([]byte, error) {
+func (o *Service) GetSignerInfo(identity driver.Identity) ([]byte, error) {
 	return o.storage.GetSignerInfo(identity)
 }
 
-func (o *Service) GetVerifier(identity view.Identity) (driver.Verifier, error) {
+func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error) {
 	idHash := identity.UniqueID()
 
 	// check cache

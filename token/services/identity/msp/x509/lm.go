@@ -11,12 +11,12 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
@@ -35,10 +35,10 @@ const (
 
 type LocalMembership struct {
 	config                 config2.Config
-	defaultNetworkIdentity view.Identity
+	defaultNetworkIdentity driver.Identity
 	signerService          common.SigService
 	binderService          common.BinderService
-	deserializerManager    deserializer.Manager
+	deserializerManager    sig.Manager
 	identityDB             driver2.IdentityDB
 	mspID                  string
 
@@ -53,10 +53,10 @@ type LocalMembership struct {
 
 func NewLocalMembership(
 	config config2.Config,
-	defaultNetworkIdentity view.Identity,
+	defaultNetworkIdentity driver.Identity,
 	signerService common.SigService,
 	binderService common.BinderService,
-	deserializerManager deserializer.Manager,
+	deserializerManager sig.Manager,
 	identityDB driver2.IdentityDB,
 	mspID string,
 	ignoreVerifyOnlyWallet bool,
@@ -110,15 +110,15 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	return nil
 }
 
-func (lm *LocalMembership) DefaultNetworkIdentity() view.Identity {
+func (lm *LocalMembership) DefaultNetworkIdentity() driver.Identity {
 	return lm.defaultNetworkIdentity
 }
 
-func (lm *LocalMembership) IsMe(id view.Identity) bool {
+func (lm *LocalMembership) IsMe(id driver.Identity) bool {
 	return lm.signerService.IsMe(id)
 }
 
-func (lm *LocalMembership) GetIdentifier(id view.Identity) (string, error) {
+func (lm *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
 	label := id.String()
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("get identity info by label [%s]", label)
@@ -155,7 +155,7 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 		r.Name,
 		r.EnrollmentID,
 		r.Remote,
-		func() (view.Identity, []byte, error) {
+		func() (driver.Identity, []byte, error) {
 			return r.GetIdentity(nil)
 		},
 	), nil

@@ -8,17 +8,16 @@ package msp
 
 import (
 	math3 "github.com/IBM/mathlib"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	x5092 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/pkg/errors"
 )
 
@@ -45,13 +44,13 @@ var RoleToMSPID = map[driver.IdentityRole]string{
 type RoleFactory struct {
 	TMSID                  token.TMSID
 	Config                 config2.Config
-	FSCIdentity            view2.Identity
-	NetworkDefaultIdentity view2.Identity
+	FSCIdentity            driver.Identity
+	NetworkDefaultIdentity driver.Identity
 	IdentityProvider       common.IdentityProvider
 	SignerService          common.SigService
 	BinderService          common.BinderService
 	StorageProvider        identity.StorageProvider
-	DeserializerManager    deserializer.Manager
+	DeserializerManager    sig.Manager
 	ignoreRemote           bool
 }
 
@@ -59,13 +58,13 @@ type RoleFactory struct {
 func NewRoleFactory(
 	TMSID token.TMSID,
 	config config2.Config,
-	fscIdentity view2.Identity,
-	networkDefaultIdentity view2.Identity,
+	fscIdentity driver.Identity,
+	networkDefaultIdentity driver.Identity,
 	identityProvider common.IdentityProvider,
 	signerService common.SigService,
 	binderService common.BinderService,
 	storageProvider identity.StorageProvider,
-	deserializerManager deserializer.Manager,
+	deserializerManager sig.Manager,
 	ignoreRemote bool,
 ) *RoleFactory {
 	return &RoleFactory{
@@ -206,9 +205,9 @@ func (f *RoleFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Ide
 
 type BindingRole struct {
 	identity.Role
-	IdentityType string
+	IdentityType identity.Type
 
-	RootIdentity     view2.Identity
+	RootIdentity     driver.Identity
 	IdentityProvider common.IdentityProvider
 	BinderService    common.BinderService
 }
@@ -231,9 +230,9 @@ func (r *BindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 // and binds the new identity to the default FSC node identity
 type Info struct {
 	driver.IdentityInfo
-	IdentityType string
+	IdentityType identity.Type
 
-	RootIdentity     view2.Identity
+	RootIdentity     driver.Identity
 	IdentityProvider common.IdentityProvider
 	BinderService    common.BinderService
 }
@@ -246,7 +245,7 @@ func (i *Info) EnrollmentID() string {
 	return i.IdentityInfo.EnrollmentID()
 }
 
-func (i *Info) Get() (view2.Identity, []byte, error) {
+func (i *Info) Get() (driver.Identity, []byte, error) {
 	// get the identity
 	id, ai, err := i.IdentityInfo.Get()
 	if err != nil {

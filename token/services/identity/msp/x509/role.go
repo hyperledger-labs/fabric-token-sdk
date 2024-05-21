@@ -9,17 +9,16 @@ package x509
 import (
 	"runtime/debug"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
 type localMembership interface {
-	DefaultNetworkIdentity() view.Identity
-	IsMe(id view.Identity) bool
+	DefaultNetworkIdentity() driver.Identity
+	IsMe(id driver.Identity) bool
 	GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error)
-	GetIdentifier(id view.Identity) (string, error)
+	GetIdentifier(id driver.Identity) (string, error)
 	GetDefaultIdentifier() string
 	RegisterIdentity(config driver.IdentityConfiguration) error
 	IDs() ([]string, error)
@@ -29,11 +28,11 @@ type localMembership interface {
 type Role struct {
 	roleID          driver.IdentityRole
 	networkID       string
-	nodeIdentity    view.Identity
+	nodeIdentity    driver.Identity
 	localMembership localMembership
 }
 
-func NewRole(roleID driver.IdentityRole, networkID string, nodeIdentity view.Identity, localMembership localMembership) *Role {
+func NewRole(roleID driver.IdentityRole, networkID string, nodeIdentity driver.Identity, localMembership localMembership) *Role {
 	return &Role{
 		roleID:          roleID,
 		networkID:       networkID,
@@ -60,20 +59,20 @@ func (r *Role) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 }
 
 // MapToID returns the identity for the given argument
-func (r *Role) MapToID(v driver.WalletLookupID) (view.Identity, string, error) {
+func (r *Role) MapToID(v driver.WalletLookupID) (driver.Identity, string, error) {
 	switch vv := v.(type) {
-	case view.Identity:
+	case driver.Identity:
 		return r.mapIdentityToID(vv)
 	case []byte:
 		return r.mapIdentityToID(vv)
 	case string:
 		return r.mapStringToID(vv)
 	default:
-		return nil, "", errors.Errorf("[LongTermIdentity] identifier not recognised, expected []byte or view.Identity, got [%T], [%s]", v, debug.Stack())
+		return nil, "", errors.Errorf("[LongTermIdentity] identifier not recognised, expected []byte or driver.Identity, got [%T], [%s]", v, debug.Stack())
 	}
 }
 
-func (r *Role) mapStringToID(v string) (view.Identity, string, error) {
+func (r *Role) mapStringToID(v string) (driver.Identity, string, error) {
 	defaultID := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
@@ -100,12 +99,12 @@ func (r *Role) mapStringToID(v string) (view.Identity, string, error) {
 		return defaultID, defaultIdentifier, nil
 	case label == string(defaultID):
 		return defaultID, defaultIdentifier, nil
-	case defaultID.Equal(view.Identity(label)):
+	case defaultID.Equal(driver.Identity(label)):
 		return defaultID, defaultIdentifier, nil
-	case r.nodeIdentity.Equal(view.Identity(label)):
+	case r.nodeIdentity.Equal(driver.Identity(label)):
 		return defaultID, defaultIdentifier, nil
-	case r.localMembership.IsMe(view.Identity(label)):
-		id := view.Identity(label)
+	case r.localMembership.IsMe(driver.Identity(label)):
+		id := driver.Identity(label)
 		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
 			return id, idIdentifier, nil
 		}
@@ -126,12 +125,12 @@ func (r *Role) mapStringToID(v string) (view.Identity, string, error) {
 		return id, label, nil
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("[LongTermIdentity] cannot find match for view.Identity string [%s]", label)
+		logger.Debugf("[LongTermIdentity] cannot find match for driver.Identity string [%s]", label)
 	}
 	return nil, label, nil
 }
 
-func (r *Role) mapIdentityToID(v view.Identity) (view.Identity, string, error) {
+func (r *Role) mapIdentityToID(v driver.Identity) (driver.Identity, string, error) {
 	defaultID := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
@@ -177,7 +176,7 @@ func (r *Role) mapIdentityToID(v view.Identity) (view.Identity, string, error) {
 		return id, idIdentifier, nil
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("[LongTermIdentity] cannot find match for view.Identity string [%s]", v)
+		logger.Debugf("[LongTermIdentity] cannot find match for driver.Identity string [%s]", v)
 	}
 
 	return id, "", nil

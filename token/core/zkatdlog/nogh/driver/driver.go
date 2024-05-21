@@ -11,8 +11,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
@@ -20,7 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -67,7 +66,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 	roles := identity.NewRoles()
-	deserializerManager := deserializer.NewMultiplexDeserializer()
+	deserializerManager := sig.NewMultiplexDeserializer()
 	tmsID := token.TMSID{
 		Network:   networkID,
 		Channel:   channel,
@@ -211,7 +210,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	}
 
 	roles := identity.NewRoles()
-	deserializerManager := deserializer.NewMultiplexDeserializer()
+	deserializerManager := sig.NewMultiplexDeserializer()
 	tmsID := token.TMSID{
 		Network:   networkID,
 		Channel:   channel,

@@ -6,9 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-)
+import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
+// Identity represents a generic identity
+type Identity = view.Identity
 
 // IdentityRole is the role of an identity
 type IdentityRole int
@@ -36,7 +37,7 @@ type IdentityInfo interface {
 	Remote() bool
 	// Get returns the identity and it is audit info.
 	// Get might return a different identity at each call depending on the implementation.
-	Get() (view.Identity, []byte, error)
+	Get() (Identity, []byte, error)
 }
 
 //go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
@@ -47,30 +48,30 @@ type IdentityProvider interface {
 	RegisterRecipientData(data *RecipientData) error
 
 	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
-	GetAuditInfo(identity view.Identity) ([]byte, error)
+	GetAuditInfo(identity Identity) ([]byte, error)
 
 	// GetSigner returns a Signer for passed identity.
-	GetSigner(identity view.Identity) (Signer, error)
+	GetSigner(identity Identity) (Signer, error)
 
 	// RegisterVerifier registers a Verifier for passed identity.
-	RegisterVerifier(identity view.Identity, v Verifier) error
+	RegisterVerifier(identity Identity, v Verifier) error
 
 	// RegisterSigner registers a Signer and a Verifier for passed identity.
-	RegisterSigner(identity view.Identity, signer Signer, verifier Verifier, signerInfo []byte) error
+	RegisterSigner(identity Identity, signer Signer, verifier Verifier, signerInfo []byte) error
 
 	// IsMe returns true if a signer was ever registered for the passed identity
-	IsMe(party view.Identity) bool
+	IsMe(party Identity) bool
 
 	// GetEnrollmentID extracts the enrollment ID from the passed audit info
-	GetEnrollmentID(auditInfo []byte) (string, error)
+	GetEnrollmentID(identity Identity, auditInfo []byte) (string, error)
 
 	// GetRevocationHandler extracts the revocation handler from the passed audit info
-	GetRevocationHandler(auditInfo []byte) (string, error)
+	GetRevocationHandler(identity Identity, auditInfo []byte) (string, error)
 
 	// Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
 	// identity is associated to id.
-	Bind(id view.Identity, longTerm view.Identity) error
+	Bind(id Identity, longTerm Identity) error
 
 	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
-	RegisterRecipientIdentity(id view.Identity) error
+	RegisterRecipientIdentity(id Identity) error
 }

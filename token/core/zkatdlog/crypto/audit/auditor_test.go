@@ -26,7 +26,6 @@ import (
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
@@ -104,7 +103,7 @@ var _ = Describe("Auditor", func() {
 				_, auditinfo := getIdemixInfo("./testdata/idemix")
 				raw, err := auditinfo.Bytes()
 				Expect(err).NotTo(HaveOccurred())
-				metadata.ReceiverAuditInfos[0] = raw
+				metadata.OutputAuditInfos[0] = raw
 				raw, err = transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
 				err = auditor.Check(&driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
@@ -137,11 +136,13 @@ func createTransfer(pp *crypto.PublicParams) (*transfer2.TransferAction, driver.
 	metadata.OutputsMetadata = marshalledInfo
 	metadata.Outputs = make([][]byte, len(transfer.OutputTokens))
 	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
+	metadata.OutputAuditInfos = make([][]byte, len(transfer.OutputTokens))
 	for i := 0; i < len(transfer.OutputTokens); i++ {
 		metadata.Outputs[i], err = json.Marshal(transfer.OutputTokens[i].Data)
 		Expect(err).NotTo(HaveOccurred())
 		metadata.ReceiverAuditInfos[i], err = auditInfo.Bytes()
 		Expect(err).NotTo(HaveOccurred())
+		metadata.OutputAuditInfos[i] = metadata.ReceiverAuditInfos[i]
 	}
 	tokns := make([][]*token.Token, 1)
 	for i := 0; i < len(inputs); i++ {
@@ -240,7 +241,7 @@ func getIdemixInfo(dir string) (view.Identity, *msp3.AuditInfo) {
 	err = registry.RegisterService(backend)
 	Expect(err).NotTo(HaveOccurred())
 
-	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token2.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token2.TMSID{Network: "pineapple"}))
 	err = registry.RegisterService(sigService)
 	Expect(err).NotTo(HaveOccurred())
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")

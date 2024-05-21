@@ -12,7 +12,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
@@ -83,7 +83,7 @@ type OwnerOpening struct {
 
 // Auditor inspects zkat tokens and their owners.
 type Auditor struct {
-	Logger common2.Logger
+	Logger logging.Logger
 	// Owner Identity Deserializer
 	Des Deserializer
 	// Auditor's signing identity
@@ -101,7 +101,7 @@ type Auditor struct {
 	GetAuditInfoForTransfersFunc GetAuditInfoForTransfersFunc
 }
 
-func NewAuditor(logger common2.Logger, des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
+func NewAuditor(logger logging.Logger, des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
 	a := &Auditor{
 		Logger:         logger,
 		Des:            des,
@@ -390,6 +390,9 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 		if len(ta.OutputTokens) != len(tr.ReceiverAuditInfos) {
 			return nil, nil, errors.Errorf("number of outputs does not match the number of receivers")
 		}
+		if len(ta.OutputTokens) != len(tr.OutputAuditInfos) {
+			return nil, nil, errors.Errorf("number of outputs does not match the number of output audit info")
+		}
 		for i := 0; i < len(tr.ReceiverAuditInfos); i++ {
 			ti := &token.Metadata{}
 			err := json.Unmarshal(tr.OutputsMetadata[i], ti)
@@ -400,7 +403,8 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 			if ta.OutputTokens[i] == nil {
 				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
-			ao, err := NewAuditableToken(ta.OutputTokens[i], tr.ReceiverAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
+			// TODO: we need to check also how many recipients the output contains, and check them all in isolation and compatibility
+			ao, err := NewAuditableToken(ta.OutputTokens[i], tr.OutputAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, nil, err
 			}

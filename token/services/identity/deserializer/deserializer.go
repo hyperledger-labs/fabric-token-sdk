@@ -7,123 +7,70 @@ SPDX-License-Identifier: Apache-2.0
 package deserializer
 
 import (
-	"sync"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.services.identity.deserializer")
-
-type Deserializer interface {
-	DeserializeVerifier(raw []byte) (driver.Verifier, error)
-	DeserializeSigner(raw []byte) (driver.Signer, error)
-	Info(raw []byte, auditInfo []byte) (string, error)
+type AuditInfo interface {
+	EnrollmentID() string
+	RevocationHandle() string
 }
 
-type Manager interface {
-	AddDeserializer(deserializer Deserializer)
-	DeserializeSigner(raw []byte) (driver.Signer, error)
+type AuditInfoDeserializer interface {
+	DeserializeAuditInfo([]byte) (AuditInfo, error)
 }
 
-type deserializer struct {
-	deserializersMutex sync.RWMutex
-	deserializers      []Deserializer
+// EIDRHDeserializer returns enrollment IDs behind the owners of token
+type EIDRHDeserializer struct {
+	deserializers map[identity.Type]AuditInfoDeserializer
 }
 
-func NewMultiplexDeserializer() *deserializer {
-	return &deserializer{
-		deserializers: []Deserializer{},
+// NewEIDRHDeserializer returns an enrollmentService
+func NewEIDRHDeserializer() *EIDRHDeserializer {
+	return &EIDRHDeserializer{
+		deserializers: map[string]AuditInfoDeserializer{},
 	}
 }
 
-func (d *deserializer) AddDeserializer(newD Deserializer) {
-	d.deserializersMutex.Lock()
-	d.deserializers = append(d.deserializers, newD)
-	d.deserializersMutex.Unlock()
+func (e *EIDRHDeserializer) AddDeserializer(typ string, d AuditInfoDeserializer) {
+	e.deserializers[typ] = d
 }
 
-func (d *deserializer) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	var errs []error
+// GetEnrollmentID returns the enrollmentID associated with the identity matched to the passed auditInfo
+func (e *EIDRHDeserializer) GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error) {
+	ai, err := e.getAuditInfo(identity, auditInfo)
+	if err != nil {
+		return "", err
+	}
+	return ai.EnrollmentID(), nil
+}
 
-	copyDeserial := d.threadSafeCopyDeserializers()
-	for _, des := range copyDeserial {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying deserialization with [%v]", des)
-		}
-		v, err := des.DeserializeVerifier(raw)
-		if err == nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("trying deserialization with [%v] succeeded", des)
-			}
-			return v, nil
-		}
+// GetRevocationHandler returns the revocation handle associated with the identity matched to the passed auditInfo
+func (e *EIDRHDeserializer) GetRevocationHandler(identity driver.Identity, auditInfo []byte) (string, error) {
+	ai, err := e.getAuditInfo(identity, auditInfo)
+	if err != nil {
+		return "", err
+	}
+	return ai.RevocationHandle(), nil
+}
 
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying deserialization with [%v] failed", des)
-		}
-		errs = append(errs, err)
+func (e *EIDRHDeserializer) getAuditInfo(id driver.Identity, auditInfo []byte) (AuditInfo, error) {
+	if len(auditInfo) == 0 {
+		return nil, errors.Errorf("nil audit info")
 	}
 
-	return nil, errors.Errorf("failed deserialization [%v]", errs)
-}
-
-func (d *deserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
-	var errs []error
-
-	copyDeserial := d.threadSafeCopyDeserializers()
-	for _, des := range copyDeserial {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying signer deserialization with [%s]", des)
-		}
-		v, err := des.DeserializeSigner(raw)
-		if err == nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("trying signer deserialization with [%s] succeeded", des)
-			}
-			return v, nil
-		}
-
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying signer deserialization with [%s] failed [%s]", des, err)
-		}
-		errs = append(errs, err)
+	si, err := identity.UnmarshalTypedIdentity(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
 	}
-
-	return nil, errors.Errorf("failed signer deserialization [%v]", errs)
-}
-
-func (d *deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
-	var errs []error
-
-	copyDeserial := d.threadSafeCopyDeserializers()
-	for _, des := range copyDeserial {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying info deserialization with [%v]", des)
-		}
-		v, err := des.Info(raw, auditInfo)
-		if err == nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("trying info deserialization with [%v] succeeded", des)
-			}
-			return v, nil
-		}
-
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying info deserialization with [%v] failed", des)
-		}
-		errs = append(errs, err)
+	d, ok := e.deserializers[si.Type]
+	if !ok {
+		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
 	}
-
-	return "", errors.Errorf("failed info deserialization [%v]", errs)
-}
-
-func (d *deserializer) threadSafeCopyDeserializers() []Deserializer {
-	d.deserializersMutex.RLock()
-	res := make([]Deserializer, len(d.deserializers))
-	copy(res, d.deserializers)
-	d.deserializersMutex.RUnlock()
-	return res
+	res, err := d.DeserializeAuditInfo(auditInfo)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to deserialize audit info for identity type [%s]", si.Type)
+	}
+	return res, nil
 }

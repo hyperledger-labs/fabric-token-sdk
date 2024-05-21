@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package identity
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -18,7 +17,7 @@ type Role interface {
 	ID() driver.IdentityRole
 	// MapToID returns the long-term identity and its identifier for the given index.
 	// The index can be an identity or a label (string).
-	MapToID(v driver.WalletLookupID) (view.Identity, string, error)
+	MapToID(v driver.WalletLookupID) (driver.Identity, string, error)
 	// GetIdentityInfo returns the long-term identity info associated to the passed id
 	GetIdentityInfo(id string) (driver.IdentityInfo, error)
 	// RegisterIdentity registers the given identity

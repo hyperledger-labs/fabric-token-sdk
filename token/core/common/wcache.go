@@ -9,16 +9,16 @@ package common
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-type WalletIdentityCacheBackendFunc func() (view.Identity, error)
+type WalletIdentityCacheBackendFunc func() (driver.Identity, error)
 
 type WalletIdentityCache struct {
 	Logger  logging.Logger
 	backed  WalletIdentityCacheBackendFunc
-	ch      chan view.Identity
+	ch      chan driver.Identity
 	timeout time.Duration
 }
 
@@ -26,7 +26,7 @@ func NewWalletIdentityCache(Logger logging.Logger, backed WalletIdentityCacheBac
 	ci := &WalletIdentityCache{
 		Logger:  Logger,
 		backed:  backed,
-		ch:      make(chan view.Identity, size),
+		ch:      make(chan driver.Identity, size),
 		timeout: time.Millisecond * 100,
 	}
 	if size > 0 {
@@ -35,7 +35,7 @@ func NewWalletIdentityCache(Logger logging.Logger, backed WalletIdentityCacheBac
 	return ci
 }
 
-func (c *WalletIdentityCache) Identity() (view.Identity, error) {
+func (c *WalletIdentityCache) Identity() (driver.Identity, error) {
 	select {
 	case entry := <-c.ch:
 		c.Logger.Debugf("fetch identity from producer channel done [%s][%d]", entry)

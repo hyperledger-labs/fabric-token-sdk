@@ -9,8 +9,8 @@ package fabtoken
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -42,22 +42,22 @@ func NewTransferService(
 
 // Transfer returns a TransferAction as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, tokenIDs []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	// select inputs
-	inputIDs, inputTokens, err := s.TokenLoader.GetTokens(ids)
+	inputIDs, inputTokens, err := s.TokenLoader.GetTokens(tokenIDs)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
 
-	var signerIds []view.Identity
+	var senders []view.Identity
 	for _, tok := range inputTokens {
 		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
-		signerIds = append(signerIds, tok.Owner.Raw)
+		senders = append(senders, tok.Owner.Raw)
 	}
 
 	// prepare outputs
 	var outs []*Output
-	var metas [][]byte
+	var outputsMetadata [][]byte
 	for _, output := range Outputs {
 		outs = append(outs, &Output{
 			Output: output,
@@ -67,7 +67,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed serializing token information")
 		}
-		metas = append(metas, metaRaw)
+		outputsMetadata = append(outputsMetadata, metaRaw)
 	}
 
 	// assemble transfer action
@@ -81,12 +81,14 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 
 	// assemble transfer metadata
 	var receivers []view.Identity
+	var outputAuditInfos [][]byte
 	for i, output := range outs {
 		if output.Output == nil || output.Output.Owner == nil {
 			return nil, nil, errors.Errorf("failed to transfer: invalid output at index %d", i)
 		}
 		if len(output.Output.Owner.Raw) == 0 { // redeem
 			receivers = append(receivers, output.Output.Owner.Raw)
+			outputAuditInfos = append(outputAuditInfos, []byte{})
 			continue
 		}
 		recipients, err := s.Deserializer.Recipients(output.Output.Owner.Raw)
@@ -94,6 +96,11 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 			return nil, nil, errors.Wrap(err, "failed getting recipients")
 		}
 		receivers = append(receivers, recipients...)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Output.Owner.Raw, ws)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(output.Output.Owner.Raw).String())
+		}
+		outputAuditInfos = append(outputAuditInfos, auditInfo...)
 	}
 
 	var senderAuditInfos [][]byte
@@ -106,10 +113,14 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 	}
 
 	var receiverAuditInfos [][]byte
-	for _, output := range outs {
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Output.Owner.Raw, ws)
+	for _, receiver := range receivers {
+		if len(receiver) == 0 {
+			receiverAuditInfos = append(receiverAuditInfos, []byte{})
+			continue
+		}
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(receiver, ws)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Output.Owner.Raw).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", receiver.String())
 		}
 		receiverAuditInfos = append(receiverAuditInfos, auditInfo...)
 	}
@@ -125,14 +136,15 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 	}
 
 	metadata := &driver.TransferMetadata{
-		Outputs:            outputs,
-		Senders:            signerIds,
+		TokenIDs:           tokenIDs,
+		Senders:            senders,
 		SenderAuditInfos:   senderAuditInfos,
-		TokenIDs:           ids,
-		OutputsMetadata:    metas,
+		Outputs:            outputs,
+		OutputsMetadata:    outputsMetadata,
+		OutputAuditInfos:   outputAuditInfos,
 		Receivers:          receivers,
-		ReceiverIsSender:   receiverIsSender,
 		ReceiverAuditInfos: receiverAuditInfos,
+		ReceiverIsSender:   receiverIsSender,
 	}
 
 	s.Logger.Debugf("Transfer metadata: [out:%d, rec:%d]", len(metadata.Outputs), len(metadata.Receivers))

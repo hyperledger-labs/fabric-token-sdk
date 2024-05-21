@@ -17,7 +17,6 @@ import (
 	"github.com/IBM/idemix/idemixmsp"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	m "github.com/hyperledger/fabric-protos-go/msp"
@@ -30,7 +29,7 @@ const (
 )
 
 type SignerService interface {
-	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
+	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
 }
 
 type Provider struct {
@@ -165,7 +164,7 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 	}, nil
 }
 
-func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte, error) {
+func (p *Provider) Identity(opts *common.IdentityOptions) (driver.Identity, []byte, error) {
 	// Derive NymPublicKey
 	nymKey, err := p.Csp.KeyDeriv(
 		p.userKey,
@@ -359,7 +358,7 @@ func (p *Provider) Info(raw []byte, auditInfo []byte) (string, error) {
 		eid = ai.EnrollmentID()
 	}
 
-	return fmt.Sprintf("MSP.Idemix: [%s][%s][%s][%s][%s]", eid, view.Identity(raw).UniqueID(), r.SerializedIdentity.Mspid, r.OU.OrganizationalUnitIdentifier, r.Role.Role.String()), nil
+	return fmt.Sprintf("MSP.Idemix: [%s][%s][%s][%s][%s]", eid, driver.Identity(raw).UniqueID(), r.SerializedIdentity.Mspid, r.OU.OrganizationalUnitIdentifier, r.Role.Role.String()), nil
 }
 
 func (p *Provider) String() string {

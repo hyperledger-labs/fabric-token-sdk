@@ -9,13 +9,11 @@ package identity_test
 import (
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs/mock"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +25,7 @@ func TestGetWallet(t *testing.T) {
 	kvsStorage, err := kvs.NewWithConfig("memory", "_default", cp)
 	assert.NoError(t, err)
 
-	alice := view.Identity("alice")
+	alice := driver.Identity("alice")
 	meta := "meta"
 	wr := identity.NewWalletRegistry(&fakeRole{}, kvs2.NewWalletDB(kvsStorage, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}))
 	assert.NoError(t, wr.RegisterWallet("hello", nil))
@@ -46,7 +44,7 @@ func (f *fakeRole) ID() driver.IdentityRole {
 	return 0
 }
 
-func (f *fakeRole) MapToID(v driver.WalletLookupID) (view.Identity, string, error) {
+func (f *fakeRole) MapToID(v driver.WalletLookupID) (driver.Identity, string, error) {
 	//TODO implement me
 	panic("implement me")
 }

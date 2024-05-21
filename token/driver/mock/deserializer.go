@@ -35,10 +35,10 @@ type Deserializer struct {
 		result1 driver.Verifier
 		result2 error
 	}
-	GetOwnerAuditInfoStub        func([]byte, driver.AuditInfoProvider) ([][]byte, error)
+	GetOwnerAuditInfoStub        func(view.Identity, driver.AuditInfoProvider) ([][]byte, error)
 	getOwnerAuditInfoMutex       sync.RWMutex
 	getOwnerAuditInfoArgsForCall []struct {
-		arg1 []byte
+		arg1 view.Identity
 		arg2 driver.AuditInfoProvider
 	}
 	getOwnerAuditInfoReturns struct {
@@ -75,22 +75,22 @@ type Deserializer struct {
 		result1 driver.Verifier
 		result2 error
 	}
-	MatchStub        func(view.Identity, []byte) error
-	matchMutex       sync.RWMutex
-	matchArgsForCall []struct {
+	MatchOwnerIdentityStub        func(view.Identity, []byte) error
+	matchOwnerIdentityMutex       sync.RWMutex
+	matchOwnerIdentityArgsForCall []struct {
 		arg1 view.Identity
 		arg2 []byte
 	}
-	matchReturns struct {
+	matchOwnerIdentityReturns struct {
 		result1 error
 	}
-	matchReturnsOnCall map[int]struct {
+	matchOwnerIdentityReturnsOnCall map[int]struct {
 		result1 error
 	}
-	RecipientsStub        func([]byte) ([]view.Identity, error)
+	RecipientsStub        func(view.Identity) ([]view.Identity, error)
 	recipientsMutex       sync.RWMutex
 	recipientsArgsForCall []struct {
-		arg1 []byte
+		arg1 view.Identity
 	}
 	recipientsReturns struct {
 		result1 []view.Identity
@@ -232,21 +232,16 @@ func (fake *Deserializer) GetIssuerVerifierReturnsOnCall(i int, result1 driver.V
 	}{result1, result2}
 }
 
-func (fake *Deserializer) GetOwnerAuditInfo(arg1 []byte, arg2 driver.AuditInfoProvider) ([][]byte, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
+func (fake *Deserializer) GetOwnerAuditInfo(arg1 view.Identity, arg2 driver.AuditInfoProvider) ([][]byte, error) {
 	fake.getOwnerAuditInfoMutex.Lock()
 	ret, specificReturn := fake.getOwnerAuditInfoReturnsOnCall[len(fake.getOwnerAuditInfoArgsForCall)]
 	fake.getOwnerAuditInfoArgsForCall = append(fake.getOwnerAuditInfoArgsForCall, struct {
-		arg1 []byte
+		arg1 view.Identity
 		arg2 driver.AuditInfoProvider
-	}{arg1Copy, arg2})
+	}{arg1, arg2})
 	stub := fake.GetOwnerAuditInfoStub
 	fakeReturns := fake.getOwnerAuditInfoReturns
-	fake.recordInvocation("GetOwnerAuditInfo", []interface{}{arg1Copy, arg2})
+	fake.recordInvocation("GetOwnerAuditInfo", []interface{}{arg1, arg2})
 	fake.getOwnerAuditInfoMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
@@ -263,13 +258,13 @@ func (fake *Deserializer) GetOwnerAuditInfoCallCount() int {
 	return len(fake.getOwnerAuditInfoArgsForCall)
 }
 
-func (fake *Deserializer) GetOwnerAuditInfoCalls(stub func([]byte, driver.AuditInfoProvider) ([][]byte, error)) {
+func (fake *Deserializer) GetOwnerAuditInfoCalls(stub func(view.Identity, driver.AuditInfoProvider) ([][]byte, error)) {
 	fake.getOwnerAuditInfoMutex.Lock()
 	defer fake.getOwnerAuditInfoMutex.Unlock()
 	fake.GetOwnerAuditInfoStub = stub
 }
 
-func (fake *Deserializer) GetOwnerAuditInfoArgsForCall(i int) ([]byte, driver.AuditInfoProvider) {
+func (fake *Deserializer) GetOwnerAuditInfoArgsForCall(i int) (view.Identity, driver.AuditInfoProvider) {
 	fake.getOwnerAuditInfoMutex.RLock()
 	defer fake.getOwnerAuditInfoMutex.RUnlock()
 	argsForCall := fake.getOwnerAuditInfoArgsForCall[i]
@@ -435,22 +430,22 @@ func (fake *Deserializer) GetOwnerVerifierReturnsOnCall(i int, result1 driver.Ve
 	}{result1, result2}
 }
 
-func (fake *Deserializer) Match(arg1 view.Identity, arg2 []byte) error {
+func (fake *Deserializer) MatchOwnerIdentity(arg1 view.Identity, arg2 []byte) error {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
 		copy(arg2Copy, arg2)
 	}
-	fake.matchMutex.Lock()
-	ret, specificReturn := fake.matchReturnsOnCall[len(fake.matchArgsForCall)]
-	fake.matchArgsForCall = append(fake.matchArgsForCall, struct {
+	fake.matchOwnerIdentityMutex.Lock()
+	ret, specificReturn := fake.matchOwnerIdentityReturnsOnCall[len(fake.matchOwnerIdentityArgsForCall)]
+	fake.matchOwnerIdentityArgsForCall = append(fake.matchOwnerIdentityArgsForCall, struct {
 		arg1 view.Identity
 		arg2 []byte
 	}{arg1, arg2Copy})
-	stub := fake.MatchStub
-	fakeReturns := fake.matchReturns
-	fake.recordInvocation("Match", []interface{}{arg1, arg2Copy})
-	fake.matchMutex.Unlock()
+	stub := fake.MatchOwnerIdentityStub
+	fakeReturns := fake.matchOwnerIdentityReturns
+	fake.recordInvocation("MatchOwnerIdentity", []interface{}{arg1, arg2Copy})
+	fake.matchOwnerIdentityMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -460,62 +455,57 @@ func (fake *Deserializer) Match(arg1 view.Identity, arg2 []byte) error {
 	return fakeReturns.result1
 }
 
-func (fake *Deserializer) MatchCallCount() int {
-	fake.matchMutex.RLock()
-	defer fake.matchMutex.RUnlock()
-	return len(fake.matchArgsForCall)
+func (fake *Deserializer) MatchOwnerIdentityCallCount() int {
+	fake.matchOwnerIdentityMutex.RLock()
+	defer fake.matchOwnerIdentityMutex.RUnlock()
+	return len(fake.matchOwnerIdentityArgsForCall)
 }
 
-func (fake *Deserializer) MatchCalls(stub func(view.Identity, []byte) error) {
-	fake.matchMutex.Lock()
-	defer fake.matchMutex.Unlock()
-	fake.MatchStub = stub
+func (fake *Deserializer) MatchOwnerIdentityCalls(stub func(view.Identity, []byte) error) {
+	fake.matchOwnerIdentityMutex.Lock()
+	defer fake.matchOwnerIdentityMutex.Unlock()
+	fake.MatchOwnerIdentityStub = stub
 }
 
-func (fake *Deserializer) MatchArgsForCall(i int) (view.Identity, []byte) {
-	fake.matchMutex.RLock()
-	defer fake.matchMutex.RUnlock()
-	argsForCall := fake.matchArgsForCall[i]
+func (fake *Deserializer) MatchOwnerIdentityArgsForCall(i int) (view.Identity, []byte) {
+	fake.matchOwnerIdentityMutex.RLock()
+	defer fake.matchOwnerIdentityMutex.RUnlock()
+	argsForCall := fake.matchOwnerIdentityArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *Deserializer) MatchReturns(result1 error) {
-	fake.matchMutex.Lock()
-	defer fake.matchMutex.Unlock()
-	fake.MatchStub = nil
-	fake.matchReturns = struct {
+func (fake *Deserializer) MatchOwnerIdentityReturns(result1 error) {
+	fake.matchOwnerIdentityMutex.Lock()
+	defer fake.matchOwnerIdentityMutex.Unlock()
+	fake.MatchOwnerIdentityStub = nil
+	fake.matchOwnerIdentityReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *Deserializer) MatchReturnsOnCall(i int, result1 error) {
-	fake.matchMutex.Lock()
-	defer fake.matchMutex.Unlock()
-	fake.MatchStub = nil
-	if fake.matchReturnsOnCall == nil {
-		fake.matchReturnsOnCall = make(map[int]struct {
+func (fake *Deserializer) MatchOwnerIdentityReturnsOnCall(i int, result1 error) {
+	fake.matchOwnerIdentityMutex.Lock()
+	defer fake.matchOwnerIdentityMutex.Unlock()
+	fake.MatchOwnerIdentityStub = nil
+	if fake.matchOwnerIdentityReturnsOnCall == nil {
+		fake.matchOwnerIdentityReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.matchReturnsOnCall[i] = struct {
+	fake.matchOwnerIdentityReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *Deserializer) Recipients(arg1 []byte) ([]view.Identity, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
+func (fake *Deserializer) Recipients(arg1 view.Identity) ([]view.Identity, error) {
 	fake.recipientsMutex.Lock()
 	ret, specificReturn := fake.recipientsReturnsOnCall[len(fake.recipientsArgsForCall)]
 	fake.recipientsArgsForCall = append(fake.recipientsArgsForCall, struct {
-		arg1 []byte
-	}{arg1Copy})
+		arg1 view.Identity
+	}{arg1})
 	stub := fake.RecipientsStub
 	fakeReturns := fake.recipientsReturns
-	fake.recordInvocation("Recipients", []interface{}{arg1Copy})
+	fake.recordInvocation("Recipients", []interface{}{arg1})
 	fake.recipientsMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
@@ -532,13 +522,13 @@ func (fake *Deserializer) RecipientsCallCount() int {
 	return len(fake.recipientsArgsForCall)
 }
 
-func (fake *Deserializer) RecipientsCalls(stub func([]byte) ([]view.Identity, error)) {
+func (fake *Deserializer) RecipientsCalls(stub func(view.Identity) ([]view.Identity, error)) {
 	fake.recipientsMutex.Lock()
 	defer fake.recipientsMutex.Unlock()
 	fake.RecipientsStub = stub
 }
 
-func (fake *Deserializer) RecipientsArgsForCall(i int) []byte {
+func (fake *Deserializer) RecipientsArgsForCall(i int) view.Identity {
 	fake.recipientsMutex.RLock()
 	defer fake.recipientsMutex.RUnlock()
 	argsForCall := fake.recipientsArgsForCall[i]
@@ -584,8 +574,8 @@ func (fake *Deserializer) Invocations() map[string][][]interface{} {
 	defer fake.getOwnerMatcherMutex.RUnlock()
 	fake.getOwnerVerifierMutex.RLock()
 	defer fake.getOwnerVerifierMutex.RUnlock()
-	fake.matchMutex.RLock()
-	defer fake.matchMutex.RUnlock()
+	fake.matchOwnerIdentityMutex.RLock()
+	defer fake.matchOwnerIdentityMutex.RUnlock()
 	fake.recipientsMutex.RLock()
 	defer fake.recipientsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

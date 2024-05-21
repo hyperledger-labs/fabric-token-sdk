@@ -10,8 +10,8 @@ import (
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 )
@@ -42,7 +42,7 @@ func NewWalletDB(kvs KVS, tmsID token.TMSID) *WalletDB {
 	return &WalletDB{kvs: kvs, tmsID: tmsID}
 }
 
-func (s *WalletDB) StoreIdentity(identity view.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
+func (s *WalletDB) StoreIdentity(identity driver2.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
 	idHash := identity.UniqueID()
 	if meta != nil {
 		k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID, "meta"})
@@ -71,7 +71,7 @@ func (s *WalletDB) StoreIdentity(identity view.Identity, eID string, wID driver.
 	return nil
 }
 
-func (s *WalletDB) IdentityExists(identity view.Identity, wID driver.WalletID, roleID int) bool {
+func (s *WalletDB) IdentityExists(identity driver2.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.UniqueID()
 	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID})
 	if err != nil {
@@ -80,7 +80,7 @@ func (s *WalletDB) IdentityExists(identity view.Identity, wID driver.WalletID, r
 	return s.kvs.Exists(k)
 }
 
-func (s *WalletDB) GetWalletID(identity view.Identity, roleID int) (driver.WalletID, error) {
+func (s *WalletDB) GetWalletID(identity driver2.Identity, roleID int) (driver.WalletID, error) {
 	idHash := identity.UniqueID()
 	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash})
 	if err != nil {
@@ -117,7 +117,7 @@ func (s *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
 	return walletIDs, nil
 }
 
-func (s *WalletDB) LoadMeta(identity view.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
+func (s *WalletDB) LoadMeta(identity driver2.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.UniqueID()
 	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID, "meta"})
 	if err != nil {
@@ -167,7 +167,7 @@ func (s *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMet
 	k := kvs.CreateCompositeKeyOrPanic(
 		"fsc.platform.view.sig",
 		[]string{
-			view.Identity(id).String(),
+			driver2.Identity(id).String(),
 		},
 	)
 	if err := s.kvs.Put(k, &RecipientData{
@@ -184,7 +184,7 @@ func (s *IdentityDB) GetAuditInfo(identity []byte) ([]byte, error) {
 	k := kvs.CreateCompositeKeyOrPanic(
 		"fsc.platform.view.sig",
 		[]string{
-			view.Identity(identity).String(),
+			driver2.Identity(identity).String(),
 		},
 	)
 	if !s.kvs.Exists(k) {
@@ -201,7 +201,7 @@ func (s *IdentityDB) GetTokenInfo(identity []byte) ([]byte, []byte, error) {
 	k := kvs.CreateCompositeKeyOrPanic(
 		"fsc.platform.view.sig",
 		[]string{
-			view.Identity(identity).String(),
+			driver2.Identity(identity).String(),
 		},
 	)
 	if !s.kvs.Exists(k) {
@@ -215,7 +215,7 @@ func (s *IdentityDB) GetTokenInfo(identity []byte) ([]byte, []byte, error) {
 }
 
 func (s *IdentityDB) StoreSignerInfo(id, info []byte) error {
-	idHash := view.Identity(id).UniqueID()
+	idHash := driver2.Identity(id).UniqueID()
 	k, err := kvs.CreateCompositeKey("sigService", []string{"signer", idHash})
 	if err != nil {
 		return errors.Wrap(err, "failed to create composite key to store entry in kvs")
@@ -228,7 +228,7 @@ func (s *IdentityDB) StoreSignerInfo(id, info []byte) error {
 }
 
 func (s *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
-	idHash := view.Identity(id).UniqueID()
+	idHash := driver2.Identity(id).UniqueID()
 	k, err := kvs.CreateCompositeKey("sigService", []string{"signer", idHash})
 	if err != nil {
 		return false, err
@@ -240,7 +240,7 @@ func (s *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
 }
 
 func (s *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
-	idHash := view.Identity(identity).UniqueID()
+	idHash := driver2.Identity(identity).UniqueID()
 	k, err := kvs.CreateCompositeKey("sigService", []string{"signer", idHash})
 	if err != nil {
 		return nil, err

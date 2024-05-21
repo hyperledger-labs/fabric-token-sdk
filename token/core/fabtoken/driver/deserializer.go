@@ -8,10 +8,12 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
 // Deserializer deserializes verifiers associated with issuers, owners, and auditors
@@ -21,13 +23,18 @@ type Deserializer struct {
 
 // NewDeserializer returns a deserializer
 func NewDeserializer() *Deserializer {
+	m := deserializer.NewTypedVerifierDeserializerMultiplex(&x509.AuditMatcherDeserializer{})
+	m.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}))
+	m.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(m))
+
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(
 			msp.X509Identity,
 			&x509.MSPIdentityDeserializer{}, // audit
-			&x509.MSPIdentityDeserializer{}, // owner
+			m,                               // owner
 			&x509.MSPIdentityDeserializer{}, // issuer
-			&x509.AuditMatcherDeserializer{},
+			m,
+			m,
 		),
 	}
 }
@@ -39,9 +46,12 @@ func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, label str
 }
 
 // EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token
-type EIDRHDeserializer = common.EIDRHDeserializer[*x509.AuditInfo]
+type EIDRHDeserializer = deserializer.EIDRHDeserializer
 
 // NewEIDRHDeserializer returns an enrollmentService
 func NewEIDRHDeserializer() *EIDRHDeserializer {
-	return common.NewEIDRHDeserializer[*x509.AuditInfo](&x509.AuditInfoDeserializer{})
+	d := deserializer.NewEIDRHDeserializer()
+	d.AddDeserializer(msp.X509Identity, &x509.AuditInfoDeserializer{})
+	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&x509.AuditInfoDeserializer{}))
+	return d
 }

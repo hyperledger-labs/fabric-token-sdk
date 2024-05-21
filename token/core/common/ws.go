@@ -10,9 +10,7 @@ import (
 	err "errors"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -37,8 +35,8 @@ type WalletRegistry interface {
 	RegisterIdentity(config driver.IdentityConfiguration) error
 	Lookup(id driver.WalletLookupID) (driver.Wallet, driver.IdentityInfo, string, error)
 	RegisterWallet(id string, wallet driver.Wallet) error
-	BindIdentity(identity view.Identity, eID string, wID string, meta any) error
-	ContainsIdentity(i view.Identity, id string) bool
+	BindIdentity(identity driver.Identity, eID string, wID string, meta any) error
+	ContainsIdentity(i driver.Identity, id string) bool
 }
 
 type WalletFactory interface {
@@ -92,16 +90,16 @@ func (s *WalletService) RegisterIssuerIdentity(config driver.IdentityConfigurati
 	return s.Registries[driver.IssuerRole].Registry.RegisterIdentity(config)
 }
 
-func (s *WalletService) GetAuditInfo(id view.Identity) ([]byte, error) {
+func (s *WalletService) GetAuditInfo(id driver.Identity) ([]byte, error) {
 	return s.IdentityProvider.GetAuditInfo(id)
 }
 
-func (s *WalletService) GetEnrollmentID(auditInfo []byte) (string, error) {
-	return s.IdentityProvider.GetEnrollmentID(auditInfo)
+func (s *WalletService) GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error) {
+	return s.IdentityProvider.GetEnrollmentID(identity, auditInfo)
 }
 
-func (s *WalletService) GetRevocationHandler(auditInfo []byte) (string, error) {
-	return s.IdentityProvider.GetRevocationHandler(auditInfo)
+func (s *WalletService) GetRevocationHandler(identity driver.Identity, auditInfo []byte) (string, error) {
+	return s.IdentityProvider.GetRevocationHandler(identity, auditInfo)
 }
 
 func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) error {
@@ -109,13 +107,13 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 		return errors.WithStack(ErrNilRecipientData)
 	}
 	if s.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, hash.Hashable(data.AuditInfo))
+		s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, Hashable(data.AuditInfo))
 	}
 
 	// match identity and audit info
-	err := s.Deserializer.Match(data.Identity, data.AuditInfo)
+	err := s.Deserializer.MatchOwnerIdentity(data.Identity, data.AuditInfo)
 	if err != nil {
-		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, hash.Hashable(data.AuditInfo))
+		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, Hashable(data.AuditInfo))
 	}
 
 	// register verifier and audit info
@@ -133,7 +131,7 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	return nil
 }
 
-func (s *WalletService) Wallet(identity view.Identity) driver.Wallet {
+func (s *WalletService) Wallet(identity driver.Identity) driver.Wallet {
 	w, _ := s.OwnerWallet(identity)
 	if w != nil {
 		return w

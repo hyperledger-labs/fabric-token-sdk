@@ -31,7 +31,6 @@ import (
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
@@ -374,7 +373,7 @@ func getIdemixInfo(dir string) (view.Identity, *msp3.AuditInfo, driver.SigningId
 	err = registry.RegisterService(backend)
 	Expect(err).NotTo(HaveOccurred())
 
-	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	err = registry.RegisterService(sigService)
 	Expect(err).NotTo(HaveOccurred())
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")
@@ -518,11 +517,13 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	metadata.OutputsMetadata = marshalledInfo
 	metadata.Outputs = make([][]byte, len(transfer.OutputTokens))
 	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
+	metadata.OutputAuditInfos = make([][]byte, len(transfer.OutputTokens))
 	for i := 0; i < len(transfer.OutputTokens); i++ {
 		metadata.Outputs[i], err = json.Marshal(transfer.OutputTokens[i].Data)
 		Expect(err).NotTo(HaveOccurred())
 		metadata.ReceiverAuditInfos[i], err = auditInfo.Bytes()
 		Expect(err).NotTo(HaveOccurred())
+		metadata.OutputAuditInfos[i] = metadata.ReceiverAuditInfos[i]
 	}
 
 	tokns := make([][]*tokn.Token, 1)

@@ -97,5 +97,8 @@ func DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(auditInfo.Attributes) == 0 {
+		return nil, errors.Errorf("failed to unmarshal, no attributes found [%s]", string(raw))
+	}
 	return auditInfo, nil
 }

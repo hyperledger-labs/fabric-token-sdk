@@ -10,17 +10,16 @@ import (
 	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
 type localMembership interface {
-	DefaultNetworkIdentity() view.Identity
-	IsMe(id view.Identity) bool
+	DefaultNetworkIdentity() driver.Identity
+	IsMe(id driver.Identity) bool
 	GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error)
-	GetIdentifier(id view.Identity) (string, error)
+	GetIdentifier(id driver.Identity) (string, error)
 	GetDefaultIdentifier() string
 	RegisterIdentity(config driver.IdentityConfiguration) error
 	IDs() ([]string, error)
@@ -30,11 +29,11 @@ type localMembership interface {
 type Role struct {
 	roleID          driver.IdentityRole
 	networkID       string
-	nodeIdentity    view.Identity
+	nodeIdentity    driver.Identity
 	localMembership localMembership
 }
 
-func NewRole(roleID driver.IdentityRole, networkID string, nodeIdentity view.Identity, localMembership localMembership) *Role {
+func NewRole(roleID driver.IdentityRole, networkID string, nodeIdentity driver.Identity, localMembership localMembership) *Role {
 	return &Role{
 		roleID:          roleID,
 		networkID:       networkID,
@@ -61,20 +60,20 @@ func (r *Role) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 }
 
 // MapToID returns the identity for the given argument
-func (r *Role) MapToID(v driver.WalletLookupID) (view.Identity, string, error) {
+func (r *Role) MapToID(v driver.WalletLookupID) (driver.Identity, string, error) {
 	switch vv := v.(type) {
 	case []byte:
 		return r.mapIdentityToID(vv)
-	case view.Identity:
+	case driver.Identity:
 		return r.mapIdentityToID(vv)
 	case string:
 		return r.mapStringToID(vv)
 	default:
-		return nil, "", errors.Errorf("identifier not recognised, expected []byte or view.Identity, got [%T], [%s]", v, string(debug.Stack()))
+		return nil, "", errors.Errorf("identifier not recognised, expected []byte or driver.Identity, got [%T], [%s]", v, string(debug.Stack()))
 	}
 }
 
-func (r *Role) mapStringToID(v string) (view.Identity, string, error) {
+func (r *Role) mapStringToID(v string) (driver.Identity, string, error) {
 	defaultID := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
@@ -89,7 +88,7 @@ func (r *Role) mapStringToID(v string) (view.Identity, string, error) {
 	}
 
 	label := v
-	viewIdentity := view.Identity(label)
+	viewIdentity := driver.Identity(label)
 	switch {
 	case len(label) == 0:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -137,12 +136,12 @@ func (r *Role) mapStringToID(v string) (view.Identity, string, error) {
 	return nil, label, nil
 }
 
-func (r *Role) mapIdentityToID(v view.Identity) (view.Identity, string, error) {
+func (r *Role) mapIdentityToID(v driver.Identity) (driver.Identity, string, error) {
 	defaultID := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("[%s] mapping view.Identity identifier for [%s], default identities [%s:%s]",
+		logger.Debugf("[%s] mapping driver.Identity identifier for [%s], default identities [%s:%s]",
 			r.networkID,
 			v,
 			defaultID.String(),
@@ -187,7 +186,7 @@ func (r *Role) mapIdentityToID(v view.Identity) (view.Identity, string, error) {
 		return nil, idIdentifier, nil
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("cannot find match for view.Identity string [%s]", id)
+		logger.Debugf("cannot find match for driver.Identity string [%s]", id)
 	}
 	return nil, string(id), nil
 }

@@ -10,10 +10,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
 
@@ -31,13 +33,18 @@ func NewDeserializer(pp *crypto.PublicParams) (*Deserializer, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", pp.IdemixCurveID)
 	}
+	m := deserializer.NewTypedVerifierDeserializerMultiplex(idemixDes)
+	m.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes))
+	m.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(m))
+
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(
 			msp.IdemixIdentity,
 			&x509.MSPIdentityDeserializer{},
-			idemixDes,
+			m,
 			&x509.MSPIdentityDeserializer{},
-			idemixDes,
+			m,
+			m,
 		),
 	}, nil
 }
@@ -67,9 +74,12 @@ func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, label str
 }
 
 // EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token
-type EIDRHDeserializer = common.EIDRHDeserializer[*msp2.AuditInfo]
+type EIDRHDeserializer = deserializer.EIDRHDeserializer
 
 // NewEIDRHDeserializer returns an enrollmentService
 func NewEIDRHDeserializer() *EIDRHDeserializer {
-	return common.NewEIDRHDeserializer[*msp2.AuditInfo](&msp2.Deserializer{})
+	d := deserializer.NewEIDRHDeserializer()
+	d.AddDeserializer(msp.IdemixIdentity, &idemix.AuditInfoDeserializer{})
+	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix.AuditInfoDeserializer{}))
+	return d
 }

@@ -49,10 +49,11 @@ type WalletService struct {
 		result1 []byte
 		result2 error
 	}
-	GetEnrollmentIDStub        func([]byte) (string, error)
+	GetEnrollmentIDStub        func(view.Identity, []byte) (string, error)
 	getEnrollmentIDMutex       sync.RWMutex
 	getEnrollmentIDArgsForCall []struct {
-		arg1 []byte
+		arg1 view.Identity
+		arg2 []byte
 	}
 	getEnrollmentIDReturns struct {
 		result1 string
@@ -62,10 +63,11 @@ type WalletService struct {
 		result1 string
 		result2 error
 	}
-	GetRevocationHandlerStub        func([]byte) (string, error)
+	GetRevocationHandlerStub        func(view.Identity, []byte) (string, error)
 	getRevocationHandlerMutex       sync.RWMutex
 	getRevocationHandlerArgsForCall []struct {
-		arg1 []byte
+		arg1 view.Identity
+		arg2 []byte
 	}
 	getRevocationHandlerReturns struct {
 		result1 string
@@ -366,23 +368,24 @@ func (fake *WalletService) GetAuditInfoReturnsOnCall(i int, result1 []byte, resu
 	}{result1, result2}
 }
 
-func (fake *WalletService) GetEnrollmentID(arg1 []byte) (string, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
+func (fake *WalletService) GetEnrollmentID(arg1 view.Identity, arg2 []byte) (string, error) {
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.getEnrollmentIDMutex.Lock()
 	ret, specificReturn := fake.getEnrollmentIDReturnsOnCall[len(fake.getEnrollmentIDArgsForCall)]
 	fake.getEnrollmentIDArgsForCall = append(fake.getEnrollmentIDArgsForCall, struct {
-		arg1 []byte
-	}{arg1Copy})
+		arg1 view.Identity
+		arg2 []byte
+	}{arg1, arg2Copy})
 	stub := fake.GetEnrollmentIDStub
 	fakeReturns := fake.getEnrollmentIDReturns
-	fake.recordInvocation("GetEnrollmentID", []interface{}{arg1Copy})
+	fake.recordInvocation("GetEnrollmentID", []interface{}{arg1, arg2Copy})
 	fake.getEnrollmentIDMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -396,17 +399,17 @@ func (fake *WalletService) GetEnrollmentIDCallCount() int {
 	return len(fake.getEnrollmentIDArgsForCall)
 }
 
-func (fake *WalletService) GetEnrollmentIDCalls(stub func([]byte) (string, error)) {
+func (fake *WalletService) GetEnrollmentIDCalls(stub func(view.Identity, []byte) (string, error)) {
 	fake.getEnrollmentIDMutex.Lock()
 	defer fake.getEnrollmentIDMutex.Unlock()
 	fake.GetEnrollmentIDStub = stub
 }
 
-func (fake *WalletService) GetEnrollmentIDArgsForCall(i int) []byte {
+func (fake *WalletService) GetEnrollmentIDArgsForCall(i int) (view.Identity, []byte) {
 	fake.getEnrollmentIDMutex.RLock()
 	defer fake.getEnrollmentIDMutex.RUnlock()
 	argsForCall := fake.getEnrollmentIDArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *WalletService) GetEnrollmentIDReturns(result1 string, result2 error) {
@@ -435,23 +438,24 @@ func (fake *WalletService) GetEnrollmentIDReturnsOnCall(i int, result1 string, r
 	}{result1, result2}
 }
 
-func (fake *WalletService) GetRevocationHandler(arg1 []byte) (string, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
+func (fake *WalletService) GetRevocationHandler(arg1 view.Identity, arg2 []byte) (string, error) {
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.getRevocationHandlerMutex.Lock()
 	ret, specificReturn := fake.getRevocationHandlerReturnsOnCall[len(fake.getRevocationHandlerArgsForCall)]
 	fake.getRevocationHandlerArgsForCall = append(fake.getRevocationHandlerArgsForCall, struct {
-		arg1 []byte
-	}{arg1Copy})
+		arg1 view.Identity
+		arg2 []byte
+	}{arg1, arg2Copy})
 	stub := fake.GetRevocationHandlerStub
 	fakeReturns := fake.getRevocationHandlerReturns
-	fake.recordInvocation("GetRevocationHandler", []interface{}{arg1Copy})
+	fake.recordInvocation("GetRevocationHandler", []interface{}{arg1, arg2Copy})
 	fake.getRevocationHandlerMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -465,17 +469,17 @@ func (fake *WalletService) GetRevocationHandlerCallCount() int {
 	return len(fake.getRevocationHandlerArgsForCall)
 }
 
-func (fake *WalletService) GetRevocationHandlerCalls(stub func([]byte) (string, error)) {
+func (fake *WalletService) GetRevocationHandlerCalls(stub func(view.Identity, []byte) (string, error)) {
 	fake.getRevocationHandlerMutex.Lock()
 	defer fake.getRevocationHandlerMutex.Unlock()
 	fake.GetRevocationHandlerStub = stub
 }
 
-func (fake *WalletService) GetRevocationHandlerArgsForCall(i int) []byte {
+func (fake *WalletService) GetRevocationHandlerArgsForCall(i int) (view.Identity, []byte) {
 	fake.getRevocationHandlerMutex.RLock()
 	defer fake.getRevocationHandlerMutex.RUnlock()
 	argsForCall := fake.getRevocationHandlerArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *WalletService) GetRevocationHandlerReturns(result1 string, result2 error) {
