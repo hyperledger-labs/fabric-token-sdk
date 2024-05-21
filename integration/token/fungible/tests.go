@@ -262,7 +262,7 @@ var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 
 type OnAuditorRestartFunc = func(*integration.Infrastructure, string)
 
-func TestAll(network *integration.Infrastructure, auditor string, onAuditorRestart OnAuditorRestartFunc, aries bool, sel *token3.ReplicaSelector) {
+func TestAll(network *integration.Infrastructure, auditor string, aries bool, sel *token3.ReplicaSelector) {
 	testInit(network, auditor, sel)
 
 	t0 := time.Now()
@@ -301,7 +301,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
 	Restart(network, true, auditor)
-	RegisterAuditor(network, auditor, onAuditorRestart)
+	RegisterAuditor(network, auditor)
 
 	CheckBalanceAndHolding(network, sel.Get("alice"), "", "USD", 120, auditor)
 	CheckBalanceAndHolding(network, sel.Get("alice"), "alice", "USD", 120, auditor)
@@ -456,7 +456,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 
 	// Restart the auditor
 	Restart(network, true, auditor)
-	RegisterAuditor(network, auditor, onAuditorRestart)
+	RegisterAuditor(network, auditor)
 
 	CheckBalanceAndHolding(network, sel.Get("issuer"), "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, sel.Get("issuer"), "", "EUR", 150, auditor)
@@ -490,7 +490,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	fmt.Printf("prepared transactions [%s:%s]", txID1, txID2)
 	Restart(network, true, "bob")
 	Restart(network, false, auditor)
-	RegisterAuditor(network, auditor, onAuditorRestart)
+	RegisterAuditor(network, auditor)
 	CheckBalance(network, "bob", "", "PINE", 0)
 	CheckHolding(network, "bob", "", "PINE", 110, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
@@ -553,7 +553,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckBalanceAndHolding(network, sel.Get("manager"), "manager.id2", "USD", 10, auditor)
 	CheckBalanceAndHolding(network, sel.Get("manager"), "manager.id3", "USD", 10, auditor)
 
-	TransferCash(network, "manager", "manager.id1", "USD", 10, "manager.id2", auditor)
+	TransferCash(network, sel.Get("manager"), "manager.id1", "USD", 10, "manager.id2", auditor)
 	CheckSpending(network, sel.Get("manager"), "manager.id1", "USD", auditor, 10)
 	CheckBalanceAndHolding(network, sel.Get("manager"), "", "USD", 20, auditor)
 	CheckBalanceAndHolding(network, sel.Get("manager"), "manager.id1", "USD", 0, auditor)
@@ -581,54 +581,54 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckBalanceAndHolding(network, sel.Get("alice"), "", "EUR", 10, auditor)
 
 	// limits
-	CheckBalanceAndHolding(network, "alice", "", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, "alice", "", "EUR", 10, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "", "EUR", 10, auditor)
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "EUR", 20, auditor)
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "USD", 110, auditor)
 	IssueCash(network, "", "EUR", 2200, "alice", auditor, true, "issuer")
 	IssueCash(network, "", "EUR", 2000, "charlie", auditor, true, "issuer")
-	CheckBalanceAndHolding(network, "alice", "", "EUR", 2210, auditor)
-	CheckBalanceAndHolding(network, "charlie", "", "EUR", 2000, auditor)
-	TransferCash(network, "alice", "", "EUR", 210, "bob", auditor, "payment limit reached", "alice", "[EUR][210]")
-	CheckBalanceAndHolding(network, "alice", "", "EUR", 2210, auditor)
-	CheckBalanceAndHolding(network, "charlie", "", "EUR", 2000, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "", "EUR", 2210, auditor)
+	CheckBalanceAndHolding(network, sel.Get("charlie"), "", "EUR", 2000, auditor)
+	TransferCash(network, sel.Get("alice"), "", "EUR", 210, "bob", auditor, "payment limit reached", "alice", "[EUR][210]")
+	CheckBalanceAndHolding(network, sel.Get("alice"), "", "EUR", 2210, auditor)
+	CheckBalanceAndHolding(network, sel.Get("charlie"), "", "EUR", 2000, auditor)
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "EUR", 20, auditor)
 
 	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
-	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("alice"), "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("alice"), "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("alice"), "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("alice"), "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("alice"), "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("alice"), "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("alice"), "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("alice"), "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("alice"), "", "EUR", 200, "bob", auditor)
 	CheckBalanceAndHolding(network, sel.Get("bob"), "", "EUR", 1820, auditor)
-	CheckSpending(network, "alice", "", "EUR", auditor, 1800)
-	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor, "cumulative payment limit reached", "alice", "[EUR][2000]")
+	CheckSpending(network, sel.Get("alice"), "", "EUR", auditor, 1800)
+	TransferCash(network, sel.Get("alice"), "", "EUR", 200, "bob", auditor, "cumulative payment limit reached", "alice", "[EUR][2000]")
 
-	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
-	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
-	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
-	CheckBalanceAndHolding(network, "charlie", "", "EUR", 1000, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820, auditor)
-	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor, "holding limit reached", "bob", "[EUR][3020]")
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820, auditor)
+	TransferCash(network, sel.Get("charlie"), "", "EUR", 200, "bob", auditor)
+	PruneInvalidUnspentTokens(network, sel.All("issuer", auditor, "alice", "bob", "charlie", "manager")...)
+	TransferCash(network, sel.Get("charlie"), "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("charlie"), "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("charlie"), "", "EUR", 200, "bob", auditor)
+	TransferCash(network, sel.Get("charlie"), "", "EUR", 200, "bob", auditor)
+	CheckBalanceAndHolding(network, sel.Get("charlie"), "", "EUR", 1000, auditor)
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "EUR", 2820, auditor)
+	TransferCash(network, sel.Get("charlie"), "", "EUR", 200, "bob", auditor, "holding limit reached", "bob", "[EUR][3020]")
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "EUR", 2820, auditor)
 
-	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+	PruneInvalidUnspentTokens(network, sel.All("issuer", auditor, "alice", "bob", "charlie", "manager")...)
 
 	// Routing
 	IssueCash(network, "", "EUR", 10, "alice.id1", auditor, true, "issuer")
-	CheckAcceptedTransactions(network, "alice", "alice.id1", AliceID1AcceptedTransactions[:], nil, nil, nil)
-	TransferCash(network, "alice", "alice.id1", "EUR", 10, "bob.id1", auditor)
-	CheckBalanceAndHolding(network, "alice", "alice.id1", "EUR", 0, auditor)
-	CheckBalanceAndHolding(network, "bob", "bob.id1", "EUR", 10, auditor)
+	CheckAcceptedTransactions(network, sel.Get("alice"), "alice.id1", AliceID1AcceptedTransactions[:], nil, nil, nil)
+	TransferCash(network, sel.Get("alice"), "alice.id1", "EUR", 10, "bob.id1", auditor)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice.id1", "EUR", 0, auditor)
+	CheckBalanceAndHolding(network, sel.Get("bob"), "bob.id1", "EUR", 10, auditor)
 
 	// Concurrent transfers
 	transferErrors := make([]chan error, 5)
@@ -642,7 +642,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 		v := r.Uint64() + 1
 		sum += v
 		go func() {
-			_, err := network.Client("bob").CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
+			_, err := network.Client(sel.Get("bob")).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
 				Auditor:      auditor,
 				Wallet:       "",
 				Type:         "EUR",
@@ -669,32 +669,32 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	// Transfer by IDs
 	{
 		txID1 := IssueCash(network, "", "CHF", 17, "alice", auditor, true, "issuer")
-		TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, "bob", auditor, true, "test release")
+		TransferCashByIDs(network, sel.Get("alice"), "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, "bob", auditor, true, "test release")
 		// the previous call should not keep the token locked if release is successful
-		txID2 := TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, "bob", auditor, false)
-		WhoDeletedToken(network, "alice", []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
-		WhoDeletedToken(network, auditor, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
+		txID2 := TransferCashByIDs(network, sel.Get("alice"), "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, "bob", auditor, false)
+		WhoDeletedToken(network, sel.Get("alice"), []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
+		WhoDeletedToken(network, sel.Get(auditor), []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
 		// redeem newly created token
-		RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor)
+		RedeemCashByIDs(network, sel.Get("bob"), "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor)
 	}
 
-	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+	PruneInvalidUnspentTokens(network, sel.All("issuer", auditor, "alice", "bob", "charlie", "manager")...)
 
 	// Test Max Token Value
 	IssueCash(network, "", "MAX", 65535, "charlie", auditor, true, "issuer")
 	IssueCash(network, "", "MAX", 65535, "charlie", auditor, true, "issuer")
-	TransferCash(network, "charlie", "", "MAX", 65536, "alice", auditor, "cannot create output with value [65536], max [65535]")
+	TransferCash(network, sel.Get("charlie"), "", "MAX", 65536, "alice", auditor, "cannot create output with value [65536], max [65535]")
 	IssueCash(network, "", "MAX", 65536, "charlie", auditor, true, "issuer", "q is larger than max token value [65535]")
 
 	// Check consistency
-	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
-	CheckOwnerDB(network, nil, "bob", "alice", "issuer", "charlie", "manager")
-	CheckAuditorDB(network, auditor, "", nil)
-	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+	CheckPublicParams(network, sel.All("issuer", auditor, "alice", "bob", "charlie", "manager")...)
+	CheckOwnerDB(network, nil, sel.All("bob", "alice", "issuer", "charlie", "manager")...)
+	CheckAuditorDB(network, sel.Get(auditor), "", nil)
+	PruneInvalidUnspentTokens(network, sel.All("issuer", auditor, "alice", "bob", "charlie", "manager")...)
 
 	for _, name := range []string{"alice", "bob", "charlie", "manager"} {
-		IDs := ListVaultUnspentTokens(network, name)
-		CheckIfExistsInVault(network, auditor, IDs)
+		IDs := ListVaultUnspentTokens(network, sel.Get(name))
+		CheckIfExistsInVault(network, sel.Get(auditor), IDs)
 	}
 
 	// Check double spending by multiple action in the same transaction
@@ -702,30 +702,30 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	// use the same token for both actions, this must fail
 	txIssuedPineapples1 := IssueCash(network, "", "Pineapples", 3, "alice", auditor, true, "issuer")
 	IssueCash(network, "", "Pineapples", 3, "alice", auditor, true, "issuer")
-	failedTransferTxID := TransferCashMultiActions(network, "alice", "", "Pineapples", []uint64{2, 3}, []string{"bob", "charlie"}, auditor, &token2.ID{TxId: txIssuedPineapples1}, "failed to append spent id", txIssuedPineapples1)
+	failedTransferTxID := TransferCashMultiActions(network, sel.Get("alice"), "", "Pineapples", []uint64{2, 3}, []string{"bob", "charlie"}, auditor, &token2.ID{TxId: txIssuedPineapples1}, "failed to append spent id", txIssuedPineapples1)
 	// the above transfer must fail at execution phase, therefore the auditor should be explicitly informed about this transaction
-	CheckBalance(network, "alice", "", "Pineapples", 6)
-	CheckHolding(network, "alice", "", "Pineapples", 1, auditor)
-	CheckBalance(network, "bob", "", "Pineapples", 0)
-	CheckHolding(network, "bob", "", "Pineapples", 2, auditor)
-	CheckBalance(network, "charlie", "", "Pineapples", 0)
-	CheckHolding(network, "charlie", "", "Pineapples", 3, auditor)
+	CheckBalance(network, sel.Get("alice"), "", "Pineapples", 6)
+	CheckHolding(network, sel.Get("alice"), "", "Pineapples", 1, auditor)
+	CheckBalance(network, sel.Get("bob"), "", "Pineapples", 0)
+	CheckHolding(network, sel.Get("bob"), "", "Pineapples", 2, auditor)
+	CheckBalance(network, sel.Get("charlie"), "", "Pineapples", 0)
+	CheckHolding(network, sel.Get("charlie"), "", "Pineapples", 3, auditor)
 	fmt.Printf("failed transaction [%s]\n", failedTransferTxID)
-	SetTransactionAuditStatus(network, auditor, failedTransferTxID, ttx.Deleted)
-	CheckBalanceAndHolding(network, "alice", "", "Pineapples", 6, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "Pineapples", 0, auditor)
-	CheckBalanceAndHolding(network, "charlie", "", "Pineapples", 0, auditor)
-	CheckAuditorDB(network, auditor, "", nil)
+	SetTransactionAuditStatus(network, sel.Get(auditor), failedTransferTxID, ttx.Deleted)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "", "Pineapples", 6, auditor)
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "Pineapples", 0, auditor)
+	CheckBalanceAndHolding(network, sel.Get("charlie"), "", "Pineapples", 0, auditor)
+	CheckAuditorDB(network, sel.Get(auditor), "", nil)
 }
 
 func TestParallelTransferWithSelector(network *integration.Infrastructure, auditor string, sel *token3.ReplicaSelector) {
 
 	// Transfer With Selector
 	IssueCash(network, "", "YUAN", 17, "alice", auditor, true, "issuer")
-	TransferCashWithSelector(network, "alice", "", "YUAN", 10, "bob", auditor)
-	CheckBalanceAndHolding(network, "alice", "", "YUAN", 7, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "YUAN", 10, auditor)
-	TransferCashWithSelector(network, "alice", "", "YUAN", 10, "bob", auditor, "pineapple", "insufficient funds")
+	TransferCashWithSelector(network, sel.Get("alice"), "", "YUAN", 10, "bob", auditor)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "", "YUAN", 7, auditor)
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "YUAN", 10, auditor)
+	TransferCashWithSelector(network, sel.Get("alice"), "", "YUAN", 10, "bob", auditor, "pineapple", "insufficient funds")
 
 	// Now, the tests asks Bob to transfer to Charlie 14 YUAN split in two parallel transactions each one transferring 7 YUAN.
 	// Notice that Bob has only 10 YUAN, therefore bob will be able to assemble only one transfer.
@@ -736,7 +736,7 @@ func TestParallelTransferWithSelector(network *integration.Infrastructure, audit
 
 		transferError := transferErrors[i]
 		go func() {
-			txid, err := network.Client("bob").CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
+			txid, err := network.Client(sel.Get("bob")).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
 				Auditor:      auditor,
 				Wallet:       "",
 				Type:         "YUAN",
@@ -784,13 +784,13 @@ func TestParallelTransferWithSelector(network *integration.Infrastructure, audit
 	//Expect(v).To(BeEquivalentTo(true))
 	Expect(errStr).NotTo(BeEmpty())
 
-	CheckBalanceAndHolding(network, "bob", "", "YUAN", 3, auditor)
-	CheckBalanceAndHolding(network, "alice", "", "YUAN", 7, auditor)
-	CheckBalanceAndHolding(network, "charlie", "", "YUAN", 7, auditor)
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "YUAN", 3, auditor)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "", "YUAN", 7, auditor)
+	CheckBalanceAndHolding(network, sel.Get("charlie"), "", "YUAN", 7, auditor)
 }
 
 func testInit(network *integration.Infrastructure, auditor string, sel *token3.ReplicaSelector) {
-	RegisterAuditor(network, auditor, nil)
+	RegisterAuditor(network, sel.Get(auditor))
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
@@ -803,19 +803,19 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 	var errorMessage string
 	if issuerAsAuditor {
 		errorMessage = "failed verifying auditor signature"
-		RegisterAuditor(network, "issuer", nil)
+		RegisterAuditor(network, "issuer")
 		txId := IssueCash(network, "", "USD", 110, "alice", "issuer", true, "issuer")
 		Expect(txId).NotTo(BeEmpty())
 		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "issuer")
 	} else {
 		errorMessage = "failed to verify issuers' signatures"
-		RegisterAuditor(network, "auditor", nil)
+		RegisterAuditor(network, "auditor")
 		txId := IssueCash(network, "", "USD", 110, "alice", "auditor", true, "issuer")
 		Expect(txId).NotTo(BeEmpty())
 		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "auditor")
 	}
 
-	RegisterAuditor(network, auditor, nil)
+	RegisterAuditor(network, auditor)
 	UpdatePublicParams(network, ppBytes, tms)
 
 	Eventually(GetPublicParams).WithArguments(network, "newIssuer").WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
@@ -884,8 +884,8 @@ func TestRevokeIdentity(network *integration.Infrastructure, auditor string, rev
 func TestMixed(network *integration.Infrastructure) {
 	dlogId := getTmsId(network, DLogNamespace)
 	fabTokenId := getTmsId(network, FabTokenNamespace)
-	RegisterAuditorForTMSID(network, "auditor1", dlogId, nil)
-	RegisterAuditorForTMSID(network, "auditor2", fabTokenId, nil)
+	RegisterAuditorForTMSID(network, "auditor1", dlogId)
+	RegisterAuditorForTMSID(network, "auditor2", fabTokenId)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(40 * time.Second)
@@ -928,7 +928,7 @@ func TestMixed(network *integration.Infrastructure) {
 	Restart(network, true, "auditor2")
 	IssueCashForTMSID(network, "", "USD", 10, "alice", "auditor1", true, "issuer1", dlogId)
 	IssueCashForTMSID(network, "", "USD", 20, "alice", "auditor2", true, "issuer2", fabTokenId, "")
-	RegisterAuditor(network, "auditor2", nil)
+	RegisterAuditor(network, "auditor2")
 	IssueCashForTMSID(network, "", "USD", 30, "alice", "auditor2", true, "issuer2", fabTokenId)
 
 	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 100, "auditor1", dlogId)
@@ -940,7 +940,7 @@ func TestRemoteOwnerWallet(network *integration.Infrastructure, auditor string, 
 }
 
 func TestRemoteOwnerWalletWithWMP(network *integration.Infrastructure, wmp *WalletManagerProvider, auditor string, websSocket bool) {
-	RegisterAuditor(network, auditor, nil)
+	RegisterAuditor(network, auditor)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)

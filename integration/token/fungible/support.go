@@ -41,18 +41,15 @@ type Stream interface {
 	Result() ([]byte, error)
 }
 
-func RegisterAuditor(network *integration.Infrastructure, id string, onAuditorRestart OnAuditorRestartFunc) {
-	RegisterAuditorForTMSID(network, id, nil, onAuditorRestart)
+func RegisterAuditor(network *integration.Infrastructure, id string) {
+	RegisterAuditorForTMSID(network, id, nil)
 }
 
-func RegisterAuditorForTMSID(network *integration.Infrastructure, id string, tmsId *token2.TMSID, onAuditorRestart OnAuditorRestartFunc) {
+func RegisterAuditorForTMSID(network *integration.Infrastructure, id string, tmsId *token2.TMSID) {
 	_, err := network.Client(id).CallView("registerAuditor", common.JSONMarshall(&views.RegisterAuditor{
 		TMSID: tmsId,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	if onAuditorRestart != nil {
-		onAuditorRestart(network, id)
-	}
 }
 
 func getTmsId(network *integration.Infrastructure, namespace string) *token2.TMSID {
