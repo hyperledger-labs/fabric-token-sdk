@@ -85,12 +85,14 @@ func TestParallel(t *testing.T) {
 	const iterations = 100
 	cache := newTestCache()
 	vals := make(chan string, iterations)
+	done := make(chan struct{})
 
 	values := make(map[string]struct{})
 	go func() {
 		for v := range vals {
 			values[v] = struct{}{}
 		}
+		done <- struct{}{}
 	}()
 
 	var wg sync.WaitGroup
@@ -107,6 +109,7 @@ func TestParallel(t *testing.T) {
 	wg.Wait()
 	close(vals)
 
+	<-done
 	assert.Equal(1, cache.Length(), "we only updated one key")
 	assert.Equal(1, len(values), "we always got one value back (the one we first set)")
 }
