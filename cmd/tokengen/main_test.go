@@ -22,6 +22,9 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
+// To run this command, first make sure to install the tokengen tool. To do that run `make tokengen`.
+//go:generate tokengen gen dlog --idemix "./testdata/idemix" --issuers "./testdata/issuers/msp" --auditors "./testdata/auditors/msp" --output "./testdata"
+
 func TestCompile(t *testing.T) {
 	gt := NewGomegaWithT(t)
 	_, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")

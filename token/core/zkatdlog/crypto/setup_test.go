@@ -53,6 +53,24 @@ func TestSerialization(t *testing.T) {
 
 }
 
+func TestComputeMaxTokenValue(t *testing.T) {
+	pp := PublicParams{
+		RangeProofParams: &RangeProofParams{
+			BitLength: 64,
+		},
+	}
+	max := pp.ComputeMaxTokenValue()
+	assert.Equal(t, uint64(18446744073709551615), max)
+
+	pp = PublicParams{
+		RangeProofParams: &RangeProofParams{
+			BitLength: 16,
+		},
+	}
+	max = pp.ComputeMaxTokenValue()
+	assert.Equal(t, uint64(65535), max)
+}
+
 func TestNewG1(t *testing.T) {
 	for i := 0; i < len(math3.Curves); i++ {
 		c := math3.Curves[i]
