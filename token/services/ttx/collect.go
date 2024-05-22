@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+
 	"go.uber.org/zap/zapcore"
 
 	"github.com/pkg/errors"
@@ -83,7 +85,12 @@ func (c *collectActionsView) collectLocal(context view.Context, actionTransfer *
 	}
 
 	// Binds identities
-	if err := c.tx.TokenRequest.BindTo(context, party); err != nil {
+	es := view2.GetEndpointService(context)
+	longTermIdentity, _, _, err := es.Resolve(party)
+	if err != nil {
+		return errors.Wrapf(err, "cannot resolve long term network identity for [%s]", party)
+	}
+	if err := c.tx.TokenRequest.BindTo(es, longTermIdentity); err != nil {
 		return errors.Wrapf(err, "failed binding to [%s]", party.String())
 	}
 
@@ -147,7 +154,12 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	}
 
 	// Bind to party
-	if err := txPayload.TokenRequest.BindTo(context, party); err != nil {
+	es := view2.GetEndpointService(context)
+	longTermIdentity, _, _, err := es.Resolve(party)
+	if err != nil {
+		return errors.Wrapf(err, "cannot resolve long term network identity for [%s]", party)
+	}
+	if err := txPayload.TokenRequest.BindTo(es, longTermIdentity); err != nil {
 		return errors.Wrapf(err, "failed binding to [%s]", party.String())
 	}
 

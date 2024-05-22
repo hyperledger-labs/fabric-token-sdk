@@ -9,16 +9,16 @@ package tokens
 import (
 	"runtime/debug"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.tokens")
+var logger = logging.MustGetLogger("token-sdk.tokens")
 
 // Authorization is an interface that defines method to check the relation between a token or TMS
 // and wallets (owner, auditor, etc.)

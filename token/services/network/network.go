@@ -14,10 +14,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -33,7 +33,7 @@ const (
 	Unknown = driver.Unknown // Transaction is unknown
 )
 
-var logger = flogging.MustGetLogger("token-sdk.network")
+var logger = logging.MustGetLogger("token-sdk.network")
 
 type UnspentTokensIterator = driver.UnspentTokensIterator
 

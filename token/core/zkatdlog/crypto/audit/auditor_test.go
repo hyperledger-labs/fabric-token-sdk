@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
@@ -232,7 +231,7 @@ func (f *fakeProv) TranslatePath(path string) string {
 	return ""
 }
 
-func getIdemixInfo(dir string) (view.Identity, *msp3.AuditInfo) {
+func getIdemixInfo(dir string) (driver.Identity, *msp3.AuditInfo) {
 	registry := registry2.New()
 	Expect(registry.RegisterService(&fakeProv{typ: "memory"})).NotTo(HaveOccurred())
 
@@ -271,7 +270,7 @@ func getIdemixInfo(dir string) (view.Identity, *msp3.AuditInfo) {
 	return id, auditInfo
 }
 
-func createInputs(pp *crypto.PublicParams, id view.Identity) ([]*token.Token, []*token.Metadata) {
+func createInputs(pp *crypto.PublicParams, id driver.Identity) ([]*token.Token, []*token.Metadata) {
 	c := math.Curves[pp.Curve]
 	inputs := make([]*token.Token, 2)
 	infos := make([]*token.Metadata, 2)
@@ -294,7 +293,7 @@ func createInputs(pp *crypto.PublicParams, id view.Identity) ([]*token.Token, []
 	return inputs, infos
 }
 
-func prepareTransfer(pp *crypto.PublicParams, id view.Identity) (*transfer2.TransferAction, []*token.Metadata, []*token.Token) {
+func prepareTransfer(pp *crypto.PublicParams, id driver.Identity) (*transfer2.TransferAction, []*token.Metadata, []*token.Token) {
 	inputs, tokenInfos := createInputs(pp, id)
 
 	fakeSigner := &mock.SigningIdentity{}

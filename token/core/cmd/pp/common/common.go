@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	msp3 "github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
@@ -26,14 +26,14 @@ const (
 // PP defines an interface shared by all public parameters
 type PP interface {
 	// AddAuditor adds an auditor to the public parameters
-	AddAuditor(raw view.Identity)
+	AddAuditor(raw driver.Identity)
 	// AddIssuer adds an issuer to the public parameters
-	AddIssuer(raw view.Identity)
+	AddIssuer(raw driver.Identity)
 }
 
 // GetMSPIdentity returns the MSP identity from the passed entry formatted as <MSPConfigPath>:<MSPID>.
 // If mspID is not empty, it will be used instead of the MSPID in the entry.
-func GetMSPIdentity(entry string, mspID string) (view.Identity, error) {
+func GetMSPIdentity(entry string, mspID string) (driver.Identity, error) {
 	entries := strings.Split(entry, ":")
 	if len(mspID) == 0 {
 		if len(entries) != 2 {

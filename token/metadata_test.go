@@ -9,10 +9,10 @@ package token_test
 import (
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
@@ -39,11 +39,11 @@ func testFilterByCase0(t *testing.T) {
 				Index: 0,
 			},
 		},
-		Senders:            []view.Identity{view.Identity("Alice")},
+		Senders:            []token.Identity{token.Identity("Alice")},
 		SenderAuditInfos:   [][]byte{[]byte("Alice")},
 		Outputs:            [][]byte{[]byte("Bob's output")},
 		OutputsMetadata:    [][]byte{[]byte("Bob's output's token info")},
-		Receivers:          []view.Identity{view.Identity("Bob")},
+		Receivers:          []token.Identity{token.Identity("Bob")},
 		ReceiverAuditInfos: [][]byte{[]byte("Bob")},
 		ReceiverIsSender:   []bool{false},
 	}
@@ -55,11 +55,11 @@ func testFilterByCase0(t *testing.T) {
 				Index: 0,
 			},
 		},
-		Senders:            []view.Identity{view.Identity("Charlie")},
+		Senders:            []token.Identity{token.Identity("Charlie")},
 		SenderAuditInfos:   [][]byte{[]byte("Charlie")},
 		Outputs:            [][]byte{[]byte("Dave's output")},
 		OutputsMetadata:    [][]byte{[]byte("Dave's output's token info")},
-		Receivers:          []view.Identity{view.Identity("Dave")},
+		Receivers:          []token.Identity{token.Identity("Dave")},
 		ReceiverAuditInfos: [][]byte{[]byte("Dave")},
 		ReceiverIsSender:   []bool{false},
 	}
@@ -85,6 +85,7 @@ func testFilterByCase0(t *testing.T) {
 				"application": []byte("application"),
 			},
 		},
+		Logger: logging.MustGetLogger("test"),
 	}
 	// Filter by Bob
 	filteredMetadata, err := metadata.FilterBy("Bob")
@@ -149,19 +150,19 @@ func testFilterByCase1(t *testing.T) {
 
 	// Alice's issue
 	aliceIssue := driver.IssueMetadata{
-		Issuer:              view.Identity("Issuer"),
+		Issuer:              token.Identity("Issuer"),
 		Outputs:             [][]byte{[]byte("Alice's output")},
-		TokenInfo:           [][]byte{[]byte("Alice's output's token info")},
-		Receivers:           []view.Identity{view.Identity("Alice")},
+		OutputsMetadata:     [][]byte{[]byte("Alice's output's token info")},
+		Receivers:           []token.Identity{token.Identity("Alice")},
 		ReceiversAuditInfos: [][]byte{[]byte("Alice")},
 	}
 
 	// Bob's issue
 	bobIssue := driver.IssueMetadata{
-		Issuer:              view.Identity("Issuer"),
+		Issuer:              token.Identity("Issuer"),
 		Outputs:             [][]byte{[]byte("Bob's output")},
-		TokenInfo:           [][]byte{[]byte("Bob's output's token info")},
-		Receivers:           []view.Identity{view.Identity("Bob")},
+		OutputsMetadata:     [][]byte{[]byte("Bob's output's token info")},
+		Receivers:           []token.Identity{token.Identity("Bob")},
 		ReceiversAuditInfos: [][]byte{[]byte("Bob")},
 	}
 
@@ -183,6 +184,7 @@ func testFilterByCase1(t *testing.T) {
 				bobIssue,
 			},
 		},
+		Logger: logging.MustGetLogger("test"),
 	}
 
 	// Filter by Alice
@@ -245,7 +247,7 @@ func testFilterByCase1(t *testing.T) {
 func assertEqualIssueMetadata(t *testing.T, original, filtered *driver.IssueMetadata) {
 	assert.Equal(t, original.Issuer, filtered.Issuer)
 	assert.Equal(t, original.Outputs, filtered.Outputs)
-	assert.Equal(t, original.TokenInfo, filtered.TokenInfo)
+	assert.Equal(t, original.OutputsMetadata, filtered.OutputsMetadata)
 	assert.Equal(t, original.Receivers, filtered.Receivers)
 }
 
@@ -254,7 +256,7 @@ func assertEmptyIssueMetadata(t *testing.T, original, filtered *driver.IssueMeta
 	assert.Equal(t, original.Issuer, filtered.Issuer)
 	// assert that the lengths are the same
 	assert.Len(t, original.Outputs, len(filtered.Outputs))
-	assert.Len(t, original.TokenInfo, len(filtered.TokenInfo))
+	assert.Len(t, original.OutputsMetadata, len(filtered.OutputsMetadata))
 	assert.Len(t, original.Receivers, len(filtered.Receivers))
 	assert.Len(t, original.ReceiversAuditInfos, len(filtered.ReceiversAuditInfos))
 
@@ -263,8 +265,8 @@ func assertEmptyIssueMetadata(t *testing.T, original, filtered *driver.IssueMeta
 		assert.Empty(t, filtered.Outputs[i])
 	}
 	// assert that the token info is empty
-	for i := 0; i < len(original.TokenInfo); i++ {
-		assert.Empty(t, filtered.TokenInfo[i])
+	for i := 0; i < len(original.OutputsMetadata); i++ {
+		assert.Empty(t, filtered.OutputsMetadata[i])
 	}
 	// assert that the receivers are empty
 	for i := 0; i < len(original.Receivers); i++ {
@@ -330,17 +332,18 @@ func TestMetadata_GetToken(t *testing.T) {
 		TokenService:         mockTokenService,
 		WalletService:        mockWalletService,
 		TokenRequestMetadata: &driver.TokenRequestMetadata{},
+		Logger:               logging.MustGetLogger("test"),
 	}
 
 	// Mocks and expectations
 	raw := []byte("some raw data")
 	expectedToken := &token2.Token{}
-	expectedIdentity := view.Identity("identity1")
+	expectedIdentity := token.Identity("identity1")
 	expectedTokenInfoRaw := []byte("token info raw")
 	mockTokenService.GetTokenInfoStub = func(metadata *driver.TokenRequestMetadata, raw []byte) ([]byte, error) {
 		return expectedTokenInfoRaw, nil
 	}
-	mockTokenService.DeserializeTokenStub = func(raw []byte, tokenInfoRaw []byte) (*token2.Token, view.Identity, error) {
+	mockTokenService.DeserializeTokenStub = func(raw []byte, tokenInfoRaw []byte) (*token2.Token, token.Identity, error) {
 		return expectedToken, expectedIdentity, nil
 	}
 

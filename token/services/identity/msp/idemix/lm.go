@@ -11,27 +11,24 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/cache"
-
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
-
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/cache"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.idemix")
+var logger = logging.MustGetLogger("token-sdk.services.identity.msp.idemix")
 
 type LocalMembership struct {
 	issuerPublicKey []byte

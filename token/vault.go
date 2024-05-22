@@ -9,6 +9,8 @@ package token
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -30,15 +32,16 @@ const (
 
 // QueryEngine models a token query engine
 type QueryEngine struct {
-	qe driver.QueryEngine
+	qe     driver.QueryEngine
+	logger logging.Logger
 
 	// Variables used to control retry condition
 	NumRetries int
 	RetryDelay time.Duration
 }
 
-func NewQueryEngine(qe driver.QueryEngine, numRetries int, retryDelay time.Duration) *QueryEngine {
-	return &QueryEngine{qe: qe, NumRetries: numRetries, RetryDelay: retryDelay}
+func NewQueryEngine(logger logging.Logger, qe driver.QueryEngine, numRetries int, retryDelay time.Duration) *QueryEngine {
+	return &QueryEngine{logger: logger, qe: qe, NumRetries: numRetries, RetryDelay: retryDelay}
 }
 
 // IsMine returns true is the given token is in this vault and therefore owned by this client
@@ -83,7 +86,7 @@ func (q *QueryEngine) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) 
 			for _, id := range ids {
 				pending, err := q.qe.IsPending(id)
 				if pending || err != nil {
-					logger.Warnf("cannot get audit token for id [%s] because the relative transaction is pending, retry at [%d]: with err [%s]", id, i, err)
+					q.logger.Warnf("cannot get audit token for id [%s] because the relative transaction is pending, retry at [%d]: with err [%s]", id, i, err)
 					if i == q.NumRetries-1 {
 						return nil, errors.Errorf("failed to get audit tokens, tx [%s] is still pending", id.TxId)
 					}
@@ -142,12 +145,13 @@ func (c *CertificationStorage) Store(certifications map[*token.ID][]byte) error 
 
 // Vault models a token vault
 type Vault struct {
-	v driver.Vault
+	v      driver.Vault
+	logger logging.Logger
 }
 
 // NewQueryEngine returns a new query engine
 func (v *Vault) NewQueryEngine() *QueryEngine {
-	return NewQueryEngine(v.v.QueryEngine(), 3, 3*time.Second)
+	return NewQueryEngine(v.logger, v.v.QueryEngine(), 3, 3*time.Second)
 }
 
 func (v *Vault) CertificationStorage() *CertificationStorage {

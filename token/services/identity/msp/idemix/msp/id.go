@@ -11,8 +11,8 @@ import (
 	"time"
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
-	"github.com/IBM/idemix/common/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ const (
 	IdentityConfigurationType = "idemix"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.idemix")
+var logger = logging.MustGetLogger("token-sdk.services.identity.msp.idemix")
 
 type Identity struct {
 	NymPublicKey bccsp.Key

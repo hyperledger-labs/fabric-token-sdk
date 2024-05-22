@@ -9,7 +9,6 @@ package token
 import (
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"
 )
@@ -112,11 +111,11 @@ func TestPublicParameters_Auditors(t *testing.T) {
 	}
 
 	mockPP := pp.PublicParameters.(*mock.PublicParameters)
-	mockPP.AuditorsReturns([]view.Identity{[]byte("auditor1"), []byte("auditor2")})
+	mockPP.AuditorsReturns([]Identity{[]byte("auditor1"), []byte("auditor2")})
 
 	auditors := pp.Auditors()
 
-	expectedAuditors := []view.Identity{[]byte("auditor1"), []byte("auditor2")}
+	expectedAuditors := []Identity{[]byte("auditor1"), []byte("auditor2")}
 	assert.Equal(t, expectedAuditors, auditors)
 
 }

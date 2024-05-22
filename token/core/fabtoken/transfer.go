@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
@@ -49,9 +48,9 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
 
-	var senders []view.Identity
+	var senders []driver.Identity
 	for _, tok := range inputTokens {
-		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
+		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner.Raw))
 		senders = append(senders, tok.Owner.Raw)
 	}
 
@@ -80,7 +79,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 	ws := s.WalletService
 
 	// assemble transfer metadata
-	var receivers []view.Identity
+	var receivers []driver.Identity
 	var outputAuditInfos [][]byte
 	for i, output := range outs {
 		if output.Output == nil || output.Output.Owner == nil {
@@ -98,7 +97,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 		receivers = append(receivers, recipients...)
 		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Output.Owner.Raw, ws)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(output.Output.Owner.Raw).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Output.Owner.Raw).String())
 		}
 		outputAuditInfos = append(outputAuditInfos, auditInfo...)
 	}
@@ -107,7 +106,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 	for _, t := range inputTokens {
 		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner.Raw, ws)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner.Raw).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner.Raw).String())
 		}
 		senderAuditInfos = append(senderAuditInfos, auditInfo...)
 	}

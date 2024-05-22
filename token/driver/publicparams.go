@@ -6,8 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 // SerializedPublicParameters is the serialized form of PublicParameters.
 type SerializedPublicParameters struct {
 	// Identifier is the unique identifier of this public parameters.
@@ -47,7 +45,7 @@ type PublicParameters interface {
 	// Bytes returns the marshalled version of the public parameters.
 	Bytes() ([]byte, error)
 	// Auditors returns the list of auditors.
-	Auditors() []view.Identity
+	Auditors() []Identity
 	// Precision returns the precision used to represent the token value.
 	Precision() uint64
 	// String returns a readable version of the public parameters

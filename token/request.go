@@ -9,9 +9,6 @@ package token
 import (
 	"encoding/asn1"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -22,6 +19,10 @@ import (
 const (
 	TransferMetadataPrefix = meta.TransferMetadataPrefix
 )
+
+type Binder interface {
+	Bind(longTerm Identity, ephemeral Identity) error
+}
 
 // RecipientData contains information about the identity of a token owner
 type RecipientData = driver.RecipientData
@@ -133,26 +134,26 @@ type AuditRecord struct {
 // In particular, it carries the identities of the issuer and the receivers
 type Issue struct {
 	// Issuer is the issuer of the tokens
-	Issuer view.Identity
+	Issuer Identity
 	// Receivers is the list of identities of the receivers
-	Receivers []view.Identity
+	Receivers []Identity
 	// ExtraSigners is the list of extra identities that must sign the token request to make it valid.
 	// This field is to be used by the token drivers to list any additional identities that must
 	// sign the token request.
-	ExtraSigners []view.Identity
+	ExtraSigners []Identity
 }
 
 // Transfer contains information about a transfer operation.
 // In particular, it carries the identities of the senders and the receivers
 type Transfer struct {
 	// Senders is the list of identities of the senders
-	Senders []view.Identity
+	Senders []Identity
 	// Receivers is the list of identities of the receivers
-	Receivers []view.Identity
+	Receivers []Identity
 	// ExtraSigners is the list of extra identities that must sign the token request to make it valid.
 	// This field is to be used by the token drivers to list any additional identities that must
 	// sign the token request.
-	ExtraSigners []view.Identity
+	ExtraSigners []Identity
 }
 
 // Request aggregates token operations that must be performed atomically.
@@ -217,7 +218,7 @@ func (r *Request) ID() string {
 // Issue appends an issue action to the request. The action will be prepared using the provided issuer wallet.
 // The action issues to the receiver a token of the passed type and quantity.
 // Additional options can be passed to customize the action.
-func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string, q uint64, opts ...IssueOption) (*IssueAction, error) {
+func (r *Request) Issue(wallet *IssuerWallet, receiver Identity, typ string, q uint64, opts ...IssueOption) (*IssueAction, error) {
 	if wallet == nil {
 		return nil, errors.Errorf("wallet is nil")
 	}
@@ -247,7 +248,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	}
 
 	// Compute Issue
-	issue, meta, err := r.TokenService.tms.IssueService().Issue(
+	action, meta, err := r.TokenService.tms.IssueService().Issue(
 		id,
 		typ,
 		[]uint64{q},
@@ -261,43 +262,21 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	}
 
 	// Append
-	raw, err := issue.Serialize()
+	raw, err := action.Serialize()
 	if err != nil {
 		return nil, err
 	}
 	r.Actions.Issues = append(r.Actions.Issues, raw)
-	outputs, err := issue.GetSerializedOutputs()
-	if err != nil {
-		return nil, err
-	}
+	r.Metadata.Issues = append(r.Metadata.Issues, *meta)
 
-	auditInfo, err := r.TokenService.tms.WalletService().GetAuditInfo(receiver)
-	if err != nil {
-		return nil, err
-	}
-	if r.Metadata == nil {
-		return nil, errors.New("failed to complete issue: nil ValidationRecords in token request")
-	}
-
-	r.Metadata.Issues = append(r.Metadata.Issues,
-		driver.IssueMetadata{
-			Issuer:              meta.Issuer,
-			Outputs:             outputs,
-			TokenInfo:           meta.TokenInfo,
-			Receivers:           []view.Identity{receiver},
-			ReceiversAuditInfos: [][]byte{auditInfo},
-			ExtraSigners:        meta.ExtraSigners,
-		},
-	)
-
-	return &IssueAction{a: issue}, nil
+	return &IssueAction{a: action}, nil
 }
 
 // Transfer appends a transfer action to the request. The action will be prepared using the provided owner wallet.
 // The action transfers tokens of the passed types to the receivers for the passed quantities.
 // In other words, owners[0] will receives values[0], and so on.
 // Additional options can be passed to customize the action.
-func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...TransferOption) (*TransferAction, error) {
+func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, owners []Identity, opts ...TransferOption) (*TransferAction, error) {
 	for _, v := range values {
 		if v == 0 {
 			return nil, errors.Errorf("value is zero")
@@ -312,7 +291,7 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 		return nil, errors.Wrap(err, "failed preparing transfer")
 	}
 
-	logger.Debugf("Prepare Transfer Action [id:%s,ins:%d,outs:%d]", r.Anchor, len(tokenIDs), len(outputTokens))
+	r.TokenService.logger.Debugf("Prepare Transfer Action [id:%s,ins:%d,outs:%d]", r.Anchor, len(tokenIDs), len(outputTokens))
 
 	ts := r.TokenService.tms.TransferService()
 
@@ -329,7 +308,7 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating transfer action")
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
+	if r.TokenService.logger.IsEnabledFor(zapcore.DebugLevel) {
 		// double check
 		if err := ts.VerifyTransfer(transfer, transferMetadata.OutputsMetadata); err != nil {
 			return nil, errors.Wrap(err, "failed checking generated proof")
@@ -355,12 +334,12 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 	if err != nil {
 		return errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
-	tokenIDs, outputTokens, err := r.prepareTransfer(true, wallet, typ, []uint64{value}, []view.Identity{nil}, opt)
+	tokenIDs, outputTokens, err := r.prepareTransfer(true, wallet, typ, []uint64{value}, []Identity{nil}, opt)
 	if err != nil {
 		return errors.Wrap(err, "failed preparing transfer")
 	}
 
-	logger.Debugf("Prepare Redeem Action [ins:%d,outs:%d]", len(tokenIDs), len(outputTokens))
+	r.TokenService.logger.Debugf("Prepare Redeem Action [ins:%d,outs:%d]", len(tokenIDs), len(outputTokens))
 
 	ts := r.TokenService.tms.TransferService()
 
@@ -378,7 +357,7 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 		return errors.Wrap(err, "failed creating transfer action")
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
+	if r.TokenService.logger.IsEnabledFor(zapcore.DebugLevel) {
 		// double check
 		if err := ts.VerifyTransfer(transfer, transferMetadata.OutputsMetadata); err != nil {
 			return errors.Wrap(err, "failed checking generated proof")
@@ -489,17 +468,17 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 
 		// is the j-th meta present? It might have been filtered out
 		if issueMeta.IsOutputAbsent(j) {
-			logger.Debugf("Issue Action Output [%d,%d] is absent", i, j)
+			r.TokenService.logger.Debugf("Issue Action Output [%d,%d] is absent", i, j)
 			if failOnMissing {
 				return nil, 0, errors.Errorf("missing token info for output [%d,%d]", i, j)
 			}
 			counter++
 			continue
 		}
-		if len(issueAction.GetOutputs()) != len(issueMeta.TokenInfo) || len(issueMeta.ReceiversAuditInfos) != len(issueAction.GetOutputs()) {
+		if len(issueAction.GetOutputs()) != len(issueMeta.OutputsMetadata) || len(issueMeta.ReceiversAuditInfos) != len(issueAction.GetOutputs()) {
 			return nil, 0, errors.Wrapf(err, "failed matching issue action with its metadata [%d]: invalid metadata", i)
 		}
-		tok, _, err := tms.TokensService().DeserializeToken(raw, issueMeta.TokenInfo[j])
+		tok, _, err := tms.TokensService().DeserializeToken(raw, issueMeta.OutputsMetadata[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
@@ -551,7 +530,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 
 		// is the j-th meta present? It might have been filtered out
 		if transferMeta.IsOutputAbsent(j) {
-			logger.Debugf("Transfer Action Output [%d,%d] is absent", i, j)
+			r.TokenService.logger.Debugf("Transfer Action Output [%d,%d] is absent", i, j)
 			if failOnMissing {
 				return nil, 0, errors.Errorf("missing token info for output [%d,%d]", i, j)
 			}
@@ -586,7 +565,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		if !output.IsRedeem() {
 			ledgerOutput = raw
 		}
-		logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, hash.Hashable(ledgerOutput))
+		r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
 		outputs = append(outputs, &Output{
 			ActionIndex:       i,
 			Index:             counter,
@@ -721,7 +700,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 		}
 
 		if verifyActions {
-			if err := issueService.VerifyIssue(issueAction, issueMeta.TokenInfo); err != nil {
+			if err := issueService.VerifyIssue(issueAction, issueMeta.OutputsMetadata); err != nil {
 				return nil, nil, errors.WithMessagef(err, "failed verifying issue action")
 			}
 		}
@@ -889,14 +868,14 @@ func (r *Request) SetSignatures(sigmas map[string][]byte) {
 		if sigma, ok := sigmas[signer.UniqueID()]; ok {
 			signatures[i] = sigma
 		} else {
-			logger.Warnf("Signature %d for signer %s not found.", i, signer.UniqueID())
+			r.TokenService.logger.Warnf("Signature %d for signer %s not found.", i, signer.UniqueID())
 		}
 	}
 	r.Actions.Signatures = signatures
 }
 
-func (r *Request) TransferSigners() []view.Identity {
-	signers := make([]view.Identity, 0)
+func (r *Request) TransferSigners() []Identity {
+	signers := make([]Identity, 0)
 	for _, transfer := range r.Transfers() {
 		signers = append(signers, transfer.Senders...)
 		signers = append(signers, transfer.ExtraSigners...)
@@ -904,8 +883,8 @@ func (r *Request) TransferSigners() []view.Identity {
 	return signers
 }
 
-func (r *Request) IssueSigners() []view.Identity {
-	signers := make([]view.Identity, 0)
+func (r *Request) IssueSigners() []Identity {
+	signers := make([]Identity, 0)
 	for _, issue := range r.Issues() {
 		signers = append(signers, issue.Issuer)
 		signers = append(signers, issue.ExtraSigners...)
@@ -919,13 +898,7 @@ func (r *Request) SetTokenService(service *ManagementService) {
 }
 
 // BindTo binds transfers' senders and receivers, that are senders, that are not me to the passed identity
-func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
-	resolver := view2.GetEndpointService(sp)
-	longTermIdentity, _, _, err := view2.GetEndpointService(sp).Resolve(party)
-	if err != nil {
-		return errors.Wrap(err, "cannot resolve identity")
-	}
-
+func (r *Request) BindTo(binder Binder, identity Identity) error {
 	for i := range r.Actions.Transfers {
 		// senders
 		for _, eid := range r.Metadata.Transfers[i].Senders {
@@ -933,8 +906,8 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 				// this is me, skip
 				continue
 			}
-			logger.Debugf("bind sender [%s] to [%s]", eid, party)
-			if err := resolver.Bind(longTermIdentity, eid); err != nil {
+			r.TokenService.logger.Debugf("bind sender [%s] to [%s]", eid, identity)
+			if err := binder.Bind(identity, eid); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
 		}
@@ -945,8 +918,8 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 				// this is me, skip
 				continue
 			}
-			logger.Debugf("bind extra signer [%s] to [%s]", eid, party)
-			if err := resolver.Bind(longTermIdentity, eid); err != nil {
+			r.TokenService.logger.Debugf("bind extra signer [%s] to [%s]", eid, identity)
+			if err := binder.Bind(identity, eid); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
 		}
@@ -960,8 +933,8 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 					continue
 				}
 
-				logger.Debugf("bind receiver as sender [%s] to [%s]", receivers[j], party)
-				if err := resolver.Bind(longTermIdentity, receivers[j]); err != nil {
+				r.TokenService.logger.Debugf("bind receiver as sender [%s] to [%s]", receivers[j], identity)
+				if err := binder.Bind(identity, receivers[j]); err != nil {
 					return errors.Wrap(err, "failed binding receiver identities")
 				}
 			}
@@ -999,7 +972,7 @@ func (r *Request) Transfers() []*Transfer {
 // AuditCheck performs the audit check of the request in addition to
 // the checks of the token request itself via IsValid.
 func (r *Request) AuditCheck() error {
-	logger.Debugf("audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID())
+	r.TokenService.logger.Debugf("audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID())
 	if err := r.IsValid(); err != nil {
 		return err
 	}
@@ -1052,7 +1025,6 @@ func (r *Request) AuditRecord() (*AuditRecord, error) {
 			return nil, errors.Wrapf(err, "failed getting audit info for owner [%s]", toks[i].Owner)
 		}
 		in.OwnerAuditInfo = ownerAuditInfo
-
 	}
 
 	return &AuditRecord{
@@ -1088,6 +1060,7 @@ func (r *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
 		TokenService:         r.TokenService.tms.TokensService(),
 		WalletService:        r.TokenService.tms.WalletService(),
 		TokenRequestMetadata: r.Metadata,
+		Logger:               r.TokenService.logger,
 	}
 	filteredMeta, err := meta.FilterBy(eIDs[0])
 	if err != nil {
@@ -1107,6 +1080,7 @@ func (r *Request) GetMetadata() (*Metadata, error) {
 		TokenService:         r.TokenService.tms.TokensService(),
 		WalletService:        r.TokenService.tms.WalletService(),
 		TokenRequestMetadata: r.Metadata,
+		Logger:               r.TokenService.logger,
 	}, nil
 }
 
@@ -1139,7 +1113,7 @@ func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 	return inputs, sum, typ, nil
 }
 
-func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType string, values []uint64, owners []view.Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
+func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType string, values []uint64, owners []Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
 	for _, owner := range owners {
 		if redeem {
 			if !owner.IsNone() {
@@ -1200,7 +1174,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 	switch cmp {
 	case 1:
 		diff := inputSum.Sub(outputSum)
-		logger.Debugf("reassign rest [%s] to sender", diff.Decimal())
+		r.TokenService.logger.Debugf("reassign rest [%s] to sender", diff.Decimal())
 
 		var restIdentity []byte
 		if transferOpts.RestRecipientIdentity != nil {
@@ -1226,7 +1200,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 	}
 
 	if r.TokenService.PublicParametersManager().PublicParameters().GraphHiding() {
-		logger.Debugf("graph hiding enabled, request certification")
+		r.TokenService.logger.Debugf("graph hiding enabled, request certification")
 		// Check token certification
 		cc, err := r.TokenService.CertificationClient()
 		if err != nil {
@@ -1240,7 +1214,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 	return tokenIDs, outputTokens, nil
 }
 
-func (r *Request) genOutputs(values []uint64, owners []view.Identity, tokenType string) ([]*token.Token, token.Quantity, error) {
+func (r *Request) genOutputs(values []uint64, owners []Identity, tokenType string) ([]*token.Token, token.Quantity, error) {
 	pp := r.TokenService.PublicParametersManager().PublicParameters()
 	precision := pp.Precision()
 	maxTokenValue := pp.MaxTokenValue()

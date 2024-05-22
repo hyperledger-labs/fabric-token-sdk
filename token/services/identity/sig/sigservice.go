@@ -11,13 +11,13 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.services.identity.sig")
+var logger = logging.MustGetLogger("token-sdk.services.identity.sig")
 
 type Storage interface {
 	StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error

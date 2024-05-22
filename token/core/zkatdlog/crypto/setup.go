@@ -14,7 +14,6 @@ import (
 	"strconv"
 
 	mathlib "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -151,11 +150,11 @@ func (pp *PublicParams) Bytes() ([]byte, error) {
 	return pp.Serialize()
 }
 
-func (pp *PublicParams) Auditors() []view.Identity {
+func (pp *PublicParams) Auditors() []driver.Identity {
 	if len(pp.Auditor) == 0 {
-		return []view.Identity{}
+		return []driver.Identity{}
 	}
-	return []view.Identity{pp.Auditor}
+	return []driver.Identity{pp.Auditor}
 }
 
 func (pp *PublicParams) Serialize() ([]byte, error) {
@@ -221,11 +220,11 @@ func (pp *PublicParams) GenerateRangeProofParameters(bitLength int) error {
 	return nil
 }
 
-func (pp *PublicParams) AddAuditor(auditor view.Identity) {
+func (pp *PublicParams) AddAuditor(auditor driver.Identity) {
 	pp.Auditor = auditor
 }
 
-func (pp *PublicParams) AddIssuer(id view.Identity) {
+func (pp *PublicParams) AddIssuer(id driver.Identity) {
 	pp.Issuers = append(pp.Issuers, id)
 }
 

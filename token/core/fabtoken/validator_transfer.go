@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
@@ -28,15 +27,15 @@ func TransferSignatureValidate(ctx *Context) error {
 	ctx.InputTokens = inputTokens
 
 	for _, tok := range inputTokens {
-		ctx.Logger.Debugf("check sender [%s]", view.Identity(tok.Owner.Raw).UniqueID())
+		ctx.Logger.Debugf("check sender [%s]", driver.Identity(tok.Owner.Raw).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner.Raw)
 		if err != nil {
-			return errors.Wrapf(err, "failed deserializing owner [%v][%s]", tok, view.Identity(tok.Owner.Raw).UniqueID())
+			return errors.Wrapf(err, "failed deserializing owner [%v][%s]", tok, driver.Identity(tok.Owner.Raw).UniqueID())
 		}
-		ctx.Logger.Debugf("signature verification [%v][%s]", tok, view.Identity(tok.Owner.Raw).UniqueID())
+		ctx.Logger.Debugf("signature verification [%v][%s]", tok, driver.Identity(tok.Owner.Raw).UniqueID())
 		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(tok.Owner.Raw, verifier)
 		if err != nil {
-			return errors.Wrapf(err, "failed signature verification [%v][%s]", tok, view.Identity(tok.Owner.Raw).UniqueID())
+			return errors.Wrapf(err, "failed signature verification [%v][%s]", tok, driver.Identity(tok.Owner.Raw).UniqueID())
 		}
 		ctx.Signatures = append(ctx.Signatures, sigma)
 	}

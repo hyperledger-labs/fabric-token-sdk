@@ -7,9 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -19,13 +18,14 @@ type Metadata struct {
 	TokenService         driver.TokensService
 	WalletService        driver.WalletService
 	TokenRequestMetadata *driver.TokenRequestMetadata
+	Logger               logging.Logger
 }
 
 // GetToken unmarshals the given bytes to extract the token and its issuer (if any).
-func (m *Metadata) GetToken(raw []byte) (*token.Token, view.Identity, []byte, error) {
+func (m *Metadata) GetToken(raw []byte) (*token.Token, Identity, []byte, error) {
 	tokenInfoRaw, err := m.TokenService.GetTokenInfo(m.TokenRequestMetadata, raw)
 	if err != nil {
-		return nil, nil, nil, errors.WithMessagef(err, "metadata for [%s] not found", hash.Hashable(raw).String())
+		return nil, nil, nil, errors.WithMessagef(err, "metadata for [%s] not found", Hashable(raw).String())
 	}
 	tok, id, err := m.TokenService.DeserializeToken(raw, tokenInfoRaw)
 	if err != nil {
@@ -57,6 +57,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 		TokenService:         m.TokenService,
 		WalletService:        m.WalletService,
 		TokenRequestMetadata: &driver.TokenRequestMetadata{},
+		Logger:               m.Logger,
 	}
 
 	// filter issues
@@ -73,21 +74,21 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 				return nil, errors.Wrap(err, "failed getting enrollment ID")
 			}
 			var Outputs []byte
-			var TokenInfo []byte
-			var Receivers view.Identity
+			var OutputsMetadata []byte
+			var Receivers Identity
 			var ReceiverAuditInfos []byte
 
 			if search(eIDs, recipientEID) != -1 {
 				Outputs = issue.Outputs[i]
-				TokenInfo = issue.TokenInfo[i]
+				OutputsMetadata = issue.OutputsMetadata[i]
 				Receivers = issue.Receivers[i]
 				ReceiverAuditInfos = issue.ReceiversAuditInfos[i]
 			} else {
-				logger.Debugf("skipping issue for [%s]", recipientEID)
+				m.Logger.Debugf("skipping issue for [%s]", recipientEID)
 			}
 
 			issueRes.Outputs = append(issueRes.Outputs, Outputs)
-			issueRes.TokenInfo = append(issueRes.TokenInfo, TokenInfo)
+			issueRes.OutputsMetadata = append(issueRes.OutputsMetadata, OutputsMetadata)
 			issueRes.Receivers = append(issueRes.Receivers, Receivers)
 			issueRes.ReceiversAuditInfos = append(issueRes.ReceiversAuditInfos, ReceiverAuditInfos)
 		}
@@ -111,12 +112,12 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			}
 			var Outputs []byte
 			var TokenInfo []byte
-			var Receivers view.Identity
+			var Receivers Identity
 			var ReceiverIsSender bool
 			var ReceiverAuditInfos []byte
 
 			if search(eIDs, recipientEID) != -1 {
-				logger.Debugf("keeping transfer for [%s]", recipientEID)
+				m.Logger.Debugf("keeping transfer for [%s]", recipientEID)
 				Outputs = transfer.Outputs[i]
 				TokenInfo = transfer.OutputsMetadata[i]
 				Receivers = transfer.Receivers[i]
@@ -124,7 +125,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 				ReceiverAuditInfos = transfer.ReceiverAuditInfos[i]
 				skip = false
 			} else {
-				logger.Debugf("skipping transfer for [%s]", recipientEID)
+				m.Logger.Debugf("skipping transfer for [%s]", recipientEID)
 			}
 
 			transferRes.Outputs = append(transferRes.Outputs, Outputs)
@@ -145,14 +146,14 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			}
 		}
 
-		logger.Debugf("keeping transfer with [%d] out of [%d] outputs", len(transferRes.Outputs), len(transfer.Outputs))
+		m.Logger.Debugf("keeping transfer with [%d] out of [%d] outputs", len(transferRes.Outputs), len(transfer.Outputs))
 		res.TokenRequestMetadata.Transfers = append(res.TokenRequestMetadata.Transfers, transferRes)
 	}
 
 	// application
 	res.TokenRequestMetadata.Application = m.TokenRequestMetadata.Application
 
-	logger.Debugf("filtered metadata for [% x] from [%d:%d] to [%d:%d]",
+	m.Logger.Debugf("filtered metadata for [% x] from [%d:%d] to [%d:%d]",
 		eIDs,
 		len(m.TokenRequestMetadata.Issues), len(m.TokenRequestMetadata.Transfers),
 		len(res.TokenRequestMetadata.Issues), len(res.TokenRequestMetadata.Transfers))
@@ -192,8 +193,8 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	if len(m.Outputs) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.Outputs), action.NumOutputs())
 	}
-	if len(m.Outputs) != len(m.TokenInfo) {
-		return errors.Errorf("expected [%d] token info but got [%d]", len(m.Outputs), len(m.TokenInfo))
+	if len(m.Outputs) != len(m.OutputsMetadata) {
+		return errors.Errorf("expected [%d] token info but got [%d]", len(m.Outputs), len(m.OutputsMetadata))
 	}
 	if len(m.Outputs) != len(m.Receivers) {
 		return errors.Errorf("expected [%d] receivers but got [%d]", len(m.Outputs), len(m.Receivers))
@@ -206,7 +207,7 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 
 // IsOutputAbsent returns true if the given output's metadata is absent
 func (m *IssueMetadata) IsOutputAbsent(j int) bool {
-	return len(m.TokenInfo[j]) == 0
+	return len(m.OutputsMetadata[j]) == 0
 }
 
 // TransferMetadata contains the metadata of a transfer action

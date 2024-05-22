@@ -11,14 +11,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.idemix")
+var logger = logging.MustGetLogger("token-sdk.services.identity.msp.idemix")
 
 type IdentityCacheBackendFunc func(opts *common.IdentityOptions) (driver.Identity, []byte, error)
 

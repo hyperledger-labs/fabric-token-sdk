@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"math"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -106,27 +105,27 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 }
 
 // AuditorIdentity returns the auditor identity encoded in PublicParams
-func (pp *PublicParams) AuditorIdentity() view.Identity {
+func (pp *PublicParams) AuditorIdentity() driver.Identity {
 	return pp.Auditor
 }
 
 // AddAuditor sets the Auditor field in PublicParams to the passed identity
-func (pp *PublicParams) AddAuditor(auditor view.Identity) {
+func (pp *PublicParams) AddAuditor(auditor driver.Identity) {
 	pp.Auditor = auditor
 }
 
 // AddIssuer adds the passed issuer to the array of Issuers in PublicParams
-func (pp *PublicParams) AddIssuer(issuer view.Identity) {
+func (pp *PublicParams) AddIssuer(issuer driver.Identity) {
 	pp.Issuers = append(pp.Issuers, issuer)
 }
 
 // Auditors returns the list of authorized auditors
 // fabtoken only supports a single auditor
-func (pp *PublicParams) Auditors() []view.Identity {
+func (pp *PublicParams) Auditors() []driver.Identity {
 	if len(pp.Auditor) == 0 {
-		return []view.Identity{}
+		return []driver.Identity{}
 	}
-	return []view.Identity{pp.Auditor}
+	return []driver.Identity{pp.Auditor}
 }
 
 // Precision returns the quantity precision encoded in PublicParams

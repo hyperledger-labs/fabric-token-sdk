@@ -11,7 +11,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -39,13 +38,13 @@ func TestOutput_ID(t *testing.T) {
 }
 
 func TestOutputStream_Filter(t *testing.T) {
-	output1 := &Output{Owner: view.Identity("owner1")}
-	output2 := &Output{Owner: view.Identity("owner2")}
-	output3 := &Output{Owner: view.Identity("owner1")}
+	output1 := &Output{Owner: Identity("owner1")}
+	output2 := &Output{Owner: Identity("owner2")}
+	output3 := &Output{Owner: Identity("owner1")}
 	stream := NewOutputStream([]*Output{output1, output2, output3}, 0)
 
 	filtered := stream.Filter(func(t *Output) bool {
-		return t.Owner.Equal(view.Identity("owner1"))
+		return t.Owner.Equal(Identity("owner1"))
 	})
 
 	assert.Equal(t, 2, filtered.Count())
@@ -107,8 +106,8 @@ func TestInputStream_IsAnyMine(t *testing.T) {
 }
 
 func TestOutputStream_ByRecipient(t *testing.T) {
-	identity1 := view.Identity("owner1")
-	identity2 := view.Identity("owner2")
+	identity1 := Identity("owner1")
+	identity2 := Identity("owner2")
 	output1 := &Output{Owner: identity1}
 	output2 := &Output{Owner: identity2}
 	output3 := &Output{Owner: identity1}
@@ -231,8 +230,8 @@ func TestOutputStream_TokenTypes(t *testing.T) {
 }
 
 func TestInputStream_Owners(t *testing.T) {
-	identity1 := view.Identity("owner1")
-	identity2 := view.Identity("owner2")
+	identity1 := Identity("owner1")
+	identity2 := Identity("owner2")
 	input1 := &Input{Owner: identity1}
 	input2 := &Input{Owner: identity2}
 	input3 := &Input{Owner: identity1}

@@ -14,18 +14,17 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	pb "github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.tcc")
+var logger = logging.MustGetLogger("token-sdk.tcc")
 
 const (
 	InvokeFunction            = "invoke"

@@ -10,14 +10,14 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.services.identity")
+var logger = logging.MustGetLogger("token-sdk.services.identity")
 
 // Deserializer is an interface for deserializing identities
 type Deserializer interface {

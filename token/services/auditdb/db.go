@@ -12,17 +12,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
 
 var (
-	logger    = flogging.MustGetLogger("token-sdk.auditdb")
+	logger    = logging.MustGetLogger("token-sdk.auditdb")
 	driversMu sync.RWMutex
 	drivers   = make(map[string]driver.AuditDBDriver)
 )

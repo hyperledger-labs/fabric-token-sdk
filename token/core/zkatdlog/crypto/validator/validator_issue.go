@@ -9,8 +9,8 @@ package validator
 import (
 	"bytes"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
@@ -38,13 +38,13 @@ func IssueValidate(ctx *Context) error {
 			}
 		}
 		if !found {
-			return errors.Errorf("issuer [%s] is not in issuers", view.Identity(action.Issuer).String())
+			return errors.Errorf("issuer [%s] is not in issuers", driver.Identity(action.Issuer).String())
 		}
 	}
 
 	verifier, err := ctx.Deserializer.GetIssuerVerifier(action.Issuer)
 	if err != nil {
-		return errors.Wrapf(err, "failed getting verifier for [%s]", view.Identity(action.Issuer).String())
+		return errors.Wrapf(err, "failed getting verifier for [%s]", driver.Identity(action.Issuer).String())
 	}
 	if _, err := ctx.SignatureProvider.HasBeenSignedBy(action.Issuer, verifier); err != nil {
 		return errors.Wrapf(err, "failed verifying signature")

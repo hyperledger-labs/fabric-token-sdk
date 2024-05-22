@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -76,7 +75,7 @@ func (wm *WalletManager) RegisterRecipientIdentity(data *RecipientData) error {
 
 // Wallet returns the wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
-func (wm *WalletManager) Wallet(identity view.Identity) *Wallet {
+func (wm *WalletManager) Wallet(identity Identity) *Wallet {
 	w := wm.walletService.Wallet(identity)
 	if w == nil {
 		return nil
@@ -99,7 +98,7 @@ func (wm *WalletManager) OwnerWalletIDs() ([]string, error) {
 func (wm *WalletManager) OwnerWallet(id WalletLookupID) *OwnerWallet {
 	w, err := wm.walletService.OwnerWallet(id)
 	if err != nil {
-		logger.Debugf("failed to get owner wallet for id [%s]: [%s]", id, err)
+		wm.managementService.logger.Debugf("failed to get owner wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -111,7 +110,7 @@ func (wm *WalletManager) OwnerWallet(id WalletLookupID) *OwnerWallet {
 func (wm *WalletManager) IssuerWallet(id WalletLookupID) *IssuerWallet {
 	w, err := wm.walletService.IssuerWallet(id)
 	if err != nil {
-		logger.Debugf("failed to get issuer wallet for id [%s]: [%s]", id, err)
+		wm.managementService.logger.Debugf("failed to get issuer wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -123,7 +122,7 @@ func (wm *WalletManager) IssuerWallet(id WalletLookupID) *IssuerWallet {
 func (wm *WalletManager) AuditorWallet(id WalletLookupID) *AuditorWallet {
 	w, err := wm.walletService.AuditorWallet(id)
 	if err != nil {
-		logger.Debugf("failed to get auditor wallet for id [%s]: [%s]", id, err)
+		wm.managementService.logger.Debugf("failed to get auditor wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &AuditorWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -135,14 +134,14 @@ func (wm *WalletManager) AuditorWallet(id WalletLookupID) *AuditorWallet {
 func (wm *WalletManager) CertifierWallet(id WalletLookupID) *CertifierWallet {
 	w, err := wm.walletService.CertifierWallet(id)
 	if err != nil {
-		logger.Debugf("failed to get certifier wallet for id [%s]: [%s]", id, err)
+		wm.managementService.logger.Debugf("failed to get certifier wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
 // GetEnrollmentID returns the enrollment ID of passed identity
-func (wm *WalletManager) GetEnrollmentID(identity view.Identity) (string, error) {
+func (wm *WalletManager) GetEnrollmentID(identity Identity) (string, error) {
 	auditInfo, err := wm.walletService.GetAuditInfo(identity)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
@@ -151,7 +150,7 @@ func (wm *WalletManager) GetEnrollmentID(identity view.Identity) (string, error)
 }
 
 // GetRevocationHandle returns the revocation handle of the passed identity
-func (wm *WalletManager) GetRevocationHandle(identity view.Identity) (string, error) {
+func (wm *WalletManager) GetRevocationHandle(identity Identity) (string, error) {
 	auditInfo, err := wm.walletService.GetAuditInfo(identity)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
@@ -183,7 +182,7 @@ func (w *Wallet) TMS() *ManagementService {
 }
 
 // Contains returns true if the wallet contains the passed identity.
-func (w *Wallet) Contains(identity view.Identity) bool {
+func (w *Wallet) Contains(identity Identity) bool {
 	return w.w.Contains(identity)
 }
 
@@ -200,12 +199,12 @@ type AuditorWallet struct {
 
 // GetAuditorIdentity returns the auditor identity. This can be a long term identity or a pseudonym depending
 // on the underlying token driver.
-func (a *AuditorWallet) GetAuditorIdentity() (view.Identity, error) {
+func (a *AuditorWallet) GetAuditorIdentity() (Identity, error) {
 	return a.w.GetAuditorIdentity()
 }
 
 // GetSigner returns the signer bound to the passed auditor identity.
-func (a *AuditorWallet) GetSigner(id view.Identity) (driver.Signer, error) {
+func (a *AuditorWallet) GetSigner(id Identity) (driver.Signer, error) {
 	return a.w.GetSigner(id)
 }
 
@@ -217,12 +216,12 @@ type CertifierWallet struct {
 
 // GetCertifierIdentity returns the certifier identity. This can be a long term identity or a pseudonym depending
 // on the underlying token driver.
-func (a *CertifierWallet) GetCertifierIdentity() (view.Identity, error) {
+func (a *CertifierWallet) GetCertifierIdentity() (Identity, error) {
 	return a.w.GetCertifierIdentity()
 }
 
 // GetSigner returns the signer bound to the passed certifier identity.
-func (a *CertifierWallet) GetSigner(id view.Identity) (driver.Signer, error) {
+func (a *CertifierWallet) GetSigner(id Identity) (driver.Signer, error) {
 	return a.w.GetSigner(id)
 }
 
@@ -234,12 +233,12 @@ type OwnerWallet struct {
 
 // GetRecipientIdentity returns the owner identity. This can be a long term identity or a pseudonym depending
 // on the underlying token driver.
-func (o *OwnerWallet) GetRecipientIdentity() (view.Identity, error) {
+func (o *OwnerWallet) GetRecipientIdentity() (Identity, error) {
 	return o.w.GetRecipientIdentity()
 }
 
 // GetAuditInfo returns auditing information for the passed identity
-func (o *OwnerWallet) GetAuditInfo(id view.Identity) ([]byte, error) {
+func (o *OwnerWallet) GetAuditInfo(id Identity) ([]byte, error) {
 	return o.w.GetAuditInfo(id)
 }
 
@@ -254,7 +253,7 @@ func (o *OwnerWallet) GetTokenMetadataAuditInfo(token []byte) ([]byte, error) {
 }
 
 // GetSigner returns the signer bound to the passed owner identity.
-func (o *OwnerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
+func (o *OwnerWallet) GetSigner(identity Identity) (driver.Signer, error) {
 	return o.w.GetSigner(identity)
 }
 
@@ -305,12 +304,12 @@ type IssuerWallet struct {
 
 // GetIssuerIdentity returns the issuer identity. This can be a long term identity or a pseudonym depending
 // on the underlying token driver.
-func (i *IssuerWallet) GetIssuerIdentity(tokenType string) (view.Identity, error) {
+func (i *IssuerWallet) GetIssuerIdentity(tokenType string) (Identity, error) {
 	return i.w.GetIssuerIdentity(tokenType)
 }
 
 // GetSigner returns the signer bound to the passed issuer identity.
-func (i *IssuerWallet) GetSigner(identity view.Identity) (Signer, error) {
+func (i *IssuerWallet) GetSigner(identity Identity) (Signer, error) {
 	return i.w.GetSigner(identity)
 }
 

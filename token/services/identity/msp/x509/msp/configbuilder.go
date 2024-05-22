@@ -11,14 +11,14 @@ import (
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.x509")
+var logger = logging.MustGetLogger("token-sdk.services.identity.msp.x509")
 
 // ProviderType indicates the type of identity provider
 type ProviderType int

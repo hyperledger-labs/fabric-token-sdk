@@ -18,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
@@ -364,7 +363,7 @@ func (f *fakeProv) TranslatePath(path string) string {
 	return ""
 }
 
-func getIdemixInfo(dir string) (view.Identity, *msp3.AuditInfo, driver.SigningIdentity) {
+func getIdemixInfo(dir string) (driver.Identity, *msp3.AuditInfo, driver.SigningIdentity) {
 	registry := registry2.New()
 	Expect(registry.RegisterService(&fakeProv{typ: "memory"})).NotTo(HaveOccurred())
 
@@ -423,7 +422,7 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer) (*driver.TokenR
 	}
 
 	metadata := driver.IssueMetadata{}
-	metadata.TokenInfo = marshalledinf
+	metadata.OutputsMetadata = marshalledinf
 	metadata.Outputs = make([][]byte, len(issue.OutputTokens))
 	metadata.ReceiversAuditInfos = make([][]byte, len(issue.OutputTokens))
 	for i := 0; i < len(issue.OutputTokens); i++ {

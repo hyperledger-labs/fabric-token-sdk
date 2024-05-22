@@ -9,16 +9,16 @@ package nfttx
 import (
 	"encoding/base64"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/marshaller"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.nfttx")
+var logger = logging.MustGetLogger("token-sdk.nfttx")
 
 type TxOption ttx.TxOption
 

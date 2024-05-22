@@ -11,14 +11,13 @@ import (
 	"encoding/base64"
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.vault.translator")
+var logger = logging.MustGetLogger("token-sdk.vault.translator")
 
 // Translator validates token requests and generates the corresponding RWSets
 type Translator struct {

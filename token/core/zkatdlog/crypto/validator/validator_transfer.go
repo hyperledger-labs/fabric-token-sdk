@@ -11,9 +11,9 @@ import (
 	"time"
 
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
@@ -43,15 +43,15 @@ func TransferSignatureValidate(ctx *Context) error {
 			return errors.Wrapf(err, "failed to deserialize input to spend [%s]", in)
 		}
 		tokens = append(tokens, tok)
-		ctx.Logger.Debugf("check sender [%d][%s]", i, view.Identity(tok.Owner).UniqueID())
+		ctx.Logger.Debugf("check sender [%d][%s]", i, driver.Identity(tok.Owner).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner)
 		if err != nil {
-			return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, view.Identity(tok.Owner).UniqueID())
+			return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
 		}
-		ctx.Logger.Debugf("signature verification [%d][%s][%s]", i, in, view.Identity(tok.Owner).UniqueID())
+		ctx.Logger.Debugf("signature verification [%d][%s][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
 		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(tok.Owner, verifier)
 		if err != nil {
-			return errors.Wrapf(err, "failed signature verification [%d][%s][%s]", i, in, view.Identity(tok.Owner).UniqueID())
+			return errors.Wrapf(err, "failed signature verification [%d][%s][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
 		}
 		signatures = append(signatures, sigma)
 	}

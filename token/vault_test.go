@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -21,7 +23,7 @@ func TestQueryEngine_IsMine(t *testing.T) {
 	expectedID := &token.ID{TxId: "a_transaction", Index: 0}
 	mockQE.IsMineReturns(true, nil)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	isMine, err := queryEngine.IsMine(expectedID)
 	assert.NoError(t, err)
 	assert.True(t, isMine)
@@ -32,7 +34,7 @@ func TestQueryEngine_IsMine_Error(t *testing.T) {
 	expectedErr := errors.New("mock error")
 	mockQE.IsMineReturns(false, expectedErr)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	isMine, err := queryEngine.IsMine(nil)
 	assert.Error(t, err)
 	assert.False(t, isMine)
@@ -49,7 +51,7 @@ func TestQueryEngine_ListAuditTokens(t *testing.T) {
 	}}
 	mockQE.ListAuditTokensReturns(expectedTokens, nil)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	tokens, err := queryEngine.ListAuditTokens(expectedIDs...)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
@@ -79,7 +81,7 @@ func TestQueryEngine_ListAuditTokens_IsPendingTrue(t *testing.T) {
 	mockQE.ListAuditTokensReturnsOnCall(1, expectedTokens, nil)
 	mockQE.IsPendingReturnsOnCall(0, true, nil)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	tokens, err := queryEngine.ListAuditTokens(expectedIDs...)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
@@ -99,7 +101,7 @@ func TestQueryEngine_ListAuditTokens_IsPendingTrueNumRetries(t *testing.T) {
 	mockQE.IsPendingReturnsOnCall(1, true, nil)
 	mockQE.IsPendingReturnsOnCall(2, true, nil)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	tokens, err := queryEngine.ListAuditTokens(expectedIDs...)
 	assert.Error(t, err)
 	assert.Empty(t, tokens)
@@ -115,7 +117,7 @@ func TestQueryEngine_UnspentTokensIterator_Error(t *testing.T) {
 	expectedErr := errors.New("mock error")
 	mockQE.UnspentTokensIteratorReturns(nil, expectedErr)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	iterator, err := queryEngine.UnspentTokensIterator()
 	assert.Error(t, err)
 	assert.Nil(t, iterator)
@@ -127,7 +129,7 @@ func TestQueryEngine_ListUnspentTokens(t *testing.T) {
 	expectedUnspentTokens := &token.UnspentTokens{}
 	mockQE.ListUnspentTokensReturns(expectedUnspentTokens, nil)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	unspentTokens, err := queryEngine.ListUnspentTokens()
 	assert.NoError(t, err)
 	assert.Equal(t, expectedUnspentTokens, unspentTokens)
@@ -138,7 +140,7 @@ func TestQueryEngine_ListUnspentTokens_Error(t *testing.T) {
 	expectedErr := errors.New("mock error")
 	mockQE.ListUnspentTokensReturns(nil, expectedErr)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	unspentTokens, err := queryEngine.ListUnspentTokens()
 	assert.Error(t, err)
 	assert.Nil(t, unspentTokens)
@@ -150,7 +152,7 @@ func TestQueryEngine_ListHistoryIssuedTokens(t *testing.T) {
 	expectedIssuedTokens := &token.IssuedTokens{}
 	mockQE.ListHistoryIssuedTokensReturns(expectedIssuedTokens, nil)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	issuedTokens, err := queryEngine.ListHistoryIssuedTokens()
 	assert.NoError(t, err)
 	assert.Equal(t, expectedIssuedTokens, issuedTokens)
@@ -161,7 +163,7 @@ func TestQueryEngine_ListHistoryIssuedTokens_Error(t *testing.T) {
 	expectedErr := errors.New("mock error")
 	mockQE.ListHistoryIssuedTokensReturns(nil, expectedErr)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	issuedTokens, err := queryEngine.ListHistoryIssuedTokens()
 	assert.Error(t, err)
 	assert.Nil(t, issuedTokens)
@@ -173,7 +175,7 @@ func TestQueryEngine_PublicParams(t *testing.T) {
 	expectedParams := []byte("public parameters")
 	mockQE.PublicParamsReturns(expectedParams, nil)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	params, err := queryEngine.PublicParams()
 	assert.NoError(t, err)
 	assert.Equal(t, expectedParams, params)
@@ -184,7 +186,7 @@ func TestQueryEngine_PublicParams_Error(t *testing.T) {
 	expectedErr := errors.New("mock error")
 	mockQE.PublicParamsReturns(nil, expectedErr)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	params, err := queryEngine.PublicParams()
 	assert.Error(t, err)
 	assert.Nil(t, params)
@@ -200,7 +202,7 @@ func TestQueryEngine_GetTokens(t *testing.T) {
 	}}
 	mockQE.GetTokensReturns(nil, expectedTokens, nil)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	tokens, err := queryEngine.GetTokens(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
@@ -212,7 +214,7 @@ func TestQueryEngine_GetTokens_Error(t *testing.T) {
 	expectedErr := errors.New("mock error")
 	mockQE.GetTokensReturns(nil, nil, expectedErr)
 
-	queryEngine := NewQueryEngine(mockQE, 3, time.Second)
+	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	tokens, err := queryEngine.GetTokens(nil)
 	assert.Error(t, err)
 	assert.Nil(t, tokens)

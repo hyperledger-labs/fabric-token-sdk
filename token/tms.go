@@ -9,14 +9,13 @@ package token
 import (
 	"fmt"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk")
+var logger = logging.MustGetLogger("token-sdk")
 
 // TMSID models a TMS identifier
 type TMSID struct {
@@ -172,6 +171,7 @@ type ManagementService struct {
 	selectorManagerProvider     SelectorManagerProvider
 	signatureService            *SignatureService
 	vault                       *Vault
+	logger                      logging.Logger
 }
 
 // String returns a string representation of the TMS
@@ -220,6 +220,7 @@ func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) 
 		TokenService:         t.tms.TokensService(),
 		WalletService:        t.tms.WalletService(),
 		TokenRequestMetadata: tokenRequestMetadata,
+		Logger:               t.logger,
 	}, nil
 }
 
@@ -296,7 +297,7 @@ func (t *ManagementService) init() error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", t.namespace, t.channel, t.namespace)
 	}
-	t.vault = &Vault{v: v}
+	t.vault = &Vault{v: v, logger: t.logger}
 	return nil
 }
 
@@ -353,7 +354,7 @@ func NewPublicParametersManagerFromPublicParams(params []byte) (*PublicParameter
 	return &PublicParametersManager{ppm: ppm}, nil
 }
 
-func NewWalletManager(sp view.ServiceProvider, network string, channel string, namespace string, params []byte) (*WalletManager, error) {
+func NewWalletManager(sp ServiceProvider, network string, channel string, namespace string, params []byte) (*WalletManager, error) {
 	logger.Debugf("unmarshall public parameters...")
 	pp, err := core.PublicParametersFromBytes(params)
 	if err != nil {

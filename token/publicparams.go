@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -52,7 +51,7 @@ func (c *PublicParameters) Identifier() string {
 }
 
 // Auditors returns the list of auditors' identities
-func (c *PublicParameters) Auditors() []view.Identity {
+func (c *PublicParameters) Auditors() []Identity {
 	return c.PublicParameters.Auditors()
 }
 
