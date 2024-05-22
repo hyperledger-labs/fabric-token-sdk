@@ -7,9 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
-	"sync"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	"github.com/pkg/errors"
 )
 
@@ -58,13 +57,16 @@ func (m *TMS) IsSet(key string) bool {
 type TokenSDK struct {
 	cp configProvider
 
-	tmsConfigsLock sync.RWMutex
-	tmsConfigs     map[string]*config.TMS
+	tmsCache common.LazyGetter[map[string]*config.TMS]
 }
 
 // NewTokenSDK creates a new TokenSDK configuration.
 func NewTokenSDK(cp configProvider) *TokenSDK {
-	return &TokenSDK{cp: cp}
+	loader := &loader{cp: cp}
+	return &TokenSDK{
+		cp:       cp,
+		tmsCache: common.NewLazyGetter(loader.load),
+	}
 }
 
 // LookupNamespace searches for a TMS configuration that matches the given network and channel, and
@@ -123,22 +125,14 @@ func (m *TokenSDK) GetTMSs() ([]*TMS, error) {
 }
 
 func (m *TokenSDK) tmss() (map[string]*config.TMS, error) {
-	// check if available
-	m.tmsConfigsLock.RLock()
-	if m.tmsConfigs != nil {
-		m.tmsConfigsLock.RUnlock()
-		return m.tmsConfigs, nil
-	}
-	m.tmsConfigsLock.RUnlock()
+	return m.tmsCache.Get()
+}
 
-	m.tmsConfigsLock.Lock()
-	defer m.tmsConfigsLock.Unlock()
+type loader struct {
+	cp configProvider
+}
 
-	// check again
-	if m.tmsConfigs != nil {
-		return m.tmsConfigs, nil
-	}
-
+func (m *loader) load() (map[string]*config.TMS, error) {
 	//load
 	var boxedConfig map[interface{}]interface{}
 	if err := m.cp.UnmarshalKey("token.tms", &boxedConfig); err != nil {
@@ -154,6 +148,5 @@ func (m *TokenSDK) tmss() (map[string]*config.TMS, error) {
 		}
 		tmsConfigs[id] = tmsConfig
 	}
-	m.tmsConfigs = tmsConfigs
-	return m.tmsConfigs, nil
+	return tmsConfigs, nil
 }

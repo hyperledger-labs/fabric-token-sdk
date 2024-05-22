@@ -11,11 +11,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	"github.com/pkg/errors"
 )
 
@@ -37,8 +37,7 @@ type Opts struct {
 }
 
 type DBOpener struct {
-	mutex     sync.RWMutex
-	dbs       map[string]*sql.DB
+	dbCache   common.LazyProvider[dbKey, *sql.DB]
 	optsKey   string
 	envVarKey string
 }
@@ -57,7 +56,35 @@ func (d *DBOpener) Open(cp core.ConfigProvider, tmsID token.TMSID) (*sql.DB, *Op
 
 func NewSQLDBOpener(optsKey, envVarKey string) *DBOpener {
 	return &DBOpener{
-		dbs:       map[string]*sql.DB{},
+		dbCache: common.NewLazyProviderWithKeyMapper(key, func(k dbKey) (*sql.DB, error) {
+			p, err := sql.Open(k.driverName, k.dataSourceName)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to open db [%s]", k.driverName)
+			}
+			if err := p.Ping(); err != nil {
+				if strings.Contains(err.Error(), "out of memory (14)") {
+					logger.Warnf("does the directory for the configured datasource exist?")
+				}
+				return nil, errors.Wrapf(err, "failed to open db [%s]", k.driverName)
+			}
+
+			// set some good defaults if the driver is sqlite
+			if k.driverName == "sqlite" {
+				if k.skipPragmas {
+					if !strings.Contains(k.dataSourceName, "WAL") {
+						logger.Warn("skipping default pragmas. Set at least ?_pragma=journal_mode(WAL) or similar in the dataSource to prevent SQLITE_BUSY errors")
+					}
+				} else {
+					logger.Debug(sqlitePragmas)
+					if _, err = p.Exec(sqlitePragmas); err != nil {
+						return nil, fmt.Errorf("error setting pragmas: %w", err)
+					}
+				}
+			}
+			p.SetMaxOpenConns(k.maxOpenConns)
+
+			return p, nil
+		}),
 		optsKey:   optsKey,
 		envVarKey: envVarKey,
 	}
@@ -88,54 +115,18 @@ func (d *DBOpener) compileOpts(cp core.ConfigProvider, tmsID token.TMSID) (*Opts
 	return opts, nil
 }
 
+type dbKey struct {
+	driverName, dataSourceName string
+	maxOpenConns               int
+	skipPragmas                bool
+}
+
 func (d *DBOpener) OpenSQLDB(driverName, dataSourceName string, maxOpenConns int, skipPragmas bool) (*sql.DB, error) {
 	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
 
-	id := driverName + dataSourceName
-	var p *sql.DB
-	d.mutex.RLock()
-	p, ok := d.dbs[id]
-	if ok {
-		logger.Infof("reuse [%s] database (cached)", driverName)
-		d.mutex.RUnlock()
-		return p, nil
-	}
-	d.mutex.RUnlock()
+	return d.dbCache.Get(dbKey{driverName: driverName, dataSourceName: dataSourceName, maxOpenConns: maxOpenConns, skipPragmas: skipPragmas})
+}
 
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-
-	// check again
-	p, ok = d.dbs[id]
-	if ok {
-		return p, nil
-	}
-	p, err := sql.Open(driverName, dataSourceName)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
-	}
-	if err := p.Ping(); err != nil {
-		if strings.Contains(err.Error(), "out of memory (14)") {
-			logger.Warnf("does the directory for the configured datasource exist?")
-		}
-		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
-	}
-
-	// set some good defaults if the driver is sqlite
-	if driverName == "sqlite" {
-		if skipPragmas {
-			if !strings.Contains(dataSourceName, "WAL") {
-				logger.Warn("skipping default pragmas. Set at least ?_pragma=journal_mode(WAL) or similar in the dataSource to prevent SQLITE_BUSY errors")
-			}
-		} else {
-			logger.Debug(sqlitePragmas)
-			if _, err = p.Exec(sqlitePragmas); err != nil {
-				return nil, fmt.Errorf("error setting pragmas: %w", err)
-			}
-		}
-	}
-	p.SetMaxOpenConns(maxOpenConns)
-
-	d.dbs[id] = p
-	return p, nil
+func key(k dbKey) string {
+	return k.driverName + k.dataSourceName
 }

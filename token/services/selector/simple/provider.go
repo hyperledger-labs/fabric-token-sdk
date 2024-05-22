@@ -7,53 +7,35 @@ SPDX-License-Identifier: Apache-2.0
 package simple
 
 import (
-	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.selector.simple")
 
-type Transaction interface {
-	ID() string
-	Network() string
-	Channel() string
-	Namespace() string
-}
-
-type Repository interface {
-	Next(typ string, of token.OwnerFilter) (*token2.UnspentToken, error)
-}
-
 type LockerProvider interface {
 	New(network, channel, namespace string) Locker
 }
 
 type SelectorService struct {
-	tracer               Tracer
-	numRetry             int
-	timeout              time.Duration
-	requestCertification bool
-
-	lock           sync.RWMutex
-	lockerProvider LockerProvider
-	lockers        map[string]Locker
-	managers       map[string]token.SelectorManager
+	managerLazyCache common.LazyProvider[*token.ManagementService, token.SelectorManager]
 }
 
 func NewProvider(lockerProvider LockerProvider, numRetry int, timeout time.Duration, tracer Tracer) *SelectorService {
-	return &SelectorService{
+	loader := &loader{
 		lockerProvider:       lockerProvider,
-		lockers:              map[string]Locker{},
-		managers:             map[string]token.SelectorManager{},
+		tracer:               tracer,
 		numRetry:             numRetry,
 		timeout:              timeout,
 		requestCertification: true,
-		tracer:               tracer,
+	}
+	return &SelectorService{
+		managerLazyCache: common.NewLazyProviderWithKeyMapper(key, loader.load),
 	}
 }
 
@@ -61,67 +43,7 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 	if tms == nil {
 		return nil, errors.Errorf("invalid tms, nil reference")
 	}
-
-	key := tms.Network() + tms.Channel() + tms.Namespace()
-
-	s.lock.RLock()
-	manager, ok := s.managers[key]
-	if ok {
-		s.lock.RUnlock()
-		return manager, nil
-	}
-	s.lock.RUnlock()
-
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	manager, ok = s.managers[key]
-	if ok {
-		return manager, nil
-	}
-
-	// instantiate a new manager
-	locker, ok := s.lockers[key]
-	if !ok {
-		logger.Debugf("new in-memory locker for [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
-		locker = s.lockerProvider.New(tms.Network(), tms.Channel(), tms.Namespace())
-		s.lockers[key] = locker
-	} else {
-		logger.Debugf("in-memory selector for [%s:%s:%s] exists", tms.Network(), tms.Channel(), tms.Namespace())
-	}
-	qe := newQueryService(
-		tms.Vault().NewQueryEngine(),
-		locker,
-	)
-	pp := tms.PublicParametersManager().PublicParameters()
-	if pp == nil {
-		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
-	}
-	manager = NewManager(
-		locker,
-		func() QueryService {
-			return qe
-		},
-		s.numRetry,
-		s.timeout,
-		s.requestCertification,
-		pp.Precision(),
-		s.tracer,
-	)
-	s.managers[key] = manager
-	return manager, nil
-}
-
-func (s *SelectorService) SetNumRetries(n uint) {
-	s.numRetry = int(n)
-}
-
-func (s *SelectorService) SetRetryTimeout(t time.Duration) {
-	s.timeout = t
-}
-
-func (s *SelectorService) SetRequestCertification(v bool) {
-	s.requestCertification = v
+	return s.managerLazyCache.Get(tms)
 }
 
 type Cache interface {
@@ -134,13 +56,6 @@ type queryService struct {
 	locker Locker
 }
 
-func newQueryService(qe QueryService, locker Locker) *queryService {
-	return &queryService{
-		qe:     qe,
-		locker: locker,
-	}
-}
-
 func (q *queryService) UnspentTokensIterator() (*token.UnspentTokensIterator, error) {
 	return q.qe.UnspentTokensIterator()
 }
@@ -151,4 +66,40 @@ func (q *queryService) UnspentTokensIteratorBy(id, typ string) (*token.UnspentTo
 
 func (q *queryService) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) {
 	return q.qe.GetTokens(inputs...)
+}
+
+type loader struct {
+	lockerProvider       LockerProvider
+	tracer               Tracer
+	numRetry             int
+	timeout              time.Duration
+	requestCertification bool
+}
+
+func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
+	logger.Debugf("new in-memory locker for [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
+
+	locker := s.lockerProvider.New(tms.Network(), tms.Channel(), tms.Namespace())
+	qe := &queryService{
+		qe:     tms.Vault().NewQueryEngine(),
+		locker: locker,
+	}
+	pp := tms.PublicParametersManager().PublicParameters()
+	if pp == nil {
+		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
+	}
+
+	return NewManager(
+		locker,
+		func() QueryService { return qe },
+		s.numRetry,
+		s.timeout,
+		s.requestCertification,
+		pp.Precision(),
+		s.tracer,
+	), nil
+}
+
+func key(tms *token.ManagementService) string {
+	return tms.Network() + tms.Channel() + tms.Namespace()
 }
