@@ -8,12 +8,13 @@ package mailman
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 type TokenIterator interface {
-	UnspentTokensIteratorBy(id, typ string) (*token.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error)
 	UnlockIDs(tokenIDs ...*token2.ID) []*token2.ID
 }
 

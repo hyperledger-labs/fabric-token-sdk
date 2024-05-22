@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -69,7 +70,7 @@ func (m *MockIterator) Close() {
 }
 
 func (m *MockIterator) Next() (*token2.UnspentToken, error) {
-	if len(m.keys) == 0 || m.pos == len(m.keys) {
+	if len(m.keys) == 0 || m.pos >= len(m.keys) {
 		return nil, nil
 	}
 
@@ -146,7 +147,7 @@ func (q *MockQueryService) UnspentTokensIterator() (*token.UnspentTokensIterator
 	return &token.UnspentTokensIterator{UnspentTokensIterator: &MockIterator{q, q.allKeys, 0}}, nil
 }
 
-func (q *MockQueryService) UnspentTokensIteratorBy(id, typ string) (*token.UnspentTokensIterator, error) {
+func (q *MockQueryService) UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error) {
 	return &token.UnspentTokensIterator{UnspentTokensIterator: &MockIterator{q, q.cache[id], 0}}, nil
 }
 
