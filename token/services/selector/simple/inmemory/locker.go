@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	logger             = flogging.MustGetLogger("token-sdk.selector.inmemory")
+	logger             = logging.MustGetLogger("token-sdk.selector.inmemory")
 	AlreadyLockedError = errors.New("already locked")
 )
 

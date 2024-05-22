@@ -8,6 +8,7 @@ package token
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -17,6 +18,7 @@ type Metadata struct {
 	TokenService         driver.TokensService
 	WalletService        driver.WalletService
 	TokenRequestMetadata *driver.TokenRequestMetadata
+	Logger               logging.Logger
 }
 
 // GetToken unmarshals the given bytes to extract the token and its issuer (if any).
@@ -55,6 +57,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 		TokenService:         m.TokenService,
 		WalletService:        m.WalletService,
 		TokenRequestMetadata: &driver.TokenRequestMetadata{},
+		Logger:               m.Logger,
 	}
 
 	// filter issues
@@ -81,7 +84,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 				Receivers = issue.Receivers[i]
 				ReceiverAuditInfos = issue.ReceiversAuditInfos[i]
 			} else {
-				logger.Debugf("skipping issue for [%s]", recipientEID)
+				m.Logger.Debugf("skipping issue for [%s]", recipientEID)
 			}
 
 			issueRes.Outputs = append(issueRes.Outputs, Outputs)
@@ -114,7 +117,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			var ReceiverAuditInfos []byte
 
 			if search(eIDs, recipientEID) != -1 {
-				logger.Debugf("keeping transfer for [%s]", recipientEID)
+				m.Logger.Debugf("keeping transfer for [%s]", recipientEID)
 				Outputs = transfer.Outputs[i]
 				TokenInfo = transfer.OutputsMetadata[i]
 				Receivers = transfer.Receivers[i]
@@ -122,7 +125,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 				ReceiverAuditInfos = transfer.ReceiverAuditInfos[i]
 				skip = false
 			} else {
-				logger.Debugf("skipping transfer for [%s]", recipientEID)
+				m.Logger.Debugf("skipping transfer for [%s]", recipientEID)
 			}
 
 			transferRes.Outputs = append(transferRes.Outputs, Outputs)
@@ -143,14 +146,14 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			}
 		}
 
-		logger.Debugf("keeping transfer with [%d] out of [%d] outputs", len(transferRes.Outputs), len(transfer.Outputs))
+		m.Logger.Debugf("keeping transfer with [%d] out of [%d] outputs", len(transferRes.Outputs), len(transfer.Outputs))
 		res.TokenRequestMetadata.Transfers = append(res.TokenRequestMetadata.Transfers, transferRes)
 	}
 
 	// application
 	res.TokenRequestMetadata.Application = m.TokenRequestMetadata.Application
 
-	logger.Debugf("filtered metadata for [% x] from [%d:%d] to [%d:%d]",
+	m.Logger.Debugf("filtered metadata for [% x] from [%d:%d] to [%d:%d]",
 		eIDs,
 		len(m.TokenRequestMetadata.Issues), len(m.TokenRequestMetadata.Transfers),
 		len(res.TokenRequestMetadata.Issues), len(res.TokenRequestMetadata.Transfers))

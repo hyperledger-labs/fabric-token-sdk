@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -27,7 +27,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 // DeserializeToken un-marshals a token and token info from raw bytes
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer
-func (s *TokensService) DeserializeToken(tok []byte, infoRaw []byte) (*token.Token, view.Identity, error) {
+func (s *TokensService) DeserializeToken(tok []byte, infoRaw []byte) (*token.Token, driver.Identity, error) {
 	// get zkatdlog token
 	output := &token2.Token{}
 	if err := output.Deserialize(tok); err != nil {

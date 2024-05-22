@@ -9,14 +9,14 @@ package simple
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.selector.simple")
+var logger = logging.MustGetLogger("token-sdk.selector.simple")
 
 type LockerProvider interface {
 	New(network, channel, namespace string) Locker

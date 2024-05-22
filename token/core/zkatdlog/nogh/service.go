@@ -8,7 +8,6 @@ package nogh
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
@@ -25,7 +24,7 @@ type TokenCommitmentLoader interface {
 }
 
 type TokenLoader interface {
-	LoadTokens(ids []*token2.ID) ([]string, []*token.Token, []*token.Metadata, []view.Identity, error)
+	LoadTokens(ids []*token2.ID) ([]string, []*token.Token, []*token.Metadata, []driver.Identity, error)
 }
 
 type Service struct {
@@ -72,7 +71,7 @@ func NewTokenService(
 // DeserializeToken un-marshals a token and token info from raw bytes
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer
-func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token2.Token, view.Identity, error) {
+func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token2.Token, driver.Identity, error) {
 	// get zkatdlog token
 	output := &token.Token{}
 	if err := output.Deserialize(tok); err != nil {

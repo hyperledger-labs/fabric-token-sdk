@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
@@ -84,6 +85,7 @@ func testFilterByCase0(t *testing.T) {
 				"application": []byte("application"),
 			},
 		},
+		Logger: logging.MustGetLogger("test"),
 	}
 	// Filter by Bob
 	filteredMetadata, err := metadata.FilterBy("Bob")
@@ -182,6 +184,7 @@ func testFilterByCase1(t *testing.T) {
 				bobIssue,
 			},
 		},
+		Logger: logging.MustGetLogger("test"),
 	}
 
 	// Filter by Alice
@@ -329,6 +332,7 @@ func TestMetadata_GetToken(t *testing.T) {
 		TokenService:         mockTokenService,
 		WalletService:        mockWalletService,
 		TokenRequestMetadata: &driver.TokenRequestMetadata{},
+		Logger:               logging.MustGetLogger("test"),
 	}
 
 	// Mocks and expectations

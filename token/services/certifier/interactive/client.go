@@ -10,14 +10,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -28,7 +26,7 @@ const (
 	Add Op = iota
 )
 
-var logger = flogging.MustGetLogger("token-sdk.certifier.interactive")
+var logger = logging.MustGetLogger("token-sdk.certifier.interactive")
 
 type QueryEngine interface {
 	UnspentTokensIterator() (*token2.UnspentTokensIterator, error)

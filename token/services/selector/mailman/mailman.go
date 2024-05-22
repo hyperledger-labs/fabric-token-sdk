@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package mailman
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.selector.mailman")
+var logger = logging.MustGetLogger("token-sdk.selector.mailman")
 
 // Mailman implements a token selector service that is targeting high concurrent use
 type Mailman struct {

@@ -291,7 +291,7 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 		return nil, errors.Wrap(err, "failed preparing transfer")
 	}
 
-	logger.Debugf("Prepare Transfer Action [id:%s,ins:%d,outs:%d]", r.Anchor, len(tokenIDs), len(outputTokens))
+	r.TokenService.logger.Debugf("Prepare Transfer Action [id:%s,ins:%d,outs:%d]", r.Anchor, len(tokenIDs), len(outputTokens))
 
 	ts := r.TokenService.tms.TransferService()
 
@@ -308,7 +308,7 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating transfer action")
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
+	if r.TokenService.logger.IsEnabledFor(zapcore.DebugLevel) {
 		// double check
 		if err := ts.VerifyTransfer(transfer, transferMetadata.OutputsMetadata); err != nil {
 			return nil, errors.Wrap(err, "failed checking generated proof")
@@ -339,7 +339,7 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 		return errors.Wrap(err, "failed preparing transfer")
 	}
 
-	logger.Debugf("Prepare Redeem Action [ins:%d,outs:%d]", len(tokenIDs), len(outputTokens))
+	r.TokenService.logger.Debugf("Prepare Redeem Action [ins:%d,outs:%d]", len(tokenIDs), len(outputTokens))
 
 	ts := r.TokenService.tms.TransferService()
 
@@ -357,7 +357,7 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 		return errors.Wrap(err, "failed creating transfer action")
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
+	if r.TokenService.logger.IsEnabledFor(zapcore.DebugLevel) {
 		// double check
 		if err := ts.VerifyTransfer(transfer, transferMetadata.OutputsMetadata); err != nil {
 			return errors.Wrap(err, "failed checking generated proof")
@@ -468,7 +468,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 
 		// is the j-th meta present? It might have been filtered out
 		if issueMeta.IsOutputAbsent(j) {
-			logger.Debugf("Issue Action Output [%d,%d] is absent", i, j)
+			r.TokenService.logger.Debugf("Issue Action Output [%d,%d] is absent", i, j)
 			if failOnMissing {
 				return nil, 0, errors.Errorf("missing token info for output [%d,%d]", i, j)
 			}
@@ -530,7 +530,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 
 		// is the j-th meta present? It might have been filtered out
 		if transferMeta.IsOutputAbsent(j) {
-			logger.Debugf("Transfer Action Output [%d,%d] is absent", i, j)
+			r.TokenService.logger.Debugf("Transfer Action Output [%d,%d] is absent", i, j)
 			if failOnMissing {
 				return nil, 0, errors.Errorf("missing token info for output [%d,%d]", i, j)
 			}
@@ -565,7 +565,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		if !output.IsRedeem() {
 			ledgerOutput = raw
 		}
-		logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
+		r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
 		outputs = append(outputs, &Output{
 			ActionIndex:       i,
 			Index:             counter,
@@ -868,7 +868,7 @@ func (r *Request) SetSignatures(sigmas map[string][]byte) {
 		if sigma, ok := sigmas[signer.UniqueID()]; ok {
 			signatures[i] = sigma
 		} else {
-			logger.Warnf("Signature %d for signer %s not found.", i, signer.UniqueID())
+			r.TokenService.logger.Warnf("Signature %d for signer %s not found.", i, signer.UniqueID())
 		}
 	}
 	r.Actions.Signatures = signatures
@@ -906,7 +906,7 @@ func (r *Request) BindTo(binder Binder, identity Identity) error {
 				// this is me, skip
 				continue
 			}
-			logger.Debugf("bind sender [%s] to [%s]", eid, identity)
+			r.TokenService.logger.Debugf("bind sender [%s] to [%s]", eid, identity)
 			if err := binder.Bind(identity, eid); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
@@ -918,7 +918,7 @@ func (r *Request) BindTo(binder Binder, identity Identity) error {
 				// this is me, skip
 				continue
 			}
-			logger.Debugf("bind extra signer [%s] to [%s]", eid, identity)
+			r.TokenService.logger.Debugf("bind extra signer [%s] to [%s]", eid, identity)
 			if err := binder.Bind(identity, eid); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
@@ -933,7 +933,7 @@ func (r *Request) BindTo(binder Binder, identity Identity) error {
 					continue
 				}
 
-				logger.Debugf("bind receiver as sender [%s] to [%s]", receivers[j], identity)
+				r.TokenService.logger.Debugf("bind receiver as sender [%s] to [%s]", receivers[j], identity)
 				if err := binder.Bind(identity, receivers[j]); err != nil {
 					return errors.Wrap(err, "failed binding receiver identities")
 				}
@@ -972,7 +972,7 @@ func (r *Request) Transfers() []*Transfer {
 // AuditCheck performs the audit check of the request in addition to
 // the checks of the token request itself via IsValid.
 func (r *Request) AuditCheck() error {
-	logger.Debugf("audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID())
+	r.TokenService.logger.Debugf("audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID())
 	if err := r.IsValid(); err != nil {
 		return err
 	}
@@ -1025,7 +1025,6 @@ func (r *Request) AuditRecord() (*AuditRecord, error) {
 			return nil, errors.Wrapf(err, "failed getting audit info for owner [%s]", toks[i].Owner)
 		}
 		in.OwnerAuditInfo = ownerAuditInfo
-
 	}
 
 	return &AuditRecord{
@@ -1061,6 +1060,7 @@ func (r *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
 		TokenService:         r.TokenService.tms.TokensService(),
 		WalletService:        r.TokenService.tms.WalletService(),
 		TokenRequestMetadata: r.Metadata,
+		Logger:               r.TokenService.logger,
 	}
 	filteredMeta, err := meta.FilterBy(eIDs[0])
 	if err != nil {
@@ -1080,6 +1080,7 @@ func (r *Request) GetMetadata() (*Metadata, error) {
 		TokenService:         r.TokenService.tms.TokensService(),
 		WalletService:        r.TokenService.tms.WalletService(),
 		TokenRequestMetadata: r.Metadata,
+		Logger:               r.TokenService.logger,
 	}, nil
 }
 
@@ -1173,7 +1174,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 	switch cmp {
 	case 1:
 		diff := inputSum.Sub(outputSum)
-		logger.Debugf("reassign rest [%s] to sender", diff.Decimal())
+		r.TokenService.logger.Debugf("reassign rest [%s] to sender", diff.Decimal())
 
 		var restIdentity []byte
 		if transferOpts.RestRecipientIdentity != nil {
@@ -1199,7 +1200,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 	}
 
 	if r.TokenService.PublicParametersManager().PublicParameters().GraphHiding() {
-		logger.Debugf("graph hiding enabled, request certification")
+		r.TokenService.logger.Debugf("graph hiding enabled, request certification")
 		// Check token certification
 		cc, err := r.TokenService.CertificationClient()
 		if err != nil {

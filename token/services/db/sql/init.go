@@ -13,11 +13,11 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.sql")
+var logger = logging.MustGetLogger("token-sdk.sql")
 
 func initSchema(db *sql.DB, schemas ...string) (err error) {
 	logger.Info("creating tables")

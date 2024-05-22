@@ -8,7 +8,6 @@ package nogh
 
 import (
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
@@ -62,7 +61,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 	}
 	var values []uint64
 	var owners [][]byte
-	var receivers []view.Identity
+	var receivers []driver.Identity
 	var outputAuditInfos [][]byte
 
 	// get values and owners of outputs
@@ -88,7 +87,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 		receivers = append(receivers, recipients...)
 		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Owner.Raw, s.WalletService)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(output.Owner.Raw).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner.Raw).String())
 		}
 		outputAuditInfos = append(outputAuditInfos, auditInfo...)
 	}
@@ -132,10 +131,10 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 	for i, t := range tokens {
 		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner, ws)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner).String())
 		}
 		if len(auditInfo) == 0 {
-			s.Logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", tokenIDs[i].String(), view.Identity(t.Owner))
+			s.Logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", tokenIDs[i].String(), driver.Identity(t.Owner))
 		}
 		senderAuditInfos = append(senderAuditInfos, auditInfo...)
 	}
@@ -199,7 +198,7 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMe
 		if err != nil {
 			return errors.Wrap(err, "failed getting token in the clear")
 		}
-		s.Logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
+		s.Logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner.Raw))
 	}
 
 	return transfer.NewVerifier(tr.InputCommitments, com, pp).Verify(tr.Proof)

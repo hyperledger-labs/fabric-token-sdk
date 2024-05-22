@@ -10,17 +10,17 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
 
 var (
 	driversMu sync.RWMutex
 	drivers   = make(map[string]driver.IdentityDBDriver)
-	logger    = flogging.MustGetLogger("token-sdk.services.identitydb")
+	logger    = logging.MustGetLogger("token-sdk.services.identitydb")
 )
 
 // Register makes a DB driver available by the provided name.

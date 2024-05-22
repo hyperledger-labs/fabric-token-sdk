@@ -9,7 +9,6 @@ package fabtoken
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -50,7 +49,7 @@ func (t *Output) IsRedeem() bool {
 // IssueAction encodes a fabtoken Issue
 type IssueAction struct {
 	// issuer's public key
-	Issuer view.Identity
+	Issuer driver.Identity
 	// new tokens to be issued
 	Outputs []*Output
 	// metadata of the issue action

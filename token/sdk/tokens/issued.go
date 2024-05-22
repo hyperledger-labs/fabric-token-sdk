@@ -7,21 +7,20 @@ SPDX-License-Identifier: Apache-2.0
 package tokens
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type Issued interface {
 	// Issued returns true if the passed issuer issued the passed token
-	Issued(tms *token.ManagementService, issuer view.Identity, tok *token2.Token) bool
+	Issued(tms *token.ManagementService, issuer token.Identity, tok *token2.Token) bool
 }
 
 // WalletIssued is an owner wallet-based Issued checker
 type WalletIssued struct{}
 
 // Issued returns true if the passed issuer issued the passed token
-func (w *WalletIssued) Issued(tms *token.ManagementService, issuer view.Identity, tok *token2.Token) bool {
+func (w *WalletIssued) Issued(tms *token.ManagementService, issuer token.Identity, tok *token2.Token) bool {
 	return tms.WalletManager().IssuerWallet(issuer) != nil
 }
 
@@ -36,7 +35,7 @@ func NewIssuedMultiplexer(checkers ...Issued) *IssuedMultiplexer {
 }
 
 // Issued returns true if the passed issuer issued the passed token
-func (o *IssuedMultiplexer) Issued(tms *token.ManagementService, issuer view.Identity, tok *token2.Token) bool {
+func (o *IssuedMultiplexer) Issued(tms *token.ManagementService, issuer token.Identity, tok *token2.Token) bool {
 	for _, Issued := range o.Checkers {
 		if Issued.Issued(tms, issuer, tok) {
 			return true

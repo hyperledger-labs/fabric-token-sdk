@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package auditor
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.auditor")
+var logger = logging.MustGetLogger("token-sdk.auditor")
 
 // TxStatus is the status of a transaction
 type TxStatus = auditdb.TxStatus
