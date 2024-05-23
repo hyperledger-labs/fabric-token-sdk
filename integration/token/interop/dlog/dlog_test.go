@@ -12,8 +12,10 @@ import (
 	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fodlog"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/odlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop"
-	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -37,7 +39,7 @@ var _ = Describe("DLog end to end", func() {
 			ii, err = integration.New(
 				integration2.ZKATDLogInteropHTLC.StartPortForNode(),
 				"",
-				interop.HTLCSingleFabricNetworkTopology("dlog")...,
+				interop.HTLCSingleFabricNetworkTopology("dlog", &fabric3.SDK{}, &fdlog.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -56,7 +58,7 @@ var _ = Describe("DLog end to end", func() {
 			ii, err = integration.New(
 				integration2.ZKATDLogInteropHTLCOrion.StartPortForNode(),
 				"",
-				interop.HTLCSingleOrionNetworkTopology("dlog")...,
+				interop.HTLCSingleOrionNetworkTopology("dlog", &orion3.SDK{}, &odlog.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -75,7 +77,7 @@ var _ = Describe("DLog end to end", func() {
 			ii, err = integration.New(
 				integration2.ZKATDLogInteropHTLCTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCTwoFabricNetworksTopology("dlog", &fabric3.SDK{}, &sdk.SDK{})...,
+				interop.HTLCTwoFabricNetworksTopology("dlog", &fabric3.SDK{}, &fdlog.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -94,7 +96,7 @@ var _ = Describe("DLog end to end", func() {
 			ii, err = integration.New(
 				integration2.ZKATDLogInteropFastExchangeTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCTwoFabricNetworksTopology("dlog", &fabric3.SDK{}, &sdk.SDK{})...,
+				interop.HTLCTwoFabricNetworksTopology("dlog", &fabric3.SDK{}, &fdlog.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -113,7 +115,7 @@ var _ = Describe("DLog end to end", func() {
 			ii, err = integration.New(
 				integration2.ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCNoCrossClaimTopology("dlog", &fabric3.SDK{}, &sdk.SDK{})...,
+				interop.HTLCNoCrossClaimTopology("dlog", &fabric3.SDK{}, &fdlog.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -132,7 +134,7 @@ var _ = Describe("DLog end to end", func() {
 			ii, err = integration.New(
 				integration2.ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCNoCrossClaimWithOrionTopology("dlog", &orion3.SDK{}, &fabric3.SDK{}, &sdk.SDK{})...,
+				interop.HTLCNoCrossClaimWithOrionTopology("dlog", &orion3.SDK{}, &fabric3.SDK{}, &fodlog.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())

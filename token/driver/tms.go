@@ -78,4 +78,6 @@ type TokenManagerServiceProvider interface {
 	NewTokenManagerService(opts ServiceOptions) (TokenManagerService, error)
 
 	Update(options ServiceOptions) error
+
+	Configs() ([]config.Manager, error)
 }

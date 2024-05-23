@@ -42,6 +42,10 @@ type Network interface {
 	// Channel returns the channel name, empty if not applicable
 	Channel() string
 
+	Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions, error)
+
+	Connect(ns string) ([]token2.ServiceOption, error)
+
 	// Vault returns the vault for the passed namespace. If namespaces are not supported,
 	// the argument is ignored.
 	Vault(namespace string) (Vault, error)

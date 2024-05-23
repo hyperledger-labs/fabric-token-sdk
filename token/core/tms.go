@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/pkg/errors"
 )
 
@@ -148,6 +149,18 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 		m.services[key] = newService
 	}
 	return
+}
+
+func (m *TMSProvider) Configs() ([]config2.Manager, error) {
+	tmsConfigs, err := config.NewTokenSDK(m.configProvider).GetTMSs()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get token managers")
+	}
+	res := make([]config2.Manager, len(tmsConfigs))
+	for i, cm := range tmsConfigs {
+		res[i] = cm
+	}
+	return res, nil
 }
 
 func (m *TMSProvider) SetCallback(callback CallbackFunc) {

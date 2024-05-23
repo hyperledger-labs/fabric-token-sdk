@@ -11,9 +11,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 )
@@ -25,7 +25,7 @@ const (
 	FabTokenNamespace = "fabtoken-token-chaincode"
 )
 
-func Topology(sdks ...api2.SDK) []api.Topology {
+func Topology(opts common.Opts) []api.Topology {
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
 	fabricTopology.AddOrganizationsByName("Org1", "Org2", "Org3")
@@ -179,7 +179,7 @@ func Topology(sdks ...api2.SDK) []api.Topology {
 	// FSC topology
 	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 
-	for _, sdk := range sdks {
+	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
 

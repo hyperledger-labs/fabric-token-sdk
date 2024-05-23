@@ -13,6 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -23,14 +24,8 @@ var (
 	AlreadyLockedError = errors.New("already locked")
 )
 
-const (
-	_       int = iota
-	Valid       // Transaction is valid and committed
-	Invalid     // Transaction is invalid and has been discarded
-)
-
-type Vault interface {
-	Status(id string) (int, error)
+type TXStatusProvider interface {
+	GetStatus(txID string) (ttxdb.TxStatus, string, error)
 }
 
 type lockEntry struct {
@@ -44,16 +39,16 @@ func (l *lockEntry) String() string {
 }
 
 type locker struct {
-	vault                  Vault
+	ttxdb                  TXStatusProvider
 	lock                   *sync.RWMutex
 	locked                 map[token2.ID]*lockEntry
 	sleepTimeout           time.Duration
 	validTxEvictionTimeout time.Duration
 }
 
-func NewLocker(vault Vault, timeout time.Duration, validTxEvictionTimeout time.Duration) simple.Locker {
+func NewLocker(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTimeout time.Duration) simple.Locker {
 	r := &locker{
-		vault:                  vault,
+		ttxdb:                  ttxdb,
 		sleepTimeout:           timeout,
 		lock:                   &sync.RWMutex{},
 		locked:                 map[token2.ID]*lockEntry{},
@@ -90,7 +85,7 @@ func (d *locker) Lock(id *token2.ID, txID string, reclaim bool) (string, error) 
 			reclaimed, status := d.reclaim(id, e.TxID)
 			if !reclaimed {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("[%s] already locked by [%s], reclaim failed, tx status [%s]", id, e, status)
+					logger.Debugf("[%s] already locked by [%s], reclaim failed, tx status [%s]", id, e, ttxdb.TxStatusMessage[status])
 				}
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					return e.TxID, errors.Errorf("already locked by [%s]", e)
@@ -98,7 +93,7 @@ func (d *locker) Lock(id *token2.ID, txID string, reclaim bool) (string, error) 
 				return e.TxID, AlreadyLockedError
 			}
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("[%s] already locked by [%s], reclaimed successful, tx status [%s]", id, e, status)
+				logger.Debugf("[%s] already locked by [%s], reclaimed successful, tx status [%s]", id, e, ttxdb.TxStatusMessage[status])
 			}
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -134,7 +129,7 @@ func (d *locker) UnlockIDs(ids ...*token2.ID) []*token2.ID {
 		if !ok {
 			notFound = append(notFound, &k)
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Warnf("unlocking [%s] hold by no one, skipping", id, entry)
+				logger.Warnf("unlocking [%s] hold by no one, skipping [%s]", id, entry)
 			}
 			continue
 		}
@@ -172,12 +167,12 @@ func (d *locker) IsLocked(id *token2.ID) bool {
 }
 
 func (d *locker) reclaim(id *token2.ID, txID string) (bool, int) {
-	status, err := d.vault.Status(txID)
+	status, _, err := d.ttxdb.GetStatus(txID)
 	if err != nil {
 		return false, status
 	}
 	switch status {
-	case Invalid:
+	case ttxdb.Deleted:
 		delete(d.locked, *id)
 		return true, status
 	default:
@@ -197,7 +192,7 @@ func (d *locker) scan() {
 		var removeList []token2.ID
 		d.lock.RLock()
 		for id, entry := range d.locked {
-			status, err := d.vault.Status(entry.TxID)
+			status, _, err := d.ttxdb.GetStatus(entry.TxID)
 			if err != nil {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					logger.Warnf("failed getting status for token [%s] locked by [%s], remove", id, entry)
@@ -206,22 +201,22 @@ func (d *locker) scan() {
 				continue
 			}
 			switch status {
-			case Valid:
+			case ttxdb.Confirmed:
 				// remove only if elapsed enough time from last access, to avoid concurrency issue
 				if time.Since(entry.LastAccess) > d.validTxEvictionTimeout {
 					removeList = append(removeList, id)
 					if logger.IsEnabledFor(zapcore.DebugLevel) {
-						logger.Debugf("token [%s] locked by [%s] in status [%s], time elapsed, remove", id, entry, status)
+						logger.Debugf("token [%s] locked by [%s] in status [%s], time elapsed, remove", id, entry, ttxdb.TxStatusMessage[status])
 					}
 				}
-			case Invalid:
+			case ttxdb.Deleted:
 				removeList = append(removeList, id)
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("token [%s] locked by [%s] in status [%s], remove", id, entry, status)
+					logger.Debugf("token [%s] locked by [%s] in status [%s], remove", id, entry, ttxdb.TxStatusMessage[status])
 				}
 			default:
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("token [%s] locked by [%s] in status [%s], skip", id, entry, status)
+					logger.Debugf("token [%s] locked by [%s] in status [%s], skip", id, entry, ttxdb.TxStatusMessage[status])
 				}
 			}
 		}

@@ -11,7 +11,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
@@ -22,10 +21,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft/views"
 )
 
-func Topology(backend, tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
+func Topology(opts common.Opts) []api.Topology {
 	var backendNetwork api.Topology
 	backendChannel := ""
-	switch backend {
+	switch opts.Backend {
 	case "fabric":
 		fabricTopology := fabric.NewDefaultTopology()
 		fabricTopology.EnableIdemix()
@@ -37,7 +36,7 @@ func Topology(backend, tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
 		orionTopology := orion.NewTopology()
 		backendNetwork = orionTopology
 	default:
-		panic("unknown backend: " + backend)
+		panic("unknown backend: " + opts.Backend)
 	}
 
 	// FSC
@@ -88,10 +87,10 @@ func Topology(backend, tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
 	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
-	if backend == "orion" {
+	if opts.Backend == "orion" {
 		// we need to define the custodian
 		custodian := fscTopology.AddNodeByName("custodian")
 		custodian.AddOptions(orion.WithRole("custodian"))
@@ -101,19 +100,19 @@ func Topology(backend, tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
 		// Enable orion sdk on each FSC node
 		orionTopology := backendNetwork.(*orion.Topology)
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
-		if _, ok := sdks[0].(*orion3.SDK); !ok {
+		if _, ok := opts.SDKs[0].(*orion3.SDK); !ok {
 			panic("orion sdk missing")
 		}
 		fscTopology.SetBootstrapNode(custodian)
 	} else {
-		if _, ok := sdks[0].(*fabric3.SDK); !ok {
+		if _, ok := opts.SDKs[0].(*fabric3.SDK); !ok {
 			panic("fabric sdk missing")
 		}
 	}
 
 	tms.AddAuditor(auditor)
 
-	for _, sdk := range sdks {
+	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
 

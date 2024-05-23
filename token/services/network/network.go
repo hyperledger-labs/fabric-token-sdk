@@ -387,6 +387,14 @@ func (n *Network) ProcessNamespace(namespace string) error {
 	return n.n.ProcessNamespace(namespace)
 }
 
+func (n *Network) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
+	return n.n.Normalize(opt)
+}
+
+func (n *Network) Connect(ns string) ([]token.ServiceOption, error) {
+	return n.n.Connect(ns)
+}
+
 // Provider returns an instance of network provider
 type Provider struct {
 	sp token.ServiceProvider
@@ -417,7 +425,7 @@ func (np *Provider) GetNetwork(network string, channel string) (*Network, error)
 		var err error
 		service, err = np.newNetwork(network, channel)
 		if err != nil {
-			logger.Errorf("Failed to get network: [%s:%s] %s", network, channel, err)
+			logger.Errorf("failed to get network: [%s:%s] %s", network, channel, err)
 			return nil, err
 		}
 		np.networks[key] = service
@@ -440,6 +448,17 @@ func (np *Provider) newNetwork(network string, channel string) (*Network, error)
 		return &Network{n: nw}, nil
 	}
 	return nil, errors.Errorf("no network driver found for [%s:%s], errs [%v]", network, channel, errs)
+}
+
+func (np *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
+	if opt == nil {
+		return nil, errors.New("no service options provided")
+	}
+	n, err := np.GetNetwork(opt.Network, opt.Channel)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get network [%s:%s]", opt.Network, opt.Channel)
+	}
+	return n.Normalize(opt)
 }
 
 // GetInstance returns a network instance for the given network and channel

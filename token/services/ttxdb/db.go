@@ -69,6 +69,9 @@ const (
 	Deleted = driver.Deleted
 )
 
+// TxStatusMessage maps TxStatus to string
+var TxStatusMessage = driver.TxStatusMessage
+
 // ActionType is the type of action performed by a transaction.
 type ActionType = driver.ActionType
 

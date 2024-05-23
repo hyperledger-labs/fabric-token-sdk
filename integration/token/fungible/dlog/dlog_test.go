@@ -15,10 +15,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	_ "modernc.org/sqlite"
@@ -39,12 +40,12 @@ var _ = Describe("EndToEnd", func() {
 			// notice that fabric-ca does not support yet aries
 			var err error
 			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
-				topology2.Opts{
+				common.Opts{
 					Backend:        "fabric",
 					TokenSDKDriver: "dlog",
 					Aries:          true,
 					//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
-					SDKs: []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
+					SDKs: []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
 				},
 			)...)
 			Expect(err).NotTo(HaveOccurred())
@@ -64,11 +65,11 @@ var _ = Describe("EndToEnd", func() {
 			// notice that fabric-ca does not support yet aries
 			var err error
 			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
-				topology2.Opts{
+				common.Opts{
 					Backend:        "fabric",
 					TokenSDKDriver: "dlog",
 					Aries:          true,
-					SDKs:           []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
+					SDKs:           []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
 					WebEnabled:     true, // Used for the websocket-based remote-wallet test
 				},
 			)...)
@@ -102,12 +103,12 @@ var _ = Describe("EndToEnd", func() {
 		BeforeEach(func() {
 			var err error
 			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
-				topology2.Opts{
+				common.Opts{
 					Backend:         "fabric",
 					TokenSDKDriver:  "dlog",
 					AuditorAsIssuer: true,
 					Aries:           true,
-					SDKs:            []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
+					SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
 					//FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 				},
 			)...)
@@ -133,10 +134,10 @@ var _ = Describe("EndToEnd", func() {
 		BeforeEach(func() {
 			var err error
 			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
-				topology2.Opts{
+				common.Opts{
 					Backend:        "fabric",
 					TokenSDKDriver: "dlog",
-					SDKs:           []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
+					SDKs:           []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
 				},
 			)...)
 			Expect(err).NotTo(HaveOccurred())
@@ -155,12 +156,12 @@ var _ = Describe("EndToEnd", func() {
 			// notice that fabric-ca does not support yet aries
 			var err error
 			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
-				topology2.Opts{
+				common.Opts{
 					Backend:        "fabric",
 					TokenSDKDriver: "dlog",
 					Aries:          true,
 					NoAuditor:      true,
-					SDKs:           []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
+					SDKs:           []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
 					//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
 				})...)
 			Expect(err).NotTo(HaveOccurred())

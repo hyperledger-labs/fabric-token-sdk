@@ -10,8 +10,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	orion2 "github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
@@ -22,8 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tms2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
@@ -32,34 +28,20 @@ import (
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/memory"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb/db/memory"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/memory"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 	"github.com/pkg/errors"
-	_ "modernc.org/sqlite"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")
@@ -101,18 +83,22 @@ func (p *SDK) Install() error {
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 
-	fabricNSP, _ := fabric.GetNetworkServiceProvider(p.registry)
-	orionNSP, _ := orion2.GetNetworkServiceProvider(p.registry)
-
+	// DB Managers
+	ttxdbManager := ttxdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
+	assert.NoError(p.registry.RegisterService(ttxdbManager))
 	tokenDBManager := tokendb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "tokendb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(tokenDBManager))
+	auditDBManager := auditdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "auditdb.persistence.type", "db.persistence.type"))
+	assert.NoError(p.registry.RegisterService(auditDBManager))
+	identityDBManager := identitydb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "identitydb.persistence.type", "db.persistence.type"))
+	assert.NoError(p.registry.RegisterService(identityDBManager))
 
 	// configure selector service
 	var selectorManagerProvider token.SelectorManagerProvider
 	switch configProvider.GetString("token.selector.driver") {
 	case "simple":
 		selectorManagerProvider = selector.NewProvider(
-			network2.NewLockerProvider(fabricNSP, orionNSP, 2*time.Second, 5*time.Minute),
+			network2.NewLockerProvider(ttxdbManager, 2*time.Second, 5*time.Minute),
 			2,
 			5*time.Second,
 			tracing.Get(p.registry).GetTracer(),
@@ -132,20 +118,14 @@ func (p *SDK) Install() error {
 	tmsp := token.NewManagementServiceProvider(
 		logging.MustGetLogger("token-sdk"),
 		tmsProvider,
-		network2.NewNormalizer(network.GetProvider(p.registry), fabricNSP, orionNSP, config.NewTokenSDK(configProvider)),
+		networkProvider,
 		&vault.ProviderAdaptor{Provider: networkProvider},
 		network2.NewCertificationClientProvider(),
 		selectorManagerProvider,
 	)
 	assert.NoError(p.registry.RegisterService(tmsp))
 
-	// DBs and their managers
-	ttxdbManager := ttxdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
-	assert.NoError(p.registry.RegisterService(ttxdbManager))
-	auditDBManager := auditdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "auditdb.persistence.type", "db.persistence.type"))
-	assert.NoError(p.registry.RegisterService(auditDBManager))
-	identityDBManager := identitydb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "identitydb.persistence.type", "db.persistence.type"))
-	assert.NoError(p.registry.RegisterService(identityDBManager))
+	// Token Manager
 	identityStorageProvider := identity.NewDBStorageProvider(kvs.GetService(p.registry), identityDBManager)
 	assert.NoError(p.registry.RegisterService(identityStorageProvider), "failed to register identity storage")
 	publisher, err := events.GetPublisher(p.registry)
@@ -160,7 +140,7 @@ func (p *SDK) Install() error {
 	)
 	assert.NoError(p.registry.RegisterService(tokensManager))
 
-	vaultProvider := vault.NewVaultProvider(tokenDBManager, ttxdbManager, auditDBManager, fabricNSP, orionNSP)
+	vaultProvider := vault.NewVaultProvider(tokenDBManager, ttxdbManager, auditDBManager)
 	assert.NoError(p.registry.RegisterService(vaultProvider))
 
 	ownerManager := ttx.NewManager(networkProvider, tmsp, ttxdbManager, tokensManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
@@ -169,17 +149,9 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(auditorManager))
 
 	// TMS callback
-	p.postInitializer, err = tms.NewPostInitializer(tmsp, fabricNSP, orionNSP, tokensManager, auditDBManager, ttxdbManager, networkProvider, ownerManager, auditorManager)
+	p.postInitializer, err = tms.NewPostInitializer(tmsp, tokensManager, networkProvider, ownerManager, auditorManager)
 	assert.NoError(err)
 	tmsProvider.SetCallback(p.postInitializer.PostInit)
-
-	// Orion related initialization
-	enabled, err := orion.IsCustodian(configProvider)
-	assert.NoError(err, "failed to get custodian status")
-	logger.Infof("Orion Custodian enabled: %t", enabled)
-	if enabled {
-		assert.NoError(orion.InstallViews(view2.GetRegistry(p.registry)), "failed to install custodian views")
-	}
 
 	// Install metrics
 	assert.NoError(
@@ -213,8 +185,17 @@ func (p *SDK) Start(ctx context.Context) error {
 		logger.Infof("start token management service [%s]...", tmsID)
 
 		// connect network
-		if err := p.postInitializer.ConnectNetwork(tmsID.Network, tmsID.Channel, tmsID.Namespace); err != nil {
+		net := network.GetInstance(p.registry, tmsID.Network, tmsID.Channel)
+		if net == nil {
+			return errors.Wrapf(err, "failed to get network [%s]", tmsID)
+		}
+		opts, err := net.Connect(tmsID.Namespace)
+		if err != nil {
 			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
+		}
+		tms := token.GetManagementService(p.registry, opts...)
+		if tms == nil {
+			return errors.WithMessagef(err, "failed to instantiate tms [%s]", tmsID)
 		}
 	}
 

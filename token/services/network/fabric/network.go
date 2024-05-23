@@ -21,8 +21,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-protos-go/peer"
@@ -100,17 +103,28 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 }
 
 type Network struct {
-	n           *fabric.NetworkService
-	ch          *fabric.Channel
-	tmsProvider *token2.ManagementServiceProvider
-	viewManager *view2.Manager
-	ledger      *ledger
+	n              *fabric.NetworkService
+	ch             *fabric.Channel
+	tmsProvider    *token2.ManagementServiceProvider
+	viewManager    *view2.Manager
+	ledger         *ledger
+	nsFinder       common2.NamespaceFinder
+	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
+	tokensProvider *tokens2.Manager
 
 	vaultLazyCache common.LazyProvider[string, driver.Vault]
 	subscribers    *events.Subscribers
 }
 
-func NewNetwork(sp token2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel, newVault NewVaultFunc) *Network {
+func NewNetwork(
+	sp token2.ServiceProvider,
+	n *fabric.NetworkService,
+	ch *fabric.Channel,
+	newVault NewVaultFunc,
+	nsFinder common2.NamespaceFinder,
+	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
+	tokensProvider *tokens2.Manager,
+) *Network {
 	loader := &loader{
 		newVault: newVault,
 		name:     n.Name(),
@@ -120,6 +134,9 @@ func NewNetwork(sp token2.ServiceProvider, n *fabric.NetworkService, ch *fabric.
 	return &Network{
 		n:              n,
 		ch:             ch,
+		nsFinder:       nsFinder,
+		filterProvider: filterProvider,
+		tokensProvider: tokensProvider,
 		tmsProvider:    token2.GetManagementServiceProvider(sp),
 		viewManager:    view2.GetManager(sp),
 		ledger:         &ledger{ch.Ledger()},
@@ -134,6 +151,80 @@ func (n *Network) Name() string {
 
 func (n *Network) Channel() string {
 	return n.ch.Name()
+}
+
+func (n *Network) Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions, error) {
+	if len(opt.Network) == 0 {
+		opt.Network = n.n.Name()
+	}
+	if opt.Network != n.n.Name() {
+		return nil, errors.Errorf("invalid network [%s], expected [%s]", opt.Network, n.n.Name())
+	}
+
+	if len(opt.Channel) == 0 {
+		opt.Channel = n.ch.Name()
+	}
+	if opt.Channel != n.ch.Name() {
+		return nil, errors.Errorf("invalid channel [%s], expected [%s]", opt.Channel, n.ch.Name())
+	}
+
+	if len(opt.Namespace) == 0 {
+		if ns, err := n.nsFinder.LookupNamespace(opt.Network, opt.Channel); err == nil {
+			logger.Debugf("no namespace specified, found namespace [%s] for [%s:%s]", ns, opt.Network, opt.Channel)
+			opt.Namespace = ns
+		} else {
+			logger.Errorf("no namespace specified, and no default namespace found [%s], use default [%s]", err, ttx.TokenNamespace)
+			opt.Namespace = ttx.TokenNamespace
+		}
+	}
+	if opt.PublicParamsFetcher == nil {
+		opt.PublicParamsFetcher = common2.NewPublicParamsFetcher(n, opt.Namespace)
+	}
+	return opt, nil
+}
+
+func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
+	tmsID := token2.TMSID{
+		Network:   n.n.Name(),
+		Channel:   n.ch.Name(),
+		Namespace: ns,
+	}
+	if err := n.n.ProcessorManager().AddProcessor(
+		ns,
+		NewTokenRWSetProcessor(
+			n.Name(),
+			ns,
+			common.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
+				return n.tokensProvider.Tokens(tmsID)
+			}).Get,
+			func() *token2.ManagementServiceProvider {
+				return n.tmsProvider
+			},
+		)); err != nil {
+		return nil, errors.WithMessagef(err, "failed to add processor to fabric network [%s]", n.n.Name())
+	}
+	transactionFilter, err := n.filterProvider.New(tmsID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to create transaction filter for [%s]", tmsID)
+	}
+	if err := n.ch.Committer().AddTransactionFilter(transactionFilter); err != nil {
+		return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
+	}
+
+	// check the vault for public parameters,
+	// use them if they exists
+	v, err := n.Vault(ns)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get network at [%s]", tmsID)
+	}
+	ppRaw, err := v.QueryEngine().PublicParams()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get public params at [%s]", tmsID)
+	}
+	if len(ppRaw) != 0 {
+		return []token2.ServiceOption{token2.WithTMSID(tmsID), token2.WithPublicParameter(ppRaw)}, nil
+	}
+	return []token2.ServiceOption{token2.WithTMSID(tmsID)}, nil
 }
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {
@@ -157,7 +248,7 @@ func (n *Network) NewEnvelope() driver.Envelope {
 }
 
 func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
-	return n.ch.Vault().StoreTransient(id, fabric.TransientMap(transient))
+	return n.ch.Vault().StoreTransient(id, transient)
 }
 
 func (n *Network) TransientExists(id string) bool {
