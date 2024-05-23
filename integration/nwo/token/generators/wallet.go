@@ -6,14 +6,16 @@ SPDX-License-Identifier: Apache-2.0
 
 package generators
 
-import "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
+import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+)
 
 type Identity struct {
 	ID      string
 	Type    string
 	Path    string
 	Default bool
-	Opts    *topology.BCCSP
+	Opts    *msp.BCCSP
 	Raw     []byte
 }
 
