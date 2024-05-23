@@ -216,13 +216,15 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 		}
 
 		if wallet == "issuers" || wallet == "auditors" {
+			var err error
 			if userSpecs[i].HSM {
 				// PKCS11
-				id.Opts = msp.BCCSPOpts("PKCS11")
+				id.Opts, err = msp.BCCSPOpts("PKCS11")
 			} else {
 				// SW
-				id.Opts = msp.BCCSPOpts("SW")
+				id.Opts, err = msp.BCCSPOpts("SW")
 			}
+			Expect(err).NotTo(HaveOccurred(), "failed generating identity [%s]", userSpecs[i])
 		}
 
 		identities = append(identities, id)
