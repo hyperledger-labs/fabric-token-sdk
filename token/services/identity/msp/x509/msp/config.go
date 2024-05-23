@@ -82,3 +82,26 @@ func ToPKCS11OptsOpts(o *PKCS11) *pkcs11.PKCS11Opts {
 	}
 	return res
 }
+
+// BCCSPOpts returns a `BCCSP` instance. `defaultProvider` sets the `Default` value of the BCCSP,
+// that is denoting the which provider impl is used. `defaultProvider` currently supports `SW` and `PKCS11`.
+func BCCSPOpts(defaultProvider string) *BCCSP {
+	bccsp := &BCCSP{
+		Default: defaultProvider,
+		SW: &SoftwareProvider{
+			Hash:     "SHA2",
+			Security: 256,
+		},
+		PKCS11: &PKCS11{
+			Hash:     "SHA2",
+			Security: 256,
+		},
+	}
+	if defaultProvider == "PKCS11" {
+		lib, pin, label := pkcs11.FindPKCS11Lib()
+		bccsp.PKCS11.Pin = pin
+		bccsp.PKCS11.Label = label
+		bccsp.PKCS11.Library = lib
+	}
+	return bccsp
+}
