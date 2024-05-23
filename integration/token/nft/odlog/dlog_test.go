@@ -9,7 +9,7 @@ package dlog
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
+	orion "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/odlog"
@@ -33,7 +33,7 @@ var _ = Describe("EndToEnd", func() {
 			network, err = integration.New(StartPortDlog(), "", nft.Topology(common.Opts{
 				Backend:        "orion",
 				TokenSDKDriver: "dlog",
-				SDKs:           []api.SDK{&fabric.SDK{}, &odlog.SDK{}},
+				SDKs:           []api.SDK{&orion.SDK{}, &odlog.SDK{}},
 			})...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
