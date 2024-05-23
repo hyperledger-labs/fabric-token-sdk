@@ -216,7 +216,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string, sdks ...api2.SDK) []ap
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("debug", "")
+	//fscTopology.SetLogging("token-sdk=debug:fabric-sdk=debug:info", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org1"),

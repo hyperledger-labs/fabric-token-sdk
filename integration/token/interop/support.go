@@ -318,7 +318,7 @@ func HTLCReclaimByHash(network *integration.Infrastructure, tmsID token.TMSID, i
 	}))
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		common2.CheckFinality(network, id, common.JSONUnmarshalString(txID), nil, false)
+		common2.CheckFinality(network, id, common.JSONUnmarshalString(txID), &tmsID, false)
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range errorMsgs {
