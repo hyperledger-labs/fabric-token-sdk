@@ -32,6 +32,7 @@ type Opts struct {
 	NoAuditor       bool
 	HSM             bool
 	SDKs            []api2.SDK
+	WebEnabled      bool
 }
 
 func Topology(opts Opts) []api.Topology {
@@ -54,6 +55,7 @@ func Topology(opts Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
+	fscTopology.WebEnabled = opts.WebEnabled
 	fscTopology.SetLogging(opts.FSCLogSpec, "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
