@@ -16,10 +16,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/commands"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/network"
 	ftopology "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -215,13 +216,15 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 		}
 
 		if wallet == "issuers" || wallet == "auditors" {
+			var err error
 			if userSpecs[i].HSM {
 				// PKCS11
-				id.Opts = network.BCCSPOpts("PKCS11")
+				id.Opts, err = msp.BCCSPOpts("PKCS11")
 			} else {
 				// SW
-				id.Opts = network.BCCSPOpts("SW")
+				id.Opts, err = msp.BCCSPOpts("SW")
 			}
+			Expect(err).NotTo(HaveOccurred(), "failed generating identity [%s]", userSpecs[i])
 		}
 
 		identities = append(identities, id)

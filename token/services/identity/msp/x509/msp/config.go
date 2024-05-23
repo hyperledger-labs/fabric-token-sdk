@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package msp
 
 import (
-	"github.com/hyperledger/fabric/bccsp/pkcs11"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp/pkcs11"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -81,4 +81,30 @@ func ToPKCS11OptsOpts(o *PKCS11) *pkcs11.PKCS11Opts {
 		})
 	}
 	return res
+}
+
+// BCCSPOpts returns a `BCCSP` instance. `defaultProvider` sets the `Default` value of the BCCSP,
+// that is denoting the which provider impl is used. `defaultProvider` currently supports `SW` and `PKCS11`.
+func BCCSPOpts(defaultProvider string) (*BCCSP, error) {
+	bccsp := &BCCSP{
+		Default: defaultProvider,
+		SW: &SoftwareProvider{
+			Hash:     "SHA2",
+			Security: 256,
+		},
+		PKCS11: &PKCS11{
+			Hash:     "SHA2",
+			Security: 256,
+		},
+	}
+	if defaultProvider == "PKCS11" {
+		lib, pin, label, err := pkcs11.FindPKCS11Lib()
+		if err != nil {
+			return nil, errors.Wrapf(err, "faild to find PKCS11 lib [%s]", defaultProvider)
+		}
+		bccsp.PKCS11.Pin = pin
+		bccsp.PKCS11.Label = label
+		bccsp.PKCS11.Library = lib
+	}
+	return bccsp, nil
 }

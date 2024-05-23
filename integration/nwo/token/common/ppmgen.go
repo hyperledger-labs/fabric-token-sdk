@@ -13,13 +13,13 @@ import (
 
 	msp "github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	cryptodlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/pkg/errors"
 )
 
@@ -54,7 +54,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *gen
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			provider, err := x509.NewProviderWithBCCSPConfig(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
+			provider, _, err := x509.NewProvider(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 provider")
 			}
@@ -74,7 +74,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *gen
 		}
 		for _, issuer := range wallets.Issuers {
 			// Build an MSP Identity
-			provider, err := x509.NewProviderWithBCCSPConfig(issuer.Path, "", msp2.AuditorMSPID, nil, issuer.Opts)
+			provider, _, err := x509.NewProvider(issuer.Path, "", msp2.AuditorMSPID, nil, issuer.Opts)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 provider")
 			}
@@ -148,7 +148,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			provider, err := x509.NewProviderWithBCCSPConfig(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
+			provider, _, err := x509.NewProvider(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 provider")
 			}
@@ -168,7 +168,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 		}
 		for _, issuer := range wallets.Issuers {
 			// Build an MSP Identity
-			provider, err := x509.NewProviderWithBCCSPConfig(issuer.Path, "", msp2.AuditorMSPID, nil, issuer.Opts)
+			provider, _, err := x509.NewProvider(issuer.Path, "", msp2.AuditorMSPID, nil, issuer.Opts)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 provider")
 			}
