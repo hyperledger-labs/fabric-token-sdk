@@ -8,7 +8,7 @@ package token
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
@@ -150,7 +150,7 @@ func (p *ManagementServiceProvider) normalize(opt *ServiceOptions) (*ServiceOpti
 	if len(configs) == 0 {
 		return nil, errors.Errorf("no token management service configs found")
 	}
-	var config *config2.TMS
+	var config *config.TMS
 	if len(opt.Network) == 0 {
 		config = configs[0].TMS()
 		opt.Network = config.Network
@@ -172,14 +172,36 @@ func (p *ManagementServiceProvider) normalize(opt *ServiceOptions) (*ServiceOpti
 		opt.Channel = config.Channel
 	}
 	if opt.Channel != config.Channel {
-		return nil, errors.Errorf("invalid channel [%s], expected [%s]", opt.Channel, config.Channel)
+		// is there another TMS with the same network, but different channel? If yes, don't fail
+		found := false
+		for _, manager := range configs {
+			tms := manager.TMS()
+			if tms.Network == opt.Network && tms.Channel == opt.Channel {
+				found = true
+				config = tms
+			}
+		}
+		if !found {
+			return nil, errors.Errorf("invalid channel [%s], expected [%s]", opt.Channel, config.Channel)
+		}
 	}
 
 	if len(opt.Namespace) == 0 {
 		opt.Namespace = config.Namespace
 	}
 	if opt.Namespace != config.Namespace {
-		return nil, errors.Errorf("invalid namespace [%s], expected [%s]", opt.Namespace, config.Namespace)
+		// is there another TMS with the same network and channel, but different namespace? If yes, don't fail
+		found := false
+		for _, manager := range configs {
+			tms := manager.TMS()
+			if tms.Network == opt.Network && tms.Channel == opt.Channel && tms.Namespace == opt.Namespace {
+				found = true
+				config = tms
+			}
+		}
+		if !found {
+			return nil, errors.Errorf("invalid namespace [%s], expected [%s]", opt.Namespace, config.Namespace)
+		}
 	}
 
 	// last pass
