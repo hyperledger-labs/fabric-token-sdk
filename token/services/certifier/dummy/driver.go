@@ -8,15 +8,8 @@ package dummy
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-)
-
-const (
-	ZKATDLog = "zkatdlog"
-	FabToken = "fabtoken"
 )
 
 type CertificationClient struct{}
@@ -51,9 +44,4 @@ func (d *Driver) NewCertificationClient(tms *token.ManagementService) (driver.Ce
 
 func (d *Driver) NewCertificationService(tms *token.ManagementService, wallet string) (driver.CertificationService, error) {
 	return &CertificationService{}, nil
-}
-
-func init() {
-	certifier.Register(FabToken, &Driver{})
-	certifier.Register(ZKATDLog, &Driver{})
 }
