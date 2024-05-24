@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/pkg/errors"
 )
 
@@ -23,7 +23,7 @@ type ClaimSignature struct {
 
 // ClaimSigner is the signer for the claim of an htlc script
 type ClaimSigner struct {
-	Recipient driver.Signer
+	Recipient token.Signer
 	Preimage  []byte
 }
 
@@ -51,7 +51,7 @@ func concatTokenRequestTxIDPreimage(tokenRequestAndTxID []byte, preImage []byte)
 
 // ClaimVerifier is the verifier of a ClaimSignature
 type ClaimVerifier struct {
-	Recipient driver.Verifier
+	Recipient token.Verifier
 	HashInfo  HashInfo
 }
 
@@ -87,8 +87,8 @@ func (cv *ClaimVerifier) Verify(tokenRequestAndTxID, claimSignature []byte) erro
 
 // Verifier checks if an htlc script can be claimed or reclaimed
 type Verifier struct {
-	Recipient driver.Verifier
-	Sender    driver.Verifier
+	Recipient token.Verifier
+	Sender    token.Verifier
 	Deadline  time.Time
 	HashInfo  HashInfo
 }

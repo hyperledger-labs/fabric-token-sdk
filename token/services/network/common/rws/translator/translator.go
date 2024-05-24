@@ -346,6 +346,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 		if len(raw) != 0 {
 			return errors.Errorf("entry with issue metadata key [%s] is already occupied by [%s]", key, string(raw))
 		}
+		logger.Infof("commit issue metadata with key [%s]", key)
 		if err := w.RWSet.SetState(w.namespace, k, value); err != nil {
 			return err
 		}

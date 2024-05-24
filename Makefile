@@ -3,6 +3,7 @@ FABRIC_VERSION ?= 2.5.0
 FABRIC_CA_VERSION ?= 1.5.7
 FABRIC_TWO_DIGIT_VERSION = $(shell echo $(FABRIC_VERSION) | cut -d '.' -f 1,2)
 ORION_VERSION=v0.2.5
+WEAVER_VERSION=1.2.1
 
 # need to install fabric binaries outside of fts tree for now (due to chaincode packaging issues)
 FABRIC_BINARY_BASE=$(PWD)/../fabric
@@ -49,7 +50,7 @@ install-softhsm:
 	./ci/scripts/install_softhsm.sh
 
 .PHONY: docker-images
-docker-images: fabric-docker-images orion-server-images monitoring-docker-images
+docker-images: fabric-docker-images orion-server-images monitoring-docker-images weaver-docker-images
 
 .PHONY: fabric-docker-images
 fabric-docker-images:
@@ -70,6 +71,12 @@ orion-server-images:
 	docker pull orionbcdb/orion-server:$(ORION_VERSION)
 	docker image tag orionbcdb/orion-server:$(ORION_VERSION) orionbcdb/orion-server:latest
 
+.PHONY: weaver-docker-images
+weaver-docker-images:
+	docker pull ghcr.io/hyperledger-labs/weaver-fabric-driver:$(WEAVER_VERSION)
+	docker image tag ghcr.io/hyperledger-labs/weaver-fabric-driver:$(WEAVER_VERSION) hyperledger-labs/weaver-fabric-driver:latest
+	docker pull ghcr.io/hyperledger-labs/weaver-relay-server:$(WEAVER_VERSION)
+	docker image tag ghcr.io/hyperledger-labs/weaver-relay-server:$(WEAVER_VERSION) hyperledger-labs/weaver-relay-server:latest
 
 .PHONY: integration-tests-nft-dlog
 integration-tests-nft-dlog:
