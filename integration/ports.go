@@ -97,6 +97,9 @@ const (
 	ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks
 	ZKATDLogInteropHTLCOrion
 	ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
+	FabTokenInteropAssetTransfer
+	ZKATDLogInteropAssetTransfer
+)
 
 	Mixed
 )

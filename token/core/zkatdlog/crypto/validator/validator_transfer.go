@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
@@ -80,18 +79,18 @@ func TransferHTLCValidate(ctx *Context) error {
 			out := ctx.TransferAction.GetOutputs()[0].(*token.Token)
 
 			// check that owner field in output is correct
-			script, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner, out.Owner, now)
+			script, op, err := htlc.VerifyOwner(ctx.InputTokens[0].Owner, out.Owner, now)
 			if err != nil {
 				return errors.Wrap(err, "failed to verify transfer from htlc script")
 			}
 
 			// check metadata
 			sigma := ctx.Signatures[i]
-			metadataKey, err := htlc2.MetadataClaimKeyCheck(ctx.TransferAction, script, op, sigma)
+			metadataKey, err := htlc.MetadataClaimKeyCheck(ctx.TransferAction, script, op, sigma)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
-			if op != htlc2.Reclaim {
+			if op != htlc.Reclaim {
 				ctx.CountMetadataKey(metadataKey)
 			}
 		}
@@ -118,7 +117,7 @@ func TransferHTLCValidate(ctx *Context) error {
 			if err := script.Validate(now); err != nil {
 				return errors.WithMessagef(err, "htlc script invalid")
 			}
-			metadataKey, err := htlc2.MetadataLockKeyCheck(ctx.TransferAction, script)
+			metadataKey, err := htlc.MetadataLockKeyCheck(ctx.TransferAction, script)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}

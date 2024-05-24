@@ -19,9 +19,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -278,15 +278,17 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 			return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
 		}
 		return nil
-	case htlc2.ScriptType:
-		return inspectTokenOwnerOfScript(des, token, index)
+	case htlc.ScriptType:
+		return inspectTokenOwnerOfHTLCScript(des, token, index)
+	case pledge.ScriptType:
+		return inspectTokenOwnerOfPledgeScript(des, token, index)
 	default:
 		return errors.Errorf("identity type [%s] not recognized", ro.Type)
 	}
 
 }
 
-func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index int) error {
+func inspectTokenOwnerOfHTLCScript(des Deserializer, token *AuditableToken, index int) error {
 	owner, err := identity.UnmarshalTypedIdentity(token.Token.Owner)
 	if err != nil {
 		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
@@ -324,6 +326,45 @@ func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index in
 		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Recipient))
 	}
 
+	return nil
+}
+
+func inspectTokenOwnerOfPledgeScript(des Deserializer, token *AuditableToken, index int) error {
+	owner, err := identity.UnmarshalTypedIdentity(token.Token.Owner)
+	if err != nil {
+		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
+	}
+	scriptInf := &htlc.ScriptInfo{}
+	if err := json.Unmarshal(token.Owner.OwnerInfo, scriptInf); err != nil {
+		return errors.Wrapf(err, "failed to unmarshal script info")
+	}
+	scriptSender, _, scriptIssuer, err := pledge.GetScriptSenderAndRecipient(owner)
+	if err != nil {
+		return errors.Wrap(err, "failed getting script sender and recipient")
+	}
+
+	sender, err := des.GetOwnerMatcher(scriptInf.Sender)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get owner matcher from pledge script sender [%s]", string(scriptInf.Sender))
+	}
+	ro, err := identity.UnmarshalTypedIdentity(scriptSender)
+	if err != nil {
+		return errors.Wrapf(err, "failed to retrieve raw owner from sender in pledge script")
+	}
+	// If this is a reclaim, match it against the sender.
+	// If this is a redeem, match it against the issuer.
+	if err := sender.Match(ro.Identity); err != nil {
+		// Check if this can be matched to the issuer
+		ro, err := identity.UnmarshalTypedIdentity(scriptIssuer)
+		if err != nil {
+			return errors.Wrapf(err, "failed to retrieve raw owner from issuer in pledge script")
+		}
+		if err := sender.Match(ro.Identity); err != nil {
+			return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Sender))
+		}
+	}
+
+	// TODO: recipient is in another network
 	return nil
 }
 

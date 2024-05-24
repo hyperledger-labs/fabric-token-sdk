@@ -9,14 +9,13 @@ package htlc
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
 
 type VerifierDES interface {
-	DeserializeVerifier(id driver.Identity) (driver.Verifier, error)
+	DeserializeVerifier(id token.Identity) (token.Verifier, error)
 }
 
 type TypedIdentityDeserializer struct {
@@ -27,17 +26,17 @@ func NewTypedIdentityDeserializer(verifierDeserializer VerifierDES) *TypedIdenti
 	return &TypedIdentityDeserializer{VerifierDeserializer: verifierDeserializer}
 }
 
-func (t *TypedIdentityDeserializer) DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error) {
-	if typ != htlc.ScriptType {
-		return nil, errors.Errorf("cannot deserializer type [%s], expected [%s]", typ, htlc.ScriptType)
+func (t *TypedIdentityDeserializer) DeserializeVerifier(typ string, raw []byte) (token.Verifier, error) {
+	if typ != ScriptType {
+		return nil, errors.Errorf("cannot deserializer type [%s], expected [%s]", typ, ScriptType)
 	}
 
-	script := &htlc.Script{}
+	script := &Script{}
 	err := json.Unmarshal(raw, script)
 	if err != nil {
 		return nil, errors.Errorf("failed to unmarshal TypedIdentity as an htlc script")
 	}
-	v := &htlc.Verifier{}
+	v := &Verifier{}
 	v.Sender, err = t.VerifierDeserializer.DeserializeVerifier(script.Sender)
 	if err != nil {
 		return nil, errors.Errorf("failed to unmarshal the identity of the sender in the htlc script")
@@ -53,24 +52,24 @@ func (t *TypedIdentityDeserializer) DeserializeVerifier(typ string, raw []byte) 
 	return v, nil
 }
 
-func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error) {
-	if typ != htlc.ScriptType {
+func (t *TypedIdentityDeserializer) Recipients(id token.Identity, typ string, raw []byte) ([]token.Identity, error) {
+	if typ != ScriptType {
 		return nil, errors.New("unknown identity type")
 	}
 
-	script := &htlc.Script{}
+	script := &Script{}
 	err := json.Unmarshal(raw, script)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal htlc script")
 	}
-	return []driver.Identity{script.Recipient}, nil
+	return []token.Identity{script.Recipient}, nil
 }
 
-func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
-	if typ != htlc.ScriptType {
-		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, htlc.ScriptType)
+func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id token.Identity, typ string, raw []byte, p deserializer.AuditInfoProvider) ([][]byte, error) {
+	if typ != ScriptType {
+		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, ScriptType)
 	}
-	script := &htlc.Script{}
+	script := &Script{}
 	var err error
 	err = json.Unmarshal(raw, script)
 	if err != nil {

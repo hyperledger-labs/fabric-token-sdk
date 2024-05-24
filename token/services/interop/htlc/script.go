@@ -74,17 +74,27 @@ type Script struct {
 // - The deadline must be after the passed time reference
 // - HashInfo must be Available
 func (s *Script) Validate(timeReference time.Time) error {
+	if err := s.WellFormedness(); err != nil {
+		return err
+	}
+	if s.Deadline.Before(timeReference) {
+		return errors.New("expiration date has already passed")
+	}
+	return nil
+}
+
+func (s *Script) WellFormedness() error {
 	if s.Sender.IsNone() {
 		return errors.New("sender not set")
 	}
 	if s.Recipient.IsNone() {
 		return errors.New("recipient not set")
 	}
-	if s.Deadline.Before(timeReference) {
-		return errors.New("expiration date has already passed")
-	}
 	if err := s.HashInfo.Validate(); err != nil {
 		return err
+	}
+	if len(s.HashInfo.Hash) == 0 {
+		return errors.New("hash is not set")
 	}
 	return nil
 }

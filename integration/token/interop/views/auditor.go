@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
@@ -66,28 +66,40 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	}
 
 	for i := 0; i < inputs.Count(); i++ {
-		input, err := htlc.ToInput(inputs.At(i))
+		input, err := interop.ToInput(inputs.At(i))
 		assert.NoError(err, "cannot get htlc input wrapper")
-		if !input.IsHTLC() {
-			continue
+
+		switch {
+		case input.IsHTLC():
+			// check script details
+			script, err := input.HTLC()
+			assert.NoError(err, "cannot get htlc script from output")
+			assert.True(len(script.HashInfo.Hash) > 0, "hash is not set")
+			assert.NoError(script.WellFormedness(), "htlc script is not valid")
+		case input.IsPledge():
+			// check script details
+			script, err := input.Pledge()
+			assert.NoError(err, "cannot get pledge script from input")
+			assert.NoError(script.WellFormedness(), "pledge script is not valid")
 		}
-		// check script details, for example make sure the hash is set
-		script, err := input.Script()
-		assert.NoError(err, "cannot get htlc script from input")
-		assert.True(len(script.HashInfo.Hash) > 0, "hash is not set")
 	}
 
 	now := time.Now()
 	for i := 0; i < outputs.Count(); i++ {
-		output, err := htlc.ToOutput(outputs.At(i))
+		output, err := interop.ToOutput(outputs.At(i))
 		assert.NoError(err, "cannot get htlc output wrapper")
-		if !output.IsHTLC() {
-			continue
+		switch {
+		case output.IsHTLC():
+			// check script details
+			script, err := output.HTLC()
+			assert.NoError(err, "cannot get htlc script from output")
+			assert.NoError(script.Validate(now), "script is not valid")
+		case output.IsPledge():
+			// check script details
+			script, err := output.Pledge()
+			assert.NoError(err, "cannot get pledge script from input")
+			assert.NoError(script.Validate(now), "script is not valid")
 		}
-		// check script details
-		script, err := output.Script()
-		assert.NoError(err, "cannot get htlc script from output")
-		assert.NoError(script.Validate(now), "script is not valid")
 	}
 
 	return context.RunView(ttx.NewAuditApproveView(w, tx))

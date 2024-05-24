@@ -446,7 +446,9 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	ts := token.GetManagementService(context, token.WithTMSID(request.TMSID))
 	other := request.RecipientData.Identity
 	if err := ts.WalletManager().RegisterRecipientIdentity(&RecipientData{
-		Identity: other, AuditInfo: request.RecipientData.AuditInfo, TokenMetadata: request.RecipientData.TokenMetadata,
+		Identity:      other,
+		AuditInfo:     request.RecipientData.AuditInfo,
+		TokenMetadata: request.RecipientData.TokenMetadata,
 	}); err != nil {
 		return nil, err
 	}

@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"unicode/utf8"
 
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/pkg/errors"
 )
@@ -30,6 +32,10 @@ const (
 	InputSerialNumberPrefix      = "sn"
 	IssueActionMetadataPrefix    = "iam"
 	TransferActionMetadataPrefix = "tam"
+
+	ProofOfExistencePrefix         = "pe"
+	ProofOfNonExistencePrefix      = "pne"
+	ProofOfMetadataExistencePrefix = "pme"
 )
 
 type Translator struct {
@@ -130,4 +136,23 @@ func splitCompositeKey(compositeKey string) (translator.Key, []string, error) {
 		return "", nil, errors.Errorf("invalid composite key - not enough components found in key '%s', [%d][%v]", compositeKey, len(components), components)
 	}
 	return components[0], components[1:], nil
+}
+
+func CreateProofOfExistenceKey(tokenId *token.ID) (string, error) {
+	id := token2.Hashable(tokenId.String()).String()
+	return CreateCompositeKey(ProofOfExistencePrefix, []string{id})
+}
+
+func CreateProofOfNonExistenceKey(tokenID *token.ID, origin string) (string, error) {
+	return CreateCompositeKey(ProofOfNonExistencePrefix, []string{
+		token2.Hashable(tokenID.String()).String(),
+		token2.Hashable(origin).String(),
+	})
+}
+
+func CreateProofOfMetadataExistenceKey(tokenID *token.ID, origin string) (string, error) {
+	return CreateCompositeKey(ProofOfMetadataExistencePrefix, []string{
+		token2.Hashable(tokenID.String()).String(),
+		token2.Hashable(origin).String(),
+	})
 }

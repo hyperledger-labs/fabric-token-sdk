@@ -393,6 +393,14 @@ func (n *Network) ProcessNamespace(namespace string) error {
 	return n.n.ProcessNamespace(namespace)
 }
 
+func (n *Network) InteropURL(namespace string) string {
+	interoperability, ok := n.n.(driver.Interoperability)
+	if !ok {
+		panic("interoperability not supported")
+	}
+	return interoperability.InteropURL(namespace)
+}
+
 func (n *Network) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
 	return n.n.Normalize(opt)
 }

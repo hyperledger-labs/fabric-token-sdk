@@ -7,9 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	. "github.com/onsi/gomega"
@@ -82,12 +80,6 @@ func (t *Topology) AddTMS(fscNodes []*node.Node, backend BackedTopology, channel
 	}
 	t.TMSs = append(t.TMSs, tms)
 	return tms
-}
-
-func (t *Topology) SetSDK(fscTopology *fsc.Topology, sdk api.SDK) {
-	for _, node := range fscTopology.Nodes {
-		node.AddSDK(sdk)
-	}
 }
 
 func (t *Topology) GetTMSs() []*topology.TMS {

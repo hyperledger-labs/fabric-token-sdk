@@ -14,14 +14,27 @@ import (
 	"github.com/pkg/errors"
 )
 
+type IssueMetadataProviderFunc = func(attributes map[string][]byte, opts *driver.IssueOptions) (map[string][]byte, error)
+
 type IssueService struct {
-	PublicParamsManager driver.PublicParamsManager
-	WalletService       driver.WalletService
-	Deserializer        driver.Deserializer
+	PublicParamsManager    driver.PublicParamsManager
+	WalletService          driver.WalletService
+	Deserializer           driver.Deserializer
+	IssueMetadataProviders []IssueMetadataProviderFunc
 }
 
-func NewIssueService(publicParamsManager driver.PublicParamsManager, walletService driver.WalletService, deserializer driver.Deserializer) *IssueService {
-	return &IssueService{PublicParamsManager: publicParamsManager, WalletService: walletService, Deserializer: deserializer}
+func NewIssueService(
+	publicParamsManager driver.PublicParamsManager,
+	walletService driver.WalletService,
+	deserializer driver.Deserializer,
+	IssueMetadataProviders []IssueMetadataProviderFunc,
+) *IssueService {
+	return &IssueService{
+		PublicParamsManager:    publicParamsManager,
+		WalletService:          walletService,
+		Deserializer:           deserializer,
+		IssueMetadataProviders: IssueMetadataProviders,
+	}
 }
 
 // Issue returns an IssueAction as a function of the passed arguments
@@ -67,7 +80,20 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		outputsMetadata = append(outputsMetadata, metaRaw)
 	}
 
-	action := &IssueAction{Issuer: issuerIdentity, Outputs: outs}
+	actionMetadata := map[string][]byte{}
+	var err error
+	for _, provider := range s.IssueMetadataProviders {
+		actionMetadata, err = provider(actionMetadata, opts)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed generating token action metadata")
+		}
+	}
+
+	action := &IssueAction{
+		Issuer:   issuerIdentity,
+		Outputs:  outs,
+		Metadata: actionMetadata,
+	}
 	outputs, err := action.GetSerializedOutputs()
 	if err != nil {
 		return nil, nil, err

@@ -14,6 +14,7 @@ import (
 	"os"
 	"runtime/debug"
 	"sync"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
@@ -35,6 +36,10 @@ const (
 	AreTokensSpent            = "areTokensSpent"
 
 	PublicParamsPathVarEnv = "PUBLIC_PARAMS_FILE_PATH"
+
+	ProofOfTokenExistenceQuery         = "proof_of_token_existence"
+	ProofOfTokenNonExistenceQuery      = "proof_of_token_non_existence"
+	ProofOfTokenMetadataExistenceQuery = "proof_of_token_metadata_existence"
 )
 
 type Agent interface {
@@ -59,6 +64,17 @@ type Validator interface {
 
 type PublicParameters interface {
 	GraphHiding() bool
+}
+
+type ProofOfTokenNonExistenceRequest struct {
+	TokenID       *token2.ID
+	OriginNetwork string
+	Deadline      time.Time
+}
+
+type ProofOfTokenMetadataExistenceRequest struct {
+	TokenID       *token2.ID
+	OriginNetwork string
 }
 
 type TokenChaincode struct {
@@ -134,6 +150,21 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 				return shim.Error("request to check if tokens are spent is empty")
 			}
 			return cc.AreTokensSpent(args[1], stub)
+		case ProofOfTokenExistenceQuery:
+			if len(args) != 2 {
+				return shim.Error(fmt.Sprintf("(ProofOfTokenExistenceQuery) invalid number of arguments, expected 2, got [%d]", len(args)))
+			}
+			return cc.ProofOfTokenExistenceQuery(args[1], stub)
+		case ProofOfTokenNonExistenceQuery:
+			if len(args) != 2 {
+				return shim.Error(fmt.Sprintf("(ProofOfTokenNonExistenceQuery) invalid number of arguments, expected 2, got [%d]", len(args)))
+			}
+			return cc.ProofOfTokenNonExistenceQuery(args[1], stub)
+		case ProofOfTokenMetadataExistenceQuery:
+			if len(args) != 2 {
+				return shim.Error(fmt.Sprintf("(ProofOfTokenMetadataExistenceQuery) invalid number of arguments, expected 2, got [%d]", len(args)))
+			}
+			return cc.ProofOfTokenMetadataExistenceQuery(args[1], stub)
 		default:
 			return shim.Error(fmt.Sprintf("function [%s] not recognized", f))
 		}
@@ -316,6 +347,79 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 		return shim.Error(fmt.Sprintf("failed marshalling spent flags: [%s]", err))
 	}
 	return shim.Success(raw)
+}
+
+func (cc *TokenChaincode) ProofOfTokenExistenceQuery(idRaw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+	raw, err := base64.StdEncoding.DecodeString(string(idRaw))
+	if err != nil {
+		return shim.Error(fmt.Sprintf("(ProofOfTokenExistenceQuery) invalid argument [%s]: failed unmarshalling [%s]", string(idRaw), err))
+	}
+	tokenId := &token2.ID{}
+	if err := json.Unmarshal(raw, tokenId); err != nil {
+		return shim.Error(fmt.Sprintf("(ProofOfTokenExistenceQuery) invalid argument [%s]: failed unmarshalling [%s]", string(idRaw), err))
+	}
+	return cc.proveTokenExists(tokenId, stub)
+}
+
+func (cc *TokenChaincode) proveTokenExists(tokenId *token2.ID, stub shim.ChaincodeStubInterface) pb.Response {
+	logger.Infof("proof of existence [%s]", tokenId.String())
+	logger.Infof("generate proof of existence...")
+	rwset := &rwsWrapper{stub: stub}
+	p := translator.New("", rwset, "")
+	if err := p.ProveTokenExists(tokenId); err != nil {
+		return shim.Error(fmt.Sprintf("failed to confirm if token with ID [%s] exists", tokenId))
+	}
+	logger.Infof("proof of existence...done.")
+	return shim.Success(nil)
+}
+
+func (cc *TokenChaincode) ProofOfTokenNonExistenceQuery(reqRaw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+	raw, err := base64.StdEncoding.DecodeString(string(reqRaw))
+	if err != nil {
+		return shim.Error(fmt.Sprintf("(ProofOfTokenNonExistenceQuery) invalid argument [%s]: failed unmarshalling [%s]", string(reqRaw), err))
+	}
+	request := &ProofOfTokenNonExistenceRequest{}
+	if err := json.Unmarshal(raw, request); err != nil {
+		return shim.Error(fmt.Sprintf("(ProofOfTokenNonExistenceQuery) invalid argument [%s]: failed unmarshalling [%s]", string(reqRaw), err))
+	}
+	return cc.proveTokenDoesNotExist(request.TokenID, request.OriginNetwork, request.Deadline, stub)
+}
+
+func (cc *TokenChaincode) proveTokenDoesNotExist(tokenID *token2.ID, origin string, deadline time.Time, stub shim.ChaincodeStubInterface) pb.Response {
+	logger.Infof("proof of non existence of token [%s] from network [%s]", tokenID.String(), origin)
+	logger.Infof("generate proof of non-existence...")
+	rwset := &rwsWrapper{stub: stub}
+	p := translator.New("", rwset, "")
+	if err := p.ProveTokenDoesNotExist(tokenID, origin, deadline); err != nil {
+		return shim.Error(fmt.Sprintf("failed to confirm if token from network [%s] and with key [%s] does not exist", origin, tokenID.String()))
+	}
+	logger.Infof("proof of non existence...done.")
+	return shim.Success(nil)
+}
+
+func (cc *TokenChaincode) ProofOfTokenMetadataExistenceQuery(reqRaw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+	raw, err := base64.StdEncoding.DecodeString(string(reqRaw))
+	if err != nil {
+		return shim.Error(fmt.Sprintf("(ProofOfTokenMetadataExistenceQuery) invalid argument [%s]: failed unmarshalling [%s]", string(reqRaw), err))
+	}
+	request := &ProofOfTokenMetadataExistenceRequest{}
+	if err := json.Unmarshal(raw, request); err != nil {
+		return shim.Error(fmt.Sprintf("(ProofOfTokenMetadataExistenceQuery) invalid argument [%s]: failed unmarshalling [%s]", string(reqRaw), err))
+	}
+	return cc.proveTokenWithMetadataExist(request.TokenID, request.OriginNetwork, stub)
+}
+
+func (cc *TokenChaincode) proveTokenWithMetadataExist(tokenID *token2.ID, origin string, stub shim.ChaincodeStubInterface) pb.Response {
+	logger.Infof("proof of existence of token with metadata [%s] and network [%s]", tokenID.String(), origin)
+	logger.Infof("generate proof of existence...")
+	rwset := &rwsWrapper{stub: stub}
+	p := translator.New("", rwset, "")
+	if err := p.ProveTokenWithMetadataExists(tokenID, origin); err != nil {
+		fmt.Println(err.Error())
+		return shim.Error(fmt.Sprintf("failed to confirm if token from network [%s] and with key [%s] exist", origin, tokenID.String()))
+	}
+	logger.Infof("proof of non existence...done.")
+	return shim.Success(nil)
 }
 
 type ledger struct {

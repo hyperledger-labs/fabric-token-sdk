@@ -50,11 +50,13 @@ func NewValidator(logger logging.Logger, pp *PublicParams, deserializer driver.D
 		TransferSignatureValidate,
 		TransferBalanceValidate,
 		TransferHTLCValidate,
+		TransferPledgeValidate,
 	}
 	transferValidators = append(transferValidators, extraValidators...)
 
 	issueValidators := []ValidateIssueFunc{
 		IssueValidate,
+		IssuePledgeValidate,
 	}
 
 	return common.NewValidator[*PublicParams, *token.Token, *TransferAction, *IssueAction, driver.Deserializer](

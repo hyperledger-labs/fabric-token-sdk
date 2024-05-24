@@ -8,6 +8,7 @@ package deserializer
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -18,10 +19,12 @@ import (
 
 var logger = logging.MustGetLogger("token-sdk.services.identity.deserializer")
 
+type AuditInfoProvider = driver.AuditInfoProvider
+
 type TypedVerifierDeserializer interface {
-	DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error)
-	Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error)
-	GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([][]byte, error)
+	DeserializeVerifier(typ string, raw []byte) (token.Verifier, error)
+	Recipients(id token.Identity, typ string, raw []byte) ([]token.Identity, error)
+	GetOwnerAuditInfo(id token.Identity, typ string, raw []byte, p AuditInfoProvider) ([][]byte, error)
 }
 
 // AuditMatcherDeserializer deserializes raw bytes into a matcher, which allows an auditor to match an identity to an enrollment ID

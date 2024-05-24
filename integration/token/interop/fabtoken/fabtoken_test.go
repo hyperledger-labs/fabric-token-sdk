@@ -106,6 +106,26 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 	return ts, selector
 }
 
+	Describe("Asset Transfer With Two Fabric Networks", func() {
+		BeforeEach(func() {
+			var err error
+			ii, err = integration.New(
+				integration2.FabTokenInteropAssetTransfer.StartPortForNode(),
+				"",
+				interop.AssetTransferTopology("fabtoken", &fabric3.SDK{}, &ffabtoken.SDK{})...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed a cross network asset transfer", func() {
+			interop.TestAssetTransferWithTwoNetworks(ii)
+		})
+	})
+
+})
 func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
 	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimWithOrionTopology(common.Opts{

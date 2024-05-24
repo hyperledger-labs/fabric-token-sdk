@@ -12,10 +12,12 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/observables"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver/interop/state/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -119,7 +121,14 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 		deserializer,
 		tmsConfig,
 		observables.NewObservableIssueService(
-			fabtoken.NewIssueService(publicParamsManager, ws, deserializer),
+			fabtoken.NewIssueService(
+			publicParamsManager,
+			ws,
+			deserializer,
+			[]fabtoken.IssueMetadataProviderFunc{
+				pledge.IssueActionMetadata,
+			},
+		),
 			observables.NewIssue(tracerProvider),
 		),
 		observables.NewObservableTransferService(

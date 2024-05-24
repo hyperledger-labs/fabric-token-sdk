@@ -18,6 +18,10 @@ const loggerNameSeparator = "."
 // Logger provides logging API
 type Logger = logging.Logger
 
+func MustGetLogger(name string) Logger {
+	return flogging.MustGetLogger(name)
+}
+
 func DriverLogger(prefix string, networkID string, channel string, namespace string) Logger {
 	return logging.MustGetLogger(loggerName(prefix, networkID, channel, namespace))
 }
