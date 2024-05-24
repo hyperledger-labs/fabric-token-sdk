@@ -39,6 +39,7 @@ var _ = Describe("EndToEnd", func() {
 					TokenSDKDriver: "fabtoken",
 					Aries:          true,
 					SDKs:           []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
+					WebEnabled:     true, // Used for the websocket-based remote-wallet test
 				},
 			)...)
 			Expect(err).NotTo(HaveOccurred())
