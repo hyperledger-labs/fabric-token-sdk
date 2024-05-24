@@ -29,8 +29,6 @@ var (
 type OwnerFilter interface {
 	// ID is the wallet identifier of the owner
 	ID() string
-	// ContainsToken returns true if the passed token is recognized, false otherwise.
-	ContainsToken(token *token2.UnspentToken) bool
 }
 
 // Selector is the interface of token selectors
