@@ -23,9 +23,6 @@ type VaultProvider interface {
 }
 
 type SelectorService struct {
-	subscribe Subscribe
-	tracer    Tracer
-
 	managerLazyCache common.LazyProvider[*token.ManagementService, token.SelectorManager]
 	// TODO create a shared worker pool for all selectors
 	// workerPool []*worker
@@ -37,8 +34,6 @@ func NewService(subscribe Subscribe, tracer Tracer) *SelectorService {
 		tracer:    tracer,
 	}
 	return &SelectorService{
-		subscribe:        subscribe,
-		tracer:           tracer,
 		managerLazyCache: common.NewLazyProviderWithKeyMapper(key, loader.load),
 	}
 }

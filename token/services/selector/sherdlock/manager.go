@@ -13,19 +13,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/common/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// LockDB enforces that a token be used only by one process
-// A housekeeping job can clean up expired locks (e.g. created_at is more than 5 minutes ago) in order to:
-// - avoid that the table grows infinitely
-// - unlock tokens that were locked by a process that exited unexpectedly
-type LockDB interface {
-	// Lock locks a specific token for the consumer TX
-	Lock(tokenID *token2.ID, consumerTxID core.TxID) error
-	// UnlockByTxID unlocks all tokens locked by the consumer TX
-	UnlockByTxID(consumerTxID core.TxID) error
-}
+type LockDB = driver2.TokenLockDB
 
 type tokenFetcher interface {
 	UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.UnspentToken], error)

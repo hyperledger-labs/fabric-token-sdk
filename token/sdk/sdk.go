@@ -10,8 +10,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -42,14 +40,19 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/memory"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb/db/memory"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -101,6 +104,9 @@ func (p *SDK) Install() error {
 	fabricNSP, _ := fabric.GetNetworkServiceProvider(p.registry)
 	orionNSP, _ := orion2.GetNetworkServiceProvider(p.registry)
 
+	tokenDBManager := tokendb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "tokendb.persistence.type", "db.persistence.type"))
+	assert.NoError(p.registry.RegisterService(tokenDBManager))
+
 	// configure selector service
 	var selectorManagerProvider token.SelectorManagerProvider
 	switch configProvider.GetString("token.selector.driver") {
@@ -111,11 +117,15 @@ func (p *SDK) Install() error {
 			5*time.Second,
 			tracing.Get(p.registry).GetTracer(),
 		)
-	default:
+	case "mailman":
 		// we use mailman as our default selector
 		subscriber, err := events.GetSubscriber(p.registry)
 		assert.NoError(err, "failed to get events subscriber")
 		selectorManagerProvider = mailman.NewService(subscriber, tracing.Get(p.registry).GetTracer())
+	default:
+		tokenLockDBManager := tokenlockdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "tokenlockdb.persistence.type", "db.persistence.type"))
+		assert.NoError(p.registry.RegisterService(tokenLockDBManager))
+		selectorManagerProvider = sherdlock.NewService(tokenDBManager, tokenLockDBManager)
 	}
 
 	// Register the token management service provider
@@ -132,8 +142,6 @@ func (p *SDK) Install() error {
 	// DBs and their managers
 	ttxdbManager := ttxdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(ttxdbManager))
-	tokenDBManager := tokendb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "tokendb.persistence.type", "db.persistence.type"))
-	assert.NoError(p.registry.RegisterService(tokenDBManager))
 	auditDBManager := auditdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "auditdb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(auditDBManager))
 	identityDBManager := identitydb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "identitydb.persistence.type", "db.persistence.type"))

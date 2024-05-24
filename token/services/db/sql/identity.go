@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -45,6 +46,10 @@ func newIdentityDB(db *sql.DB, tables identityTables, singerInfoCache cache) *Id
 		table:           tables,
 		singerInfoCache: singerInfoCache,
 	}
+}
+
+func NewCachedIdentityDB(db *sql.DB, tablePrefix string, createSchema bool) (*IdentityDB, error) {
+	return NewIdentityDB(db, tablePrefix, createSchema, secondcache.New(1000))
 }
 
 func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfoCache cache) (*IdentityDB, error) {

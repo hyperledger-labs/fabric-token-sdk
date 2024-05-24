@@ -10,6 +10,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/core"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -168,6 +169,23 @@ type TokenDB interface {
 type TokenDBDriver interface {
 	// Open opens a token database
 	Open(cp ConfigProvider, tmsID token2.TMSID) (TokenDB, error)
+}
+
+// TokenLockDB enforces that a token be used only by one process
+// A housekeeping job can clean up expired locks (e.g. created_at is more than 5 minutes ago) in order to:
+// - avoid that the table grows infinitely
+// - unlock tokens that were locked by a process that exited unexpectedly
+type TokenLockDB interface {
+	// Lock locks a specific token for the consumer TX
+	Lock(tokenID *token.ID, consumerTxID core.TxID) error
+	// UnlockByTxID unlocks all tokens locked by the consumer TX
+	UnlockByTxID(consumerTxID core.TxID) error
+}
+
+// TokenLockDBDriver is the interface for a token database driver
+type TokenLockDBDriver interface {
+	// Open opens a token database
+	Open(cp ConfigProvider, tmsID token2.TMSID) (TokenLockDB, error)
 }
 
 var (
