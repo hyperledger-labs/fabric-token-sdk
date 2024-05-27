@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package inmemory
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/common/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 

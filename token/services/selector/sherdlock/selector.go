@@ -11,11 +11,11 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/core"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/common/core"
 	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -48,15 +48,6 @@ type selector struct {
 	precision uint64
 }
 
-var (
-	// When we loop over the tokens, we check whether a token is already locked.
-	// Every time our token cache finishes, but we noted that one of the tokens we saw was used by someone,
-	// we retry to fetch, in case the other process did not spend and unlocked the token meanwhile.
-	// We do not unlock our tokens, yet.
-	// After some retries, we unlock the tokens and return a maxImmediateRetriesExceeded error
-	maxImmediateRetriesExceeded = errors.New("max retries exceeded and no backoff specified: aborting to avoid possible deadlock")
-)
-
 type stubbornSelector struct {
 	*selector
 	// After maxImmediateRetries attempts, the procs will roll back and unlock the tokens.
@@ -70,7 +61,7 @@ type stubbornSelector struct {
 
 func (m *stubbornSelector) Select(owner token.OwnerFilter, q, currency string) ([]*token2.ID, token2.Quantity, error) {
 	for retriesAfterBackoff := 0; retriesAfterBackoff <= m.maxRetriesAfterBackoff; retriesAfterBackoff++ {
-		if tokens, quantity, err := m.selector.Select(owner, q, currency); err == nil || !errors.Is(err, maxImmediateRetriesExceeded) {
+		if tokens, quantity, err := m.selector.Select(owner, q, currency); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
 			return tokens, quantity, err
 		}
 		backoffDuration := time.Duration(rand.Int63n(int64(m.backoffInterval)))
@@ -78,7 +69,7 @@ func (m *stubbornSelector) Select(owner token.OwnerFilter, q, currency string) (
 		time.Sleep(backoffDuration)
 		m.logger.Debugf("Now it is our turn to retry...")
 	}
-	return nil, nil, errors.New("aborted too many times and no other process unlocked or added tokens")
+	return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "aborted too many times and no other process unlocked or added tokens")
 }
 
 func NewStubbornSelector(logger logging2.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, backoff time.Duration) *stubbornSelector {
@@ -92,7 +83,7 @@ func NewStubbornSelector(logger logging2.Logger, tokenDB tokenFetcher, lockDB to
 func NewSelector(logger logging2.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64) *selector {
 	return &selector{
 		logger:    logger,
-		cache:     utils.NewEmptyIterator[*token2.UnspentToken](),
+		cache:     collections.NewEmptyIterator[*token2.UnspentToken](),
 		fetcher:   tokenDB,
 		locker:    lockDB,
 		precision: precision,
@@ -104,14 +95,14 @@ func (m *selector) Select(owner token.OwnerFilter, q, currency string) ([]*token
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to create quantity")
 	}
-	sum, selected, tokensLockedByOthersExist, immediateRetries := token2.NewZeroQuantity(m.precision), utils.NewSet[*token2.ID](), true, 0
+	sum, selected, tokensLockedByOthersExist, immediateRetries := token2.NewZeroQuantity(m.precision), collections.NewSet[*token2.ID](), true, 0
 	for {
 		if t, err := m.cache.Next(); err != nil {
 			err2 := m.locker.UnlockAll()
 			return nil, nil, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), currency, err2)
 		} else if t == nil {
 			if !tokensLockedByOthersExist {
-				return nil, nil, errors.Errorf("all non-deleted tokens sum up to %d, but %d were requested and no other process has any tokens locked", sum, quantity)
+				return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "all non-deleted tokens sum up to %d, but %d were requested and no other process has any tokens locked", sum, quantity)
 			}
 
 			if immediateRetries > maxImmediateRetries {
@@ -119,7 +110,13 @@ func (m *selector) Select(owner token.OwnerFilter, q, currency string) ([]*token
 				if err := m.locker.UnlockAll(); err != nil {
 					return nil, nil, errors.Wrapf(err, "exceeded number of retries: %d and unlock failed", maxImmediateRetries)
 				}
-				return nil, nil, maxImmediateRetriesExceeded
+
+				// When we loop over the tokens, we check whether a token is already locked.
+				// Every time our token cache finishes, but we noted that one of the tokens we saw was used by someone,
+				// we retry to fetch, in case the other process did not spend and unlocked the token meanwhile.
+				// We do not unlock our tokens, yet.
+				// After some retries, we unlock the tokens and return a token.SelectorInsufficientFunds error
+				return nil, nil, token.SelectorSufficientButLockedFunds
 			}
 
 			m.logger.Debugf("Fetch all non-deleted tokens from the DB and refresh the token cache.")
@@ -163,7 +160,7 @@ func (f *fetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*
 	if err != nil {
 		return nil, err
 	}
-	return utils.CopyIterator[token2.UnspentToken](it)
+	return collections.CopyIterator[token2.UnspentToken](it)
 }
 
 type locker struct {
