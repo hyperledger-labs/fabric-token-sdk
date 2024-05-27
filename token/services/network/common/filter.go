@@ -18,6 +18,8 @@ type TransactionFilterProvider[F driver2.TransactionFilter] interface {
 	New(tmsID token3.TMSID) (F, error)
 }
 
+// AcceptTxInDBFilterProvider provides instances of AcceptTxInDBsFilter based on the transaction db and audit db
+// for a given TMS
 type AcceptTxInDBFilterProvider struct {
 	ttxDBProvider   *ttxdb.Manager
 	auditDBProvider *auditdb.Manager
@@ -42,6 +44,8 @@ func (p *AcceptTxInDBFilterProvider) New(tmsID token3.TMSID) (*AcceptTxInDBsFilt
 	}, nil
 }
 
+// AcceptTxInDBsFilter uses the transaction db and the audit db to decide if a given transaction needs
+// to be further processed by the token-sdk upon a network event about its finality
 type AcceptTxInDBsFilter struct {
 	ttxDB   *ttxdb.DB
 	auditDB *auditdb.DB

@@ -55,6 +55,9 @@ type Registry interface {
 type SDK struct {
 	registry        Registry
 	postInitializer *tms.PostInitializer
+	networkProvider *network.Provider
+	tmsProvider     *token.ManagementServiceProvider
+	configProvider  *view2.ConfigService
 }
 
 func NewSDK(registry Registry) *SDK {
@@ -63,6 +66,7 @@ func NewSDK(registry Registry) *SDK {
 
 func (p *SDK) Install() error {
 	configProvider := view2.GetConfigService(p.registry)
+	p.configProvider = configProvider
 	if !configProvider.GetBool("token.enabled") {
 		logger.Infof("Token platform not enabled, skipping")
 		return nil
@@ -73,6 +77,7 @@ func (p *SDK) Install() error {
 
 	// Network provider
 	networkProvider := network.NewProvider(p.registry)
+	p.networkProvider = networkProvider
 	assert.NoError(p.registry.RegisterService(networkProvider))
 
 	tmsProvider := core.NewTMSProvider(
@@ -123,6 +128,7 @@ func (p *SDK) Install() error {
 		network2.NewCertificationClientProvider(),
 		selectorManagerProvider,
 	)
+	p.tmsProvider = tmsp
 	assert.NoError(p.registry.RegisterService(tmsp))
 
 	// Token Manager
@@ -162,19 +168,17 @@ func (p *SDK) Install() error {
 }
 
 func (p *SDK) Start(ctx context.Context) error {
-	configProvider := view2.GetConfigService(p.registry)
-	if !configProvider.GetBool("token.enabled") {
+	if !p.configProvider.GetBool("token.enabled") {
 		logger.Infof("Token platform not enabled, skipping start")
 		return nil
 	}
 	logger.Infof("Token platform enabled, starting...")
 
 	// load the configured tms
-	tmsConfigs, err := config.NewTokenSDK(configProvider).GetTMSs()
+	tmsConfigs, err := config.NewTokenSDK(p.configProvider).GetTMSs()
 	if err != nil {
 		return errors.WithMessagef(err, "failed get the TMS configurations")
 	}
-	//tmsProvider := token.GetManagementServiceProvider(p.registry)
 	logger.Infof("configured token management service [%d]", len(tmsConfigs))
 	for _, tmsConfig := range tmsConfigs {
 		tmsID := token.TMSID{
@@ -185,16 +189,16 @@ func (p *SDK) Start(ctx context.Context) error {
 		logger.Infof("start token management service [%s]...", tmsID)
 
 		// connect network
-		net := network.GetInstance(p.registry, tmsID.Network, tmsID.Channel)
-		if net == nil {
+		net, err := p.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
+		if err != nil {
 			return errors.Wrapf(err, "failed to get network [%s]", tmsID)
 		}
 		opts, err := net.Connect(tmsID.Namespace)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
 		}
-		tms := token.GetManagementService(p.registry, opts...)
-		if tms == nil {
+		_, err = p.tmsProvider.GetManagementService(opts...)
+		if err != nil {
 			return errors.WithMessagef(err, "failed to instantiate tms [%s]", tmsID)
 		}
 	}
