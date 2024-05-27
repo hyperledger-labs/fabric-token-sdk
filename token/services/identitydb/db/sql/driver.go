@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 )
 
@@ -20,30 +20,27 @@ const (
 	EnvVarKey = "IDENTITYDB_DATASOURCE"
 )
 
-type Driver struct {
-	*sqldb.DBOpener
+func NewSQLDBOpener() *sqldb.DBOpener {
+	return sqldb.NewSQLDBOpener(OptsKey, EnvVarKey)
 }
 
-func NewDriver() *Driver {
-	return &Driver{DBOpener: sqldb.NewSQLDBOpener(OptsKey, EnvVarKey)}
+type Driver struct {
+	identityDriver *drivers.SQLDriver[driver.IdentityDB]
+	walletDriver   *drivers.SQLDriver[driver.WalletDB]
 }
 
 func (d *Driver) OpenIdentityDB(cp driver.ConfigProvider, tmsID token.TMSID) (driver.IdentityDB, error) {
-	sqlDB, opts, err := d.DBOpener.Open(cp, tmsID)
-	if err != nil {
-		return nil, err
-	}
-	return sqldb.NewIdentityDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable, secondcache.New(1000))
+	return d.identityDriver.Open(cp, tmsID)
 }
 
 func (d *Driver) OpenWalletDB(cp driver.ConfigProvider, tmsID token.TMSID) (driver.WalletDB, error) {
-	sqlDB, opts, err := d.DBOpener.Open(cp, tmsID)
-	if err != nil {
-		return nil, err
-	}
-	return sqldb.NewWalletDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
+	return d.walletDriver.Open(cp, tmsID)
 }
 
 func init() {
-	identitydb.Register("sql", NewDriver())
+	sqlDBOpener := NewSQLDBOpener()
+	identitydb.Register("sql", &Driver{
+		identityDriver: drivers.NewSQLDriver(sqlDBOpener, sqldb.NewCachedIdentityDB),
+		walletDriver:   drivers.NewSQLDriver(sqlDBOpener, sqldb.NewWalletDB),
+	})
 }

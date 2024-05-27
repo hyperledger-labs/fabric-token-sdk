@@ -20,7 +20,11 @@ func initTransactionsDB(driverName, dataSourceName, tablePrefix string, maxOpenC
 	if err != nil {
 		return nil, err
 	}
-	return NewTransactionDB(sqlDB, tablePrefix, true)
+	transactionDB, err := NewTransactionDB(sqlDB, tablePrefix, true)
+	if err != nil {
+		return nil, err
+	}
+	return transactionDB.(*TransactionDB), err
 }
 
 func TestTransactionsSqlite(t *testing.T) {

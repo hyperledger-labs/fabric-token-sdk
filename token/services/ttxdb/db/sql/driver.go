@@ -7,9 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 )
 
@@ -19,22 +18,10 @@ const (
 	EnvVarKey = "TTXDB_DATASOURCE"
 )
 
-type Driver struct {
-	*sqldb.DBOpener
-}
-
-func NewDriver() *Driver {
-	return &Driver{DBOpener: sqldb.NewSQLDBOpener(OptsKey, EnvVarKey)}
-}
-
-func (d *Driver) Open(cp driver.ConfigProvider, tmsID token.TMSID) (driver.TokenTransactionDB, error) {
-	sqlDB, opts, err := d.DBOpener.Open(cp, tmsID)
-	if err != nil {
-		return nil, err
-	}
-	return sqldb.NewTransactionDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
+func NewSQLDBOpener() *sqldb.DBOpener {
+	return sqldb.NewSQLDBOpener(OptsKey, EnvVarKey)
 }
 
 func init() {
-	ttxdb.Register("sql", NewDriver())
+	ttxdb.Register("sql", drivers.NewSQLDriver(NewSQLDBOpener(), sqldb.NewTransactionDB))
 }

@@ -39,7 +39,7 @@ func newTokenDB(db *sql.DB, tables tokenTables) *TokenDB {
 	}
 }
 
-func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (*TokenDB, error) {
+func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.TokenDB, error) {
 	tables, err := getTableNames(tablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")

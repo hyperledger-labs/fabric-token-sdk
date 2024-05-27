@@ -8,6 +8,7 @@ package driver
 
 import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 )
 
 // AuditTransactionDB defines the interface for a database to store the audit records of token transactions.
@@ -49,9 +50,4 @@ type AuditDBDriver interface {
 	Open(cp ConfigProvider, tmsID token2.TMSID) (AuditTransactionDB, error)
 }
 
-type ConfigProvider interface {
-	UnmarshalKey(key string, rawVal interface{}) error
-	GetString(key string) string
-	IsSet(key string) bool
-	TranslatePath(path string) string
-}
+type ConfigProvider = core.ConfigProvider

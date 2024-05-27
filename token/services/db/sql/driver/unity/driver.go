@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package unity
 
 import (
-	"database/sql"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
@@ -51,9 +49,7 @@ func (d *Driver) OpenTokenLockDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) 
 }
 
 func (d *Driver) OpenAuditTransactionDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.AuditTransactionDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, func(sqlDB *sql.DB, tablePrefix string, createSchema bool) (dbdriver.AuditTransactionDB, error) {
-		return sqldb.NewTransactionDB(sqlDB, tablePrefix+"aud_", createSchema)
-	})
+	return openDB(d.DBOpener, cp, tmsID, sqldb.NewAuditTransactionDB)
 }
 
 func (d *Driver) OpenWalletDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.WalletDB, error) {

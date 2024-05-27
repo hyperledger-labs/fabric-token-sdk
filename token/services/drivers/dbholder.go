@@ -9,10 +9,10 @@ package drivers
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 )
 
-type ConfigProvider = driver.ConfigProvider
+type ConfigProvider = core.ConfigProvider
 
 type ServiceProvider interface {
 	// GetService returns an instance of the given type

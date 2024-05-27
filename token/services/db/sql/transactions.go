@@ -40,7 +40,11 @@ func newTransactionDB(db *sql.DB, tables transactionTables) *TransactionDB {
 	}
 }
 
-func NewTransactionDB(db *sql.DB, tablePrefix string, createSchema bool) (*TransactionDB, error) {
+func NewAuditTransactionDB(sqlDB *sql.DB, tablePrefix string, createSchema bool) (driver.AuditTransactionDB, error) {
+	return NewTransactionDB(sqlDB, tablePrefix+"_aud", createSchema)
+}
+
+func NewTransactionDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.TokenTransactionDB, error) {
 	tables, err := getTableNames(tablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
