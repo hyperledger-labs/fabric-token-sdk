@@ -19,7 +19,7 @@ type CertificationClient struct {
 
 func NewCertificationClient(tms *token.ManagementService) (*CertificationClient, error) {
 	driver := tms.PublicParametersManager().PublicParameters().CertificationDriver()
-	d, ok := drivers[driver]
+	d, ok := holder.Drivers[driver]
 	if !ok {
 		return nil, errors.Errorf("certifier driver [%s] not found", driver)
 	}

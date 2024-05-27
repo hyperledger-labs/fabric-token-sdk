@@ -20,7 +20,7 @@ func PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
 		return nil, errors.Wrapf(err, "failed unmarshalling public params")
 	}
 
-	d, ok := drivers[pp.Identifier]
+	d, ok := holder.Drivers[pp.Identifier]
 	if !ok {
 		return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", pp.Identifier)
 	}
@@ -39,7 +39,7 @@ func SerializedPublicParametersFromBytes(raw []byte) (*driver.SerializedPublicPa
 // NewPublicParametersManager returns a new instance of driver.PublicParamsManager for the passed parameters.
 // If no driver is registered for the public params' identifier, it returns an error
 func NewPublicParametersManager(pp driver.PublicParameters) (driver.PublicParamsManager, error) {
-	d, ok := drivers[pp.Identifier()]
+	d, ok := holder.Drivers[pp.Identifier()]
 	if !ok {
 		return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", pp.Identifier())
 	}
