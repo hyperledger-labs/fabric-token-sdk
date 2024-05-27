@@ -10,8 +10,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/core"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/common/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
