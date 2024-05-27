@@ -29,16 +29,24 @@ type ServiceHolder[S any, D serviceDriver[S]] struct {
 	zero        S
 }
 
-func newServiceHolder[S any, D serviceDriver[S]]() *ServiceHolder[S, D] {
+func NewServiceHolder[S any, D serviceDriver[S]]() *ServiceHolder[S, D] {
+	return newServiceHolderWithType[S, D](reflect.TypeOf((*ServiceManager[S, D])(nil)))
+}
+
+func newServiceHolderWithType[S any, D serviceDriver[S]](managerType reflect.Type) *ServiceHolder[S, D] {
 	return &ServiceHolder[S, D]{
 		Holder:      NewHolder[D](),
-		managerType: reflect.TypeOf((*ServiceManager[S, D])(nil)),
+		managerType: managerType,
 		zero:        utils.Zero[S](),
 	}
 }
 
 type Config interface {
 	DriverFor(tmsID token.TMSID) (DriverName, error)
+}
+
+type serviceManager[S any] interface {
+	ServiceByTMSId(id token.TMSID) (S, error)
 }
 
 // ServiceManager handles the services
@@ -98,7 +106,7 @@ func (m *ServiceManager[S, D]) ServiceByTMSId(id token.TMSID) (S, error) {
 // GetByTMSId returns the service for the given TMS id.
 // Nil might be returned if the wallet is not found or an error occurred.
 func (h *ServiceHolder[S, D]) GetByTMSId(sp ServiceProvider, tmsID token.TMSID) (S, error) {
-	s, err := h.GetProvider(sp)
+	s, err := h.getProvider(sp)
 	if err != nil {
 		return h.zero, errors.Wrapf(err, "failed to get manager service")
 	}
@@ -109,10 +117,18 @@ func (h *ServiceHolder[S, D]) GetByTMSId(sp ServiceProvider, tmsID token.TMSID) 
 	return c, nil
 }
 
-func (h *ServiceHolder[S, D]) GetProvider(sp ServiceProvider) (*ServiceManager[S, D], error) {
+func (h *ServiceHolder[S, D]) getProvider(sp ServiceProvider) (serviceManager[S], error) {
 	s, err := sp.GetService(h.managerType)
 	if err != nil {
-		return utils.Zero[*ServiceManager[S, D]](), errors.Wrapf(err, "failed to get manager service")
+		return utils.Zero[serviceManager[S]](), errors.Wrapf(err, "failed to get manager service")
 	}
-	return s.(*ServiceManager[S, D]), nil
+	return s.(serviceManager[S]), nil
+}
+
+func (h *ServiceHolder[S, D]) GetProvider(sp ServiceProvider) (*ServiceManager[S, D], error) {
+	provider, err := h.getProvider(sp)
+	if err != nil {
+		return nil, err
+	}
+	return provider.(*ServiceManager[S, D]), nil
 }

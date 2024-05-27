@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package drivers
 
 import (
+	"reflect"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -40,7 +42,7 @@ func (o *dbOpener[S, D, O]) New(cp ConfigProvider, id token.TMSID) (S, error) {
 
 func NewDBHolder[S any, D any, O dbDriver[D]](newDB dbInstantiator[S, D, O]) *DBDriverHolder[S, D, O] {
 	return &DBDriverHolder[S, D, O]{
-		ServiceHolder: newServiceHolder[S, *dbOpener[S, D, O]](),
+		ServiceHolder: newServiceHolderWithType[S, *dbOpener[S, D, O]](reflect.TypeOf((*DBManager[S, D, O])(nil))),
 		newDB:         newDB,
 	}
 }
@@ -69,4 +71,12 @@ type DBManager[S any, D any, O dbDriver[D]] struct {
 
 func (m *DBManager[S, D, O]) DBByTMSId(id token.TMSID) (S, error) {
 	return m.ServiceManager.ServiceByTMSId(id)
+}
+
+func (h *DBDriverHolder[S, D, O]) GetProvider(sp ServiceProvider) (*DBManager[S, D, O], error) {
+	provider, err := h.ServiceHolder.getProvider(sp)
+	if err != nil {
+		return nil, err
+	}
+	return provider.(*DBManager[S, D, O]), nil
 }
