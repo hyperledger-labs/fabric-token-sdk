@@ -153,7 +153,7 @@ var _ = Describe("DLog end to end", func() {
 			ii, err = integration.New(
 				integration2.ZKATDLogInteropAssetTransfer.StartPortForNode(),
 				"",
-				interop.AssetTransferTopology("dlog", &fabric3.SDK{}, &sdk.SDK{})...,
+				interop.AssetTransferTopology("dlog", &fabric3.SDK{}, &fdlog.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())

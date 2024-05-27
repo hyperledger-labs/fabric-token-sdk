@@ -153,7 +153,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropAssetTransfer.StartPortForNode(),
 				"",
-				interop.AssetTransferTopology("fabtoken", &fabric3.SDK{}, &sdk.SDK{})...,
+				interop.AssetTransferTopology("fabtoken", &fabric3.SDK{}, &ffabtoken.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
