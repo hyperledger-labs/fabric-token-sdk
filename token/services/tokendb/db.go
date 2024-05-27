@@ -8,22 +8,21 @@ package tokendb
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
 )
 
 var (
-	holder = drivers.NewDBHolder[*DB, driver.TokenDB, driver.TokenDBDriver](newDB)
+	holder = db.NewDriverHolder[*DB, driver.TokenDB, driver.TokenDBDriver](newDB)
 )
 
 func Register(name string, driver driver.TokenDBDriver) { holder.Register(name, driver) }
 
 func Drivers() []string { return holder.DriverNames() }
 
-type Manager = drivers.DBManager[*DB, driver.TokenDB, driver.TokenDBDriver]
+type Manager = db.Manager[*DB, driver.TokenDB, driver.TokenDBDriver]
 
-func NewManager(cp core.ConfigProvider, config drivers.Config) *Manager {
+func NewManager(cp driver.ConfigProvider, config db.Config) *Manager {
 	return holder.NewManager(cp, config)
 }
 

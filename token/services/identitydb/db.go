@@ -8,10 +8,9 @@ package identitydb
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/common/utils"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 type identityDBDriver struct{ driver.IdentityDBDriver }
@@ -27,8 +26,8 @@ func (d *walletDBDriver) Open(cp driver.ConfigProvider, tmsID token.TMSID) (driv
 }
 
 var (
-	identityHolder = drivers.NewDBHolder[driver.IdentityDB, driver.IdentityDB, *identityDBDriver](utils.IdentityFunc[driver.IdentityDB]())
-	walletHolder   = drivers.NewDBHolder[driver.WalletDB, driver.WalletDB, *walletDBDriver](utils.IdentityFunc[driver.WalletDB]())
+	identityHolder = db.NewDriverHolder[driver.IdentityDB, driver.IdentityDB, *identityDBDriver](utils.IdentityFunc[driver.IdentityDB]())
+	walletHolder   = db.NewDriverHolder[driver.WalletDB, driver.WalletDB, *walletDBDriver](utils.IdentityFunc[driver.WalletDB]())
 )
 
 func Register(name string, driver driver.IdentityDBDriver) {
@@ -39,11 +38,11 @@ func Register(name string, driver driver.IdentityDBDriver) {
 func Drivers() []string { return identityHolder.DriverNames() }
 
 type Manager struct {
-	identityManager *drivers.DBManager[driver.IdentityDB, driver.IdentityDB, *identityDBDriver]
-	walletManager   *drivers.DBManager[driver.WalletDB, driver.WalletDB, *walletDBDriver]
+	identityManager *db.Manager[driver.IdentityDB, driver.IdentityDB, *identityDBDriver]
+	walletManager   *db.Manager[driver.WalletDB, driver.WalletDB, *walletDBDriver]
 }
 
-func NewManager(cp core.ConfigProvider, config drivers.Config) *Manager {
+func NewManager(cp driver.ConfigProvider, config db.Config) *Manager {
 	return &Manager{
 		identityManager: identityHolder.NewManager(cp, config),
 		walletManager:   walletHolder.NewManager(cp, config),

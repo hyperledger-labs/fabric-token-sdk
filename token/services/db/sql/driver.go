@@ -13,9 +13,9 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 )
 
@@ -42,7 +42,7 @@ type DBOpener struct {
 	envVarKey string
 }
 
-func (d *DBOpener) Open(cp core.ConfigProvider, tmsID token.TMSID) (*sql.DB, *Opts, error) {
+func (d *DBOpener) Open(cp driver.ConfigProvider, tmsID token.TMSID) (*sql.DB, *Opts, error) {
 	opts, err := d.compileOpts(cp, tmsID)
 	if err != nil {
 		return nil, nil, err
@@ -90,7 +90,7 @@ func NewSQLDBOpener(optsKey, envVarKey string) *DBOpener {
 	}
 }
 
-func (d *DBOpener) compileOpts(cp core.ConfigProvider, tmsID token.TMSID) (*Opts, error) {
+func (d *DBOpener) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*Opts, error) {
 	opts := &Opts{}
 	tmsConfig, err := config.NewTokenSDK(cp).GetTMS(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {

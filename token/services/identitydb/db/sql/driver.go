@@ -8,9 +8,9 @@ package sql
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 )
 
@@ -25,8 +25,8 @@ func NewSQLDBOpener() *sqldb.DBOpener {
 }
 
 type Driver struct {
-	identityDriver *drivers.SQLDriver[driver.IdentityDB]
-	walletDriver   *drivers.SQLDriver[driver.WalletDB]
+	identityDriver *db.SQLDriver[driver.IdentityDB]
+	walletDriver   *db.SQLDriver[driver.WalletDB]
 }
 
 func (d *Driver) OpenIdentityDB(cp driver.ConfigProvider, tmsID token.TMSID) (driver.IdentityDB, error) {
@@ -40,7 +40,7 @@ func (d *Driver) OpenWalletDB(cp driver.ConfigProvider, tmsID token.TMSID) (driv
 func init() {
 	sqlDBOpener := NewSQLDBOpener()
 	identitydb.Register("sql", &Driver{
-		identityDriver: drivers.NewSQLDriver(sqlDBOpener, sqldb.NewCachedIdentityDB),
-		walletDriver:   drivers.NewSQLDriver(sqlDBOpener, sqldb.NewWalletDB),
+		identityDriver: db.NewSQLDriver(sqlDBOpener, sqldb.NewCachedIdentityDB),
+		walletDriver:   db.NewSQLDriver(sqlDBOpener, sqldb.NewWalletDB),
 	})
 }

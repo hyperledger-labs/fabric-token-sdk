@@ -14,15 +14,17 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
+type DriverName = string
+
 type Holder[D any] struct {
-	logger    logging.Logger
+	Logger    logging.Logger
 	driversMu sync.RWMutex
 	Drivers   map[DriverName]D
 }
 
 func NewHolder[D any]() *Holder[D] {
 	return &Holder[D]{
-		logger:  logging.MustGetLogger("token-sdk.manager.drivers"),
+		Logger:  logging.MustGetLogger("token-sdk.manager.drivers"),
 		Drivers: make(map[DriverName]D),
 	}
 }
@@ -32,7 +34,7 @@ func (h *Holder[D]) Get(name DriverName) (D, bool) {
 	return d, ok
 }
 
-// Register makes a DB driver available by the provided name.
+// Register makes a driver available by the provided name.
 // If Register is called twice with the same name or if driver is nil,
 // it panics.
 func (h *Holder[D]) Register(name DriverName, driver D) {

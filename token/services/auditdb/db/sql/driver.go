@@ -8,8 +8,8 @@ package sql
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
 )
 
 const (
@@ -27,5 +27,5 @@ func NewSQLDBOpener() *sqldb.DBOpener {
 }
 
 func init() {
-	auditdb.Register("sql", drivers.NewSQLDriver(NewSQLDBOpener(), sqldb.NewAuditTransactionDB))
+	auditdb.Register("sql", db.NewSQLDriver(NewSQLDBOpener(), sqldb.NewAuditTransactionDB))
 }

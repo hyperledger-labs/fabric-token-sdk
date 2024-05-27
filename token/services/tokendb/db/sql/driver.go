@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 )
 
@@ -23,5 +23,5 @@ func NewSQLDBOpener() *sqldb.DBOpener {
 }
 
 func init() {
-	tokendb.Register("sql", drivers.NewSQLDriver(NewSQLDBOpener(), sqldb.NewTokenDB))
+	tokendb.Register("sql", db.NewSQLDriver(NewSQLDBOpener(), sqldb.NewTokenDB))
 }

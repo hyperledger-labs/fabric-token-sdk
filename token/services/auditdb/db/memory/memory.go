@@ -9,11 +9,11 @@ package memory
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
 	_ "modernc.org/sqlite"
 )
 
 func init() {
-	auditdb.Register("memory", drivers.NewMemoryDriver(sql.NewSQLDBOpener(), sqldb.NewAuditTransactionDB)) //TODO NewTransactionDB
+	auditdb.Register("memory", db.NewMemoryDriver(sql.NewSQLDBOpener(), sqldb.NewAuditTransactionDB)) //TODO NewTransactionDB
 }

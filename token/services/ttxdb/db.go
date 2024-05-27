@@ -13,16 +13,14 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
 
 var (
-	holder = drivers.NewDBHolder[*DB, driver.TokenTransactionDB, driver.TTXDBDriver](newDB)
+	holder = db.NewDriverHolder[*DB, driver.TokenTransactionDB, driver.TTXDBDriver](newDB)
 	logger = logging.MustGetLogger("token-sdk.ttxdb")
 )
 
@@ -30,9 +28,9 @@ func Register(name string, driver driver.TTXDBDriver) { holder.Register(name, dr
 
 func Drivers() []string { return holder.DriverNames() }
 
-type Manager = drivers.DBManager[*DB, driver.TokenTransactionDB, driver.TTXDBDriver]
+type Manager = db.Manager[*DB, driver.TokenTransactionDB, driver.TTXDBDriver]
 
-func NewManager(cp core.ConfigProvider, config drivers.Config) *Manager {
+func NewManager(cp driver.ConfigProvider, config db.Config) *Manager {
 	return holder.NewManager(cp, config)
 }
 

@@ -10,9 +10,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
@@ -60,7 +60,7 @@ func (d *Driver) OpenIdentityDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (
 	return openDB(d.DBOpener, cp, tmsID, sqldb.NewCachedIdentityDB)
 }
 
-func openDB[D any](dbOpener *sqldb.DBOpener, cp dbdriver.ConfigProvider, tmsID token.TMSID, newDB drivers.NewDBFunc[D]) (D, error) {
+func openDB[D any](dbOpener *sqldb.DBOpener, cp dbdriver.ConfigProvider, tmsID token.TMSID, newDB db.NewDBFunc[D]) (D, error) {
 	sqlDB, opts, err := dbOpener.Open(cp, tmsID)
 	if err != nil {
 		return utils.Zero[D](), errors.Wrapf(err, "failed to open db at [%s:%s]", optsKey, envVarKey)

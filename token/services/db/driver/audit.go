@@ -7,8 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 // AuditTransactionDB defines the interface for a database to store the audit records of token transactions.
@@ -47,7 +46,5 @@ type AuditTransactionDB interface {
 // AuditDBDriver is the interface for an audit database driver
 type AuditDBDriver interface {
 	// Open opens an audit database connection
-	Open(cp ConfigProvider, tmsID token2.TMSID) (AuditTransactionDB, error)
+	Open(cp ConfigProvider, tmsID token.TMSID) (AuditTransactionDB, error)
 }
-
-type ConfigProvider = core.ConfigProvider

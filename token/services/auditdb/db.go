@@ -11,17 +11,15 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
 
 var (
-	holder = drivers.NewDBHolder[*DB, driver.AuditTransactionDB, driver.AuditDBDriver](newDB)
+	holder = db.NewDriverHolder[*DB, driver.AuditTransactionDB, driver.AuditDBDriver](newDB)
 	logger = logging.MustGetLogger("token-sdk.auditdb")
 )
 
@@ -29,9 +27,9 @@ func Register(name string, driver driver.AuditDBDriver) { holder.Register(name, 
 
 func Drivers() []string { return holder.DriverNames() }
 
-type Manager = drivers.DBManager[*DB, driver.AuditTransactionDB, driver.AuditDBDriver]
+type Manager = db.Manager[*DB, driver.AuditTransactionDB, driver.AuditDBDriver]
 
-func NewManager(cp core.ConfigProvider, config drivers.Config) *Manager {
+func NewManager(cp driver.ConfigProvider, config db.Config) *Manager {
 	return holder.NewManager(cp, config)
 }
 
