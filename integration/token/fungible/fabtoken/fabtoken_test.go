@@ -9,6 +9,10 @@ package fabtoken
 import (
 	"math"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
@@ -16,7 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
-	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -34,11 +37,11 @@ var _ = Describe("EndToEnd", func() {
 		BeforeEach(func() {
 			var err error
 			network, err = integration.New(StartPortDlog(), "", topology.Topology(
-				topology.Opts{
+				common.Opts{
 					Backend:        "fabric",
 					TokenSDKDriver: "fabtoken",
 					Aries:          true,
-					SDKs:           []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
+					SDKs:           []api.SDK{&fabric.SDK{}, &ffabtoken.SDK{}},
 					WebEnabled:     true, // Used for the websocket-based remote-wallet test
 				},
 			)...)

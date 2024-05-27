@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
@@ -23,19 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 )
 
-type Opts struct {
-	Backend         string
-	TokenSDKDriver  string
-	AuditorAsIssuer bool
-	Aries           bool
-	FSCLogSpec      string
-	NoAuditor       bool
-	HSM             bool
-	SDKs            []api2.SDK
-	WebEnabled      bool
-}
-
-func Topology(opts Opts) []api.Topology {
+func Topology(opts common.Opts) []api.Topology {
 	var backendNetwork api.Topology
 	backendChannel := ""
 	switch opts.Backend {

@@ -20,7 +20,7 @@ import (
 var logger = logging.MustGetLogger("token-sdk.selector.simple")
 
 type LockerProvider interface {
-	New(network, channel, namespace string) Locker
+	New(network, channel, namespace string) (Locker, error)
 }
 
 type SelectorService struct {
@@ -80,14 +80,13 @@ type loader struct {
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
 	logger.Debugf("new in-memory locker for [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 
-	locker := s.lockerProvider.New(tms.Network(), tms.Channel(), tms.Namespace())
+	locker, err := s.lockerProvider.New(tms.Network(), tms.Channel(), tms.Namespace())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting locker")
+	}
 	qe := &queryService{
 		qe:     tms.Vault().NewQueryEngine(),
 		locker: locker,
-	}
-	pp := tms.PublicParametersManager().PublicParameters()
-	if pp == nil {
-		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
 	}
 
 	return NewManager(
@@ -96,7 +95,7 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 		s.numRetry,
 		s.timeout,
 		s.requestCertification,
-		pp.Precision(),
+		tms.PublicParametersManager().PublicParameters().Precision(),
 		s.tracer,
 	), nil
 }

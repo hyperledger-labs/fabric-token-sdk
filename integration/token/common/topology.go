@@ -7,10 +7,23 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	. "github.com/onsi/gomega"
 )
+
+type Opts struct {
+	Backend         string
+	TokenSDKDriver  string
+	AuditorAsIssuer bool
+	Aries           bool
+	FSCLogSpec      string
+	NoAuditor       bool
+	HSM             bool
+	SDKs            []api.SDK
+	WebEnabled      bool
+}
 
 func SetDefaultParams(tokenSDKDriver string, tms *topology.TMS, aries bool) {
 	switch tokenSDKDriver {

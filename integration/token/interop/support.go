@@ -310,14 +310,15 @@ func HTLCReclaimAll(network *integration.Infrastructure, id string, wallet strin
 	}
 }
 
-func HTLCReclaimByHash(network *integration.Infrastructure, id string, wallet string, hash []byte, errorMsgs ...string) {
+func HTLCReclaimByHash(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, hash []byte, errorMsgs ...string) {
 	txID, err := network.Client(id).CallView("htlc.reclaimByHash", common.JSONMarshall(&htlc.ReclaimByHash{
 		Wallet: wallet,
 		Hash:   hash,
+		TMSID:  tmsID,
 	}))
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		common2.CheckFinality(network, id, common.JSONUnmarshalString(txID), nil, false)
+		common2.CheckFinality(network, id, common.JSONUnmarshalString(txID), &tmsID, false)
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range errorMsgs {
@@ -327,11 +328,12 @@ func HTLCReclaimByHash(network *integration.Infrastructure, id string, wallet st
 	}
 }
 
-func HTLCCheckExistenceReceivedExpiredByHash(network *integration.Infrastructure, id string, wallet string, hash []byte, exists bool, errorMsgs ...string) {
+func HTLCCheckExistenceReceivedExpiredByHash(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, hash []byte, exists bool, errorMsgs ...string) {
 	_, err := network.Client(id).CallView("htlc.CheckExistenceReceivedExpiredByHash", common.JSONMarshall(&htlc.CheckExistenceReceivedExpiredByHash{
 		Wallet: wallet,
 		Hash:   hash,
 		Exists: exists,
+		TMSID:  tmsID,
 	}))
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())

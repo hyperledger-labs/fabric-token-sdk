@@ -23,3 +23,4 @@
 
 * The SDK leverages the Fabric Smart Client stack for complex workflows, secure storage, and event listening.
 * Configuration examples can be found in the [`Example Core File Section`](./core-token.md) documentation.
+* Deployment guideline can be found in the [`Deployment`](./deployment/deployment.md) documentation.

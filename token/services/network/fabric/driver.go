@@ -8,9 +8,15 @@ package fabric
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/pkg/errors"
 )
@@ -30,7 +36,27 @@ func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get vault manager")
 	}
-	return NewNetwork(sp, n, ch, m.Vault), nil
+	ttxdbProvider, err := ttxdb.GetProvider(sp)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get ttxdb manager")
+	}
+	auditDBProvider, err := auditdb.GetProvider(sp)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get audit db provider")
+	}
+	tokensProvider, err := tokens.GetProvider(sp)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get tokens db provider")
+	}
+	return NewNetwork(
+		sp,
+		n,
+		ch,
+		m.Vault,
+		config.NewTokenSDK(view2.GetConfigService(sp)),
+		common.NewAcceptTxInDBFilterProvider(ttxdbProvider, auditDBProvider),
+		tokensProvider,
+	), nil
 }
 
 func init() {

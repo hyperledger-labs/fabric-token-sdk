@@ -95,7 +95,7 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 		counter++
 	}
 	if counter == 0 {
-		return nil, errors.Errorf("transaction [%s] is unknown", txID)
+		return nil, errors.Errorf("transaction [%s] is unknown for [%s]", txID, tmsID)
 	}
 
 	iterations := int(timeout.Milliseconds() / f.pollingTimeout.Milliseconds())

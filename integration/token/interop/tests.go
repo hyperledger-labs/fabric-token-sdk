@@ -233,8 +233,8 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 	// "alice" locks to "alice.id1", the deadline expires, "alice" reclaims, "alice.id1" checks the existence of an expired received locked token
 	_, _, h := HTLCLock(network, alpha, "alice", "", "EUR", 10, "alice.id1", 10*time.Second, nil, 0)
 	time.Sleep(10 * time.Second)
-	HTLCReclaimByHash(network, "alice", "", h)
-	HTLCCheckExistenceReceivedExpiredByHash(network, "alice", "alice.id1", h, false)
+	HTLCReclaimByHash(network, alpha, "alice", "", h)
+	HTLCCheckExistenceReceivedExpiredByHash(network, alpha, "alice", "alice.id1", h, false)
 }
 
 func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {

@@ -10,8 +10,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/pkg/errors"
 )
@@ -27,7 +31,34 @@ func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get vault manager")
 	}
-	return NewNetwork(sp, view.GetIdentityProvider(sp), n, m.Vault), nil
+	ttxdbProvider, err := ttxdb.GetProvider(sp)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get ttxdb manager")
+	}
+	auditDBProvider, err := auditdb.GetProvider(sp)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get audit db provider")
+	}
+	configProvider := view.GetConfigService(sp)
+	enabled, err := IsCustodian(configProvider)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed checking if custodian is enabled")
+	}
+	logger.Infof("Orion Custodian enabled: %t", enabled)
+	if enabled {
+		if err := InstallViews(view.GetRegistry(sp)); err != nil {
+			return nil, errors.WithMessagef(err, "failed installing views")
+		}
+	}
+
+	return NewNetwork(
+		sp,
+		view.GetIdentityProvider(sp),
+		n,
+		m.Vault,
+		config.NewTokenSDK(view.GetConfigService(sp)),
+		common.NewAcceptTxInDBFilterProvider(ttxdbProvider, auditDBProvider),
+	), nil
 }
 
 func init() {

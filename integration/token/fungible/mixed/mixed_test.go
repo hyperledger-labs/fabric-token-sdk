@@ -8,10 +8,12 @@ package mixed
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fall"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
-	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -28,7 +30,9 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible with Auditor ne Issuer", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", Topology(&fabric3.SDK{}, &sdk.SDK{})...)
+			network, err = integration.New(StartPortDlog(), "", Topology(common.Opts{
+				SDKs: []api.SDK{&fabric3.SDK{}, &fall.SDK{}},
+			})...)
 			Expect(err).NotTo(HaveOccurred())
 			network.DeleteOnStop = false
 			network.DeleteOnStart = true

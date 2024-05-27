@@ -11,16 +11,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -33,18 +34,27 @@ type IdentityProvider interface {
 }
 
 type Network struct {
-	sp          token2.ServiceProvider
-	viewManager *view2.Manager
-	tmsProvider *token2.ManagementServiceProvider
-	n           *orion.NetworkService
-	ip          IdentityProvider
-	ledger      *ledger
+	sp             token2.ServiceProvider
+	viewManager    *view2.Manager
+	tmsProvider    *token2.ManagementServiceProvider
+	n              *orion.NetworkService
+	ip             IdentityProvider
+	ledger         *ledger
+	nsFinder       common2.NamespaceFinder
+	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
 
 	vaultLazyCache common.LazyProvider[string, driver.Vault]
 	subscribers    *events.Subscribers
 }
 
-func NewNetwork(sp token2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService, newVault NewVaultFunc) *Network {
+func NewNetwork(
+	sp token2.ServiceProvider,
+	ip IdentityProvider,
+	n *orion.NetworkService,
+	newVault NewVaultFunc,
+	nsFinder common2.NamespaceFinder,
+	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
+) *Network {
 	loader := &loader{
 		newVault: newVault,
 		name:     n.Name(),
@@ -53,6 +63,8 @@ func NewNetwork(sp token2.ServiceProvider, ip IdentityProvider, n *orion.Network
 	}
 	net := &Network{
 		sp:             sp,
+		nsFinder:       nsFinder,
+		filterProvider: filterProvider,
 		ip:             ip,
 		n:              n,
 		viewManager:    view2.GetManager(sp),
@@ -70,6 +82,54 @@ func (n *Network) Name() string {
 
 func (n *Network) Channel() string {
 	return ""
+}
+
+func (n *Network) Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions, error) {
+	if len(opt.Network) == 0 {
+		opt.Network = n.n.Name()
+	}
+	if opt.Network != n.n.Name() {
+		return nil, errors.Errorf("invalid network [%s], expected [%s]", opt.Network, n.n.Name())
+	}
+
+	if len(opt.Channel) != 0 {
+		return nil, errors.Errorf("invalid channel [%s], expected []", opt.Channel)
+	}
+
+	if len(opt.Namespace) == 0 {
+		if ns, err := n.nsFinder.LookupNamespace(opt.Network, opt.Channel); err == nil {
+			logger.Debugf("no namespace specified, found namespace [%s] for [%s:%s]", ns, opt.Network, opt.Channel)
+			opt.Namespace = ns
+		} else {
+			logger.Errorf("no namespace specified, and no default namespace found [%s], use default [%s]", err, ttx.TokenNamespace)
+			opt.Namespace = ttx.TokenNamespace
+		}
+	}
+	if opt.PublicParamsFetcher == nil {
+		opt.PublicParamsFetcher = common2.NewPublicParamsFetcher(n, opt.Namespace)
+	}
+	return opt, nil
+}
+
+func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
+	tmsID := token2.TMSID{
+		Network:   n.Name(),
+		Namespace: ns,
+	}
+	transactionFilter, err := n.filterProvider.New(tmsID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to create transaction filter for [%s]", tmsID)
+	}
+	if err := n.n.Committer().AddTransactionFilter(transactionFilter); err != nil {
+		return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
+	}
+
+	// fetch public params and instantiate the tms
+	ppRaw, err := n.FetchPublicParameters(ns)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to fetch public parameters for [%s]", tmsID)
+	}
+	return []token2.ServiceOption{token2.WithTMSID(tmsID), token2.WithPublicParameter(ppRaw)}, nil
 }
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {

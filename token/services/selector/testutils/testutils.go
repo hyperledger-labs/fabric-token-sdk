@@ -13,6 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -32,8 +33,8 @@ const (
 type MockVault struct {
 }
 
-func (m *MockVault) Status(id string) (int, error) {
-	return token.Pending, nil
+func (m *MockVault) GetStatus(txID string) (ttxdb.TxStatus, string, error) {
+	return ttxdb.Pending, "", nil
 }
 
 type MockTracer struct {

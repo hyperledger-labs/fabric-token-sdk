@@ -9,8 +9,6 @@ package vault
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/vault"
@@ -28,20 +26,16 @@ type Provider struct {
 	tokenDBProvider tokens.DBProvider
 	ttxDBProvider   ttx.DBProvider
 	auditDBProvider auditor.AuditDBProvider
-	fabricNSP       *fabric.NetworkServiceProvider
-	orionNSP        *orion.NetworkServiceProvider
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]vault.Vault
 }
 
-func NewVaultProvider(tokenDBProvider tokens.DBProvider, ttxDBProvider ttx.DBProvider, auditDBProvider auditor.AuditDBProvider, fabricNSP *fabric.NetworkServiceProvider, orionNSP *orion.NetworkServiceProvider) *Provider {
+func NewVaultProvider(tokenDBProvider tokens.DBProvider, ttxDBProvider ttx.DBProvider, auditDBProvider auditor.AuditDBProvider) *Provider {
 	return &Provider{
 		ttxDBProvider:   ttxDBProvider,
 		tokenDBProvider: tokenDBProvider,
 		auditDBProvider: auditDBProvider,
-		fabricNSP:       fabricNSP,
-		orionNSP:        orionNSP,
 		vaultCache:      make(map[string]vault.Vault),
 	}
 }

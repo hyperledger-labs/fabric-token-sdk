@@ -12,8 +12,10 @@ import (
 	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fofabtoken"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ofabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop"
-	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -37,7 +39,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropHTLC.StartPortForNode(),
 				"",
-				interop.HTLCSingleFabricNetworkTopology("fabtoken")...,
+				interop.HTLCSingleFabricNetworkTopology("fabtoken", &fabric3.SDK{}, &ffabtoken.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -56,7 +58,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropHTLCOrion.StartPortForNode(),
 				"",
-				interop.HTLCSingleOrionNetworkTopology("fabtoken")...,
+				interop.HTLCSingleOrionNetworkTopology("fabtoken", &orion3.SDK{}, &ofabtoken.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -75,7 +77,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropHTLCTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCTwoFabricNetworksTopology("fabtoken", &fabric3.SDK{}, &sdk.SDK{})...,
+				interop.HTLCTwoFabricNetworksTopology("fabtoken", &fabric3.SDK{}, &ffabtoken.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -94,7 +96,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropFastExchangeTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCTwoFabricNetworksTopology("fabtoken", &fabric3.SDK{}, &sdk.SDK{})...,
+				interop.HTLCTwoFabricNetworksTopology("fabtoken", &fabric3.SDK{}, &ffabtoken.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -113,7 +115,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCNoCrossClaimTopology("fabtoken", &fabric3.SDK{}, &sdk.SDK{})...,
+				interop.HTLCNoCrossClaimTopology("fabtoken", &fabric3.SDK{}, &ffabtoken.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -132,7 +134,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCNoCrossClaimWithOrionTopology("fabtoken", &fabric3.SDK{}, &orion3.SDK{}, &sdk.SDK{})...,
+				interop.HTLCNoCrossClaimWithOrionTopology("fabtoken", &fabric3.SDK{}, &orion3.SDK{}, &fofabtoken.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())

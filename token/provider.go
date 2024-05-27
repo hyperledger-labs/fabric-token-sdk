@@ -8,6 +8,7 @@ package token
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
@@ -93,7 +94,7 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to compile options")
 	}
-	opt, err = p.normalizer.Normalize(opt)
+	opt, err = p.normalize(opt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to normalize options")
 	}
@@ -138,6 +139,73 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 		return nil, errors.WithMessagef(err, "failed to initialize token management service")
 	}
 	return ms, nil
+}
+
+func (p *ManagementServiceProvider) normalize(opt *ServiceOptions) (*ServiceOptions, error) {
+	// lookup configurations
+	configs, err := p.tmsProvider.Configs()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting tms configs")
+	}
+	if len(configs) == 0 {
+		return nil, errors.Errorf("no token management service configs found")
+	}
+	var config *config.TMS
+	if len(opt.Network) == 0 {
+		config = configs[0].TMS()
+		opt.Network = config.Network
+	} else {
+		// search
+		found := false
+		for _, manager := range configs {
+			if manager.TMS().Network == opt.Network {
+				found = true
+				config = manager.TMS()
+			}
+		}
+		if !found {
+			return nil, errors.Errorf("no token management service config found for network [%s]", opt.Network)
+		}
+	}
+
+	if len(opt.Channel) == 0 {
+		opt.Channel = config.Channel
+	}
+	if opt.Channel != config.Channel {
+		// is there another TMS with the same network, but different channel? If yes, don't fail
+		found := false
+		for _, manager := range configs {
+			tms := manager.TMS()
+			if tms.Network == opt.Network && tms.Channel == opt.Channel {
+				found = true
+				config = tms
+			}
+		}
+		if !found {
+			return nil, errors.Errorf("invalid channel [%s], expected [%s]", opt.Channel, config.Channel)
+		}
+	}
+
+	if len(opt.Namespace) == 0 {
+		opt.Namespace = config.Namespace
+	}
+	if opt.Namespace != config.Namespace {
+		// is there another TMS with the same network and channel, but different namespace? If yes, don't fail
+		found := false
+		for _, manager := range configs {
+			tms := manager.TMS()
+			if tms.Network == opt.Network && tms.Channel == opt.Channel && tms.Namespace == opt.Namespace {
+				found = true
+				config = tms
+			}
+		}
+		if !found {
+			return nil, errors.Errorf("invalid namespace [%s], expected [%s]", opt.Namespace, config.Namespace)
+		}
+	}
+
+	// last pass
+	return p.normalizer.Normalize(opt)
 }
 
 func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
