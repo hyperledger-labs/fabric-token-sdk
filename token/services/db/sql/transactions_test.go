@@ -52,7 +52,7 @@ func TestTransactionsSqliteMemory(t *testing.T) {
 }
 
 func TestTransactionsPostgres(t *testing.T) {
-	terminate, pgConnStr := startPostgresContainer(t)
+	terminate, pgConnStr := StartPostgresContainer(t)
 	defer terminate()
 
 	for _, c := range dbtest.Cases {

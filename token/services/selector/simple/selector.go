@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -20,7 +21,7 @@ import (
 
 type QueryService interface {
 	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
-	UnspentTokensIteratorBy(id, typ string) (*token.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error)
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
@@ -85,7 +86,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 	id := ownerFilter.ID()
 
 	i := 0
-	var unspentTokens *token.UnspentTokensIterator
+	var unspentTokens driver.UnspentTokensIterator
 	defer func() {
 		if unspentTokens != nil {
 			unspentTokens.Close()

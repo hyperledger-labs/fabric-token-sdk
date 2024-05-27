@@ -54,7 +54,7 @@ func TestIdentitySqliteMemory(t *testing.T) {
 }
 
 func TestIdentityPostgres(t *testing.T) {
-	terminate, pgConnStr := startPostgresContainer(t)
+	terminate, pgConnStr := StartPostgresContainer(t)
 	defer terminate()
 
 	for _, c := range IdentityCases {

@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -170,7 +171,7 @@ func (m *Manager) OnReceive(event events.Event) {
 	mm.Update(upd)
 }
 
-func (m *Manager) UnspentTokensIteratorBy(walletId, tokenType string) (*token.UnspentTokensIterator, error) {
+func (m *Manager) UnspentTokensIteratorBy(walletId, tokenType string) (driver.UnspentTokensIterator, error) {
 	k := spaceKey(walletId, tokenType)
 
 	mm, ok := m.mailmen[k]

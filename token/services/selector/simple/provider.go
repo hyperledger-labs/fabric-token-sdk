@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -60,7 +61,7 @@ func (q *queryService) UnspentTokensIterator() (*token.UnspentTokensIterator, er
 	return q.qe.UnspentTokensIterator()
 }
 
-func (q *queryService) UnspentTokensIteratorBy(id, typ string) (*token.UnspentTokensIterator, error) {
+func (q *queryService) UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error) {
 	return q.qe.UnspentTokensIteratorBy(id, typ)
 }
 

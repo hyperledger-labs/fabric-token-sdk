@@ -37,6 +37,9 @@ token:
       auditdb:
         persistence:
           type: unity
+      tokenlockdb:
+        persistence:
+          type: unity
       tokendb:
         persistence:
           type: sql

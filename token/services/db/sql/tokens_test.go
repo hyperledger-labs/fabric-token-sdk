@@ -54,7 +54,7 @@ func TestTokensSqliteMemory(t *testing.T) {
 }
 
 func TestTokensPostgres(t *testing.T) {
-	terminate, pgConnStr := startPostgresContainer(t)
+	terminate, pgConnStr := StartPostgresContainer(t)
 	defer terminate()
 
 	for _, c := range TokensCases {

@@ -51,7 +51,7 @@ func TestWalletSqliteMemory(t *testing.T) {
 }
 
 func TestWalletPostgres(t *testing.T) {
-	terminate, pgConnStr := startPostgresContainer(t)
+	terminate, pgConnStr := StartPostgresContainer(t)
 	defer terminate()
 
 	for _, c := range WalletCases {

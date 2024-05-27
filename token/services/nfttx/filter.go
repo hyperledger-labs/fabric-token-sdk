@@ -9,6 +9,7 @@ package nfttx
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 
@@ -24,7 +25,7 @@ type Filter interface {
 
 type QueryService interface {
 	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
-	UnspentTokensIteratorBy(id, typ string) (*token.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error)
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
