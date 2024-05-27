@@ -14,6 +14,7 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb/db/sql"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 	_ "modernc.org/sqlite"
 )

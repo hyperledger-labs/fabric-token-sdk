@@ -18,7 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	tms2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
@@ -75,7 +75,7 @@ func (p *SDK) Install() error {
 	networkProvider := network.NewProvider(p.registry)
 	assert.NoError(p.registry.RegisterService(networkProvider))
 
-	tmsProvider := tms2.NewTMSProvider(
+	tmsProvider := core.NewTMSProvider(
 		p.registry,
 		flogging.MustGetLogger("token-sdk.core"),
 		configProvider,
