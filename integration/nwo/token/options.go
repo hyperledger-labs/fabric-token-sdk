@@ -9,6 +9,7 @@ package token
 import (
 	fsc "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 )
 
 func WithIssuerIdentity(label string, hsm bool) fsc.Option {
@@ -34,6 +35,16 @@ func WithIssuerIdentityWithHSM(label string) fsc.Option {
 
 		if label != "_default_" {
 			o.AddAlias(label)
+		}
+		return nil
+	}
+}
+
+func WithPostgresPersistence(config *sql.PostgresConfig) fsc.Option {
+	return func(o *fsc.Options) error {
+		if config != nil {
+			o.Put("token.persistence.sql", config.DataSource())
+			o.Put("token.persistence.driver", "postgres")
 		}
 		return nil
 	}

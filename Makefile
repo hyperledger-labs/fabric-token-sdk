@@ -49,7 +49,12 @@ install-softhsm:
 	./ci/scripts/install_softhsm.sh
 
 .PHONY: docker-images
-docker-images: fabric-docker-images orion-server-images monitoring-docker-images
+docker-images: fabric-docker-images orion-server-images monitoring-docker-images testing-docker-images
+
+.PHONY: testing-docker-images
+testing-docker-images:
+	docker pull postgres:16.2-alpine
+	docker tag postgres:16.2-alpine postgres:latest
 
 .PHONY: fabric-docker-images
 fabric-docker-images:

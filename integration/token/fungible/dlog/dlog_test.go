@@ -10,11 +10,12 @@ import (
 	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
@@ -26,152 +27,124 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	var (
-		network *integration.Infrastructure
-	)
-
-	AfterEach(func() {
-		network.DeleteOnStop = false
-		network.Stop()
-	})
-
 	Describe("T1 Fungible with Auditor ne Issuer", func() {
-		BeforeEach(func() {
-			// notice that fabric-ca does not support yet aries
-			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
-				common.Opts{
-					Backend:        "fabric",
-					TokenSDKDriver: "dlog",
-					Aries:          true,
-					//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
-					SDKs: []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				},
-			)...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
+		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
+			common.Opts{
+				Backend:         "fabric",
+				CommType:        fsc.LibP2P,
+				TokenSDKDriver:  "dlog",
+				Aries:           true,
+				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
+				ReplicationOpts: integration.NoReplication,
+			},
+		))
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor", nil, true)
+			fungible.TestAll(ts.II, "auditor", nil, true)
 		})
 
 	})
 
 	Describe("Extras", func() {
-		BeforeEach(func() {
-			// notice that fabric-ca does not support yet aries
-			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
-				common.Opts{
-					Backend:        "fabric",
-					TokenSDKDriver: "dlog",
-					Aries:          true,
-					SDKs:           []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-					WebEnabled:     true, // Used for the websocket-based remote-wallet test
-				},
-			)...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
+		opts, selector := token2.NoReplication()
+		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
+			common.Opts{
+				Backend:         "fabric",
+				CommType:        fsc.LibP2P,
+				TokenSDKDriver:  "dlog",
+				Aries:           true,
+				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
+				ReplicationOpts: opts,
+				WebEnabled:      true, // Needed for the Remote Wallet with websockets
+			},
+		))
+		// notice that fabric-ca does not support yet aries
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
 
 		It("Update public params", func() {
-			tms := fungible.GetTMS(network, "default")
-			fungible.TestPublicParamsUpdate(network, "newAuditor", PrepareUpdatedPublicParams(network, "newAuditor", tms), tms, false)
+			tms := fungible.GetTMS(ts.II, "default")
+			fungible.TestPublicParamsUpdate(ts.II, "newAuditor", PrepareUpdatedPublicParams(ts.II, "newAuditor", tms), tms, false, selector)
 		})
 
 		It("Test Identity Revocation", func() {
-			fungible.RegisterAuditor(network, "auditor", nil)
-			rId := fungible.GetRevocationHandle(network, "bob")
-			fungible.TestRevokeIdentity(network, "auditor", rId, hash.Hashable(rId).String()+" Identity is in revoked state")
+			fungible.RegisterAuditor(ts.II, "auditor")
+			rId := fungible.GetRevocationHandle(ts.II, "bob")
+			fungible.TestRevokeIdentity(ts.II, "auditor", rId, selector)
 		})
 
 		It("Test Remote Wallet (GRPC)", func() {
-			fungible.TestRemoteOwnerWallet(network, "auditor", false)
+			fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, false)
 		})
 
 		It("Test Remote Wallet (WebSocket)", func() {
-			fungible.TestRemoteOwnerWallet(network, "auditor", true)
+			fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, true)
 		})
 	})
 
 	Describe("T2 Fungible with Auditor = Issuer", func() {
-		BeforeEach(func() {
-			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
-				common.Opts{
-					Backend:         "fabric",
-					TokenSDKDriver:  "dlog",
-					AuditorAsIssuer: true,
-					Aries:           true,
-					SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-					//FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
-				},
-			)...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.DeleteOnStart = true
-			network.Generate()
-			network.Start()
-		})
+		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
+			common.Opts{
+				Backend:         "fabric",
+				CommType:        fsc.LibP2P,
+				TokenSDKDriver:  "dlog",
+				Aries:           true,
+				AuditorAsIssuer: true,
+				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
+				ReplicationOpts: integration.NoReplication,
+			},
+		))
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
 
 		It("T2.1 succeeded", func() {
-			fungible.TestAll(network, "issuer", nil, true)
+			fungible.TestAll(ts.II, "issuer", nil, true)
 		})
 
 		It("T2.2 Update public params", func() {
-			tms := fungible.GetTMS(network, "default")
-			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, "newIssuer", tms), tms, true)
+			tms := fungible.GetTMS(ts.II, "default")
+			fungible.TestPublicParamsUpdate(ts.II, "newIssuer", PrepareUpdatedPublicParams(ts.II, "newIssuer", tms), tms, true, selector)
 		})
 
 	})
 
 	Describe("T3 Fungible with Auditor ne Issuer + Fabric CA", func() {
-		BeforeEach(func() {
-			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
-				common.Opts{
-					Backend:        "fabric",
-					TokenSDKDriver: "dlog",
-					SDKs:           []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				},
-			)...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
-
+		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
+			common.Opts{
+				Backend:         "fabric",
+				CommType:        fsc.LibP2P,
+				TokenSDKDriver:  "dlog",
+				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
+				ReplicationOpts: integration.NoReplication,
+			},
+		))
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor", nil, false)
+			fungible.TestAll(ts.II, "auditor", nil, false)
 		})
 	})
 
 	Describe("T4 Malicious Transactions", func() {
-		BeforeEach(func() {
-			// notice that fabric-ca does not support yet aries
-			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
-				common.Opts{
-					Backend:        "fabric",
-					TokenSDKDriver: "dlog",
-					Aries:          true,
-					NoAuditor:      true,
-					SDKs:           []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-					//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
-				})...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
+		opts, selector := token2.NoReplication()
+		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
+			common.Opts{
+				Backend:         "fabric",
+				CommType:        fsc.LibP2P,
+				TokenSDKDriver:  "dlog",
+				Aries:           true,
+				NoAuditor:       true,
+				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
+				ReplicationOpts: opts,
+			},
+		))
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
 
 		It("Malicious Transactions", func() {
-			fungible.TestMaliciousTransactions(network)
+			fungible.TestMaliciousTransactions(ts.II, selector)
 		})
 
 	})

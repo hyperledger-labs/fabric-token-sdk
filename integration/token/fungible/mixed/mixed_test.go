@@ -7,44 +7,27 @@ SPDX-License-Identifier: Apache-2.0
 package mixed
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fall"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("EndToEnd", func() {
-	var (
-		network *integration.Infrastructure
-	)
-
-	AfterEach(func() {
-		network.Stop()
-	})
-
 	Describe("Fungible with Auditor ne Issuer", func() {
-		BeforeEach(func() {
-			var err error
-			network, err = integration.New(StartPortDlog(), "", Topology(common.Opts{
-				SDKs: []api.SDK{&fabric3.SDK{}, &fall.SDK{}},
-			})...)
-			Expect(err).NotTo(HaveOccurred())
-			network.DeleteOnStop = false
-			network.DeleteOnStart = true
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
-
-		It("succeeded", func() {
-			fungible.TestMixed(network)
-		})
-
+		opts, selector := token2.NoReplication()
+		ts := token2.NewTestSuite(nil, StartPortDlog, Topology(common.Opts{
+			CommType:        fsc.LibP2P,
+			FSCLogSpec:      "",
+			SDKs:            []api2.SDK{&fabric3.SDK{}, &fall.SDK{}},
+			ReplicationOpts: opts,
+		}))
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
+		It("succeeded", func() { fungible.TestMixed(ts.II, selector) })
 	})
-
 })

@@ -13,10 +13,21 @@ import (
 	"testing"
 	"time"
 
+	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+type PostgresConfig = postgres2.PostgresConfig
+
+func DefaultPostgresConfig(node string) *PostgresConfig {
+	return postgres2.DefaultConfig(node)
+}
+
+func StartPostgresWithFmt(configs map[string]*PostgresConfig) (func(), error) {
+	return postgres2.StartPostgresWithFmt(configs)
+}
 
 // https://testcontainers.com/guides/getting-started-with-testcontainers-for-go/
 // Note: Before running tests: docker pull postgres:16.0-alpine

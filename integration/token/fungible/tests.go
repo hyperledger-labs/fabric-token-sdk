@@ -287,7 +287,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], &t0, &t1, nil)
 
 	t2 := time.Now()
-	Withdraw(network, nil, "alice", "", "USD", 10, auditor, "issuer")
+	Withdraw(network, nil, "alice", sel.Get("alice"), "", "USD", 10, auditor, "issuer")
 	t3 := time.Now()
 	CheckBalanceAndHolding(network, "alice", "", "USD", 120, auditor)
 	CheckBalanceAndHolding(network, "alice", "alice", "USD", 120, auditor)
@@ -420,7 +420,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 
 	IssueCash(network, "", "USD", 1, "alice", auditor, true, "issuer")
 
-	testTwoGeneratedOwnerWalletsSameNode(network, auditor, !aries)
+	testTwoGeneratedOwnerWalletsSameNode(network, auditor, !aries, sel)
 
 	CheckBalanceAndHolding(network, "alice", "", "USD", 10, auditor)
 	CheckBalanceAndHolding(network, "alice", "", "EUR", 0, auditor)
@@ -776,20 +776,20 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckAuditorDB(network, auditor, "", nil)
 }
 
-func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string, ppBytes []byte, tms *topology.TMS, issuerAsAuditor bool) {
+func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string, ppBytes []byte, tms *topology.TMS, issuerAsAuditor bool, sel *token3.ReplicaSelector) {
 	var errorMessage string
 	if issuerAsAuditor {
 		errorMessage = "failed verifying auditor signature"
-		RegisterAuditor(network, "issuer", nil)
-		txId := IssueCash(network, "", "USD", 110, "alice", "issuer", true, "issuer")
+		RegisterAuditor(network, sel.Get("issuer"), nil)
+		txId := IssueCash(network, "", "USD", 110, "alice", "issuer", true, sel.Get("issuer"))
 		Expect(txId).NotTo(BeEmpty())
-		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "issuer")
+		CheckBalanceAndHolding(network, sel.Get("alice"), "", "USD", 110, sel.Get("issuer"))
 	} else {
 		errorMessage = "failed to verify issuers' signatures"
-		RegisterAuditor(network, "auditor", nil)
-		txId := IssueCash(network, "", "USD", 110, "alice", "auditor", true, "issuer")
+		RegisterAuditor(network, sel.Get("auditor"), nil)
+		txId := IssueCash(network, "", "USD", 110, "alice", "auditor", true, sel.Get("issuer"))
 		Expect(txId).NotTo(BeEmpty())
-		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "auditor")
+		CheckBalanceAndHolding(network, sel.Get("alice"), "", "USD", 110, sel.Get("auditor"))
 	}
 
 	RegisterAuditor(network, auditor, nil)
@@ -818,51 +818,51 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 	CheckOwnerWalletIDs(network, "manager", "manager.id1", "manager.id2", "manager.id3")
 }
 
-func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string, useFabricCA bool) {
+func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string, useFabricCA bool, sel *token3.ReplicaSelector) {
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
 	idConfig1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1", false)
-	RegisterOwnerIdentity(network, "charlie", idConfig1)
+	RegisterOwnerIdentity(network, sel.Get("charlie"), idConfig1)
 	idConfig2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2", useFabricCA)
-	RegisterOwnerIdentity(network, "charlie", idConfig2)
+	RegisterOwnerIdentity(network, sel.Get("charlie"), idConfig2)
 
-	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, "issuer")
-	TransferCash(network, "charlie", "", "SPE", 25, "charlie.ExtraId1", auditor)
+	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, sel.Get("issuer"))
+	TransferCash(network, sel.Get("charlie"), "", "SPE", 25, "charlie.ExtraId1", auditor)
 	Restart(network, false, "charlie")
-	TransferCash(network, "charlie", "charlie.ExtraId1", "SPE", 15, "charlie.ExtraId2", auditor)
+	TransferCash(network, sel.Get("charlie"), "charlie.ExtraId1", "SPE", 15, "charlie.ExtraId2", auditor)
 
-	CheckBalanceAndHolding(network, "charlie", "", "SPE", 75, auditor)
-	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId1", "SPE", 10, auditor)
-	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId2", "SPE", 15, auditor)
+	CheckBalanceAndHolding(network, sel.Get("charlie"), "", "SPE", 75, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("charlie"), "charlie.ExtraId1", "SPE", 10, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("charlie"), "charlie.ExtraId2", "SPE", 15, sel.Get(auditor))
 }
 
-func TestRevokeIdentity(network *integration.Infrastructure, auditor string, revocationHandle string, errorMessage string) {
-	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer")
-	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 0, auditor)
+func TestRevokeIdentity(network *integration.Infrastructure, auditor string, revocationHandle string, sel *token3.ReplicaSelector) {
+	IssueCash(network, "", "USD", 110, "alice", auditor, true, sel.Get("issuer"))
+	CheckBalanceAndHolding(network, sel.Get("alice"), "", "USD", 110, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "USD", 0, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "bob.id1", "USD", 0, sel.Get(auditor))
 
-	rId := GetRevocationHandle(network, "bob")
+	rId := GetRevocationHandle(network, sel.Get("bob"))
 	RevokeIdentity(network, auditor, revocationHandle)
 	// try to issue to bob
-	IssueCash(network, "", "USD", 22, "bob", auditor, true, "issuer", hash.Hashable(rId).String()+" Identity is in revoked state")
+	IssueCash(network, "", "USD", 22, "bob", auditor, true, sel.Get("issuer"), hash.Hashable(rId).String()+" Identity is in revoked state")
 	// try to transfer to bob
-	TransferCash(network, "alice", "", "USD", 22, "bob", auditor, hash.Hashable(rId).String()+" Identity is in revoked state")
-	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 0, auditor)
+	TransferCash(network, sel.Get("alice"), "", "USD", 22, "bob", auditor, hash.Hashable(rId).String()+" Identity is in revoked state")
+	CheckBalanceAndHolding(network, sel.Get("alice"), "", "USD", 110, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "USD", 0, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "bob.id1", "USD", 0, sel.Get(auditor))
 
 	// Issuer to bob.id1
-	IssueCash(network, "", "USD", 90, "bob.id1", auditor, true, "issuer")
-	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 90, auditor)
+	IssueCash(network, "", "USD", 90, "bob.id1", auditor, true, sel.Get("issuer"))
+	CheckBalanceAndHolding(network, sel.Get("alice"), "", "USD", 110, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "USD", 0, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "bob.id1", "USD", 90, sel.Get(auditor))
 }
 
-func TestMixed(network *integration.Infrastructure) {
+func TestMixed(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
 	dlogId := getTmsId(network, DLogNamespace)
 	fabTokenId := getTmsId(network, FabTokenNamespace)
-	RegisterAuditorForTMSID(network, "auditor1", dlogId, nil)
-	RegisterAuditorForTMSID(network, "auditor2", fabTokenId, nil)
+	RegisterAuditorForTMSID(network, sel.Get("auditor1"), dlogId, nil)
+	RegisterAuditorForTMSID(network, sel.Get("auditor2"), fabTokenId, nil)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(40 * time.Second)
@@ -870,19 +870,19 @@ func TestMixed(network *integration.Infrastructure) {
 	Eventually(CheckPublicParamsMatch).WithArguments(network, dlogId, "issuer1", "auditor1", "alice", "bob").WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 	Eventually(CheckPublicParamsMatch).WithArguments(network, fabTokenId, "issuer2", "auditor2", "alice", "bob").WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 
-	IssueCashForTMSID(network, "", "USD", 110, "alice", "auditor1", true, "issuer1", dlogId)
-	IssueCashForTMSID(network, "", "USD", 115, "alice", "auditor2", true, "issuer2", fabTokenId)
+	IssueCashForTMSID(network, "", "USD", 110, "alice", "auditor1", true, sel.Get("issuer1"), dlogId)
+	IssueCashForTMSID(network, "", "USD", 115, "alice", "auditor2", true, sel.Get("issuer2"), fabTokenId)
 
-	TransferCashForTMSID(network, "alice", "", "USD", 20, "bob", "auditor1", dlogId)
-	TransferCashForTMSID(network, "alice", "", "USD", 30, "bob", "auditor2", fabTokenId)
+	TransferCashForTMSID(network, sel.Get("alice"), "", "USD", 20, "bob", "auditor1", dlogId)
+	TransferCashForTMSID(network, sel.Get("alice"), "", "USD", 30, "bob", "auditor2", fabTokenId)
 
-	RedeemCashForTMSID(network, "bob", "", "USD", 11, "auditor1", dlogId)
-	CheckSpendingForTMSID(network, "bob", "", "USD", "auditor1", 11, dlogId)
+	RedeemCashForTMSID(network, sel.Get("bob"), "", "USD", 11, sel.Get("auditor1"), dlogId)
+	CheckSpendingForTMSID(network, sel.Get("bob"), "", "USD", sel.Get("auditor1"), 11, dlogId)
 
-	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 90, "auditor1", dlogId)
-	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 85, "auditor2", fabTokenId)
-	CheckBalanceAndHoldingForTMSID(network, "bob", "", "USD", 9, "auditor1", dlogId)
-	CheckBalanceAndHoldingForTMSID(network, "bob", "", "USD", 30, "auditor2", fabTokenId)
+	CheckBalanceAndHoldingForTMSID(network, sel.Get("alice"), "", "USD", 90, sel.Get("auditor1"), dlogId)
+	CheckBalanceAndHoldingForTMSID(network, sel.Get("alice"), "", "USD", 85, sel.Get("auditor2"), fabTokenId)
+	CheckBalanceAndHoldingForTMSID(network, sel.Get("bob"), "", "USD", 9, sel.Get("auditor1"), dlogId)
+	CheckBalanceAndHoldingForTMSID(network, sel.Get("bob"), "", "USD", 30, sel.Get("auditor2"), fabTokenId)
 
 	h := ListIssuerHistoryForTMSID(network, "", "USD", "issuer1", dlogId)
 	Expect(h.Count() > 0).To(BeTrue())
@@ -892,84 +892,84 @@ func TestMixed(network *integration.Infrastructure) {
 	// Error cases
 
 	// Try to approve dlog with auditor2
-	TransferCashForTMSID(network, "alice", "", "USD", 20, "bob", "auditor2", dlogId, "")
+	TransferCashForTMSID(network, sel.Get("alice"), "", "USD", 20, "bob", "auditor2", dlogId, "")
 	// Try to issue on dlog with issuer2
-	IssueCashForTMSID(network, "", "USD", 110, "alice", "auditor1", true, "issuer2", dlogId, "")
+	IssueCashForTMSID(network, "", "USD", 110, "alice", "auditor1", true, sel.Get("issuer2"), dlogId, "")
 	// Try to spend on dlog coins from fabtoken
-	TransferCashForTMSID(network, "alice", "", "USD", 120, "bob", "auditor2", fabTokenId, "")
+	TransferCashForTMSID(network, sel.Get("alice"), "", "USD", 120, "bob", "auditor2", fabTokenId, "")
 	// Try to issue more coins than the max
-	IssueCashForTMSID(network, "", "MAX", 65535, "bob", "auditor1", true, "issuer1", dlogId)
-	IssueCashForTMSID(network, "", "MAX", 65536, "bob", "auditor2", true, "issuer2", fabTokenId, "q is larger than max token value [65535]")
+	IssueCashForTMSID(network, "", "MAX", 65535, "bob", "auditor1", true, sel.Get("issuer1"), dlogId)
+	IssueCashForTMSID(network, "", "MAX", 65536, "bob", "auditor2", true, sel.Get("issuer2"), fabTokenId, "q is larger than max token value [65535]")
 
 	// Shut down one auditor and try to issue cash for both chaincodes
-	Restart(network, true, "auditor2")
-	IssueCashForTMSID(network, "", "USD", 10, "alice", "auditor1", true, "issuer1", dlogId)
-	IssueCashForTMSID(network, "", "USD", 20, "alice", "auditor2", true, "issuer2", fabTokenId, "")
+	Restart(network, true, sel.All("auditor2")...)
+	IssueCashForTMSID(network, "", "USD", 10, "alice", "auditor1", true, sel.Get("issuer1"), dlogId)
+	IssueCashForTMSID(network, "", "USD", 20, "alice", "auditor2", true, sel.Get("issuer2"), fabTokenId, "")
 	RegisterAuditor(network, "auditor2", nil)
-	IssueCashForTMSID(network, "", "USD", 30, "alice", "auditor2", true, "issuer2", fabTokenId)
+	IssueCashForTMSID(network, "", "USD", 30, "alice", "auditor2", true, sel.Get("issuer2"), fabTokenId)
 
-	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 100, "auditor1", dlogId)
-	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 115, "auditor2", fabTokenId)
+	CheckBalanceAndHoldingForTMSID(network, sel.Get("alice"), "", "USD", 100, sel.Get("auditor1"), dlogId)
+	CheckBalanceAndHoldingForTMSID(network, sel.Get("alice"), "", "USD", 115, sel.Get("auditor2"), fabTokenId)
 }
 
-func TestRemoteOwnerWallet(network *integration.Infrastructure, auditor string, websSocket bool) {
-	TestRemoteOwnerWalletWithWMP(network, NewWalletManagerProvider(&walletManagerLoader{II: network}), auditor, websSocket)
+func TestRemoteOwnerWallet(network *integration.Infrastructure, auditor string, sel *token3.ReplicaSelector, websSocket bool) {
+	TestRemoteOwnerWalletWithWMP(network, NewWalletManagerProvider(&walletManagerLoader{II: network}), auditor, sel, websSocket)
 }
 
-func TestRemoteOwnerWalletWithWMP(network *integration.Infrastructure, wmp *WalletManagerProvider, auditor string, websSocket bool) {
-	RegisterAuditor(network, auditor, nil)
+func TestRemoteOwnerWalletWithWMP(network *integration.Infrastructure, wmp *WalletManagerProvider, auditor string, sel *token3.ReplicaSelector, websSocket bool) {
+	RegisterAuditor(network, sel.Get(auditor), nil)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
 
-	SetKVSEntry(network, "issuer", "auditor", auditor)
-	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+	SetKVSEntry(network, sel.Get("issuer"), "auditor", auditor)
+	CheckPublicParams(network, sel.All("issuer", auditor, "alice", "bob", "charlie", "manager")...)
 
-	Withdraw(network, wmp, "alice", "alice_remote", "USD", 10, auditor, "issuer")
-	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 10, auditor)
+	Withdraw(network, wmp, "alice", sel.Get("alice"), "alice_remote", "USD", 10, auditor, "issuer")
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice_remote", "USD", 10, sel.Get(auditor))
 
 	TransferCashFromExternalWallet(network, wmp, websSocket, "alice", "alice_remote", "USD", 7, "bob", auditor)
-	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 3, auditor)
-	CheckBalanceAndHolding(network, "alice", "alice_remote_2", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 7, auditor)
-	TransferCashToExternalWallet(network, wmp, "bob", "", "USD", 3, "alice", "alice_remote", auditor)
-	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 6, auditor)
-	CheckBalanceAndHolding(network, "alice", "alice_remote_2", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
-	TransferCashFromExternalWallet(network, wmp, websSocket, "alice", "alice_remote", "USD", 4, "charlie", auditor)
-	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 2, auditor)
-	CheckBalanceAndHolding(network, "alice", "alice_remote_2", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
-	CheckBalanceAndHolding(network, "bob", "bob_remote", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, "charlie", "", "USD", 4, auditor)
-	TransferCashFromAndToExternalWallet(network, wmp, websSocket, "alice", "alice_remote", "USD", 1, "bob", "bob_remote", auditor)
-	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 1, auditor)
-	CheckBalanceAndHolding(network, "alice", "alice_remote_2", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
-	CheckBalanceAndHolding(network, "bob", "bob_remote", "USD", 1, auditor)
-	CheckBalanceAndHolding(network, "charlie", "", "USD", 4, auditor)
-	TransferCashFromAndToExternalWallet(network, wmp, websSocket, "alice", "alice_remote", "USD", 1, "alice", "alice_remote_2", auditor)
-	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, "alice", "alice_remote_2", "USD", 1, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
-	CheckBalanceAndHolding(network, "bob", "bob_remote", "USD", 1, auditor)
-	CheckBalanceAndHolding(network, "charlie", "", "USD", 4, auditor)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice_remote", "USD", 3, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice_remote_2", "USD", 0, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "USD", 7, sel.Get(auditor))
+	TransferCashToExternalWallet(network, wmp, sel.Get("bob"), "", "USD", 3, "alice", "alice_remote", sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice_remote", "USD", 6, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice_remote_2", "USD", 0, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "USD", 4, sel.Get(auditor))
+	TransferCashFromExternalWallet(network, wmp, websSocket, sel.Get("alice"), "alice_remote", "USD", 4, "charlie", auditor)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice_remote", "USD", 2, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice_remote_2", "USD", 0, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "USD", 4, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "bob_remote", "USD", 0, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("charlie"), "", "USD", 4, sel.Get(auditor))
+	TransferCashFromAndToExternalWallet(network, wmp, websSocket, sel.Get("alice"), "alice_remote", "USD", 1, "bob", "bob_remote", auditor)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice_remote", "USD", 1, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice_remote_2", "USD", 0, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "USD", 4, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("bob"), "bob_remote", "USD", 1, sel.Get(auditor))
+	CheckBalanceAndHolding(network, sel.Get("charlie"), "", "USD", 4, sel.Get(auditor))
+	TransferCashFromAndToExternalWallet(network, wmp, websSocket, sel.Get("alice"), "alice_remote", "USD", 1, "alice", "alice_remote_2", auditor)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice_remote", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, sel.Get("alice"), "alice_remote_2", "USD", 1, auditor)
+	CheckBalanceAndHolding(network, sel.Get("bob"), "", "USD", 4, auditor)
+	CheckBalanceAndHolding(network, sel.Get("bob"), "bob_remote", "USD", 1, auditor)
+	CheckBalanceAndHolding(network, sel.Get("charlie"), "", "USD", 4, auditor)
 }
 
-func TestMaliciousTransactions(net *integration.Infrastructure) {
-	CheckPublicParams(net, "issuer", "alice", "bob", "charlie", "manager")
+func TestMaliciousTransactions(net *integration.Infrastructure, sel *token3.ReplicaSelector) {
+	CheckPublicParams(net, sel.All("issuer", "alice", "bob", "charlie", "manager")...)
 
-	Eventually(DoesWalletExist).WithArguments(net, "issuer", "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(net, "alice", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(net, "bob", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	IssueCash(net, "", "USD", 110, "alice", "", true, "issuer")
-	CheckBalance(net, "alice", "", "USD", 110)
+	Eventually(DoesWalletExist).WithArguments(net, sel.Get("issuer"), "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(net, sel.Get("alice"), "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(net, sel.Get("bob"), "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	IssueCash(net, "", "USD", 110, "alice", "", true, sel.Get("issuer"))
+	CheckBalance(net, sel.Get("alice"), "", "USD", 110)
 
-	txID := MaliciousTransferCash(net, "alice", "", "USD", 2, "bob", "", nil)
-	txStatusAlice := GetTXStatus(net, "alice", txID)
+	txID := MaliciousTransferCash(net, sel.Get("alice"), "", "USD", 2, "bob", "", nil)
+	txStatusAlice := GetTXStatus(net, sel.Get("alice"), txID)
 	Expect(txStatusAlice.ValidationCode).To(BeEquivalentTo(ttx.Deleted))
 	Expect(txStatusAlice.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
-	txStatusBob := GetTXStatus(net, "bob", txID)
+	txStatusBob := GetTXStatus(net, sel.Get("bob"), txID)
 	Expect(txStatusBob.ValidationCode).To(BeEquivalentTo(ttx.Deleted))
 	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
 }

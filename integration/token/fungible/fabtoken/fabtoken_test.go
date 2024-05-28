@@ -9,14 +9,13 @@ package fabtoken
 import (
 	"math"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
-
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
@@ -25,37 +24,27 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	var (
-		network *integration.Infrastructure
-	)
-
-	AfterEach(func() {
-		network.Stop()
-	})
-
 	Describe("Fungible", func() {
-		BeforeEach(func() {
-			var err error
-			network, err = integration.New(StartPortDlog(), "", topology.Topology(
-				common.Opts{
-					Backend:        "fabric",
-					TokenSDKDriver: "fabtoken",
-					Aries:          true,
-					SDKs:           []api.SDK{&fabric.SDK{}, &ffabtoken.SDK{}},
-					WebEnabled:     true, // Used for the websocket-based remote-wallet test
-				},
-			)...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
+		ts := token2.NewTestSuite(nil, StartPortDlog, topology.Topology(
+			common.Opts{
+				Backend:         "fabric",
+				CommType:        fsc.LibP2P,
+				TokenSDKDriver:  "fabtoken",
+				Aries:           true,
+				SDKs:            []api.SDK{&fabric.SDK{}, &ffabtoken.SDK{}},
+				ReplicationOpts: integration.NoReplication,
+				WebEnabled:      true, // Needed for the Remote Wallet with websockets
+			},
+		))
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor", nil, true)
+			fungible.TestAll(ts.II, "auditor", nil, true)
 		})
 
 		It("Update public params", func() {
+			network := ts.II
 			auditorId := fungible.GetAuditorIdentity(network, "newAuditor")
 			issuerId := fungible.GetIssuerIdentity(network, "newIssuer.id1")
 			publicParam := fabtoken.PublicParams{
@@ -70,21 +59,21 @@ var _ = Describe("EndToEnd", func() {
 
 			tms := fungible.GetTMS(network, "default")
 			Expect(tms).NotTo(BeNil())
-			fungible.TestPublicParamsUpdate(network, "newAuditor", ppBytes, tms, false)
+			fungible.TestPublicParamsUpdate(network, "newAuditor", ppBytes, tms, false, selector)
 		})
 
 		It("Test Identity Revocation", func() {
-			fungible.RegisterAuditor(network, "auditor", nil)
-			rId := fungible.GetRevocationHandle(network, "bob")
-			fungible.TestRevokeIdentity(network, "auditor", rId, " Identity is in revoked state")
+			fungible.RegisterAuditor(ts.II, "auditor", nil)
+			rId := fungible.GetRevocationHandle(ts.II, "bob")
+			fungible.TestRevokeIdentity(ts.II, "auditor", rId, selector)
 		})
 
 		It("Test Remote Wallet (GRPC)", func() {
-			fungible.TestRemoteOwnerWallet(network, "auditor", false)
+			fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, false)
 		})
 
 		It("Test Remote Wallet (WebSocket)", func() {
-			fungible.TestRemoteOwnerWallet(network, "auditor", true)
+			fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, true)
 		})
 
 	})
