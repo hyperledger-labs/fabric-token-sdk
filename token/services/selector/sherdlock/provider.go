@@ -9,8 +9,9 @@ package sherdlock
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/pkg/errors"
@@ -19,7 +20,7 @@ import (
 const retrySelectionBackoff = 5 * time.Second
 
 type SelectorService struct {
-	managerLazyCache common.LazyProvider[*token.ManagementService, token.SelectorManager]
+	managerLazyCache utils.LazyProvider[*token.ManagementService, token.SelectorManager]
 }
 
 func NewService(tokenDBManager *tokendb.Manager, tokenLockDBManager *tokenlockdb.Manager) *SelectorService {
@@ -28,7 +29,7 @@ func NewService(tokenDBManager *tokendb.Manager, tokenLockDBManager *tokenlockdb
 		tokenLockDBManager: tokenLockDBManager,
 	}
 	return &SelectorService{
-		managerLazyCache: common.NewLazyProviderWithKeyMapper(key, loader.load),
+		managerLazyCache: utils.NewLazyProviderWithKeyMapper(key, loader.load),
 	}
 }
 

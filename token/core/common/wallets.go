@@ -9,7 +9,6 @@ package common
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -262,7 +261,6 @@ func (w *LongTermOwnerWallet) Remote() bool {
 type AnonymousOwnerWallet struct {
 	*LongTermOwnerWallet
 	Logger         logging.Logger
-	ConfigManager  config.Manager
 	Deserializer   driver.Deserializer
 	WalletRegistry WalletRegistry
 	IdentityCache  *WalletIdentityCache
@@ -272,11 +270,11 @@ func NewAnonymousOwnerWallet(
 	logger logging.Logger,
 	IdentityProvider driver.IdentityProvider,
 	TokenVault OwnerTokenVault,
-	ConfigManager config.Manager,
 	Deserializer driver.Deserializer,
 	walletRegistry WalletRegistry,
 	id string,
 	identityInfo driver.IdentityInfo,
+	cacheSize int,
 ) (*AnonymousOwnerWallet, error) {
 	w := &AnonymousOwnerWallet{
 		LongTermOwnerWallet: &LongTermOwnerWallet{
@@ -289,15 +287,6 @@ func NewAnonymousOwnerWallet(
 		WalletRegistry: walletRegistry,
 		Deserializer:   Deserializer,
 	}
-	cacheSize := 0
-	tmsConfig := ConfigManager.TMS()
-	conf := tmsConfig.GetOwnerWallet(id)
-	if conf == nil {
-		cacheSize = tmsConfig.GetWalletDefaultCacheSize()
-	} else {
-		cacheSize = conf.CacheSize
-	}
-
 	w.IdentityCache = NewWalletIdentityCache(logger, w.getRecipientIdentity, cacheSize)
 	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), cacheSize)
 	return w, nil

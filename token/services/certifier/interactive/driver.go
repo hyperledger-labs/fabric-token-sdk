@@ -20,6 +20,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	ConfigurationKey = "certification.interactive"
+)
+
+type Certification struct {
+	IDs []string `yaml:"ids,omitempty"`
+}
+
 type BackendFactory func(tms *token.ManagementService, wallet string) (Backend, error)
 
 type Resolver interface {
@@ -60,8 +68,12 @@ func (d *Driver) NewCertificationClient(tms *token.ManagementService) (driver.Ce
 	k := tms.Channel() + ":" + tms.Namespace()
 	cm, ok := d.CertificationClients[k]
 	if !ok {
-		var certifiers []view.Identity
-		certifiers, err := d.Resolver.ResolveIdentities(tms.ConfigManager().Certifiers()...)
+		certification := &Certification{}
+		if err := tms.Configuration().UnmarshalKey(ConfigurationKey, &certification); err != nil {
+			return nil, errors.Wrap(err, "failed unmarshalling certification config")
+		}
+
+		certifiers, err := d.Resolver.ResolveIdentities(certification.IDs...)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "cannot resolve certifier identities")
 		}

@@ -10,8 +10,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -50,13 +50,16 @@ func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.
 			return nil, errors.WithMessagef(err, "failed installing views")
 		}
 	}
-
+	cs, err := config.GetService(sp)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get config service")
+	}
 	return NewNetwork(
 		sp,
 		view.GetIdentityProvider(sp),
 		n,
 		m.Vault,
-		config.NewTokenSDK(view.GetConfigService(sp)),
+		cs,
 		common.NewAcceptTxInDBFilterProvider(ttxdbProvider, auditDBProvider),
 	), nil
 }

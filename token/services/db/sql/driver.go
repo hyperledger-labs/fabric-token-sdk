@@ -13,9 +13,9 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/pkg/errors"
 )
 
@@ -37,7 +37,7 @@ type Opts struct {
 }
 
 type DBOpener struct {
-	dbCache   common.LazyProvider[dbKey, *sql.DB]
+	dbCache   utils.LazyProvider[dbKey, *sql.DB]
 	optsKey   string
 	envVarKey string
 }
@@ -56,7 +56,7 @@ func (d *DBOpener) Open(cp driver.ConfigProvider, tmsID token.TMSID) (*sql.DB, *
 
 func NewSQLDBOpener(optsKey, envVarKey string) *DBOpener {
 	return &DBOpener{
-		dbCache: common.NewLazyProviderWithKeyMapper(key, func(k dbKey) (*sql.DB, error) {
+		dbCache: utils.NewLazyProviderWithKeyMapper(key, func(k dbKey) (*sql.DB, error) {
 			p, err := sql.Open(k.driverName, k.dataSourceName)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to open db [%s]", k.driverName)
@@ -92,7 +92,7 @@ func NewSQLDBOpener(optsKey, envVarKey string) *DBOpener {
 
 func (d *DBOpener) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*Opts, error) {
 	opts := &Opts{}
-	tmsConfig, err := config.NewTokenSDK(cp).GetTMS(tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	tmsConfig, err := config.NewService(cp).ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)
 	}

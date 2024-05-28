@@ -20,12 +20,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-protos-go/peer"
@@ -112,7 +112,7 @@ type Network struct {
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
 	tokensProvider *tokens2.Manager
 
-	vaultLazyCache common.LazyProvider[string, driver.Vault]
+	vaultLazyCache utils.LazyProvider[string, driver.Vault]
 	subscribers    *events.Subscribers
 }
 
@@ -141,7 +141,7 @@ func NewNetwork(
 		viewManager:    view2.GetManager(sp),
 		ledger:         &ledger{ch.Ledger()},
 		subscribers:    events.NewSubscribers(),
-		vaultLazyCache: common.NewLazyProvider(loader.load),
+		vaultLazyCache: utils.NewLazyProvider(loader.load),
 	}
 }
 
@@ -194,7 +194,7 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 		NewTokenRWSetProcessor(
 			n.Name(),
 			ns,
-			common.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
+			utils.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
 				return n.tokensProvider.Tokens(tmsID)
 			}).Get,
 			func() *token2.ManagementServiceProvider {

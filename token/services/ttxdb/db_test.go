@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -33,7 +35,7 @@ func TestDB(t *testing.T) {
 	registry := registry.New()
 	assert.NoError(t, registry.RegisterService(cp))
 
-	manager := ttxdb.NewManager(cp, db.NewConfig(cp, "ttxdb.persistence.type"))
+	manager := ttxdb.NewManager(cp, db.NewConfig(config2.NewService(cp), "ttxdb.persistence.type"))
 	db1, err := manager.DBByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	db2, err := manager.DBByTMSId(token.TMSID{Network: "grapes"})

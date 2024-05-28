@@ -9,7 +9,6 @@ package common
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/pkg/errors"
 )
 
@@ -24,7 +23,7 @@ type Service[T driver.PublicParameters] struct {
 	serializer              driver.Serializer
 	deserializer            driver.Deserializer
 	identityProvider        driver.IdentityProvider
-	configManager           config.Manager
+	configuration           driver.Configuration
 	certificationService    driver.CertificationService
 	walletService           driver.WalletService
 	issueService            driver.IssueService
@@ -40,7 +39,7 @@ func NewTokenService[T driver.PublicParameters](
 	identityProvider driver.IdentityProvider,
 	serializer driver.Serializer,
 	deserializer driver.Deserializer,
-	configManager config.Manager,
+	configManager driver.Configuration,
 	certificationService driver.CertificationService,
 	issueService driver.IssueService,
 	transferService driver.TransferService,
@@ -53,7 +52,7 @@ func NewTokenService[T driver.PublicParameters](
 		identityProvider:        identityProvider,
 		serializer:              serializer,
 		deserializer:            deserializer,
-		configManager:           configManager,
+		configuration:           configManager,
 		certificationService:    certificationService,
 		walletService:           ws,
 		issueService:            issueService,
@@ -95,9 +94,9 @@ func (s *Service[T]) PublicParamsManager() driver.PublicParamsManager {
 	return s.PublicParametersManager
 }
 
-// ConfigManager returns the configuration manager associated with the service
-func (s *Service[T]) ConfigManager() config.Manager {
-	return s.configManager
+// Configuration returns the configuration manager associated with the service
+func (s *Service[T]) Configuration() driver.Configuration {
+	return s.configuration
 }
 
 func (s *Service[T]) WalletService() driver.WalletService {

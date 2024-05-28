@@ -1,0 +1,40 @@
+token:
+  enabled: true
+  tms:
+    n1c1ns1:
+      certification: null
+      network: n1
+      channel: c1
+      namespace: ns1
+      wallets:
+        # Default cache size reference that can be used by any wallet that support caching
+        defaultCacheSize: 3
+        owners:
+          - default: true
+            id: owner1
+            path: /path/to/crypto/owner1
+            cacheSize: 5
+        issuers:
+          - default: true
+            id: issuer1
+            path: /path/to/crypto/issuer1
+          - id: issuer2
+            path: /path/to/crypto/issuer2
+        auditors:
+          - default: true
+            id: auditor1
+            path: /path/to/crypto/auditor1
+          - id: auditor2
+            path: /path/to/crypto/auditor2
+          - id: auditor3
+            path: /path/to/crypto/auditor3
+        certifiers:
+          - default: true
+            id: certifier1
+            path: /path/to/crypto/certifier1
+          - id: certifier2
+            path: /path/to/crypto/certifier2
+          - id: certifier3
+            path: /path/to/crypto/certifier3
+          - id: certifier4
+            path: /path/to/crypto/certifier4

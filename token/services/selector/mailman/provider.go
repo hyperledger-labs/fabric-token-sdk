@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/pkg/errors"
 )
 
@@ -23,7 +23,7 @@ type VaultProvider interface {
 }
 
 type SelectorService struct {
-	managerLazyCache common.LazyProvider[*token.ManagementService, token.SelectorManager]
+	managerLazyCache utils.LazyProvider[*token.ManagementService, token.SelectorManager]
 	// TODO create a shared worker pool for all selectors
 	// workerPool []*worker
 }
@@ -34,7 +34,7 @@ func NewService(subscribe Subscribe, tracer Tracer) *SelectorService {
 		tracer:    tracer,
 	}
 	return &SelectorService{
-		managerLazyCache: common.NewLazyProviderWithKeyMapper(key, loader.load),
+		managerLazyCache: utils.NewLazyProviderWithKeyMapper(key, loader.load),
 	}
 }
 

@@ -5,6 +5,9 @@ The following example provides descriptions for the various keys required by the
 ```yaml
 # ------------------- Token SDK Configuration -------------------------
 token:
+  # Is the version of this configuration structure. 
+  # If not specified, the latest version is used 
+  version: v1
   # Is the token-sdk enabled
   enabled: true
 

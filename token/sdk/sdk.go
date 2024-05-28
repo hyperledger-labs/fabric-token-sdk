@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
@@ -29,6 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -57,7 +57,7 @@ type SDK struct {
 	postInitializer *tms.PostInitializer
 	networkProvider *network.Provider
 	tmsProvider     *token.ManagementServiceProvider
-	configProvider  *view2.ConfigService
+	configService   *config.Service
 }
 
 func NewSDK(registry Registry) *SDK {
@@ -65,15 +65,17 @@ func NewSDK(registry Registry) *SDK {
 }
 
 func (p *SDK) Install() error {
-	configProvider := view2.GetConfigService(p.registry)
-	p.configProvider = configProvider
-	if !configProvider.GetBool("token.enabled") {
+	cs := view2.GetConfigService(p.registry)
+	assert.NotNil(cs, "config service missing")
+	p.configService = config.NewService(cs)
+	assert.NoError(p.registry.RegisterService(p.configService))
+	if !p.configService.Enabled() {
 		logger.Infof("Token platform not enabled, skipping")
 		return nil
 	}
 	logger.Infof("Token platform enabled, installing...")
 
-	logger.Infof("Set TMS TMSProvider")
+	logger.Infof("Set configuration TMSProvider")
 
 	// Network provider
 	networkProvider := network.NewProvider(p.registry)
@@ -83,24 +85,24 @@ func (p *SDK) Install() error {
 	tmsProvider := core.NewTMSProvider(
 		p.registry,
 		flogging.MustGetLogger("token-sdk.core"),
-		configProvider,
+		p.configService,
 		&vault.PublicParamsProvider{Provider: networkProvider},
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 
 	// DB Managers
-	ttxdbManager := ttxdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
+	ttxdbManager := ttxdb.NewManager(cs, dbconfig.NewConfig(p.configService, "ttxdb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(ttxdbManager))
-	tokenDBManager := tokendb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "tokendb.persistence.type", "db.persistence.type"))
+	tokenDBManager := tokendb.NewManager(cs, dbconfig.NewConfig(p.configService, "tokendb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(tokenDBManager))
-	auditDBManager := auditdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "auditdb.persistence.type", "db.persistence.type"))
+	auditDBManager := auditdb.NewManager(cs, dbconfig.NewConfig(p.configService, "auditdb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(auditDBManager))
-	identityDBManager := identitydb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "identitydb.persistence.type", "db.persistence.type"))
+	identityDBManager := identitydb.NewManager(cs, dbconfig.NewConfig(p.configService, "identitydb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(identityDBManager))
 
 	// configure selector service
 	var selectorManagerProvider token.SelectorManagerProvider
-	switch configProvider.GetString("token.selector.driver") {
+	switch cs.GetString("token.selector.driver") {
 	case "simple":
 		selectorManagerProvider = selector.NewProvider(
 			network2.NewLockerProvider(ttxdbManager, 2*time.Second, 5*time.Minute),
@@ -114,7 +116,7 @@ func (p *SDK) Install() error {
 		assert.NoError(err, "failed to get events subscriber")
 		selectorManagerProvider = mailman.NewService(subscriber, tracing.Get(p.registry).GetTracer())
 	default:
-		tokenLockDBManager := tokenlockdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "tokenlockdb.persistence.type", "db.persistence.type"))
+		tokenLockDBManager := tokenlockdb.NewManager(cs, dbconfig.NewConfig(p.configService, "tokenlockdb.persistence.type", "db.persistence.type"))
 		assert.NoError(p.registry.RegisterService(tokenLockDBManager))
 		selectorManagerProvider = sherdlock.NewService(tokenDBManager, tokenLockDBManager)
 	}
@@ -154,7 +156,7 @@ func (p *SDK) Install() error {
 	auditorManager := auditor.NewManager(networkProvider, auditDBManager, tokensManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)), tmsp)
 	assert.NoError(p.registry.RegisterService(auditorManager))
 
-	// TMS callback
+	// configuration callback
 	p.postInitializer, err = tms.NewPostInitializer(tmsp, tokensManager, networkProvider, ownerManager, auditorManager)
 	assert.NoError(err)
 	tmsProvider.SetCallback(p.postInitializer.PostInit)
@@ -168,24 +170,20 @@ func (p *SDK) Install() error {
 }
 
 func (p *SDK) Start(ctx context.Context) error {
-	if !p.configProvider.GetBool("token.enabled") {
+	if !p.configService.Enabled() {
 		logger.Infof("Token platform not enabled, skipping start")
 		return nil
 	}
 	logger.Infof("Token platform enabled, starting...")
 
 	// load the configured tms
-	tmsConfigs, err := config.NewTokenSDK(p.configProvider).GetTMSs()
+	configurations, err := p.configService.Configurations()
 	if err != nil {
-		return errors.WithMessagef(err, "failed get the TMS configurations")
+		return errors.WithMessagef(err, "failed get the configuration configurations")
 	}
-	logger.Infof("configured token management service [%d]", len(tmsConfigs))
-	for _, tmsConfig := range tmsConfigs {
-		tmsID := token.TMSID{
-			Network:   tmsConfig.TMS().Network,
-			Channel:   tmsConfig.TMS().Channel,
-			Namespace: tmsConfig.TMS().Namespace,
-		}
+	logger.Infof("configured token management service [%d]", len(configurations))
+	for _, tmsConfig := range configurations {
+		tmsID := tmsConfig.ID()
 		logger.Infof("start token management service [%s]...", tmsID)
 
 		// connect network

@@ -16,12 +16,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -43,7 +43,7 @@ type Network struct {
 	nsFinder       common2.NamespaceFinder
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
 
-	vaultLazyCache common.LazyProvider[string, driver.Vault]
+	vaultLazyCache utils.LazyProvider[string, driver.Vault]
 	subscribers    *events.Subscribers
 }
 
@@ -69,7 +69,7 @@ func NewNetwork(
 		n:              n,
 		viewManager:    view2.GetManager(sp),
 		tmsProvider:    token2.GetManagementServiceProvider(sp),
-		vaultLazyCache: common.NewLazyProvider(loader.load),
+		vaultLazyCache: utils.NewLazyProvider(loader.load),
 		subscribers:    events.NewSubscribers(),
 	}
 	net.ledger = &ledger{n: net}

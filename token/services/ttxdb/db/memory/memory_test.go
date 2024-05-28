@@ -17,6 +17,7 @@ type mockConfigProvider struct{}
 
 func (sp mockConfigProvider) UnmarshalKey(key string, rawVal interface{}) error { return nil }
 func (sp mockConfigProvider) GetString(key string) string                       { return "" }
+func (sp mockConfigProvider) GetBool(key string) bool                           { return false }
 func (sp mockConfigProvider) IsSet(key string) bool                             { return false }
 func (sp mockConfigProvider) TranslatePath(path string) string                  { return "" }
 
