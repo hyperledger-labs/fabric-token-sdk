@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	tplatform "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -41,17 +42,17 @@ type Stream interface {
 	Result() ([]byte, error)
 }
 
-func RegisterAuditor(network *integration.Infrastructure, id string, onAuditorRestart OnAuditorRestartFunc) {
-	RegisterAuditorForTMSID(network, id, nil, onAuditorRestart)
+func RegisterAuditor(network *integration.Infrastructure, auditor *token3.NodeReference, onAuditorRestart OnAuditorRestartFunc) {
+	RegisterAuditorForTMSID(network, auditor, nil, onAuditorRestart)
 }
 
-func RegisterAuditorForTMSID(network *integration.Infrastructure, id string, tmsId *token2.TMSID, onAuditorRestart OnAuditorRestartFunc) {
-	_, err := network.Client(id).CallView("registerAuditor", common.JSONMarshall(&views.RegisterAuditor{
+func RegisterAuditorForTMSID(network *integration.Infrastructure, auditor *token3.NodeReference, tmsId *token2.TMSID, onAuditorRestart OnAuditorRestartFunc) {
+	_, err := network.Client(auditor.ReplicaName()).CallView("registerAuditor", common.JSONMarshall(&views.RegisterAuditor{
 		TMSID: tmsId,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	if onAuditorRestart != nil {
-		onAuditorRestart(network, id)
+		onAuditorRestart(network, auditor.Id())
 	}
 }
 
@@ -73,29 +74,24 @@ func getFabricTopology(network *integration.Infrastructure) *topology2.Topology 
 	panic("no fabric topology found")
 }
 
-func RegisterCertifier(network *integration.Infrastructure, id string) {
-	_, err := network.Client(id).CallView("registerCertifier", nil)
-	Expect(err).NotTo(HaveOccurred())
+func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, expectedErrorMsgs ...string) string {
+	return IssueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, nil, expectedErrorMsgs...)
 }
 
-func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string, auditor string, anonymous bool, IssuerId string, expectedErrorMsgs ...string) string {
-	return IssueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, IssuerId, nil, expectedErrorMsgs...)
-}
-
-func IssueCashForTMSID(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string, auditor string, anonymous bool, IssuerId string, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
-	targetAuditor := auditor
-	if auditor == "issuer" || auditor == "newIssuer" {
+func IssueCashForTMSID(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
+	targetAuditor := auditor.Id()
+	if auditor.Id() == "issuer" || auditor.Id() == "newIssuer" {
 		// the issuer is the auditor, choose default identity
 		targetAuditor = ""
 	}
-	txIDBoxed, err := network.Client(IssuerId).CallView("issue", common.JSONMarshall(&views.IssueCash{
+	txIDBoxed, err := network.Client(issuer.ReplicaName()).CallView("issue", common.JSONMarshall(&views.IssueCash{
 		Anonymous:    anonymous,
 		Auditor:      targetAuditor,
 		IssuerWallet: wallet,
 		TokenType:    typ,
 		Quantity:     amount,
-		Recipient:    network.Identity(receiver),
-		RecipientEID: receiver,
+		Recipient:    network.Identity(receiver.Id()),
+		RecipientEID: receiver.Id(),
 		TMSID:        tmsId,
 	}))
 
@@ -114,8 +110,8 @@ func IssueCashForTMSID(network *integration.Infrastructure, wallet string, typ s
 	return ""
 }
 
-func CheckAuditedTransactions(network *integration.Infrastructure, auditor string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
-	txsBoxed, err := network.Client(auditor).CallView("historyAuditing", common.JSONMarshall(&views.ListAuditedTransactions{
+func CheckAuditedTransactions(network *integration.Infrastructure, auditor *token3.NodeReference, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
+	txsBoxed, err := network.Client(auditor.ReplicaName()).CallView("historyAuditing", common.JSONMarshall(&views.ListAuditedTransactions{
 		From: start,
 		To:   end,
 	}))
@@ -139,8 +135,8 @@ func CheckAuditedTransactions(network *integration.Infrastructure, auditor strin
 	}
 }
 
-func CheckAcceptedTransactions(network *integration.Infrastructure, id string, wallet string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time, statuses []ttxdb.TxStatus, actionTypes ...ttxdb.ActionType) {
-	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
+func CheckAcceptedTransactions(network *integration.Infrastructure, id *token3.NodeReference, wallet string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time, statuses []ttxdb.TxStatus, actionTypes ...ttxdb.ActionType) {
+	eIDBoxed, err := network.Client(id.ReplicaName()).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
 		Wallet: wallet,
 	}))
 	Expect(err).NotTo(HaveOccurred())
@@ -154,7 +150,7 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id string, w
 		ActionTypes:     actionTypes,
 		Statuses:        statuses,
 	}
-	txsBoxed, err := network.Client(id).CallView("acceptedTransactionHistory", common.JSONMarshall(&params))
+	txsBoxed, err := network.Client(id.ReplicaName()).CallView("acceptedTransactionHistory", common.JSONMarshall(&params))
 	Expect(err).NotTo(HaveOccurred())
 	var txs []*ttxdb.TransactionRecord
 	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
@@ -172,22 +168,22 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id string, w
 	}
 }
 
-func CheckBalanceAndHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, auditorId string) {
-	CheckBalance(network, id, wallet, typ, expected)
-	CheckHolding(network, id, wallet, typ, int64(expected), auditorId)
+func CheckBalanceAndHolding(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ string, expected uint64, auditor *token3.NodeReference) {
+	CheckBalance(network, ref, wallet, typ, expected)
+	CheckHolding(network, ref, wallet, typ, int64(expected), auditor)
 }
 
-func CheckBalanceAndHoldingForTMSID(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, auditorId string, tmsID *token2.TMSID) {
-	CheckBalanceForTMSID(network, id, wallet, typ, expected, tmsID)
-	CheckHoldingForTMSID(network, id, wallet, typ, int64(expected), auditorId, tmsID)
+func CheckBalanceAndHoldingForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ string, expected uint64, auditor *token3.NodeReference, tmsID *token2.TMSID) {
+	CheckBalanceForTMSID(network, ref, wallet, typ, expected, tmsID)
+	CheckHoldingForTMSID(network, ref, wallet, typ, int64(expected), auditor, tmsID)
 }
 
-func CheckBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
-	CheckBalanceForTMSID(network, id, wallet, typ, expected, nil)
+func CheckBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ string, expected uint64) {
+	CheckBalanceForTMSID(network, ref, wallet, typ, expected, nil)
 }
 
-func CheckBalanceForTMSID(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, tmsID *token2.TMSID) {
-	res, err := network.Client(id).CallView("balance", common.JSONMarshall(&views.BalanceQuery{
+func CheckBalanceForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ string, expected uint64, tmsID *token2.TMSID) {
+	res, err := network.Client(ref.ReplicaName()).CallView("balance", common.JSONMarshall(&views.BalanceQuery{
 		Wallet: wallet,
 		Type:   typ,
 		TMSID:  tmsID,
@@ -202,18 +198,18 @@ func CheckBalanceForTMSID(network *integration.Infrastructure, id string, wallet
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
 }
 
-func CheckHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected int64, auditorId string) {
-	CheckHoldingForTMSID(network, id, wallet, typ, expected, auditorId, nil)
+func CheckHolding(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ string, expected int64, auditor *token3.NodeReference) {
+	CheckHoldingForTMSID(network, ref, wallet, typ, expected, auditor, nil)
 }
 
-func CheckHoldingForTMSID(network *integration.Infrastructure, id string, wallet string, typ string, expected int64, auditorId string, tmsID *token2.TMSID) {
-	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
+func CheckHoldingForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ string, expected int64, auditor *token3.NodeReference, tmsID *token2.TMSID) {
+	eIDBoxed, err := network.Client(ref.ReplicaName()).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
 		Wallet: wallet,
 		TMSID:  tmsID,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	eID := common.JSONUnmarshalString(eIDBoxed)
-	holdingBoxed, err := network.Client(auditorId).CallView("holding", common.JSONMarshall(&views.CurrentHolding{
+	holdingBoxed, err := network.Client(auditor.ReplicaName()).CallView("holding", common.JSONMarshall(&views.CurrentHolding{
 		EnrollmentID: eID,
 		TokenType:    typ,
 	}))
@@ -223,20 +219,20 @@ func CheckHoldingForTMSID(network *integration.Infrastructure, id string, wallet
 	Expect(holding).To(Equal(int(expected)))
 }
 
-func CheckSpending(network *integration.Infrastructure, id string, wallet string, tokenType string, auditor string, expected uint64) {
+func CheckSpending(network *integration.Infrastructure, id *token3.NodeReference, wallet string, tokenType string, auditor *token3.NodeReference, expected uint64) {
 	CheckSpendingForTMSID(network, id, wallet, tokenType, auditor, expected, nil)
 }
 
-func CheckSpendingForTMSID(network *integration.Infrastructure, id string, wallet string, tokenType string, auditor string, expected uint64, tmsId *token2.TMSID) {
+func CheckSpendingForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, tokenType string, auditor *token3.NodeReference, expected uint64, tmsId *token2.TMSID) {
 	// check spending
 	// first get the enrollment id
-	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
+	eIDBoxed, err := network.Client(id.ReplicaName()).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
 		Wallet: wallet,
 		TMSID:  tmsId,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	eID := common.JSONUnmarshalString(eIDBoxed)
-	spendingBoxed, err := network.Client(auditor).CallView("spending", common.JSONMarshall(&views.CurrentSpending{
+	spendingBoxed, err := network.Client(auditor.ReplicaName()).CallView("spending", common.JSONMarshall(&views.CurrentSpending{
 		EnrollmentID: eID,
 		TokenType:    tokenType,
 		TMSID:        tmsId,
@@ -247,12 +243,12 @@ func CheckSpendingForTMSID(network *integration.Infrastructure, id string, walle
 	Expect(spending).To(Equal(expected))
 }
 
-func ListIssuerHistory(network *integration.Infrastructure, wallet, typ, issuer string) *token.IssuedTokens {
+func ListIssuerHistory(network *integration.Infrastructure, wallet, typ string, issuer *token3.NodeReference) *token.IssuedTokens {
 	return ListIssuerHistoryForTMSID(network, wallet, typ, issuer, nil)
 }
 
-func ListIssuerHistoryForTMSID(network *integration.Infrastructure, wallet, typ, issuer string, tmsId *token2.TMSID) *token.IssuedTokens {
-	res, err := network.Client(issuer).CallView("historyIssuedToken", common.JSONMarshall(&views.ListIssuedTokens{
+func ListIssuerHistoryForTMSID(network *integration.Infrastructure, wallet, typ string, issuer *token3.NodeReference, tmsId *token2.TMSID) *token.IssuedTokens {
+	res, err := network.Client(issuer.ReplicaName()).CallView("historyIssuedToken", common.JSONMarshall(&views.ListIssuedTokens{
 		Wallet:    wallet,
 		TokenType: typ,
 		TMSID:     tmsId,
@@ -264,12 +260,12 @@ func ListIssuerHistoryForTMSID(network *integration.Infrastructure, wallet, typ,
 	return issuedTokens
 }
 
-func ListUnspentTokens(network *integration.Infrastructure, id string, wallet string, typ string) *token.UnspentTokens {
+func ListUnspentTokens(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ string) *token.UnspentTokens {
 	return ListUnspentTokensForTMSID(network, id, wallet, typ, nil)
 }
 
-func ListUnspentTokensForTMSID(network *integration.Infrastructure, id string, wallet string, typ string, tmsId *token2.TMSID) *token.UnspentTokens {
-	res, err := network.Client(id).CallView("history", common.JSONMarshall(&views.ListUnspentTokens{
+func ListUnspentTokensForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ string, tmsId *token2.TMSID) *token.UnspentTokens {
+	res, err := network.Client(id.ReplicaName()).CallView("history", common.JSONMarshall(&views.ListUnspentTokens{
 		Wallet:    wallet,
 		TokenType: typ,
 		TMSID:     tmsId,
@@ -281,18 +277,18 @@ func ListUnspentTokensForTMSID(network *integration.Infrastructure, id string, w
 	return unspentTokens
 }
 
-func TransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) string {
-	return TransferCashForTMSID(network, id, wallet, typ, amount, receiver, auditor, nil, expectedErrorMsgs...)
+func TransferCash(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, expectedErrorMsgs ...string) string {
+	return TransferCashForTMSID(network, sender, wallet, typ, amount, receiver, auditor, nil, expectedErrorMsgs...)
 }
 
-func TransferCashForTMSID(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
-	txidBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
-		Auditor:      auditor,
+func TransferCashForTMSID(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
+	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("transfer", common.JSONMarshall(&views.Transfer{
+		Auditor:      auditor.Id(),
 		Wallet:       wallet,
 		Type:         typ,
 		Amount:       amount,
-		Recipient:    network.Identity(receiver),
-		RecipientEID: receiver,
+		Recipient:    network.Identity(receiver.Id()),
+		RecipientEID: receiver.Id(),
 		TMSID:        tmsId,
 	}))
 	if len(expectedErrorMsgs) == 0 {
@@ -301,11 +297,11 @@ func TransferCashForTMSID(network *integration.Infrastructure, id string, wallet
 		common2.CheckFinality(network, receiver, txID, tmsId, false)
 		common2.CheckFinality(network, auditor, txID, tmsId, false)
 
-		signers := []string{auditor}
-		if !strings.HasPrefix(receiver, id) {
-			signers = append(signers, strings.Split(receiver, ".")[0])
+		signers := []string{auditor.Id()}
+		if !strings.Contains(receiver.Id(), sender.Id()) {
+			signers = append(signers, strings.Split(receiver.Id(), ".")[0])
 		}
-		txInfo := GetTransactionInfoForTMSID(network, id, txID, tmsId)
+		txInfo := GetTransactionInfoForTMSID(network, sender, txID, tmsId)
 		for _, identity := range signers {
 			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
 			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
@@ -323,30 +319,30 @@ func TransferCashForTMSID(network *integration.Infrastructure, id string, wallet
 	return ""
 }
 
-func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, websSocket bool, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) string {
+func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, websSocket bool, sender *token3.NodeReference, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, expectedErrorMsgs ...string) string {
 	// obtain the recipient for the rest
-	restRecipient := wmp.RecipientData(id, wallet)
+	restRecipient := wmp.RecipientData(sender.Id(), wallet)
 	// start the call as a stream
 	var stream Stream
 	var err error
 	input := common.JSONMarshall(&views.Transfer{
-		Auditor:                   auditor,
+		Auditor:                   auditor.Id(),
 		Wallet:                    wallet,
 		Type:                      typ,
 		Amount:                    amount,
-		Recipient:                 network.Identity(receiver),
-		RecipientEID:              receiver,
+		Recipient:                 network.Identity(receiver.Id()),
+		RecipientEID:              receiver.Id(),
 		SenderChangeRecipientData: restRecipient,
 	})
 	if websSocket {
-		stream, err = network.WebClient(id).StreamCallView("transfer", input)
+		stream, err = network.WebClient(sender.ReplicaName()).StreamCallView("transfer", input)
 	} else {
-		stream, err = network.Client(id).StreamCallView("transfer", input)
+		stream, err = network.Client(sender.ReplicaName()).StreamCallView("transfer", input)
 	}
 	Expect(err).NotTo(HaveOccurred())
 
 	// Here we handle the sign requests
-	client := ttx.NewStreamExternalWalletSignerClient(wmp.SignerProvider(id, wallet), stream, 1)
+	client := ttx.NewStreamExternalWalletSignerClient(wmp.SignerProvider(sender.Id(), wallet), stream, 1)
 	Expect(client.Respond()).NotTo(HaveOccurred())
 
 	// wait for the completion of the view
@@ -357,11 +353,11 @@ func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *Wa
 		common2.CheckFinality(network, receiver, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
 
-		signers := []string{auditor}
-		if !strings.HasPrefix(receiver, id) {
-			signers = append(signers, strings.Split(receiver, ".")[0])
+		signers := []string{auditor.Id()}
+		if receiver.Id() != sender.Id() {
+			signers = append(signers, receiver.Id())
 		}
-		txInfo := GetTransactionInfo(network, id, txID)
+		txInfo := GetTransactionInfo(network, sender, txID)
 		for _, identity := range signers {
 			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
 			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
@@ -379,35 +375,35 @@ func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *Wa
 	return ""
 }
 
-func TransferCashToExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, id string, wallet string, typ string, amount uint64, receiver string, receiverWallet string, auditor string, expectedErrorMsgs ...string) string {
+func TransferCashToExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, sender *token3.NodeReference, wallet string, typ string, amount uint64, receiver *token3.NodeReference, receiverWallet string, auditor *token3.NodeReference, expectedErrorMsgs ...string) string {
 	// obtain the recipient data for the recipient and register it
-	recipientData := wmp.RecipientData(receiver, receiverWallet)
+	recipientData := wmp.RecipientData(receiver.Id(), receiverWallet)
 	RegisterRecipientData(network, receiver, receiverWallet, recipientData)
 
 	// transfer
 	var err error
 	input := common.JSONMarshall(&views.Transfer{
-		Auditor:       auditor,
+		Auditor:       auditor.Id(),
 		Wallet:        wallet,
 		Type:          typ,
 		Amount:        amount,
-		RecipientEID:  receiver,
+		RecipientEID:  receiver.Id(),
 		Recipient:     view.Identity(receiverWallet),
 		RecipientData: recipientData,
 	})
 
-	txidBoxed, err := network.Client(id).CallView("transfer", input)
+	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("transfer", input)
 	if len(expectedErrorMsgs) == 0 {
 		txID := common.JSONUnmarshalString(txidBoxed)
 		Expect(err).NotTo(HaveOccurred())
 		common2.CheckFinality(network, receiver, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
 
-		signers := []string{auditor}
-		if !strings.HasPrefix(receiver, id) {
-			signers = append(signers, strings.Split(receiver, ".")[0])
+		signers := []string{auditor.Id()}
+		if receiver.Id() != sender.Id() {
+			signers = append(signers, receiver.Id())
 		}
-		txInfo := GetTransactionInfo(network, id, txID)
+		txInfo := GetTransactionInfo(network, sender, txID)
 		for _, identity := range signers {
 			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
 			Expect(ok).To(BeTrue(), "identity [%s] not found in txInfo.EndorsementAcks [%v]", identity, txInfo.EndorsementAcks)
@@ -425,36 +421,36 @@ func TransferCashToExternalWallet(network *integration.Infrastructure, wmp *Wall
 	return ""
 }
 
-func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, websSocket bool, id string, wallet string, typ string, amount uint64, receiver string, receiverWallet string, auditor string, expectedErrorMsgs ...string) string {
+func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, websSocket bool, sender *token3.NodeReference, wallet string, typ string, amount uint64, receiver *token3.NodeReference, receiverWallet string, auditor *token3.NodeReference, expectedErrorMsgs ...string) string {
 	// obtain the recipient for the rest
-	restRecipient := wmp.RecipientData(id, wallet)
+	restRecipient := wmp.RecipientData(sender.Id(), wallet)
 
 	// obtain the recipient data for the recipient and register it
-	recipientData := wmp.RecipientData(receiver, receiverWallet)
+	recipientData := wmp.RecipientData(receiver.Id(), receiverWallet)
 	RegisterRecipientData(network, receiver, receiverWallet, recipientData)
 
 	// start the call as a stream
 	var stream Stream
 	var err error
 	input := common.JSONMarshall(&views.Transfer{
-		Auditor:                   auditor,
+		Auditor:                   auditor.Id(),
 		Wallet:                    wallet,
 		Type:                      typ,
 		Amount:                    amount,
-		RecipientEID:              receiver,
+		RecipientEID:              receiver.Id(),
 		SenderChangeRecipientData: restRecipient,
 		Recipient:                 view.Identity(receiverWallet),
 		RecipientData:             recipientData,
 	})
 	if websSocket {
-		stream, err = network.WebClient(id).StreamCallView("transfer", input)
+		stream, err = network.WebClient(sender.ReplicaName()).StreamCallView("transfer", input)
 	} else {
-		stream, err = network.Client(id).StreamCallView("transfer", input)
+		stream, err = network.Client(sender.ReplicaName()).StreamCallView("transfer", input)
 	}
 	Expect(err).NotTo(HaveOccurred())
 
 	// Here we handle the sign requests
-	client := ttx.NewStreamExternalWalletSignerClient(wmp.SignerProvider(id, wallet), stream, 1)
+	client := ttx.NewStreamExternalWalletSignerClient(wmp.SignerProvider(sender.Id(), wallet), stream, 1)
 	Expect(client.Respond()).NotTo(HaveOccurred())
 
 	// wait for the completion of the view
@@ -465,11 +461,11 @@ func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wm
 		common2.CheckFinality(network, receiver, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
 
-		signers := []string{auditor}
-		if !strings.HasPrefix(receiver, id) {
-			signers = append(signers, strings.Split(receiver, ".")[0])
+		signers := []string{auditor.Id()}
+		if receiver != sender {
+			signers = append(signers, receiver.Id())
 		}
-		txInfo := GetTransactionInfo(network, id, txID)
+		txInfo := GetTransactionInfo(network, sender, txID)
 		for _, identity := range signers {
 			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
 			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
@@ -487,41 +483,41 @@ func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wm
 	return ""
 }
 
-func TransferCashMultiActions(network *integration.Infrastructure, id string, wallet string, typ string, amounts []uint64, receivers []string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) string {
+func TransferCashMultiActions(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ string, amounts []uint64, receivers []*token3.NodeReference, auditor *token3.NodeReference, tokenID *token.ID, expectedErrorMsgs ...string) string {
 	Expect(len(amounts) > 1).To(BeTrue())
 	Expect(len(receivers)).To(BeEquivalentTo(len(amounts)))
 	transfer := &views.Transfer{
-		Auditor:      auditor,
+		Auditor:      auditor.Id(),
 		Wallet:       wallet,
 		Type:         typ,
 		Amount:       amounts[0],
-		Recipient:    network.Identity(receivers[0]),
-		RecipientEID: receivers[0],
+		Recipient:    network.Identity(receivers[0].Id()),
+		RecipientEID: receivers[0].Id(),
 		TokenIDs:     []*token.ID{tokenID},
 	}
 	for i := 1; i < len(amounts); i++ {
 		transfer.TransferAction = append(transfer.TransferAction, views.TransferAction{
 			Amount:       amounts[i],
-			Recipient:    network.Identity(receivers[i]),
-			RecipientEID: receivers[i],
+			Recipient:    network.Identity(receivers[i].Id()),
+			RecipientEID: receivers[i].Id(),
 		})
 	}
 
-	txidBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(transfer))
+	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("transfer", common.JSONMarshall(transfer))
 	if len(expectedErrorMsgs) == 0 {
 		txID := common.JSONUnmarshalString(txidBoxed)
 		Expect(err).NotTo(HaveOccurred())
-		signers := []string{auditor}
+		signers := []string{auditor.Id()}
 
 		for _, receiver := range receivers {
 			common2.CheckFinality(network, receiver, txID, nil, false)
-			if !strings.HasPrefix(receiver, id) {
-				signers = append(signers, strings.Split(receiver, ".")[0])
+			if receiver.Id() != sender.Id() {
+				signers = append(signers, receiver.Id())
 			}
 		}
 		common2.CheckFinality(network, auditor, txID, nil, false)
 
-		txInfo := GetTransactionInfo(network, id, txID)
+		txInfo := GetTransactionInfo(network, sender, txID)
 		for _, identity := range signers {
 			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
 			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
@@ -543,14 +539,14 @@ func TransferCashMultiActions(network *integration.Infrastructure, id string, wa
 	return strErr[s+4 : e]
 }
 
-func MaliciousTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
-	txidBoxed, err := network.Client(id).CallView("MaliciousTransfer", common.JSONMarshall(&views.Transfer{
-		Auditor:      auditor,
+func MaliciousTransferCash(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
+	txidBoxed, err := network.Client(id.ReplicaName()).CallView("MaliciousTransfer", common.JSONMarshall(&views.Transfer{
+		Auditor:      auditor.Id(),
 		Wallet:       wallet,
 		Type:         typ,
 		Amount:       amount,
-		Recipient:    network.Identity(receiver),
-		RecipientEID: receiver,
+		Recipient:    network.Identity(receiver.Id()),
+		RecipientEID: receiver.Id(),
 		TMSID:        tmsId,
 	}))
 	if len(expectedErrorMsgs) == 0 {
@@ -568,19 +564,19 @@ func MaliciousTransferCash(network *integration.Infrastructure, id string, walle
 	return ""
 }
 
-func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) (string, []byte) {
+func PrepareTransferCash(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, tokenID *token.ID, expectedErrorMsgs ...string) (string, []byte) {
 	transferInput := &views.Transfer{
-		Auditor:      auditor,
+		Auditor:      auditor.Id(),
 		Wallet:       wallet,
 		Type:         typ,
 		Amount:       amount,
-		Recipient:    network.Identity(receiver),
-		RecipientEID: receiver,
+		Recipient:    network.Identity(receiver.Id()),
+		RecipientEID: receiver.Id(),
 	}
 	if tokenID != nil {
 		transferInput.TokenIDs = []*token.ID{tokenID}
 	}
-	txBoxed, err := network.Client(id).CallView("prepareTransfer", common.JSONMarshall(transferInput))
+	txBoxed, err := network.Client(sender.ReplicaName()).CallView("prepareTransfer", common.JSONMarshall(transferInput))
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
 	} else {
@@ -595,8 +591,8 @@ func PrepareTransferCash(network *integration.Infrastructure, id string, wallet 
 	return res.TxID, res.TXRaw
 }
 
-func SetTransactionAuditStatus(network *integration.Infrastructure, id string, txID string, txStatus ttx.TxStatus) {
-	_, err := network.Client(id).CallView("SetTransactionAuditStatus", common.JSONMarshall(views.SetTransactionAuditStatus{
+func SetTransactionAuditStatus(network *integration.Infrastructure, id *token3.NodeReference, txID string, txStatus ttx.TxStatus) {
+	_, err := network.Client(id.ReplicaName()).CallView("SetTransactionAuditStatus", common.JSONMarshall(views.SetTransactionAuditStatus{
 		TxID:   txID,
 		Status: txStatus,
 	}))
@@ -613,15 +609,15 @@ func SetTransactionOwnersStatus(network *integration.Infrastructure, txID string
 	}
 }
 
-func TokenSelectorUnlock(network *integration.Infrastructure, id string, txID string) {
-	_, err := network.Client(id).CallView("TokenSelectorUnlock", common.JSONMarshall(views.TokenSelectorUnlock{
+func TokenSelectorUnlock(network *integration.Infrastructure, id *token3.NodeReference, txID string) {
+	_, err := network.Client(id.ReplicaName()).CallView("TokenSelectorUnlock", common.JSONMarshall(views.TokenSelectorUnlock{
 		TxID: txID,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func BroadcastPreparedTransferCash(network *integration.Infrastructure, id string, txID string, tx []byte, finality bool, expectedErrorMsgs ...string) {
-	_, err := network.Client(id).CallView("broadcastPreparedTransfer", common.JSONMarshall(&views.BroadcastPreparedTransfer{
+func BroadcastPreparedTransferCash(network *integration.Infrastructure, id *token3.NodeReference, txID string, tx []byte, finality bool, expectedErrorMsgs ...string) {
+	_, err := network.Client(id.ReplicaName()).CallView("broadcastPreparedTransfer", common.JSONMarshall(&views.BroadcastPreparedTransfer{
 		Tx:       tx,
 		Finality: finality,
 	}))
@@ -638,8 +634,8 @@ func BroadcastPreparedTransferCash(network *integration.Infrastructure, id strin
 	time.Sleep(5 * time.Second)
 }
 
-func FinalityWithTimeout(network *integration.Infrastructure, id string, tx []byte, timeout time.Duration) {
-	elapsedBoxed, err := network.Client(id).CallView("FinalityWithTimeout", common.JSONMarshall(&views.FinalityWithTimeout{
+func FinalityWithTimeout(network *integration.Infrastructure, id *token3.NodeReference, tx []byte, timeout time.Duration) {
+	elapsedBoxed, err := network.Client(id.ReplicaName()).CallView("FinalityWithTimeout", common.JSONMarshall(&views.FinalityWithTimeout{
 		Tx:      tx,
 		Timeout: timeout,
 	}))
@@ -650,12 +646,12 @@ func FinalityWithTimeout(network *integration.Infrastructure, id string, tx []by
 	Expect(elapsed < timeout.Seconds()*2).To(BeTrue())
 }
 
-func GetTransactionInfo(network *integration.Infrastructure, id string, txnId string) *ttx.TransactionInfo {
+func GetTransactionInfo(network *integration.Infrastructure, id *token3.NodeReference, txnId string) *ttx.TransactionInfo {
 	return GetTransactionInfoForTMSID(network, id, txnId, nil)
 }
 
-func GetTransactionInfoForTMSID(network *integration.Infrastructure, id string, txnId string, tmsId *token2.TMSID) *ttx.TransactionInfo {
-	boxed, err := network.Client(id).CallView("transactionInfo", common.JSONMarshall(&views.TransactionInfo{
+func GetTransactionInfoForTMSID(network *integration.Infrastructure, id *token3.NodeReference, txnId string, tmsId *token2.TMSID) *ttx.TransactionInfo {
+	boxed, err := network.Client(id.ReplicaName()).CallView("transactionInfo", common.JSONMarshall(&views.TransactionInfo{
 		TransactionID: txnId,
 		TMSID:         tmsId,
 	}))
@@ -665,15 +661,15 @@ func GetTransactionInfoForTMSID(network *integration.Infrastructure, id string, 
 	return info
 }
 
-func TransferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token.ID, amount uint64, receiver string, auditor string, failToRelease bool, expectedErrorMsgs ...string) string {
-	txIDBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
-		Auditor:       auditor,
+func TransferCashByIDs(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, ids []*token.ID, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, failToRelease bool, expectedErrorMsgs ...string) string {
+	txIDBoxed, err := network.Client(ref.ReplicaName()).CallView("transfer", common.JSONMarshall(&views.Transfer{
+		Auditor:       auditor.Id(),
 		Wallet:        wallet,
 		Type:          "",
 		TokenIDs:      ids,
 		Amount:        amount,
-		Recipient:     network.Identity(receiver),
-		RecipientEID:  receiver,
+		Recipient:     network.Identity(receiver.Id()),
+		RecipientEID:  receiver.Id(),
 		FailToRelease: failToRelease,
 	}))
 	if len(expectedErrorMsgs) == 0 {
@@ -692,14 +688,14 @@ func TransferCashByIDs(network *integration.Infrastructure, id string, wallet st
 	}
 }
 
-func TransferCashWithSelector(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) {
-	txIDBoxed, err := network.Client(id).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
-		Auditor:      auditor,
+func TransferCashWithSelector(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, expectedErrorMsgs ...string) {
+	txIDBoxed, err := network.Client(sender.ReplicaName()).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
+		Auditor:      auditor.Id(),
 		Wallet:       wallet,
 		Type:         typ,
 		Amount:       amount,
-		Recipient:    network.Identity(receiver),
-		RecipientEID: receiver,
+		Recipient:    network.Identity(receiver.Id()),
+		RecipientEID: receiver.Id(),
 	}))
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
@@ -715,13 +711,13 @@ func TransferCashWithSelector(network *integration.Infrastructure, id string, wa
 	}
 }
 
-func RedeemCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, auditor string) {
+func RedeemCash(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ string, amount uint64, auditor *token3.NodeReference) {
 	RedeemCashForTMSID(network, id, wallet, typ, amount, auditor, nil)
 }
 
-func RedeemCashForTMSID(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, auditor string, tmsID *token2.TMSID) {
-	txid, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
-		Auditor: auditor,
+func RedeemCashForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ string, amount uint64, auditor *token3.NodeReference, tmsID *token2.TMSID) {
+	txid, err := network.Client(id.ReplicaName()).CallView("redeem", common.JSONMarshall(&views.Redeem{
+		Auditor: auditor.Id(),
 		Wallet:  wallet,
 		Type:    typ,
 		Amount:  amount,
@@ -731,9 +727,9 @@ func RedeemCashForTMSID(network *integration.Infrastructure, id string, wallet s
 	common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), tmsID, false)
 }
 
-func RedeemCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token.ID, amount uint64, auditor string) {
-	txid, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
-		Auditor:  auditor,
+func RedeemCashByIDs(network *integration.Infrastructure, id *token3.NodeReference, wallet string, ids []*token.ID, amount uint64, auditor *token3.NodeReference) {
+	txid, err := network.Client(id.ReplicaName()).CallView("redeem", common.JSONMarshall(&views.Redeem{
+		Auditor:  auditor.Id(),
 		Wallet:   wallet,
 		Type:     "",
 		TokenIDs: ids,
@@ -743,15 +739,15 @@ func RedeemCashByIDs(network *integration.Infrastructure, id string, wallet stri
 	common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), nil, false)
 }
 
-func SwapCash(network *integration.Infrastructure, id string, wallet string, typeLeft string, amountLeft uint64, typRight string, amountRight uint64, receiver string, auditor string) {
-	txid, err := network.Client(id).CallView("swap", common.JSONMarshall(&views.Swap{
-		Auditor:         auditor,
+func SwapCash(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typeLeft string, amountLeft uint64, typRight string, amountRight uint64, receiver *token3.NodeReference, auditor *token3.NodeReference) {
+	txid, err := network.Client(id.ReplicaName()).CallView("swap", common.JSONMarshall(&views.Swap{
+		Auditor:         auditor.Id(),
 		AliceWallet:     wallet,
 		FromAliceType:   typeLeft,
 		FromAliceAmount: amountLeft,
 		FromBobType:     typRight,
 		FromBobAmount:   amountRight,
-		Bob:             network.Identity(receiver),
+		Bob:             network.Identity(receiver.Id()),
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	txID := common.JSONUnmarshalString(txid)
@@ -760,12 +756,12 @@ func SwapCash(network *integration.Infrastructure, id string, wallet string, typ
 	common2.CheckFinality(network, auditor, txID, nil, false)
 }
 
-func CheckPublicParams(network *integration.Infrastructure, ids ...string) {
+func CheckPublicParams(network *integration.Infrastructure, ids ...*token3.NodeReference) {
 	CheckPublicParamsForTMSID(network, nil, ids...)
 }
 
-func GetTXStatus(network *integration.Infrastructure, id string, txID string) *views.TxStatusResponse {
-	boxed, err := network.Client(id).CallView("TxStatus", common.JSONMarshall(&views.TxStatus{
+func GetTXStatus(network *integration.Infrastructure, id *token3.NodeReference, txID string) *views.TxStatusResponse {
+	boxed, err := network.Client(id.ReplicaName()).CallView("TxStatus", common.JSONMarshall(&views.TxStatus{
 		TMSID: token2.TMSID{},
 		TxID:  txID,
 	}))
@@ -775,22 +771,32 @@ func GetTXStatus(network *integration.Infrastructure, id string, txID string) *v
 	return response
 }
 
-func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token2.TMSID, ids ...string) {
+func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token2.TMSID, ids ...*token3.NodeReference) {
+	for k := range network.Ctx.ViewClients {
+		fmt.Println("Found name: " + k)
+	}
 	for _, id := range ids {
-		_, err := network.Client(id).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
-			TMSID: tmsId,
-		}))
-		Expect(err).NotTo(HaveOccurred(), "failed to check public params at [%s]", id)
+		for _, replicaName := range id.AllNames() {
+			if network.Client(replicaName) == nil {
+				panic("did not find id " + replicaName)
+			}
+			_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
+				TMSID: tmsId,
+			}))
+			Expect(err).NotTo(HaveOccurred(), "failed to check public params at [%s]", id)
+		}
 	}
 }
 
-func CheckPublicParamsMatch(network *integration.Infrastructure, tmsId *token2.TMSID, ids ...string) bool {
+func CheckPublicParamsMatch(network *integration.Infrastructure, tmsId *token2.TMSID, ids ...*token3.NodeReference) bool {
 	for _, id := range ids {
-		_, err := network.Client(id).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
-			TMSID: tmsId,
-		}))
-		if err != nil {
-			return false
+		for _, replicaName := range id.AllNames() {
+			_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
+				TMSID: tmsId,
+			}))
+			if err != nil {
+				return false
+			}
 		}
 	}
 	return true
@@ -815,14 +821,14 @@ func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte
 	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
 }
 
-func GetPublicParams(network *integration.Infrastructure, id string) []byte {
-	pp, err := network.Client(id).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParams{}))
+func GetPublicParams(network *integration.Infrastructure, id *token3.NodeReference) []byte {
+	pp, err := network.Client(id.ReplicaName()).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParams{}))
 	Expect(err).NotTo(HaveOccurred())
 	return pp.([]byte)
 }
 
-func DoesWalletExist(network *integration.Infrastructure, id string, wallet string, walletType int) bool {
-	boxed, err := network.Client(id).CallView("DoesWalletExist", common.JSONMarshall(&views.DoesWalletExist{
+func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReference, wallet string, walletType int) bool {
+	boxed, err := network.Client(id.ReplicaName()).CallView("DoesWalletExist", common.JSONMarshall(&views.DoesWalletExist{
 		Wallet:     wallet,
 		WalletType: walletType,
 	}))
@@ -841,29 +847,31 @@ func DoesWalletExist(network *integration.Infrastructure, id string, wallet stri
 	return exists
 }
 
-func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, ids ...string) {
+func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, ids ...*token3.NodeReference) {
 	for _, id := range ids {
-		errorMessagesBoxed, err := network.Client(id).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{}))
-		Expect(err).NotTo(HaveOccurred())
-		var errorMessages []string
-		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
+		for _, replicaName := range id.AllNames() {
+			errorMessagesBoxed, err := network.Client(replicaName).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{}))
+			Expect(err).NotTo(HaveOccurred())
+			var errorMessages []string
+			common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
 
-		Expect(len(errorMessages)).To(Equal(len(expectedErrors)), "expected %d error messages from [%s], got [% v]", len(expectedErrors), id, errorMessages)
-		for _, expectedError := range expectedErrors {
-			found := false
-			for _, message := range errorMessages {
-				if message == expectedError {
-					found = true
-					break
+			Expect(len(errorMessages)).To(Equal(len(expectedErrors)), "expected %d error messages from [%s], got [% v]", len(expectedErrors), replicaName, errorMessages)
+			for _, expectedError := range expectedErrors {
+				found := false
+				for _, message := range errorMessages {
+					if message == expectedError {
+						found = true
+						break
+					}
 				}
+				Expect(found).To(BeTrue(), "cannot find error message [%s] in [% v]", expectedError, errorMessages)
 			}
-			Expect(found).To(BeTrue(), "cannot find error message [%s] in [% v]", expectedError, errorMessages)
 		}
 	}
 }
 
-func CheckAuditorDB(network *integration.Infrastructure, auditorID string, walletID string, errorCheck func([]string) error) {
-	errorMessagesBoxed, err := network.Client(auditorID).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
+func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
+	errorMessagesBoxed, err := network.Client(auditor.ReplicaName()).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
 		Auditor:         true,
 		AuditorWalletID: walletID,
 	}))
@@ -879,9 +887,9 @@ func CheckAuditorDB(network *integration.Infrastructure, auditorID string, walle
 	}
 }
 
-func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...string) {
+func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...*token3.NodeReference) {
 	for _, id := range ids {
-		eIDBoxed, err := network.Client(id).CallView("PruneInvalidUnspentTokens", common.JSONMarshall(&views.PruneInvalidUnspentTokens{}))
+		eIDBoxed, err := network.Client(id.ReplicaName()).CallView("PruneInvalidUnspentTokens", common.JSONMarshall(&views.PruneInvalidUnspentTokens{}))
 		Expect(err).NotTo(HaveOccurred())
 
 		var deleted []*token.ID
@@ -890,8 +898,8 @@ func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...strin
 	}
 }
 
-func ListVaultUnspentTokens(network *integration.Infrastructure, id string) []*token.ID {
-	res, err := network.Client(id).CallView("ListVaultUnspentTokens", common.JSONMarshall(&views.ListVaultUnspentTokens{}))
+func ListVaultUnspentTokens(network *integration.Infrastructure, id *token3.NodeReference) []*token.ID {
+	res, err := network.Client(id.ReplicaName()).CallView("ListVaultUnspentTokens", common.JSONMarshall(&views.ListVaultUnspentTokens{}))
 	Expect(err).NotTo(HaveOccurred())
 
 	unspentTokens := &token.UnspentTokens{}
@@ -905,13 +913,13 @@ func ListVaultUnspentTokens(network *integration.Infrastructure, id string) []*t
 	return IDs
 }
 
-func CheckIfExistsInVault(network *integration.Infrastructure, id string, tokenIDs []*token.ID) {
-	_, err := network.Client(id).CallView("CheckIfExistsInVault", common.JSONMarshall(&views.CheckIfExistsInVault{IDs: tokenIDs}))
+func CheckIfExistsInVault(network *integration.Infrastructure, id *token3.NodeReference, tokenIDs []*token.ID) {
+	_, err := network.Client(id.ReplicaName()).CallView("CheckIfExistsInVault", common.JSONMarshall(&views.CheckIfExistsInVault{IDs: tokenIDs}))
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func WhoDeletedToken(network *integration.Infrastructure, id string, tokenIDs []*token.ID, txIDs ...string) *views.WhoDeletedTokenResult {
-	boxed, err := network.Client(id).CallView("WhoDeletedToken", common.JSONMarshall(&views.WhoDeletedToken{
+func WhoDeletedToken(network *integration.Infrastructure, id *token3.NodeReference, tokenIDs []*token.ID, txIDs ...string) *views.WhoDeletedTokenResult {
+	boxed, err := network.Client(id.ReplicaName()).CallView("WhoDeletedToken", common.JSONMarshall(&views.WhoDeletedToken{
 		TokenIDs: tokenIDs,
 	}))
 	Expect(err).NotTo(HaveOccurred())
@@ -961,25 +969,25 @@ func JSONUnmarshalFloat64(v interface{}) float64 {
 	return s
 }
 
-func Restart(network *integration.Infrastructure, deleteVault bool, ids ...string) {
+func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*token3.NodeReference) {
 	logger.Infof("restart [%s], [%v]", ids, RestartEnabled)
 	if !RestartEnabled {
 		return
 	}
 	for _, id := range ids {
-		network.StopFSCNode(id)
+		network.StopFSCNode(id.Id())
 	}
 	time.Sleep(10 * time.Second)
 	if deleteVault {
 		for _, id := range ids {
 			fn := fabric.Network(network.Ctx, "default")
 			if fn != nil {
-				fn.DeleteVault(id)
+				fn.DeleteVault(id.Id())
 			} else {
 				// skip
 				on := orion.Network(network.Ctx, "orion")
 				if on != nil {
-					on.DeleteVault(id)
+					on.DeleteVault(id.Id())
 				} else {
 					Expect(false).To(BeTrue(), "neither fabric nor orion network found")
 				}
@@ -989,12 +997,12 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...strin
 			tokenPlatform := tplatform.GetPlatform(network.Ctx, "token")
 			Expect(tokenPlatform).ToNot(BeNil(), "cannot find token platform in context")
 			for _, tms := range tokenPlatform.GetTopology().TMSs {
-				tokenPlatform.DeleteDBs(tms, id)
+				tokenPlatform.DeleteDBs(tms, id.Id())
 			}
 		}
 	}
 	for _, id := range ids {
-		network.StartFSCNode(id)
+		network.StartFSCNode(id.Id())
 	}
 	time.Sleep(10 * time.Second)
 	if deleteVault {
@@ -1003,34 +1011,36 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...strin
 	}
 }
 
-func RegisterIssuerIdentity(network *integration.Infrastructure, id string, walletID, walletPath string) {
-	_, err := network.Client(id).CallView("RegisterIssuerIdentity", common.JSONMarshall(&views.RegisterIssuerWallet{
+func RegisterIssuerIdentity(network *integration.Infrastructure, id *token3.NodeReference, walletID, walletPath string) {
+	_, err := network.Client(id.ReplicaName()).CallView("RegisterIssuerIdentity", common.JSONMarshall(&views.RegisterIssuerWallet{
 		ID:   walletID,
 		Path: walletPath,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	network.Ctx.SetViewClient(walletPath, network.Client(id))
+	network.Ctx.SetViewClient(walletPath, network.Client(id.ReplicaName()))
 }
 
-func RegisterOwnerIdentity(network *integration.Infrastructure, id string, identityConfiguration token2.IdentityConfiguration) {
-	_, err := network.Client(id).CallView("RegisterOwnerIdentity", common.JSONMarshall(&views.RegisterOwnerIdentity{
-		IdentityConfiguration: identityConfiguration,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	network.Ctx.SetViewClient(identityConfiguration.ID, network.Client(id))
+func RegisterOwnerIdentity(network *integration.Infrastructure, id *token3.NodeReference, identityConfiguration token2.IdentityConfiguration) {
+	for _, replicaName := range id.AllNames() { // TODO: AF
+		_, err := network.Client(replicaName).CallView("RegisterOwnerIdentity", common.JSONMarshall(&views.RegisterOwnerIdentity{
+			IdentityConfiguration: identityConfiguration,
+		}))
+		Expect(err).NotTo(HaveOccurred())
+		network.Ctx.SetViewClient(identityConfiguration.ID, network.Client(replicaName))
+	}
 }
 
-func RegisterRecipientData(network *integration.Infrastructure, id string, walletID string, rd *token2.RecipientData) {
-	_, err := network.Client(id).CallView("RegisterRecipientData", common.JSONMarshall(&views.RegisterRecipientData{
+func RegisterRecipientData(network *integration.Infrastructure, ref *token3.NodeReference, walletID string, rd *token2.RecipientData) {
+	_, err := network.Client(ref.ReplicaName()).CallView("RegisterRecipientData", common.JSONMarshall(&views.RegisterRecipientData{
 		WalletID:      walletID,
 		RecipientData: *rd,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	network.Ctx.SetViewClient(walletID, network.Client(id))
+	network.Ctx.SetViewClient(walletID, network.Client(ref.ReplicaName()))
 }
 
-func CheckOwnerWalletIDs(network *integration.Infrastructure, id string, ids ...string) {
-	idsBoxed, err := network.Client(id).CallView("ListOwnerWalletIDsView", nil)
+func CheckOwnerWalletIDs(network *integration.Infrastructure, owner *token3.NodeReference, ids ...string) {
+	idsBoxed, err := network.Client(owner.ReplicaName()).CallView("ListOwnerWalletIDsView", nil)
 	Expect(err).NotTo(HaveOccurred())
 	var wIDs []string
 	common.JSONUnmarshal(idsBoxed.([]byte), &wIDs)
@@ -1046,15 +1056,15 @@ func CheckOwnerWalletIDs(network *integration.Infrastructure, id string, ids ...
 	}
 }
 
-func RevokeIdentity(network *integration.Infrastructure, auditor string, rh string) {
-	_, err := network.Client(auditor).CallView("RevokeUser", common.JSONMarshall(&views.RevokeUser{
+func RevokeIdentity(network *integration.Infrastructure, auditor *token3.NodeReference, rh string) {
+	_, err := network.Client(auditor.ReplicaName()).CallView("RevokeUser", common.JSONMarshall(&views.RevokeUser{
 		RH: rh,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func GetRevocationHandle(network *integration.Infrastructure, id string) string {
-	rhBoxed, err := network.Client(id).CallView("GetRevocationHandle", common.JSONMarshall(&views.GetRevocationHandle{}))
+func GetRevocationHandle(network *integration.Infrastructure, ref *token3.NodeReference) string {
+	rhBoxed, err := network.Client(ref.ReplicaName()).CallView("GetRevocationHandle", common.JSONMarshall(&views.GetRevocationHandle{}))
 	Expect(err).NotTo(HaveOccurred())
 	rh := &views.RevocationHandle{}
 	common.JSONUnmarshal(rhBoxed.([]byte), rh)
@@ -1062,24 +1072,24 @@ func GetRevocationHandle(network *integration.Infrastructure, id string) string 
 	return rh.RH
 }
 
-func SetKVSEntry(network *integration.Infrastructure, user string, key string, value string) {
-	_, err := network.Client(user).CallView("SetKVSEntry", common.JSONMarshall(&views.KVSEntry{
+func SetKVSEntry(network *integration.Infrastructure, user *token3.NodeReference, key string, value string) {
+	_, err := network.Client(user.ReplicaName()).CallView("SetKVSEntry", common.JSONMarshall(&views.KVSEntry{
 		Key:   key,
 		Value: value,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, user string, userId string, wallet string, typ string, amount uint64, auditor string, IssuerId string, expectedErrorMsgs ...string) string {
+func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, user *token3.NodeReference, wallet string, typ string, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference, expectedErrorMsgs ...string) string {
 	var recipientData *token2.RecipientData
 	if wpm != nil {
-		recipientData = wpm.RecipientData(userId, wallet)
+		recipientData = wpm.RecipientData(user.Id(), wallet)
 	}
-	txid, err := network.Client(user).CallView("withdrawal", common.JSONMarshall(&views.Withdrawal{
+	txid, err := network.Client(user.ReplicaName()).CallView("withdrawal", common.JSONMarshall(&views.Withdrawal{
 		Wallet:        wallet,
 		TokenType:     typ,
 		Amount:        amount,
-		Issuer:        IssuerId,
+		Issuer:        issuer.Id(),
 		RecipientData: recipientData,
 	}))
 
@@ -1088,7 +1098,7 @@ func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, u
 		txID := common.JSONUnmarshalString(txid)
 		common2.CheckFinality(network, user, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
-		common2.CheckFinality(network, IssuerId, txID, nil, false)
+		common2.CheckFinality(network, issuer, txID, nil, false)
 		return txID
 	}
 

@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
@@ -21,6 +20,7 @@ import (
 
 var _ = Describe("Orion EndToEnd", func() {
 	Describe("Orion FabToken", func() {
+		opts, selector := token2.NoReplication()
 		ts := token2.NewTestSuite(nil, StartPortDlog, topology.Topology(
 			common.Opts{
 				Backend:         "orion",
@@ -28,13 +28,13 @@ var _ = Describe("Orion EndToEnd", func() {
 				TokenSDKDriver:  "fabtoken",
 				Aries:           true,
 				SDKs:            []api.SDK{&orion3.SDK{}, &ofabtoken.SDK{}},
-				ReplicationOpts: integration.NoReplication,
+				ReplicationOpts: opts,
 			},
 		))
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true)
+			fungible.TestAll(ts.II, "auditor", nil, true, selector)
 		})
 	})
 

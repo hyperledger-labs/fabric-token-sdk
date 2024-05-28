@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	. "github.com/onsi/gomega"
@@ -139,7 +138,7 @@ func (s *TestSuite) TearDown() {
 
 func (s *TestSuite) Setup() {
 	if len(s.sqlConfigs) > 0 {
-		closeFunc, err := postgres.StartPostgresWithFmt(s.sqlConfigs)
+		closeFunc, err := sql.StartPostgresWithFmt(s.sqlConfigs)
 		Expect(err).NotTo(HaveOccurred())
 		s.closeFunc = closeFunc
 	}
