@@ -7,14 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package unity
 
 import (
-	"database/sql"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
@@ -51,9 +49,7 @@ func (d *Driver) OpenTokenLockDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) 
 }
 
 func (d *Driver) OpenAuditTransactionDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.AuditTransactionDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, func(sqlDB *sql.DB, tablePrefix string, createSchema bool) (dbdriver.AuditTransactionDB, error) {
-		return sqldb.NewTransactionDB(sqlDB, tablePrefix+"aud_", createSchema)
-	})
+	return openDB(d.DBOpener, cp, tmsID, sqldb.NewAuditTransactionDB)
 }
 
 func (d *Driver) OpenWalletDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.WalletDB, error) {
@@ -64,7 +60,7 @@ func (d *Driver) OpenIdentityDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (
 	return openDB(d.DBOpener, cp, tmsID, sqldb.NewCachedIdentityDB)
 }
 
-func openDB[D any](dbOpener *sqldb.DBOpener, cp dbdriver.ConfigProvider, tmsID token.TMSID, newDB drivers.NewDBFunc[D]) (D, error) {
+func openDB[D any](dbOpener *sqldb.DBOpener, cp dbdriver.ConfigProvider, tmsID token.TMSID, newDB db.NewDBFunc[D]) (D, error) {
 	sqlDB, opts, err := dbOpener.Open(cp, tmsID)
 	if err != nil {
 		return utils.Zero[D](), errors.Wrapf(err, "failed to open db at [%s:%s]", optsKey, envVarKey)

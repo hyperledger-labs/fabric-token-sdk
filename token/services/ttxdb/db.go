@@ -8,14 +8,11 @@ package ttxdb
 
 import (
 	"math/big"
-	"reflect"
-	"sort"
 	"sync"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -23,36 +20,26 @@ import (
 )
 
 var (
-	logger    = logging.MustGetLogger("token-sdk.ttxdb")
-	driversMu sync.RWMutex
-	drivers   = make(map[string]driver.TTXDBDriver)
+	holder = db.NewDriverHolder[*DB, driver.TokenTransactionDB, driver.TTXDBDriver](newDB)
+	logger = logging.MustGetLogger("token-sdk.ttxdb")
 )
 
-// Register makes a DB driver available by the provided name.
-// If Register is called twice with the same name or if driver is nil,
-// it panics.
-func Register(name string, driver driver.TTXDBDriver) {
-	driversMu.Lock()
-	defer driversMu.Unlock()
-	if driver == nil {
-		panic("Register driver is nil")
-	}
-	if _, dup := drivers[name]; dup {
-		panic("Register called twice for driver " + name)
-	}
-	drivers[name] = driver
+func Register(name string, driver driver.TTXDBDriver) { holder.Register(name, driver) }
+
+func Drivers() []string { return holder.DriverNames() }
+
+type Manager = db.Manager[*DB, driver.TokenTransactionDB, driver.TTXDBDriver]
+
+func NewManager(cp driver.ConfigProvider, config db.Config) *Manager {
+	return holder.NewManager(cp, config)
 }
 
-// Drivers returns a sorted list of the names of the registered drivers.
-func Drivers() []string {
-	driversMu.RLock()
-	defer driversMu.RUnlock()
-	list := make([]string, 0, len(drivers))
-	for name := range drivers {
-		list = append(list, name)
-	}
-	sort.Strings(list)
-	return list
+func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
+	return holder.GetByTMSId(sp, tmsID)
+}
+
+func GetProvider(sp token.ServiceProvider) (*Manager, error) {
+	return holder.GetProvider(sp)
 }
 
 // TxStatus is the status of a transaction
@@ -443,78 +430,4 @@ func deduplicate(source []string) []string {
 		}
 	}
 	return res
-}
-
-type Config interface {
-	DriverFor(tmsID token.TMSID) (string, error)
-}
-
-// Manager handles the databases
-type Manager struct {
-	cp     core.ConfigProvider
-	config Config
-
-	mutex sync.Mutex
-	dbs   map[string]*DB
-}
-
-// NewManager creates a new DB manager.
-func NewManager(cp core.ConfigProvider, config Config) *Manager {
-	return &Manager{
-		cp:     cp,
-		config: config,
-		dbs:    map[string]*DB{},
-	}
-}
-
-// DBByTMSId returns a DB for the given TMS id
-func (m *Manager) DBByTMSId(id token.TMSID) (*DB, error) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	logger.Debugf("get ttxdb for [%s]", id)
-	c, ok := m.dbs[id.String()]
-	if !ok {
-		driverName, err := m.config.DriverFor(id)
-		if err != nil {
-			return nil, errors.Wrapf(err, "no driver found for [%s]", id)
-		}
-		d := drivers[driverName]
-		if d == nil {
-			return nil, errors.Errorf("no driver found for [%s]", driverName)
-		}
-		driverInstance, err := d.Open(m.cp, id)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", driverName)
-		}
-		c = newDB(driverInstance)
-		m.dbs[id.String()] = c
-	}
-	return c, nil
-}
-
-var (
-	managerType = reflect.TypeOf((*Manager)(nil))
-)
-
-// GetByTMSId returns the DB for the given TMS id.
-// Nil might be returned if the wallet is not found or an error occurred.
-func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
-	s, err := GetProvider(sp)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get manager service")
-	}
-	c, err := s.DBByTMSId(tmsID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
-	}
-	return c, nil
-}
-
-func GetProvider(sp token.ServiceProvider) (*Manager, error) {
-	s, err := sp.GetService(managerType)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get manager service")
-	}
-	return s.(*Manager), nil
 }

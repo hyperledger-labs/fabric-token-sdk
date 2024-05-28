@@ -21,7 +21,11 @@ func initWalletDB(driverName, dataSourceName, tablePrefix string, maxOpenConns i
 	if err != nil {
 		return nil, err
 	}
-	return NewWalletDB(sqlDB, tablePrefix, true)
+	walletDB, err := NewWalletDB(sqlDB, tablePrefix, true)
+	if err != nil {
+		return nil, err
+	}
+	return walletDB.(*WalletDB), nil
 }
 
 func TestWalletSqlite(t *testing.T) {

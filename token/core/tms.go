@@ -188,7 +188,7 @@ func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerSe
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get driver for [%s]", opts)
 	}
-	d, ok := drivers[driverName]
+	d, ok := holder.Drivers[driverName]
 	if !ok {
 		return nil, errors.Errorf("failed instantiate token service, driver [%s] not found", driverName)
 	}

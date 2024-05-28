@@ -23,7 +23,11 @@ func initTokenDB(driverName, dataSourceName, tablePrefix string, maxOpenConns in
 	if err != nil {
 		return nil, err
 	}
-	return NewTokenDB(sqlDB, tablePrefix, true)
+	tokenDB, err := NewTokenDB(sqlDB, tablePrefix, true)
+	if err != nil {
+		return nil, err
+	}
+	return tokenDB.(*TokenDB), err
 }
 
 func TestTokensSqlite(t *testing.T) {

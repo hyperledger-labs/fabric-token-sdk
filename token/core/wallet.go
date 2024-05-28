@@ -14,7 +14,7 @@ import (
 
 // NewWalletService returns a new instance of the driver.WalletService interface for the passed public parameters
 func NewWalletService(sp view.ServiceProvider, network string, channel string, namespace string, pp driver.PublicParameters) (driver.WalletService, error) {
-	d, ok := drivers[pp.Identifier()]
+	d, ok := holder.Drivers[pp.Identifier()]
 	if !ok {
 		return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", pp.Identifier())
 	}

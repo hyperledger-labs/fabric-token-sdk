@@ -438,7 +438,7 @@ func (np *Provider) GetNetwork(network string, channel string) (*Network, error)
 
 func (np *Provider) newNetwork(network string, channel string) (*Network, error) {
 	var errs []error
-	for driverName, d := range drivers {
+	for driverName, d := range holder.Drivers {
 		nw, err := d.New(np.sp, network, channel)
 		if err != nil {
 			errs = append(errs, errors.WithMessagef(err, "failed to create network [%s:%s]", network, channel))
