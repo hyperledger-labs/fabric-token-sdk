@@ -1070,10 +1070,10 @@ func SetKVSEntry(network *integration.Infrastructure, user string, key string, v
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, user string, wallet string, typ string, amount uint64, auditor string, IssuerId string, expectedErrorMsgs ...string) string {
+func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, user string, userId string, wallet string, typ string, amount uint64, auditor string, IssuerId string, expectedErrorMsgs ...string) string {
 	var recipientData *token2.RecipientData
 	if wpm != nil {
-		recipientData = wpm.RecipientData(user, wallet)
+		recipientData = wpm.RecipientData(userId, wallet)
 	}
 	txid, err := network.Client(user).CallView("withdrawal", common.JSONMarshall(&views.Withdrawal{
 		Wallet:        wallet,

@@ -8,46 +8,33 @@ package fabtoken
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ofabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Orion EndToEnd", func() {
-	var (
-		network *integration.Infrastructure
-	)
-
-	AfterEach(func() {
-		//network.DeleteOnStop = false
-		network.Stop()
-	})
-
 	Describe("Orion FabToken", func() {
-		BeforeEach(func() {
-			var err error
-			network, err = integration.New(StartPortDlog(), "", topology.Topology(
-				common.Opts{
-					Backend:        "orion",
-					TokenSDKDriver: "fabtoken",
-					Aries:          true,
-					SDKs:           []api.SDK{&orion3.SDK{}, &ofabtoken.SDK{}},
-				},
-			)...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
-
+		ts := token2.NewTestSuite(nil, StartPortDlog, topology.Topology(
+			common.Opts{
+				Backend:         "orion",
+				CommType:        fsc.LibP2P,
+				TokenSDKDriver:  "fabtoken",
+				Aries:           true,
+				SDKs:            []api.SDK{&orion3.SDK{}, &ofabtoken.SDK{}},
+				ReplicationOpts: integration.NoReplication,
+			},
+		))
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor", nil, true)
+			fungible.TestAll(ts.II, "auditor", nil, true)
 		})
 	})
 

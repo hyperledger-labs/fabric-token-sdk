@@ -42,6 +42,7 @@ func Topology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
+	fscTopology.P2PCommunicationType = opts.CommType
 	fscTopology.WebEnabled = opts.WebEnabled
 	fscTopology.SetLogging(opts.FSCLogSpec, "")
 
@@ -54,6 +55,7 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
+	issuer.AddOptions(opts.ReplicationOpts.For("issuer")...)
 	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	issuer.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
@@ -85,6 +87,7 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("newIssuer.owner"),
 	)
+	newIssuer.AddOptions(opts.ReplicationOpts.For("newIssuer")...)
 	newIssuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
 	newIssuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 	newIssuer.RegisterViewFactory("GetIssuerWalletIdentity", &views.GetIssuerWalletIdentityViewFactory{})
@@ -98,6 +101,7 @@ func Topology(opts common.Opts) []api.Topology {
 		orion.WithRole("auditor"),
 		token.WithAuditorIdentity(opts.HSM),
 	)
+	newAuditor.AddOptions(opts.ReplicationOpts.For("newAuditor")...)
 	newAuditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 	newAuditor.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 	newAuditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
@@ -143,6 +147,7 @@ func Topology(opts common.Opts) []api.Topology {
 			orion.WithRole("auditor"),
 			token.WithAuditorIdentity(opts.HSM),
 		)
+		auditor.AddOptions(opts.ReplicationOpts.For("auditor")...)
 		auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 		auditor.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
 		auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
@@ -169,6 +174,7 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithRemoteOwnerIdentity("alice_remote"),
 		token.WithRemoteOwnerIdentity("alice_remote_2"),
 	)
+	alice.AddOptions(opts.ReplicationOpts.For("alice")...)
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
@@ -205,6 +211,7 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithOwnerIdentity("bob.id1"),
 		token.WithRemoteOwnerIdentity("bob_remote"),
 	)
+	bob.AddOptions(opts.ReplicationOpts.For("bob")...)
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
@@ -242,6 +249,7 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("charlie.id1"),
 	)
+	charlie.AddOptions(opts.ReplicationOpts.For("charlie")...)
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
@@ -272,6 +280,7 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithOwnerIdentity("manager.id2"),
 		token.WithOwnerIdentity("manager.id3"),
 	)
+	manager.AddOptions(opts.ReplicationOpts.For("manager")...)
 	manager.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	manager.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	manager.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
@@ -306,6 +315,7 @@ func Topology(opts common.Opts) []api.Topology {
 		// we need to define the custodian
 		custodian := fscTopology.AddNodeByName("custodian")
 		custodian.AddOptions(orion.WithRole("custodian"))
+		custodian.AddOptions(opts.ReplicationOpts.For("custodian")...)
 		orion2.SetCustodian(tms, custodian)
 		tms.AddNode(custodian)
 

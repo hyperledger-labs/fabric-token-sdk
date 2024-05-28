@@ -12,6 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/cash"
@@ -20,23 +21,23 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestAll(network *integration.Infrastructure) {
+func TestAll(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
 
 	// Ready to go
 	registerAuditor(network)
-	issueCash(network)
-	checkBalance(network, "buyer", "", "USD", 10)
-	checkBalance(network, "seller", "", "USD", 0)
-	houseID := issueHouse(network, 4)
-	queryHouse(network, "seller", houseID, "5th Avenue")
-	queryHouse(network, "buyer", houseID, "5th Avenue", "failed loading house with id")
-	sellHouse(network, houseID)
-	queryHouse(network, "buyer", houseID, "5th Avenue")
-	queryHouse(network, "seller", houseID, "5th Avenue", "failed loading house with id")
-	checkBalance(network, "buyer", "", "USD", 6)
-	checkBalance(network, "seller", "", "USD", 4)
+	issueCash(network, sel.Get("cash_issuer"))
+	checkBalance(network, sel.Get("buyer"), "", "USD", 10)
+	checkBalance(network, sel.Get("seller"), "", "USD", 0)
+	houseID := issueHouse(network, 4, sel.Get("house_issuer"))
+	queryHouse(network, sel.Get("seller"), houseID, "5th Avenue")
+	queryHouse(network, sel.Get("buyer"), houseID, "5th Avenue", "failed loading house with id")
+	sellHouse(network, houseID, sel.Get("seller"))
+	queryHouse(network, sel.Get("buyer"), houseID, "5th Avenue")
+	queryHouse(network, sel.Get("seller"), houseID, "5th Avenue", "failed loading house with id")
+	checkBalance(network, sel.Get("buyer"), "", "USD", 6)
+	checkBalance(network, sel.Get("seller"), "", "USD", 4)
 }
 
 func registerAuditor(network *integration.Infrastructure) {
@@ -44,8 +45,8 @@ func registerAuditor(network *integration.Infrastructure) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func issueCash(network *integration.Infrastructure) {
-	_, err := network.Client("cash_issuer").CallView("issue_cash", common.JSONMarshall(cash.IssueCash{
+func issueCash(network *integration.Infrastructure, issuerId string) {
+	_, err := network.Client(issuerId).CallView("issue_cash", common.JSONMarshall(cash.IssueCash{
 		IssuerWallet: "",
 		TokenType:    "USD",
 		Quantity:     10,
@@ -55,8 +56,8 @@ func issueCash(network *integration.Infrastructure) {
 	time.Sleep(5 * time.Second)
 }
 
-func issueHouse(network *integration.Infrastructure, valuation uint64) string {
-	houseIDBoxed, err := network.Client("house_issuer").CallView("issue_house", common.JSONMarshall(house.IssueHouse{
+func issueHouse(network *integration.Infrastructure, valuation uint64, issuerId string) string {
+	houseIDBoxed, err := network.Client(issuerId).CallView("issue_house", common.JSONMarshall(house.IssueHouse{
 		IssuerWallet: "",
 		Recipient:    "seller",
 		Address:      "5th Avenue",
@@ -67,8 +68,8 @@ func issueHouse(network *integration.Infrastructure, valuation uint64) string {
 	return common.JSONUnmarshalString(houseIDBoxed)
 }
 
-func sellHouse(network *integration.Infrastructure, houseID string) {
-	txIDBoxed, err := network.Client("seller").CallView("sell", common.JSONMarshall(views2.Sell{
+func sellHouse(network *integration.Infrastructure, houseID string, sellerId string) {
+	txIDBoxed, err := network.Client(sellerId).CallView("sell", common.JSONMarshall(views2.Sell{
 		HouseID: houseID,
 		Buyer:   "buyer",
 	}))

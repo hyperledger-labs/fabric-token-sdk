@@ -7,144 +7,101 @@ SPDX-License-Identifier: Apache-2.0
 package dlog_test
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fodlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/odlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop"
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("DLog end to end", func() {
-	var (
-		ii *integration.Infrastructure
-	)
-
 	BeforeEach(func() {
 		token.Drivers = append(token.Drivers, "dlog")
 	})
 
-	AfterEach(func() {
-		ii.Stop()
-	})
-
 	Describe("HTLC Single Fabric Network", func() {
-		BeforeEach(func() {
-			var err error
-			ii, err = integration.New(
-				integration2.ZKATDLogInteropHTLC.StartPortForNode(),
-				"",
-				interop.HTLCSingleFabricNetworkTopology("dlog", &fabric3.SDK{}, &fdlog.SDK{})...,
-			)
-			Expect(err).NotTo(HaveOccurred())
-			ii.RegisterPlatformFactory(token.NewPlatformFactory())
-			ii.Generate()
-			ii.Start()
-		})
-
-		It("Performed htlc-related basic operations", func() {
-			interop.TestHTLCSingleNetwork(ii)
-		})
+		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLC.StartPortForNode, interop.HTLCSingleFabricNetworkTopology(common.Opts{
+			CommType:        fsc.LibP2P,
+			ReplicationOpts: integration.NoReplication,
+			TokenSDKDriver:  "dlog",
+			SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
+		}))
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II) })
 	})
 
 	Describe("HTLC Single Orion Network", func() {
-		BeforeEach(func() {
-			var err error
-			ii, err = integration.New(
-				integration2.ZKATDLogInteropHTLCOrion.StartPortForNode(),
-				"",
-				interop.HTLCSingleOrionNetworkTopology("dlog", &orion3.SDK{}, &odlog.SDK{})...,
-			)
-			Expect(err).NotTo(HaveOccurred())
-			ii.RegisterPlatformFactory(token.NewPlatformFactory())
-			ii.Generate()
-			ii.Start()
-		})
-
-		It("Performed htlc-related basic operations", func() {
-			interop.TestHTLCSingleNetwork(ii)
-		})
+		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLCOrion.StartPortForNode, interop.HTLCSingleOrionNetworkTopology(common.Opts{
+			CommType:        fsc.LibP2P,
+			ReplicationOpts: integration.NoReplication,
+			TokenSDKDriver:  "dlog",
+			SDKs:            []api2.SDK{&orion3.SDK{}, &odlog.SDK{}},
+		}))
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II) })
 	})
 
 	Describe("HTLC Two Fabric Networks", func() {
-		BeforeEach(func() {
-			var err error
-			ii, err = integration.New(
-				integration2.ZKATDLogInteropHTLCTwoFabricNetworks.StartPortForNode(),
-				"",
-				interop.HTLCTwoFabricNetworksTopology("dlog", &fabric3.SDK{}, &fdlog.SDK{})...,
-			)
-			Expect(err).NotTo(HaveOccurred())
-			ii.RegisterPlatformFactory(token.NewPlatformFactory())
-			ii.Generate()
-			ii.Start()
-		})
-
-		It("Performed an htlc based atomic swap", func() {
-			interop.TestHTLCTwoNetworks(ii)
-		})
+		opts, selector := token2.NoReplication()
+		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLCTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
+			CommType:        fsc.LibP2P,
+			ReplicationOpts: opts,
+			TokenSDKDriver:  "dlog",
+			SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
+		}))
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("Performed an htlc based atomic swap", func() { interop.TestHTLCTwoNetworks(ts.II, selector) })
 	})
 
 	Describe("Fast Exchange Two Fabric Networks", func() {
-		BeforeEach(func() {
-			var err error
-			ii, err = integration.New(
-				integration2.ZKATDLogInteropFastExchangeTwoFabricNetworks.StartPortForNode(),
-				"",
-				interop.HTLCTwoFabricNetworksTopology("dlog", &fabric3.SDK{}, &fdlog.SDK{})...,
-			)
-			Expect(err).NotTo(HaveOccurred())
-			ii.RegisterPlatformFactory(token.NewPlatformFactory())
-			ii.Generate()
-			ii.Start()
-		})
-
-		It("Performed a fast exchange", func() {
-			interop.TestFastExchange(ii)
-		})
+		opts, selector := token2.NoReplication()
+		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropFastExchangeTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
+			CommType:        fsc.LibP2P,
+			ReplicationOpts: opts,
+			TokenSDKDriver:  "dlog",
+			SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
+		}))
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		//TODO: AF Two tests go together
+		It("Performed a fast exchange", func() { interop.TestFastExchange(ts.II, selector) })
 	})
 
 	Describe("HTLC No Cross Claim Two Fabric Networks", func() {
-		BeforeEach(func() {
-			var err error
-			ii, err = integration.New(
-				integration2.ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode(),
-				"",
-				interop.HTLCNoCrossClaimTopology("dlog", &fabric3.SDK{}, &fdlog.SDK{})...,
-			)
-			Expect(err).NotTo(HaveOccurred())
-			ii.RegisterPlatformFactory(token.NewPlatformFactory())
-			ii.Generate()
-			ii.Start()
-		})
-
-		It("Performed an htlc based atomic swap", func() {
-			interop.TestHTLCNoCrossClaimTwoNetworks(ii)
-		})
+		opts, selector := token2.NoReplication()
+		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimTopology(common.Opts{
+			CommType:        fsc.LibP2P,
+			ReplicationOpts: opts,
+			TokenSDKDriver:  "dlog",
+			SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
+		}))
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("Performed an htlc based atomic swap", func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
 	})
 
 	Describe("HTLC No Cross Claim with Orion and Fabric Networks", func() {
-		BeforeEach(func() {
-			var err error
-			ii, err = integration.New(
-				integration2.ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode(),
-				"",
-				interop.HTLCNoCrossClaimWithOrionTopology("dlog", &orion3.SDK{}, &fabric3.SDK{}, &fodlog.SDK{})...,
-			)
-			Expect(err).NotTo(HaveOccurred())
-			ii.RegisterPlatformFactory(token.NewPlatformFactory())
-			ii.Generate()
-			ii.Start()
-		})
-
-		It("Performed an htlc based atomic swap", func() {
-			interop.TestHTLCNoCrossClaimTwoNetworks(ii)
-		})
+		opts, selector := token2.NoReplication()
+		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimWithOrionTopology(common.Opts{
+			CommType:        fsc.LibP2P,
+			ReplicationOpts: opts,
+			TokenSDKDriver:  "dlog",
+			SDKs:            []api2.SDK{&orion3.SDK{}, &fabric3.SDK{}, &fodlog.SDK{}},
+		}))
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("Performed an htlc based atomic swap", func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
 	})
 
 })
