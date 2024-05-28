@@ -9,7 +9,7 @@ package pledge
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -41,10 +41,10 @@ func IssueActionMetadata(attributes map[string][]byte, opts *driver.IssueOptions
 	}
 	if metadata != nil {
 		marshalled, err := json.Marshal(metadata)
-		key := hash.Hashable(marshalled).String()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed marshaling metadata; origin network [%s]; origin tokenID [%s]", metadata.OriginNetwork, metadata.OriginTokenID)
 		}
+		key := common.Hashable(marshalled).String()
 		attributes[key] = marshalled
 		attributes[key+"proof_of_claim"] = proof
 	}
