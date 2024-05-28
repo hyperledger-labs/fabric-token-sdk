@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/weaver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
@@ -67,7 +67,7 @@ func NewStateQueryExecutor(
 func (p *StateQueryExecutor) Exist(tokenID *token.ID) ([]byte, error) {
 	raw, err := json.Marshal(tokenID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed marshalling tokenID")
 	}
 
 	// get local relay
@@ -75,9 +75,13 @@ func (p *StateQueryExecutor) Exist(tokenID *token.ID) ([]byte, error) {
 
 	// Query
 	p.Logger.Debugf("Query [%s] for proof of existence of token [%s], input [%s]", p.TargetNetworkURL, tokenID.String(), base64.StdEncoding.EncodeToString(raw))
-	query, err := relay.ToFabric().Query(p.TargetNetworkURL, tcc.ProofOfTokenExistenceQuery, base64.StdEncoding.EncodeToString(raw))
+	query, err := relay.ToFabric().Query(
+		p.TargetNetworkURL,
+		tcc.ProofOfTokenExistenceQuery,
+		base64.StdEncoding.EncodeToString(raw),
+	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed querying token")
 	}
 	res, err := query.Call()
 	if err != nil {
@@ -102,7 +106,7 @@ func (p *StateQueryExecutor) DoesNotExist(tokenID *token.ID, origin string, dead
 	}
 	raw, err := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed marshalling tokenID")
 	}
 
 	// get local relay
@@ -110,9 +114,13 @@ func (p *StateQueryExecutor) DoesNotExist(tokenID *token.ID, origin string, dead
 
 	// Query
 	p.Logger.Debugf("Query [%s] for proof of non-existence of token [%s], input [%s]", p.TargetNetworkURL, tokenID.String(), base64.StdEncoding.EncodeToString(raw))
-	query, err := relay.ToFabric().Query(p.TargetNetworkURL, tcc.ProofOfTokenNonExistenceQuery, base64.StdEncoding.EncodeToString(raw))
+	query, err := relay.ToFabric().Query(
+		p.TargetNetworkURL,
+		tcc.ProofOfTokenNonExistenceQuery,
+		base64.StdEncoding.EncodeToString(raw),
+	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed querying token")
 	}
 	res, err := query.Call()
 	if err != nil {
@@ -145,7 +153,11 @@ func (p *StateQueryExecutor) ExistsWithMetadata(tokenID *token.ID, origin string
 
 	// Query
 	p.Logger.Debugf("Query [%s] for proof of existence of metadata with token [%s], input [%s]", p.TargetNetworkURL, tokenID.String(), base64.StdEncoding.EncodeToString(raw))
-	query, err := relay.ToFabric().Query(p.TargetNetworkURL, tcc.ProofOfTokenMetadataExistenceQuery, base64.StdEncoding.EncodeToString(raw))
+	query, err := relay.ToFabric().Query(
+		p.TargetNetworkURL,
+		tcc.ProofOfTokenMetadataExistenceQuery,
+		base64.StdEncoding.EncodeToString(raw),
+	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query proof of metadata [%s]", req)
 	}
@@ -215,23 +227,23 @@ func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID,
 
 	key, err := keys.CreateProofOfExistenceKey(tokenID)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to create proof of existence key from token [%s]", tokenID)
 	}
 	tmsID, err := fabric3.FabricURLToTMSID(v.NetworkURL)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to extract tms id from [%s]", v.NetworkURL)
 	}
 	raw, err := rwset.GetState(tmsID.Namespace, key)
 	if err != nil {
-		return errors.Wrapf(err, "failed to check proof of existence")
+		return errors.Wrapf(err, "failed to get state for token [%s:%s]", tmsID.Namespace, key)
 	}
 	if len(raw) == 0 {
-		return errors.Errorf("failed to check proof of existence, missing key-value pair")
+		return errors.Errorf("token [%s:%s] does not contain proof", tmsID.Namespace, key)
 	}
 	tok := &token.Token{}
 	err = json.Unmarshal(raw, tok)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to unmarshal token [%s]", common.Hashable(raw))
 	}
 	// Validate against pledge
 	v.Logger.Debugf("verify proof of existence for token id [%s]", tokenID)
@@ -252,7 +264,7 @@ func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID,
 	}
 	q, err := token.ToQuantity(tok.Quantity, 64)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed converting token quantity [%s]", tok.Quantity)
 	}
 	expectedQ := token.NewQuantityFromUInt64(info.Amount)
 	if expectedQ.Cmp(q) != 0 {
@@ -260,7 +272,7 @@ func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID,
 	}
 	owner, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to unmarshal owner of token [%s]", tokenID)
 	}
 	if owner.Type != pledge.ScriptType {
 		return err
@@ -268,7 +280,7 @@ func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID,
 	script := &pledge.Script{}
 	err = json.Unmarshal(owner.Identity, script)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to unmarshal pledge script [%s]", tokenID)
 	}
 	if script.Recipient == nil {
 		return errors.Errorf("script in proof encodes invalid recipient")

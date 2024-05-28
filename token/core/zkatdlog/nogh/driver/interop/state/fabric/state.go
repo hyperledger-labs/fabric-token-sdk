@@ -12,12 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/weaver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state"
@@ -73,7 +71,11 @@ func (p *StateQueryExecutor) Exist(tokenID *token.ID) ([]byte, error) {
 	relay := p.RelayProvider.Relay(p.RelaySelector)
 	p.Logger.Debugf("Query [%s] for proof of existence of token [%s], input [%s]", p.TargetNetworkURL, tokenID.String(), base64.StdEncoding.EncodeToString(raw))
 
-	query, err := relay.ToFabric().Query(p.TargetNetworkURL, tcc.ProofOfTokenExistenceQuery, base64.StdEncoding.EncodeToString(raw))
+	query, err := relay.ToFabric().Query(
+		p.TargetNetworkURL,
+		tcc.ProofOfTokenExistenceQuery,
+		base64.StdEncoding.EncodeToString(raw),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +108,11 @@ func (p *StateQueryExecutor) DoesNotExist(tokenID *token.ID, origin string, dead
 
 	p.Logger.Debugf("Query [%s] for proof of non-existence of token [%s], input [%s]", p.TargetNetworkURL, tokenID.String(), base64.StdEncoding.EncodeToString(raw))
 
-	query, err := relay.ToFabric().Query(p.TargetNetworkURL, tcc.ProofOfTokenNonExistenceQuery, base64.StdEncoding.EncodeToString(raw))
+	query, err := relay.ToFabric().Query(
+		p.TargetNetworkURL,
+		tcc.ProofOfTokenNonExistenceQuery,
+		base64.StdEncoding.EncodeToString(raw),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +145,11 @@ func (p *StateQueryExecutor) ExistsWithMetadata(tokenID *token.ID, origin string
 
 	p.Logger.Debugf("Query [%s] for proof of existence of metadata with token [%s], input [%s]", p.TargetNetworkURL, tokenID.String(), base64.StdEncoding.EncodeToString(raw))
 
-	query, err := relay.ToFabric().Query(p.TargetNetworkURL, tcc.ProofOfTokenMetadataExistenceQuery, base64.StdEncoding.EncodeToString(raw))
+	query, err := relay.ToFabric().Query(
+		p.TargetNetworkURL,
+		tcc.ProofOfTokenMetadataExistenceQuery,
+		base64.StdEncoding.EncodeToString(raw),
+	)
 	if err != nil {
 		return nil, err
 	}
