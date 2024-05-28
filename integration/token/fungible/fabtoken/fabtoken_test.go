@@ -9,7 +9,6 @@ package fabtoken
 import (
 	"math"
 
-	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
@@ -25,6 +24,7 @@ import (
 
 var _ = Describe("EndToEnd", func() {
 	Describe("Fungible", func() {
+		opts, selector := token2.NoReplication()
 		ts := token2.NewTestSuite(nil, StartPortDlog, topology.Topology(
 			common.Opts{
 				Backend:         "fabric",
@@ -32,7 +32,7 @@ var _ = Describe("EndToEnd", func() {
 				TokenSDKDriver:  "fabtoken",
 				Aries:           true,
 				SDKs:            []api.SDK{&fabric.SDK{}, &ffabtoken.SDK{}},
-				ReplicationOpts: integration.NoReplication,
+				ReplicationOpts: opts,
 				WebEnabled:      true, // Needed for the Remote Wallet with websockets
 			},
 		))
@@ -40,7 +40,7 @@ var _ = Describe("EndToEnd", func() {
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true)
+			fungible.TestAll(ts.II, "auditor", nil, true, selector)
 		})
 
 		It("Update public params", func() {

@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package dloghsm
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
@@ -21,6 +20,7 @@ import (
 
 var _ = Describe("EndToEnd", func() {
 	Describe("Fungible with HSM", func() {
+		opts, selector := token2.NoReplication()
 		ts := token2.NewTestSuite(nil, StartPortDlog, topology.Topology(
 			common.Opts{
 				Backend:         "fabric",
@@ -29,18 +29,19 @@ var _ = Describe("EndToEnd", func() {
 				Aries:           true,
 				HSM:             true,
 				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				ReplicationOpts: integration.NoReplication,
+				ReplicationOpts: opts,
 			},
 		))
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true)
+			fungible.TestAll(ts.II, "auditor", nil, true, selector)
 		})
 	})
 
 	Describe("Fungible with Auditor = Issuer with HSM", func() {
+		opts, selector := token2.NoReplication()
 		ts := token2.NewTestSuite(nil, StartPortDlog, topology.Topology(
 			common.Opts{
 				Backend:         "fabric",
@@ -50,14 +51,14 @@ var _ = Describe("EndToEnd", func() {
 				HSM:             true,
 				AuditorAsIssuer: true,
 				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				ReplicationOpts: integration.NoReplication,
+				ReplicationOpts: opts,
 			},
 		))
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "issuer", nil, true)
+			fungible.TestAll(ts.II, "issuer", nil, true, selector)
 		})
 	})
 

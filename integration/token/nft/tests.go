@@ -19,23 +19,28 @@ import (
 )
 
 func TestAll(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
+	issuer := sel.Get("issuer")
+	alice := sel.Get("alice")
+	bob := sel.Get("bob")
+	auditor := sel.Get("auditor")
+
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
 
-	_, err := network.Client(sel.Get("auditor")).CallView("registerAuditor", nil)
+	_, err := network.Client(auditor.ReplicaName()).CallView("registerAuditor", nil)
 	Expect(err).NotTo(HaveOccurred())
-	houseID := issueHouse(network, sel.Get("issuer"), "alice", 4)
-	queryHouse(network, sel.Get("alice"), houseID, "5th Avenue")
-	queryHouse(network, sel.Get("bob"), houseID, "5th Avenue", "failed loading house with id")
-	transferHouse(network, houseID, sel.Get("alice"), "bob", sel.Get("bob"))
-	queryHouse(network, sel.Get("bob"), houseID, "5th Avenue")
-	queryHouse(network, sel.Get("alice"), houseID, "5th Avenue", "failed loading house with id")
+	houseID := issueHouse(network, issuer, alice, 4)
+	queryHouse(network, alice, houseID, "5th Avenue")
+	queryHouse(network, bob, houseID, "5th Avenue", "failed loading house with id")
+	transferHouse(network, houseID, alice, bob)
+	queryHouse(network, bob, houseID, "5th Avenue")
+	queryHouse(network, alice, houseID, "5th Avenue", "failed loading house with id")
 }
 
-func issueHouse(network *integration.Infrastructure, issuer, recipient string, valuation uint64) string {
-	houseIDBoxed, err := network.Client(issuer).CallView("issue", common.JSONMarshall(views.IssueHouse{
+func issueHouse(network *integration.Infrastructure, issuer, recipient *token3.NodeReference, valuation uint64) string {
+	houseIDBoxed, err := network.Client(issuer.ReplicaName()).CallView("issue", common.JSONMarshall(views.IssueHouse{
 		IssuerWallet: "",
-		Recipient:    recipient,
+		Recipient:    recipient.Id(),
 		Address:      "5th Avenue",
 		Valuation:    valuation,
 	}))
@@ -44,17 +49,17 @@ func issueHouse(network *integration.Infrastructure, issuer, recipient string, v
 	return common.JSONUnmarshalString(houseIDBoxed)
 }
 
-func transferHouse(network *integration.Infrastructure, houseID string, from, toID, to string) {
-	txIDBoxed, err := network.Client(from).CallView("transfer", common.JSONMarshall(views.Transfer{
+func transferHouse(network *integration.Infrastructure, houseID string, from, to *token3.NodeReference) {
+	txIDBoxed, err := network.Client(from.ReplicaName()).CallView("transfer", common.JSONMarshall(views.Transfer{
 		HouseID:   houseID,
-		Recipient: toID,
+		Recipient: to.Id(),
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	common2.CheckFinality(network, to, common.JSONUnmarshalString(txIDBoxed), nil, false)
 }
 
-func queryHouse(network *integration.Infrastructure, clientID string, houseID string, address string, errorMsgs ...string) {
-	resBoxed, err := network.Client(clientID).CallView("queryHouse", common.JSONMarshall(views.GetHouse{
+func queryHouse(network *integration.Infrastructure, client *token3.NodeReference, houseID string, address string, errorMsgs ...string) {
+	resBoxed, err := network.Client(client.ReplicaName()).CallView("queryHouse", common.JSONMarshall(views.GetHouse{
 		HouseID: houseID,
 	}))
 	if len(errorMsgs) == 0 {

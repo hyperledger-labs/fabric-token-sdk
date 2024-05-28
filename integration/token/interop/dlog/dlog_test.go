@@ -28,27 +28,29 @@ var _ = Describe("DLog end to end", func() {
 	})
 
 	Describe("HTLC Single Fabric Network", func() {
+		opts, selector := token2.NoReplication()
 		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLC.StartPortForNode, interop.HTLCSingleFabricNetworkTopology(common.Opts{
 			CommType:        fsc.LibP2P,
-			ReplicationOpts: integration.NoReplication,
+			ReplicationOpts: opts,
 			TokenSDKDriver:  "dlog",
 			SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
 		}))
 		AfterEach(ts.TearDown)
 		BeforeEach(ts.Setup)
-		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II) })
+		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II, selector) })
 	})
 
 	Describe("HTLC Single Orion Network", func() {
+		opts, selector := token2.NoReplication()
 		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLCOrion.StartPortForNode, interop.HTLCSingleOrionNetworkTopology(common.Opts{
 			CommType:        fsc.LibP2P,
-			ReplicationOpts: integration.NoReplication,
+			ReplicationOpts: opts,
 			TokenSDKDriver:  "dlog",
 			SDKs:            []api2.SDK{&orion3.SDK{}, &odlog.SDK{}},
 		}))
 		AfterEach(ts.TearDown)
 		BeforeEach(ts.Setup)
-		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II) })
+		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II, selector) })
 	})
 
 	Describe("HTLC Two Fabric Networks", func() {

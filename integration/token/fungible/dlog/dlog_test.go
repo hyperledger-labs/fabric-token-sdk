@@ -28,6 +28,7 @@ import (
 
 var _ = Describe("EndToEnd", func() {
 	Describe("T1 Fungible with Auditor ne Issuer", func() {
+		opts, selector := token2.NoReplication()
 		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
 			common.Opts{
 				Backend:         "fabric",
@@ -35,14 +36,14 @@ var _ = Describe("EndToEnd", func() {
 				TokenSDKDriver:  "dlog",
 				Aries:           true,
 				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				ReplicationOpts: integration.NoReplication,
+				ReplicationOpts: opts,
 			},
 		))
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true)
+			fungible.TestAll(ts.II, "auditor", nil, true, selector)
 		})
 
 	})
@@ -70,7 +71,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("Test Identity Revocation", func() {
-			fungible.RegisterAuditor(ts.II, "auditor")
+			fungible.RegisterAuditor(ts.II, "auditor", nil)
 			rId := fungible.GetRevocationHandle(ts.II, "bob")
 			fungible.TestRevokeIdentity(ts.II, "auditor", rId, selector)
 		})
@@ -85,6 +86,7 @@ var _ = Describe("EndToEnd", func() {
 	})
 
 	Describe("T2 Fungible with Auditor = Issuer", func() {
+		opts, selector := token2.NoReplication()
 		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
 			common.Opts{
 				Backend:         "fabric",
@@ -93,14 +95,14 @@ var _ = Describe("EndToEnd", func() {
 				Aries:           true,
 				AuditorAsIssuer: true,
 				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				ReplicationOpts: integration.NoReplication,
+				ReplicationOpts: opts,
 			},
 		))
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 
 		It("T2.1 succeeded", func() {
-			fungible.TestAll(ts.II, "issuer", nil, true)
+			fungible.TestAll(ts.II, "issuer", nil, true, selector)
 		})
 
 		It("T2.2 Update public params", func() {
@@ -111,19 +113,20 @@ var _ = Describe("EndToEnd", func() {
 	})
 
 	Describe("T3 Fungible with Auditor ne Issuer + Fabric CA", func() {
+		opts, selector := token2.NoReplication()
 		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
 			common.Opts{
 				Backend:         "fabric",
 				CommType:        fsc.LibP2P,
 				TokenSDKDriver:  "dlog",
 				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				ReplicationOpts: integration.NoReplication,
+				ReplicationOpts: opts,
 			},
 		))
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, false)
+			fungible.TestAll(ts.II, "auditor", nil, false, selector)
 		})
 	})
 
