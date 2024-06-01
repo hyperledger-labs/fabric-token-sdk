@@ -33,6 +33,10 @@ type Logger interface {
 	IsEnabledFor(level zapcore.Level) bool
 }
 
+func MustGetLogger(name string) Logger {
+	return flogging.MustGetLogger(name)
+}
+
 func DriverLogger(prefix string, networkID string, channel string, namespace string) Logger {
 	return flogging.MustGetLogger(loggerName(prefix, networkID, channel, namespace))
 }

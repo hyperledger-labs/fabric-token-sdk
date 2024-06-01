@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"unicode/utf8"
 
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -29,6 +31,10 @@ const (
 	SerialNumber           = "sn"
 	IssueActionMetadata    = "iam"
 	TransferActionMetadata = "tam"
+
+	ProofOfExistencePrefix         = "pe"
+	ProofOfNonExistencePrefix      = "pne"
+	ProofOfMetadataExistencePrefix = "pme"
 )
 
 func SplitCompositeKey(compositeKey string) (string, []string, error) {
@@ -123,4 +129,23 @@ func ValidateCompositeKeyAttribute(str string) error {
 		}
 	}
 	return nil
+}
+
+func CreateProofOfExistenceKey(tokenId *token.ID) (string, error) {
+	id := token2.Hashable(tokenId.String()).String()
+	return CreateCompositeKey(ProofOfExistencePrefix, []string{id})
+}
+
+func CreateProofOfNonExistenceKey(tokenID *token.ID, origin string) (string, error) {
+	return CreateCompositeKey(ProofOfNonExistencePrefix, []string{
+		token2.Hashable(tokenID.String()).String(),
+		token2.Hashable(origin).String(),
+	})
+}
+
+func CreateProofOfMetadataExistenceKey(tokenID *token.ID, origin string) (string, error) {
+	return CreateCompositeKey(ProofOfMetadataExistencePrefix, []string{
+		token2.Hashable(tokenID.String()).String(),
+		token2.Hashable(origin).String(),
+	})
 }

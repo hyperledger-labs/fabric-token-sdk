@@ -121,6 +121,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", receiver.String())
 		}
+		s.Logger.Debugf("receiver audit info for [%s] is [%s]", receiver, auditInfo)
 		receiverAuditInfos = append(receiverAuditInfos, auditInfo...)
 	}
 	outputs, err := transfer.GetSerializedOutputs()

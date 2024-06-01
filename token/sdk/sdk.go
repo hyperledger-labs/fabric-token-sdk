@@ -31,6 +31,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
@@ -140,7 +142,11 @@ func (p *SDK) Install() error {
 		tmsp,
 		tokenDBManager,
 		publisher,
-		tokens2.NewAuthorizationMultiplexer(&tokens2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
+		tokens2.NewAuthorizationMultiplexer(
+			&tokens2.TMSAuthorization{},
+			&htlc.ScriptOwnership{},
+			&pledge.ScriptOwnership{},
+		),
 		tokens2.NewIssuedMultiplexer(&tokens2.WalletIssued{}),
 		storage.NewDBEntriesStorage("tokens", kvs.GetService(p.registry)),
 	)
@@ -158,6 +164,10 @@ func (p *SDK) Install() error {
 	p.postInitializer, err = tms.NewPostInitializer(tmsp, tokensManager, networkProvider, ownerManager, auditorManager)
 	assert.NoError(err)
 	tmsProvider.SetCallback(p.postInitializer.PostInit)
+
+	// State Service Provider
+	provider := state.NewServiceProvider(p.registry)
+	assert.NoError(p.registry.RegisterService(provider), "failed registering interoperability prover provider")
 
 	// Install metrics
 	assert.NoError(

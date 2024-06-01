@@ -11,9 +11,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver/interop/state/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
@@ -141,7 +143,14 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
-		fabtoken.NewIssueService(publicParamsManager, ws, deserializer),
+		fabtoken.NewIssueService(
+			publicParamsManager,
+			ws,
+			deserializer,
+			[]fabtoken.IssueMetadataProviderFunc{
+				pledge.IssueActionMetadata,
+			},
+		),
 		fabtoken.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
 		fabtoken.NewAuditorService(),
 		fabtoken.NewTokensService(),

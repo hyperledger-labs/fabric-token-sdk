@@ -13,6 +13,22 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TMSID models a TMS identifier
+type TMSID struct {
+	Network   string
+	Channel   string
+	Namespace string
+}
+
+// String returns a string representation of the TMSID
+func (t TMSID) String() string {
+	return fmt.Sprintf("%s,%s,%s", t.Network, t.Channel, t.Namespace)
+}
+
+func (t TMSID) Equal(tmsid TMSID) bool {
+	return t.Network == tmsid.Network && t.Channel == tmsid.Channel && t.Namespace == tmsid.Namespace
+}
+
 // TokenManagerService is the entry point of the Driver API and gives access to the rest of the API
 type TokenManagerService interface {
 	IssueService() IssueService

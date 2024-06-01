@@ -24,7 +24,7 @@ type TxOptions struct {
 	NetworkTxID               network.TxID
 }
 
-func compile(opts ...TxOption) (*TxOptions, error) {
+func CompileTXOptions(opts ...TxOption) (*TxOptions, error) {
 	txOptions := &TxOptions{}
 	for _, opt := range opts {
 		if err := opt(txOptions); err != nil {
