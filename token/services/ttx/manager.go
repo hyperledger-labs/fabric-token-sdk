@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
@@ -38,16 +37,19 @@ type Manager struct {
 	ttxDBProvider   DBProvider
 	tokensProvider  TokensProvider
 
-	storage storage.DBEntriesStorage
-	mutex   sync.Mutex
-	dbs     map[string]*DB
+	mutex sync.Mutex
+	dbs   map[string]*DB
 }
 
 // NewManager creates a new DB manager.
-func NewManager(np NetworkProvider, tmsProvider TMSProvider, ttxDBProvider DBProvider, tokensBProvider TokensProvider, storage storage.DBEntriesStorage) *Manager {
+func NewManager(
+	np NetworkProvider,
+	tmsProvider TMSProvider,
+	ttxDBProvider DBProvider,
+	tokensBProvider TokensProvider,
+) *Manager {
 	return &Manager{
 		networkProvider: np,
-		storage:         storage,
 		tmsProvider:     tmsProvider,
 		ttxDBProvider:   ttxDBProvider,
 		tokensProvider:  tokensBProvider,
@@ -64,10 +66,6 @@ func (m *Manager) DB(tmsID token.TMSID) (*DB, error) {
 	logger.Debugf("get ttxdb for [%s]", id)
 	c, ok := m.dbs[id]
 	if !ok {
-		// add an entry
-		if err := m.storage.Put(tmsID, ""); err != nil {
-			return nil, errors.Wrapf(err, "failed to store db entry in KVS [%s]", tmsID)
-		}
 		var err error
 		c, err = m.newDB(tmsID)
 		if err != nil {
