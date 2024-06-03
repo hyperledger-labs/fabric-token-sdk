@@ -7,53 +7,76 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/pkg/errors"
 )
 
 type Config interface {
 	TranslatePath(path string) string
+	UnmarshalKey(key string, rawVal interface{}) error
+}
+
+type Identity struct {
+	ID        string      `yaml:"id"`
+	Default   bool        `yaml:"default,omitempty"`
+	Path      string      `yaml:"path"`
+	CacheSize int         `yaml:"cacheSize"`
+	Type      string      `yaml:"type,omitempty"`
+	Opts      interface{} `yaml:"opts,omitempty"`
+}
+
+func (i *Identity) String() string {
+	return i.ID
+}
+
+type Wallets struct {
+	DefaultCacheSize int         `yaml:"defaultCacheSize,omitempty"`
+	Certifiers       []*Identity `yaml:"certifiers,omitempty"`
+	Owners           []*Identity `yaml:"owners,omitempty"`
+	Issuers          []*Identity `yaml:"issuers,omitempty"`
+	Auditors         []*Identity `yaml:"auditors,omitempty"`
 }
 
 type IdentityConfig struct {
-	Config Config
-	TMS    *config2.TMS
+	Config  Config
+	Wallets *Wallets
 }
 
-func NewIdentityConfig(Config Config, TMS *config2.TMS) *IdentityConfig {
-	return &IdentityConfig{Config: Config, TMS: TMS}
+func NewIdentityConfig(config Config) (*IdentityConfig, error) {
+	wallets := &Wallets{}
+	if err := config.UnmarshalKey("wallets", wallets); err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling wallets")
+	}
+	return &IdentityConfig{Config: config, Wallets: wallets}, nil
 }
 
-func (i *IdentityConfig) CacheSizeForOwnerID(id string) (int, error) {
-	for _, owner := range i.TMS.TMS().Wallets.Owners {
+func (i *IdentityConfig) CacheSizeForOwnerID(id string) int {
+	for _, owner := range i.Wallets.Owners {
 		if owner.ID == id {
-			return owner.CacheSize, nil
+			return owner.CacheSize
 		}
 	}
-	return -1, nil
+	return -1
+}
+
+func (i *IdentityConfig) DefaultCacheSize() int {
+	return i.Wallets.DefaultCacheSize
 }
 
 func (i *IdentityConfig) TranslatePath(path string) string {
 	return i.Config.TranslatePath(path)
 }
 
-func (i *IdentityConfig) IdentitiesForRole(role driver.IdentityRole) ([]*config.Identity, error) {
-	tmsConfig := i.TMS.TMS()
-	if tmsConfig.Wallets == nil {
-		tmsConfig.Wallets = &config.Wallets{}
-	}
-
+func (i *IdentityConfig) IdentitiesForRole(role driver.IdentityRole) ([]*Identity, error) {
 	switch role {
 	case driver.IssuerRole:
-		return tmsConfig.Wallets.Issuers, nil
+		return i.Wallets.Issuers, nil
 	case driver.AuditorRole:
-		return tmsConfig.Wallets.Auditors, nil
+		return i.Wallets.Auditors, nil
 	case driver.OwnerRole:
-		return tmsConfig.Wallets.Owners, nil
+		return i.Wallets.Owners, nil
 	case driver.CertifierRole:
-		return tmsConfig.Wallets.Certifiers, nil
+		return i.Wallets.Certifiers, nil
 	default:
 		return nil, errors.Errorf("unknown role [%d]", role)
 	}

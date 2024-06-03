@@ -9,6 +9,7 @@ package driver
 type ConfigProvider interface {
 	UnmarshalKey(key string, rawVal interface{}) error
 	GetString(key string) string
+	GetBool(key string) bool
 	IsSet(key string) bool
 	TranslatePath(path string) string
 }

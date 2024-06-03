@@ -8,15 +8,12 @@ package db
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/pkg/errors"
 )
 
 type ConfigProvider interface {
-	UnmarshalKey(key string, rawVal interface{}) error
-	GetString(key string) string
-	IsSet(key string) bool
-	TranslatePath(path string) string
+	ConfigurationFor(network, channel, namespace string) (config.Configuration, error)
 }
 
 type Config struct {
@@ -29,7 +26,7 @@ func NewConfig(configProvider ConfigProvider, configurationKeys ...string) *Conf
 }
 
 func (c *Config) DriverFor(tmsID token.TMSID) (string, error) {
-	tmsConfig, err := config.NewTokenSDK(c.configProvider).GetTMS(tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	tmsConfig, err := c.configProvider.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)
 	}

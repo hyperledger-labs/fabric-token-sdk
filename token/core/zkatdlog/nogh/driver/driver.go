@@ -12,12 +12,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
@@ -53,10 +53,13 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", networkID, namespace)
 	}
 
-	cs := view.GetConfigService(sp)
-	tmsConfig, err := config.NewTokenSDK(cs).GetTMS(networkID, channel, namespace)
+	cs, err := config.GetService(sp)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create config manager")
+		return nil, errors.WithMessage(err, "failed to get config service")
+	}
+	tmsConfig, err := cs.ConfigurationFor(networkID, channel, namespace)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", networkID, channel, namespace)
 	}
 
 	fscIdentity := view.GetIdentityProvider(sp).DefaultIdentity()
@@ -86,9 +89,13 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
+	identityConfig, err := config2.NewIdentityConfig(tmsConfig)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create identity config")
+	}
 	roleFactory := msp.NewRoleFactory(
 		tmsID,
-		config2.NewIdentityConfig(cs, tmsConfig), // config
+		identityConfig,                           // config
 		fscIdentity,                              // FSC identity
 		networkLocalMembership.DefaultIdentity(), // network default identity
 		ip,
@@ -100,7 +107,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	)
 	role, err := roleFactory.NewIdemix(
 		driver.OwnerRole,
-		tmsConfig.TMS().GetWalletDefaultCacheSize(),
+		identityConfig.DefaultCacheSize(),
 		ppm.PublicParams().IdemixIssuerPK,
 		ppm.PublicParams().IdemixCurveID,
 	)
@@ -140,7 +147,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		logger,
 		ip,
 		deserializer,
-		zkatdlog.NewWalletFactory(logger, ip, qe, tmsConfig, deserializer),
+		zkatdlog.NewWalletFactory(logger, ip, qe, identityConfig, deserializer),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
@@ -197,10 +204,13 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	cs := view.GetConfigService(sp)
-	tmsConfig, err := config.NewTokenSDK(cs).GetTMS(networkID, channel, namespace)
+	cs, err := config.GetService(sp)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create config manager")
+		return nil, errors.WithMessage(err, "failed to get config service")
+	}
+	tmsConfig, err := cs.ConfigurationFor(networkID, channel, namespace)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", networkID, channel, namespace)
 	}
 
 	// Prepare roles
@@ -227,11 +237,15 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to load public parameters")
 	}
+	identityConfig, err := config2.NewIdentityConfig(tmsConfig)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create identity config")
+	}
 	roleFactory := msp.NewRoleFactory(
 		tmsID,
-		config2.NewIdentityConfig(cs, tmsConfig), // config
-		nil,                                      // FSC identity
-		nil,                                      // network default identity
+		identityConfig, // config
+		nil,            // FSC identity
+		nil,            // network default identity
 		ip,
 		sigService, // signer service
 		nil,        // endpoint service
@@ -241,7 +255,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	)
 	role, err := roleFactory.NewIdemix(
 		driver.OwnerRole,
-		tmsConfig.TMS().GetWalletDefaultCacheSize(),
+		identityConfig.DefaultCacheSize(),
 		ppm.PublicParams().IdemixIssuerPK,
 		ppm.PublicParams().IdemixCurveID,
 	)
@@ -279,7 +293,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		logger,
 		ip,
 		deserializer,
-		zkatdlog.NewWalletFactory(logger, ip, nil, tmsConfig, deserializer),
+		zkatdlog.NewWalletFactory(logger, ip, nil, identityConfig, deserializer),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),

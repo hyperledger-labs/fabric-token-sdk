@@ -11,8 +11,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -24,7 +24,7 @@ type LockerProvider interface {
 }
 
 type SelectorService struct {
-	managerLazyCache common.LazyProvider[*token.ManagementService, token.SelectorManager]
+	managerLazyCache utils.LazyProvider[*token.ManagementService, token.SelectorManager]
 }
 
 func NewProvider(lockerProvider LockerProvider, numRetry int, timeout time.Duration, tracer Tracer) *SelectorService {
@@ -36,7 +36,7 @@ func NewProvider(lockerProvider LockerProvider, numRetry int, timeout time.Durat
 		requestCertification: true,
 	}
 	return &SelectorService{
-		managerLazyCache: common.NewLazyProviderWithKeyMapper(key, loader.load),
+		managerLazyCache: utils.NewLazyProviderWithKeyMapper(key, loader.load),
 	}
 }
 

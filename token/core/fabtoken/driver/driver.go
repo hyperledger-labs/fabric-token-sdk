@@ -12,9 +12,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
@@ -51,10 +51,13 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	qe := v.QueryEngine()
 	networkLocalMembership := n.LocalMembership()
 
-	cs := view.GetConfigService(sp)
-	tmsConfig, err := config.NewTokenSDK(cs).GetTMS(networkID, channel, namespace)
+	cs, err := config.GetService(sp)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create config manager")
+		return nil, errors.WithMessage(err, "failed to get config service")
+	}
+	tmsConfig, err := cs.ConfigurationFor(networkID, channel, namespace)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", networkID, channel, namespace)
 	}
 
 	// Prepare roles
@@ -76,9 +79,13 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
 	ip := identity.NewProvider(identityDB, sigService, view.GetEndpointService(sp), NewEIDRHDeserializer(), deserializerManager)
+	identityConfig, err := config2.NewIdentityConfig(tmsConfig)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create identity config")
+	}
 	roleFactory := msp.NewRoleFactory(
 		tmsID,
-		config2.NewIdentityConfig(cs, tmsConfig), // config
+		identityConfig,                           //config
 		fscIdentity,                              // FSC identity
 		networkLocalMembership.DefaultIdentity(), // network default identity
 		ip,
@@ -173,10 +180,13 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
 	logger := logging.DriverLogger("token-sdk.driver.fabtoken", networkID, channel, namespace)
 
-	cs := view.GetConfigService(sp)
-	tmsConfig, err := config.NewTokenSDK(cs).GetTMS(networkID, channel, namespace)
+	cs, err := config.GetService(sp)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create config manager")
+		return nil, errors.WithMessage(err, "failed to get config service")
+	}
+	tmsConfig, err := cs.ConfigurationFor(networkID, channel, namespace)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", networkID, channel, namespace)
 	}
 
 	// Prepare roles
@@ -197,11 +207,15 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
 	ip := identity.NewProvider(identityDB, sigService, nil, NewEIDRHDeserializer(), deserializerManager)
+	identityConfig, err := config2.NewIdentityConfig(tmsConfig)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create identity config")
+	}
 	roleFactory := msp.NewRoleFactory(
 		tmsID,
-		config2.NewIdentityConfig(cs, tmsConfig), // config
-		nil,                                      // FSC identity
-		nil,                                      // network default identity
+		identityConfig, // config
+		nil,            // FSC identity
+		nil,            // network default identity
 		ip,
 		sigService, // signer service
 		nil,        // endpoint service

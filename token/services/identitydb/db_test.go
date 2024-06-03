@@ -9,6 +9,8 @@ package identitydb_test
 import (
 	"testing"
 
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
@@ -23,7 +25,7 @@ func TestDB(t *testing.T) {
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 
-	manager := identitydb.NewManager(cp, db.NewConfig(cp, "identitydb.persistence.type"))
+	manager := identitydb.NewManager(cp, db.NewConfig(config2.NewService(cp), "identitydb.persistence.type"))
 	_, err = manager.IdentityDBByTMSId(token2.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	_, err = manager.WalletDBByTMSId(token2.TMSID{Network: "grapes"})

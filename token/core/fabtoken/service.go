@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -29,7 +28,7 @@ func NewService(
 	identityProvider driver.IdentityProvider,
 	serializer driver.Serializer,
 	deserializer driver.Deserializer,
-	configManager config.Manager,
+	configuration driver.Configuration,
 	issueService driver.IssueService,
 	transferService driver.TransferService,
 	auditorService driver.AuditorService,
@@ -42,7 +41,7 @@ func NewService(
 		identityProvider,
 		serializer,
 		deserializer,
-		configManager,
+		configuration,
 		nil,
 		issueService,
 		transferService,

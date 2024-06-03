@@ -13,24 +13,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestGetTMSs tests the GetTMSs function
+// TestGetTMSs tests the Configurations function
 func TestGetTMSs(t *testing.T) {
 	// create a new config service by loading the config file
 	cp, err := config.NewProvider("./testdata/token0")
 	assert.NoError(t, err)
 
 	// instantiate the token sdk config
-	tokenSDKConfig := NewTokenSDK(cp)
+	tokenSDKConfig := NewService(cp)
 
-	// compare the TMSs obtained from GetTMSs with the corresponding TMSs obtained from GetTMS
-	tmss, err := tokenSDKConfig.GetTMSs()
+	// compare the TMSs obtained from Configurations with the corresponding TMSs obtained from ConfigurationFor
+	tmss, err := tokenSDKConfig.Configurations()
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(tmss))
 	for _, tms := range tmss {
-		tms2, err := tokenSDKConfig.GetTMS(tms.TMS().Network, tms.TMS().Channel, tms.TMS().Namespace)
+		tms2, err := tokenSDKConfig.ConfigurationFor(tms.ID().Network, tms.ID().Channel, tms.ID().Namespace)
 		assert.NoError(t, err)
 		assert.Equal(t, tms, tms2)
-
-		assert.Len(t, tms2.TMS().Wallets.Owners, 2)
 	}
 }

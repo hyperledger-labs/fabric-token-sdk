@@ -23,6 +23,9 @@ type WalletIdentityCache struct {
 }
 
 func NewWalletIdentityCache(Logger logging.Logger, backed WalletIdentityCacheBackendFunc, size int) *WalletIdentityCache {
+	if size < 0 {
+		size = 0
+	}
 	ci := &WalletIdentityCache{
 		Logger:  Logger,
 		backed:  backed,

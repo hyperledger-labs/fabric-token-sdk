@@ -12,8 +12,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/common/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -29,7 +29,7 @@ type tokenSelectorUnlocker interface {
 }
 
 type manager struct {
-	selectorCache common.LazyProvider[core.TxID, tokenSelectorUnlocker]
+	selectorCache utils.LazyProvider[core.TxID, tokenSelectorUnlocker]
 }
 
 type TokenDB interface {
@@ -42,7 +42,7 @@ type iterator[k any] interface {
 
 func NewManager(tokenDB TokenDB, lockDB LockDB, precision uint64, backoff time.Duration) *manager {
 	return &manager{
-		selectorCache: common.NewLazyProvider(func(txID core.TxID) (tokenSelectorUnlocker, error) {
+		selectorCache: utils.NewLazyProvider(func(txID core.TxID) (tokenSelectorUnlocker, error) {
 			return NewSherdSelector(txID, tokenDB, lockDB, precision, backoff), nil
 		}),
 	}

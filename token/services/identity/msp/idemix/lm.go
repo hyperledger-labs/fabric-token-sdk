@@ -15,8 +15,8 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/cache"
@@ -342,10 +342,7 @@ func (l *LocalMembership) getResolver(label string) *common.Resolver {
 }
 
 func (l *LocalMembership) cacheSizeForID(id string) (int, error) {
-	cacheSize, err := l.config.CacheSizeForOwnerID(id)
-	if err != nil {
-		return 0, errors.WithMessage(err, "failed to obtain token management system instances")
-	}
+	cacheSize := l.config.CacheSizeForOwnerID(id)
 	if cacheSize == -1 {
 		logger.Debugf("cache size for %s not configured, using default (%d)", id, l.cacheSize)
 		cacheSize = l.cacheSize

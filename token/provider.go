@@ -8,7 +8,6 @@ package token
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
@@ -143,24 +142,24 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 
 func (p *ManagementServiceProvider) normalize(opt *ServiceOptions) (*ServiceOptions, error) {
 	// lookup configurations
-	configs, err := p.tmsProvider.Configs()
+	configs, err := p.tmsProvider.Configurations()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting tms configs")
 	}
 	if len(configs) == 0 {
 		return nil, errors.Errorf("no token management service configs found")
 	}
-	var config *config.TMS
+	var config driver.TMSID
 	if len(opt.Network) == 0 {
-		config = configs[0].TMS()
+		config = configs[0].ID()
 		opt.Network = config.Network
 	} else {
 		// search
 		found := false
 		for _, manager := range configs {
-			if manager.TMS().Network == opt.Network {
+			if manager.ID().Network == opt.Network {
 				found = true
-				config = manager.TMS()
+				config = manager.ID()
 			}
 		}
 		if !found {
@@ -175,7 +174,7 @@ func (p *ManagementServiceProvider) normalize(opt *ServiceOptions) (*ServiceOpti
 		// is there another TMS with the same network, but different channel? If yes, don't fail
 		found := false
 		for _, manager := range configs {
-			tms := manager.TMS()
+			tms := manager.ID()
 			if tms.Network == opt.Network && tms.Channel == opt.Channel {
 				found = true
 				config = tms
@@ -193,7 +192,7 @@ func (p *ManagementServiceProvider) normalize(opt *ServiceOptions) (*ServiceOpti
 		// is there another TMS with the same network and channel, but different namespace? If yes, don't fail
 		found := false
 		for _, manager := range configs {
-			tms := manager.TMS()
+			tms := manager.ID()
 			if tms.Network == opt.Network && tms.Channel == opt.Channel && tms.Namespace == opt.Namespace {
 				found = true
 				config = tms

@@ -13,9 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/pkg/errors"
 )
 
@@ -26,10 +24,12 @@ type Vault interface {
 }
 
 type ConfigProvider interface {
-	UnmarshalKey(key string, rawVal interface{}) error
-	GetString(key string) string
-	IsSet(key string) bool
-	TranslatePath(path string) string
+	Configurations() ([]driver.Configuration, error)
+	ConfigurationFor(network string, channel string, namespace string) (driver.Configuration, error)
+}
+
+type PublicParameters struct {
+	Path string `yaml:"path"`
 }
 
 // TMSProvider is a token management service provider.
@@ -151,15 +151,13 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 	return
 }
 
-func (m *TMSProvider) Configs() ([]config2.Manager, error) {
-	tmsConfigs, err := config.NewTokenSDK(m.configProvider).GetTMSs()
+func (m *TMSProvider) Configurations() ([]driver.Configuration, error) {
+	tmsConfigs, err := m.configProvider.Configurations()
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get token managers")
 	}
-	res := make([]config2.Manager, len(tmsConfigs))
-	for i, cm := range tmsConfigs {
-		res[i] = cm
-	}
+	res := make([]driver.Configuration, len(tmsConfigs))
+	copy(res, tmsConfigs)
 	return res, nil
 }
 
@@ -262,12 +260,15 @@ func (m *TMSProvider) ppFromVault(opts *driver.ServiceOptions) ([]byte, error) {
 }
 
 func (m *TMSProvider) ppFromConfig(opts *driver.ServiceOptions) ([]byte, error) {
-	tmsConfig, err := config.NewTokenSDK(m.configProvider).GetTMS(opts.Network, opts.Channel, opts.Namespace)
+	tmsConfig, err := m.configProvider.ConfigurationFor(opts.Network, opts.Channel, opts.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to identify driver from the configuration of [%s], loading driver from public parameters failed too [%s]", opts, err)
 	}
-	cPP := tmsConfig.TMS().PublicParameters
-	if cPP != nil && len(cPP.Path) != 0 {
+	cPP := &PublicParameters{}
+	if err := tmsConfig.UnmarshalKey("publicParameters", cPP); err != nil {
+		return nil, errors.WithMessage(err, "failed to unmarshal public parameters")
+	}
+	if len(cPP.Path) != 0 {
 		m.logger.Infof("load public parameters from [%s]...", cPP.Path)
 		ppRaw, err := os.ReadFile(cPP.Path)
 		if err != nil {

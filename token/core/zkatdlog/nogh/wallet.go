@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -21,34 +20,47 @@ type TokenVault interface {
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
 }
 
+type WalletsConfiguration interface {
+	CacheSizeForOwnerID(id string) int
+}
+
 type WalletFactory struct {
-	Logger           logging.Logger
-	IdentityProvider driver.IdentityProvider
-	TokenVault       TokenVault
-	ConfigManager    config.Manager
-	Deserializer     driver.Deserializer
+	Logger               logging.Logger
+	IdentityProvider     driver.IdentityProvider
+	TokenVault           TokenVault
+	walletsConfiguration WalletsConfiguration
+	Deserializer         driver.Deserializer
 }
 
 func NewWalletFactory(
 	logger logging.Logger,
 	identityProvider driver.IdentityProvider,
 	tokenVault TokenVault,
-	configManager config.Manager,
+	walletsConfiguration WalletsConfiguration,
 	deserializer driver.Deserializer,
 ) *WalletFactory {
 	return &WalletFactory{
-		Logger:           logger,
-		IdentityProvider: identityProvider,
-		TokenVault:       tokenVault,
-		ConfigManager:    configManager,
-		Deserializer:     deserializer,
+		Logger:               logger,
+		IdentityProvider:     identityProvider,
+		TokenVault:           tokenVault,
+		walletsConfiguration: walletsConfiguration,
+		Deserializer:         deserializer,
 	}
 }
 
 func (w *WalletFactory) NewWallet(role driver.IdentityRole, walletRegistry common.WalletRegistry, info driver.IdentityInfo, id string) (driver.Wallet, error) {
 	switch role {
 	case driver.OwnerRole:
-		newWallet, err := common.NewAnonymousOwnerWallet(w.Logger, w.IdentityProvider, w.TokenVault, w.ConfigManager, w.Deserializer, walletRegistry, id, info)
+		newWallet, err := common.NewAnonymousOwnerWallet(
+			w.Logger,
+			w.IdentityProvider,
+			w.TokenVault,
+			w.Deserializer,
+			walletRegistry,
+			id,
+			info,
+			w.walletsConfiguration.CacheSizeForOwnerID(id),
+		)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to create new owner wallet [%s]", id)
 		}

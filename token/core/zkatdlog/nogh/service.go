@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -38,7 +37,7 @@ func NewTokenService(
 	identityProvider driver.IdentityProvider,
 	serializer driver.Serializer,
 	deserializer driver.Deserializer,
-	configManager config.Manager,
+	configuration driver.Configuration,
 	issueService driver.IssueService,
 	transferService driver.TransferService,
 	auditorService driver.AuditorService,
@@ -51,7 +50,7 @@ func NewTokenService(
 		identityProvider,
 		serializer,
 		deserializer,
-		configManager,
+		configuration,
 		nil,
 		issueService,
 		transferService,
