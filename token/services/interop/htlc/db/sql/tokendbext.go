@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package sql
 
 import (
@@ -43,7 +49,7 @@ func (e *HTLCTokenDBExtension) GetSchema() string {
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 		`,
 		e.table.Tokens,
-		e.table.Tokens,
+		e.table.Tokens, e.table.Tokens,
 	)
 }
 
