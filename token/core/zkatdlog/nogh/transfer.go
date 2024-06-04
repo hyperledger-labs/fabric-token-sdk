@@ -25,6 +25,7 @@ type TransferService struct {
 	WalletService           driver.WalletService
 	TokenLoader             TokenLoader
 	Deserializer            driver.Deserializer
+	Metrics                 *Metrics
 }
 
 func NewTransferService(
@@ -33,6 +34,7 @@ func NewTransferService(
 	walletService driver.WalletService,
 	tokenLoader TokenLoader,
 	deserializer driver.Deserializer,
+	metrics *Metrics,
 ) *TransferService {
 	return &TransferService{
 		Logger:                  logger,
@@ -40,6 +42,7 @@ func NewTransferService(
 		WalletService:           walletService,
 		TokenLoader:             tokenLoader,
 		Deserializer:            deserializer,
+		Metrics:                 metrics,
 	}
 }
 
@@ -163,6 +166,9 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 		ReceiverAuditInfos: receiverAuditInfos,
 		ReceiverIsSender:   receiverIsSender,
 	}
+
+	// metrics
+	s.Metrics.AddTransfer()
 
 	return zkTransfer, metadata, nil
 }

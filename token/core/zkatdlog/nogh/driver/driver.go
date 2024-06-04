@@ -8,6 +8,7 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	metrics2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
@@ -154,6 +155,8 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		nil,
 	)
 	tokDeserializer := &TokenDeserializer{}
+
+	metrics := zkatdlog.NewMetrics(metrics2.GetProvider(sp), tmsID)
 	service, err := zkatdlog.NewTokenService(
 		logger,
 		ws,
@@ -162,8 +165,15 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
-		zkatdlog.NewIssueService(ppm, ws, deserializer),
-		zkatdlog.NewTransferService(logger, ppm, ws, common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer), deserializer),
+		zkatdlog.NewIssueService(ppm, ws, deserializer, metrics),
+		zkatdlog.NewTransferService(
+			logger,
+			ppm,
+			ws,
+			common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer),
+			deserializer,
+			metrics,
+		),
 		zkatdlog.NewAuditorService(logger, ppm, common.NewLedgerTokenLoader[*token3.Token](logger, qe, tokDeserializer), deserializer),
 		zkatdlog.NewTokensService(ppm),
 	)
