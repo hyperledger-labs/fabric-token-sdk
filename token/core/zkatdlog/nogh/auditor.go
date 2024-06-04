@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"time"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
@@ -22,6 +24,7 @@ type AuditorService struct {
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
 	TokenCommitmentLoader   TokenCommitmentLoader
 	Deserializer            driver.Deserializer
+	Metrics                 *Metrics
 }
 
 func NewAuditorService(
@@ -29,12 +32,14 @@ func NewAuditorService(
 	publicParametersManager common.PublicParametersManager[*crypto.PublicParams],
 	tokenCommitmentLoader TokenCommitmentLoader,
 	deserializer driver.Deserializer,
+	metrics *Metrics,
 ) *AuditorService {
 	return &AuditorService{
 		Logger:                  logger,
 		PublicParametersManager: publicParametersManager,
 		TokenCommitmentLoader:   tokenCommitmentLoader,
 		Deserializer:            deserializer,
+		Metrics:                 metrics,
 	}
 }
 
@@ -53,20 +58,27 @@ func (s *AuditorService) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRe
 	}
 
 	pp := s.PublicParametersManager.PublicParams()
-	if err := audit.NewAuditor(
+	auditor := audit.NewAuditor(
 		s.Logger,
 		s.Deserializer,
 		pp.PedersenGenerators,
 		pp.IdemixIssuerPK,
 		nil,
 		math.Curves[pp.Curve],
-	).Check(
+	)
+	start := time.Now()
+	err := auditor.Check(
 		tokenRequest,
 		tokenRequestMetadata,
 		inputTokens,
 		txID,
-	); err != nil {
+	)
+	duration := time.Since(start)
+	if err != nil {
 		return errors.WithMessagef(err, "failed to perform auditor check")
 	}
+	s.Metrics.AddAudit()
+	s.Metrics.ObserveAuditDuration(duration)
+
 	return nil
 }
