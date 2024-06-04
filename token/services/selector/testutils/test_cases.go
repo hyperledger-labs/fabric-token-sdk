@@ -12,10 +12,11 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/common/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -229,7 +230,7 @@ func deleteTokensAndStoreChange(m EnhancedManager, spentTokens []*token.ID, chan
 	logger.Debugf("Deleting [%d] tokens [%s] and creating a new one with quantity %s", len(spentTokens), spentTokens, change.Decimal())
 	var changeTokens []token.UnspentToken
 	if change.ToBigInt().Int64() > 0 {
-		changeTokens = createTokens(map[core.TxID][]token.Quantity{
+		changeTokens = createTokens(map[utils.TxID][]token.Quantity{
 			newTxID(): {change},
 		})
 	}
@@ -243,10 +244,10 @@ func deleteTokensAndStoreChange(m EnhancedManager, spentTokens []*token.ID, chan
 }
 
 func createDefaultTokens(quantities ...token.Quantity) []token.UnspentToken {
-	return createTokens(map[core.TxID][]token.Quantity{newTxID(): quantities})
+	return createTokens(map[utils.TxID][]token.Quantity{newTxID(): quantities})
 }
 
-func createTokens(txs map[core.TxID][]token.Quantity) []token.UnspentToken {
+func createTokens(txs map[utils.TxID][]token.Quantity) []token.UnspentToken {
 	unspentTokens := make([]token.UnspentToken, 0)
 	for txID, quantities := range txs {
 		for i, quantity := range quantities {

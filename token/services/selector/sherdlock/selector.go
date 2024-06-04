@@ -11,10 +11,11 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/common/core"
 	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -165,7 +166,7 @@ func (f *fetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*
 
 type locker struct {
 	LockDB
-	txID core.TxID
+	txID utils.TxID
 }
 
 func (l *locker) TryLock(tokenID *token2.ID) bool {
@@ -176,7 +177,7 @@ func (l *locker) UnlockAll() error {
 	return l.LockDB.UnlockByTxID(l.txID)
 }
 
-func NewSherdSelector(txID core.TxID, tokenDB TokenDB, lockDB LockDB, precision uint64, backoff time.Duration) tokenSelectorUnlocker {
+func NewSherdSelector(txID utils.TxID, tokenDB TokenDB, lockDB LockDB, precision uint64, backoff time.Duration) tokenSelectorUnlocker {
 	logger := logger.Named(fmt.Sprintf("selector-%s", txID))
 	fetcher := &fetcher{TokenDB: tokenDB}
 	locker := &locker{txID: txID, LockDB: lockDB}

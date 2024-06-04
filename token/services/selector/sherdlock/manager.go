@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/common/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -29,7 +28,7 @@ type tokenSelectorUnlocker interface {
 }
 
 type manager struct {
-	selectorCache utils.LazyProvider[core.TxID, tokenSelectorUnlocker]
+	selectorCache utils.LazyProvider[utils.TxID, tokenSelectorUnlocker]
 }
 
 type TokenDB interface {
@@ -42,17 +41,17 @@ type iterator[k any] interface {
 
 func NewManager(tokenDB TokenDB, lockDB LockDB, precision uint64, backoff time.Duration) *manager {
 	return &manager{
-		selectorCache: utils.NewLazyProvider(func(txID core.TxID) (tokenSelectorUnlocker, error) {
+		selectorCache: utils.NewLazyProvider(func(txID utils.TxID) (tokenSelectorUnlocker, error) {
 			return NewSherdSelector(txID, tokenDB, lockDB, precision, backoff), nil
 		}),
 	}
 }
 
-func (m *manager) NewSelector(id core.TxID) (token.Selector, error) {
+func (m *manager) NewSelector(id utils.TxID) (token.Selector, error) {
 	return m.selectorCache.Get(id)
 }
 
-func (m *manager) Unlock(id core.TxID) error {
+func (m *manager) Unlock(id utils.TxID) error {
 	if c, ok := m.selectorCache.Delete(id); ok {
 		return c.UnlockAll()
 	}
