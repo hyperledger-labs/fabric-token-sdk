@@ -19,17 +19,20 @@ type IssueService struct {
 	PublicParametersManager common2.PublicParametersManager[*crypto.PublicParams]
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
+	Metrics                 *Metrics
 }
 
 func NewIssueService(
 	publicParametersManager common2.PublicParametersManager[*crypto.PublicParams],
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
+	metrics *Metrics,
 ) *IssueService {
 	return &IssueService{
 		PublicParametersManager: publicParametersManager,
 		WalletService:           walletService,
 		Deserializer:            deserializer,
+		Metrics:                 metrics,
 	}
 }
 
@@ -96,6 +99,10 @@ func (s *IssueService) Issue(issuerIdentity driver.Identity, tokenType string, v
 		ReceiversAuditInfos: auditInfo,
 		ExtraSigners:        nil,
 	}
+
+	// metrics
+	s.Metrics.AddIssue(tokenType)
+
 	return action, meta, err
 }
 
