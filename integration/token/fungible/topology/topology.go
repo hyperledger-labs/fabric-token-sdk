@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
@@ -338,6 +339,15 @@ func Topology(opts common.Opts) []api.Topology {
 
 	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
+	}
+	if opts.Monitoring {
+		monitoringTopology := monitoring.NewTopology()
+		monitoringTopology.EnableHyperledgerExplorer()
+		monitoringTopology.EnablePrometheusGrafana()
+		return []api.Topology{
+			backendNetwork, tokenTopology, fscTopology,
+			monitoringTopology,
+		}
 	}
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}
 }

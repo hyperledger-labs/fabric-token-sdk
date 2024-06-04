@@ -7,9 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package auditdb
 
 import (
+	"slices"
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -253,15 +255,23 @@ func (d *DB) GetTokenRequest(txID string) ([]byte, error) {
 // AcquireLocks acquires locks for the passed anchor and enrollment ids.
 // This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
 func (d *DB) AcquireLocks(anchor string, eIDs ...string) error {
-	dedup := deduplicate(eIDs)
-	logger.Debugf("Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
+	// This implementation allows concurrent calls to AcquireLocks such that if two
+	// or more calls involve non-overlapping enrollment IDs, both calls will succeed.
+	// To achieve this, we first remove any duplicates from the list of enrollment IDs.
+	// Next, we sort this list. Sorting ensures that two concurrent invocations of
+	// AcquireLocks with intersecting sets of enrollment IDs do not result in a deadlock.
+	// For example, consider a scenario where one invocation attempts to lock (Alice, Bob)
+	// and another tries to lock (Bob, Alice).
+	// Without sorting, these two calls could deadlock. Sorting prevents this issue.
+	dedup := deduplicateAndSort(eIDs)
+	logger.Infof("Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
 	d.eIDsLocks.LoadOrStore(anchor, dedup)
 	for _, id := range dedup {
 		lock, _ := d.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
 		lock.(*sync.RWMutex).Lock()
-		logger.Debugf("Acquire locks for [%s:%v] enrollment id done", anchor, id)
+		logger.Infof("Acquire locks for [%s:%v] enrollment id done", anchor, id)
 	}
-	logger.Debugf("Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
+	logger.Infof("Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
 	return nil
 }
 
@@ -287,15 +297,9 @@ func (d *DB) ReleaseLocks(anchor string) {
 
 }
 
-// deduplicate removes duplicate entries from a slice
-func deduplicate(source []string) []string {
-	support := make(map[string]bool)
-	var res []string
-	for _, item := range source {
-		if _, value := support[item]; !value {
-			support[item] = true
-			res = append(res, item)
-		}
-	}
-	return res
+// deduplicateAndSort removes duplicate entries from a slice and sort it
+func deduplicateAndSort(source []string) []string {
+	slide := collections.NewSet(source...).ToSlice()
+	slices.Sort(slide)
+	return slide
 }
