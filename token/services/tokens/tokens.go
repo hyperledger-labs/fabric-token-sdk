@@ -10,7 +10,6 @@ import (
 	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -34,7 +33,7 @@ type Authorization interface {
 
 type Issued interface {
 	// Issued returns true if the passed issuer issued the passed token
-	Issued(tms *token.ManagementService, issuer view.Identity, tok *token2.Token) bool
+	Issued(tms *token.ManagementService, issuer token.Identity, tok *token2.Token) bool
 }
 
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider

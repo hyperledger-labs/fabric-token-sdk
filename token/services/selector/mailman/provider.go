@@ -10,7 +10,6 @@ import (
 	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/pkg/errors"
@@ -55,7 +54,7 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	walletIDByRawIdentity := func(rawIdentity []byte) string {
 		w := tms.WalletManager().OwnerWallet(rawIdentity)
 		if w == nil {
-			logger.Errorf("wallet not found for identity [%s][%s]", view2.Identity(rawIdentity), debug.Stack())
+			logger.Errorf("wallet not found for identity [%s][%s]", token.Identity(rawIdentity), debug.Stack())
 			return ""
 		}
 		return w.ID()

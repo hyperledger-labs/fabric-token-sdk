@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 )
@@ -47,7 +47,7 @@ func NewWalletDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.Wall
 	return walletDB, nil
 }
 
-func (db *WalletDB) GetWalletID(identity view.Identity, roleID int) (driver.WalletID, error) {
+func (db *WalletDB) GetWalletID(identity token.Identity, roleID int) (driver.WalletID, error) {
 	idHash := identity.Hash()
 	result, err := QueryUnique[driver.WalletID](db.db,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND role_id=$2", db.table.Wallets),
@@ -83,7 +83,7 @@ func (db *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
 	return walletIDs, nil
 }
 
-func (db *WalletDB) StoreIdentity(identity view.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
+func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
 	if db.IdentityExists(identity, wID, roleID) {
 		return nil
 	}
@@ -100,7 +100,7 @@ func (db *WalletDB) StoreIdentity(identity view.Identity, eID string, wID driver
 	return nil
 }
 
-func (db *WalletDB) LoadMeta(identity view.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
+func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.Hash()
 	result, err := QueryUnique[[]byte](db.db,
 		fmt.Sprintf("SELECT meta FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
@@ -113,7 +113,7 @@ func (db *WalletDB) LoadMeta(identity view.Identity, wID driver.WalletID, roleID
 	return result, nil
 }
 
-func (db *WalletDB) IdentityExists(identity view.Identity, wID driver.WalletID, roleID int) bool {
+func (db *WalletDB) IdentityExists(identity token.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.Hash()
 	result, err := QueryUnique[driver.WalletID](db.db,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),

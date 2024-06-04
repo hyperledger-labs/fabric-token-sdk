@@ -9,8 +9,7 @@ package driver
 import (
 	"errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 // TokenTransactionDB defines the interface for a token transaction database.
@@ -80,7 +79,7 @@ type TransactionDB interface {
 
 type TransactionEndorsementAckDB interface {
 	// AddTransactionEndorsementAck records the signature of a given endorser for a given transaction
-	AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) error
+	AddTransactionEndorsementAck(txID string, endorser token.Identity, sigma []byte) error
 
 	// GetTransactionEndorsementAcks returns the endorsement signatures for the given transaction id
 	GetTransactionEndorsementAcks(txID string) (map[string][]byte, error)
@@ -89,7 +88,7 @@ type TransactionEndorsementAckDB interface {
 // TTXDBDriver is the interface for a token transaction db driver
 type TTXDBDriver interface {
 	// Open opens a token transaction database
-	Open(cp ConfigProvider, tmsID token2.TMSID) (TokenTransactionDB, error)
+	Open(cp ConfigProvider, tmsID token.TMSID) (TokenTransactionDB, error)
 }
 
 var (

@@ -14,7 +14,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -105,7 +105,7 @@ func (db *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMe
 	query := fmt.Sprintf("INSERT INTO %s (identity_hash, identity, identity_audit_info, token_metadata, token_metadata_audit_info) VALUES ($1, $2, $3, $4, $5)", db.table.IdentityInfo)
 	logger.Debug(query)
 
-	h := view.Identity(id).String()
+	h := token.Identity(id).String()
 	_, err := db.db.Exec(query, h, id, identityAudit, tokenMetadata, tokenMetadataAudit)
 	if err != nil {
 		// does the record already exists?
@@ -122,7 +122,7 @@ func (db *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMe
 }
 
 func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
-	h := view.Identity(id).String()
+	h := token.Identity(id).String()
 	query := fmt.Sprintf("SELECT identity_audit_info FROM %s WHERE identity_hash = $1", db.table.IdentityInfo)
 	logger.Debug(query)
 	row := db.db.QueryRow(query, h)
@@ -138,7 +138,7 @@ func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 }
 
 func (db *IdentityDB) GetTokenInfo(id []byte) ([]byte, []byte, error) {
-	h := view.Identity(id).String()
+	h := token.Identity(id).String()
 	query := fmt.Sprintf("SELECT token_metadata, token_metadata_audit_info FROM %s WHERE identity_hash = $1", db.table.IdentityInfo)
 	logger.Debug(query)
 	row := db.db.QueryRow(query, h)
@@ -156,7 +156,7 @@ func (db *IdentityDB) GetTokenInfo(id []byte) ([]byte, []byte, error) {
 
 func (db *IdentityDB) StoreSignerInfo(id, info []byte) error {
 	query := fmt.Sprintf("INSERT INTO %s (identity_hash, identity, info) VALUES ($1, $2, $3)", db.table.Signers)
-	h := view.Identity(id).String()
+	h := token.Identity(id).String()
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("store signer info [%s]: [%s][%s]", query, h, hash.Hashable(info))
 	}
@@ -176,7 +176,7 @@ func (db *IdentityDB) StoreSignerInfo(id, info []byte) error {
 }
 
 func (db *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
-	h := view.Identity(id).String()
+	h := token.Identity(id).String()
 
 	// is in cache?
 	db.singerInfoCacheMutex.RLock()
@@ -217,7 +217,7 @@ func (db *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
 }
 
 func (db *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
-	h := view.Identity(identity).String()
+	h := token.Identity(identity).String()
 	query := fmt.Sprintf("SELECT info FROM %s WHERE identity_hash = $1", db.table.Signers)
 	logger.Debug(query)
 	row := db.db.QueryRow(query, h)

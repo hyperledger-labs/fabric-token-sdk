@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
@@ -29,15 +28,15 @@ type IdentityConfiguration struct {
 
 type WalletDB interface {
 	// GetWalletID fetches a walletID that is bound to the identity passed
-	GetWalletID(identity view.Identity, roleID int) (WalletID, error)
+	GetWalletID(identity token.Identity, roleID int) (WalletID, error)
 	// GetWalletIDs fetches all walletID's that have been stored so far without duplicates
 	GetWalletIDs(roleID int) ([]WalletID, error)
 	// StoreIdentity binds an identity to a walletID and its metadata
-	StoreIdentity(identity view.Identity, eID string, wID WalletID, roleID int, meta []byte) error
+	StoreIdentity(identity token.Identity, eID string, wID WalletID, roleID int, meta []byte) error
 	// IdentityExists checks whether an identity-wallet binding has already been stored
-	IdentityExists(identity view.Identity, wID WalletID, roleID int) bool
+	IdentityExists(identity token.Identity, wID WalletID, roleID int) bool
 	// LoadMeta returns the metadata stored for a specific identity
-	LoadMeta(identity view.Identity, wID WalletID, roleID int) ([]byte, error)
+	LoadMeta(identity token.Identity, wID WalletID, roleID int) ([]byte, error)
 }
 
 type IdentityDB interface {
