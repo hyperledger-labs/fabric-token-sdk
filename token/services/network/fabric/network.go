@@ -38,6 +38,8 @@ const (
 	QueryPublicParamsFunction = "queryPublicParams"
 	QueryTokensFunctions      = "queryTokens"
 	AreTokensSpent            = "areTokensSpent"
+	maxRetries                = 3
+	retryWaitDuration         = 1 * time.Second
 )
 
 type NewVaultFunc = func(network, channel, namespace string) (vault.Vault, error)
@@ -515,7 +517,15 @@ func (t *FinalityListener) OnStatus(txID string, status int, message string) {
 	if err != nil {
 		panic(fmt.Sprintf("can't get query executor [%s]", txID))
 	}
-	tokenRequestHash, err := qe.GetState(t.namespace, key)
+
+	// Fetch the token request hash. Retry in case some other replica committed it shortly before
+	var tokenRequestHash []byte
+	var retries int
+	for tokenRequestHash, err = qe.GetState(t.namespace, key); err == nil && len(tokenRequestHash) == 0 && retries < maxRetries; tokenRequestHash, err = qe.GetState(t.namespace, key) {
+		logger.Debugf("did not find token request [%s]. retrying...", txID)
+		retries++
+		time.Sleep(retryWaitDuration)
+	}
 	if err != nil {
 		panic(fmt.Sprintf("can't get state [%s][%s]", txID, key))
 	}
