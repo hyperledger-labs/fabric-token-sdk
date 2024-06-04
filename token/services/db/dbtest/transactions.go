@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/test-go/testify/assert"
 )
@@ -903,7 +903,7 @@ func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
 	assert.NoError(t, err)
 	assert.Len(t, acks, n)
 	for i := 0; i < n; i++ {
-		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[view.Identity(fmt.Sprintf("alice_%d", i)).String()])
+		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("alice_%d", i)).String()])
 	}
 }
 

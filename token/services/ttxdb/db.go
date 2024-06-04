@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -272,7 +271,7 @@ func (d *DB) GetTokenRequest(txID string) ([]byte, error) {
 }
 
 // AddTransactionEndorsementAck records the signature of a given endorser for a given transaction
-func (d *DB) AddTransactionEndorsementAck(txID string, id view2.Identity, sigma []byte) error {
+func (d *DB) AddTransactionEndorsementAck(txID string, id token.Identity, sigma []byte) error {
 	return d.db.AddTransactionEndorsementAck(txID, id, sigma)
 }
 

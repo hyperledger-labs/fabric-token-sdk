@@ -8,7 +8,6 @@ package tokens
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -113,7 +112,7 @@ func (t *transaction) AppendToken(
 	tokenOnLedger []byte,
 	tokenOnLedgerMetadata []byte,
 	ids []string,
-	issuer view.Identity,
+	issuer token.Identity,
 	precision uint64,
 	flags Flags,
 ) error {

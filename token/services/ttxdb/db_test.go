@@ -13,13 +13,11 @@ import (
 	"testing"
 	"time"
 
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
@@ -68,14 +66,14 @@ func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.DB) {
 	assert.NoError(t, err)
 	assert.Len(t, acks, n)
 	for i := 0; i < n; i++ {
-		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[view.Identity(fmt.Sprintf("alice_%d", i)).String()])
+		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("alice_%d", i)).String()])
 	}
 
 	acks, err = db2.GetTransactionEndorsementAcks("2")
 	assert.NoError(t, err)
 	assert.Len(t, acks, n)
 	for i := 0; i < n; i++ {
-		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[view.Identity(fmt.Sprintf("bob_%d", i)).String()])
+		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("bob_%d", i)).String()])
 	}
 }
 

@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 )
@@ -181,7 +181,7 @@ func (db *TransactionDB) QueryTokenRequests(params driver.QueryTokenRequestsPara
 	return &TokenRequestIterator{txs: rows}, nil
 }
 
-func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) (err error) {
+func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser token.Identity, sigma []byte) (err error) {
 	logger.Debugf("adding transaction endorse ack record [%s]", txID)
 
 	now := time.Now().UTC()
@@ -218,7 +218,7 @@ func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string]
 			}
 			return nil, errors.Wrapf(err, "error querying db")
 		}
-		acks[view.Identity(endorser).String()] = sigma
+		acks[token.Identity(endorser).String()] = sigma
 	}
 	if err = rows.Err(); err != nil {
 		return nil, err
