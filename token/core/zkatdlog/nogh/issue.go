@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"time"
+
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
@@ -63,10 +65,13 @@ func (s *IssueService) Issue(issuerIdentity driver.Identity, tokenType string, v
 		Signer:   signer,
 	}, pp)
 
+	start := time.Now()
 	action, zkOutputsMetadata, err := issuer.GenerateZKIssue(values, owners)
+	duration := time.Since(start)
 	if err != nil {
 		return nil, nil, err
 	}
+	s.Metrics.ObserveZKIssueDuration(duration)
 
 	var outputsMetadata [][]byte
 	for _, meta := range zkOutputsMetadata {

@@ -80,7 +80,7 @@ func (m *Metrics) NewGauge(opts GaugeOpts) Gauge {
 }
 
 func (m *Metrics) NewHistogram(opts HistogramOpts) Histogram {
-	return m.provider.NewHistogram(opts)
+	return &histogram{rootLabels: m.labels, Histogram: m.provider.NewHistogram(opts)}
 }
 
 type counter struct {
@@ -93,4 +93,16 @@ func (c *counter) With(labels ...string) Counter {
 	l = append(l, c.rootLabels...)
 	l = append(l, labels...)
 	return c.Counter.With(l...)
+}
+
+type histogram struct {
+	rootLabels []string
+	Histogram
+}
+
+func (c *histogram) With(labels ...string) Histogram {
+	l := make([]string, len(c.rootLabels)+len(labels))
+	l = append(l, c.rootLabels...)
+	l = append(l, labels...)
+	return c.Histogram.With(l...)
 }
