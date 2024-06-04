@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package metrics
 
 import (
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
@@ -25,28 +27,64 @@ type (
 )
 
 var (
-	issues = metrics.CounterOpts{
+	issuesOpts = metrics.CounterOpts{
 		Namespace:    "token_sdk",
 		Name:         "issue_operations",
 		Help:         "The number of issue operations",
 		LabelNames:   []string{"network", "channel", "namespace", "token_type"},
 		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}.%{token_type}",
 	}
-	transfers = metrics.CounterOpts{
+	failedIssuesOpts = metrics.CounterOpts{
+		Namespace:    "token_sdk",
+		Name:         "failed_issue_operations",
+		Help:         "The number of failed issue operations",
+		LabelNames:   []string{"network", "channel", "namespace", "token_type"},
+		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}.%{token_type}",
+	}
+	transfersOpts = metrics.CounterOpts{
 		Namespace:    "token_sdk",
 		Name:         "transfer_operations",
 		Help:         "The number of transfer operations",
 		LabelNames:   []string{"network", "channel", "namespace"},
 		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
 	}
+	failedTransfersOpts = metrics.CounterOpts{
+		Namespace:    "token_sdk",
+		Name:         "failed_transfer_operations",
+		Help:         "The number of failed transfer operations",
+		LabelNames:   []string{"network", "channel", "namespace"},
+		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
+	}
+	auditsOpts = metrics.CounterOpts{
+		Namespace:    "token_sdk",
+		Name:         "audit_operations",
+		Help:         "The number of audit operations",
+		LabelNames:   []string{"network", "channel", "namespace"},
+		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
+	}
+	auditDurationOpts = metrics.HistogramOpts{
+		Namespace:    "token_sdk",
+		Name:         "audit_duration",
+		Help:         "Duration of an audit operation",
+		LabelNames:   []string{"network", "channel", "namespace"},
+		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
+	}
 )
+
+var GetProvider = metrics.GetProvider
 
 type Metrics struct {
 	provider Provider
 	labels   []string
 
-	Issues    Counter
-	Transfers Counter
+	Issues       Counter
+	FailedIssues Counter
+
+	Transfers       Counter
+	FailedTransfers Counter
+
+	Audits        Counter
+	AuditDuration Histogram
 }
 
 func New(provider Provider, tmsID token.TMSID) *Metrics {
@@ -58,17 +96,39 @@ func New(provider Provider, tmsID token.TMSID) *Metrics {
 			"namespace", tmsID.Namespace,
 		},
 	}
-	m.Issues = m.NewCounter(issues)
-	m.Transfers = m.NewCounter(transfers)
+	m.Issues = m.NewCounter(issuesOpts)
+	m.FailedIssues = m.NewCounter(failedIssuesOpts)
+
+	m.Transfers = m.NewCounter(transfersOpts)
+	m.FailedTransfers = m.NewCounter(failedTransfersOpts)
+
+	m.Audits = m.NewCounter(auditsOpts)
+	m.AuditDuration = m.NewHistogram(auditDurationOpts)
 	return m
 }
 
-func (m *Metrics) AddIssue(tokenType string) {
-	m.Issues.With("token_type", tokenType).Add(1)
+func (m *Metrics) AddIssue(tokenType string, noErr bool) {
+	if noErr {
+		m.Issues.With("token_type", tokenType).Add(1)
+		return
+	}
+	m.FailedIssues.With("token_type", tokenType).Add(1)
 }
 
-func (m *Metrics) AddTransfer() {
-	m.Transfers.With().Add(1)
+func (m *Metrics) AddTransfer(noErr bool) {
+	if noErr {
+		m.Transfers.With().Add(1)
+		return
+	}
+	m.FailedTransfers.With().Add(1)
+}
+
+func (m *Metrics) AddAudit() {
+	m.Audits.With().Add(1)
+}
+
+func (m *Metrics) ObserveAuditDuration(duration time.Duration) {
+	m.AuditDuration.With().Observe(float64(duration.Milliseconds()))
 }
 
 func (m *Metrics) NewCounter(opts CounterOpts) Counter {

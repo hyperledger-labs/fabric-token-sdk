@@ -105,9 +105,6 @@ func (s *IssueService) Issue(issuerIdentity driver.Identity, tokenType string, v
 		ExtraSigners:        nil,
 	}
 
-	// metrics
-	s.Metrics.AddIssue(tokenType)
-
 	return action, meta, err
 }
 
