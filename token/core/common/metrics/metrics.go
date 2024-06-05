@@ -14,61 +14,13 @@ import (
 )
 
 type (
-	CounterOpts = metrics.CounterOpts
-	Counter     = metrics.Counter
-
-	GaugeOpts = metrics.GaugeOpts
-	Gauge     = metrics.Gauge
-
+	CounterOpts   = metrics.CounterOpts
+	Counter       = metrics.Counter
+	GaugeOpts     = metrics.GaugeOpts
+	Gauge         = metrics.Gauge
 	HistogramOpts = metrics.HistogramOpts
 	Histogram     = metrics.Histogram
-
-	Provider = metrics.Provider
-)
-
-var (
-	issuesOpts = metrics.CounterOpts{
-		Namespace:    "token_sdk",
-		Name:         "issue_operations",
-		Help:         "The number of issue operations",
-		LabelNames:   []string{"network", "channel", "namespace", "token_type"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}.%{token_type}",
-	}
-	failedIssuesOpts = metrics.CounterOpts{
-		Namespace:    "token_sdk",
-		Name:         "failed_issue_operations",
-		Help:         "The number of failed issue operations",
-		LabelNames:   []string{"network", "channel", "namespace", "token_type"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}.%{token_type}",
-	}
-	transfersOpts = metrics.CounterOpts{
-		Namespace:    "token_sdk",
-		Name:         "transfer_operations",
-		Help:         "The number of transfer operations",
-		LabelNames:   []string{"network", "channel", "namespace"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
-	}
-	failedTransfersOpts = metrics.CounterOpts{
-		Namespace:    "token_sdk",
-		Name:         "failed_transfer_operations",
-		Help:         "The number of failed transfer operations",
-		LabelNames:   []string{"network", "channel", "namespace"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
-	}
-	auditsOpts = metrics.CounterOpts{
-		Namespace:    "token_sdk",
-		Name:         "audit_operations",
-		Help:         "The number of audit operations",
-		LabelNames:   []string{"network", "channel", "namespace"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
-	}
-	auditDurationOpts = metrics.HistogramOpts{
-		Namespace:    "token_sdk",
-		Name:         "audit_duration",
-		Help:         "Duration of an audit operation",
-		LabelNames:   []string{"network", "channel", "namespace"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
-	}
+	Provider      = metrics.Provider
 )
 
 var GetProvider = metrics.GetProvider
@@ -77,13 +29,16 @@ type Metrics struct {
 	provider Provider
 	labels   []string
 
-	Issues       Counter
-	FailedIssues Counter
+	Issues        Counter
+	FailedIssues  Counter
+	IssueDuration Histogram
 
-	Transfers       Counter
-	FailedTransfers Counter
+	Transfers        Counter
+	FailedTransfers  Counter
+	TransferDuration Histogram
 
 	Audits        Counter
+	FailedAudits  Counter
 	AuditDuration Histogram
 }
 
@@ -98,11 +53,14 @@ func New(provider Provider, tmsID token.TMSID) *Metrics {
 	}
 	m.Issues = m.NewCounter(issuesOpts)
 	m.FailedIssues = m.NewCounter(failedIssuesOpts)
+	m.IssueDuration = m.NewHistogram(issueDurationOpts)
 
 	m.Transfers = m.NewCounter(transfersOpts)
 	m.FailedTransfers = m.NewCounter(failedTransfersOpts)
+	m.TransferDuration = m.NewHistogram(transferDurationOpts)
 
 	m.Audits = m.NewCounter(auditsOpts)
+	m.FailedAudits = m.NewCounter(failedAuditsOpts)
 	m.AuditDuration = m.NewHistogram(auditDurationOpts)
 	return m
 }
@@ -115,6 +73,10 @@ func (m *Metrics) AddIssue(tokenType string, noErr bool) {
 	m.FailedIssues.With("token_type", tokenType).Add(1)
 }
 
+func (m *Metrics) ObserveIssueDuration(duration time.Duration) {
+	m.IssueDuration.Observe(float64(duration.Milliseconds()))
+}
+
 func (m *Metrics) AddTransfer(noErr bool) {
 	if noErr {
 		m.Transfers.With().Add(1)
@@ -123,8 +85,16 @@ func (m *Metrics) AddTransfer(noErr bool) {
 	m.FailedTransfers.With().Add(1)
 }
 
-func (m *Metrics) AddAudit() {
-	m.Audits.With().Add(1)
+func (m *Metrics) ObserveTransferDuration(duration time.Duration) {
+	m.TransferDuration.Observe(float64(duration.Milliseconds()))
+}
+
+func (m *Metrics) AddAudit(noErr bool) {
+	if noErr {
+		m.Audits.With().Add(1)
+		return
+	}
+	m.FailedAudits.With().Add(1)
 }
 
 func (m *Metrics) ObserveAuditDuration(duration time.Duration) {
