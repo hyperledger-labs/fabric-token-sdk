@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"time"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
@@ -66,19 +64,15 @@ func (s *AuditorService) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRe
 		nil,
 		math.Curves[pp.Curve],
 	)
-	start := time.Now()
 	err := auditor.Check(
 		tokenRequest,
 		tokenRequestMetadata,
 		inputTokens,
 		txID,
 	)
-	duration := time.Since(start)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to perform auditor check")
 	}
-	s.Metrics.AddAudit()
-	s.Metrics.ObserveAuditDuration(duration)
 
 	return nil
 }

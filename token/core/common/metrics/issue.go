@@ -6,7 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 package metrics
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+import (
+	"time"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+)
 
 type ObservableIssueService struct {
 	IssueService driver.IssueService
@@ -18,7 +22,10 @@ func NewObservableIssueService(issueService driver.IssueService, metrics *Metric
 }
 
 func (o *ObservableIssueService) Issue(issuerIdentity driver.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
+	start := time.Now()
 	action, meta, err := o.IssueService.Issue(issuerIdentity, tokenType, values, owners, opts)
+	duration := time.Since(start)
+	o.Metrics.ObserveIssueDuration(duration)
 	o.Metrics.AddIssue(tokenType, err == nil)
 	return action, meta, err
 }

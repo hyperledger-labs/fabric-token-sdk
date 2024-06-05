@@ -172,9 +172,6 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 		ReceiverIsSender:   receiverIsSender,
 	}
 
-	// metrics
-	s.Metrics.AddTransfer(false)
-
 	return zkTransfer, metadata, nil
 }
 
