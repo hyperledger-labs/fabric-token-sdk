@@ -56,25 +56,25 @@ func (i *IssueAction) NumOutputs() int {
 
 // GetOutputs returns the OutputTokens in IssueAction
 func (i *IssueAction) GetOutputs() []driver.Output {
-	var res []driver.Output
-	for _, token := range i.OutputTokens {
-		res = append(res, token)
+	res := make([]driver.Output, len(i.OutputTokens))
+	for i, token := range i.OutputTokens {
+		res[i] = token
 	}
 	return res
 }
 
 // GetSerializedOutputs returns the serialization of OutputTokens
 func (i *IssueAction) GetSerializedOutputs() ([][]byte, error) {
-	var res [][]byte
-	for _, token := range i.OutputTokens {
+	res := make([][]byte, len(i.OutputTokens))
+	for i, token := range i.OutputTokens {
 		if token == nil {
 			return nil, errors.New("invalid issue: there is a nil output")
 		}
-		r, err := token.Serialize()
+		var err error
+		res[i], err = token.Serialize()
 		if err != nil {
 			return nil, err
 		}
-		res = append(res, r)
 	}
 	return res, nil
 }
@@ -164,21 +164,20 @@ func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, pp *crypto.Publi
 	commitmentToType.Add(pp.PedersenGenerators[2].Mul(typeBF))
 	p.SameType = NewSameTypeProver(tw[0].Type, typeBF, commitmentToType, pp.PedersenGenerators, c)
 
-	var values []uint64
-	var blindingFactors []*math.Zr
+	values := make([]uint64, len(tw))
+	blindingFactors := make([]*math.Zr, len(tw))
 	for i := 0; i < len(tw); i++ {
 		if tw[i] == nil || tw[i].BlindingFactor == nil {
 			return nil, errors.New("invalid token witness")
 		}
-		tw[i] = tw[i].Clone()
-		values = append(values, tw[i].Value)
-		blindingFactors = append(blindingFactors, c.ModSub(tw[i].BlindingFactor, p.SameType.blindingFactor, c.GroupOrder))
+		//tw[i] = tw[i].Clone()
+		values[i] = tw[i].Value
+		blindingFactors[i] = c.ModSub(tw[i].BlindingFactor, p.SameType.blindingFactor, c.GroupOrder)
 	}
-	var coms []*math.G1
+	coms := make([]*math.G1, len(tokens))
 	for i := 0; i < len(tokens); i++ {
-		token := tokens[i].Copy()
-		token.Sub(commitmentToType)
-		coms = append(coms, token)
+		coms[i] = tokens[i].Copy()
+		coms[i].Sub(commitmentToType)
 	}
 	// range prover takes commitments tokens[i]/commitmentToType
 	p.RangeCorrectness = rp.NewRangeCorrectnessProver(coms, values, blindingFactors, pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
@@ -237,11 +236,10 @@ func (v *Verifier) Verify(proof []byte) error {
 	}
 	// verify RangeCorrectness proof
 	commitmentToType := tp.SameType.CommitmentToType.Copy()
-	var coms []*math.G1
+	coms := make([]*math.G1, len(v.SameType.Tokens))
 	for i := 0; i < len(v.SameType.Tokens); i++ {
-		token := v.SameType.Tokens[i].Copy()
-		token.Sub(commitmentToType)
-		coms = append(coms, token)
+		coms[i] = v.SameType.Tokens[i].Copy()
+		coms[i].Sub(commitmentToType)
 	}
 	v.RangeCorrectness.Commitments = coms
 	err = v.RangeCorrectness.Verify(tp.RangeCorrectness)

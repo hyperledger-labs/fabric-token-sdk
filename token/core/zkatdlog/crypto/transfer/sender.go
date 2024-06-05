@@ -180,9 +180,9 @@ func (t *Action) NumOutputs() int {
 
 // GetOutputs returns the outputs in the Action
 func (t *Action) GetOutputs() []driver.Output {
-	var res []driver.Output
-	for _, outputToken := range t.OutputTokens {
-		res = append(res, outputToken)
+	res := make([]driver.Output, len(t.OutputTokens))
+	for i, outputToken := range t.OutputTokens {
+		res[i] = outputToken
 	}
 	return res
 }
@@ -214,13 +214,13 @@ func (t *Action) Deserialize(raw []byte) error {
 
 // GetSerializedOutputs returns the outputs in the Action serialized
 func (t *Action) GetSerializedOutputs() ([][]byte, error) {
-	var res [][]byte
-	for _, token := range t.OutputTokens {
-		r, err := token.Serialize()
+	res := make([][]byte, len(t.OutputTokens))
+	var err error
+	for i, token := range t.OutputTokens {
+		res[i], err = token.Serialize()
 		if err != nil {
 			return nil, err
 		}
-		res = append(res, r)
 	}
 	return res, nil
 }
