@@ -8,6 +8,7 @@ package common
 
 import (
 	"encoding/hex"
+	"encoding/json"
 
 	math "github.com/IBM/mathlib"
 	"github.com/pkg/errors"
@@ -22,18 +23,16 @@ type G1Array []*math.G1
 
 // Bytes serialize an array of G1 elements
 func (a *G1Array) Bytes() ([]byte, error) {
-
-	var raw []byte
-	for _, e := range []*math.G1(*a) {
+	raw := make([][]byte, 2*len([]*math.G1(*a)))
+	for i, e := range []*math.G1(*a) {
 		if e == nil {
 			return nil, errors.Errorf("failed to marshal array of G1")
 		}
 		st := hex.EncodeToString(e.Bytes())
-		raw = append(raw, []byte(Separator)...)
-		raw = append(raw, []byte(st)...)
-
+		raw[2*i] = []byte(st)
+		raw[2*i+1] = []byte(Separator)
 	}
-	return raw, nil
+	return json.Marshal(raw)
 }
 
 // GetG1Array takes a series of G1 elements and returns the corresponding array

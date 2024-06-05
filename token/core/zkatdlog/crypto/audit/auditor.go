@@ -344,6 +344,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 		if len(ia.OutputTokens) != len(md.ReceiversAuditInfos) || len(ia.OutputTokens) != len(md.OutputsMetadata) {
 			return nil, errors.Errorf("number of output does not match number of provided metadata")
 		}
+		outputs[k] = make([]*AuditableToken, len(md.ReceiversAuditInfos))
 		for i := 0; i < len(md.ReceiversAuditInfos); i++ {
 			ti := &token.Metadata{}
 			err := json.Unmarshal(md.OutputsMetadata[i], ti)
@@ -360,7 +361,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 			if err != nil {
 				return nil, err
 			}
-			outputs[k] = append(outputs[k], ao)
+			outputs[k][i] = ao
 		}
 	}
 	return outputs, nil
@@ -381,6 +382,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 		if len(tr.SenderAuditInfos) != len(inputs[k]) {
 			return nil, nil, errors.Errorf("number of inputs does not match the number of senders [%d]!=[%d]", len(tr.SenderAuditInfos), len(inputs[k]))
 		}
+		auditableInputs[k] = make([]*AuditableToken, len(tr.SenderAuditInfos))
 		for i := 0; i < len(tr.SenderAuditInfos); i++ {
 			var err error
 			if inputs[k][i] == nil {
@@ -390,7 +392,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 			if err != nil {
 				return nil, nil, err
 			}
-			auditableInputs[k] = append(auditableInputs[k], ai)
+			auditableInputs[k][i] = ai
 		}
 		ta := &transfer.Action{}
 		err := json.Unmarshal(transfers[k], ta)
@@ -403,6 +405,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 		if len(ta.OutputTokens) != len(tr.OutputAuditInfos) {
 			return nil, nil, errors.Errorf("number of outputs does not match the number of output audit info")
 		}
+		outputs[k] = make([]*AuditableToken, len(tr.ReceiverAuditInfos))
 		for i := 0; i < len(tr.ReceiverAuditInfos); i++ {
 			ti := &token.Metadata{}
 			err := json.Unmarshal(tr.OutputsMetadata[i], ti)
@@ -418,7 +421,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 			if err != nil {
 				return nil, nil, err
 			}
-			outputs[k] = append(outputs[k], ao)
+			outputs[k][i] = ao
 		}
 	}
 	return auditableInputs, outputs, nil
