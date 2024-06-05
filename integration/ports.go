@@ -41,6 +41,11 @@ var AllTestTypes = []*InfrastructureType{
 		CommType:          fsc.WebSocket,
 		ReplicationFactor: token.None,
 	},
+	{
+		Label:             ginkgo.Label("replicas"),
+		CommType:          fsc.WebSocket,
+		ReplicationFactor: 3,
+	},
 }
 
 const (
