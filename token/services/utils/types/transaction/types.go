@@ -4,8 +4,9 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package utils
+package transaction
 
 type (
-	TxID = string
+	// ID models the transaction identifier's type
+	ID = string
 )

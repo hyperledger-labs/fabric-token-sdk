@@ -10,10 +10,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -178,9 +177,9 @@ type TokenDBDriver interface {
 // - unlock tokens that were locked by a process that exited unexpectedly
 type TokenLockDB interface {
 	// Lock locks a specific token for the consumer TX
-	Lock(tokenID *token.ID, consumerTxID utils.TxID) error
+	Lock(tokenID *token.ID, consumerTxID transaction.ID) error
 	// UnlockByTxID unlocks all tokens locked by the consumer TX
-	UnlockByTxID(consumerTxID utils.TxID) error
+	UnlockByTxID(consumerTxID transaction.ID) error
 }
 
 // TokenLockDBDriver is the interface for a token database driver
