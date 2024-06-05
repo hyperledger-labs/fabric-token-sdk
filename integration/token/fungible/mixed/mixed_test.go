@@ -8,8 +8,9 @@ package mixed
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fall"
@@ -18,16 +19,23 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	Describe("Fungible with Auditor ne Issuer", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, StartPortDlog, Topology(common.Opts{
-			CommType:        fsc.LibP2P,
-			FSCLogSpec:      "",
-			SDKs:            []api2.SDK{&fabric3.SDK{}, &fall.SDK{}},
-			ReplicationOpts: opts,
-		}))
-		BeforeEach(ts.Setup)
-		AfterEach(ts.TearDown)
-		It("succeeded", func() { fungible.TestMixed(ts.II, selector) })
-	})
+	for _, t := range integration.AllTestTypes {
+		Describe("Fungible with Auditor ne Issuer", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", func() { fungible.TestMixed(ts.II, selector) })
+		})
+	}
 })
+
+func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
+	opts, selector := token2.NewReplicationOptions(factor, names...)
+	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, Topology(common.Opts{
+		CommType:        commType,
+		FSCLogSpec:      "",
+		SDKs:            []api.SDK{&fabric3.SDK{}, &fall.SDK{}},
+		ReplicationOpts: opts,
+	}))
+	return ts, selector
+}

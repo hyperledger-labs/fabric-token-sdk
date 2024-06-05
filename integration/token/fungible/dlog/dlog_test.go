@@ -13,8 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
+	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
@@ -26,135 +26,64 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+const None = 0
+const (
+	Aries = 1 << iota
+	AuditorAsIssuer
+	NoAuditor
+	HSM
+	WebEnabled
+)
+
 var _ = Describe("EndToEnd", func() {
-	Describe("T1 Fungible with Auditor ne Issuer", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
-			common.Opts{
-				Backend:         "fabric",
-				CommType:        fsc.LibP2P,
-				TokenSDKDriver:  "dlog",
-				Aries:           true,
-				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				ReplicationOpts: opts,
-			},
-		))
-		BeforeEach(ts.Setup)
-		AfterEach(ts.TearDown)
-
-		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true, selector)
+	for _, t := range integration2.AllTestTypes {
+		Describe("T1 Fungible with Auditor ne Issuer", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
 		})
 
-	})
-
-	Describe("Extras", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
-			common.Opts{
-				Backend:         "fabric",
-				CommType:        fsc.LibP2P,
-				TokenSDKDriver:  "dlog",
-				Aries:           true,
-				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				ReplicationOpts: opts,
-				WebEnabled:      true, // Needed for the Remote Wallet with websockets
-			},
-		))
-		// notice that fabric-ca does not support yet aries
-		BeforeEach(ts.Setup)
-		AfterEach(ts.TearDown)
-
-		It("Update public params", func() {
-			tms := fungible.GetTMS(ts.II, "default")
-			fungible.TestPublicParamsUpdate(ts.II, "newAuditor", PrepareUpdatedPublicParams(ts.II, "newAuditor", tms), tms, false, selector)
+		Describe("Extras with websockets and replicas", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, Aries|WebEnabled, t.ReplicationFactor, "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("Update public params", Label("T2"), func() {
+				fungible.TestPublicParamsUpdate(ts.II, "newAuditor", PrepareUpdatedPublicParams(ts.II, "newAuditor", "default"), "default", false, selector)
+			})
+			It("Test Identity Revocation", Label("T3"), func() { fungible.TestRevokeIdentity(ts.II, "auditor", selector) })
+			It("Test Remote Wallet (GRPC)", Label("T4"), func() { fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, false) })
+			It("Test Remote Wallet (WebSocket)", Label("T5"), func() { fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, true) })
 		})
 
-		It("Test Identity Revocation", func() {
-			fungible.RegisterAuditor(ts.II, "auditor", nil)
-			rId := fungible.GetRevocationHandle(ts.II, "bob")
-			fungible.TestRevokeIdentity(ts.II, "auditor", rId, selector)
+		Describe("Fungible with Auditor = Issuer", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, Aries|AuditorAsIssuer, t.ReplicationFactor, "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T6"), func() { fungible.TestAll(ts.II, "issuer", nil, true, selector) })
+			It("Update public params", Label("T7"), func() {
+				fungible.TestPublicParamsUpdate(ts.II, "newIssuer", PrepareUpdatedPublicParams(ts.II, "newIssuer", "default"), "default", true, selector)
+			})
 		})
 
-		It("Test Remote Wallet (GRPC)", func() {
-			fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, false)
+		Describe("Fungible with Auditor ne Issuer + Fabric CA", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, None, t.ReplicationFactor, "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T8"), func() { fungible.TestAll(ts.II, "auditor", nil, false, selector) })
 		})
 
-		It("Test Remote Wallet (WebSocket)", func() {
-			fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, true)
+		Describe("Malicious Transactions", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, Aries|NoAuditor, t.ReplicationFactor, "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("Malicious Transactions", Label("T9"), func() { fungible.TestMaliciousTransactions(ts.II, selector) })
 		})
-	})
-
-	Describe("T2 Fungible with Auditor = Issuer", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
-			common.Opts{
-				Backend:         "fabric",
-				CommType:        fsc.LibP2P,
-				TokenSDKDriver:  "dlog",
-				Aries:           true,
-				AuditorAsIssuer: true,
-				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				ReplicationOpts: opts,
-			},
-		))
-		BeforeEach(ts.Setup)
-		AfterEach(ts.TearDown)
-
-		It("T2.1 succeeded", func() {
-			fungible.TestAll(ts.II, "issuer", nil, true, selector)
-		})
-
-		It("T2.2 Update public params", func() {
-			tms := fungible.GetTMS(ts.II, "default")
-			fungible.TestPublicParamsUpdate(ts.II, "newIssuer", PrepareUpdatedPublicParams(ts.II, "newIssuer", tms), tms, true, selector)
-		})
-
-	})
-
-	Describe("T3 Fungible with Auditor ne Issuer + Fabric CA", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
-			common.Opts{
-				Backend:         "fabric",
-				CommType:        fsc.LibP2P,
-				TokenSDKDriver:  "dlog",
-				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				ReplicationOpts: opts,
-			},
-		))
-		BeforeEach(ts.Setup)
-		AfterEach(ts.TearDown)
-		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, false, selector)
-		})
-	})
-
-	Describe("T4 Malicious Transactions", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, StartPortDlog, topology2.Topology(
-			common.Opts{
-				Backend:         "fabric",
-				CommType:        fsc.LibP2P,
-				TokenSDKDriver:  "dlog",
-				Aries:           true,
-				NoAuditor:       true,
-				SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
-				ReplicationOpts: opts,
-			},
-		))
-		BeforeEach(ts.Setup)
-		AfterEach(ts.TearDown)
-
-		It("Malicious Transactions", func() {
-			fungible.TestMaliciousTransactions(ts.II, selector)
-		})
-
-	})
-
+	}
 })
 
-func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, tms *topology.TMS) []byte {
+func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, networkName string) []byte {
+	tms := fungible.GetTMS(network, networkName)
 	auditorId := fungible.GetAuditorIdentity(network, auditor)
 	issuerId := fungible.GetIssuerIdentity(network, "newIssuer.id1")
 	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
@@ -176,4 +105,23 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	Expect(err).NotTo(HaveOccurred())
 
 	return ppBytes
+}
+
+func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
+	opts, selector := token2.NewReplicationOptions(factor, names...)
+	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology2.Topology(
+		common.Opts{
+			Backend:         "fabric",
+			CommType:        commType,
+			TokenSDKDriver:  "dlog",
+			NoAuditor:       mask&NoAuditor > 0,
+			Aries:           mask&Aries > 0,
+			AuditorAsIssuer: mask&AuditorAsIssuer > 0,
+			HSM:             mask&HSM > 0,
+			WebEnabled:      mask&WebEnabled > 0,
+			SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
+			ReplicationOpts: opts,
+		},
+	))
+	return ts, selector
 }
