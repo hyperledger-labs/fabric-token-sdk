@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/onsi/ginkgo/v2"
 )
 
@@ -21,6 +23,25 @@ const (
 	portsPerNode  = 50
 	portsPerSuite = 10 * portsPerNode
 )
+
+type InfrastructureType struct {
+	Label             ginkgo.Labels
+	CommType          fsc.P2PCommunicationType
+	ReplicationFactor int
+}
+
+var AllTestTypes = []*InfrastructureType{
+	{
+		Label:             ginkgo.Label("libp2p"),
+		CommType:          fsc.LibP2P,
+		ReplicationFactor: token.None,
+	},
+	{
+		Label:             ginkgo.Label("websocket"),
+		CommType:          fsc.WebSocket,
+		ReplicationFactor: token.None,
+	},
+}
 
 const (
 	BasePort TestPortRange = basePort + portsPerSuite*iota

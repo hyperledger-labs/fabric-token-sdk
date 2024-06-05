@@ -23,87 +23,98 @@ import (
 )
 
 var _ = Describe("DLog end to end", func() {
-	BeforeEach(func() {
-		token.Drivers = append(token.Drivers, "dlog")
-	})
+	BeforeEach(func() { token.Drivers = append(token.Drivers, "dlog") })
 
-	Describe("HTLC Single Fabric Network", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLC.StartPortForNode, interop.HTLCSingleFabricNetworkTopology(common.Opts{
-			CommType:        fsc.LibP2P,
-			ReplicationOpts: opts,
-			TokenSDKDriver:  "dlog",
-			SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
-		}))
-		AfterEach(ts.TearDown)
-		BeforeEach(ts.Setup)
-		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II, selector) })
-	})
+	for _, t := range integration2.AllTestTypes {
+		Describe("HTLC Single Fabric Network", t.Label, func() {
+			ts, selector := newTestSuiteSingleFabric(t.CommType, t.ReplicationFactor, "alice", "bob")
+			AfterEach(ts.TearDown)
+			BeforeEach(ts.Setup)
+			It("Performed htlc-related basic operations", Label("T1"), func() { interop.TestHTLCSingleNetwork(ts.II, selector) })
+		})
 
-	Describe("HTLC Single Orion Network", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLCOrion.StartPortForNode, interop.HTLCSingleOrionNetworkTopology(common.Opts{
-			CommType:        fsc.LibP2P,
-			ReplicationOpts: opts,
-			TokenSDKDriver:  "dlog",
-			SDKs:            []api2.SDK{&orion3.SDK{}, &odlog.SDK{}},
-		}))
-		AfterEach(ts.TearDown)
-		BeforeEach(ts.Setup)
-		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II, selector) })
-	})
+		Describe("HTLC Single Orion Network", t.Label, func() {
+			ts, selector := newTestSuiteSingleOrion(t.CommType, t.ReplicationFactor, "alice", "bob")
+			AfterEach(ts.TearDown)
+			BeforeEach(ts.Setup)
+			It("Performed htlc-related basic operations", Label("T2"), func() { interop.TestHTLCSingleNetwork(ts.II, selector) })
+		})
 
-	Describe("HTLC Two Fabric Networks", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLCTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
-			CommType:        fsc.LibP2P,
-			ReplicationOpts: opts,
-			TokenSDKDriver:  "dlog",
-			SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
-		}))
-		AfterEach(ts.TearDown)
-		BeforeEach(ts.Setup)
-		It("Performed an htlc based atomic swap", func() { interop.TestHTLCTwoNetworks(ts.II, selector) })
-	})
+		Describe("HTLC Two Fabric Networks", t.Label, func() {
+			ts, selector := newTestSuiteTwoFabric(t.CommType, t.ReplicationFactor, "alice", "bob")
+			AfterEach(ts.TearDown)
+			BeforeEach(ts.Setup)
+			It("Performed an htlc based atomic swap", Label("T3"), func() { interop.TestHTLCTwoNetworks(ts.II, selector) })
+			It("Performed a fast exchange", Label("T4"), func() { interop.TestFastExchange(ts.II, selector) })
+		})
 
-	Describe("Fast Exchange Two Fabric Networks", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropFastExchangeTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
-			CommType:        fsc.LibP2P,
-			ReplicationOpts: opts,
-			TokenSDKDriver:  "dlog",
-			SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
-		}))
-		AfterEach(ts.TearDown)
-		BeforeEach(ts.Setup)
-		//TODO: AF Two tests go together
-		It("Performed a fast exchange", func() { interop.TestFastExchange(ts.II, selector) })
-	})
+		Describe("HTLC No Cross Claim Two Fabric Networks", t.Label, func() {
+			ts, selector := newTestSuiteNoCrossClaimFabric(t.CommType, t.ReplicationFactor, "alice", "bob")
+			AfterEach(ts.TearDown)
+			BeforeEach(ts.Setup)
+			It("Performed an htlc based atomic swap", Label("T5"), func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
+		})
 
-	Describe("HTLC No Cross Claim Two Fabric Networks", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimTopology(common.Opts{
-			CommType:        fsc.LibP2P,
-			ReplicationOpts: opts,
-			TokenSDKDriver:  "dlog",
-			SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
-		}))
-		AfterEach(ts.TearDown)
-		BeforeEach(ts.Setup)
-		It("Performed an htlc based atomic swap", func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
-	})
-
-	Describe("HTLC No Cross Claim with Orion and Fabric Networks", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, integration2.ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimWithOrionTopology(common.Opts{
-			CommType:        fsc.LibP2P,
-			ReplicationOpts: opts,
-			TokenSDKDriver:  "dlog",
-			SDKs:            []api2.SDK{&orion3.SDK{}, &fabric3.SDK{}, &fodlog.SDK{}},
-		}))
-		AfterEach(ts.TearDown)
-		BeforeEach(ts.Setup)
-		It("Performed an htlc based atomic swap", func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
-	})
-
+		Describe("HTLC No Cross Claim with Orion and Fabric Networks", t.Label, func() {
+			ts, selector := newTestSuiteNoCrossClaimOrion(t.CommType, t.ReplicationFactor, "alice", "bob")
+			AfterEach(ts.TearDown)
+			BeforeEach(ts.Setup)
+			It("Performed an htlc based atomic swap", Label("T6"), func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
+		})
+	}
 })
+
+func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
+	opts, selector := token2.NewReplicationOptions(factor, names...)
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropHTLC.StartPortForNode, interop.HTLCSingleFabricNetworkTopology(common.Opts{
+		CommType:        commType,
+		ReplicationOpts: opts,
+		TokenSDKDriver:  "dlog",
+		SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
+	}))
+	return ts, selector
+}
+
+func newTestSuiteSingleOrion(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
+	opts, selector := token2.NewReplicationOptions(factor, names...)
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropHTLCOrion.StartPortForNode, interop.HTLCSingleOrionNetworkTopology(common.Opts{
+		CommType:        commType,
+		ReplicationOpts: opts,
+		TokenSDKDriver:  "dlog",
+		SDKs:            []api2.SDK{&orion3.SDK{}, &odlog.SDK{}},
+	}))
+	return ts, selector
+}
+
+func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
+	opts, selector := token2.NewReplicationOptions(factor, names...)
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropHTLCTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
+		CommType:        commType,
+		ReplicationOpts: opts,
+		TokenSDKDriver:  "dlog",
+		SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
+	}))
+	return ts, selector
+}
+
+func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
+	opts, selector := token2.NewReplicationOptions(factor, names...)
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimTopology(common.Opts{
+		CommType:        commType,
+		ReplicationOpts: opts,
+		TokenSDKDriver:  "dlog",
+		SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
+	}))
+	return ts, selector
+}
+
+func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
+	opts, selector := token2.NewReplicationOptions(factor, names...)
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimWithOrionTopology(common.Opts{
+		CommType:        commType,
+		ReplicationOpts: opts,
+		TokenSDKDriver:  "dlog",
+		SDKs:            []api2.SDK{&orion3.SDK{}, &fabric3.SDK{}, &fodlog.SDK{}},
+	}))
+	return ts, selector
+}

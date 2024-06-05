@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
 	dvp2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp"
@@ -17,20 +18,24 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	Describe("Plain DVP", func() {
-		opts, selector := token2.NoReplication()
-		ts := token2.NewTestSuite(nil, StartPort, dvp2.Topology(dvp2.Opts{
-			CommType:       fsc.LibP2P,
-			TokenSDKDriver: "fabtoken",
-			FSCLogSpec:     "",
-			SDKs:           []api2.SDK{&fabric3.SDK{}, &ffabtoken.SDK{}},
-			Replication:    opts,
-		}))
-		BeforeEach(ts.Setup)
-		AfterEach(ts.TearDown)
-
-		It("succeeded", func() {
-			dvp2.TestAll(ts.II, selector)
+	for _, t := range integration.AllTestTypes {
+		Describe("Plain DVP", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "buyer", "seller")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", func() { dvp2.TestAll(ts.II, selector) })
 		})
-	})
+	}
 })
+
+func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
+	opts, selector := token2.NewReplicationOptions(factor, names...)
+	ts := token2.NewTestSuite(opts.SQLConfigs, StartPort, dvp2.Topology(dvp2.Opts{
+		CommType:       commType,
+		TokenSDKDriver: "fabtoken",
+		FSCLogSpec:     "",
+		SDKs:           []api2.SDK{&fabric3.SDK{}, &ffabtoken.SDK{}},
+		Replication:    opts,
+	}))
+	return ts, selector
+}
