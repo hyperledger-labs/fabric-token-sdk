@@ -8,7 +8,6 @@ package rp
 
 import (
 	"encoding/json"
-
 	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/pkg/errors"
