@@ -12,7 +12,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/pkg/errors"
 )
@@ -32,7 +31,6 @@ type Manager struct {
 	notifier      events.Publisher
 	authorization Authorization
 	issued        Issued
-	storage       storage.DBEntriesStorage
 
 	mutex  sync.Mutex
 	tokens map[string]*Tokens
@@ -45,7 +43,6 @@ func NewManager(
 	notifier events.Publisher,
 	authorization Authorization,
 	issued Issued,
-	storage storage.DBEntriesStorage,
 ) *Manager {
 	return &Manager{
 		tmsProvider:   tmsProvider,
@@ -53,7 +50,6 @@ func NewManager(
 		notifier:      notifier,
 		authorization: authorization,
 		issued:        issued,
-		storage:       storage,
 		tokens:        map[string]*Tokens{},
 	}
 }
@@ -67,10 +63,6 @@ func (cm *Manager) Tokens(tmsID token.TMSID) (*Tokens, error) {
 	logger.Debugf("get ttxdb for [%s]", id)
 	c, ok := cm.tokens[id]
 	if !ok {
-		// add an entry
-		if err := cm.storage.Put(tmsID, ""); err != nil {
-			return nil, errors.Wrapf(err, "failed to store db entry in KVS [%s]", tmsID)
-		}
 		var err error
 		c, err = cm.newTokens(tmsID)
 		if err != nil {

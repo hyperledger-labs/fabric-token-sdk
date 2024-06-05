@@ -22,7 +22,6 @@ import (
 	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
@@ -138,22 +137,15 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(identityStorageProvider), "failed to register identity storage")
 	publisher, err := events.GetPublisher(p.registry)
 	assert.NoError(err, "failed to get publisher")
-	tokensManager := tokens.NewManager(
-		tmsp,
-		tokenDBManager,
-		publisher,
-		tokens2.NewAuthorizationMultiplexer(&tokens2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
-		tokens2.NewIssuedMultiplexer(&tokens2.WalletIssued{}),
-		storage.NewDBEntriesStorage("tokens", kvs.GetService(p.registry)),
-	)
+	tokensManager := tokens.NewManager(tmsp, tokenDBManager, publisher, tokens2.NewAuthorizationMultiplexer(&tokens2.TMSAuthorization{}, &htlc.ScriptOwnership{}), tokens2.NewIssuedMultiplexer(&tokens2.WalletIssued{}))
 	assert.NoError(p.registry.RegisterService(tokensManager))
 
 	vaultProvider := vault.NewVaultProvider(tokenDBManager, ttxdbManager, auditDBManager)
 	assert.NoError(p.registry.RegisterService(vaultProvider))
 
-	ownerManager := ttx.NewManager(networkProvider, tmsp, ttxdbManager, tokensManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
+	ownerManager := ttx.NewManager(networkProvider, tmsp, ttxdbManager, tokensManager)
 	assert.NoError(p.registry.RegisterService(ownerManager))
-	auditorManager := auditor.NewManager(networkProvider, auditDBManager, tokensManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)), tmsp)
+	auditorManager := auditor.NewManager(networkProvider, auditDBManager, tokensManager, tmsp)
 	assert.NoError(p.registry.RegisterService(auditorManager))
 
 	// configuration callback

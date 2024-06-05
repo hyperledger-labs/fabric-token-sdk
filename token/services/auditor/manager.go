@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 )
@@ -38,16 +37,19 @@ type Manager struct {
 	tokenDBProvider TokenDBProvider
 	tmsProvider     TokenManagementServiceProvider
 
-	storage  storage.DBEntriesStorage
 	mutex    sync.Mutex
 	auditors map[string]*Auditor
 }
 
 // NewManager creates a new Auditor manager.
-func NewManager(networkProvider NetworkProvider, auditDBProvider AuditDBProvider, tokenDBProvider TokenDBProvider, storage storage.DBEntriesStorage, tmsProvider TokenManagementServiceProvider) *Manager {
+func NewManager(
+	networkProvider NetworkProvider,
+	auditDBProvider AuditDBProvider,
+	tokenDBProvider TokenDBProvider,
+	tmsProvider TokenManagementServiceProvider,
+) *Manager {
 	return &Manager{
 		networkProvider: networkProvider,
-		storage:         storage,
 		auditDBProvider: auditDBProvider,
 		tokenDBProvider: tokenDBProvider,
 		tmsProvider:     tmsProvider,
@@ -57,42 +59,30 @@ func NewManager(networkProvider NetworkProvider, auditDBProvider AuditDBProvider
 
 // Auditor returns the Auditor for the given wallet
 func (cm *Manager) Auditor(tmsID token.TMSID) (*Auditor, error) {
-	return cm.getAuditor(tmsID, "")
+	return cm.getAuditor(tmsID)
 }
 
 func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
-	logger.Infof("restore audit dbs...")
-	dbs, err := cm.storage.ByTMS(tmsID)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to list existing auditors")
+	logger.Infof("restore audit dbs for entry [%s]...", tmsID)
+	if err := cm.restore(tmsID); err != nil {
+		return errors.Wrapf(err, "cannot bootstrap auditdb for [%s]", tmsID)
 	}
-	for _, db := range dbs {
-		logger.Infof("restore audit dbs for entry [%s:%s]...", db.TMSID, db.WalletID)
-		if err := cm.restore(db.TMSID, db.WalletID); err != nil {
-			return errors.Wrapf(err, "cannot bootstrap auditdb for [%s:%s]", db.TMSID, db.WalletID)
-		}
-		logger.Infof("restore audit dbs for entry [%s:%s]...done", db.TMSID, db.WalletID)
-	}
-	logger.Infof("restore audit dbs...done")
+	logger.Infof("restore audit dbs for entry [%s]...done", tmsID)
 	return nil
 }
 
-func (cm *Manager) getAuditor(tmsID token.TMSID, walletID string) (*Auditor, error) {
+func (cm *Manager) getAuditor(tmsID token.TMSID) (*Auditor, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	id := tmsID.String() + walletID
+	id := tmsID.String()
 	logger.Debugf("get auditdb for [%s]", id)
 	c, ok := cm.auditors[id]
 	if !ok {
-		// add an entry
-		if err := cm.storage.Put(tmsID, walletID); err != nil {
-			return nil, errors.Wrapf(err, "failed to store auditor entry [%s:%s]", tmsID, walletID)
-		}
 		var err error
 		c, err = cm.newAuditor(tmsID)
 		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to instantiate auditor for wallet [%s:%s]", tmsID, walletID)
+			return nil, errors.WithMessagef(err, "failed to instantiate auditor for wallet [%s]", tmsID)
 		}
 		cm.auditors[id] = c
 	}
@@ -122,7 +112,7 @@ func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
 	return auditor, nil
 }
 
-func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
+func (cm *Manager) restore(tmsID token.TMSID) error {
 	net, err := cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
@@ -131,20 +121,20 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
 	}
-	auditor, err := cm.getAuditor(tmsID, walletID)
+	auditor, err := cm.getAuditor(tmsID)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to get auditor for [%s]", walletID)
+		return errors.WithMessagef(err, "failed to get auditor for [%s]", tmsID)
 	}
 	it, err := auditor.auditDB.TokenRequests(auditdb.QueryTokenRequestsParams{})
 	if err != nil {
-		return errors.Errorf("failed to get tx iterator for [%s:%s]", tmsID, walletID)
+		return errors.Errorf("failed to get tx iterator for [%s]", tmsID)
 	}
 	defer it.Close()
 	counter := 0
 	for {
 		record, err := it.Next()
 		if err != nil {
-			return errors.Errorf("failed to get next tx record for [%s:%s]", tmsID, walletID)
+			return errors.Errorf("failed to get next tx record for [%s]", tmsID)
 		}
 		if record == nil {
 			break
