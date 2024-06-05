@@ -270,26 +270,29 @@ func (v *rangeVerifier) Verify(rp *RangeProof) error {
 
 // preprocess prepares data for the inner product argument
 func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProof, error) {
-	var left, right []*math.Zr
-	var randomLeft, randomRight []*math.Zr
+	left := make([]*math.Zr, p.BitLength)
+	right := make([]*math.Zr, p.BitLength)
+	randomLeft := make([]*math.Zr, p.BitLength)
+	randomRight := make([]*math.Zr, p.BitLength)
+
 	rand, err := p.Curve.Rand()
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 	rho := p.Curve.NewRandomZr(rand)
 	eta := p.Curve.NewRandomZr(rand)
-	for i := 0; i < int(p.BitLength); i++ {
+	for i := 0; i < p.BitLength; i++ {
 		b := 1 << uint(i) & p.value
 		if b > 0 {
 			b = 1
 		}
 		// this is an array of the bits b_i of p.value
-		left = append(left, p.Curve.NewZrFromInt(int64(b)))
+		left[i] = p.Curve.NewZrFromInt(int64(b))
 		// this is an array of b_i - 1
-		right = append(right, p.Curve.ModSub(left[i], p.Curve.NewZrFromInt(1), p.Curve.GroupOrder))
+		right[i] = p.Curve.ModSub(left[i], p.Curve.NewZrFromInt(1), p.Curve.GroupOrder)
 		// these are randomly generated arrays
-		randomLeft = append(randomLeft, p.Curve.NewRandomZr(rand))
-		randomRight = append(randomRight, p.Curve.NewRandomZr(rand))
+		randomLeft[i] = p.Curve.NewRandomZr(rand)
+		randomRight[i] = p.Curve.NewRandomZr(rand)
 	}
 
 	// C commits to L = (b_0, ..., b_{p.BitLength}) and R = (b_0 - 1 , ..., b_{p.BitLength} - 1)
