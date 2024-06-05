@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/common/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -48,7 +48,7 @@ func NewTokenLockDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.T
 	return identityDB, nil
 }
 
-func (db *TokenLockDB) Lock(tokenID *token.ID, consumerTxID core.TxID) error {
+func (db *TokenLockDB) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
 	query := fmt.Sprintf("INSERT INTO %s (consumer_tx_id, tx_id, idx, created_at) VALUES ($1, $2, $3, $4)", db.table.TokenLocks)
 	logger.Debug(query, tokenID, consumerTxID)
 
@@ -56,7 +56,7 @@ func (db *TokenLockDB) Lock(tokenID *token.ID, consumerTxID core.TxID) error {
 	return err
 }
 
-func (db *TokenLockDB) UnlockByTxID(consumerTxID core.TxID) error {
+func (db *TokenLockDB) UnlockByTxID(consumerTxID transaction.ID) error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE consumer_tx_id = $1", db.table.TokenLocks)
 	logger.Debug(query, consumerTxID)
 
