@@ -31,6 +31,7 @@ type Opts struct {
 	HSM             bool
 	SDKs            []api.SDK
 	WebEnabled      bool
+	Monitoring      bool
 }
 
 func SetDefaultParams(tokenSDKDriver string, tms *topology.TMS, aries bool) {

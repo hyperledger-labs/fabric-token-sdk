@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	dlog "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/dlogstress/support"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -1024,4 +1025,71 @@ func TestMaliciousTransactions(net *integration.Infrastructure, sel *token3.Repl
 	txStatusBob := GetTXStatus(net, bob, txID)
 	Expect(txStatusBob.ValidationCode).To(BeEquivalentTo(ttx.Deleted))
 	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
+}
+
+func TestStress(network *integration.Infrastructure, auditorId string, selector *token3.ReplicaSelector) {
+	auditor := selector.Get(auditorId)
+	issuer := selector.Get("issuer")
+	alice := selector.Get("alice")
+	bob := selector.Get("bob")
+	charlie := selector.Get("charlie")
+	manager := selector.Get("manager")
+
+	RegisterAuditor(network, auditor, nil)
+
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditorId)
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+
+	// Start Issuance
+	issuePool := dlog.NewPool(10)
+	go func() {
+		issuePool.ScheduleTask(func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Errorf("caught panic during issue: %v", r)
+				}
+			}()
+			IssueCash(network, "", "StressCoin", 1, alice, auditor, true, issuer)
+			IssueCash(network, "", "StressCoin", 1, bob, auditor, true, issuer)
+		})
+	}()
+
+	// let issue enough tokens
+	time.Sleep(1 * time.Minute)
+
+	// start transfers from Alice
+	aliceTransferPool := dlog.NewPool(5)
+	go func() {
+		aliceTransferPool.ScheduleTask(func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Errorf("caught panic during transfer alice to bob: %v", r)
+				}
+			}()
+			TransferCash(network, alice, "", "StressCoin", 2, bob, auditor)
+		})
+	}()
+
+	time.Sleep(1 * time.Minute)
+
+	// start transfers from Bob
+	bobTransferPool := dlog.NewPool(5)
+	go func() {
+		bobTransferPool.ScheduleTask(func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Errorf("caught panic during transfer bob to alice: %v", r)
+				}
+			}()
+			TransferCash(network, bob, "", "StressCoin", 1, alice, auditor)
+		})
+	}()
+
+	time.Sleep(10 * time.Minute)
+	issuePool.Shutdown()
+	aliceTransferPool.Shutdown()
+	bobTransferPool.Shutdown()
 }

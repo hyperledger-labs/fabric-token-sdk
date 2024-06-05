@@ -64,6 +64,7 @@ func (a *Auditor) Validate(request *token.Request) error {
 // In addition, the Audit locks the enrollment named ids.
 // Release must be invoked in case
 func (a *Auditor) Audit(tx Transaction) (*token.InputStream, *token.OutputStream, error) {
+	logger.Debugf("audit transaction [%s]....", tx.ID())
 	request := tx.Request()
 	record, err := request.AuditRecord()
 	if err != nil {
@@ -73,9 +74,11 @@ func (a *Auditor) Audit(tx Transaction) (*token.InputStream, *token.OutputStream
 	var eids []string
 	eids = append(eids, record.Inputs.EnrollmentIDs()...)
 	eids = append(eids, record.Outputs.EnrollmentIDs()...)
+	logger.Debugf("audit transaction [%s], acquire locks", tx.ID())
 	if err := a.auditDB.AcquireLocks(request.Anchor, eids...); err != nil {
 		return nil, nil, err
 	}
+	logger.Debugf("audit transaction [%s], acquire locks done", tx.ID())
 
 	return record.Inputs, record.Outputs, nil
 }

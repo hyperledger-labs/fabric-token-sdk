@@ -46,6 +46,7 @@ var AllTestTypes = []*InfrastructureType{
 const (
 	BasePort TestPortRange = basePort + portsPerSuite*iota
 	ZKATDLogFungible
+	ZKATDLogFungibleStress
 	ZKATDLogFungibleHSM
 	FabTokenFungible
 	OrionZKATDLogBasics
