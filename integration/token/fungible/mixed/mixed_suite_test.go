@@ -25,5 +25,5 @@ func TestEndToEnd(t *testing.T) {
 }
 
 func StartPortDlog() int {
-	return integration.ZKATDLogFungible.StartPortForNode()
+	return integration.Mixed.StartPortForNode()
 }
