@@ -109,7 +109,7 @@ func (r *RequestTxStatusResponderView) process(context view.Context, request *Tx
 	}
 	tx, err := ledger.GetTransactionByID(request.TxID)
 	if err != nil {
-		if errors2.HasCause(err, &bcdb.ErrorNotFound{}) {
+		if errors2.HasType(err, &bcdb.ErrorNotFound{}) {
 			return &TxStatusResponse{Status: driver.Unknown}, nil
 		}
 		return nil, errors.Wrapf(err, "failed to get transaction [%s] for orion network [%s]", request.TxID, request.Network)
