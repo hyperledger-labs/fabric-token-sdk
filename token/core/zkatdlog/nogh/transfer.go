@@ -104,7 +104,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", txID)
 	}
-	s.Metrics.ObserveZKTransferDuration(duration)
+	s.Metrics.zkTransferDuration.Observe(float64(duration.Milliseconds()))
 
 	// add transfer action's metadata
 	zkTransfer.Metadata = meta.TransferActionMetadata(opts.Attributes)
