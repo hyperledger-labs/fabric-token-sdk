@@ -7,9 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"time"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 )
 
@@ -31,23 +28,13 @@ var (
 )
 
 type Metrics struct {
-	*metrics.Metrics
-
 	zkIssueDuration    metrics.Histogram
 	zkTransferDuration metrics.Histogram
 }
 
-func NewMetrics(provider metrics.Provider, tmsID token.TMSID) *Metrics {
-	m := &Metrics{Metrics: metrics.New(provider, tmsID)}
-	m.zkIssueDuration = m.NewHistogram(zkIssueDurationOpts)
-	m.zkTransferDuration = m.NewHistogram(zkTransferDurationOpts)
-	return m
-}
-
-func (m *Metrics) ObserveZKIssueDuration(duration time.Duration) {
-	m.zkIssueDuration.With().Observe(float64(duration.Milliseconds()))
-}
-
-func (m *Metrics) ObserveZKTransferDuration(duration time.Duration) {
-	m.zkTransferDuration.With().Observe(float64(duration.Milliseconds()))
+func NewMetrics(p metrics.Provider) *Metrics {
+	return &Metrics{
+		zkIssueDuration:    p.NewHistogram(zkIssueDurationOpts),
+		zkTransferDuration: p.NewHistogram(zkTransferDurationOpts),
+	}
 }

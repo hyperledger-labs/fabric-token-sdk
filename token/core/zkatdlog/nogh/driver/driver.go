@@ -13,6 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/observables"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
@@ -156,7 +158,9 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	)
 	tokDeserializer := &TokenDeserializer{}
 
-	driverMetrics := zkatdlog.NewMetrics(metrics.GetProvider(sp), tmsID)
+	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
+	tracerProvider := tracing.NewProvider(metricsProvider)
+	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
 	service, err := zkatdlog.NewTokenService(
 		logger,
 		ws,
@@ -165,11 +169,11 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
-		metrics.NewObservableIssueService(
+		observables.NewObservableIssueService(
 			zkatdlog.NewIssueService(ppm, ws, deserializer, driverMetrics),
-			driverMetrics.Metrics,
+			observables.NewIssue(tracerProvider),
 		),
-		metrics.NewObservableTransferService(
+		observables.NewObservableTransferService(
 			zkatdlog.NewTransferService(
 				logger,
 				ppm,
@@ -178,7 +182,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 				deserializer,
 				driverMetrics,
 			),
-			driverMetrics.Metrics,
+			observables.NewTransfer(tracerProvider),
 		),
 		zkatdlog.NewAuditorService(
 			logger,

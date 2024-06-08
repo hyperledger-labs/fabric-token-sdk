@@ -71,7 +71,7 @@ func (s *IssueService) Issue(issuerIdentity driver.Identity, tokenType string, v
 	if err != nil {
 		return nil, nil, err
 	}
-	s.Metrics.ObserveZKIssueDuration(duration)
+	s.Metrics.zkIssueDuration.Observe(float64(duration.Milliseconds()))
 
 	var outputsMetadata [][]byte
 	for _, meta := range zkOutputsMetadata {
