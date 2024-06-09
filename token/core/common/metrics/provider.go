@@ -10,7 +10,12 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+var logger = logging.MustGetLogger("token-sdk.metrics")
 
 const (
 	NetworkLabel   MetricLabel = "network"
@@ -35,13 +40,32 @@ func NewTMSProvider(tmsID token.TMSID, provider Provider) *tmsProvider {
 }
 
 func (p *tmsProvider) NewCounter(o CounterOpts) Counter {
+	defer func() { recoverFromDuplicate(recover()) }()
 	return p.provider.NewCounter(o).With(p.tmsLabels...)
 }
 
-func (p *tmsProvider) NewGauge(o GaugeOpts) Gauge { return p.provider.NewGauge(o).With(p.tmsLabels...) }
+func (p *tmsProvider) NewGauge(o GaugeOpts) Gauge {
+	defer func() { recoverFromDuplicate(recover()) }()
+	return p.provider.NewGauge(o).With(p.tmsLabels...)
+}
 
 func (p *tmsProvider) NewHistogram(o HistogramOpts) Histogram {
+	defer func() { recoverFromDuplicate(recover()) }()
 	return p.provider.NewHistogram(o).With(p.tmsLabels...)
+}
+
+func recoverFromDuplicate(recovered any) {
+	if recovered == nil {
+		// Registered successfully
+		return
+	}
+	if err, ok := recovered.(error); ok && errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+		// Different TMS's try to register the same metric
+		logger.Warnf("Recovered from panic: %v\n", err)
+		return
+	}
+	panic(recovered)
+
 }
 
 func AllLabelNames(extraLabels ...MetricLabel) []MetricLabel {

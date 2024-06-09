@@ -43,6 +43,9 @@ func Topology(opts common.Opts) []api.Topology {
 	fscTopology := fsc.NewTopology()
 	fscTopology.P2PCommunicationType = opts.CommType
 	fscTopology.WebEnabled = opts.WebEnabled
+	if opts.Monitoring {
+		fscTopology.EnablePrometheusMetrics()
+	}
 	fscTopology.SetLogging(opts.FSCLogSpec, "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
@@ -334,7 +337,7 @@ func Topology(opts common.Opts) []api.Topology {
 	}
 	if opts.Monitoring {
 		monitoringTopology := monitoring.NewTopology()
-		monitoringTopology.EnableHyperledgerExplorer()
+		//monitoringTopology.EnableHyperledgerExplorer()
 		monitoringTopology.EnablePrometheusGrafana()
 		return []api.Topology{
 			backendNetwork, tokenTopology, fscTopology,
