@@ -60,9 +60,8 @@ func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) 
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
-	}
+
+	logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	if request == nil {
 		logger.Debugf("transaction [%s], no request found, skip it", txID)
 		return nil
@@ -72,85 +71,99 @@ func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) 
 		return nil
 	}
 
-	logger.Debugf("transaction [%s] start db transaction", txID)
-	ts, err := t.Storage.NewTransaction()
-	if err != nil {
-		return errors.WithMessagef(err, "transaction [%s], failed to start db transaction", txID)
-	}
-	defer func() {
-		if err != nil && ts != nil {
-			if err := ts.Rollback(); err != nil {
-				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
-			}
-		}
-	}()
-	exists, err := ts.TransactionExists(txID)
+	exists, err := t.Storage.TransactionExists(txID)
 	if err != nil {
 		logger.Errorf("transaction [%s], failed to check existence in db [%s]", txID, err)
 		return errors.WithMessagef(err, "transaction [%s], failed to check existence in db", txID)
 	}
 	if exists {
 		logger.Debugf("transaction [%s], exists in db, skipping", txID)
-		if err := ts.Rollback(); err != nil {
-			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
-		}
 		return nil
 	}
 
+	graphHiding := tms.PublicParametersManager().PublicParameters().GraphHiding()
 	precision := tms.PublicParametersManager().PublicParameters().Precision()
+	auditorFlag := t.Ownership.AmIAnAuditor(tms)
+	if auditorFlag {
+		logger.Debugf("transaction [%s], I must be the auditor", txID)
+	}
+
 	md, err := request.GetMetadata()
 	if err != nil {
 		logger.Debugf("transaction [%s], failed to get metadata [%s]", txID, err)
 		return errors.WithMessagef(err, "transaction [%s], failed to get request metadata", txID)
-	}
-	if tms.PublicParametersManager().PublicParameters().GraphHiding() {
-		ids := md.SpentTokenID()
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
-		}
-		if err := ts.DeleteTokens(txID, ids); err != nil {
-			return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
-		}
-	}
-
-	auditorFlag := t.Ownership.AmIAnAuditor(tms)
-	if auditorFlag {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], I must be the auditor", txID)
-		}
 	}
 
 	is, os, err := request.InputsAndOutputs()
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get request's outputs")
 	}
+	toSpend, toAppend := t.parse(tms, txID, md, is, os, auditorFlag, precision, graphHiding)
+
+	logger.Debugf("transaction [%s] start db transaction", txID)
+	ts, err := t.Storage.NewTransaction()
+	if err != nil {
+		return errors.WithMessagef(err, "transaction [%s], failed to start db transaction", txID)
+	}
+	defer func() {
+		if err == nil {
+			return
+		}
+		if err1 := ts.Rollback(); err1 != nil {
+			logger.Errorf("error rolling back [%s][%s]", err1, debug.Stack())
+		} else {
+			logger.Infof("transaction [%s] rolled back", txID)
+		}
+	}()
+	for _, tta := range toAppend {
+		err = ts.AppendToken(tta)
+		if err != nil {
+			return errors.WithMessagef(err, "transaction [%s], failed to append token", txID)
+		}
+	}
+	err = ts.DeleteTokens(txID, toSpend)
+	if err != nil {
+		return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
+	}
+	if err = ts.Commit(); err != nil {
+		return errors.WithMessagef(err, "transaction [%s], failed to commit tokens to database", txID)
+	}
+	logger.Debugf("transaction [%s], committed tokens to database", txID)
+
+	return nil
+}
+
+type MetaData interface {
+	SpentTokenID() []*token2.ID
+	GetToken(raw []byte) (*token2.Token, token.Identity, []byte, error)
+}
+
+// parse returns the tokens to store and spend as the result of a transaction
+func (t *Tokens) parse(tms *token.ManagementService, txID string, md MetaData, is *token.InputStream, os *token.OutputStream, auditorFlag bool, precision uint64, graphHiding bool) (toSpend []*token2.ID, toAppend []TokenToAppend) {
+	if graphHiding {
+		ids := md.SpentTokenID()
+		logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
+		toSpend = append(toSpend, ids...)
+	}
+
+	logger.Debugf("parse [%d] inputs and [%d] outputs from [%s]", is.Count(), os.Count(), txID)
 
 	// parse the inputs
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("parse [%d] inputs and [%d] outputs from [%s]", is.Count(), os.Count(), txID)
-	}
 	for _, input := range is.Inputs() {
 		if input.Id == nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("transaction [%s] found an input that is not mine, skip it", txID)
-			}
+			logger.Debugf("transaction [%s] found an input that is not mine, skip it", txID)
 			continue
 		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s] delete input [%s]", txID, input.Id)
-		}
-		if err = ts.DeleteToken(input.Id.TxId, input.Id.Index, txID); err != nil {
-			return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
-		}
-		continue
+		logger.Debugf("transaction [%s] delete input [%s]", txID, input.Id)
+		toSpend = append(toSpend, input.Id)
 	}
 
 	// parse the outputs
 	for _, output := range os.Outputs() {
 		// get token in the clear
-		tok, issuer, tokenOnLedgerMetadata, err2 := md.GetToken(output.LedgerOutput)
-		if err2 != nil {
-			logger.Errorf("transaction [%s], found a token but failed getting the clear version, skipping it [%s]", txID, err2)
+		tok, issuer, tokenOnLedgerMetadata, err := md.GetToken(output.LedgerOutput)
+		if err != nil {
+			logger.Errorf("transaction [%s], found a token but failed getting the clear version, skipping it [%s]", txID, err)
 			continue
 		}
 		if tok == nil {
@@ -159,12 +172,8 @@ func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) 
 		}
 
 		if len(output.LedgerOutput) == 0 {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("transaction [%s] without graph hiding, delete input [%d]", txID, output.Index)
-			}
-			if err = ts.DeleteToken(txID, output.Index, txID); err != nil {
-				return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
-			}
+			logger.Debugf("transaction [%s] without graph hiding, delete input [%d]", txID, output.Index)
+			toSpend = append(toSpend, &token2.ID{TxId: txID, Index: output.Index})
 			continue
 		}
 
@@ -181,41 +190,33 @@ func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) 
 			}
 			logger.Debugf("store token [%s:%d][%s]", txID, output.Index, hash.Hashable(output.LedgerOutput))
 		}
-
 		if !mine && !auditorFlag && !issuerFlag {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("transaction [%s], discarding token, not mine, not an auditor, not an issuer", txID)
-			}
+			logger.Debugf("transaction [%s], discarding token, not mine, not an auditor, not an issuer", txID)
 			continue
 		}
 
-		if err = ts.AppendToken(
-			txID,
-			output.Index,
-			tok,
-			output.LedgerOutput,
-			tokenOnLedgerMetadata,
-			ids,
-			issuer,
-			precision,
-			Flags{
+		tta := TokenToAppend{
+			txID:                  txID,
+			index:                 output.Index,
+			tok:                   tok,
+			tokenOnLedger:         output.LedgerOutput,
+			tokenOnLedgerMetadata: tokenOnLedgerMetadata,
+			owners:                ids,
+			issuer:                issuer,
+			precision:             precision,
+			flags: Flags{
 				Mine:    mine,
 				Auditor: auditorFlag,
 				Issuer:  issuerFlag,
 			},
-		); err != nil {
-			return errors.WithMessagef(err, "transaction [%s], failed to append token", txID)
 		}
+		toAppend = append(toAppend, tta)
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("Done parsing write key [%s]", output.ID(txID))
+			logger.Debugf("done parsing write key [%s]", output.ID(txID))
 		}
 	}
-
-	if err = ts.Commit(); err != nil {
-		return errors.WithMessagef(err, "transaction [%s], failed to get token db transaction", txID)
-	}
-	return nil
+	return
 }
 
 func (t *Tokens) AppendRaw(tmsID token.TMSID, txID string, requestRaw []byte) (err error) {
