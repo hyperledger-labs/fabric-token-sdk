@@ -105,12 +105,8 @@ type CertificationDB interface {
 }
 
 type TokenDBTransaction interface {
-	// TransactionExists returns true if a token with that transaction id exists in the db
-	TransactionExists(id string) (bool, error)
 	// GetToken returns the owned tokens and their identifier keys for the passed ids.
 	GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error)
-	// OwnersOf returns the list of owner of a given token
-	OwnersOf(txID string, index uint64) ([]string, error)
 	// Delete marks the passed token as deleted by a given identifier (idempotent)
 	Delete(txID string, index uint64, deletedBy string) error
 	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
@@ -155,6 +151,8 @@ type TokenDB interface {
 	GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error)
 	// WhoDeletedTokens for each id, the function return if it was deleted and by who as per the Delete function
 	WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
+	// TransactionExists returns true if a token with that transaction id exists in the db
+	TransactionExists(id string) (bool, error)
 	// StorePublicParams stores the public parameters
 	StorePublicParams(raw []byte) error
 	// PublicParams returns the stored public parameters

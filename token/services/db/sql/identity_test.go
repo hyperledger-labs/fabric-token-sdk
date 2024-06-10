@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"path"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
@@ -72,9 +73,10 @@ var IdentityCases = []struct {
 	Name string
 	Fn   func(*testing.T, *IdentityDB)
 }{
-	{"TIdentityInfo", TIdentityInfo},
-	{"TSignerInfo", TSignerInfo},
-	{"TConfigurations", TConfigurations},
+	{"IdentityInfo", TIdentityInfo},
+	{"SignerInfo", TSignerInfo},
+	{"Configurations", TConfigurations},
+	{"SignerInfoConcurrent", TSignerInfoConcurrent},
 }
 
 func TConfigurations(t *testing.T, db *IdentityDB) {
@@ -145,4 +147,35 @@ func TSignerInfo(t *testing.T, db *IdentityDB) {
 	exists, err = db.SignerInfoExists(bob)
 	assert.NoError(t, err, "failed to check signer info existence for [%s]", bob)
 	assert.False(t, exists)
+}
+
+func TSignerInfoConcurrent(t *testing.T, db *IdentityDB) {
+	wg := sync.WaitGroup{}
+	n := 100
+	wg.Add(n)
+
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			alice := []byte(fmt.Sprintf("alice_%d", i))
+			bob := []byte(fmt.Sprintf("bob_%d", i))
+			assert.NoError(t, db.StoreSignerInfo(alice, nil))
+			exists, err := db.SignerInfoExists(alice)
+			assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
+			assert.True(t, exists)
+
+			t.Log(i)
+			exists, err = db.SignerInfoExists(bob)
+			assert.NoError(t, err, "failed to check signer info existence for [%s]", bob)
+			assert.False(t, exists)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	for i := 0; i < n; i++ {
+		alice := []byte(fmt.Sprintf("alice_%d", i))
+		exists, err := db.SignerInfoExists(alice)
+		assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
+		assert.True(t, exists)
+	}
 }

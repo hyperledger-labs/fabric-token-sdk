@@ -583,6 +583,22 @@ func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, erro
 	return spentBy, isSpent, nil
 }
 
+func (db *TokenDB) TransactionExists(id string) (bool, error) {
+	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id=$1 LIMIT 1;", db.table.Tokens)
+	logger.Debug(query, id)
+
+	row := db.db.QueryRow(query, id)
+	var found string
+	if err := row.Scan(&found); err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		logger.Warnf("tried to check transaction existence for id %s, err %s", id, err)
+		return false, err
+	}
+	return true, nil
+}
+
 func (db *TokenDB) StorePublicParams(raw []byte) error {
 	now := time.Now().UTC()
 	query := fmt.Sprintf("INSERT INTO %s (raw, stored_at) VALUES ($1, $2)", db.table.PublicParams)
@@ -783,22 +799,6 @@ type TokenTransaction struct {
 	tx *sql.Tx
 }
 
-func (t *TokenTransaction) TransactionExists(id string) (bool, error) {
-	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id=$1 LIMIT 1;", t.db.table.Tokens)
-	logger.Debug(query, id)
-
-	row := t.tx.QueryRow(query, id)
-	var found string
-	if err := row.Scan(&found); err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
-		}
-		logger.Warnf("tried to check transaction existence for id %s, err %s", id, err)
-		return false, err
-	}
-	return true, nil
-}
-
 func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error) {
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		IDs:            []*token.ID{{TxId: txID, Index: index}},
@@ -839,35 +839,6 @@ func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bo
 		Type:     tokenType,
 		Quantity: quantity,
 	}, owners, nil
-}
-
-func (t *TokenTransaction) OwnersOf(txID string, index uint64) ([]string, error) {
-	args := make([]interface{}, 0)
-	tokenIDs := []*token.ID{{TxId: txID, Index: index}}
-	where := whereTokenIDs(&args, tokenIDs)
-	query := fmt.Sprintf("SELECT enrollment_id FROM %s WHERE %s", t.db.table.Ownership, where)
-	logger.Debug(query, args)
-	rows, err := t.tx.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var owners []string
-	for rows.Next() {
-		var owner string
-		if err := rows.Scan(&owner); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return nil, nil
-			}
-			return nil, err
-		}
-		owners = append(owners, owner)
-	}
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-	return owners, nil
 }
 
 func (t *TokenTransaction) Delete(txID string, index uint64, deletedBy string) error {

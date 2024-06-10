@@ -49,6 +49,10 @@ func (d *DBStorage) NewTransaction() (*transaction, error) {
 	}, nil
 }
 
+func (d *DBStorage) TransactionExists(id string) (bool, error) {
+	return d.tokenDB.TransactionExists(id)
+}
+
 func (d *DBStorage) StorePublicParams(raw []byte) error {
 	return d.tokenDB.StorePublicParams(raw)
 }
@@ -105,23 +109,25 @@ func (t *transaction) DeleteTokens(deletedBy string, ids []*token2.ID) error {
 	return nil
 }
 
-func (t *transaction) AppendToken(
-	txID string,
-	index uint64,
-	tok *token2.Token,
-	tokenOnLedger []byte,
-	tokenOnLedgerMetadata []byte,
-	ids []string,
-	issuer token.Identity,
-	precision uint64,
-	flags Flags,
-) error {
-	q, err := token2.ToQuantity(tok.Quantity, precision)
+type TokenToAppend struct {
+	txID                  string
+	index                 uint64
+	tok                   *token2.Token
+	tokenOnLedger         []byte
+	tokenOnLedgerMetadata []byte
+	owners                []string
+	issuer                token.Identity
+	precision             uint64
+	flags                 Flags
+}
+
+func (t *transaction) AppendToken(tta TokenToAppend) error {
+	q, err := token2.ToQuantity(tta.tok.Quantity, tta.precision)
 	if err != nil {
-		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tok.Quantity, precision)
+		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tta.tok.Quantity, tta.precision)
 	}
 
-	typ, id, err := t.ote.OwnerType(tok.Owner.Raw)
+	typ, id, err := t.ote.OwnerType(tta.tok.Owner.Raw)
 	if err != nil {
 		logger.Errorf("could not unmarshal identity when storing token: %s", err.Error())
 		return errors.Wrap(err, "could not unmarshal identity when storing token")
@@ -129,32 +135,32 @@ func (t *transaction) AppendToken(
 
 	err = t.tx.StoreToken(
 		tokendb.TokenRecord{
-			TxID:           txID,
-			Index:          index,
-			IssuerRaw:      issuer,
-			OwnerRaw:       tok.Owner.Raw,
+			TxID:           tta.txID,
+			Index:          tta.index,
+			IssuerRaw:      tta.issuer,
+			OwnerRaw:       tta.tok.Owner.Raw,
 			OwnerType:      typ,
 			OwnerIdentity:  id,
-			Ledger:         tokenOnLedger,
-			LedgerMetadata: tokenOnLedgerMetadata,
-			Quantity:       tok.Quantity,
-			Type:           tok.Type,
+			Ledger:         tta.tokenOnLedger,
+			LedgerMetadata: tta.tokenOnLedgerMetadata,
+			Quantity:       tta.tok.Quantity,
+			Type:           tta.tok.Type,
 			Amount:         q.ToBigInt().Uint64(),
-			Owner:          flags.Mine,
-			Auditor:        flags.Auditor,
-			Issuer:         flags.Issuer,
+			Owner:          tta.flags.Mine,
+			Auditor:        tta.flags.Auditor,
+			Issuer:         tta.flags.Issuer,
 		},
-		ids,
+		tta.owners,
 	)
 	if err != nil {
 		return errors.Wrapf(err, "cannot store token in db")
 	}
 
-	for _, id := range ids {
+	for _, id := range tta.owners {
 		if len(id) == 0 {
 			continue
 		}
-		t.Notify(AddToken, t.tmsID, id, tok.Type, txID, index)
+		t.Notify(AddToken, t.tmsID, id, tta.tok.Type, tta.txID, tta.index)
 	}
 
 	return nil
@@ -184,10 +190,6 @@ func (t *transaction) Rollback() error {
 
 func (t *transaction) Commit() error {
 	return t.tx.Commit()
-}
-
-func (t *transaction) TransactionExists(id string) (bool, error) {
-	return t.tx.TransactionExists(id)
 }
 
 type TokenProcessorEvent struct {
