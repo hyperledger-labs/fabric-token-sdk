@@ -110,6 +110,7 @@ clean:
 	docker container prune -f
 	rm -rf ./integration/token/fungible/dlog/cmd/
 	rm -rf ./integration/token/fungible/dloghsm/cmd/
+	rm -rf ./integration/token/fungible/dlogstress/cmd/
 	rm -rf ./integration/token/fungible/fabtoken/cmd/
 	rm -rf ./integration/token/fungible/odlog/cmd/
 	rm -rf ./integration/token/fungible/ofabtoken/cmd/
