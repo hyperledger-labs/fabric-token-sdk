@@ -263,6 +263,7 @@ func (c *CollectEndorsementsView) signExternal(party view.Identity, signer Exter
 }
 
 func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Identity, signatureRequest *SignatureRequest, verifierGetter verifierGetterFunc) ([]byte, error) {
+	logger.Debugf("get session for [%s] with initiator [%s]", party, getIdentifier(context.Initiator()))
 	session, err := context.GetSession(context.Initiator(), party)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting session")
@@ -609,6 +610,7 @@ func (c *CollectEndorsementsView) getSession(context view.Context, p view.Identi
 		logger.Debugf("getSession: found session for [%s]", p.UniqueID())
 		return s, nil
 	}
+	logger.Debugf("get session for [%s] with initiator [%s]", p, getIdentifier(context.Initiator()))
 	return context.GetSession(context.Initiator(), p)
 }
 
