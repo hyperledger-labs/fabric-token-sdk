@@ -109,7 +109,7 @@ type WhoDeletedTokenView struct {
 func (w *WhoDeletedTokenView) Call(context view.Context) (interface{}, error) {
 	net := network.GetInstance(context, w.TMSID.Network, w.TMSID.Channel)
 	assert.NotNil(net, "cannot find network [%s:%s]", w.TMSID.Network, w.TMSID.Channel)
-	vault, err := net.Vault(w.TMSID.Namespace)
+	vault, err := net.TokenVault(w.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", w.TMSID.Network, w.TMSID.Channel, w.TMSID.Namespace)
 
 	who, deleted, err := vault.QueryEngine().WhoDeletedTokens(w.TokenIDs...)

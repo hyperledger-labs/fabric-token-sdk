@@ -11,13 +11,21 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/pkg/errors"
 )
+
+type Driver struct {
+	auditDBManager *auditdb.Manager
+	ttxDBManager   *ttxdb.Manager
+}
 
 func NewDriver(
 	fnsProvider *fabric.NetworkServiceProvider,
@@ -57,7 +65,7 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "fabric network [%s] not found", network)
 	}
-	ch, err := n.Channel(channel)
+	ch, err := fns.Channel(channel)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "fabric channel [%s:%s] not found", network, channel)
 	}
@@ -71,5 +79,17 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		d.configService,
 		d.filterProvider,
 		d.tokensManager,
+		view.GetIdentityProvider(sp),
+		view.GetManager(sp),
+		view.GetRegistry(sp),
+		token.GetManagementServiceProvider(sp),
+		endorsement.NewServiceProvider(
+			fns,
+			cs,
+			view.GetManager(sp),
+			view.GetRegistry(sp),
+			view.GetIdentityProvider(sp),
+			token.GetManagementServiceProvider(sp),
+		),
 	), nil
 }

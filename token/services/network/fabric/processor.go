@@ -9,14 +9,11 @@ package fabric
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
-
-var logger = logging.MustGetLogger("token-sdk.vault.processor")
 
 type GetTokensFunc = func() (*tokens.Tokens, error)
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider

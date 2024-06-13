@@ -76,7 +76,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	if n == nil {
 		return nil, errors.Errorf("network [%s] does not exists", networkID)
 	}
-	v, err := n.Vault(namespace)
+	v, err := n.TokenVault(namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", networkID, namespace)
 	}

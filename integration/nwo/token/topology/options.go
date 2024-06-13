@@ -90,6 +90,18 @@ func (o *Options) SetAuditor(v bool) {
 	o.Mapping["Auditor"] = v
 }
 
+func (o *Options) Endorser() bool {
+	res := o.Mapping["Endorser"]
+	if res == nil {
+		return false
+	}
+	return res.(bool)
+}
+
+func (o *Options) SetEndorser(v bool) {
+	o.Mapping["Endorser"] = v
+}
+
 func (o *Options) UseHSMForIssuer(label string) {
 	o.Mapping["Issuers.HSM."+label] = true
 }

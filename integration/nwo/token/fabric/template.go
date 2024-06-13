@@ -25,6 +25,16 @@ token:
         {{ if TMS.Certifiers }} interactive:
           ids: {{ range TMS.Certifiers }}
           - {{ . }}{{ end }}{{ end }}
+      {{ if Endorsement }}
+      services:
+        network:
+          fabric:
+            endorsement:
+              endorser: {{ Endorser }}
+              id: {{ EndorserID }}
+              endorsers: {{ range Endorsers }}
+              - {{ . }}{{ end }}
+      {{ end }}
       db:
         persistence:
           type: unity

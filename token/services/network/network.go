@@ -16,10 +16,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -135,21 +133,11 @@ func (e *Envelope) String() string {
 }
 
 type Vault struct {
-	n  *Network
-	v  driver.Vault
-	ns string
+	v driver.Vault
 }
 
-func (v *Vault) QueryEngine() api2.QueryEngine {
-	return v.v.QueryEngine()
-}
-
-func (v *Vault) CertificationStorage() vault.CertificationStorage {
-	return v.v.CertificationStorage()
-}
-
-func (v *Vault) DeleteTokens(ids ...*token2.ID) error {
-	return v.v.DeleteTokens(ids...)
+func (v *Vault) NewQueryExecutor() (driver.QueryExecutor, error) {
+	return v.v.NewQueryExecutor()
 }
 
 func (v *Vault) GetLastTxID() (string, error) {
@@ -157,18 +145,31 @@ func (v *Vault) GetLastTxID() (string, error) {
 }
 
 func (v *Vault) Status(id string) (ValidationCode, string, error) {
-	vc, message, err := v.v.Status(id)
-	return vc, message, err
+	return v.v.Status(id)
 }
 
 func (v *Vault) DiscardTx(id string) error {
 	return v.v.DiscardTx(id, "")
 }
 
+type TokenVault struct {
+	n  *Network
+	v  driver.TokenVault
+	ns string
+}
+
+func (v *TokenVault) QueryEngine() driver.QueryEngine {
+	return v.v.QueryEngine()
+}
+
+func (v *TokenVault) CertificationStorage() driver.CertificationStorage {
+	return v.v.CertificationStorage()
+}
+
 // PruneInvalidUnspentTokens checks that each unspent token is actually available on the ledger.
 // Those that are not available are deleted.
 // The function returns the list of deleted token ids
-func (v *Vault) PruneInvalidUnspentTokens(context view.Context) ([]*token2.ID, error) {
+func (v *TokenVault) PruneInvalidUnspentTokens(context view.Context) ([]*token2.ID, error) {
 	it, err := v.QueryEngine().UnspentTokensIterator()
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get an iterator of unspent tokens")
@@ -206,7 +207,11 @@ func (v *Vault) PruneInvalidUnspentTokens(context view.Context) ([]*token2.ID, e
 	return deleted, nil
 }
 
-func (v *Vault) deleteTokens(context view.Context, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
+func (v *TokenVault) DeleteTokens(ids ...*token2.ID) error {
+	return v.v.DeleteTokens(ids...)
+}
+
+func (v *TokenVault) deleteTokens(context view.Context, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
 	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
 	if len(tokens) == 0 {
 		return nil, nil
@@ -288,7 +293,16 @@ func (n *Network) Vault(namespace string) (*Vault, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Vault{n: n, v: v, ns: namespace}, nil
+	return &Vault{v: v}, nil
+}
+
+// TokenVault returns the token vault for the given namespace
+func (n *Network) TokenVault(namespace string) (*TokenVault, error) {
+	v, err := n.n.TokenVault(namespace)
+	if err != nil {
+		return nil, err
+	}
+	return &TokenVault{n: n, v: v, ns: namespace}, nil
 }
 
 // Broadcast sends the given blob to the network
