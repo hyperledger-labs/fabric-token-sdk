@@ -9,7 +9,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/gammazero/deque v0.2.1
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240613095459-4007fee30821
+	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240613132245-ef7acc718f8e
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
@@ -31,6 +31,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.30.0
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	github.com/ugorji/go v1.2.12
+	go.uber.org/dig v1.17.0
 	go.uber.org/zap v1.25.0
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 	google.golang.org/protobuf v1.33.0
@@ -246,7 +247,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	go.uber.org/dig v1.17.0 // indirect
 	go.uber.org/fx v1.20.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.7.0 // indirect
