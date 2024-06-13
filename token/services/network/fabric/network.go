@@ -14,15 +14,18 @@ import (
 	"strings"
 	"time"
 
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/fts"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -42,6 +45,8 @@ const (
 	retryWaitDuration         = 1 * time.Second
 )
 
+var logger = logging.MustGetLogger("token-sdk.network.fabric")
+
 type NewVaultFunc = func(network, channel, namespace string) (vault.Vault, error)
 
 type lm struct {
@@ -56,21 +61,22 @@ func (n *lm) AnonymousIdentity() view.Identity {
 	return n.lm.AnonymousIdentity()
 }
 
+type qe struct {
+	driver2.QueryExecutor
+	ns string
+}
+
+func (q *qe) GetState(key string) ([]byte, error) {
+	return q.QueryExecutor.GetState(q.ns, key)
+}
+
+func (q *qe) Done() {
+	q.QueryExecutor.Done()
+}
+
 type nv struct {
-	v          *fabric.Vault
-	tokenVault driver.TokenVault
-}
-
-func (v *nv) QueryEngine() vault.QueryEngine {
-	return v.tokenVault.QueryEngine()
-}
-
-func (v *nv) CertificationStorage() vault.CertificationStorage {
-	return v.tokenVault.CertificationStorage()
-}
-
-func (v *nv) DeleteTokens(ids ...*token.ID) error {
-	return v.tokenVault.DeleteTokens(ids...)
+	v  *fabric.Vault
+	ns string
 }
 
 func (v *nv) Status(id string) (driver.ValidationCode, string, error) {
@@ -84,6 +90,30 @@ func (v *nv) GetLastTxID() (string, error) {
 
 func (v *nv) DiscardTx(id string, message string) error {
 	return v.v.DiscardTx(id, message)
+}
+
+func (v *nv) NewQueryExecutor() (driver.QueryExecutor, error) {
+	qeInstance, err := v.v.NewQueryExecutor()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed creating query executor")
+	}
+	return &qe{QueryExecutor: qeInstance, ns: v.ns}, nil
+}
+
+type tokenVault struct {
+	tokenVault driver.TokenVault
+}
+
+func (v *tokenVault) QueryEngine() vault.QueryEngine {
+	return v.tokenVault.QueryEngine()
+}
+
+func (v *tokenVault) CertificationStorage() vault.CertificationStorage {
+	return v.tokenVault.CertificationStorage()
+}
+
+func (v *tokenVault) DeleteTokens(ids ...*token.ID) error {
+	return v.tokenVault.DeleteTokens(ids...)
 }
 
 type ledger struct {
@@ -104,28 +134,48 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	}
 }
 
-type Network struct {
-	n              *fabric.NetworkService
-	ch             *fabric.Channel
-	tmsProvider    *token2.ManagementServiceProvider
-	viewManager    *view2.Manager
-	ledger         *ledger
-	nsFinder       common2.NamespaceFinder
-	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
-	tokensProvider *tokens2.Manager
+type IdentityProvider interface {
+	Identity(string) view.Identity
+}
 
-	vaultLazyCache utils.LazyProvider[string, driver.Vault]
-	subscribers    *events.Subscribers
+type ViewManager interface {
+	InitiateView(view view2.View) (interface{}, error)
+}
+
+type ViewRegistry interface {
+	RegisterResponder(responder view2.View, initiatedBy interface{}) error
+}
+
+type Network struct {
+	n                *fabric.NetworkService
+	ch               *fabric.Channel
+	tmsProvider      *token2.ManagementServiceProvider
+	viewManager      ViewManager
+	viewRegistry     ViewRegistry
+	ledger           *ledger
+	configuration    common2.Configuration
+	filterProvider   common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
+	tokensProvider   *tokens2.Manager
+	identityProvider IdentityProvider
+
+	vaultLazyCache      utils.LazyProvider[string, driver.Vault]
+	tokenVaultLazyCache utils.LazyProvider[string, driver.TokenVault]
+	subscribers         *events.Subscribers
+
+	endorsements map[token2.TMSID]Endorsement
 }
 
 func NewNetwork(
-	sp token2.ServiceProvider,
 	n *fabric.NetworkService,
 	ch *fabric.Channel,
 	newVault NewVaultFunc,
-	nsFinder common2.NamespaceFinder,
+	configuration common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
 	tokensProvider *tokens2.Manager,
+	identityProvider IdentityProvider,
+	viewManager ViewManager,
+	viewRegistry ViewRegistry,
+	tmsProvider *token2.ManagementServiceProvider,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -134,16 +184,20 @@ func NewNetwork(
 		vault:    ch.Vault(),
 	}
 	return &Network{
-		n:              n,
-		ch:             ch,
-		nsFinder:       nsFinder,
-		filterProvider: filterProvider,
-		tokensProvider: tokensProvider,
-		tmsProvider:    token2.GetManagementServiceProvider(sp),
-		viewManager:    view2.GetManager(sp),
-		ledger:         &ledger{ch.Ledger()},
-		subscribers:    events.NewSubscribers(),
-		vaultLazyCache: utils.NewLazyProvider(loader.load),
+		n:                   n,
+		ch:                  ch,
+		configuration:       configuration,
+		filterProvider:      filterProvider,
+		tokensProvider:      tokensProvider,
+		tmsProvider:         tmsProvider,
+		viewManager:         viewManager,
+		viewRegistry:        viewRegistry,
+		ledger:              &ledger{ch.Ledger()},
+		subscribers:         events.NewSubscribers(),
+		vaultLazyCache:      utils.NewLazyProvider(loader.loadVault),
+		tokenVaultLazyCache: utils.NewLazyProvider(loader.loadTokenVault),
+		endorsements:        make(map[token2.TMSID]Endorsement),
+		identityProvider:    identityProvider,
 	}
 }
 
@@ -171,7 +225,7 @@ func (n *Network) Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions,
 	}
 
 	if len(opt.Namespace) == 0 {
-		if ns, err := n.nsFinder.LookupNamespace(opt.Network, opt.Channel); err == nil {
+		if ns, err := n.configuration.LookupNamespace(opt.Network, opt.Channel); err == nil {
 			logger.Debugf("no namespace specified, found namespace [%s] for [%s:%s]", ns, opt.Network, opt.Channel)
 			opt.Namespace = ns
 		} else {
@@ -191,6 +245,11 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 		Channel:   n.ch.Name(),
 		Namespace: ns,
 	}
+	_, ok := n.endorsements[tmsID]
+	if ok {
+		return nil, errors.Errorf("network already connected [%s]", tmsID)
+	}
+
 	if err := n.n.ProcessorManager().AddProcessor(
 		ns,
 		NewTokenRWSetProcessor(
@@ -209,13 +268,60 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create transaction filter for [%s]", tmsID)
 	}
-	if err := n.ch.Committer().AddTransactionFilter(transactionFilter); err != nil {
+	committer := n.ch.Committer()
+	if err := committer.AddTransactionFilter(transactionFilter); err != nil {
 		return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
 	}
 
+	// if I'm an endorser, I need to process all token transactions
+	var isEndorser bool
+	configuration, err := n.configuration.ConfigurationFor(n.n.Name(), n.ch.Name(), ns)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get configuration for [%s]", tmsID)
+	}
+	var endorsement Endorsement
+	if configuration.IsSet("services.network.fabric.endorsement") {
+		if err := configuration.UnmarshalKey("services.network.fabric.endorsement.endorser", &isEndorser); err != nil {
+			return nil, errors.WithMessagef(err, "failed to unmarshal is endorser for [%s]", tmsID)
+		}
+		if isEndorser {
+			logger.Info("this node is an endorser, prepare it...")
+			if err := committer.ProcessNamespace(ns); err != nil {
+				return nil, errors.WithMessagef(err, "failed to add namespace to committer [%s]", ns)
+			}
+			if err := n.viewRegistry.RegisterResponder(&fts.RequestApprovalResponderView{}, &fts.RequestApprovalView{}); err != nil {
+				return nil, errors.WithMessagef(err, "failed to register approval view for [%s]", tmsID)
+			}
+		}
+
+		e := &FSCEndorsement{
+			ViewManager: n.viewManager,
+		}
+		var endorserIDs []string
+		if err := configuration.UnmarshalKey("services.network.fabric.endorsement.endorsers", &endorserIDs); err != nil {
+			return nil, errors.WithMessage(err, "failed to load endorsers")
+		}
+		logger.Infof("defined [%s] as endorsers for [%s]", endorserIDs, tmsID)
+		if len(endorserIDs) == 0 {
+			return nil, errors.Errorf("no endorsers found for [%s]", tmsID)
+		}
+		e.Endorsers = make([]view.Identity, 0, len(endorserIDs))
+		for _, id := range endorserIDs {
+			endorserID := n.identityProvider.Identity(id)
+			if endorserID.IsNone() {
+				return nil, errors.Errorf("cannot find identity for endorser [%s]", id)
+			}
+			e.Endorsers = append(e.Endorsers, endorserID)
+		}
+		endorsement = e
+	} else {
+		endorsement = &ChaincodeEndorsement{}
+	}
+	n.endorsements[tmsID] = endorsement
+
 	// check the vault for public parameters,
 	// use them if they exists
-	v, err := n.Vault(ns)
+	v, err := n.TokenVault(ns)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network at [%s]", tmsID)
 	}
@@ -237,8 +343,18 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 		}
 		namespace = tms.Namespace()
 	}
-
 	return n.vaultLazyCache.Get(namespace)
+}
+
+func (n *Network) TokenVault(namespace string) (driver.TokenVault, error) {
+	if len(namespace) == 0 {
+		tms, err := n.tmsProvider.GetManagementService(token2.WithNetwork(n.n.Name()), token2.WithChannel(n.ch.Name()))
+		if tms == nil || err != nil {
+			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s:%s]: %v", n.n.Name(), n.ch.Name(), err)
+		}
+		namespace = tms.Namespace()
+	}
+	return n.tokenVaultLazyCache.Get(namespace)
 }
 
 func (n *Network) Broadcast(context context.Context, blob interface{}) error {
@@ -266,27 +382,11 @@ func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
 }
 
 func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
-	env, err := chaincode.NewEndorseView(
-		tms.Namespace(),
-		InvokeFunction,
-	).WithNetwork(
-		n.n.Name(),
-	).WithChannel(
-		n.ch.Name(),
-	).WithSignerIdentity(
-		signer,
-	).WithTransientEntry(
-		"token_request", requestRaw,
-	).WithTxID(
-		fabric.TxID{
-			Nonce:   txID.Nonce,
-			Creator: txID.Creator,
-		},
-	).Endorse(context)
-	if err != nil {
-		return nil, err
+	endorsement, ok := n.endorsements[tms.ID()]
+	if !ok {
+		return nil, errors.Errorf("network not connected [%s]", tms.ID())
 	}
-	return env, nil
+	return endorsement.Endorse(context, tms, requestRaw, signer, txID)
 }
 
 func (n *Network) ComputeTxID(id *driver.TxID) string {
@@ -543,10 +643,14 @@ type loader struct {
 	vault    *fabric.Vault
 }
 
-func (l *loader) load(namespace string) (driver.Vault, error) {
-	tokenVault, err := l.newVault(l.name, l.channel, namespace)
+func (l *loader) loadVault(namespace string) (driver.Vault, error) {
+	return &nv{v: l.vault, ns: namespace}, nil
+}
+
+func (l *loader) loadTokenVault(namespace string) (driver.TokenVault, error) {
+	tv, err := l.newVault(l.name, l.channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token vault")
 	}
-	return &nv{v: l.vault, tokenVault: tokenVault}, nil
+	return &tokenVault{tokenVault: tv}, nil
 }

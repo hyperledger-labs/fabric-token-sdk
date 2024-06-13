@@ -25,7 +25,16 @@ token:
         {{ if TMS.Certifiers }} interactive:
           ids: {{ range TMS.Certifiers }}
           - {{ . }}{{ end }}{{ end }}
-      {{ if Wallets }}
+      {{ if Endorsement }}
+      services:
+        network:
+          fabric:
+            endorsement:
+              endorser: {{ Endorser }}
+              id: {{ EndorserID }}
+              endorsers: {{ range Endorsers }}
+              - {{ . }}{{ end }}
+      {{ end }}
       db:
         persistence:
           type: unity
@@ -43,6 +52,7 @@ token:
             driver: {{ TokensSQLDriver }}    
             maxOpenConns: 10
             dataSource: {{ TokensSQLDataSource }}
+      {{ if Wallets }}
       # Wallets associated with this TMS
       wallets:
         defaultCacheSize: 3
