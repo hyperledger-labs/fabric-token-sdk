@@ -12,14 +12,13 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
-	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -109,7 +108,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 
 func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology2.Topology(
+	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, integration.ReplaceTemplate(topology.Topology(
 		common.Opts{
 			Backend:         "fabric",
 			CommType:        commType,
@@ -119,9 +118,9 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names
 			AuditorAsIssuer: mask&AuditorAsIssuer > 0,
 			HSM:             mask&HSM > 0,
 			WebEnabled:      mask&WebEnabled > 0,
-			SDKs:            []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
+			SDKs:            []api.SDK{&fdlog.SDK{}},
 			ReplicationOpts: opts,
 		},
-	))
+	)))
 	return ts, selector
 }

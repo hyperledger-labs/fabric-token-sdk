@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dlog_test
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
@@ -66,12 +67,12 @@ var _ = Describe("DLog end to end", func() {
 
 func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropHTLC.StartPortForNode, interop.HTLCSingleFabricNetworkTopology(common.Opts{
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropHTLC.StartPortForNode, integration.ReplaceTemplate(interop.HTLCSingleFabricNetworkTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
-		SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
-	}))
+		SDKs:            []api2.SDK{&fdlog.SDK{}},
+	})))
 	return ts, selector
 }
 
@@ -88,23 +89,23 @@ func newTestSuiteSingleOrion(commType fsc.P2PCommunicationType, factor int, name
 
 func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropHTLCTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropHTLCTwoFabricNetworks.StartPortForNode, integration.ReplaceTemplate(interop.HTLCTwoFabricNetworksTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
-		SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
-	}))
+		SDKs:            []api2.SDK{&fdlog.SDK{}},
+	})))
 	return ts, selector
 }
 
 func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimTopology(common.Opts{
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, integration.ReplaceTemplate(interop.HTLCNoCrossClaimTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
-		SDKs:            []api2.SDK{&fabric3.SDK{}, &fdlog.SDK{}},
-	}))
+		SDKs:            []api2.SDK{&fdlog.SDK{}},
+	})))
 	return ts, selector
 }
 

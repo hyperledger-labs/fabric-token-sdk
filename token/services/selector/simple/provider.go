@@ -27,7 +27,12 @@ type SelectorService struct {
 	managerLazyCache utils.LazyProvider[*token.ManagementService, token.SelectorManager]
 }
 
-func NewProvider(lockerProvider LockerProvider, numRetry int, timeout time.Duration, tracer Tracer) *SelectorService {
+const (
+	numRetry = 2
+	timeout  = 5 * time.Second
+)
+
+func NewProvider(lockerProvider LockerProvider, tracer Tracer) *SelectorService {
 	loader := &loader{
 		lockerProvider:       lockerProvider,
 		tracer:               tracer,

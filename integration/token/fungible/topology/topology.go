@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
-	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
@@ -329,9 +328,6 @@ func Topology(opts common.Opts) []api.Topology {
 		}
 	} else {
 		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
-		if _, ok := opts.SDKs[0].(*fabric3.SDK); !ok {
-			panic("fabric sdk missing")
-		}
 	}
 	if !opts.NoAuditor {
 		tms.AddAuditor(auditor)
