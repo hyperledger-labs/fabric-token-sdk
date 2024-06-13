@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
-	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
@@ -323,9 +322,6 @@ func Topology(opts common.Opts) []api.Topology {
 		orionTopology := backendNetwork.(*orion.Topology)
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")
 		fscTopology.SetBootstrapNode(custodian)
-		if _, ok := opts.SDKs[0].(*orion3.SDK); !ok {
-			panic("orion sdk missing")
-		}
 	} else {
 		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 	}
