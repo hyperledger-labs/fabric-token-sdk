@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -57,16 +56,16 @@ func UpdatePublicParams(network *integration.Infrastructure, selector *token2.Re
 
 func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
+	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, integration.ReplaceTemplate(topology.Topology(
 		common.Opts{
 			Backend:         "fabric",
 			CommType:        commType,
 			TokenSDKDriver:  "fabtoken",
 			Aries:           true,
-			SDKs:            []api.SDK{&fabric.SDK{}, &ffabtoken.SDK{}},
+			SDKs:            []api.SDK{&ffabtoken.SDK{}},
 			ReplicationOpts: opts,
 			WebEnabled:      true, // Needed for the Remote Wallet with websockets
 		},
-	))
+	)))
 	return ts, selector
 }

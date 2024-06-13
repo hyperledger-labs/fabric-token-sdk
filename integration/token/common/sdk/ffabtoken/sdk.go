@@ -8,6 +8,7 @@ package ffabtoken
 
 import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
+	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/dig"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/unity"
@@ -20,9 +21,9 @@ import (
 )
 
 type SDK struct {
-	*sdk.SDK
+	*tokensdk.SDK
 }
 
 func NewSDK(registry sdk.Registry) *SDK {
-	return &SDK{SDK: sdk.NewSDK(registry)}
+	return &SDK{SDK: tokensdk.NewSDK(registry)}
 }
