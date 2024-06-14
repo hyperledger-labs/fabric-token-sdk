@@ -11,6 +11,7 @@ import (
 	errors2 "errors"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
@@ -63,12 +64,6 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk")
 
-type Registry interface {
-	GetService(v interface{}) (interface{}, error)
-
-	RegisterService(service interface{}) error
-}
-
 var selectorProviders = map[string]any{
 	"simple":    selector.NewProvider,
 	"mailman":   mailman.NewService,
@@ -77,19 +72,19 @@ var selectorProviders = map[string]any{
 }
 
 type SDK struct {
-	*fabricsdk.SDK
+	dig2.SDK
 }
 
 func (p *SDK) TokenEnabled() bool {
 	return p.ConfigService().GetBool("token.enabled")
 }
 
-func NewSDK(registry Registry) *SDK {
-	return &SDK{SDK: fabricsdk.NewSDK(registry)}
+func NewSDK(registry node.Registry) *SDK {
+	return NewFrom(fabricsdk.NewSDK(registry))
 }
 
-func NewFrom(dig2.SDK) *SDK {
-	return &SDK{SDK: nil}
+func NewFrom(sdk dig2.SDK) *SDK {
+	return &SDK{SDK: sdk}
 }
 
 func (p *SDK) Install() error {
@@ -99,8 +94,6 @@ func (p *SDK) Install() error {
 	}
 
 	logger.Infof("Token platform enabled, installing...")
-
-	logger.Infof("Set TMS TMSProvider")
 
 	err := errors2.Join(
 		p.Container().Provide(func(sp view2.ServiceProvider) *network.Provider { return network.NewProvider(sp) }),

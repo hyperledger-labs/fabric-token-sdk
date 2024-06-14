@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package fodlog
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
 	orionsdk "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk/dig"
 	viewsdk "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/dig"
@@ -27,6 +28,6 @@ type SDK struct {
 	*tokensdk.SDK
 }
 
-func NewSDK(registry tokensdk.Registry) *SDK {
+func NewSDK(registry node.Registry) *SDK {
 	return &SDK{SDK: tokensdk.NewFrom(orionsdk.NewFrom(fabricsdk.NewFrom(viewsdk.NewSDK(registry))))}
 }
