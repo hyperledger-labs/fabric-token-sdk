@@ -11,12 +11,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	fabricSDK "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/artifactgen"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	tokenSDK "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
+	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 )
 
 func Topology(tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
@@ -116,7 +115,7 @@ func Topology(tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
 }
 
 func main() {
-	if err := artifactgen.WriteTopologies("fungible.yaml", Topology("dlog", &fabricSDK.SDK{}, &tokenSDK.SDK{}), 0766); err != nil {
+	if err := artifactgen.WriteTopologies("fungible.yaml", Topology("dlog", &tokensdk.SDK{}), 0766); err != nil {
 		panic(err)
 	}
 }
