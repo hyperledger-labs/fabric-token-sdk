@@ -9,7 +9,6 @@ package fabtoken
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -35,7 +34,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 		Backend:         "fabric",
 		CommType:        commType,
 		TokenSDKDriver:  "fabtoken",
-		SDKs:            []api.SDK{&fabric.SDK{}, &ffabtoken.SDK{}},
+		SDKs:            []api.SDK{&ffabtoken.SDK{}},
 		ReplicationOpts: opts,
 	}))
 	return ts, selector

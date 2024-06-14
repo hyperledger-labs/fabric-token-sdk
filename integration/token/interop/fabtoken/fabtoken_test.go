@@ -70,7 +70,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
-		SDKs:            []api2.SDK{&fabric3.SDK{}, &ffabtoken.SDK{}},
+		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
 	}))
 	return ts, selector
 }
@@ -92,7 +92,7 @@ func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names 
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
-		SDKs:            []api2.SDK{&fabric3.SDK{}, &ffabtoken.SDK{}},
+		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
 	}))
 	return ts, selector
 }
@@ -103,7 +103,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
-		SDKs:            []api2.SDK{&fabric3.SDK{}, &ffabtoken.SDK{}},
+		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
 	}))
 	return ts, selector
 }
