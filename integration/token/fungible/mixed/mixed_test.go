@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package mixed
 
 import (
-	integration2 "github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration"
@@ -31,11 +30,11 @@ var _ = Describe("EndToEnd", func() {
 
 func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, integration2.ReplaceTemplate(Topology(common.Opts{
+	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, Topology(common.Opts{
 		CommType:        commType,
 		FSCLogSpec:      "",
 		SDKs:            []api.SDK{&fall.SDK{}},
 		ReplicationOpts: opts,
-	})))
+	}))
 	return ts, selector
 }

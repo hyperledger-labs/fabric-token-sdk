@@ -56,7 +56,7 @@ func UpdatePublicParams(network *integration.Infrastructure, selector *token2.Re
 
 func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, integration.ReplaceTemplate(topology.Topology(
+	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
 		common.Opts{
 			Backend:         "fabric",
 			CommType:        commType,
@@ -66,6 +66,6 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 			ReplicationOpts: opts,
 			WebEnabled:      true, // Needed for the Remote Wallet with websockets
 		},
-	)))
+	))
 	return ts, selector
 }

@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package dloghsm
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
@@ -47,7 +46,7 @@ var _ = Describe("EndToEnd", func() {
 
 func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, integration.ReplaceTemplate(topology.Topology(
+	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
 		common.Opts{
 			Backend:         "fabric",
 			CommType:        commType,
@@ -60,6 +59,6 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names
 			SDKs:            []api.SDK{&fdlog.SDK{}},
 			ReplicationOpts: opts,
 		},
-	)))
+	))
 	return ts, selector
 }

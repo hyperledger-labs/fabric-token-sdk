@@ -85,7 +85,11 @@ func (p *SDK) TokenEnabled() bool {
 }
 
 func NewSDK(registry Registry) *SDK {
-	return &SDK{SDK: sdk.NewSDK(registry)}
+	return NewFrom(sdk.NewSDK(registry))
+}
+
+func NewFrom(sdk dig2.SDK) *SDK {
+	return &SDK{SDK: sdk}
 }
 
 func (p *SDK) Install() error {

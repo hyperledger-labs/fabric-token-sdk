@@ -7,11 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken_test
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
-	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
@@ -67,12 +64,12 @@ var _ = Describe("FabToken end to end", func() {
 
 func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLC.StartPortForNode, integration.ReplaceTemplate(interop.HTLCSingleFabricNetworkTopology(common.Opts{
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLC.StartPortForNode, interop.HTLCSingleFabricNetworkTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
 		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
-	})))
+	}))
 	return ts, selector
 }
 
@@ -82,30 +79,30 @@ func newTestSuiteSingleOrion(commType fsc.P2PCommunicationType, factor int, name
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
-		SDKs:            []api2.SDK{&orion3.SDK{}, &ofabtoken.SDK{}},
+		SDKs:            []api2.SDK{&ofabtoken.SDK{}},
 	}))
 	return ts, selector
 }
 
 func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCTwoFabricNetworks.StartPortForNode, integration.ReplaceTemplate(interop.HTLCTwoFabricNetworksTopology(common.Opts{
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
 		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
-	})))
+	}))
 	return ts, selector
 }
 
 func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, integration.ReplaceTemplate(interop.HTLCNoCrossClaimTopology(common.Opts{
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
 		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
-	})))
+	}))
 	return ts, selector
 }
 
@@ -115,7 +112,7 @@ func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
-		SDKs:            []api2.SDK{&fabric3.SDK{}, &orion3.SDK{}, &fofabtoken.SDK{}},
+		SDKs:            []api2.SDK{&fofabtoken.SDK{}},
 	}))
 	return ts, selector
 }
