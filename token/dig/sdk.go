@@ -14,7 +14,7 @@ import (
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
-	sdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
+	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -77,7 +77,7 @@ var selectorProviders = map[string]any{
 }
 
 type SDK struct {
-	dig2.SDK
+	*fabricsdk.SDK
 }
 
 func (p *SDK) TokenEnabled() bool {
@@ -85,11 +85,11 @@ func (p *SDK) TokenEnabled() bool {
 }
 
 func NewSDK(registry Registry) *SDK {
-	return NewFrom(sdk.NewSDK(registry))
+	return &SDK{SDK: fabricsdk.NewSDK(registry)}
 }
 
-func NewFrom(sdk dig2.SDK) *SDK {
-	return &SDK{SDK: sdk}
+func NewFrom(dig2.SDK) *SDK {
+	return &SDK{SDK: nil}
 }
 
 func (p *SDK) Install() error {
