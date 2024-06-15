@@ -29,5 +29,5 @@ type SDK struct {
 }
 
 func NewSDK(registry sdk.Registry) *SDK {
-	return &SDK{SDK: tokensdk.NewFrom(orionsdk.NewFrom(fabricsdk.NewFrom(viewsdk.NewSDK(registry))))}
+	return &SDK{SDK: tokensdk.NewFrom(fabricsdk.NewFrom(orionsdk.NewFrom(viewsdk.NewSDK(registry))))}
 }
