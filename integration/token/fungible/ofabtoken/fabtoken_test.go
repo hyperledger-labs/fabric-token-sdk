@@ -9,7 +9,6 @@ package fabtoken
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -38,7 +37,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 			CommType:        commType,
 			TokenSDKDriver:  "fabtoken",
 			Aries:           true,
-			SDKs:            []api.SDK{&orion3.SDK{}, &ofabtoken.SDK{}},
+			SDKs:            []api.SDK{&ofabtoken.SDK{}},
 			ReplicationOpts: opts,
 		},
 	))

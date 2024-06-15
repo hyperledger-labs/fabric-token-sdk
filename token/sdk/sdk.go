@@ -105,8 +105,6 @@ func (p *SDK) Install() error {
 	case "simple":
 		selectorManagerProvider = selector.NewProvider(
 			network2.NewLockerProvider(ttxdbManager, 2*time.Second, 5*time.Minute),
-			2,
-			5*time.Second,
 			tracing.Get(p.registry).GetTracer(),
 		)
 	case "mailman":

@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -63,7 +62,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 			CommType:        commType,
 			TokenSDKDriver:  "fabtoken",
 			Aries:           true,
-			SDKs:            []api.SDK{&fabric.SDK{}, &ffabtoken.SDK{}},
+			SDKs:            []api.SDK{&ffabtoken.SDK{}},
 			ReplicationOpts: opts,
 			WebEnabled:      true, // Needed for the Remote Wallet with websockets
 		},

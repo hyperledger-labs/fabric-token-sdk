@@ -9,7 +9,6 @@ package dlog
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -36,17 +35,17 @@ var _ = Describe("Stress EndToEnd", func() {
 		BeforeEach(func() {
 			// notice that fabric-ca does not support yet aries
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+			network, err = integration.New(StartPortDlog(), "", integration.ReplaceTemplate(topology2.Topology(
 				common.Opts{
 					Backend:         "fabric",
 					TokenSDKDriver:  "dlog",
 					Aries:           true,
 					ReplicationOpts: opts,
 					//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
-					SDKs:       []api.SDK{&fabric.SDK{}, &fdlog.SDK{}},
+					SDKs:       []api.SDK{&fdlog.SDK{}},
 					Monitoring: true,
 				},
-			)...)
+			))...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()

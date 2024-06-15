@@ -9,7 +9,6 @@ package mixed
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -34,7 +33,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, Topology(common.Opts{
 		CommType:        commType,
 		FSCLogSpec:      "",
-		SDKs:            []api.SDK{&fabric3.SDK{}, &fall.SDK{}},
+		SDKs:            []api.SDK{&fall.SDK{}},
 		ReplicationOpts: opts,
 	}))
 	return ts, selector
