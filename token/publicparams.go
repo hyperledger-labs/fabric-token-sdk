@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -58,7 +60,7 @@ func (c *PublicParameters) Auditors() []Identity {
 // PublicParamsFetcher models the public parameters fetcher
 type PublicParamsFetcher interface {
 	// Fetch fetches the public parameters from the backend
-	Fetch() ([]byte, error)
+	Fetch(context.Context) ([]byte, error)
 }
 
 // PublicParametersManager exposes methods to manage the public parameters

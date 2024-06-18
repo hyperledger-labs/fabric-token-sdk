@@ -90,7 +90,7 @@ type ledger struct {
 	l *fabric.Ledger
 }
 
-func (l *ledger) Status(id string) (driver.ValidationCode, error) {
+func (l *ledger) Status(ctx context.Context, id string) (driver.ValidationCode, error) {
 	tx, err := l.l.GetTransactionByID(id)
 	if err != nil {
 		return driver.Unknown, errors.Wrapf(err, "failed to get transaction [%s]", id)
@@ -301,12 +301,12 @@ func (n *Network) ComputeTxID(id *driver.TxID) string {
 	return res
 }
 
-func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
+func (n *Network) FetchPublicParameters(ctx context.Context, namespace string) ([]byte, error) {
 	ppBoxed, err := n.viewManager.InitiateView(
 		chaincode.NewQueryView(
 			namespace,
 			QueryPublicParamsFunction,
-		).WithNetwork(n.Name()).WithChannel(n.Channel()),
+		).WithNetwork(n.Name()).WithChannel(n.Channel()), ctx,
 	)
 	if err != nil {
 		return nil, err
@@ -404,7 +404,7 @@ func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityLi
 	return n.ch.Committer().RemoveFinalityListener(txID, wrapper.(*FinalityListener))
 }
 
-func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration, stopOnLastTx bool) ([]byte, error) {
+func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration, stopOnLastTx bool, ctx context.Context) ([]byte, error) {
 	transferMetadataKey, err := keys.CreateTransferActionMetadataKey(key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)

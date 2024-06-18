@@ -64,7 +64,7 @@ type Network interface {
 
 	// FetchPublicParameters returns the public parameters for the network.
 	// If namespace is not supported, the argument is ignored.
-	FetchPublicParameters(namespace string) ([]byte, error)
+	FetchPublicParameters(ctx context.Context, namespace string) ([]byte, error)
 
 	// QueryTokens retrieves the token content for the passed token ids
 	QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error)
@@ -87,7 +87,7 @@ type Network interface {
 
 	// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
 	// The operation gets canceled if the passed timeout elapses or, if stopOnLastTx is true, when the last transaction in the vault is reached.
-	LookupTransferMetadataKey(namespace string, startingTxID string, subKey string, timeout time.Duration, stopOnLastTx bool) ([]byte, error)
+	LookupTransferMetadataKey(namespace string, startingTxID string, subKey string, timeout time.Duration, stopOnLastTx bool, ctx context.Context) ([]byte, error)
 
 	// Ledger gives access to the remote ledger
 	Ledger() (Ledger, error)

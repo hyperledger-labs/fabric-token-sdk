@@ -259,8 +259,8 @@ type Ledger struct {
 	l driver.Ledger
 }
 
-func (l *Ledger) Status(id string) (ValidationCode, string, error) {
-	vc, err := l.l.Status(id)
+func (l *Ledger) Status(ctx context.Context, id string) (ValidationCode, string, error) {
+	vc, err := l.l.Status(ctx, id)
 	if err != nil {
 		return 0, "", err
 	}
@@ -336,8 +336,8 @@ func (n *Network) ComputeTxID(id *TxID) string {
 }
 
 // FetchPublicParameters returns the public parameters for the given namespace
-func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
-	return n.n.FetchPublicParameters(namespace)
+func (n *Network) FetchPublicParameters(ctx context.Context, namespace string) ([]byte, error) {
+	return n.n.FetchPublicParameters(ctx, namespace)
 }
 
 // QueryTokens returns the tokens corresponding to the given token ids int the given namespace
@@ -371,8 +371,8 @@ func (n *Network) RemoveFinalityListener(id string, listener FinalityListener) e
 
 // LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
 // The operation gets canceled if the passed timeout gets reached or, if stopOnLastTx is true, when the last transaction in the vault is reached.
-func (n *Network) LookupTransferMetadataKey(namespace, startingTxID, key string, timeout time.Duration, stopOnLastTx bool, opts ...token.ServiceOption) ([]byte, error) {
-	return n.n.LookupTransferMetadataKey(namespace, startingTxID, key, timeout, stopOnLastTx)
+func (n *Network) LookupTransferMetadataKey(namespace, startingTxID, key string, timeout time.Duration, stopOnLastTx bool, ctx context.Context) ([]byte, error) {
+	return n.n.LookupTransferMetadataKey(namespace, startingTxID, key, timeout, stopOnLastTx, ctx)
 }
 
 func (n *Network) Ledger() (*Ledger, error) {

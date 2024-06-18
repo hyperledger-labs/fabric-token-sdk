@@ -6,8 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
+import "context"
+
 // Ledger models the ledger service
 type Ledger interface {
 	// Status returns the status of the transaction
-	Status(id string) (ValidationCode, error)
+	Status(ctx context.Context, id string) (ValidationCode, error)
 }

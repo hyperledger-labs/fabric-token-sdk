@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package core
 
 import (
+	"context"
 	"os"
 	"runtime/debug"
 	"sync"
@@ -281,7 +282,7 @@ func (m *TMSProvider) ppFromConfig(opts *driver.ServiceOptions) ([]byte, error) 
 
 func (m *TMSProvider) ppFromFetcher(opts *driver.ServiceOptions) ([]byte, error) {
 	if opts.PublicParamsFetcher != nil {
-		ppRaw, err := opts.PublicParamsFetcher.Fetch()
+		ppRaw, err := opts.PublicParamsFetcher.Fetch(context.TODO())
 		if err != nil {
 			return nil, errors.WithMessage(err, "failed fetching public parameters")
 		}
