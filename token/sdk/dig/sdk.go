@@ -21,6 +21,7 @@ import (
 	tracing3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/operations"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
@@ -170,6 +171,9 @@ func (p *SDK) Install() error {
 				return nil, err
 			}
 			return tracing2.NewTracerProvider(tp), nil
+		}),
+		p.Container().Decorate(func(_ metrics.Provider, o *operations.Options, l operations.OperationsLogger) metrics.Provider {
+			return operations.NewMetricsProvider(o.Metrics, l, true)
 		}),
 	)
 	if err != nil {
