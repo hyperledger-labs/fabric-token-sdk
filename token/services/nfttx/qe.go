@@ -9,7 +9,6 @@ package nfttx
 import (
 	"encoding/base64"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/marshaller"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -40,12 +39,7 @@ func NewQueryExecutor(sp token.ServiceProvider, wallet string, precision uint64,
 	tms := token.GetManagementService(sp, opts...)
 	qe := tms.Vault().NewQueryEngine()
 	return &QueryExecutor{
-		selector: NewFilter(
-			wallet,
-			qe,
-			tms.PublicParametersManager().PublicParameters().Precision(),
-			tracing.Get(sp).GetTracer(),
-		),
+		selector:  NewFilter(wallet, qe, tms.PublicParametersManager().PublicParameters().Precision()),
 		vault:     qe,
 		precision: precision,
 	}, nil

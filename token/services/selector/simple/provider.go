@@ -9,12 +9,14 @@ package simple
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var logger = logging.MustGetLogger("token-sdk.selector.simple")
@@ -28,14 +30,15 @@ type SelectorService struct {
 }
 
 const (
-	numRetry = 2
-	timeout  = 5 * time.Second
+	UUIDLabel = "uuid"
+	numRetry  = 2
+	timeout   = 5 * time.Second
 )
 
-func NewProvider(lockerProvider LockerProvider, tracer Tracer) *SelectorService {
+func NewProvider(lockerProvider LockerProvider, tracerProvider trace.TracerProvider) *SelectorService {
 	loader := &loader{
 		lockerProvider:       lockerProvider,
-		tracer:               tracer,
+		tracerProvider:       tracerProvider,
 		numRetry:             numRetry,
 		timeout:              timeout,
 		requestCertification: true,
@@ -76,7 +79,7 @@ func (q *queryService) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) 
 
 type loader struct {
 	lockerProvider       LockerProvider
-	tracer               Tracer
+	tracerProvider       trace.TracerProvider
 	numRetry             int
 	timeout              time.Duration
 	requestCertification bool
@@ -101,7 +104,10 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 		s.timeout,
 		s.requestCertification,
 		tms.PublicParametersManager().PublicParameters().Precision(),
-		s.tracer,
+		s.tracerProvider.Tracer("selector", tracing.WithMetricsOpts(tracing.MetricsOpts{
+			Namespace:  "token-sdk",
+			LabelNames: []tracing.LabelName{UUIDLabel},
+		})),
 	), nil
 }
 

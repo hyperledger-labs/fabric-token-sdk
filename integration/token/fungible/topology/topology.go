@@ -45,6 +45,7 @@ func Topology(opts common.Opts) []api.Topology {
 	fscTopology.WebEnabled = opts.WebEnabled
 	if opts.Monitoring {
 		fscTopology.EnablePrometheusMetrics()
+		fscTopology.EnableFileTracing()
 	}
 	fscTopology.SetLogging(opts.FSCLogSpec, "")
 

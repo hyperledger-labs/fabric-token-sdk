@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple/inmemory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/testutils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func BenchmarkSelectorSingle(b *testing.B) {
@@ -150,7 +151,7 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.W
 		return qs
 	}
 
-	s, _ := selector.NewManager(lock, qf, testutils.SelectorNumRetries, testutils.SelectorTimeout, false, testutils.TokenQuantityPrecision, &testutils.MockTracer{}).NewSelector(testutils.TxID)
+	s, _ := selector.NewManager(lock, qf, testutils.SelectorNumRetries, testutils.SelectorTimeout, false, testutils.TokenQuantityPrecision, noop.NewTracerProvider().Tracer("")).NewSelector(testutils.TxID)
 
 	return &mailman.ExtendedSelector{
 		Selector: s,
@@ -159,14 +160,7 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.W
 }
 
 func NewSelectorWithMailman(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
-	mmManager, err := mailman.NewManager(
-		token.TMSID{},
-		qs,
-		walletIDByRawIdentity,
-		&testutils.MockTracer{},
-		testutils.TokenQuantityPrecision,
-		nil,
-	)
+	mmManager, err := mailman.NewManager(token.TMSID{}, qs, walletIDByRawIdentity, testutils.TokenQuantityPrecision, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -176,7 +170,7 @@ func NewSelectorWithMailman(qs *testutils.MockQueryService, walletIDByRawIdentit
 		return &mailmanManagerDecorator{mmManager, qs}
 	}
 
-	s, _ := selector.NewManager(mmlock, qf, testutils.SelectorNumRetries, testutils.SelectorTimeout, false, testutils.TokenQuantityPrecision, &testutils.MockTracer{}).NewSelector(testutils.TxID)
+	s, _ := selector.NewManager(mmlock, qf, testutils.SelectorNumRetries, testutils.SelectorTimeout, false, testutils.TokenQuantityPrecision, noop.NewTracerProvider().Tracer("")).NewSelector(testutils.TxID)
 
 	return &mailman.ExtendedSelector{
 		Selector: s,
@@ -199,14 +193,7 @@ func NewSimpleSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mai
 }
 
 func NewSimpleSelectorWithMailman(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
-	mmManager, err := mailman.NewManager(
-		token.TMSID{},
-		qs,
-		walletIDByRawIdentity,
-		&testutils.MockTracer{},
-		testutils.TokenQuantityPrecision,
-		nil,
-	)
+	mmManager, err := mailman.NewManager(token.TMSID{}, qs, walletIDByRawIdentity, testutils.TokenQuantityPrecision, nil)
 	if err != nil {
 		panic(err)
 	}

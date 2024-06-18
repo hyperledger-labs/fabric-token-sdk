@@ -9,7 +9,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/gammazero/deque v0.2.1
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240615050326-4c873648ea59
+	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240617213543-c3f2e9034f35
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
@@ -22,6 +22,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.8
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.17.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.9.0
@@ -31,6 +32,8 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.30.0
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	github.com/ugorji/go v1.2.12
+	go.opentelemetry.io/otel v1.27.0
+	go.opentelemetry.io/otel/trace v1.27.0
 	go.uber.org/dig v1.17.0
 	go.uber.org/zap v1.25.0
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
@@ -200,7 +203,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/polydawn/refmt v0.89.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
@@ -237,12 +239,11 @@ require (
 	go.etcd.io/etcd/server/v3 v3.5.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
-	go.opentelemetry.io/otel v1.24.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.21.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.21.0 // indirect
-	go.opentelemetry.io/otel/metric v1.24.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.21.0 // indirect
-	go.opentelemetry.io/otel/trace v1.24.0 // indirect
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.27.0 // indirect
+	go.opentelemetry.io/otel/metric v1.27.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.27.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/fx v1.20.0 // indirect
@@ -252,7 +253,7 @@ require (
 	golang.org/x/mod v0.16.0 // indirect
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.19.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect

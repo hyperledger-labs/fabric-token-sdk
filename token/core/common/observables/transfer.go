@@ -9,8 +9,8 @@ package observables
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/attribute"
@@ -24,9 +24,8 @@ type transferMetrics struct {
 func NewTransfer(p trace.TracerProvider) *transferMetrics {
 	return &transferMetrics{
 		transferTracer: p.Tracer("transfer", tracing.WithMetricsOpts(tracing.MetricsOpts{
-			Namespace:    "token_sdk",
-			LabelNames:   metrics.AllLabelNames(SuccessfulLabel),
-			StatsdFormat: metrics.StatsdFormat(SuccessfulLabel),
+			Namespace:  "token_sdk",
+			LabelNames: metrics.AllLabelNames(SuccessfulLabel),
 		})),
 	}
 }

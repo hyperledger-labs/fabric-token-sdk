@@ -9,8 +9,8 @@ package observables
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -23,9 +23,8 @@ type issueMetrics struct {
 func NewIssue(p trace.TracerProvider) *issueMetrics {
 	return &issueMetrics{
 		issueTracer: p.Tracer("issue", tracing.WithMetricsOpts(tracing.MetricsOpts{
-			Namespace:    "token_sdk",
-			LabelNames:   metrics.AllLabelNames(TokenTypeLabel, SuccessfulLabel),
-			StatsdFormat: metrics.StatsdFormat(TokenTypeLabel, SuccessfulLabel),
+			Namespace:  "token_sdk",
+			LabelNames: metrics.AllLabelNames(TokenTypeLabel, SuccessfulLabel),
 		})),
 	}
 }

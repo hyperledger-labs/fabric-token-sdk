@@ -27,10 +27,9 @@ type SelectorService struct {
 	// workerPool []*worker
 }
 
-func NewService(subscribe Subscribe, tracer Tracer) *SelectorService {
+func NewService(subscribe Subscribe) *SelectorService {
 	loader := &loader{
 		subscribe: subscribe,
-		tracer:    tracer,
 	}
 	return &SelectorService{
 		managerLazyCache: utils.NewLazyProviderWithKeyMapper(key, loader.load),
@@ -47,7 +46,6 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 
 type loader struct {
 	subscribe Subscribe
-	tracer    Tracer
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -64,14 +62,7 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
 	}
-	newManager, err := NewManager(
-		tms.ID(),
-		tms.Vault().NewQueryEngine(),
-		walletIDByRawIdentity,
-		s.tracer,
-		pp.Precision(),
-		s.subscribe,
-	)
+	newManager, err := NewManager(tms.ID(), tms.Vault().NewQueryEngine(), walletIDByRawIdentity, pp.Precision(), s.subscribe)
 	if err != nil {
 		return nil, err
 	}

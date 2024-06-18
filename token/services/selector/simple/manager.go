@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type NewQueryEngineFunc func() QueryService
@@ -21,7 +22,7 @@ type Manager struct {
 	timeout              time.Duration
 	requestCertification bool
 	precision            uint64
-	tracer               Tracer
+	tracer               trace.Tracer
 }
 
 func NewManager(
@@ -31,7 +32,7 @@ func NewManager(
 	timeout time.Duration,
 	requestCertification bool,
 	precision uint64,
-	tracer Tracer,
+	tracer trace.Tracer,
 ) *Manager {
 	return &Manager{
 		locker:               locker,
