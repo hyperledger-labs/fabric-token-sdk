@@ -50,6 +50,8 @@ type Network interface {
 	// the argument is ignored.
 	Vault(namespace string) (Vault, error)
 
+	TokenVault(namespace string) (TokenVault, error)
+
 	// Broadcast sends the passed blob to the network
 	Broadcast(context context.Context, blob interface{}) error
 

@@ -34,10 +34,10 @@ type TokenVault interface {
 
 // OwnerWallet is a combination of a wallet and a query service
 type OwnerWallet struct {
-	wallet       *token.OwnerWallet
-	queryService QueryEngine
-	vault        TokenVault
-	bufferSize   int
+	wallet      *token.OwnerWallet
+	queryEngine QueryEngine
+	vault       TokenVault
+	bufferSize  int
 }
 
 // ListTokensAsSender returns a list of non-expired htlc-tokens whose sender id is in this wallet
@@ -297,7 +297,7 @@ func (w *OwnerWallet) filterIterator(tokenType string, sender bool, selector Sel
 	} else {
 		walletID = recipientWallet(w.wallet)
 	}
-	it, err := w.queryService.UnspentTokensIteratorBy(walletID, tokenType)
+	it, err := w.queryEngine.UnspentTokensIteratorBy(walletID, tokenType)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get iterator over unspent tokens")
 	}
@@ -323,17 +323,17 @@ func Wallet(sp token.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
 	if nw == nil {
 		return nil
 	}
-	vault, err := nw.Vault(tms.Namespace())
+	vault, err := nw.TokenVault(tms.Namespace())
 	if err != nil {
 		logger.Errorf("failed to get vault for [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 		return nil
 	}
 
 	return &OwnerWallet{
-		wallet:       wallet,
-		vault:        vault,
-		queryService: vault.QueryEngine(),
-		bufferSize:   100,
+		wallet:      wallet,
+		vault:       vault,
+		queryEngine: vault.QueryEngine(),
+		bufferSize:  100,
 	}
 }
 

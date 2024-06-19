@@ -32,6 +32,7 @@ const (
 	NoAuditor
 	HSM
 	WebEnabled
+	WithEndorsers
 )
 
 var _ = Describe("EndToEnd", func() {
@@ -78,6 +79,13 @@ var _ = Describe("EndToEnd", func() {
 			AfterEach(ts.TearDown)
 			It("Malicious Transactions", Label("T9"), func() { fungible.TestMaliciousTransactions(ts.II, selector) })
 		})
+
+		Describe("T10 Fungible with Auditor ne Issuer and Endorsers", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, Aries|WithEndorsers, t.ReplicationFactor, "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T10"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+		})
 	}
 })
 
@@ -110,16 +118,18 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names
 	opts, selector := token2.NewReplicationOptions(factor, names...)
 	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
 		common.Opts{
-			Backend:         "fabric",
-			CommType:        commType,
-			TokenSDKDriver:  "dlog",
-			NoAuditor:       mask&NoAuditor > 0,
-			Aries:           mask&Aries > 0,
-			AuditorAsIssuer: mask&AuditorAsIssuer > 0,
-			HSM:             mask&HSM > 0,
-			WebEnabled:      mask&WebEnabled > 0,
-			SDKs:            []api.SDK{&fdlog.SDK{}},
-			ReplicationOpts: opts,
+			Backend:             "fabric",
+			CommType:            commType,
+			TokenSDKDriver:      "dlog",
+			NoAuditor:           mask&NoAuditor > 0,
+			Aries:               mask&Aries > 0,
+			AuditorAsIssuer:     mask&AuditorAsIssuer > 0,
+			HSM:                 mask&HSM > 0,
+			WebEnabled:          mask&WebEnabled > 0,
+			SDKs:                []api.SDK{&fdlog.SDK{}},
+			ReplicationOpts:     opts,
+			FSCBasedEndorsement: mask&WithEndorsers > 0,
+			//FSCLogSpec:          "token-sdk=debug:fabric-sdk=debug:info",
 		},
 	))
 	return ts, selector

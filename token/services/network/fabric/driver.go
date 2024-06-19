@@ -8,9 +8,11 @@ package fabric
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -52,13 +54,17 @@ func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.
 		return nil, errors.WithMessage(err, "failed to get config service")
 	}
 	return NewNetwork(
-		sp,
 		n,
 		ch,
 		m.Vault,
 		cs,
 		common.NewAcceptTxInDBFilterProvider(ttxdbProvider, auditDBProvider),
 		tokensProvider,
+		view.GetIdentityProvider(sp),
+		view.GetManager(sp),
+		view.GetRegistry(sp),
+		token.GetManagementServiceProvider(sp),
+		endorsement.GetProvider(sp),
 	), nil
 }
 

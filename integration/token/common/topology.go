@@ -20,18 +20,19 @@ type replicationOpts interface {
 }
 
 type Opts struct {
-	CommType        fsc.P2PCommunicationType
-	ReplicationOpts replicationOpts
-	Backend         string
-	TokenSDKDriver  string
-	AuditorAsIssuer bool
-	Aries           bool
-	FSCLogSpec      string
-	NoAuditor       bool
-	HSM             bool
-	SDKs            []api.SDK
-	WebEnabled      bool
-	Monitoring      bool
+	CommType            fsc.P2PCommunicationType
+	ReplicationOpts     replicationOpts
+	Backend             string
+	TokenSDKDriver      string
+	AuditorAsIssuer     bool
+	Aries               bool
+	FSCLogSpec          string
+	NoAuditor           bool
+	HSM                 bool
+	SDKs                []api.SDK
+	WebEnabled          bool
+	Monitoring          bool
+	FSCBasedEndorsement bool
 }
 
 func SetDefaultParams(tokenSDKDriver string, tms *topology.TMS, aries bool) {
