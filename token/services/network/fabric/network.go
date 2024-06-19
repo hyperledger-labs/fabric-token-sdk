@@ -21,11 +21,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/fts"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -37,7 +37,6 @@ import (
 )
 
 const (
-	InvokeFunction            = "invoke"
 	QueryPublicParamsFunction = "queryPublicParams"
 	QueryTokensFunctions      = "queryTokens"
 	AreTokensSpent            = "areTokensSpent"
@@ -162,7 +161,7 @@ type Network struct {
 	tokenVaultLazyCache utils.LazyProvider[string, driver.TokenVault]
 	subscribers         *events.Subscribers
 
-	endorsements map[token2.TMSID]Endorsement
+	endorsementServiceProvider *endorsement.ServiceProvider
 }
 
 func NewNetwork(
@@ -176,6 +175,7 @@ func NewNetwork(
 	viewManager ViewManager,
 	viewRegistry ViewRegistry,
 	tmsProvider *token2.ManagementServiceProvider,
+	endorsementServiceProvider *endorsement.ServiceProvider,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -184,20 +184,20 @@ func NewNetwork(
 		vault:    ch.Vault(),
 	}
 	return &Network{
-		n:                   n,
-		ch:                  ch,
-		configuration:       configuration,
-		filterProvider:      filterProvider,
-		tokensProvider:      tokensProvider,
-		tmsProvider:         tmsProvider,
-		viewManager:         viewManager,
-		viewRegistry:        viewRegistry,
-		ledger:              &ledger{ch.Ledger()},
-		subscribers:         events.NewSubscribers(),
-		vaultLazyCache:      utils.NewLazyProvider(loader.loadVault),
-		tokenVaultLazyCache: utils.NewLazyProvider(loader.loadTokenVault),
-		endorsements:        make(map[token2.TMSID]Endorsement),
-		identityProvider:    identityProvider,
+		n:                          n,
+		ch:                         ch,
+		configuration:              configuration,
+		filterProvider:             filterProvider,
+		tokensProvider:             tokensProvider,
+		tmsProvider:                tmsProvider,
+		viewManager:                viewManager,
+		viewRegistry:               viewRegistry,
+		ledger:                     &ledger{ch.Ledger()},
+		subscribers:                events.NewSubscribers(),
+		vaultLazyCache:             utils.NewLazyProvider(loader.loadVault),
+		tokenVaultLazyCache:        utils.NewLazyProvider(loader.loadTokenVault),
+		endorsementServiceProvider: endorsementServiceProvider,
+		identityProvider:           identityProvider,
 	}
 }
 
@@ -245,10 +245,6 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 		Channel:   n.ch.Name(),
 		Namespace: ns,
 	}
-	_, ok := n.endorsements[tmsID]
-	if ok {
-		return nil, errors.Errorf("network already connected [%s]", tmsID)
-	}
 
 	if err := n.n.ProcessorManager().AddProcessor(
 		ns,
@@ -272,52 +268,6 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 	if err := committer.AddTransactionFilter(transactionFilter); err != nil {
 		return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
 	}
-
-	// if I'm an endorser, I need to process all token transactions
-	var isEndorser bool
-	configuration, err := n.configuration.ConfigurationFor(n.n.Name(), n.ch.Name(), ns)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get configuration for [%s]", tmsID)
-	}
-	var endorsement Endorsement
-	if configuration.IsSet("services.network.fabric.endorsement") {
-		if err := configuration.UnmarshalKey("services.network.fabric.endorsement.endorser", &isEndorser); err != nil {
-			return nil, errors.WithMessagef(err, "failed to unmarshal is endorser for [%s]", tmsID)
-		}
-		if isEndorser {
-			logger.Info("this node is an endorser, prepare it...")
-			if err := committer.ProcessNamespace(ns); err != nil {
-				return nil, errors.WithMessagef(err, "failed to add namespace to committer [%s]", ns)
-			}
-			if err := n.viewRegistry.RegisterResponder(&fts.RequestApprovalResponderView{}, &fts.RequestApprovalView{}); err != nil {
-				return nil, errors.WithMessagef(err, "failed to register approval view for [%s]", tmsID)
-			}
-		}
-
-		e := &FSCEndorsement{
-			ViewManager: n.viewManager,
-		}
-		var endorserIDs []string
-		if err := configuration.UnmarshalKey("services.network.fabric.endorsement.endorsers", &endorserIDs); err != nil {
-			return nil, errors.WithMessage(err, "failed to load endorsers")
-		}
-		logger.Infof("defined [%s] as endorsers for [%s]", endorserIDs, tmsID)
-		if len(endorserIDs) == 0 {
-			return nil, errors.Errorf("no endorsers found for [%s]", tmsID)
-		}
-		e.Endorsers = make([]view.Identity, 0, len(endorserIDs))
-		for _, id := range endorserIDs {
-			endorserID := n.identityProvider.Identity(id)
-			if endorserID.IsNone() {
-				return nil, errors.Errorf("cannot find identity for endorser [%s]", id)
-			}
-			e.Endorsers = append(e.Endorsers, endorserID)
-		}
-		endorsement = e
-	} else {
-		endorsement = &ChaincodeEndorsement{}
-	}
-	n.endorsements[tmsID] = endorsement
 
 	// check the vault for public parameters,
 	// use them if they exists
@@ -382,11 +332,11 @@ func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
 }
 
 func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
-	endorsement, ok := n.endorsements[tms.ID()]
-	if !ok {
-		return nil, errors.Errorf("network not connected [%s]", tms.ID())
+	endorsement, err := n.endorsementServiceProvider.Get(tms.ID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "network not connected [%s]", tms.ID())
 	}
-	return endorsement.Endorse(context, tms, requestRaw, signer, txID)
+	return endorsement.Endorse(context, requestRaw, signer, txID)
 }
 
 func (n *Network) ComputeTxID(id *driver.TxID) string {

@@ -17,6 +17,8 @@ type Configuration interface {
 	UnmarshalKey(key string, rawVal interface{}) error
 	// GetString returns the value associated with the key as a string
 	GetString(key string) string
+	// GetBool returns the value associated with the key as a bool
+	GetBool(key string) bool
 	// TranslatePath translates the passed path relative to the config path
 	TranslatePath(path string) string
 }

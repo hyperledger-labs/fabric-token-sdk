@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -63,6 +64,7 @@ func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.
 		view.GetManager(sp),
 		view.GetRegistry(sp),
 		token.GetManagementServiceProvider(sp),
+		endorsement.GetProvider(sp),
 	), nil
 }
 

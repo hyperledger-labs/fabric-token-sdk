@@ -38,6 +38,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/endorsement"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
@@ -149,6 +150,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(vault.NewVaultProvider),
 		p.Container().Provide(tms.NewPostInitializer),
 		p.Container().Provide(ttx.NewMetrics),
+		p.Container().Provide(endorsement.NewServiceProvider),
 	)
 
 	if err != nil {
@@ -176,6 +178,7 @@ func (p *SDK) Install() error {
 		digutils.Register[*ttx.Manager](p.Container()),
 		digutils.Register[*tokens.Manager](p.Container()),
 		digutils.Register[*tracing.Provider](p.Container()),
+		digutils.Register[*endorsement.ServiceProvider](p.Container()),
 	)
 	if err != nil {
 		return err

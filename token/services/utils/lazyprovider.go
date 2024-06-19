@@ -14,6 +14,7 @@ import (
 
 type LazyProvider[I any, V any] interface {
 	Get(I) (V, error)
+	Peek(input I) (V, bool)
 	Update(I) (V, V, error)
 	Delete(I) (V, bool)
 	Length() int
@@ -62,11 +63,7 @@ func (v *lazyProvider[I, K, V]) Update(input I) (V, V, error) {
 
 func (v *lazyProvider[I, K, V]) Get(input I) (V, error) {
 	key := v.keyMapper(input)
-	// Check cache
-	v.cacheLock.RLock()
-	res, ok := v.cache[key]
-	v.cacheLock.RUnlock()
-	if ok {
+	if res, ok := v.peek(key); ok {
 		return res, nil
 	}
 
@@ -75,8 +72,7 @@ func (v *lazyProvider[I, K, V]) Get(input I) (V, error) {
 	defer v.cacheLock.Unlock()
 
 	// check cache again
-	res, ok = v.cache[key]
-	if ok {
+	if res, ok := v.cache[key]; ok {
 		return res, nil
 	}
 
@@ -88,6 +84,18 @@ func (v *lazyProvider[I, K, V]) Get(input I) (V, error) {
 	v.cache[key] = res
 
 	return res, nil
+}
+
+func (v *lazyProvider[I, K, V]) Peek(input I) (V, bool) {
+	return v.peek(v.keyMapper(input))
+}
+
+func (v *lazyProvider[I, K, V]) peek(key K) (V, bool) {
+	// Check cache
+	v.cacheLock.RLock()
+	defer v.cacheLock.RUnlock()
+	res, ok := v.cache[key]
+	return res, ok
 }
 
 func (v *lazyProvider[I, K, V]) Delete(input I) (V, bool) {
