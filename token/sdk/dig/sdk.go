@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/operations"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
@@ -156,6 +157,16 @@ func (p *SDK) Install() error {
 	}
 
 	if err := p.SDK.Install(); err != nil {
+		return err
+	}
+
+	// Overwrite dependencies
+	err = errors2.Join(
+		p.Container().Decorate(func(_ metrics.Provider, o *operations.Options, l operations.OperationsLogger) metrics.Provider {
+			return operations.NewMetricsProvider(o.Metrics, l, true)
+		}),
+	)
+	if err != nil {
 		return err
 	}
 
