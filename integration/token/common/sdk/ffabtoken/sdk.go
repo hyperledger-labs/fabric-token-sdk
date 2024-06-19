@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package ffabtoken
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
-	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/unity"
@@ -24,6 +24,6 @@ type SDK struct {
 	*tokensdk.SDK
 }
 
-func NewSDK(registry sdk.Registry) *SDK {
+func NewSDK(registry node.Registry) *SDK {
 	return &SDK{SDK: tokensdk.NewSDK(registry)}
 }
