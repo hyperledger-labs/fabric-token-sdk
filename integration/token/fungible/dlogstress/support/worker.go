@@ -52,6 +52,7 @@ func (p *Pool) ScheduleTask(task Task) {
 }
 
 func (p *Pool) Shutdown() {
-	close(p.taskQueue)
+	p.shutdown <- struct{}{}
 	p.wg.Wait()
+	close(p.taskQueue)
 }
