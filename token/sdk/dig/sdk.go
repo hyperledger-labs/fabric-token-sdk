@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -174,6 +175,7 @@ func (p *SDK) Install() error {
 		digutils.Register[*config2.Service](p.Container()),
 		digutils.Register[*ttx.Manager](p.Container()),
 		digutils.Register[*tokens.Manager](p.Container()),
+		digutils.Register[metrics.Provider](p.Container()),
 	)
 	if err != nil {
 		return err
