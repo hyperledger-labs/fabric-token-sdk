@@ -13,7 +13,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -23,12 +22,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type Tracer tracing.Tracer
-
 type Manager struct {
 	notifier               events.Subscriber
 	eventOperationMap      map[string]Op
-	tracer                 Tracer
 	mailmen                map[string]*Mailman
 	tokenQuantityPrecision uint64
 	qs                     QueryService
@@ -43,7 +39,7 @@ type Manager struct {
 
 type WalletIDByRawIdentityFunc func(rawIdentity []byte) string
 
-func NewManager(tmsID token.TMSID, qs QueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, tracer Tracer, tokenQuantityPrecision uint64, notifier events.Subscriber) (*Manager, error) {
+func NewManager(tmsID token.TMSID, qs QueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, tokenQuantityPrecision uint64, notifier events.Subscriber) (*Manager, error) {
 	// pre-populate mailman instances
 	iter, err := qs.UnspentTokensIterator()
 	if err != nil {
@@ -96,7 +92,6 @@ func NewManager(tmsID token.TMSID, qs QueryService, walletIDByRawIdentity Wallet
 		tmsID:                  tmsID,
 		notifier:               notifier,
 		eventOperationMap:      eventOperationMap,
-		tracer:                 tracer,
 		mailmen:                mailmen,
 		tokenQuantityPrecision: tokenQuantityPrecision,
 		qs:                     qs,

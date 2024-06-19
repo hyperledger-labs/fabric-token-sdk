@@ -32,10 +32,9 @@ const (
 	timeout  = 5 * time.Second
 )
 
-func NewProvider(lockerProvider LockerProvider, tracer Tracer) *SelectorService {
+func NewProvider(lockerProvider LockerProvider) *SelectorService {
 	loader := &loader{
 		lockerProvider:       lockerProvider,
-		tracer:               tracer,
 		numRetry:             numRetry,
 		timeout:              timeout,
 		requestCertification: true,
@@ -76,7 +75,6 @@ func (q *queryService) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) 
 
 type loader struct {
 	lockerProvider       LockerProvider
-	tracer               Tracer
 	numRetry             int
 	timeout              time.Duration
 	requestCertification bool
@@ -101,7 +99,6 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 		s.timeout,
 		s.requestCertification,
 		tms.PublicParametersManager().PublicParameters().Precision(),
-		s.tracer,
 	), nil
 }
 

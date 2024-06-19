@@ -14,6 +14,5 @@ package integration
 import (
 	_ "github.com/hyperledger-labs/fabric-smart-client"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm"
-	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing/optl"
 	_ "github.com/libp2p/go-libp2p"
 )

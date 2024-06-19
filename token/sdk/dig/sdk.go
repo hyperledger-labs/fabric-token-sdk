@@ -20,7 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
@@ -175,7 +174,6 @@ func (p *SDK) Install() error {
 		digutils.Register[*config2.Service](p.Container()),
 		digutils.Register[*ttx.Manager](p.Container()),
 		digutils.Register[*tokens.Manager](p.Container()),
-		digutils.Register[*tracing.Provider](p.Container()),
 	)
 	if err != nil {
 		return err

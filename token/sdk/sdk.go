@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
@@ -105,13 +104,12 @@ func (p *SDK) Install() error {
 	case "simple":
 		selectorManagerProvider = selector.NewProvider(
 			network2.NewLockerProvider(ttxdbManager, 2*time.Second, 5*time.Minute),
-			tracing.Get(p.registry).GetTracer(),
 		)
 	case "mailman":
 		// we use mailman as our default selector
 		subscriber, err := events.GetSubscriber(p.registry)
 		assert.NoError(err, "failed to get events subscriber")
-		selectorManagerProvider = mailman.NewService(subscriber, tracing.Get(p.registry).GetTracer())
+		selectorManagerProvider = mailman.NewService(subscriber)
 	default:
 		tokenLockDBManager := tokenlockdb.NewManager(cs, dbconfig.NewConfig(p.configService, "tokenlockdb.persistence.type", "db.persistence.type"))
 		assert.NoError(p.registry.RegisterService(tokenLockDBManager))

@@ -9,8 +9,6 @@ package simple
 import (
 	"time"
 
-	"github.com/hashicorp/go-uuid"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -33,8 +31,6 @@ type Locker interface {
 	IsLocked(id *token2.ID) bool
 }
 
-type Tracer = tracing.Tracer
-
 type selector struct {
 	txID         string
 	locker       Locker
@@ -44,8 +40,6 @@ type selector struct {
 	numRetry             int
 	timeout              time.Duration
 	requestCertification bool
-
-	tracer Tracer
 }
 
 // Select selects tokens to be spent based on ownership, quantity, and type
@@ -62,13 +56,6 @@ func (s *selector) concurrencyCheck(ids []*token2.ID) error {
 }
 
 func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType string) ([]*token2.ID, token2.Quantity, error) {
-	uuid, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to generate UUID")
-	}
-	s.tracer.Start("selector.selectByID" + uuid)
-	defer s.tracer.End("selector.selectByID" + uuid)
-
 	var toBeSpent []*token2.ID
 	var sum token2.Quantity
 	var potentialSumWithLocked token2.Quantity

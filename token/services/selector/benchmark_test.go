@@ -150,7 +150,7 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.W
 		return qs
 	}
 
-	s, _ := selector.NewManager(lock, qf, testutils.SelectorNumRetries, testutils.SelectorTimeout, false, testutils.TokenQuantityPrecision, &testutils.MockTracer{}).NewSelector(testutils.TxID)
+	s, _ := selector.NewManager(lock, qf, testutils.SelectorNumRetries, testutils.SelectorTimeout, false, testutils.TokenQuantityPrecision).NewSelector(testutils.TxID)
 
 	return &mailman.ExtendedSelector{
 		Selector: s,
@@ -159,14 +159,7 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.W
 }
 
 func NewSelectorWithMailman(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
-	mmManager, err := mailman.NewManager(
-		token.TMSID{},
-		qs,
-		walletIDByRawIdentity,
-		&testutils.MockTracer{},
-		testutils.TokenQuantityPrecision,
-		nil,
-	)
+	mmManager, err := mailman.NewManager(token.TMSID{}, qs, walletIDByRawIdentity, testutils.TokenQuantityPrecision, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -176,7 +169,7 @@ func NewSelectorWithMailman(qs *testutils.MockQueryService, walletIDByRawIdentit
 		return &mailmanManagerDecorator{mmManager, qs}
 	}
 
-	s, _ := selector.NewManager(mmlock, qf, testutils.SelectorNumRetries, testutils.SelectorTimeout, false, testutils.TokenQuantityPrecision, &testutils.MockTracer{}).NewSelector(testutils.TxID)
+	s, _ := selector.NewManager(mmlock, qf, testutils.SelectorNumRetries, testutils.SelectorTimeout, false, testutils.TokenQuantityPrecision).NewSelector(testutils.TxID)
 
 	return &mailman.ExtendedSelector{
 		Selector: s,
@@ -199,14 +192,7 @@ func NewSimpleSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mai
 }
 
 func NewSimpleSelectorWithMailman(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
-	mmManager, err := mailman.NewManager(
-		token.TMSID{},
-		qs,
-		walletIDByRawIdentity,
-		&testutils.MockTracer{},
-		testutils.TokenQuantityPrecision,
-		nil,
-	)
+	mmManager, err := mailman.NewManager(token.TMSID{}, qs, walletIDByRawIdentity, testutils.TokenQuantityPrecision, nil)
 	if err != nil {
 		panic(err)
 	}
