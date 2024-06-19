@@ -45,6 +45,7 @@ func Topology(opts common.Opts) []api.Topology {
 	fscTopology.WebEnabled = opts.WebEnabled
 	if opts.Monitoring {
 		fscTopology.EnablePrometheusMetrics()
+		//fscTopology.EnableFileTracing()
 	}
 	fscTopology.SetLogging(opts.FSCLogSpec, "")
 
@@ -339,6 +340,7 @@ func Topology(opts common.Opts) []api.Topology {
 		monitoringTopology := monitoring.NewTopology()
 		//monitoringTopology.EnableHyperledgerExplorer()
 		monitoringTopology.EnablePrometheusGrafana()
+		monitoringTopology.EnableOPTL()
 		return []api.Topology{
 			backendNetwork, tokenTopology, fscTopology,
 			monitoringTopology,
