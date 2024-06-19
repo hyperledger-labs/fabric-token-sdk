@@ -1079,7 +1079,7 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
 	// Start Issuance
-	issuePool := dlog.NewPool(10)
+	issuePool := dlog.NewPool(20)
 	go func() {
 		issuePool.ScheduleTask(func() {
 			defer func() {
@@ -1089,6 +1089,7 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 			}()
 			IssueCash(network, "", "StressCoin", 1, alice, auditor, true, issuer)
 			IssueCash(network, "", "StressCoin", 1, bob, auditor, true, issuer)
+			IssueCash(network, "", "StressCoin", 1, charlie, auditor, true, issuer)
 		})
 	}()
 
@@ -1096,7 +1097,7 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	time.Sleep(1 * time.Minute)
 
 	// start transfers from Alice
-	aliceTransferPool := dlog.NewPool(5)
+	aliceTransferPool := dlog.NewPool(10)
 	go func() {
 		aliceTransferPool.ScheduleTask(func() {
 			defer func() {
@@ -1111,7 +1112,7 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	time.Sleep(1 * time.Minute)
 
 	// start transfers from Bob
-	bobTransferPool := dlog.NewPool(5)
+	bobTransferPool := dlog.NewPool(10)
 	go func() {
 		bobTransferPool.ScheduleTask(func() {
 			defer func() {
@@ -1123,8 +1124,23 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 		})
 	}()
 
+	// start transfers from Charlie
+	charlieTransferPool := dlog.NewPool(10)
+	go func() {
+		charlieTransferPool.ScheduleTask(func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Errorf("caught panic during transfer charlie to alice: %v", r)
+				}
+			}()
+			TransferCash(network, charlie, "", "StressCoin", 1, charlie, auditor)
+			TransferCash(network, charlie, "", "StressCoin", 1, alice, auditor)
+		})
+	}()
+
 	time.Sleep(10 * time.Minute)
 	issuePool.Shutdown()
 	aliceTransferPool.Shutdown()
 	bobTransferPool.Shutdown()
+	charlieTransferPool.Shutdown()
 }
