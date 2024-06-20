@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"time"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
@@ -25,6 +27,7 @@ type TransferService struct {
 	WalletService           driver.WalletService
 	TokenLoader             TokenLoader
 	Deserializer            driver.Deserializer
+	Metrics                 *Metrics
 }
 
 func NewTransferService(
@@ -33,6 +36,7 @@ func NewTransferService(
 	walletService driver.WalletService,
 	tokenLoader TokenLoader,
 	deserializer driver.Deserializer,
+	metrics *Metrics,
 ) *TransferService {
 	return &TransferService{
 		Logger:                  logger,
@@ -40,6 +44,7 @@ func NewTransferService(
 		WalletService:           walletService,
 		TokenLoader:             tokenLoader,
 		Deserializer:            deserializer,
+		Metrics:                 metrics,
 	}
 }
 
@@ -93,10 +98,13 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, token
 	}
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
+	start := time.Now()
 	zkTransfer, outputMetadata, err := sender.GenerateZKTransfer(values, owners)
+	duration := time.Since(start)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", txID)
 	}
+	s.Metrics.zkTransferDuration.Observe(float64(duration.Milliseconds()))
 
 	// add transfer action's metadata
 	zkTransfer.Metadata = meta.TransferActionMetadata(opts.Attributes)

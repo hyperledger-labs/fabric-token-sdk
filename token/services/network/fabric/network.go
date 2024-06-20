@@ -307,6 +307,7 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 			namespace,
 			QueryPublicParamsFunction,
 		).WithNetwork(n.Name()).WithChannel(n.Channel()),
+		context.TODO(),
 	)
 	if err != nil {
 		return nil, err
@@ -426,7 +427,7 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	if err := n.ch.Delivery().Scan(c, startingTxID, func(tx *fabric.ProcessedTransaction) (bool, error) {
 		logger.Debugf("scanning [%s]...", tx.TxID())
 
-		rws, err := v.GetEphemeralRWSet(tx.Results())
+		rws, err := v.InspectRWSet(tx.Results())
 		if err != nil {
 			return false, err
 		}

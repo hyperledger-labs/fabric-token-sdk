@@ -144,13 +144,13 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 	return n.vaultLazyCache.Get(namespace)
 }
 
-func (n *Network) Broadcast(_ context.Context, blob interface{}) error {
+func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
 	var err error
 	switch b := blob.(type) {
 	case driver.Envelope:
-		_, err = n.viewManager.InitiateView(NewBroadcastView(n, b))
+		_, err = n.viewManager.InitiateView(NewBroadcastView(n, b), ctx)
 	default:
-		_, err = n.viewManager.InitiateView(NewBroadcastView(n, b))
+		_, err = n.viewManager.InitiateView(NewBroadcastView(n, b), ctx)
 	}
 	return err
 }
@@ -179,7 +179,7 @@ func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementSe
 	envBoxed, err := view2.GetManager(context).InitiateView(NewRequestApprovalView(
 		n.n, tms.Namespace(),
 		requestRaw, signer, n.ComputeTxID(&txID),
-	))
+	), context.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (n *Network) ComputeTxID(id *driver.TxID) string {
 }
 
 func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
-	pp, err := n.viewManager.InitiateView(NewPublicParamsRequestView(n.Name(), namespace))
+	pp, err := n.viewManager.InitiateView(NewPublicParamsRequestView(n.Name(), namespace), context.TODO())
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 }
 
 func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
-	resBoxed, err := view2.GetManager(context).InitiateView(NewRequestQueryTokensView(n, namespace, IDs))
+	resBoxed, err := view2.GetManager(context).InitiateView(NewRequestQueryTokensView(n, namespace, IDs), context.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (n *Network) AreTokensSpent(context view.Context, namespace string, tokenID
 		}
 	}
 
-	resBoxed, err := view2.GetManager(context).InitiateView(NewRequestSpentTokensView(n, namespace, sIDs))
+	resBoxed, err := view2.GetManager(context).InitiateView(NewRequestSpentTokensView(n, namespace, sIDs), context.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +271,7 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 			startingTxID,
 			orionKey(k),
 			timeout,
-		),
+		), context.TODO(),
 	)
 	if err != nil {
 		return nil, err
@@ -323,7 +323,7 @@ type ledger struct {
 }
 
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
-	boxed, err := view2.GetManager(l.n.sp).InitiateView(NewRequestTxStatusView(l.n.Name(), "", id))
+	boxed, err := view2.GetManager(l.n.sp).InitiateView(NewRequestTxStatusView(l.n.Name(), "", id), context.TODO())
 	if err != nil {
 		return driver.Unknown, err
 	}
@@ -347,7 +347,7 @@ func (t *FinalityListener) OnStatus(txID string, status int, message string) {
 
 func (t *FinalityListener) runOnStatus(txID string, status int, message string) (err error) {
 	defer func() { err = wrapRecover(recover()) }()
-	boxed, err := view2.GetManager(t.sp).InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID))
+	boxed, err := view2.GetManager(t.sp).InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID), context.TODO())
 	if err != nil {
 		return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
 	}
