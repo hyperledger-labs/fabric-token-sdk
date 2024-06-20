@@ -32,13 +32,13 @@ type InfrastructureType struct {
 
 var AllTestTypes = []*InfrastructureType{
 	{
-		Label:             ginkgo.Label("libp2p"),
-		CommType:          fsc.LibP2P,
+		Label:             ginkgo.Label("websocket"),
+		CommType:          fsc.WebSocket,
 		ReplicationFactor: token.None,
 	},
 	{
-		Label:             ginkgo.Label("websocket"),
-		CommType:          fsc.WebSocket,
+		Label:             ginkgo.Label("libp2p"),
+		CommType:          fsc.LibP2P,
 		ReplicationFactor: token.None,
 	},
 	{
