@@ -307,6 +307,7 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 			namespace,
 			QueryPublicParamsFunction,
 		).WithNetwork(n.Name()).WithChannel(n.Channel()),
+		context.TODO(),
 	)
 	if err != nil {
 		return nil, err
