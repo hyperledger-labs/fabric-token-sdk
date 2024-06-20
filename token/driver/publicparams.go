@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
+import "context"
+
 // SerializedPublicParameters is the serialized form of PublicParameters.
 type SerializedPublicParameters struct {
 	// Identifier is the unique identifier of this public parameters.
@@ -25,7 +27,7 @@ func (pp *SerializedPublicParameters) Deserialize(raw []byte) error {
 // PublicParamsFetcher models a public parameters fetcher.
 type PublicParamsFetcher interface {
 	// Fetch fetches the public parameters from a repository.
-	Fetch() ([]byte, error)
+	Fetch(ctx context.Context) ([]byte, error)
 }
 
 //go:generate counterfeiter -o mock/pp.go -fake-name PublicParameters . PublicParameters

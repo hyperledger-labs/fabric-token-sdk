@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
@@ -45,7 +46,7 @@ func Topology(opts common.Opts) []api.Topology {
 	fscTopology.WebEnabled = opts.WebEnabled
 	if opts.Monitoring {
 		fscTopology.EnablePrometheusMetrics()
-		fscTopology.EnableFileTracing()
+		fscTopology.EnableTracing(tracing.Otpl)
 	}
 	fscTopology.SetLogging(opts.FSCLogSpec, "")
 

@@ -67,7 +67,7 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	assert.NotNil(tms.PublicParametersManager().PublicParameters(), "failed to validate local public parameters")
 	ppRaw := GetTMSPublicParams(tms)
 
-	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
+	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(context.Context(), tms.Namespace())
 	assert.NoError(err, "failed to fetch public params")
 	ppm, err := token.NewPublicParametersManagerFromPublicParams(fetchedPPRaw)
 

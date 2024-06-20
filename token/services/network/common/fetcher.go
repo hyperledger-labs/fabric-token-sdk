@@ -6,8 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package common
 
+import "context"
+
 type Fetcher interface {
-	FetchPublicParameters(namespace string) ([]byte, error)
+	FetchPublicParameters(ctx context.Context, namespace string) ([]byte, error)
 }
 
 type publicParamsFetcher struct {
@@ -22,6 +24,6 @@ func NewPublicParamsFetcher(fetcher Fetcher, namespace string) *publicParamsFetc
 	}
 }
 
-func (c *publicParamsFetcher) Fetch() ([]byte, error) {
-	return c.fetcher.FetchPublicParameters(c.namespace)
+func (c *publicParamsFetcher) Fetch(ctx context.Context) ([]byte, error) {
+	return c.fetcher.FetchPublicParameters(ctx, c.namespace)
 }

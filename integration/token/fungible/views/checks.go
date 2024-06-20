@@ -108,7 +108,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		assert.NotNil(tokenRequest, "token requests must not be nil")
 
 		// check the ledger
-		lVC, _, err := l.Status(transactionRecord.TxID)
+		lVC, _, err := l.Status(context.Context(), transactionRecord.TxID)
 		if err != nil {
 			lVC = network.Unknown
 		}

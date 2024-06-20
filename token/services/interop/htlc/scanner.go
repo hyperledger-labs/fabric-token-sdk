@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -48,7 +49,7 @@ func WithStopOnLastTransaction() token.ServiceOption {
 }
 
 // ScanForPreImage scans the ledger for a preimage of the passed image, taking into account the timeout
-func ScanForPreImage(sp token.ServiceProvider, image []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+func ScanForPreImage(sp view.Context, image []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
 	logger.Debugf("scanning for preimage of [%s] with timeout [%s]", base64.StdEncoding.EncodeToString(image), timeout)
 
 	if !hashFunc.Available() {
@@ -81,7 +82,7 @@ func ScanForPreImage(sp token.ServiceProvider, image []byte, hashFunc crypto.Has
 	stopOnLastTx = stop == True
 
 	claimKey := ClaimKey(image)
-	preImage, err := network.LookupTransferMetadataKey(tms.Namespace(), startingTxID, claimKey, timeout, stopOnLastTx, opts...)
+	preImage, err := network.LookupTransferMetadataKey(tms.Namespace(), startingTxID, claimKey, timeout, stopOnLastTx, sp.Context())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to lookup key [%s]", claimKey)
 	}
