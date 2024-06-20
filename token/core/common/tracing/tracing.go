@@ -13,20 +13,20 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var providerType = reflect.TypeOf((*tracerProvider)(nil))
+var providerType = reflect.TypeOf((*TracerProvider)(nil))
 
-type tracerProvider struct {
+type TracerProvider struct {
 	trace.TracerProvider
 }
 
-func NewTracerProvider(tp trace.TracerProvider) trace.TracerProvider {
-	return &tracerProvider{TracerProvider: tp}
+func NewTracerProvider(tp trace.TracerProvider) *TracerProvider {
+	return &TracerProvider{TracerProvider: tp}
 }
 
-func Get(sp view.ServiceProvider) trace.TracerProvider {
+func GetProvider(sp view.ServiceProvider) *TracerProvider {
 	s, err := sp.GetService(providerType)
 	if err != nil {
 		panic(err)
 	}
-	return s.(*tracerProvider)
+	return s.(*TracerProvider)
 }
