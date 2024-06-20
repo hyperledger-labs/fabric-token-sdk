@@ -159,7 +159,8 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	tokDeserializer := &TokenDeserializer{}
 
 	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
-	tracerProvider := tracing.NewProvider(metricsProvider)
+	//tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.Get(sp), metricsProvider)
+	tracerProvider := tracing.Get(sp)
 	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
 	service, err := zkatdlog.NewTokenService(
 		logger,

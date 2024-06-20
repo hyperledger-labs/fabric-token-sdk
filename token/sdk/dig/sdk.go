@@ -18,6 +18,7 @@ import (
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/operations"
@@ -25,6 +26,7 @@ import (
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -59,6 +61,7 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/memory"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/dig"
 	_ "modernc.org/sqlite"
 )
@@ -164,6 +167,13 @@ func (p *SDK) Install() error {
 	err = errors2.Join(
 		p.Container().Decorate(func(_ metrics.Provider, o *operations.Options, l operations.OperationsLogger) metrics.Provider {
 			return operations.NewMetricsProvider(o.Metrics, l, true)
+		}),
+		p.Container().Decorate(func(_ trace.TracerProvider, configService driver.ConfigService) (trace.TracerProvider, error) {
+			tp, err := tracing2.NewTracerProvider(configService)
+			if err != nil {
+				return nil, err
+			}
+			return tracing.NewTracerProvider(tp), nil
 		}),
 	)
 	if err != nil {
