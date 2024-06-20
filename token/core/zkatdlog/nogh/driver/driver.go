@@ -8,7 +8,6 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
@@ -160,7 +159,8 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	tokDeserializer := &TokenDeserializer{}
 
 	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
-	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.GetProvider(sp), metricsProvider)
+	//tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.Get(sp), metricsProvider)
+	tracerProvider := tracing.GetProvider(sp)
 	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
 	service, err := zkatdlog.NewTokenService(
 		logger,
