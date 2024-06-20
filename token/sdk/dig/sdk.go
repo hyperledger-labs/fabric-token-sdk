@@ -196,6 +196,7 @@ func (p *SDK) Install() error {
 		digutils.Register[*config2.Service](p.Container()),
 		digutils.Register[*ttx.Manager](p.Container()),
 		digutils.Register[*tokens.Manager](p.Container()),
+		digutils.Register[trace.TracerProvider](p.Container()),
 		digutils.Register[metrics.Provider](p.Container()),
 	)
 	if err != nil {
