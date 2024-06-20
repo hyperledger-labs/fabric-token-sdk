@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package nfttx
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -29,21 +28,17 @@ type QueryService interface {
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
-type Tracer tracing.Tracer
-
 type filter struct {
 	wallet       string
 	queryService QueryService
 	precision    uint64
-	tracer       Tracer
 }
 
-func NewFilter(wallet string, service QueryService, precision uint64, tracer Tracer) *filter {
+func NewFilter(wallet string, service QueryService, precision uint64) *filter {
 	return &filter{
 		wallet:       wallet,
 		queryService: service,
 		precision:    precision,
-		tracer:       tracer,
 	}
 }
 

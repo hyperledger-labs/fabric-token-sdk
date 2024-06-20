@@ -37,30 +37,6 @@ func (m *MockVault) GetStatus(txID string) (ttxdb.TxStatus, string, error) {
 	return ttxdb.Pending, "", nil
 }
 
-type MockTracer struct {
-}
-
-func (m MockTracer) Start(spanName string) {
-}
-
-func (m MockTracer) StartAt(spanName string, when time.Time) {
-}
-
-func (m MockTracer) AddEvent(spanName string, eventName string) {
-}
-
-func (m MockTracer) AddEventAt(spanName string, eventName string, when time.Time) {
-}
-
-func (m MockTracer) AddError(spanName string, err error) {
-}
-
-func (m MockTracer) End(spanName string, attrs ...string) {
-}
-
-func (m MockTracer) EndAt(spanName string, when time.Time, attrs ...string) {
-}
-
 type MockIterator struct {
 	qs   *MockQueryService
 	keys []string

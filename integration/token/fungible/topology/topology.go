@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
@@ -43,6 +44,10 @@ func Topology(opts common.Opts) []api.Topology {
 	fscTopology := fsc.NewTopology()
 	fscTopology.P2PCommunicationType = opts.CommType
 	fscTopology.WebEnabled = opts.WebEnabled
+	if opts.Monitoring {
+		fscTopology.EnablePrometheusMetrics()
+		fscTopology.EnableTracing(tracing.File)
+	}
 	fscTopology.SetLogging(opts.FSCLogSpec, "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
@@ -334,7 +339,7 @@ func Topology(opts common.Opts) []api.Topology {
 	}
 	if opts.Monitoring {
 		monitoringTopology := monitoring.NewTopology()
-		monitoringTopology.EnableHyperledgerExplorer()
+		//monitoringTopology.EnableHyperledgerExplorer()
 		monitoringTopology.EnablePrometheusGrafana()
 		return []api.Topology{
 			backendNetwork, tokenTopology, fscTopology,

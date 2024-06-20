@@ -21,7 +21,6 @@ type Manager struct {
 	timeout              time.Duration
 	requestCertification bool
 	precision            uint64
-	tracer               Tracer
 }
 
 func NewManager(
@@ -31,7 +30,6 @@ func NewManager(
 	timeout time.Duration,
 	requestCertification bool,
 	precision uint64,
-	tracer Tracer,
 ) *Manager {
 	return &Manager{
 		locker:               locker,
@@ -40,7 +38,6 @@ func NewManager(
 		timeout:              timeout,
 		requestCertification: requestCertification,
 		precision:            precision,
-		tracer:               tracer,
 	}
 }
 
@@ -53,7 +50,6 @@ func (m *Manager) NewSelector(id string) (token.Selector, error) {
 		numRetry:             m.numRetry,
 		timeout:              m.timeout,
 		requestCertification: m.requestCertification,
-		tracer:               m.tracer,
 	}, nil
 }
 

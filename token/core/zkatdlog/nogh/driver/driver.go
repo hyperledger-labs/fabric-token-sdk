@@ -8,10 +8,14 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/observables"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
@@ -154,6 +158,10 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		nil,
 	)
 	tokDeserializer := &TokenDeserializer{}
+
+	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
+	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.GetProvider(sp), metricsProvider)
+	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
 	service, err := zkatdlog.NewTokenService(
 		logger,
 		ws,
@@ -162,9 +170,28 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
-		zkatdlog.NewIssueService(ppm, ws, deserializer),
-		zkatdlog.NewTransferService(logger, ppm, ws, common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer), deserializer),
-		zkatdlog.NewAuditorService(logger, ppm, common.NewLedgerTokenLoader[*token3.Token](logger, qe, tokDeserializer), deserializer),
+		observables.NewObservableIssueService(
+			zkatdlog.NewIssueService(ppm, ws, deserializer, driverMetrics),
+			observables.NewIssue(tracerProvider),
+		),
+		observables.NewObservableTransferService(
+			zkatdlog.NewTransferService(
+				logger,
+				ppm,
+				ws,
+				common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer),
+				deserializer,
+				driverMetrics,
+			),
+			observables.NewTransfer(tracerProvider),
+		),
+		zkatdlog.NewAuditorService(
+			logger,
+			ppm,
+			common.NewLedgerTokenLoader[*token3.Token](logger, qe, tokDeserializer),
+			deserializer,
+			driverMetrics,
+		),
 		zkatdlog.NewTokensService(ppm),
 	)
 	if err != nil {

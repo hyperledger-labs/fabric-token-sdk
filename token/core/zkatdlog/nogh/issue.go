@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"time"
+
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
@@ -19,17 +21,20 @@ type IssueService struct {
 	PublicParametersManager common2.PublicParametersManager[*crypto.PublicParams]
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
+	Metrics                 *Metrics
 }
 
 func NewIssueService(
 	publicParametersManager common2.PublicParametersManager[*crypto.PublicParams],
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
+	metrics *Metrics,
 ) *IssueService {
 	return &IssueService{
 		PublicParametersManager: publicParametersManager,
 		WalletService:           walletService,
 		Deserializer:            deserializer,
+		Metrics:                 metrics,
 	}
 }
 
@@ -60,10 +65,13 @@ func (s *IssueService) Issue(issuerIdentity driver.Identity, tokenType string, v
 		Signer:   signer,
 	}, pp)
 
+	start := time.Now()
 	action, zkOutputsMetadata, err := issuer.GenerateZKIssue(values, owners)
+	duration := time.Since(start)
 	if err != nil {
 		return nil, nil, err
 	}
+	s.Metrics.zkIssueDuration.Observe(float64(duration.Milliseconds()))
 
 	var outputsMetadata [][]byte
 	for _, meta := range zkOutputsMetadata {
@@ -96,6 +104,7 @@ func (s *IssueService) Issue(issuerIdentity driver.Identity, tokenType string, v
 		ReceiversAuditInfos: auditInfo,
 		ExtraSigners:        nil,
 	}
+
 	return action, meta, err
 }
 
