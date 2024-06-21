@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dlog
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -35,6 +36,7 @@ func newTestSuite() (*token2.TestSuite, *token2.ReplicaSelector) {
 			TokenSDKDriver:  "dlog",
 			Aries:           true,
 			ReplicationOpts: opts,
+			CommType:        fsc.WebSocket,
 			//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
 			SDKs:       []api.SDK{&fdlog.SDK{}},
 			Monitoring: true,
