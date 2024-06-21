@@ -14,10 +14,12 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/fabric/iou"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -27,6 +29,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
+	"github.ibm.com/decentralized-trust-research/e2e-transaction-generator/model"
 )
 
 const (
@@ -1027,6 +1030,48 @@ func TestMaliciousTransactions(net *integration.Infrastructure, sel *token3.Repl
 	txStatusBob := GetTXStatus(net, bob, txID)
 	Expect(txStatusBob.ValidationCode).To(BeEquivalentTo(ttx.Deleted))
 	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
+}
+
+func TestStressSuite(network *integration.Infrastructure, auditorId string, selector *token3.ReplicaSelector) {
+	RegisterAuditor(network, selector.Get(auditorId), nil)
+
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, selector.Get("issuer"), "auditor", auditorId)
+	CheckPublicParams(network, selector.Get("issuer"), selector.Get("auditor"), selector.Get("alice"), selector.Get("bob"), selector.Get("charlie"), selector.Get("manager"))
+
+	r, err := runner.NewRunner(network)
+	assert.NoError(err)
+
+	assert.NoError(r.SuiteRunner.Run([]model.SuiteConfig{
+		{
+			Name:       "stress-test-1",
+			PoolSize:   10,
+			Iterations: 2,
+			Delay:      time.Second,
+			Cases: []model.TestCase{
+				{
+					Name:   "test-case-1-1",
+					Payer:  "alice",
+					Payees: []model.UserAlias{"bob", "charlie"},
+					Issue: model.IssueConfig{
+						Total:        10,
+						Distribution: "const:1",
+						Execute:      true,
+					},
+					Transfer: model.TransferConfig{
+						Distribution: "const:1",
+						Execute:      true,
+					},
+				},
+			},
+			UseExistingFunds: false,
+		},
+	}))
+
+	iou.CheckLocalMetrics(network, "alice", "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView")
+	iou.CheckPrometheusMetrics(network, "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView", 2)
 }
 
 func TestStress(network *integration.Infrastructure, auditorId string, selector *token3.ReplicaSelector) {

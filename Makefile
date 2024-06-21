@@ -102,6 +102,18 @@ integration-tests-dvp-fabtoken:
 integration-tests-dvp-dlog:
 	cd ./integration/token/dvp/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
+.PHONY: integration-tests-dlogstress-t1
+integration-tests-dlogstress-t1:
+	make integration-tests-dlogstress TEST_FILTER="T1"
+
+.PHONY: integration-tests-dlogstress-t2
+integration-tests-dlogstress-t2:
+	make integration-tests-dlogstress TEST_FILTER="T2"
+
+.PHONY: integration-tests-dlogstress
+integration-tests-dlogstress:
+	cd ./integration/token/fungible/dlogstress; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --label-filter="$(TEST_FILTER)" .
+
 .PHONY: tidy
 tidy:
 	@go mod tidy
