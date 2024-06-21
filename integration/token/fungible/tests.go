@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package fungible
 
 import (
-	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -18,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner/nwo"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
 	. "github.com/onsi/gomega"
 )
 
@@ -1029,6 +1030,38 @@ func TestMaliciousTransactions(net *integration.Infrastructure, sel *token3.Repl
 	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
 }
 
+func TestStressSuite(network *integration.Infrastructure, auditorId string, selector *token3.ReplicaSelector) {
+	r, err := nwo.NewSuiteExecutor(network, auditorId, "issuer")
+	assert.NoError(err)
+
+	assert.NoError(r.Execute([]model.SuiteConfig{{
+		Name:       "stress-test-1",
+		PoolSize:   10,
+		Iterations: 2,
+		Delay:      time.Second,
+		Cases: []model.TestCase{
+			{
+				Name:   "test-case-1-1",
+				Payer:  "alice",
+				Payees: []model.UserAlias{"bob", "charlie"},
+				Issue: model.IssueConfig{
+					Total:        10,
+					Distribution: "const:1",
+					Execute:      true,
+				},
+				Transfer: model.TransferConfig{
+					Distribution: "const:1",
+					Execute:      true,
+				},
+			},
+		},
+		UseExistingFunds: false,
+	}}))
+
+	CheckLocalMetrics(network, "alice", "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView")
+	CheckPrometheusMetrics(network, "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView", 3, 1)
+}
+
 func TestStress(network *integration.Infrastructure, auditorId string, selector *token3.ReplicaSelector) {
 	auditor := selector.Get(auditorId)
 	issuer := selector.Get("issuer")
@@ -1036,14 +1069,6 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	bob := selector.Get("bob")
 	charlie := selector.Get("charlie")
 	manager := selector.Get("manager")
-
-	// TODO: AF Remove
-	aliceMetrics, err := network.WebClient("alice").Metrics()
-	logger.Infof("metrics: %v, error: %v", aliceMetrics, err)
-	api, err := network.NWO.PrometheusAPI()
-	assert.NoError(err)
-	value, warnings, err := api.Query(context.Background(), "fsc_version", time.Now())
-	logger.Infof("value: %v, warnings: %v, Error: %v", value, warnings, err)
 
 	RegisterAuditor(network, auditor, nil)
 

@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/api"
 	c "github.com/hyperledger-labs/fabric-token-sdk/txgen/model/constants"
@@ -148,7 +147,7 @@ func (u *restUser) GetBalance() (api.Amount, api.Error) {
 		return 0, apiErr
 	}
 
-	var balanceResponse api.BalanceResponse
+	var balanceResponse BalanceResponse
 	err := json.Unmarshal(respBody, &balanceResponse)
 
 	if err != nil {
@@ -168,7 +167,7 @@ func (u *restUser) GetBalance() (api.Amount, api.Error) {
 	return api.Amount(amount), nil
 }
 
-func (u *restUser) Transfer(value api.Amount, recipient model.Username, nonce uuid.UUID) api.Error {
+func (u *restUser) Transfer(value api.Amount, recipient model.Username, nonce api.UUID) api.Error {
 	u.logger.Debugf("Execute payment with nonce %s from %s to %s of %d", nonce.String(), u.username, recipient, value)
 	if err := u.refreshAuthToken(); err != nil {
 		return err
@@ -187,7 +186,7 @@ func (u *restUser) Username() model.Username {
 	return u.username
 }
 
-func (u *restUser) InitiateTransfer(value api.Amount, nonce uuid.UUID) api.Error {
+func (u *restUser) InitiateTransfer(value api.Amount, nonce api.UUID) api.Error {
 	u.logger.Debugf("Initiate payment with nonce %s to %s ", nonce, u.username)
 	if err := u.refreshAuthToken(); err != nil {
 		return err
@@ -203,7 +202,7 @@ func (u *restUser) InitiateTransfer(value api.Amount, nonce uuid.UUID) api.Error
 	return err
 }
 
-func newTransferForm(value api.Amount, nonce uuid.UUID, username model.Username) url.Values {
+func newTransferForm(value api.Amount, nonce api.UUID, username model.Username) url.Values {
 	form := url.Values{}
 	form.Add("value", strconv.Itoa(int(value)))
 	form.Add("recipient", username)
@@ -215,7 +214,7 @@ func (u *restUser) authenticateUser() (string, api.Error) {
 	u.logger.Infof("Authenticate user %s", u.username)
 	url := fmt.Sprintf("%s/login", u.endpoint)
 
-	request := api.LoginRequest{
+	request := LoginRequest{
 		Username: u.username,
 		Password: u.password,
 	}
@@ -240,7 +239,7 @@ func (u *restUser) authenticateUser() (string, api.Error) {
 		}
 	}
 
-	var loginResponse api.LoginResponse
+	var loginResponse LoginResponse
 	err = json.Unmarshal(respBody, &loginResponse)
 
 	if err != nil {
