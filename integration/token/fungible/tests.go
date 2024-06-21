@@ -7,14 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package fungible
 
 import (
-	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/fabric/iou"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -28,8 +26,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
 	. "github.com/onsi/gomega"
-	"github.ibm.com/decentralized-trust-research/e2e-transaction-generator/model"
 )
 
 const (
@@ -1070,8 +1068,8 @@ func TestStressSuite(network *integration.Infrastructure, auditorId string, sele
 		},
 	}))
 
-	iou.CheckLocalMetrics(network, "alice", "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView")
-	iou.CheckPrometheusMetrics(network, "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView", 2)
+	CheckLocalMetrics(network, "alice", "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView")
+	CheckPrometheusMetrics(network, "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView", 3, 1)
 }
 
 func TestStress(network *integration.Infrastructure, auditorId string, selector *token3.ReplicaSelector) {
@@ -1081,14 +1079,6 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	bob := selector.Get("bob")
 	charlie := selector.Get("charlie")
 	manager := selector.Get("manager")
-
-	// TODO: AF Remove
-	aliceMetrics, err := network.WebClient("alice").Metrics()
-	logger.Infof("metrics: %v, error: %v", aliceMetrics, err)
-	api, err := network.NWO.PrometheusAPI()
-	assert.NoError(err)
-	value, warnings, err := api.Query(context.Background(), "fsc_version", time.Now())
-	logger.Infof("value: %v, warnings: %v, Error: %v", value, warnings, err)
 
 	RegisterAuditor(network, auditor, nil)
 

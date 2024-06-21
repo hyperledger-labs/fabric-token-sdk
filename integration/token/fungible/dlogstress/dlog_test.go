@@ -22,8 +22,8 @@ var _ = Describe("Stress EndToEnd", func() {
 		ts, selector := newTestSuite()
 		AfterEach(ts.TearDown)
 		BeforeEach(ts.Setup)
-		It("stress", Label("T1"), func() { fungible.TestStress(ts.II, "auditor", selector) })
-		It("stress_suite", Label("T2"), func() { fungible.TestStressSuite(ts.II, "auditor", selector) })
+		It("stress_suite", Label("T1"), func() { fungible.TestStressSuite(ts.II, "auditor", selector) })
+		It("stress", Label("T2"), func() { fungible.TestStress(ts.II, "auditor", selector) })
 	})
 })
 

@@ -1,8 +1,6 @@
 module github.com/hyperledger-labs/fabric-token-sdk
 
-go 1.22.2
-
-toolchain go1.22.3
+go 1.21
 
 require (
 	github.com/IBM/idemix v0.0.2-0.20231107110441-534ea4193b8f
@@ -12,6 +10,7 @@ require (
 	github.com/gammazero/deque v0.2.1
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240621171244-1b6098b69069
+	github.com/hyperledger-labs/fabric-token-sdk/txgen v0.0.0-00010101000000-000000000000
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
@@ -33,13 +32,15 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.30.0
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	github.com/ugorji/go v1.2.12
-	go.uber.org/dig v1.17.0
+	go.uber.org/dig v1.17.1
 	go.uber.org/zap v1.26.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	google.golang.org/protobuf v1.34.1
 	gopkg.in/yaml.v2 v2.4.0
 	modernc.org/sqlite v1.28.0
 )
+
+replace github.com/hyperledger-labs/fabric-token-sdk/txgen => ./txgen
 
 require (
 	github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20231023164747-f3f972769504 // indirect
@@ -239,7 +240,6 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
-	github.ibm.com/decentralized-trust-research/e2e-transaction-generator v0.0.0-20240621153523-ce8333a3d8d8
 	go.etcd.io/etcd/client/pkg/v3 v3.5.10 // indirect
 	go.etcd.io/etcd/pkg/v3 v3.5.1 // indirect
 	go.etcd.io/etcd/raft/v3 v3.5.1 // indirect

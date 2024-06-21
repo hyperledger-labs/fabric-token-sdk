@@ -22,11 +22,11 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.ibm.com/decentralized-trust-research/e2e-transaction-generator/model"
-	"github.ibm.com/decentralized-trust-research/e2e-transaction-generator/model/api"
-	"github.ibm.com/decentralized-trust-research/e2e-transaction-generator/model/constants"
-	"github.ibm.com/decentralized-trust-research/e2e-transaction-generator/service/metrics"
-	"github.ibm.com/decentralized-trust-research/e2e-transaction-generator/service/user"
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/constants"
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
 )
 
 const currency = "CHF"

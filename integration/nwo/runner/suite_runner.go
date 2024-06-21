@@ -12,16 +12,19 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/runner"
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
 	metrics2 "github.com/hyperledger/fabric-lib-go/common/metrics"
-	"github.ibm.com/decentralized-trust-research/e2e-transaction-generator/configuration/logging"
-	"github.ibm.com/decentralized-trust-research/e2e-transaction-generator/model"
-	"github.ibm.com/decentralized-trust-research/e2e-transaction-generator/service"
-	"github.ibm.com/decentralized-trust-research/e2e-transaction-generator/service/metrics"
 	"go.uber.org/dig"
 )
 
 type Runner struct {
-	*service.SuiteRunner
+	*runner.SuiteRunner
 }
 
 func NewRunner(nw *integration.Infrastructure) (*Runner, error) {
@@ -33,9 +36,9 @@ func NewRunner(nw *integration.Infrastructure) (*Runner, error) {
 		c.Provide(func() model.IntermediaryConfig { return model.IntermediaryConfig{DelayAfterInitiation: time.Second} }),
 		c.Provide(func() metrics2.Provider { return &metrics.Provider{} }),
 		c.Provide(newUserProvider),
-		c.Provide(service.NewSuiteRunner),
-		c.Provide(service.NewIntermediaryClient),
-		c.Provide(service.NewTestCaseRunner),
+		c.Provide(runner.NewSuiteRunner),
+		c.Provide(user.NewIntermediaryClient),
+		c.Provide(runner.NewTestCaseRunner),
 		c.Provide(func(p metrics2.Provider) (metrics.Collector, metrics.Reporter) {
 			c := metrics.NewCollector(p)
 			return c, metrics.NewReporter(c)
@@ -45,7 +48,7 @@ func NewRunner(nw *integration.Infrastructure) (*Runner, error) {
 		return nil, err
 	}
 	r := &Runner{}
-	if err := c.Invoke(func(sr *service.SuiteRunner) { r.SuiteRunner = sr }); err != nil {
+	if err := c.Invoke(func(sr *runner.SuiteRunner) { r.SuiteRunner = sr }); err != nil {
 		return nil, err
 	}
 	return r, nil
