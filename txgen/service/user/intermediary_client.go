@@ -7,9 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package user
 
 import (
+	"crypto/rand"
+	"io"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
@@ -37,7 +38,7 @@ payment has two phases:
 
 func (ic *IntermediaryClient) ExecutePayment(payerName, payeeName model.UserAlias, amount api.Amount) (api.Amount, api.Error) {
 	ic.logger.Infof("User [%s] executes a transfer to [%s] of [%d]", payerName, payeeName, amount)
-	nonce := uuid.New()
+	nonce := newUUID()
 
 	payee := ic.userProvider.Get(payeeName)
 	if err := payee.InitiateTransfer(amount, nonce); err != nil {
@@ -55,6 +56,15 @@ func (ic *IntermediaryClient) ExecutePayment(payerName, payeeName model.UserAlia
 	}
 
 	return amount, nil
+}
+
+func newUUID() api.UUID {
+	var uuid api.UUID
+	_, err := io.ReadFull(rand.Reader, uuid[:])
+	if err != nil {
+		panic(err)
+	}
+	return uuid
 }
 
 func (ic *IntermediaryClient) Withdraw(customer model.UserAlias, amount api.Amount) (api.Amount, api.Error) {
