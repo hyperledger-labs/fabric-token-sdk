@@ -12,6 +12,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/odlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	. "github.com/onsi/ginkgo/v2"
@@ -19,26 +20,33 @@ import (
 )
 
 var _ = Describe("Stress EndToEnd", func() {
-	Describe("T1 Fungible with Auditor ne Issuer", func() {
-		ts, selector := newTestSuite()
-		AfterEach(ts.TearDown)
-		BeforeEach(ts.Setup)
-		It("stress_suite", Label("T1"), func() { fungible.TestStressSuite(ts.II, "auditor", selector) })
-		It("stress", Label("T2"), func() { fungible.TestStress(ts.II, "auditor", selector) })
-	})
+	for _, backend := range []string{"fabric", "orion"} {
+		Describe("Stress test", Label(backend), func() {
+			ts, selector := newTestSuite(backend)
+			AfterEach(ts.TearDown)
+			BeforeEach(ts.Setup)
+			It("stress_suite", Label("T1"), func() { fungible.TestStressSuite(ts.II, "auditor", selector) })
+			//It("stress", Label("T2"), func() { fungible.TestStress(ts.II, "auditor", selector) })
+		})
+	}
 })
 
-func newTestSuite() (*token2.TestSuite, *token2.ReplicaSelector) {
+var sdks = map[string]api.SDK{
+	"fabric": &fdlog.SDK{},
+	"orion":  &odlog.SDK{},
+}
+
+func newTestSuite(backend string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(token2.None)
 	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
 		common.Opts{
-			Backend:         "fabric",
+			Backend:         backend,
 			TokenSDKDriver:  "dlog",
 			Aries:           true,
 			ReplicationOpts: opts,
 			CommType:        fsc.WebSocket,
 			//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
-			SDKs:       []api.SDK{&fdlog.SDK{}},
+			SDKs:       []api.SDK{sdks[backend]},
 			Monitoring: true,
 		},
 	))
