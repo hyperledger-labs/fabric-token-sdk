@@ -121,6 +121,7 @@ jobs:
           interop-dlog-t4,
           interop-dlog-t5,
           interop-dlog-t6,
+          dlogstress-t1,
         ]
 
     steps:

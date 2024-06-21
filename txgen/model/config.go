@@ -17,6 +17,7 @@ type Configuration struct {
 	Suites       []SuiteConfig      `yaml:"suites"`
 	UserProvider UserProviderConfig `yaml:"userProvider"`
 	Intermediary IntermediaryConfig `yaml:"intermediary"`
+	Server       ServerConfig       `yaml:"server"`
 }
 
 type AppConfig struct {
@@ -39,23 +40,27 @@ type Username = string
 type UserAlias = string
 
 type UserConfig struct {
-	Name     UserAlias `yaml:"name"`
-	Username Username  `yaml:"username"`
-	Password string    `yaml:"password"`
-	Endpoint string    `yaml:"endpoint"`
+	Name     UserAlias `yaml:"name" json:"name"`
+	Username Username  `yaml:"username" json:"username"`
+	Password string    `yaml:"password" json:"password"`
+	Endpoint string    `yaml:"endpoint" json:"endpoint"`
 }
 
 type SuiteConfig struct {
-	Name             string        `yaml:"name"`
-	PoolSize         int           `yaml:"poolSize"`
-	Iterations       int           `yaml:"iterations"`
-	Delay            time.Duration `yaml:"delay"`
-	Cases            []TestCase    `yaml:"cases"`
-	UseExistingFunds bool          `yaml:"useExistingFunds"`
+	Name             string        `yaml:"name" json:"name"`
+	PoolSize         int           `yaml:"poolSize" json:"poolSize"`
+	Iterations       int           `yaml:"iterations" json:"iterations"`
+	Delay            time.Duration `yaml:"delay" json:"delay"`
+	Cases            []TestCase    `yaml:"cases" json:"cases"`
+	UseExistingFunds bool          `yaml:"useExistingFunds" yaml:"useExistingFunds"`
 }
 
 type IntermediaryConfig struct {
 	DelayAfterInitiation time.Duration `yaml:"delayAfterInitiation"`
+}
+
+type ServerConfig struct {
+	Endpoint string
 }
 
 type IssueConfig struct {
@@ -70,11 +75,11 @@ type TransferConfig struct {
 }
 
 type TestCase struct {
-	Name     string         `yaml:"name"`
-	Payer    UserAlias      `yaml:"payer"`
-	Payees   []UserAlias    `yaml:"payees"`
-	Issue    IssueConfig    `yaml:"issue"`
-	Transfer TransferConfig `yaml:"transfer"`
+	Name     string         `yaml:"name" json:"name"`
+	Payer    UserAlias      `yaml:"payer" json:"payer"`
+	Payees   []UserAlias    `yaml:"payees" json:"payees"`
+	Issue    IssueConfig    `yaml:"issue" json:"issue"`
+	Transfer TransferConfig `yaml:"transfer" json:"transfer"`
 }
 
 // LogLevel String defining a log level.

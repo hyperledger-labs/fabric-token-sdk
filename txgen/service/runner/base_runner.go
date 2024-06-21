@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package runner
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -15,69 +16,128 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
+	"github.com/pkg/errors"
 	"github.com/sourcegraph/conc"
 )
 
-func NewSuiteRunner(testCaseRunner *TestCaseRunner, intermediary *user.IntermediaryClient, metricsReporter metrics.Reporter, logger logging.ILogger) *SuiteRunner {
-	return &SuiteRunner{
+// SuiteRunner executes test suites
+type SuiteRunner interface {
+	// Start initializes the users and waits for new suites
+	Start(ctx context.Context) error
+	// PushSuites adds new suites to the queue for execution
+	PushSuites(suite ...model.SuiteConfig)
+	// ShutDown waits for all suites to be executed and shuts down the runner
+	ShutDown() error
+}
+
+// BaseRunner runs sequentially the suites passed using PushSuites
+type BaseRunner struct {
+	logger          logging.ILogger
+	intermediary    *user.IntermediaryClient
+	testCaseRunner  *TestCaseRunner
+	metricsReporter metrics.Reporter
+	customers       map[string]*customerState
+	suites          chan model.SuiteConfig
+	shutdown        chan struct{}
+	done            chan struct{}
+}
+
+func NewBase(testCaseRunner *TestCaseRunner, intermediary *user.IntermediaryClient, metricsReporter metrics.Reporter, logger logging.ILogger) *BaseRunner {
+	return &BaseRunner{
 		logger:          logger,
 		intermediary:    intermediary,
 		testCaseRunner:  testCaseRunner,
 		metricsReporter: metricsReporter,
 		customers:       make(map[string]*customerState),
+		suites:          make(chan model.SuiteConfig, 100),
+		shutdown:        make(chan struct{}),
 		done:            make(chan struct{}),
 	}
 }
 
-type SuiteRunner struct {
-	logger          logging.ILogger
-	customers       map[string]*customerState
-	intermediary    *user.IntermediaryClient
-	testCaseRunner  *TestCaseRunner
-	metricsReporter metrics.Reporter
-	done            chan struct{}
+func (r *BaseRunner) ShutDown() error {
+	select {
+	case <-r.shutdown:
+		return errors.New("runner already down")
+	default:
+		r.logger.Infof("Sending command to shut down runner...")
+		close(r.shutdown)
+		r.logger.Infof("Waiting for runner to shut down...")
+		<-r.done
+		r.logger.Infof("Runner successfully shut down")
+		return nil
+	}
+}
+
+func (r *BaseRunner) PushSuites(suites ...model.SuiteConfig) {
+	for _, suite := range suites {
+		r.suites <- suite
+	}
 }
 
 // TODO collect all transactions and verify that they are equal to stored in the system
 
-func (r *SuiteRunner) Run(suiteConfigs []model.SuiteConfig) api.Error {
-	r.logger.Infof("Init customer states")
-	if err := r.initCustomerStates(suiteConfigs); err != nil {
-		return err
-	}
-	r.logger.Infof("Found %d customers: %v", len(r.customers), r.customers)
-
+func (r *BaseRunner) Start(ctx context.Context) error {
 	r.logger.Infof("Launch throughput logger")
 	go r.printTPS()
 
-	r.logger.Infof("Start suite execution")
-	for _, suite := range suiteConfigs {
-		r.runSuite(suite)
-	}
-
-	r.logger.Infof("Check customer balances")
-	r.checkCustomerBalances()
-	r.logger.Infof(r.metricsReporter.Summary())
-
-	close(r.done)
-
-	time.Sleep(time.Second)
+	go func() {
+		defer close(r.done)
+		r.logger.Infof("Start suite executions")
+		for {
+			select {
+			case suite := <-r.suites:
+				r.logger.Infof("Start new suite execution: %v", suite)
+				r.executeSuite(suite)
+			default:
+				select {
+				case suite := <-r.suites:
+					r.logger.Infof("Start new suite execution: %v", suite)
+					r.executeSuite(suite)
+				case <-ctx.Done():
+					r.logger.Infof("Context canceled. Shutting down...")
+					close(r.shutdown)
+					return
+				case <-r.shutdown:
+					r.logger.Infof("Shutting down...")
+					return
+				}
+			}
+		}
+	}()
 
 	return nil
 }
 
-func (r *SuiteRunner) initCustomerStates(suiteConfigs []model.SuiteConfig) api.Error {
-	for _, u := range collectUsers(suiteConfigs) {
+func (r *BaseRunner) executeSuite(suite model.SuiteConfig) {
+	r.logger.Infof("Init new customer states")
+	statesBefore := len(r.customers)
+	if err := r.initCustomerState(suite); err != nil {
+		r.logger.Errorf("error initializing customer states: %v", err)
+	}
+	r.logger.Infof("Found %d new customers: %v", len(r.customers)-statesBefore, r.customers)
+
+	r.runSuite(suite)
+
+	r.logger.Infof("Check customer balances after suite: %v", r.customers)
+	r.checkCustomerBalances()
+	r.logger.Infof(r.metricsReporter.Summary())
+}
+
+func (r *BaseRunner) initCustomerState(suiteConfig model.SuiteConfig) api.Error {
+	for _, u := range collectUsers(suiteConfig) {
 		balance, err := r.intermediary.GetBalance(u)
 		if err != nil {
 			return err
 		}
+		//if _, ok := r.customers[u]; !ok {
 		r.customers[u] = &customerState{Name: u, StartingAmount: balance}
+		//}
 	}
 	return nil
 }
 
-func (r *SuiteRunner) runSuite(suite model.SuiteConfig) {
+func (r *BaseRunner) runSuite(suite model.SuiteConfig) {
 	wg := conc.NewWaitGroup()
 	r.logger.Infof("========================== Start suite %s ==========================", suite.Name)
 	for i := 0; i < suite.Iterations; i++ {
@@ -100,13 +160,12 @@ func (r *SuiteRunner) runSuite(suite model.SuiteConfig) {
 	r.logger.Infof("========================== End suite %s ==========================", suite.Name)
 }
 
-func collectUsers(suiteConfigs []model.SuiteConfig) []model.UserAlias {
+func collectUsers(s model.SuiteConfig) []model.UserAlias {
 	usernameMap := make(map[string]struct{})
-	for _, s := range suiteConfigs {
-		for _, c := range s.Cases {
-			for _, username := range append(c.Payees, c.Payer) {
-				usernameMap[username] = struct{}{}
-			}
+
+	for _, c := range s.Cases {
+		for _, username := range append(c.Payees, c.Payer) {
+			usernameMap[username] = struct{}{}
 		}
 	}
 
@@ -118,10 +177,10 @@ func collectUsers(suiteConfigs []model.SuiteConfig) []model.UserAlias {
 	return usernames
 }
 
-func (r *SuiteRunner) printTPS() {
-	activeRequestReportingInterval := time.NewTicker(time.Millisecond * 500)
+func (r *BaseRunner) printTPS() {
+	activeRequestReportingInterval := time.NewTicker(5 * time.Second)
 
-	totalReqReportingInterval := time.NewTicker(3 * time.Second)
+	totalReqReportingInterval := time.NewTicker(10 * time.Second)
 
 	for {
 		select {
@@ -129,7 +188,7 @@ func (r *SuiteRunner) printTPS() {
 			r.logger.Infof(r.metricsReporter.GetTotalRequests())
 		case <-activeRequestReportingInterval.C:
 			r.logger.Infof(r.metricsReporter.GetActiveRequests())
-		case <-r.done:
+		case <-r.shutdown:
 			activeRequestReportingInterval.Stop()
 			totalReqReportingInterval.Stop()
 			r.logger.Infof("Quitting TPS monitoring... %s", r.metricsReporter.GetActiveRequests())
@@ -138,7 +197,7 @@ func (r *SuiteRunner) printTPS() {
 	}
 }
 
-func (r *SuiteRunner) checkCustomerBalances() {
+func (r *BaseRunner) checkCustomerBalances() {
 	totalWithdrawn := api.Amount(0)
 	totalPaid := api.Amount(0)
 	totalReceived := api.Amount(0)
