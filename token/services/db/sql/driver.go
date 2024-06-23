@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db"
@@ -58,6 +59,12 @@ func (d *DBOpener) Open(cp driver.ConfigProvider, tmsID token.TMSID) (*sql.DB, *
 func NewSQLDBOpener(optsKey, envVarKey string) *DBOpener {
 	return &DBOpener{
 		dbCache: utils.NewLazyProviderWithKeyMapper(key, func(k dbKey) (*sql.DB, error) {
+			if k.driverName == "sqlite" && strings.HasPrefix(k.dataSourceName, "file:") {
+				path := strings.TrimLeft(k.dataSourceName[:strings.IndexRune(k.dataSourceName, '?')], "file:")
+				if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
+					logger.Warnf("failed creating dir [%s]: %s", path, err)
+				}
+			}
 			p, err := sql.Open(k.driverName, k.dataSourceName)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to open db [%s]", k.driverName)

@@ -91,7 +91,7 @@ func HTLCSingleOrionNetworkTopology(opts common.Opts) []api.Topology {
 	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
-	orion2.SetCustodian(tms, custodian)
+	orion2.SetCustodian(tms, custodian.Name)
 
 	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
 
@@ -296,7 +296,7 @@ func HTLCNoCrossClaimWithOrionTopology(opts common.Opts) []api.Topology {
 	tmsOrion := tokenTopology.AddTMS(fscTopology.ListNodes("custodian", "auditor", "issuer", "bob"), orionTopology, "", opts.TokenSDKDriver)
 	common.SetDefaultParams(opts.TokenSDKDriver, tmsOrion, true)
 	tmsOrion.AddAuditor(auditor)
-	orion2.SetCustodian(tmsOrion, custodian)
+	orion2.SetCustodian(tmsOrion, custodian.Name)
 
 	orionTopology.AddDB(tmsOrion.Namespace, "custodian", "issuer", "auditor", "bob")
 
