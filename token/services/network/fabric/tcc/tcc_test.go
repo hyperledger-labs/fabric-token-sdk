@@ -44,6 +44,7 @@ var _ = Describe("ccvalidator", func() {
 		_, err = ppFile.WriteString(pp)
 		Expect(err).NotTo(HaveOccurred())
 		fakestub = &mock.ChaincodeStubInterface{}
+		fakestub.GetTxIDReturns("txid")
 		err = os.Setenv(chaincode2.PublicParamsPathVarEnv, ppFile.Name())
 		Expect(err).NotTo(HaveOccurred())
 	})

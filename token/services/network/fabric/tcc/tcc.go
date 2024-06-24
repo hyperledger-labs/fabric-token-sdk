@@ -61,7 +61,6 @@ type PublicParameters interface {
 
 type TokenChaincode struct {
 	initOnce         sync.Once
-	LogLevel         string
 	Validator        Validator
 	PublicParameters PublicParameters
 
@@ -86,12 +85,17 @@ func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 }
 
 func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Response) {
+	txID := stub.GetTxID()
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Errorf("invoke triggered panic: %s\n%s\n", r, debug.Stack())
+			logger.Errorf("[%s] invoke triggered panic: %s\n%s\n", txID, r, debug.Stack())
 			res = shim.Error(fmt.Sprintf("failed responding [%s]", r))
 		} else {
-			logger.Infof("execution terminated with status [%d]", res.Status)
+			if res.Status == 200 {
+				logger.Infof("[%s] OK", txID)
+			} else {
+				logger.Errorf("[%s] %d: %s", txID, res.Status, res.Message)
+			}
 		}
 	}()
 
@@ -100,7 +104,7 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 	case 0:
 		return shim.Error("missing parameters")
 	default:
-		logger.Infof("running function [%s]", string(args[0]))
+		logger.Infof("[%s] %s", txID, string(args[0]))
 		switch f := string(args[0]); f {
 		case InvokeFunction:
 			if len(args) != 1 {
@@ -129,7 +133,7 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 			}
 			return cc.AreTokensSpent(args[1], stub)
 		default:
-			return shim.Error(fmt.Sprintf("function not [%s] recognized", f))
+			return shim.Error(fmt.Sprintf("function [%s] not recognized", f))
 		}
 	}
 }
@@ -193,7 +197,7 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 		return ""
 	}
 
-	logger.Infof("reading " + publicParamsPath + " ...")
+	logger.Infof("reading %s ...", publicParamsPath)
 	paramsAsBytes, err := os.ReadFile(publicParamsPath)
 	if err != nil {
 		logger.Errorf(
@@ -218,7 +222,6 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	}
 
 	// Write
-
 	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
 	for _, action := range actions {
 		err = w.Write(action)
@@ -228,11 +231,11 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	}
 	err = w.AddPublicParamsDependency()
 	if err != nil {
-		return shim.Error("failed to add public params dependency:" + err.Error())
+		return shim.Error("failed to add public params dependency: " + err.Error())
 	}
 	err = w.CommitTokenRequest(attributes[common.TokenRequestToSign], true)
 	if err != nil {
-		return shim.Error("failed to write token request:" + err.Error())
+		return shim.Error("failed to write token request: " + err.Error())
 	}
 
 	return shim.Success(nil)
@@ -248,7 +251,7 @@ func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) pb
 		return shim.Error("need to initialize public parameters")
 	}
 
-	logger.Infof("query public params, size[%d]", len(raw))
+	logger.Infof("query public params, size [%d]", len(raw))
 
 	return shim.Success(raw)
 }
