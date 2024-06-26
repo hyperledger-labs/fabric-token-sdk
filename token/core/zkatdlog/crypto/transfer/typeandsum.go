@@ -144,23 +144,22 @@ func (p *TypeAndSumProver) Prove() (*TypeAndSumProof, error) {
 	if err != nil {
 		return nil, err
 	}
-	var inputs, outputs []*math.G1
+	inputs := make([]*math.G1, len(p.Inputs))
+	outputs := make([]*math.G1, len(p.Outputs))
 	// sum = \prod (inputs[i]/commitmentToType)/ \prod (outputs[i]/commitmentToType)
 	// sum = G_2^r
 	sum := p.Curve.NewG1()
 	for i := 0; i < len(p.Inputs); i++ {
 		// compute in = inputs[i]/commitmentToType
-		in := p.Inputs[i].Copy()
-		in.Sub(p.CommitmentToType)
-		inputs = append(inputs, in)
-		sum.Add(in)
+		inputs[i] = p.Inputs[i].Copy()
+		inputs[i].Sub(p.CommitmentToType)
+		sum.Add(inputs[i])
 	}
 	for i := 0; i < len(p.Outputs); i++ {
 		// compute out = outputs[i]/commitmentToType
-		out := p.Outputs[i].Copy()
-		out.Sub(p.CommitmentToType)
-		outputs = append(outputs, out)
-		sum.Sub(out)
+		outputs[i] = p.Outputs[i].Copy()
+		outputs[i].Sub(p.CommitmentToType)
+		sum.Sub(outputs[i])
 	}
 
 	// serialize public information
@@ -185,35 +184,31 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 		return errors.New("invalid sum and type proof")
 	}
 
-	var inputs, outputs []*math.G1
+	inputs := make([]*math.G1, len(v.Inputs))
+	outputs := make([]*math.G1, len(v.Outputs))
 	sum := v.Curve.NewG1()
 
-	var inComs []*math.G1
+	inComs := make([]*math.G1, len(inputs))
 
 	for i := 0; i < len(v.Inputs); i++ {
 		if stp.InputValues[i] == nil {
 			return errors.New("invalid sum and type proof")
 		}
-		in := v.Inputs[i].Copy()
-		in.Sub(stp.CommitmentToType)
-		inputs = append(inputs, in)
+		inputs[i] = v.Inputs[i].Copy()
+		inputs[i].Sub(stp.CommitmentToType)
+		sum.Add(inputs[i])
 
-		sum.Add(in)
-
-		inC := v.PedParams[1].Mul(stp.InputValues[i])
-		inC.Add(v.PedParams[2].Mul(stp.InputBlindingFactors[i]))
-		inC.Sub(in.Mul(stp.Challenge))
-		inComs = append(inComs, inC)
+		inComs[i] = v.PedParams[1].Mul(stp.InputValues[i])
+		inComs[i].Add(v.PedParams[2].Mul(stp.InputBlindingFactors[i]))
+		inComs[i].Sub(inputs[i].Mul(stp.Challenge))
 	}
 
 	for i := 0; i < len(v.Outputs); i++ {
-		out := v.Outputs[i].Copy()
-		out.Sub(stp.CommitmentToType)
-		outputs = append(outputs, out)
-
-		sum.Sub(out)
-
+		outputs[i] = v.Outputs[i].Copy()
+		outputs[i].Sub(stp.CommitmentToType)
+		sum.Sub(outputs[i])
 	}
+
 	sumCom := v.PedParams[2].Mul(stp.EqualityOfSum)
 	sumCom.Sub(sum.Mul(stp.Challenge))
 
@@ -244,17 +239,17 @@ func (p *TypeAndSumProver) computeProof(randomness *TypeAndSumProofRandomness, c
 	stp.TypeBlindingFactor = p.Curve.ModMul(chal, p.witness.typeBlindingFactor, p.Curve.GroupOrder)
 	stp.TypeBlindingFactor = p.Curve.ModAdd(stp.TypeBlindingFactor, randomness.typeBF, p.Curve.GroupOrder)
 
+	stp.InputValues = make([]*math.Zr, len(p.Inputs))
+	stp.InputBlindingFactors = make([]*math.Zr, len(p.Inputs))
 	sumBF := p.Curve.NewZrFromInt(0)
 	// generate zk proof for input values and corresponding blinding factors
 	for i := 0; i < len(p.Inputs); i++ {
-		v := p.Curve.ModMul(chal, p.witness.inValues[i], p.Curve.GroupOrder)
-		v = p.Curve.ModAdd(v, randomness.inValues[i], p.Curve.GroupOrder)
-		stp.InputValues = append(stp.InputValues, v)
+		stp.InputValues[i] = p.Curve.ModMul(chal, p.witness.inValues[i], p.Curve.GroupOrder)
+		stp.InputValues[i] = p.Curve.ModAdd(stp.InputValues[i], randomness.inValues[i], p.Curve.GroupOrder)
 
 		t := p.Curve.ModSub(p.witness.inBlindingFactors[i], p.witness.typeBlindingFactor, p.Curve.GroupOrder)
-		bf := p.Curve.ModMul(chal, t, p.Curve.GroupOrder)
-		bf = p.Curve.ModAdd(bf, randomness.inBF[i], p.Curve.GroupOrder)
-		stp.InputBlindingFactors = append(stp.InputBlindingFactors, bf)
+		stp.InputBlindingFactors[i] = p.Curve.ModMul(chal, t, p.Curve.GroupOrder)
+		stp.InputBlindingFactors[i] = p.Curve.ModAdd(stp.InputBlindingFactors[i], randomness.inBF[i], p.Curve.GroupOrder)
 		sumBF = p.Curve.ModAdd(sumBF, t, p.Curve.GroupOrder)
 	}
 

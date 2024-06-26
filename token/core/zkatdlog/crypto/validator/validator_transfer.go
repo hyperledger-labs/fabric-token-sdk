@@ -21,16 +21,16 @@ import (
 )
 
 func TransferSignatureValidate(ctx *Context) error {
-	var tokens []*token.Token
-	var signatures [][]byte
-
 	inputs, err := ctx.TransferAction.GetInputs()
+	tokens := make([]*token.Token, len(inputs))
+	signatures := make([][]byte, len(inputs))
 	if err != nil {
 		return errors.Wrapf(err, "failed to retrieve inputs to spend")
 	}
 	for i, in := range inputs {
 		ctx.Logger.Debugf("load token [%d][%s]", i, in)
-		bytes, err := ctx.Ledger.GetState(in)
+		var bytes []byte
+		bytes, err = ctx.Ledger.GetState(in)
 		if err != nil {
 			return errors.Wrapf(err, "failed to retrieve input to spend [%s]", in)
 		}
@@ -39,26 +39,24 @@ func TransferSignatureValidate(ctx *Context) error {
 		}
 
 		tok := &token.Token{}
-		if err := tok.Deserialize(bytes); err != nil {
+		if err = tok.Deserialize(bytes); err != nil {
 			return errors.Wrapf(err, "failed to deserialize input to spend [%s]", in)
 		}
-		tokens = append(tokens, tok)
+		tokens[i] = tok
 		ctx.Logger.Debugf("check sender [%d][%s]", i, driver.Identity(tok.Owner).UniqueID())
-		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner)
+		var verifier driver.Verifier
+		verifier, err = ctx.Deserializer.GetOwnerVerifier(tok.Owner)
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
 		}
 		ctx.Logger.Debugf("signature verification [%d][%s][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(tok.Owner, verifier)
+		signatures[i], err = ctx.SignatureProvider.HasBeenSignedBy(tok.Owner, verifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%d][%s][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
 		}
-		signatures = append(signatures, sigma)
 	}
-
 	ctx.InputTokens = tokens
 	ctx.Signatures = signatures
-
 	return nil
 }
 
