@@ -1,0 +1,50 @@
+app:
+  logging: DEBUG
+userProvider:
+  users:
+    - name: alice
+      username: alice
+      password: alicePwd
+      endpoint: "http://localhost:8080"
+    - name: bob
+      username: bob
+      password: bobPwd
+      endpoint: "http://localhost:8080"
+    - name: charlie
+      username: charlie
+      password: charliePwd
+      endpoint: "http://localhost:8080"
+    - name: dave
+      username: dave
+      password: davePwd
+      endpoint: "http://localhost:8080"
+
+suites:
+  - name: Concurrent payments from this config # Could help for logs
+    parallel: true
+    iterations: 2
+    delay: 50ms
+    poolSize: 100 # number of parallel requests to server from one test case
+    cases:
+      - name: Alice to all
+        payer: alice # Refers to users.name
+        payees: # Refers to users.name
+          - bob
+          - charlie
+          - dave
+        issue: # We will issue using the distribution until we reach the total. Then we start transferring
+          total: 150000
+          distribution: "const:10" # const:20:20:10:30 | normal:50:3 | uniform:10:40
+        transfer:
+          distribution: "uniform:10:50" # This distribution is the same as the one in issue
+      - name: Bob to all
+        payer: bob
+        payees:
+          - alice
+          - charlie
+          - dave
+        issue:
+          total: 150000
+          distribution: "const:10" # const:20:20:10:30 | normal:50:3 | uniform:10:40
+        transfer:
+          distribution: "uniform:10:50"
