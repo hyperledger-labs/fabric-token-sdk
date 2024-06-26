@@ -23,6 +23,7 @@ type serverConfig struct {
 	CCaddress          string
 	TLS                string
 	LogLevel           string
+	LogFormat          string
 	TLSKey             string
 	TLSCert            string
 	TLSCACertsFilePath string
@@ -33,6 +34,7 @@ func main() {
 		CCID:               os.Getenv("CHAINCODE_ID"),
 		CCaddress:          os.Getenv("CHAINCODE_SERVER_ADDRESS"),
 		LogLevel:           os.Getenv("CHAINCODE_LOG_LEVEL"),
+		LogFormat:          os.Getenv("CHAINCODE_LOG_FORMAT"),
 		TLS:                os.Getenv("CHAINCODE_TLS"),
 		TLSKey:             os.Getenv("CHAINCODE_TLS_KEY"),
 		TLSCert:            os.Getenv("CHAINCODE_TLS_CERT"),
@@ -42,12 +44,15 @@ func main() {
 	if len(config.LogLevel) == 0 {
 		config.LogLevel = "info"
 	}
-	if len(config.TLS) == 0 {
+	if len(config.TLS) == 0 && len(config.TLSKey) > 0 {
 		config.TLS = "true"
+	}
+	if len(config.LogFormat) == 0 {
+		config.LogFormat = "%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}"
 	}
 
 	flogging.Init(flogging.Config{
-		Format:  "'%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}'",
+		Format:  config.LogFormat,
 		LogSpec: config.LogLevel,
 		Writer:  os.Stderr,
 	})
@@ -106,7 +111,6 @@ func main() {
 					}
 					return ppm.PublicParameters(), v, nil
 				},
-				LogLevel: config.LogLevel,
 			},
 			TLSProps: tlsProps,
 		}
