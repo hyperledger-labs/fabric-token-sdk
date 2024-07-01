@@ -41,6 +41,7 @@ var _ = Describe("EndToEnd", func() {
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
 			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+			It("test selector", Label("T10"), func() { fungible.TestSelector(ts.II, "auditor", nil, true, selector) })
 		})
 
 		Describe("Extras with websockets and replicas", t.Label, func() {
