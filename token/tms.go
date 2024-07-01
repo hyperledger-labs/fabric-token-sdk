@@ -278,6 +278,10 @@ func (t *ManagementService) Configuration() *Configuration {
 	return &Configuration{cm: t.tms.Configuration()}
 }
 
+func (t *ManagementService) Authorization() *Authorization {
+	return &Authorization{Authorization: t.tms.Authorization()}
+}
+
 func (t *ManagementService) init() error {
 	v, err := t.vaultProvider.Vault(t.network, t.channel, t.namespace)
 	if err != nil {

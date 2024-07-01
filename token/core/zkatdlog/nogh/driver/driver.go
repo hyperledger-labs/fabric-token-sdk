@@ -20,6 +20,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -102,6 +106,10 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	ip := ws.IdentityProvider
 
 	tokDeserializer := &TokenDeserializer{}
+	authorization := common.NewAuthorizationMultiplexer(
+		common.NewTMSAuthorization(ppm.PublicParams(), ws),
+		htlc.NewScriptAuth(ws),
+	)
 
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
@@ -141,6 +149,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 			observables.NewAudit(tracerProvider),
 		),
 		zkatdlog.NewTokensService(ppm),
+		authorization,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")

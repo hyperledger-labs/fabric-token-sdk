@@ -44,6 +44,7 @@ func NewTokenService(
 	transferService driver.TransferService,
 	auditorService driver.AuditorService,
 	tokensService driver.TokensService,
+	authorization driver.Authorization,
 ) (*Service, error) {
 	root, err := common.NewTokenService[*crypto.PublicParams](
 		logger,
@@ -58,6 +59,7 @@ func NewTokenService(
 		transferService,
 		auditorService,
 		tokensService,
+		authorization,
 	)
 	if err != nil {
 		return nil, err
