@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -89,16 +89,22 @@ func (s *Script) Validate(timeReference time.Time) error {
 	return nil
 }
 
-// ScriptOwnership implements the Ownership interface for scripts
-type ScriptOwnership struct{}
+// ScriptAuth implements the Authorization interface for this script
+type ScriptAuth struct {
+	WalletService driver.WalletService
+}
+
+func NewScriptAuth(walletService driver.WalletService) *ScriptAuth {
+	return &ScriptAuth{WalletService: walletService}
+}
 
 // AmIAnAuditor returns false for script ownership
-func (s *ScriptOwnership) AmIAnAuditor(tms *token.ManagementService) bool {
+func (s *ScriptAuth) AmIAnAuditor() bool {
 	return false
 }
 
 // IsMine returns true if one is either a sender or a recipient of an htlc script
-func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token) ([]string, bool) {
+func (s *ScriptAuth) IsMine(tok *token3.Token) ([]string, bool) {
 	owner, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
 	if err != nil {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
@@ -121,14 +127,14 @@ func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token
 	var ids []string
 	// I'm either the sender
 	logger.Debugf("Is Mine [%s,%s,%s] as a sender?", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-	if wallet := tms.WalletManager().OwnerWallet(script.Sender); wallet != nil {
+	if wallet, err := s.WalletService.OwnerWallet(script.Sender); err == nil {
 		logger.Debugf("Is Mine [%s,%s,%s] as a sender? Yes", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
 		ids = append(ids, senderWallet(wallet))
 	}
 
 	// or the recipient
 	logger.Debugf("Is Mine [%s,%s,%s] as a recipient?", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-	if wallet := tms.WalletManager().OwnerWallet(script.Recipient); wallet != nil {
+	if wallet, err := s.WalletService.OwnerWallet(script.Recipient); err == nil {
 		logger.Debugf("Is Mine [%s,%s,%s] as a recipient? Yes", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
 		ids = append(ids, recipientWallet(wallet))
 	}
@@ -137,7 +143,11 @@ func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token
 	return ids, len(ids) != 0
 }
 
-func (w *ScriptOwnership) OwnerType(raw []byte) (string, []byte, error) {
+func (s *ScriptAuth) Issued(issuer driver.Identity, tok *token3.Token) bool {
+	return false
+}
+
+func (s *ScriptAuth) OwnerType(raw []byte) (string, []byte, error) {
 	owner, err := identity.UnmarshalTypedIdentity(raw)
 	if err != nil {
 		return "", nil, err
@@ -145,10 +155,14 @@ func (w *ScriptOwnership) OwnerType(raw []byte) (string, []byte, error) {
 	return owner.Type, owner.Identity, nil
 }
 
-func senderWallet(w *token.OwnerWallet) string {
+type ownerWallet interface {
+	ID() string
+}
+
+func senderWallet(w ownerWallet) string {
 	return "htlc.sender" + w.ID()
 }
 
-func recipientWallet(w *token.OwnerWallet) string {
+func recipientWallet(w ownerWallet) string {
 	return "htlc.recipient" + w.ID()
 }

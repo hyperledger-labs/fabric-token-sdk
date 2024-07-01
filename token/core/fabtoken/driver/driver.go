@@ -19,6 +19,7 @@ import (
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 )
@@ -142,6 +143,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	)
 	authorization := common.NewAuthorizationMultiplexer(
 		common.NewTMSAuthorization(publicParamsManager.PublicParams(), ws),
+		htlc.NewScriptAuth(ws),
 	)
 	service, err := fabtoken.NewService(
 		logger,
