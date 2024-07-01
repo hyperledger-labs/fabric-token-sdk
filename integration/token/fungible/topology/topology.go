@@ -308,6 +308,7 @@ func Topology(opts common.Opts) []api.Topology {
 	manager.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
+	tokenTopology.TokenSelector = opts.TokenSelector
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.TokenSDKDriver)
 	tms.SetNamespace("token-chaincode")
 	common.SetDefaultParams(opts.TokenSDKDriver, tms, opts.Aries)

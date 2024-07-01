@@ -4,32 +4,28 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package mailman
+package sherdlock
 
 import (
-	"runtime/debug"
+	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/pkg/errors"
 )
 
-type Subscribe = events.Subscriber
-
-type VaultProvider interface {
-	Vault(tms *token.ManagementService) (QueryService, error)
-}
+const retrySelectionBackoff = 5 * time.Second
 
 type SelectorService struct {
 	managerLazyCache utils.LazyProvider[*token.ManagementService, token.SelectorManager]
-	// TODO create a shared worker pool for all selectors
-	// workerPool []*worker
 }
 
-func NewService(subscribe Subscribe) *SelectorService {
+func NewService(tokenDBManager *tokendb.Manager, tokenLockDBManager *tokenlockdb.Manager) *SelectorService {
 	loader := &loader{
-		subscribe: subscribe,
+		tokenDBManager:     tokenDBManager,
+		tokenLockDBManager: tokenLockDBManager,
 	}
 	return &SelectorService{
 		managerLazyCache: utils.NewLazyProviderWithKeyMapper(key, loader.load),
@@ -45,31 +41,26 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 }
 
 type loader struct {
-	subscribe Subscribe
+	tokenDBManager     *tokendb.Manager
+	tokenLockDBManager *tokenlockdb.Manager
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
-	walletIDByRawIdentity := func(rawIdentity []byte) string {
-		w := tms.WalletManager().OwnerWallet(rawIdentity)
-		if w == nil {
-			logger.Errorf("wallet not found for identity [%s][%s]", token.Identity(rawIdentity), debug.Stack())
-			return ""
-		}
-		return w.ID()
-	}
-
 	pp := tms.PublicParametersManager().PublicParameters()
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
 	}
-	newManager, err := NewManager(tms.ID(), tms.Vault().NewQueryEngine(), walletIDByRawIdentity, pp.Precision(), s.subscribe)
+	tokenDB, err := s.tokenDBManager.DBByTMSId(tms.ID())
 	if err != nil {
-		return nil, err
+		return nil, errors.Errorf("failed to create tokenDB: %v", err)
 	}
-	newManager.Start()
-	return newManager, nil
+	tokenLockDB, err := s.tokenLockDBManager.DBByTMSId(tms.ID())
+	if err != nil {
+		return nil, errors.Errorf("failed to create tokenLockDB: %v", err)
+	}
+	return NewManager(tokenDB, tokenLockDB, pp.Precision(), retrySelectionBackoff), nil
 }
 
 func key(tms *token.ManagementService) string {
-	return tms.Network() + tms.Channel() + tms.Namespace()
+	return tms.ID().String()
 }

@@ -8,5 +8,8 @@ package token
 
 const Extension = `
 token:
+  version: v1
   enabled: true
+  selector:
+    driver: {{ TokenSelector }}
 `

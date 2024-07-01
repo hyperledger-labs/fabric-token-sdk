@@ -679,7 +679,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	}
 	CheckBalanceAndHolding(network, bob, "", "EUR", 2820-sum, auditor)
 
-	// Transfer With Selector
+	// Transfer With TokenSelector
 	IssueCash(network, "", "YUAN", 17, alice, auditor, true, issuer)
 	TransferCashWithSelector(network, alice, "", "YUAN", 10, bob, auditor)
 	CheckBalanceAndHolding(network, alice, "", "YUAN", 7, auditor)
@@ -797,6 +797,35 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckBalanceAndHolding(network, bob, "", "Pineapples", 0, auditor)
 	CheckBalanceAndHolding(network, charlie, "", "Pineapples", 0, auditor)
 	CheckAuditorDB(network, auditor, "", nil)
+}
+
+func TestSelector(network *integration.Infrastructure, auditorId string, sel *token3.ReplicaSelector) {
+	auditor := sel.Get(auditorId)
+	issuer := sel.Get("issuer")
+	alice := sel.Get("alice")
+	bob := sel.Get("bob")
+	charlie := sel.Get("charlie")
+	manager := sel.Get("manager")
+	RegisterAuditor(network, auditor, nil)
+
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditor.Id())
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+
+	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+
+	IssueCash(network, "", "USD", 100, alice, auditor, true, issuer)
+	IssueCash(network, "", "USD", 50, alice, auditor, true, issuer)
+	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
+	time.Sleep(10 * time.Second)
+	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
+	time.Sleep(2 * time.Minute)
+	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
 }
 
 func TestPublicParamsUpdate(network *integration.Infrastructure, auditorId string, ppBytes []byte, networkName string, issuerAsAuditor bool, sel *token3.ReplicaSelector) {

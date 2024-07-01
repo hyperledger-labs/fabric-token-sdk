@@ -12,9 +12,10 @@ token:
   enabled: true
 
   # token selector configuration allows to use different implementations of the token selector
-  # the "default" driver is the mailman implementation, other possible configurations are: "simple"
+  # the "sherdlock" driver is the default implementation, other possible configurations are: "simple"
+  # if empty, the default selector is used
   selector:
-    driver: mailman
+    driver: sherdlock
 
   tms:
     mytms: # unique name of this token management system

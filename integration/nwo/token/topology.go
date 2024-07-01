@@ -31,7 +31,8 @@ type Topology struct {
 	TopologyName string `yaml:"name,omitempty"`
 	TopologyType string `yaml:"type,omitempty"`
 
-	TMSs []*topology.TMS
+	TokenSelector string
+	TMSs          []*topology.TMS
 }
 
 func NewTopology() *Topology {

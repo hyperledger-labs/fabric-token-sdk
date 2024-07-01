@@ -102,7 +102,13 @@ func (m *selector) Select(owner token.OwnerFilter, q, currency string) ([]*token
 			return nil, nil, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), currency, err2)
 		} else if t == nil {
 			if !tokensLockedByOthersExist {
-				return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "all non-deleted tokens sum up to %d, but %d were requested and no other process has any tokens locked", sum, quantity)
+				return nil, nil, errors.Wrapf(
+					token.SelectorInsufficientFunds,
+					"insufficient funds, only [%s] tokens of type [%s] are available, but [%s] were requested and no other process has any tokens locked",
+					sum.Decimal(),
+					currency,
+					quantity.Decimal(),
+				)
 			}
 
 			if immediateRetries > maxImmediateRetries {
