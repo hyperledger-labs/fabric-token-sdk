@@ -26,11 +26,9 @@ type TMSProvider interface {
 
 // Manager handles the databases
 type Manager struct {
-	tmsProvider   TMSProvider
-	dbProvider    DBProvider
-	notifier      events.Publisher
-	authorization Authorization
-	issued        Issued
+	tmsProvider TMSProvider
+	dbProvider  DBProvider
+	notifier    events.Publisher
 
 	mutex  sync.Mutex
 	tokens map[string]*Tokens
@@ -41,16 +39,12 @@ func NewManager(
 	tmsProvider TMSProvider,
 	dbManager DBProvider,
 	notifier events.Publisher,
-	authorization Authorization,
-	issued Issued,
 ) *Manager {
 	return &Manager{
-		tmsProvider:   tmsProvider,
-		dbProvider:    dbManager,
-		notifier:      notifier,
-		authorization: authorization,
-		issued:        issued,
-		tokens:        map[string]*Tokens{},
+		tmsProvider: tmsProvider,
+		dbProvider:  dbManager,
+		notifier:    notifier,
+		tokens:      map[string]*Tokens{},
 	}
 }
 
@@ -79,14 +73,12 @@ func (cm *Manager) newTokens(tmsID token.TMSID) (*Tokens, error) {
 		return nil, errors.WithMessagef(err, "failed to get tokendb for [%s]", tmsID)
 	}
 
-	storage, err := NewDBStorage(cm.notifier, cm.authorization, db, tmsID)
+	storage, err := NewDBStorage(cm.notifier, db, tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token store for [%s]", tmsID)
 	}
 	tokens := &Tokens{
 		TMSProvider: cm.tmsProvider,
-		Ownership:   cm.authorization,
-		Issued:      cm.issued,
 		Storage:     storage,
 	}
 	return tokens, nil

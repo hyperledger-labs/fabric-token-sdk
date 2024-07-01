@@ -4,31 +4,39 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package tokens
+package common
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// Authorization is an interface that defines method to check the relation between a token or TMS
-// and wallets (owner, auditor, etc.)
 type Authorization interface {
 	// IsMine returns true if the passed token is owned by an owner wallet in the passed TMS
-	IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool)
+	IsMine(tok *token2.Token) ([]string, bool)
 	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 	// defined in the public parameters of the passed TMS.
-	AmIAnAuditor(tms *token.ManagementService) bool
+	AmIAnAuditor() bool
+
+	Issued(issuer token.Identity, tok *token2.Token) bool
 }
 
-// TMSAuthorization is an owner wallet-based ownership checker
-type TMSAuthorization struct{}
+// WalletBasedAuthorization is a wallet-based authorization implementation
+type WalletBasedAuthorization struct {
+	PublicParameters driver.PublicParameters
+	WalletService    driver.WalletService
+}
+
+func NewTMSAuthorization(publicParameters driver.PublicParameters, walletService driver.WalletService) *WalletBasedAuthorization {
+	return &WalletBasedAuthorization{PublicParameters: publicParameters, WalletService: walletService}
+}
 
 // IsMine returns true if the passed token is owned by an owner wallet in the passed TMS
-func (w *TMSAuthorization) IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool) {
-	wallet := tms.WalletManager().OwnerWallet(tok.Owner.Raw)
-	if wallet == nil {
+func (w *WalletBasedAuthorization) IsMine(tok *token2.Token) ([]string, bool) {
+	wallet, err := w.WalletService.OwnerWallet(tok.Owner.Raw)
+	if err != nil {
 		return nil, false
 	}
 	return []string{wallet.ID()}, true
@@ -36,29 +44,34 @@ func (w *TMSAuthorization) IsMine(tms *token.ManagementService, tok *token2.Toke
 
 // AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 // defined in the public parameters of the passed TMS.
-func (w *TMSAuthorization) AmIAnAuditor(tms *token.ManagementService) bool {
-	for _, identity := range tms.PublicParametersManager().PublicParameters().Auditors() {
-		if tms.WalletManager().AuditorWallet(identity) != nil {
+func (w *WalletBasedAuthorization) AmIAnAuditor() bool {
+	for _, identity := range w.PublicParameters.Auditors() {
+		if _, err := w.WalletService.AuditorWallet(identity); err == nil {
 			return true
 		}
 	}
 	return false
 }
 
+func (w *WalletBasedAuthorization) Issued(issuer token.Identity, tok *token2.Token) bool {
+	_, err := w.WalletService.IssuerWallet(issuer)
+	return err == nil
+}
+
 // AuthorizationMultiplexer iterates over multiple authorization checker
 type AuthorizationMultiplexer struct {
-	ownerships []Authorization
+	authorizations []Authorization
 }
 
 // NewAuthorizationMultiplexer returns a new AuthorizationMultiplexer for the passed ownership checkers
 func NewAuthorizationMultiplexer(ownerships ...Authorization) *AuthorizationMultiplexer {
-	return &AuthorizationMultiplexer{ownerships: ownerships}
+	return &AuthorizationMultiplexer{authorizations: ownerships}
 }
 
 // IsMine returns true it there exists an authorization checker that returns true
-func (o *AuthorizationMultiplexer) IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool) {
-	for _, ownership := range o.ownerships {
-		ids, mine := ownership.IsMine(tms, tok)
+func (o *AuthorizationMultiplexer) IsMine(tok *token2.Token) ([]string, bool) {
+	for _, authorization := range o.authorizations {
+		ids, mine := authorization.IsMine(tok)
 		if mine {
 			return ids, true
 		}
@@ -67,9 +80,19 @@ func (o *AuthorizationMultiplexer) IsMine(tms *token.ManagementService, tok *tok
 }
 
 // AmIAnAuditor returns true it there exists an authorization checker that returns true
-func (o *AuthorizationMultiplexer) AmIAnAuditor(tms *token.ManagementService) bool {
-	for _, ownership := range o.ownerships {
-		yes := ownership.AmIAnAuditor(tms)
+func (o *AuthorizationMultiplexer) AmIAnAuditor() bool {
+	for _, authorization := range o.authorizations {
+		yes := authorization.AmIAnAuditor()
+		if yes {
+			return true
+		}
+	}
+	return false
+}
+
+func (o *AuthorizationMultiplexer) Issued(issuer token.Identity, tok *token2.Token) bool {
+	for _, authorization := range o.authorizations {
+		yes := authorization.Issued(issuer, tok)
 		if yes {
 			return true
 		}

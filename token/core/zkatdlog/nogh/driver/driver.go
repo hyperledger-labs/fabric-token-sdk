@@ -158,6 +158,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		nil,
 	)
 	tokDeserializer := &TokenDeserializer{}
+	authorization := common.NewAuthorizationMultiplexer()
 
 	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
 	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.GetProvider(sp), metricsProvider)
@@ -193,6 +194,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 			driverMetrics,
 		),
 		zkatdlog.NewTokensService(ppm),
+		authorization,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
