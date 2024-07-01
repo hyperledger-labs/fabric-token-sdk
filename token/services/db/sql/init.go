@@ -78,7 +78,7 @@ func getTableNames(prefix string) (tableNames, error) {
 		Transactions:           fmt.Sprintf("%stransactions", prefix),
 		TransactionEndorseAck:  fmt.Sprintf("%stransaction_endorsements", prefix),
 		Requests:               fmt.Sprintf("%srequests", prefix),
-		Validations:            fmt.Sprintf("%svalidations", prefix),
+		Validations:            fmt.Sprintf("%srequests_validations", prefix),
 		Tokens:                 fmt.Sprintf("%stokens", prefix),
 		Ownership:              fmt.Sprintf("%stoken_ownership", prefix),
 		Certifications:         fmt.Sprintf("%stoken_certifications", prefix),
@@ -86,7 +86,7 @@ func getTableNames(prefix string) (tableNames, error) {
 		PublicParams:           fmt.Sprintf("%spublic_params", prefix),
 		Wallets:                fmt.Sprintf("%swallets", prefix),
 		IdentityConfigurations: fmt.Sprintf("%sidentity_configurations", prefix),
-		IdentityInfo:           fmt.Sprintf("%sidentity_info", prefix),
-		Signers:                fmt.Sprintf("%ssigners", prefix),
+		IdentityInfo:           fmt.Sprintf("%sidentity_information", prefix),
+		Signers:                fmt.Sprintf("%sidentity_signers", prefix),
 	}, nil
 }
