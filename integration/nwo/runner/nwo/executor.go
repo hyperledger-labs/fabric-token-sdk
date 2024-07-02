@@ -8,9 +8,12 @@ package nwo
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring/optl"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	runner2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
@@ -18,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -38,8 +42,14 @@ func NewSuiteExecutor(nw *integration.Infrastructure, auditor, issuer model.User
 
 	err = errors.Join(
 		s.C.Provide(func() *integration.Infrastructure { return nw }),
-		s.C.Provide(func(nw *integration.Infrastructure, metricsCollector metrics.Collector, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
-			return newUserProvider(nw, metricsCollector, logger, auditor)
+		s.C.Provide(func() (trace.TracerProvider, error) {
+			return tracing.NewTracerProviderFromConfig(tracing.Config{
+				Provider: tracing.Otpl,
+				Otpl:     tracing.OtplConfig{Address: fmt.Sprintf(":%d", optl.JaegerCollectorPort)},
+			})
+		}),
+		s.C.Provide(func(nw *integration.Infrastructure, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
+			return newUserProvider(nw, metricsCollector, tracerProvider, logger, auditor)
 		}),
 	)
 	if err != nil {

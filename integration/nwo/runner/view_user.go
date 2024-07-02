@@ -7,14 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 package runner
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"time"
 
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	metrics2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/api"
@@ -22,6 +25,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const currency = "CHF"
@@ -45,7 +49,7 @@ type idResolver interface {
 	Identity(model.Username) view.Identity
 }
 
-func NewViewUser(username model.Username, auditor model.Username, client api2.ViewClient, idResolver idResolver, metricsCollector metrics.Collector, logger logging.ILogger) *viewUser {
+func NewViewUser(username model.Username, auditor model.Username, client api2.ViewClient, idResolver idResolver, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger) *viewUser {
 	return &viewUser{
 		username:         username,
 		auditor:          auditor,
@@ -53,6 +57,10 @@ func NewViewUser(username model.Username, auditor model.Username, client api2.Vi
 		idResolver:       idResolver,
 		metricsCollector: metricsCollector,
 		logger:           logger,
+		tracer: tracerProvider.Tracer("user", tracing.WithMetricsOpts(tracing.MetricsOpts{
+			Namespace:  "token_sdk",
+			LabelNames: []metrics2.MetricLabel{},
+		})),
 	}
 }
 
@@ -63,6 +71,7 @@ type viewUser struct {
 	idResolver       idResolver
 	metricsCollector metrics.Collector
 	logger           logging.ILogger
+	tracer           trace.Tracer
 }
 
 func (u *viewUser) CallView(fid string, in []byte) (interface{}, error) {
@@ -74,6 +83,8 @@ func (u *viewUser) Username() model.Username { return u.username }
 func (u *viewUser) InitiateTransfer(_ api.Amount, _ api.UUID) api.Error { return nil }
 
 func (u *viewUser) Transfer(value api.Amount, recipient model.Username, _ api.UUID) api.Error {
+	ctx, span := u.tracer.Start(context.Background(), "transfer")
+	defer span.End()
 	u.logger.Infof("Call view for transfer of %d to %s\n", value, recipient)
 	u.metricsCollector.IncrementRequests()
 	defer u.metricsCollector.DecrementRequests()
@@ -88,7 +99,7 @@ func (u *viewUser) Transfer(value api.Amount, recipient model.Username, _ api.UU
 	if err != nil {
 		return api.NewInternalServerError(err, err.Error())
 	}
-	_, err = u.client.CallView("transfer", input)
+	_, err = u.client.CallViewWithContext(ctx, "transfer", input)
 	u.metricsCollector.AddDuration(time.Since(start), constants.PaymentTransferRequest, err == nil)
 	if err != nil {
 		u.logger.Errorf("Failed to call view transfer: %s", err)
@@ -99,6 +110,8 @@ func (u *viewUser) Transfer(value api.Amount, recipient model.Username, _ api.UU
 }
 
 func (u *viewUser) Withdraw(value api.Amount) api.Error {
+	ctx, span := u.tracer.Start(context.Background(), "withdraw")
+	defer span.End()
 	u.logger.Infof("Call view to withdraw %d\n", value)
 	u.metricsCollector.IncrementRequests()
 	defer u.metricsCollector.DecrementRequests()
@@ -112,7 +125,7 @@ func (u *viewUser) Withdraw(value api.Amount) api.Error {
 	if err != nil {
 		return api.NewInternalServerError(err, err.Error())
 	}
-	_, err = u.client.CallView("withdrawal", input)
+	_, err = u.client.CallViewWithContext(ctx, "withdrawal", input)
 	u.metricsCollector.AddDuration(time.Since(start), constants.WithdrawRequest, err == nil)
 	if err != nil {
 		u.logger.Errorf("Failed to call view withdrawal: %s", err)
@@ -123,6 +136,8 @@ func (u *viewUser) Withdraw(value api.Amount) api.Error {
 }
 
 func (u *viewUser) GetBalance() (api.Amount, api.Error) {
+	ctx, span := u.tracer.Start(context.Background(), "balance")
+	defer span.End()
 	u.logger.Infof("Call view to get balance of %s\n", u.username)
 	u.metricsCollector.IncrementRequests()
 	defer u.metricsCollector.DecrementRequests()
@@ -133,7 +148,7 @@ func (u *viewUser) GetBalance() (api.Amount, api.Error) {
 	if err != nil {
 		return 0, api.NewInternalServerError(err, err.Error())
 	}
-	res, err := u.client.CallView("balance", input)
+	res, err := u.client.CallViewWithContext(ctx, "balance", input)
 	if err != nil {
 		u.logger.Errorf("Failed to call view balance: %s", err)
 		return 0, api.NewInternalServerError(err, err.Error())

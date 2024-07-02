@@ -9,7 +9,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/gammazero/deque v0.2.1
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240703044456-7ac01f576ec9
+	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240702174822-780639250a98
 	github.com/hyperledger-labs/fabric-token-sdk/txgen v0.0.0-00010101000000-000000000000
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
@@ -134,7 +134,7 @@ require (
 	github.com/huin/goupnp v1.2.0 // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 // indirect
 	github.com/hyperledger/fabric-config v0.1.0 // indirect
-	github.com/hyperledger/fabric-lib-go v1.1.2 // indirect
+	github.com/hyperledger/fabric-lib-go v1.1.2
 	github.com/hyperledger/fabric-private-chaincode v1.0.0-rc3.0.20231026135044-67a19b0fcda0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/boxo v0.8.0-rc1 // indirect
