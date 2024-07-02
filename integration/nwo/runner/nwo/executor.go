@@ -18,6 +18,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 var (
@@ -38,8 +40,9 @@ func NewSuiteExecutor(nw *integration.Infrastructure, auditor, issuer model.User
 
 	err = errors.Join(
 		s.C.Provide(func() *integration.Infrastructure { return nw }),
-		s.C.Provide(func(nw *integration.Infrastructure, metricsCollector metrics.Collector, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
-			return newUserProvider(nw, metricsCollector, logger, auditor)
+		s.C.Provide(noop.NewTracerProvider),
+		s.C.Provide(func(nw *integration.Infrastructure, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
+			return newUserProvider(nw, metricsCollector, tracerProvider, logger, auditor)
 		}),
 	)
 	if err != nil {

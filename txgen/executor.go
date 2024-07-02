@@ -33,7 +33,7 @@ func NewSuiteExecutor(userProviderConfig model.UserProviderConfig, intermediaryC
 		c.Provide(func() logging.ILogger { return logging.MustGetLogger("client") }),
 		c.Provide(func() model.IntermediaryConfig { return intermediaryConfig }),
 		c.Provide(func() model.UserProviderConfig { return userProviderConfig }),
-		c.Provide(func() metrics2.Provider { return &metrics.Provider{} }),
+		c.Provide(metrics.NewProvider),
 		c.Provide(rest.NewRestUserProvider),
 		c.Provide(runner.NewBase),
 		c.Provide(func(r *runner.BaseRunner, config model.ServerConfig, logger logging.ILogger) *runner.RestRunner {
