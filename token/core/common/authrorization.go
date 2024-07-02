@@ -19,7 +19,7 @@ type Authorization interface {
 	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 	// defined in the public parameters of the passed TMS.
 	AmIAnAuditor() bool
-
+	// Issued returns true if the passed issuer issued the passed token
 	Issued(issuer token.Identity, tok *token2.Token) bool
 }
 

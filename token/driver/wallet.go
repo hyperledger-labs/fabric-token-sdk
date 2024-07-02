@@ -122,7 +122,7 @@ type IdentityConfiguration struct {
 // Ultimately, it is the token driver to decide which types are allowed.
 type WalletLookupID = any
 
-// Authorization is an interface that defines method to check the relation between a token or TMS
+// Authorization defines method to check the relation between a token
 // and wallets (owner, auditor, etc.)
 type Authorization interface {
 	// IsMine returns true if the passed token is owned by an owner wallet in the passed TMS
@@ -130,7 +130,7 @@ type Authorization interface {
 	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 	// defined in the public parameters of the passed TMS.
 	AmIAnAuditor() bool
-
+	// Issued returns true if the passed issuer issued the passed token
 	Issued(issuer Identity, tok *token.Token) bool
 	// OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
 	OwnerType(raw []byte) (string, []byte, error)
