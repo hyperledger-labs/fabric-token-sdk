@@ -78,7 +78,7 @@ func getTableNames(prefix string) (tableNames, error) {
 		Transactions:           fmt.Sprintf("%stransactions", prefix),
 		TransactionEndorseAck:  fmt.Sprintf("%stransaction_endorsements", prefix),
 		Requests:               fmt.Sprintf("%srequests", prefix),
-		Validations:            fmt.Sprintf("%srequests_validations", prefix),
+		Validations:            fmt.Sprintf("%srequest_validations", prefix),
 		Tokens:                 fmt.Sprintf("%stokens", prefix),
 		Ownership:              fmt.Sprintf("%stoken_ownership", prefix),
 		Certifications:         fmt.Sprintf("%stoken_certifications", prefix),
