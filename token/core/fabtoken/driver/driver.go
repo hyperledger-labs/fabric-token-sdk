@@ -19,6 +19,7 @@ import (
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 )
@@ -140,6 +141,10 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
 		nil,
 	)
+	authorization := common.NewAuthorizationMultiplexer(
+		common.NewTMSAuthorization(publicParamsManager.PublicParams(), ws),
+		htlc.NewScriptAuth(ws),
+	)
 	service, err := fabtoken.NewService(
 		logger,
 		ws,
@@ -152,6 +157,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		fabtoken.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
 		fabtoken.NewAuditorService(),
 		fabtoken.NewTokensService(),
+		authorization,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")

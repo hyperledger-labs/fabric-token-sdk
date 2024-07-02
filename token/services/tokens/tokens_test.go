@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
@@ -23,14 +24,15 @@ func (qs qsMock) IsMine(id *token2.ID) (bool, error) {
 
 type authMock struct{}
 
-func (a authMock) IsMine(_ *token.ManagementService, tok *token2.Token) ([]string, bool) {
-	return []string{string(tok.Owner.Raw)}, true
-}
-func (a authMock) AmIAnAuditor(_ *token.ManagementService) bool {
+func (a authMock) Issued(issuer driver.Identity, tok *token2.Token) bool {
 	return false
 }
-
-// OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
+func (a authMock) IsMine(tok *token2.Token) ([]string, bool) {
+	return []string{string(tok.Owner.Raw)}, true
+}
+func (a authMock) AmIAnAuditor() bool {
+	return false
+}
 func (a authMock) OwnerType(raw []byte) (string, []byte, error) {
 	return "idemix", raw, nil
 }
@@ -62,8 +64,6 @@ func (md mdMock) GetToken(raw []byte) (*token2.Token, token.Identity, []byte, er
 func TestParse(t *testing.T) {
 	tokens := &Tokens{
 		TMSProvider: nil,
-		Ownership:   &authMock{},
-		Issued:      nil,
 		Storage:     &DBStorage{},
 	}
 	md := mdMock{}
@@ -90,7 +90,7 @@ func TestParse(t *testing.T) {
 	is := token.NewInputStream(qsMock{}, []*token.Input{input1}, 64)
 	os := token.NewOutputStream([]*token.Output{output1}, 64)
 
-	spend, store := tokens.parse(nil, "tx1", md, is, os, false, 64, false)
+	spend, store := tokens.parse(&authMock{}, "tx1", md, is, os, false, 64, false)
 
 	assert.Len(t, spend, 1)
 	assert.Equal(t, "in", spend[0].TxId)
@@ -109,7 +109,7 @@ func TestParse(t *testing.T) {
 	// no ledger output -> spend
 	output1.LedgerOutput = []byte{}
 	os = token.NewOutputStream([]*token.Output{output1}, 64)
-	spend, store = tokens.parse(nil, "tx1", md, is, os, false, 64, false)
+	spend, store = tokens.parse(&authMock{}, "tx1", md, is, os, false, 64, false)
 	assert.Len(t, spend, 2)
 	assert.Len(t, store, 0)
 
@@ -153,7 +153,7 @@ func TestParse(t *testing.T) {
 	is = token.NewInputStream(qsMock{}, []*token.Input{input1, input2}, 64)
 	os = token.NewOutputStream([]*token.Output{output1, output2}, 64)
 
-	spend, store = tokens.parse(nil, "tx2", md, is, os, false, 64, false)
+	spend, store = tokens.parse(&authMock{}, "tx2", md, is, os, false, 64, false)
 	assert.Len(t, spend, 2)
 	assert.Equal(t, "in1", spend[0].TxId)
 	assert.Equal(t, uint64(1), spend[0].Index)

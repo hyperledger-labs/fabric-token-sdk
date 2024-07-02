@@ -26,6 +26,7 @@ import (
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 )
@@ -85,7 +86,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
 	ip := identity.NewProvider(identityDB, sigService, view.GetEndpointService(sp), NewEIDRHDeserializer(), deserializerManager)
-	ppm, err := common.NewPublicParamsManager[*crypto.PublicParams](
+	publicParamsManager, err := common.NewPublicParamsManager[*crypto.PublicParams](
 		&PublicParamsDeserializer{},
 		crypto.DLogPublicParameters,
 		publicParams,
@@ -112,8 +113,8 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	role, err := roleFactory.NewIdemix(
 		driver.OwnerRole,
 		identityConfig.DefaultCacheSize(),
-		ppm.PublicParams().IdemixIssuerPK,
-		ppm.PublicParams().IdemixCurveID,
+		publicParamsManager.PublicParams().IdemixIssuerPK,
+		publicParamsManager.PublicParams().IdemixCurveID,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
@@ -143,7 +144,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 
-	deserializer, err := NewDeserializer(ppm.PublicParams())
+	deserializer, err := NewDeserializer(publicParamsManager.PublicParams())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to instantiate the deserializer")
 	}
@@ -158,6 +159,10 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		nil,
 	)
 	tokDeserializer := &TokenDeserializer{}
+	authorization := common.NewAuthorizationMultiplexer(
+		common.NewTMSAuthorization(publicParamsManager.PublicParams(), ws),
+		htlc.NewScriptAuth(ws),
+	)
 
 	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
 	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.GetProvider(sp), metricsProvider)
@@ -165,19 +170,19 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	service, err := zkatdlog.NewTokenService(
 		logger,
 		ws,
-		ppm,
+		publicParamsManager,
 		ip,
 		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
 		observables.NewObservableIssueService(
-			zkatdlog.NewIssueService(ppm, ws, deserializer, driverMetrics),
+			zkatdlog.NewIssueService(publicParamsManager, ws, deserializer, driverMetrics),
 			observables.NewIssue(tracerProvider),
 		),
 		observables.NewObservableTransferService(
 			zkatdlog.NewTransferService(
 				logger,
-				ppm,
+				publicParamsManager,
 				ws,
 				common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer),
 				deserializer,
@@ -187,12 +192,13 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		),
 		zkatdlog.NewAuditorService(
 			logger,
-			ppm,
+			publicParamsManager,
 			common.NewLedgerTokenLoader[*token3.Token](logger, qe, tokDeserializer),
 			deserializer,
 			driverMetrics,
 		),
-		zkatdlog.NewTokensService(ppm),
+		zkatdlog.NewTokensService(publicParamsManager),
+		authorization,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")

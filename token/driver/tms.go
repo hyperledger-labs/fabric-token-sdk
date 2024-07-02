@@ -42,6 +42,7 @@ type TokenManagerService interface {
 	PublicParamsManager() PublicParamsManager
 	Configuration() Configuration
 	WalletService() WalletService
+	Authorization() Authorization
 	// Done releases all the resources allocated by this service
 	Done() error
 }
