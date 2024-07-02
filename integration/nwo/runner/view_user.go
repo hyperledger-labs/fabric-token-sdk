@@ -84,7 +84,7 @@ func (u *viewUser) Username() model.Username { return u.username }
 func (u *viewUser) InitiateTransfer(_ api.Amount, _ uuid.UUID) api.Error { return nil }
 
 func (u *viewUser) Transfer(value api.Amount, recipient model.Username, _ uuid.UUID) api.Error {
-	_, span := u.tracer.Start(context.Background(), "transfer")
+	ctx, span := u.tracer.Start(context.Background(), "transfer")
 	defer span.End()
 	u.logger.Infof("Call view for transfer of %d to %s\n", value, recipient)
 	u.metricsCollector.IncrementRequests()
@@ -100,7 +100,7 @@ func (u *viewUser) Transfer(value api.Amount, recipient model.Username, _ uuid.U
 	if err != nil {
 		return api.NewInternalServerError(err, err.Error())
 	}
-	_, err = u.client.CallView("transfer", input)
+	_, err = u.client.CallViewWithContext(ctx, "transfer", input)
 	u.metricsCollector.AddDuration(time.Since(start), constants.PaymentTransferRequest, err == nil)
 	if err != nil {
 		u.logger.Errorf("Failed to call view transfer: %s", err)
@@ -111,6 +111,8 @@ func (u *viewUser) Transfer(value api.Amount, recipient model.Username, _ uuid.U
 }
 
 func (u *viewUser) Withdraw(value api.Amount) api.Error {
+	ctx, span := u.tracer.Start(context.Background(), "withdraw")
+	defer span.End()
 	u.logger.Infof("Call view to withdraw %d\n", value)
 	u.metricsCollector.IncrementRequests()
 	defer u.metricsCollector.DecrementRequests()
@@ -124,7 +126,7 @@ func (u *viewUser) Withdraw(value api.Amount) api.Error {
 	if err != nil {
 		return api.NewInternalServerError(err, err.Error())
 	}
-	_, err = u.client.CallView("withdrawal", input)
+	_, err = u.client.CallViewWithContext(ctx, "withdrawal", input)
 	u.metricsCollector.AddDuration(time.Since(start), constants.WithdrawRequest, err == nil)
 	if err != nil {
 		u.logger.Errorf("Failed to call view withdrawal: %s", err)
@@ -135,6 +137,8 @@ func (u *viewUser) Withdraw(value api.Amount) api.Error {
 }
 
 func (u *viewUser) GetBalance() (api.Amount, api.Error) {
+	ctx, span := u.tracer.Start(context.Background(), "balance")
+	defer span.End()
 	u.logger.Infof("Call view to get balance of %s\n", u.username)
 	u.metricsCollector.IncrementRequests()
 	defer u.metricsCollector.DecrementRequests()
@@ -145,7 +149,7 @@ func (u *viewUser) GetBalance() (api.Amount, api.Error) {
 	if err != nil {
 		return 0, api.NewInternalServerError(err, err.Error())
 	}
-	res, err := u.client.CallView("balance", input)
+	res, err := u.client.CallViewWithContext(ctx, "balance", input)
 	if err != nil {
 		u.logger.Errorf("Failed to call view balance: %s", err)
 		return 0, api.NewInternalServerError(err, err.Error())

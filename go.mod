@@ -40,7 +40,10 @@ require (
 	modernc.org/sqlite v1.28.0
 )
 
-replace github.com/hyperledger-labs/fabric-token-sdk/txgen => ./txgen
+replace (
+	github.com/hyperledger-labs/fabric-smart-client => ../../../github.com/hyperledger-labs/fabric-smart-client
+	github.com/hyperledger-labs/fabric-token-sdk/txgen => ./txgen
+)
 
 require (
 	github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20231023164747-f3f972769504 // indirect
@@ -135,7 +138,7 @@ require (
 	github.com/huin/goupnp v1.2.0 // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 // indirect
 	github.com/hyperledger/fabric-config v0.1.0 // indirect
-	github.com/hyperledger/fabric-lib-go v1.1.2 // indirect
+	github.com/hyperledger/fabric-lib-go v1.1.2
 	github.com/hyperledger/fabric-private-chaincode v1.0.0-rc3.0.20231026135044-67a19b0fcda0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/boxo v0.8.0-rc1 // indirect

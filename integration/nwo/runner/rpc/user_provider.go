@@ -12,8 +12,8 @@ import (
 	"os"
 	"time"
 
+	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
@@ -92,12 +92,12 @@ func newUser(corePath string, connType ConnectionType, metricsCollector metrics.
 	return runner2.NewViewUser(cfg.GetString("fsc.id"), auditor, cli, idResolver, metricsCollector, tracerProvider, logger), nil
 }
 
-func newClient(corePath string, connType ConnectionType) (driver.ConfigService, api.ViewClient, error) {
+func newClient(corePath string, connType ConnectionType) (driver.ConfigService, api2.ViewClient, error) {
 	cfg, err := config.NewProvider(corePath)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not find config provider")
 	}
-	var cli api.ViewClient
+	var cli api2.ViewClient
 	if connType == REST {
 		cli, err = newWebClient(cfg)
 	} else {
@@ -109,7 +109,7 @@ func newClient(corePath string, connType ConnectionType) (driver.ConfigService, 
 	return cfg, cli, nil
 }
 
-func newGrpcClient(configProvider driver.ConfigService) (api.ViewClient, error) {
+func newGrpcClient(configProvider driver.ConfigService) (api2.ViewClient, error) {
 	cc := &grpc.ConnectionConfig{
 		Address:           configProvider.GetString("fsc.grpc.address"),
 		TLSEnabled:        true,
@@ -138,7 +138,7 @@ func (*hasher) Hash(msg []byte) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-func newWebClient(configProvider driver.ConfigService) (api.ViewClient, error) {
+func newWebClient(configProvider driver.ConfigService) (api2.ViewClient, error) {
 	return web.NewClient(&web.Config{
 		Host:        configProvider.GetString("fsc.web.address"),
 		CACertPath:  configProvider.GetStringSlice("fsc.web.tls.clientRootCAs.files")[0],
