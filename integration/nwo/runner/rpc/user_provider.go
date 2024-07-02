@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/client/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/client/web"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/grpc"
@@ -26,15 +27,25 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
 type UserProviderConfig struct {
-	ConnectionType     ConnectionType `yaml:"connectionType"`
-	Users              []UserConfig   `yaml:"users"`
-	Auditors           []UserConfig   `yaml:"auditors"`
-	Issuers            []UserConfig   `yaml:"issuers"`
-	ControllerEndpoint string         `yaml:"controllerEndpoint"`
+	ConnectionType     ConnectionType   `yaml:"connectionType"`
+	Users              []UserConfig     `yaml:"users"`
+	Auditors           []UserConfig     `yaml:"auditors"`
+	Issuers            []UserConfig     `yaml:"issuers"`
+	ControllerEndpoint string           `yaml:"controllerEndpoint"`
+	Monitoring         MonitoringConfig `yaml:"monitoring"`
+}
+
+type MonitoringConfig struct {
+	MetricsProviderType     string             `yaml:"metricsProviderType"`
+	MetricsEndpoint         string             `yaml:"metricsEndpoint"`
+	TracerExporterType      tracing.TracerType `yaml:"tracerExporterType"`
+	TracerCollectorEndpoint string             `yaml:"tracerCollectorEndpoint"`
+	TracerCollectorFile     string             `yaml:"tracerCollectorFile"`
 }
 
 func (c *UserProviderConfig) IssuerNames() []model.Username {
@@ -57,10 +68,10 @@ const (
 	GRPC ConnectionType = "GRPC"
 )
 
-func newUserProvider(c UserProviderConfig, metricsCollector metrics.Collector, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
+func newUserProvider(c UserProviderConfig, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
 	users := make(map[model.UserAlias][]user.User, len(c.Users))
 	for _, uc := range append(append(c.Users, c.Auditors...), c.Issuers...) {
-		u, err := newUser(uc.CorePath, c.ConnectionType, metricsCollector, logger, c.Auditors[0].Name)
+		u, err := newUser(uc.CorePath, c.ConnectionType, metricsCollector, tracerProvider, logger, c.Auditors[0].Name)
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +80,7 @@ func newUserProvider(c UserProviderConfig, metricsCollector metrics.Collector, l
 	return runner2.NewViewUserProvider(users), nil
 }
 
-func newUser(corePath string, connType ConnectionType, metricsCollector metrics.Collector, logger logging.ILogger, auditor model.Username) (user.User, error) {
+func newUser(corePath string, connType ConnectionType, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger, auditor model.Username) (user.User, error) {
 	cfg, cli, err := newClient(corePath, connType)
 	if err != nil {
 		return nil, err
@@ -78,7 +89,7 @@ func newUser(corePath string, connType ConnectionType, metricsCollector metrics.
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create identity resolver")
 	}
-	return runner2.NewViewUser(cfg.GetString("fsc.id"), auditor, cli, idResolver, metricsCollector, logger), nil
+	return runner2.NewViewUser(cfg.GetString("fsc.id"), auditor, cli, idResolver, metricsCollector, tracerProvider, logger), nil
 }
 
 func newClient(corePath string, connType ConnectionType) (driver.ConfigService, api2.ViewClient, error) {
