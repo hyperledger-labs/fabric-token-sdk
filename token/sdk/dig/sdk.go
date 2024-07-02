@@ -48,7 +48,6 @@ import (
 	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
@@ -70,7 +69,6 @@ var logger = flogging.MustGetLogger("token-sdk")
 
 var selectorProviders = map[string]any{
 	"simple":    selector.NewService,
-	"mailman":   mailman.NewService,
 	"sherdlock": sherdlock.NewService,
 	"":          sherdlock.NewService,
 }

@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	TokenSelectors = []string{"simple", "mailman", "sherdlock"}
+	TokenSelectors = []string{"simple", "sherdlock"}
 )
 
 type InfrastructureType struct {

@@ -132,6 +132,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			Monitoring:      false,
 			ReplicationOpts: opts,
 			TokenSelector:   tokenSelector,
+			//FSCLogSpec:      "fabric-sdk=debug:token-sdk=debug:orion-sdk=debug:info",
 		},
 	))
 	return ts, selector
