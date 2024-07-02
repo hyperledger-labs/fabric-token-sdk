@@ -19,6 +19,11 @@ import (
 
 var logger = logging.MustGetLogger("token-sdk.selector.simple")
 
+const (
+	numRetry = 2
+	timeout  = 5 * time.Second
+)
+
 type LockerProvider interface {
 	New(network, channel, namespace string) (Locker, error)
 }
@@ -27,12 +32,7 @@ type SelectorService struct {
 	managerLazyCache utils.LazyProvider[*token.ManagementService, token.SelectorManager]
 }
 
-const (
-	numRetry = 2
-	timeout  = 5 * time.Second
-)
-
-func NewProvider(lockerProvider LockerProvider) *SelectorService {
+func NewService(lockerProvider LockerProvider) *SelectorService {
 	loader := &loader{
 		lockerProvider:       lockerProvider,
 		numRetry:             numRetry,

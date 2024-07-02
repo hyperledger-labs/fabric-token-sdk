@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	inmemory2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock/inmemory"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
@@ -23,15 +22,36 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+type WalletIDByRawIdentityFunc func(rawIdentity []byte) string
+
+type Locker interface {
+	Lock(id *token2.ID, txID string, reclaim bool) (string, error)
+	UnlockIDs(id ...*token2.ID) []*token2.ID
+	UnlockByTxID(txID string)
+	IsLocked(id *token2.ID) bool
+}
+
+type extendedSelector struct {
+	Selector token.Selector
+	Lock     Locker
+}
+
+func (s *extendedSelector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error) {
+	return s.Selector.Select(ownerFilter, q, tokenType)
+}
+
+func (s *extendedSelector) Unselect(id ...*token2.ID) {
+	if s.Lock != nil {
+		s.Lock.UnlockIDs(id...)
+	}
+}
+
 func BenchmarkSelectorSingle(b *testing.B) {
 	settings := []Setting{
 		{name: "sherdlock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSherdSelector, lockProvider: NewNoLocker},
 		{name: "sherdlock+lock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSherdSelector, lockProvider: NewLocker},
-		{name: "simple", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSimpleSelector, lockProvider: NewNoLocker},
-		{name: "simple+mailman", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSimpleSelectorWithMailman, lockProvider: NewNoLocker},
 		{name: "selector+nolock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSelector, lockProvider: NewNoLocker},
 		{name: "selector+lock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSelector, lockProvider: NewLocker},
-		{name: "selector+mailman", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSelectorWithMailman, lockProvider: NewNoLocker},
 	}
 
 	for _, s := range settings {
@@ -65,11 +85,8 @@ func BenchmarkSelectorParallel(b *testing.B) {
 		{name: "sherdlock+lock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSherdSelector, lockProvider: NewLocker},
 		{name: "sherdlock+lock+parallelism", clients: 10, tokens: 10 * testutils.NumTokensPerWallet, selectorProvider: NewSherdSelector, lockProvider: NewLocker},
 		{name: "sherdlock+lock+contention", clients: 8, tokens: testutils.NumTokensPerWallet / 1000, selectorProvider: NewSherdSelector, lockProvider: NewLocker},
-		{name: "simple", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSimpleSelector, lockProvider: NewNoLocker},
-		{name: "simple+mailman", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSimpleSelectorWithMailman, lockProvider: NewNoLocker},
 		{name: "selector+nolock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSelector, lockProvider: NewNoLocker},
 		{name: "selector+lock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSelector, lockProvider: NewLocker},
-		{name: "selector+mailman", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSelectorWithMailman, lockProvider: NewNoLocker},
 	}
 
 	for _, s := range settings {
@@ -144,7 +161,7 @@ func cleanup(s *Setting) {
 	}
 }
 
-func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
+func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
 
 	qf := func() selector.QueryService {
 		return qs
@@ -152,56 +169,17 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.W
 
 	s, _ := selector.NewManager(lock, qf, testutils.SelectorNumRetries, testutils.SelectorTimeout, false, testutils.TokenQuantityPrecision).NewSelector(testutils.TxID)
 
-	return &mailman.ExtendedSelector{
+	return &extendedSelector{
 		Selector: s,
 		Lock:     lock,
 	}, nil
 }
 
-func NewSelectorWithMailman(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
-	mmManager, err := mailman.NewManager(token.TMSID{}, qs, walletIDByRawIdentity, testutils.TokenQuantityPrecision, nil)
-	if err != nil {
-		panic(err)
-	}
-	mmlock := &mailman.Unlocker{Manager: mmManager}
-
-	qf := func() selector.QueryService {
-		return &mailmanManagerDecorator{mmManager, qs}
-	}
-
-	s, _ := selector.NewManager(mmlock, qf, testutils.SelectorNumRetries, testutils.SelectorTimeout, false, testutils.TokenQuantityPrecision).NewSelector(testutils.TxID)
-
-	return &mailman.ExtendedSelector{
-		Selector: s,
-		Lock:     mmlock,
-	}, mmManager.Shutdown
-}
-
-func NewSherdSelector(qs *testutils.MockQueryService, _ mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
-	return &mailman.ExtendedSelector{
+func NewSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
+	return &extendedSelector{
 		Selector: sherdlock.NewSherdSelector(testutils.TxID, qs, inmemory2.NewLocker(lock), testutils.TokenQuantityPrecision, sherdlock.NoBackoff),
 		Lock:     nil,
 	}, nil
-}
-
-func NewSimpleSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
-	return &mailman.ExtendedSelector{
-		Selector: &mailman.SimpleSelector{QuerySelector: &MockTokenIterator{qs, nil}, Precision: testutils.TokenQuantityPrecision},
-		Lock:     nil,
-	}, nil
-}
-
-func NewSimpleSelectorWithMailman(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
-	mmManager, err := mailman.NewManager(token.TMSID{}, qs, walletIDByRawIdentity, testutils.TokenQuantityPrecision, nil)
-	if err != nil {
-		panic(err)
-	}
-	mmlock := &mailman.Unlocker{Manager: mmManager}
-
-	return &mailman.ExtendedSelector{
-		Selector: &mailman.SimpleSelector{QuerySelector: mmManager, Precision: testutils.TokenQuantityPrecision},
-		Lock:     mmlock,
-	}, mmManager.Shutdown
 }
 
 type Setting struct {
@@ -216,7 +194,7 @@ type Setting struct {
 }
 
 type CleanupFunction func()
-type SelectorProviderFunction func(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction)
+type SelectorProviderFunction func(qs *testutils.MockQueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction)
 type LockerProviderFunction func() selector.Locker
 
 type ExtendedSelector interface {
@@ -235,18 +213,4 @@ func NewLocker() selector.Locker {
 
 func NewNoLocker() selector.Locker {
 	return &testutils.NoLock{}
-}
-
-// only used for testing with the default selector
-type mailmanManagerDecorator struct {
-	*mailman.Manager
-	qs selector.QueryService
-}
-
-func (m *mailmanManagerDecorator) UnspentTokensIterator() (*token.UnspentTokensIterator, error) {
-	panic("Don't call me")
-}
-
-func (m *mailmanManagerDecorator) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) {
-	return m.qs.GetTokens(inputs...)
 }
