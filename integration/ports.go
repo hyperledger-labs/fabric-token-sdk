@@ -24,29 +24,37 @@ const (
 	portsPerSuite = 10 * portsPerNode
 )
 
+var (
+	TokenSelectors = []string{"simple", "mailman", "sherdlock"}
+)
+
 type InfrastructureType struct {
 	Label             ginkgo.Labels
 	CommType          fsc.P2PCommunicationType
 	ReplicationFactor int
 }
 
-var AllTestTypes = []*InfrastructureType{
-	{
+var (
+	WebSocketNoReplication = &InfrastructureType{
 		Label:             ginkgo.Label("websocket"),
 		CommType:          fsc.WebSocket,
 		ReplicationFactor: token.None,
-	},
-	{
-		Label:             ginkgo.Label("libp2p"),
-		CommType:          fsc.LibP2P,
-		ReplicationFactor: token.None,
-	},
-	{
-		Label:             ginkgo.Label("replicas"),
-		CommType:          fsc.WebSocket,
-		ReplicationFactor: 3,
-	},
-}
+	}
+
+	AllTestTypes = []*InfrastructureType{
+		WebSocketNoReplication,
+		{
+			Label:             ginkgo.Label("libp2p"),
+			CommType:          fsc.LibP2P,
+			ReplicationFactor: token.None,
+		},
+		{
+			Label:             ginkgo.Label("replicas"),
+			CommType:          fsc.WebSocket,
+			ReplicationFactor: 3,
+		},
+	}
+)
 
 const (
 	BasePort TestPortRange = basePort + portsPerSuite*iota

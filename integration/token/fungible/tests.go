@@ -798,7 +798,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckAuditorDB(network, auditor, "", nil)
 }
 
-func TestSelector(network *integration.Infrastructure, auditorId string, onAuditorRestart OnAuditorRestartFunc, aries bool, sel *token3.ReplicaSelector) {
+func TestSelector(network *integration.Infrastructure, auditorId string, sel *token3.ReplicaSelector) {
 	auditor := sel.Get(auditorId)
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
@@ -823,7 +823,7 @@ func TestSelector(network *integration.Infrastructure, auditorId string, onAudit
 	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
 	time.Sleep(10 * time.Second)
 	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
-	time.Sleep(10 * time.Second)
+	time.Sleep(2 * time.Minute)
 	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
 }
 
