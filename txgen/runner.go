@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package txgen
 
 import (
-	"context"
 	"errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
@@ -21,12 +20,12 @@ import (
 	"go.uber.org/dig"
 )
 
-// SuiteExecutor instantiates all dependencies and creates a suite runner
-type SuiteExecutor struct {
+type Runner struct {
+	*runner.SuiteRunner
 	C *dig.Container // Allow for overwriting dependencies
 }
 
-func NewSuiteExecutor(userProviderConfig model.UserProviderConfig, intermediaryConfig model.IntermediaryConfig, serverConfig model.ServerConfig) (*SuiteExecutor, api.Error) {
+func NewRunner(userProviderConfig model.UserProviderConfig, intermediaryConfig model.IntermediaryConfig) (*Runner, api.Error) {
 	c := dig.New()
 
 	err := errors.Join(
@@ -35,12 +34,7 @@ func NewSuiteExecutor(userProviderConfig model.UserProviderConfig, intermediaryC
 		c.Provide(func() model.UserProviderConfig { return userProviderConfig }),
 		c.Provide(func() metrics2.Provider { return &metrics.Provider{} }),
 		c.Provide(rest.NewRestUserProvider),
-		c.Provide(runner.NewBase),
-		c.Provide(func(r *runner.BaseRunner, config model.ServerConfig, logger logging.ILogger) *runner.RestRunner {
-			return runner.NewRest(r, config, logger)
-		}),
-		c.Provide(func(r *runner.RestRunner) runner.SuiteRunner { return r }),
-		c.Provide(func() model.ServerConfig { return serverConfig }),
+		c.Provide(runner.NewSuiteRunner),
 		c.Provide(user.NewIntermediaryClient),
 		c.Provide(runner.NewTestCaseRunner),
 		c.Provide(func(p metrics2.Provider) (metrics.Collector, metrics.Reporter) {
@@ -51,15 +45,9 @@ func NewSuiteExecutor(userProviderConfig model.UserProviderConfig, intermediaryC
 	if err != nil {
 		return nil, api.NewInternalServerError(err, err.Error())
 	}
-	return &SuiteExecutor{C: c}, nil
-}
-
-func (r *SuiteExecutor) Execute(suites []model.SuiteConfig) error {
-	return r.C.Invoke(func(s runner.SuiteRunner) error {
-		if err := s.Start(context.TODO()); err != nil {
-			return err
-		}
-		s.PushSuites(suites...)
-		return s.ShutDown()
-	})
+	r := &Runner{C: c}
+	if err := c.Invoke(func(sr *runner.SuiteRunner) { r.SuiteRunner = sr }); err != nil {
+		return nil, api.NewAuthorizationError(err, err.Error())
+	}
+	return r, nil
 }

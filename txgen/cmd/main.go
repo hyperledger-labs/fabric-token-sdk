@@ -21,13 +21,14 @@ func main() {
 
 	logging.InitializeLogger(c.App)
 
-	executor, err := txgen.NewSuiteExecutor(c.UserProvider, c.Intermediary, c.Server)
+	container, err := txgen.NewRunner(c.UserProvider, c.Intermediary)
 	if err != nil {
 		logging.Logger.Errorf("Error creating new runner: %v", err)
 		panic(err)
 	}
-	if err := executor.Execute(c.Suites); err != nil {
-		logging.Logger.Errorf("Error initializing executor: %v", err)
+
+	if err = container.SuiteRunner.Run(c.Suites); err != nil {
+		logging.Logger.Errorf("Error happened during run of the program: %s", err.GetMessage())
 		panic(err)
 	}
 }

@@ -148,7 +148,7 @@ func (u *restUser) GetBalance() (api.Amount, api.Error) {
 		return 0, apiErr
 	}
 
-	var balanceResponse BalanceResponse
+	var balanceResponse api.BalanceResponse
 	err := json.Unmarshal(respBody, &balanceResponse)
 
 	if err != nil {
@@ -215,7 +215,7 @@ func (u *restUser) authenticateUser() (string, api.Error) {
 	u.logger.Infof("Authenticate user %s", u.username)
 	url := fmt.Sprintf("%s/login", u.endpoint)
 
-	request := LoginRequest{
+	request := api.LoginRequest{
 		Username: u.username,
 		Password: u.password,
 	}
@@ -240,7 +240,7 @@ func (u *restUser) authenticateUser() (string, api.Error) {
 		}
 	}
 
-	var loginResponse LoginResponse
+	var loginResponse api.LoginResponse
 	err = json.Unmarshal(respBody, &loginResponse)
 
 	if err != nil {

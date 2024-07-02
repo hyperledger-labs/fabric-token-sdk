@@ -4,7 +4,9 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package rest
+package api
+
+type Amount = int64
 
 type LoginRequest struct {
 	Username string `json:"username"`
