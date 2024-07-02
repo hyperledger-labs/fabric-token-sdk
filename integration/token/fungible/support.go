@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package fungible
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -30,6 +31,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
+	"github.com/prometheus/common/model"
 )
 
 var (
@@ -1111,4 +1113,44 @@ func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, u
 
 func DisableRestart() {
 	RestartEnabled = false
+}
+
+func CheckLocalMetrics(ii *integration.Infrastructure, user string, viewName string) {
+	metrics, err := ii.WebClient(user).Metrics()
+	Expect(err).To(BeNil())
+	Expect(metrics).NotTo(BeEmpty())
+
+	var sum float64
+	for _, m := range metrics["fsc_view_operations"].GetMetric() {
+		for _, labelPair := range m.Label {
+			if labelPair.GetName() == "view" && labelPair.GetValue() == viewName {
+				sum += m.Counter.GetValue()
+			}
+		}
+	}
+
+	logger.Infof("Received in total %f view operations for [%s] for user %s: %v", sum, viewName, user, metrics["fsc_view_operations"].GetMetric())
+	Expect(sum).NotTo(BeZero())
+}
+
+func CheckPrometheusMetrics(ii *integration.Infrastructure, viewName string, expectedLength, expectedValue int) {
+	cli, err := ii.NWO.PrometheusAPI()
+	Expect(err).To(BeNil())
+	metric := model.Metric{
+		"__name__": "fsc_view_operations",
+		"view":     model.LabelValue(viewName),
+	}
+	val, warnings, err := cli.Query(context.Background(), metric.String(), time.Now())
+	Expect(warnings).To(BeEmpty())
+	Expect(err).To(BeNil())
+	Expect(val.Type()).To(Equal(model.ValVector))
+
+	logger.Infof("Received prometheus metrics for view [%s]: %s", viewName, val)
+
+	vector, ok := val.(model.Vector)
+	Expect(ok).To(BeTrue())
+	Expect(vector).To(HaveLen(expectedLength))
+	for i := 0; i < expectedLength; i++ {
+		Expect(vector[i].Value).To(Equal(model.SampleValue(expectedValue)))
+	}
 }

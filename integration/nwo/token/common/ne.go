@@ -62,6 +62,10 @@ func (p *NetworkHandler) dbsqlDataSourceDir(uniqueName string, dirName string) s
 	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", uniqueName, dirName)
 }
 
+func (p *NetworkHandler) HelperConfigPath() string {
+	return filepath.Join(p.TokenPlatform.TokenDir(), "helper-config.yaml")
+}
+
 func (p *NetworkHandler) DBPath(root string, tms *topology2.TMS) string {
 	return "file:" +
 		filepath.Join(

@@ -8,6 +8,7 @@ package orion
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"text/template"
@@ -17,6 +18,7 @@ import (
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+	orion2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
@@ -27,15 +29,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
+	"github.com/hyperledger-labs/orion-sdk-go/pkg/config"
+	logger2 "github.com/hyperledger-labs/orion-server/pkg/logger"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v2"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.integration.token.orion")
-
-type orionPlatform interface {
-	CreateDBInstance() bcdb.BCDB
-	CreateUserSession(bcdb bcdb.BCDB, user string) bcdb.DBSession
-}
 
 type Entry struct {
 	TMS     *topology2.TMS
@@ -100,6 +100,76 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	// - Store pp
 	Expect(os.MkdirAll(p.TokenPlatform.PublicParametersDir(), 0766)).ToNot(HaveOccurred())
 	Expect(os.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(HaveOccurred())
+
+	Expect(os.MkdirAll(p.TokenPlatform.TokenDir(), 0766)).To(Succeed())
+	Expect(p.AddInitConfig(tms)).To(Succeed())
+}
+
+type HelperConfig struct {
+	PPInitConfigs []*PPInitConfig `yaml:"ppInits"`
+}
+
+func (c *HelperConfig) GetByTMSID(tmsID token.TMSID) *PPInitConfig {
+	for _, config := range c.PPInitConfigs {
+		if config.TMSID.Equal(tmsID) {
+			return config
+		}
+	}
+	return nil
+}
+
+func (p *NetworkHandler) AddInitConfig(tms *topology2.TMS) error {
+	orion, ok := p.TokenPlatform.GetContext().PlatformByName(tms.BackendTopology.Name()).(*orion2.Platform)
+	if !ok {
+		return fmt.Errorf("target topology %s not found", tms.BackendTopology.Name())
+	}
+
+	var c HelperConfig
+	path := p.HelperConfigPath()
+	if conf, err := ReadHelperConfig(path); err == nil {
+		c = *conf
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	if len(c.PPInitConfigs) == 0 {
+		c.PPInitConfigs = []*PPInitConfig{}
+	}
+	custodianID := tms.BackendParams[Custodian].(string)
+	c.PPInitConfigs = append(c.PPInitConfigs, &PPInitConfig{
+		TMSID: token.TMSID{
+			Network:   tms.Network,
+			Channel:   tms.Channel,
+			Namespace: tms.Namespace,
+		},
+		PPPath:                  p.TokenPlatform.PublicParametersFile(tms),
+		CustodianID:             custodianID,
+		CustodianCertPath:       orion.PemPath(custodianID),
+		CustodianPrivateKeyPath: orion.KeyPath(custodianID),
+		CACertPath:              orion.PemPath("CA"),
+		ServerUrl:               orion.ServerUrl(),
+		ServerID:                orion.ServerID(),
+	})
+
+	i, err := yaml.Marshal(c)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(p.HelperConfigPath(), i, 0766)
+}
+
+func ReadHelperConfig(path string) (*HelperConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var c HelperConfig
+
+	if err := yaml.Unmarshal(data, &c); err != nil {
+		return nil, err
+
+	}
+	return &c, nil
 }
 
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node, uniqueName string) string {
@@ -117,10 +187,10 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 			if !ok {
 				return false
 			}
-			return custodianNode.(*sfcnode.Node).Name == node.Name
+			return custodianNode.(string) == node.Name
 		},
 		"CustodianID": func() string {
-			return tms.BackendParams[Custodian].(*sfcnode.Node).Name
+			return tms.BackendParams[Custodian].(string)
 		},
 		"SQLDriver":           func() string { return GetTokenPersistenceDriver(node.Options) },
 		"SQLDataSource":       func() string { return p.GetSQLDataSource(node.Options, uniqueName, tms) },
@@ -171,34 +241,103 @@ func GetTokenPersistenceDriver(opts *sfcnode.Options) string {
 	return "sqlite"
 }
 
+type PPInitConfig struct {
+	TMSID                   token.TMSID `yaml:"tmsID"`
+	PPPath                  string      `yaml:"ppPath"`
+	CustodianID             string      `yaml:"custodianId"`
+	CustodianCertPath       string      `yaml:"custodianCertPath"`
+	CustodianPrivateKeyPath string      `yaml:"custodianPrivateKeyPath"`
+	CACertPath              string      `yaml:"caCertPath"`
+	ServerID                string      `yaml:"serverId"`
+	ServerUrl               string      `yaml:"serverUrl"`
+}
+
+func (p *PPInitConfig) createUserSession(bcdb bcdb.BCDB) (bcdb.DBSession, error) {
+	return bcdb.Session(&config.SessionConfig{
+		UserConfig: &config.UserConfig{
+			UserID:         p.CustodianID,
+			CertPath:       p.CustodianCertPath,
+			PrivateKeyPath: p.CustodianPrivateKeyPath,
+		},
+		TxTimeout: time.Second * 5,
+	})
+}
+
+func (p *PPInitConfig) createDBInstance() (bcdb.BCDB, error) {
+	c := &logger2.Config{
+		Level:         "info",
+		OutputPath:    []string{"stdout"},
+		ErrOutputPath: []string{"stderr"},
+		Encoding:      "console",
+		Name:          "bcdb-client",
+	}
+	clientLogger, err := logger2.New(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return bcdb.Create(&config.ConnectionConfig{
+		RootCAs: []string{
+			p.CACertPath,
+		},
+		ReplicaSet: []*config.Replica{
+			{
+				ID:       p.ServerID,
+				Endpoint: p.ServerUrl,
+			},
+		},
+		Logger: clientLogger,
+	})
+}
+
+func (c *PPInitConfig) Init() error {
+	// Store the public parameters in orion
+	db, err := c.createDBInstance()
+	if err != nil {
+		return err
+	}
+
+	session, err := c.createUserSession(db)
+	if err != nil {
+		return err
+	}
+	tx, err := session.DataTx()
+	if err != nil {
+		return err
+	}
+
+	rwset := &RWSWrapper{
+		db: c.TMSID.Namespace,
+		me: c.CustodianID,
+		tx: tx,
+	}
+	w := translator.New("", rwset, "")
+	ppRaw, err := os.ReadFile(c.PPPath)
+	if err != nil {
+		return err
+	}
+	action := &tcc.SetupAction{
+		SetupParameters: ppRaw,
+	}
+	if err := w.Write(action); err != nil {
+		return err
+	}
+	if _, _, err = tx.Commit(true); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 	if load {
 		return
 	}
 
-	// Store the public parameters in orion
-	orion, ok := p.TokenPlatform.GetContext().PlatformByName(tms.BackendTopology.Name()).(orionPlatform)
-	Expect(ok).To(BeTrue(), "No orion platform found for topology %s", tms.BackendTopology.Name())
-	db := orion.CreateDBInstance()
-	custodianID := tms.BackendParams[Custodian].(*sfcnode.Node).Name
-	session := orion.CreateUserSession(db, custodianID)
-	tx, err := session.DataTx()
-	Expect(err).ToNot(HaveOccurred(), "Failed to create data transaction")
-
-	rwset := &RWSWrapper{
-		db: tms.Namespace,
-		me: custodianID,
-		tx: tx,
-	}
-	w := translator.New("", rwset, "")
-	ppRaw, err := os.ReadFile(p.TokenPlatform.PublicParametersFile(tms))
-	Expect(err).ToNot(HaveOccurred(), "Failed to read public parameters file %s", p.TokenPlatform.PublicParametersFile(tms))
-	action := &tcc.SetupAction{
-		SetupParameters: ppRaw,
-	}
-	Expect(w.Write(action)).ToNot(HaveOccurred(), "Failed to store public parameters for namespace %s", tms.Namespace)
-	_, _, err = tx.Commit(true)
-	Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction")
+	c, err := ReadHelperConfig(p.HelperConfigPath())
+	Expect(err).NotTo(HaveOccurred())
+	ppConfig := c.GetByTMSID(token.TMSID{Network: tms.Network, Channel: tms.Channel, Namespace: tms.Namespace})
+	Expect(ppConfig).NotTo(BeNil())
+	Expect(ppConfig.Init()).To(Succeed())
 }
 
 func (p *NetworkHandler) Cleanup() {

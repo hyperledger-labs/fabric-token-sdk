@@ -101,7 +101,7 @@ func Topology(opts common.Opts) []api.Topology {
 		custodian := fscTopology.AddNodeByName("custodian").
 			AddOptions(orion.WithRole("custodian")).
 			AddOptions(opts.ReplicationOpts.For("custodian")...)
-		orion2.SetCustodian(tms, custodian)
+		orion2.SetCustodian(tms, custodian.Name)
 		tms.AddNode(custodian)
 
 		// Enable orion sdk on each FSC node
