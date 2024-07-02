@@ -121,6 +121,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names
 			SDKs:            []api.SDK{&fdlog.SDK{}},
 			Monitoring:      true,
 			ReplicationOpts: opts,
+			OnlyUnity:       true,
 		},
 	))
 	return ts, selector

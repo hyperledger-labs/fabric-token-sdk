@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -332,6 +333,9 @@ func Topology(opts common.Opts) []api.Topology {
 	}
 	if !opts.NoAuditor {
 		tms.AddAuditor(auditor)
+	}
+	if opts.OnlyUnity {
+		common2.WithOnlyUnity(tms)
 	}
 
 	for _, sdk := range opts.SDKs {

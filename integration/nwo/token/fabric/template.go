@@ -25,7 +25,6 @@ token:
         {{ if TMS.Certifiers }} interactive:
           ids: {{ range TMS.Certifiers }}
           - {{ . }}{{ end }}{{ end }}
-      {{ if Wallets }}
       db:
         persistence:
           type: unity
@@ -34,6 +33,7 @@ token:
             driver: {{ SQLDriver }}    
             maxOpenConns: 10
             dataSource: {{ SQLDataSource }}
+      {{ if not OnlyUnity }} 
       tokendb:
         persistence:
           type: sql
@@ -43,6 +43,8 @@ token:
             driver: {{ TokensSQLDriver }}    
             maxOpenConns: 10
             dataSource: {{ TokensSQLDataSource }}
+      {{ end }}
+      {{ if Wallets }}
       # Wallets associated with this TMS
       wallets:
         defaultCacheSize: 3
