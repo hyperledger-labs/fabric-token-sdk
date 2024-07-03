@@ -15,6 +15,7 @@ import (
 
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/ext"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -28,8 +29,9 @@ type tokenTables struct {
 }
 
 type TokenDB struct {
-	db    *sql.DB
-	table tokenTables
+	db         *sql.DB
+	table      tokenTables
+	extensions []ext.TokenDBExtension
 }
 
 func newTokenDB(db *sql.DB, tables tokenTables) *TokenDB {
@@ -55,6 +57,11 @@ func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.Token
 		if err = initSchema(db, tokenDB.GetSchema()); err != nil {
 			return nil, err
 		}
+		for _, extension := range tokenDB.extensions {
+			if err = initSchema(db, extension.GetSchema()); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return tokenDB, nil
 }
@@ -69,6 +76,14 @@ func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error
 			logger.Errorf("error rolling back: %s", err1.Error())
 		}
 		return
+	}
+	for _, extension := range db.extensions {
+		if err := extension.StoreToken(tx.Tx(), tr, owners); err != nil {
+			if err1 := tx.Rollback(); err1 != nil {
+				logger.Errorf("error rolling back: %s", err1.Error())
+			}
+			return
+		}
 	}
 	if err = tx.Commit(); err != nil {
 		return
@@ -85,10 +100,28 @@ func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 	args := []interface{}{deletedBy, time.Now().UTC()}
 	where := whereTokenIDs(&args, ids)
 
+	tx, err := db.NewTokenDBTransaction()
+	if err != nil {
+		return err
+	}
 	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE %s", db.table.Tokens, where)
 	logger.Debug(query, args)
-	if _, err := db.db.Exec(query, args...); err != nil {
+	if _, err := tx.Tx().Exec(query, args...); err != nil {
+		if err1 := tx.Rollback(); err1 != nil {
+			logger.Errorf("error rolling back: %s", err1.Error())
+		}
 		return errors.Wrapf(err, "error setting tokens to deleted [%v]", ids)
+	}
+	for _, extension := range db.extensions {
+		if err := extension.DeleteTokens(tx.Tx(), deletedBy, ids...); err != nil {
+			if err1 := tx.Rollback(); err1 != nil {
+				logger.Errorf("error rolling back: %s", err1.Error())
+			}
+			return errors.Wrapf(err, "error committing extension tokens to deleted [%v]", ids)
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return errors.Wrapf(err, "error committing tokens to deleted [%v]", ids)
 	}
 	return nil
 }
@@ -799,6 +832,10 @@ type TokenTransaction struct {
 	tx *sql.Tx
 }
 
+func (t *TokenTransaction) Tx() *sql.Tx {
+	return t.tx
+}
+
 func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error) {
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		IDs:            []*token.ID{{TxId: txID, Index: index}},
@@ -849,6 +886,11 @@ func (t *TokenTransaction) Delete(txID string, index uint64, deletedBy string) e
 	logger.Debug(query, deletedBy, now, txID, index)
 	if _, err := t.tx.Exec(query, deletedBy, now, txID, index); err != nil {
 		return errors.Wrapf(err, "error setting token to deleted [%s]", txID)
+	}
+	for _, extension := range t.db.extensions {
+		if err := extension.Delete(t.tx, txID, index, deletedBy); err != nil {
+			return errors.Wrapf(err, "error setting token to deleted [%s]", txID)
+		}
 	}
 	return nil
 }

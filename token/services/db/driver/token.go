@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"database/sql"
 	"errors"
 	"time"
 
@@ -105,6 +106,7 @@ type CertificationDB interface {
 }
 
 type TokenDBTransaction interface {
+	Tx() *sql.Tx
 	// GetToken returns the owned tokens and their identifier keys for the passed ids.
 	GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error)
 	// Delete marks the passed token as deleted by a given identifier (idempotent)
