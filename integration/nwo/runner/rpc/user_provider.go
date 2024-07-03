@@ -8,7 +8,9 @@ package rpc
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"hash"
+	"net"
 	"os"
 	"time"
 
@@ -58,6 +60,7 @@ func (c *UserProviderConfig) IssuerNames() []model.Username {
 
 type UserConfig struct {
 	Name     model.UserAlias `yaml:"name"`
+	Host     string          `yaml:"host"`
 	CorePath string          `yaml:"corePath"`
 }
 
@@ -71,7 +74,7 @@ const (
 func newUserProvider(c UserProviderConfig, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
 	users := make(map[model.UserAlias][]user.User, len(c.Users))
 	for _, uc := range append(append(c.Users, c.Auditors...), c.Issuers...) {
-		u, err := newUser(uc.CorePath, c.ConnectionType, metricsCollector, tracerProvider, logger, c.Auditors[0].Name)
+		u, err := newUser(uc.CorePath, uc.Host, c.ConnectionType, metricsCollector, tracerProvider, logger, c.Auditors[0].Name)
 		if err != nil {
 			return nil, err
 		}
@@ -80,8 +83,8 @@ func newUserProvider(c UserProviderConfig, metricsCollector metrics.Collector, t
 	return runner2.NewViewUserProvider(users), nil
 }
 
-func newUser(corePath string, connType ConnectionType, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger, auditor model.Username) (user.User, error) {
-	cfg, cli, err := newClient(corePath, connType)
+func newUser(corePath string, host string, connType ConnectionType, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger, auditor model.Username) (user.User, error) {
+	cfg, cli, err := newClient(corePath, host, connType)
 	if err != nil {
 		return nil, err
 	}
@@ -92,16 +95,16 @@ func newUser(corePath string, connType ConnectionType, metricsCollector metrics.
 	return runner2.NewViewUser(cfg.GetString("fsc.id"), auditor, cli, idResolver, metricsCollector, tracerProvider, logger), nil
 }
 
-func newClient(corePath string, connType ConnectionType) (driver.ConfigService, api2.ViewClient, error) {
+func newClient(corePath string, host string, connType ConnectionType) (driver.ConfigService, api2.ViewClient, error) {
 	cfg, err := config.NewProvider(corePath)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not find config provider")
 	}
 	var cli api2.ViewClient
 	if connType == REST {
-		cli, err = newWebClient(cfg)
+		cli, err = newWebClient(cfg, host)
 	} else {
-		cli, err = newGrpcClient(cfg)
+		cli, err = newGrpcClient(cfg, host)
 	}
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create view client")
@@ -109,9 +112,14 @@ func newClient(corePath string, connType ConnectionType) (driver.ConfigService, 
 	return cfg, cli, nil
 }
 
-func newGrpcClient(configProvider driver.ConfigService) (api2.ViewClient, error) {
+func newGrpcClient(configProvider driver.ConfigService, host string) (api2.ViewClient, error) {
+	_, port, err := net.SplitHostPort(configProvider.GetString("fsc.grpc.address"))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse address")
+	}
+
 	cc := &grpc.ConnectionConfig{
-		Address:           configProvider.GetString("fsc.grpc.address"),
+		Address:           fmt.Sprintf("%s:%s", host, port),
 		TLSEnabled:        true,
 		TLSRootCertFile:   configProvider.GetStringSlice("fsc.web.tls.clientRootCAs.files")[0],
 		ConnectionTimeout: 10 * time.Second,
@@ -138,9 +146,13 @@ func (*hasher) Hash(msg []byte) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-func newWebClient(configProvider driver.ConfigService) (api2.ViewClient, error) {
+func newWebClient(configProvider driver.ConfigService, host string) (api2.ViewClient, error) {
+	_, port, err := net.SplitHostPort(configProvider.GetString("fsc.web.address"))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse address")
+	}
 	return web.NewClient(&web.Config{
-		Host:        configProvider.GetString("fsc.web.address"),
+		Host:        fmt.Sprintf("%s:%s", host, port),
 		CACertPath:  configProvider.GetStringSlice("fsc.web.tls.clientRootCAs.files")[0],
 		TLSCertPath: configProvider.GetPath("fsc.web.tls.cert.file"),
 		TLSKeyPath:  configProvider.GetPath("fsc.web.tls.key.file"),
