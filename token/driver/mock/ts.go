@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -22,14 +23,15 @@ type TransferService struct {
 		result1 driver.TransferAction
 		result2 error
 	}
-	TransferStub        func(string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error)
+	TransferStub        func(context.Context, string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error)
 	transferMutex       sync.RWMutex
 	transferArgsForCall []struct {
-		arg1 string
-		arg2 driver.OwnerWallet
-		arg3 []*token.ID
-		arg4 []*token.Token
-		arg5 *driver.TransferOptions
+		arg1 context.Context
+		arg2 string
+		arg3 driver.OwnerWallet
+		arg4 []*token.ID
+		arg5 []*token.Token
+		arg6 *driver.TransferOptions
 	}
 	transferReturns struct {
 		result1 driver.TransferAction
@@ -126,32 +128,33 @@ func (fake *TransferService) DeserializeTransferActionReturnsOnCall(i int, resul
 	}{result1, result2}
 }
 
-func (fake *TransferService) Transfer(arg1 string, arg2 driver.OwnerWallet, arg3 []*token.ID, arg4 []*token.Token, arg5 *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
-	var arg3Copy []*token.ID
-	if arg3 != nil {
-		arg3Copy = make([]*token.ID, len(arg3))
-		copy(arg3Copy, arg3)
-	}
-	var arg4Copy []*token.Token
+func (fake *TransferService) Transfer(arg1 context.Context, arg2 string, arg3 driver.OwnerWallet, arg4 []*token.ID, arg5 []*token.Token, arg6 *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+	var arg4Copy []*token.ID
 	if arg4 != nil {
-		arg4Copy = make([]*token.Token, len(arg4))
+		arg4Copy = make([]*token.ID, len(arg4))
 		copy(arg4Copy, arg4)
+	}
+	var arg5Copy []*token.Token
+	if arg5 != nil {
+		arg5Copy = make([]*token.Token, len(arg5))
+		copy(arg5Copy, arg5)
 	}
 	fake.transferMutex.Lock()
 	ret, specificReturn := fake.transferReturnsOnCall[len(fake.transferArgsForCall)]
 	fake.transferArgsForCall = append(fake.transferArgsForCall, struct {
-		arg1 string
-		arg2 driver.OwnerWallet
-		arg3 []*token.ID
-		arg4 []*token.Token
-		arg5 *driver.TransferOptions
-	}{arg1, arg2, arg3Copy, arg4Copy, arg5})
+		arg1 context.Context
+		arg2 string
+		arg3 driver.OwnerWallet
+		arg4 []*token.ID
+		arg5 []*token.Token
+		arg6 *driver.TransferOptions
+	}{arg1, arg2, arg3, arg4Copy, arg5Copy, arg6})
 	stub := fake.TransferStub
 	fakeReturns := fake.transferReturns
-	fake.recordInvocation("Transfer", []interface{}{arg1, arg2, arg3Copy, arg4Copy, arg5})
+	fake.recordInvocation("Transfer", []interface{}{arg1, arg2, arg3, arg4Copy, arg5Copy, arg6})
 	fake.transferMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4, arg5)
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -165,17 +168,17 @@ func (fake *TransferService) TransferCallCount() int {
 	return len(fake.transferArgsForCall)
 }
 
-func (fake *TransferService) TransferCalls(stub func(string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error)) {
+func (fake *TransferService) TransferCalls(stub func(context.Context, string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error)) {
 	fake.transferMutex.Lock()
 	defer fake.transferMutex.Unlock()
 	fake.TransferStub = stub
 }
 
-func (fake *TransferService) TransferArgsForCall(i int) (string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) {
+func (fake *TransferService) TransferArgsForCall(i int) (context.Context, string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) {
 	fake.transferMutex.RLock()
 	defer fake.transferMutex.RUnlock()
 	argsForCall := fake.transferArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
 func (fake *TransferService) TransferReturns(result1 driver.TransferAction, result2 *driver.TransferMetadata, result3 error) {

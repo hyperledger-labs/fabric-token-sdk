@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
 	"encoding/asn1"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
@@ -218,7 +219,7 @@ func (r *Request) ID() string {
 // Issue appends an issue action to the request. The action will be prepared using the provided issuer wallet.
 // The action issues to the receiver a token of the passed type and quantity.
 // Additional options can be passed to customize the action.
-func (r *Request) Issue(wallet *IssuerWallet, receiver Identity, typ string, q uint64, opts ...IssueOption) (*IssueAction, error) {
+func (r *Request) Issue(context context.Context, wallet *IssuerWallet, receiver Identity, typ string, q uint64, opts ...IssueOption) (*IssueAction, error) {
 	if wallet == nil {
 		return nil, errors.Errorf("wallet is nil")
 	}
@@ -249,6 +250,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver Identity, typ string, q u
 
 	// Compute Issue
 	action, meta, err := r.TokenService.tms.IssueService().Issue(
+		context,
 		id,
 		typ,
 		[]uint64{q},
@@ -276,7 +278,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver Identity, typ string, q u
 // The action transfers tokens of the passed types to the receivers for the passed quantities.
 // In other words, owners[0] will receives values[0], and so on.
 // Additional options can be passed to customize the action.
-func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, owners []Identity, opts ...TransferOption) (*TransferAction, error) {
+func (r *Request) Transfer(context context.Context, wallet *OwnerWallet, typ string, values []uint64, owners []Identity, opts ...TransferOption) (*TransferAction, error) {
 	for _, v := range values {
 		if v == 0 {
 			return nil, errors.Errorf("value is zero")
@@ -297,6 +299,7 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 
 	// Compute transfer
 	transfer, transferMetadata, err := ts.Transfer(
+		context,
 		r.Anchor,
 		wallet.w,
 		tokenIDs,
@@ -329,7 +332,7 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 // Redeem appends a redeem action to the request. The action will be prepared using the provided owner wallet.
 // The action redeems tokens of the passed type for a total amount matching the passed value.
 // Additional options can be passed to customize the action.
-func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...TransferOption) error {
+func (r *Request) Redeem(context context.Context, wallet *OwnerWallet, typ string, value uint64, opts ...TransferOption) error {
 	opt, err := compileTransferOptions(opts...)
 	if err != nil {
 		return errors.WithMessagef(err, "failed compiling options [%v]", opts)
@@ -345,6 +348,7 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 
 	// Compute redeem, it is a transfer with owner set to nil
 	transfer, transferMetadata, err := ts.Transfer(
+		context,
 		r.Anchor,
 		wallet.w,
 		tokenIDs,
@@ -971,12 +975,13 @@ func (r *Request) Transfers() []*Transfer {
 
 // AuditCheck performs the audit check of the request in addition to
 // the checks of the token request itself via IsValid.
-func (r *Request) AuditCheck() error {
+func (r *Request) AuditCheck(context context.Context) error {
 	r.TokenService.logger.Debugf("audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID())
 	if err := r.IsValid(); err != nil {
 		return err
 	}
 	return r.TokenService.tms.AuditorService().AuditorCheck(
+		context,
 		r.Actions,
 		r.Metadata,
 		r.Anchor,

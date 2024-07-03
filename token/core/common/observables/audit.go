@@ -39,11 +39,15 @@ type ObservableAuditorService struct {
 	Metrics      *auditMetrics
 }
 
-func (o *ObservableAuditorService) AuditorCheck(request *driver.TokenRequest, metadata *driver.TokenRequestMetadata, anchor string) error {
-	_, span := o.Metrics.auditTracer.Start(context.Background(), "check")
+func NewObservableAuditorService(auditService driver.AuditorService, metrics *auditMetrics) *ObservableAuditorService {
+	return &ObservableAuditorService{AuditService: auditService, Metrics: metrics}
+}
+
+func (o *ObservableAuditorService) AuditorCheck(context context.Context, request *driver.TokenRequest, metadata *driver.TokenRequestMetadata, anchor string) error {
+	_, span := o.Metrics.auditTracer.Start(context, "check")
 	defer span.End()
 
-	err := o.AuditService.AuditorCheck(request, metadata, anchor)
+	err := o.AuditService.AuditorCheck(context, request, metadata, anchor)
 	span.SetAttributes(attribute.Bool(SuccessfulLabel, err == nil))
 	return err
 }

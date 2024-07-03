@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package auditor
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -56,8 +58,8 @@ type Auditor struct {
 }
 
 // Validate validates the passed token request
-func (a *Auditor) Validate(request *token.Request) error {
-	return request.AuditCheck()
+func (a *Auditor) Validate(context context.Context, request *token.Request) error {
+	return request.AuditCheck(context)
 }
 
 // Audit extracts the list of inputs and outputs from the passed transaction.

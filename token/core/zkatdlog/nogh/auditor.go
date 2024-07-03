@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"context"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
@@ -42,10 +44,10 @@ func NewAuditorService(
 }
 
 // AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
-func (s *AuditorService) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, txID string) error {
-	s.Logger.Debugf("[%s] check token request validity, number of transfer actions [%d]...", txID, len(tokenRequestMetadata.Transfers))
+func (s *AuditorService) AuditorCheck(context context.Context, request *driver.TokenRequest, metadata *driver.TokenRequestMetadata, txID string) error {
+	s.Logger.Debugf("[%s] check token request validity, number of transfer actions [%d]...", txID, len(metadata.Transfers))
 	var inputTokens [][]*token.Token
-	for i, transfer := range tokenRequestMetadata.Transfers {
+	for i, transfer := range metadata.Transfers {
 		s.Logger.Debugf("[%s] transfer action [%d] contains [%d] inputs", txID, i, len(transfer.TokenIDs))
 		inputs, err := s.TokenCommitmentLoader.GetTokenOutputs(transfer.TokenIDs)
 		if err != nil {
@@ -65,8 +67,8 @@ func (s *AuditorService) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRe
 		math.Curves[pp.Curve],
 	)
 	err := auditor.Check(
-		tokenRequest,
-		tokenRequestMetadata,
+		request,
+		metadata,
 		inputTokens,
 		txID,
 	)

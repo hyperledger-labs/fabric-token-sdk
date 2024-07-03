@@ -185,12 +185,15 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 			),
 			observables.NewTransfer(tracerProvider),
 		),
-		zkatdlog.NewAuditorService(
-			logger,
-			ppm,
-			common.NewLedgerTokenLoader[*token3.Token](logger, qe, tokDeserializer),
-			deserializer,
-			driverMetrics,
+		observables.NewObservableAuditorService(
+			zkatdlog.NewAuditorService(
+				logger,
+				ppm,
+				common.NewLedgerTokenLoader[*token3.Token](logger, qe, tokDeserializer),
+				deserializer,
+				driverMetrics,
+			),
+			observables.NewAudit(tracerProvider),
 		),
 		zkatdlog.NewTokensService(ppm),
 	)
