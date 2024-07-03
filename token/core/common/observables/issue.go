@@ -38,8 +38,8 @@ func NewObservableIssueService(issueService driver.IssueService, metrics *issueM
 	return &ObservableIssueService{IssueService: issueService, Metrics: metrics}
 }
 
-func (o *ObservableIssueService) Issue(context context.Context, issuerIdentity driver.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
-	newContext, span := o.Metrics.issueTracer.Start(context, "issue", trace.WithAttributes(attribute.String(TokenTypeLabel, tokenType)))
+func (o *ObservableIssueService) Issue(ctx context.Context, issuerIdentity driver.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
+	newContext, span := o.Metrics.issueTracer.Start(ctx, "issue", trace.WithAttributes(attribute.String(TokenTypeLabel, tokenType)))
 	defer span.End()
 
 	action, meta, err := o.IssueService.Issue(newContext, issuerIdentity, tokenType, values, owners, opts)

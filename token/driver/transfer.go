@@ -25,7 +25,7 @@ type TransferService interface {
 	// Transfer generates a TransferAction that spend the passed token ids and created the passed outputs.
 	// In addition, a set of options can be specified to further customize the transfer command.
 	// The function returns an TransferAction and the associated metadata.
-	Transfer(context context.Context, txID string, wallet OwnerWallet, ids []*token2.ID, Outputs []*token2.Token, opts *TransferOptions) (TransferAction, *TransferMetadata, error)
+	Transfer(ctx context.Context, txID string, wallet OwnerWallet, ids []*token2.ID, Outputs []*token2.Token, opts *TransferOptions) (TransferAction, *TransferMetadata, error)
 
 	// VerifyTransfer checks the well-formedness of the passed TransferAction with the respect to the passed output metadata
 	VerifyTransfer(tr TransferAction, tokenInfos [][]byte) error

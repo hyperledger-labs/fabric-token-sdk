@@ -44,7 +44,7 @@ func NewAuditorService(
 }
 
 // AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
-func (s *AuditorService) AuditorCheck(context context.Context, request *driver.TokenRequest, metadata *driver.TokenRequestMetadata, txID string) error {
+func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.TokenRequest, metadata *driver.TokenRequestMetadata, txID string) error {
 	s.Logger.Debugf("[%s] check token request validity, number of transfer actions [%d]...", txID, len(metadata.Transfers))
 	var inputTokens [][]*token.Token
 	for i, transfer := range metadata.Transfers {
