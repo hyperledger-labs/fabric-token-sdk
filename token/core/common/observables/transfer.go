@@ -40,10 +40,10 @@ func NewObservableTransferService(transferService driver.TransferService, metric
 }
 
 func (o *ObservableTransferService) Transfer(context context.Context, txID string, wallet driver.OwnerWallet, ids []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
-	_, span := o.Metrics.transferTracer.Start(context, "transfer")
+	newContext, span := o.Metrics.transferTracer.Start(context, "transfer")
 	defer span.End()
 
-	action, meta, err := o.TransferService.Transfer(context, txID, wallet, ids, Outputs, opts)
+	action, meta, err := o.TransferService.Transfer(newContext, txID, wallet, ids, Outputs, opts)
 	span.SetAttributes(attribute.Bool(SuccessfulLabel, err == nil))
 	return action, meta, err
 }
