@@ -44,7 +44,7 @@ require (
 	modernc.org/sqlite v1.28.0
 )
 
-replace github.com/hyperledger-labs/fabric-token-sdk/txgen => ./txgen
+replace github.com/hyperledger-labs/fabric-token-sdk/txgen => ./cmd/txgen
 
 require github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20231023164747-f3f972769504 // indirect
 
