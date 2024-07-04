@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"context"
 	"encoding/base64"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -83,23 +84,22 @@ func (s *localSession) Info() view.SessionInfo {
 }
 
 func (s *localSession) Send(payload []byte) error {
-	if s.info.Closed {
-		return errors.New("session is closed")
-	}
+	return s.SendWithContext(context.Background(), payload)
+}
 
-	s.writeChannel <- &view.Message{
-		SessionID:    s.info.ID,
-		ContextID:    s.contextID,
-		Caller:       s.caller,
-		FromEndpoint: s.info.Endpoint,
-		FromPKID:     s.info.EndpointPKID,
-		Status:       view.OK,
-		Payload:      payload,
-	}
-	return nil
+func (s *localSession) SendWithContext(ctx context.Context, payload []byte) error {
+	return s.send(ctx, payload, view.OK)
 }
 
 func (s *localSession) SendError(payload []byte) error {
+	return s.SendErrorWithContext(context.Background(), payload)
+}
+
+func (s *localSession) SendErrorWithContext(ctx context.Context, payload []byte) error {
+	return s.send(ctx, payload, view.ERROR)
+}
+
+func (s *localSession) send(ctx context.Context, payload []byte, status int32) error {
 	if s.info.Closed {
 		return errors.New("session is closed")
 	}
@@ -110,8 +110,9 @@ func (s *localSession) SendError(payload []byte) error {
 		Caller:       s.caller,
 		FromEndpoint: s.info.Endpoint,
 		FromPKID:     s.info.EndpointPKID,
-		Status:       view.ERROR,
+		Status:       status,
 		Payload:      payload,
+		Ctx:          ctx,
 	}
 	return nil
 }
