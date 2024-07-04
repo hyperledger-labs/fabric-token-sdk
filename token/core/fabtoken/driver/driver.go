@@ -8,10 +8,14 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/observables"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -130,6 +134,8 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
 	deserializer := NewDeserializer()
+	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
+	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.GetProvider(sp), metricsProvider)
 	ws := common.NewWalletService(
 		logger,
 		ip,
@@ -148,9 +154,18 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
-		fabtoken.NewIssueService(publicParamsManager, ws, deserializer),
-		fabtoken.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
-		fabtoken.NewAuditorService(),
+		observables.NewObservableIssueService(
+			fabtoken.NewIssueService(publicParamsManager, ws, deserializer),
+			observables.NewIssue(tracerProvider),
+		),
+		observables.NewObservableTransferService(
+			fabtoken.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
+			observables.NewTransfer(tracerProvider),
+		),
+		observables.NewObservableAuditorService(
+			fabtoken.NewAuditorService(),
+			observables.NewAudit(tracerProvider),
+		),
 		fabtoken.NewTokensService(),
 	)
 	if err != nil {
@@ -159,14 +174,22 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	return service, nil
 }
 
-func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator, error) {
+func (d *Driver) NewValidator(sp driver.ServiceProvider, tmsID driver.TMSID, params driver.PublicParameters) (driver.Validator, error) {
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", params.Identifier())
 
 	pp, ok := params.(*fabtoken.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return fabtoken.NewValidator(logger, pp, NewDeserializer()), nil
+	if sp == nil {
+		return fabtoken.NewValidator(logger, pp, NewDeserializer()), nil
+	}
+	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
+	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.GetProvider(sp), metricsProvider)
+	return observables.NewObservableValidator(
+		fabtoken.NewValidator(logger, pp, NewDeserializer()),
+		observables.NewValidator(tracerProvider),
+	), nil
 }
 
 func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {

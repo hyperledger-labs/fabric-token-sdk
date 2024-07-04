@@ -21,7 +21,7 @@ type Driver interface {
 	// NewPublicParametersManager returns a new PublicParametersManager instance from the passed public parameters
 	NewPublicParametersManager(pp PublicParameters) (PublicParamsManager, error)
 	// NewValidator returns a new Validator instance from the passed public parameters
-	NewValidator(pp PublicParameters) (Validator, error)
+	NewValidator(sp ServiceProvider, tmsID TMSID, pp PublicParameters) (Validator, error)
 }
 
 // ExtendedDriver is the interface that models additional services a token driver may offer

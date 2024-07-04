@@ -2,19 +2,21 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 )
 
 type Validator struct {
-	UnmarshallAndVerifyWithMetadataStub        func(token.Ledger, string, []byte) ([]interface{}, map[string][]byte, error)
+	UnmarshallAndVerifyWithMetadataStub        func(context.Context, driver.ValidatorLedger, string, []byte) ([]interface{}, map[string][]byte, error)
 	unmarshallAndVerifyWithMetadataMutex       sync.RWMutex
 	unmarshallAndVerifyWithMetadataArgsForCall []struct {
-		arg1 token.Ledger
-		arg2 string
-		arg3 []byte
+		arg1 context.Context
+		arg2 driver.ValidatorLedger
+		arg3 string
+		arg4 []byte
 	}
 	unmarshallAndVerifyWithMetadataReturns struct {
 		result1 []interface{}
@@ -30,25 +32,26 @@ type Validator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Validator) UnmarshallAndVerifyWithMetadata(arg1 token.Ledger, arg2 string, arg3 []byte) ([]interface{}, map[string][]byte, error) {
-	var arg3Copy []byte
-	if arg3 != nil {
-		arg3Copy = make([]byte, len(arg3))
-		copy(arg3Copy, arg3)
+func (fake *Validator) UnmarshallAndVerifyWithMetadata(arg1 context.Context, arg2 driver.ValidatorLedger, arg3 string, arg4 []byte) ([]interface{}, map[string][]byte, error) {
+	var arg4Copy []byte
+	if arg4 != nil {
+		arg4Copy = make([]byte, len(arg4))
+		copy(arg4Copy, arg4)
 	}
 	fake.unmarshallAndVerifyWithMetadataMutex.Lock()
 	ret, specificReturn := fake.unmarshallAndVerifyWithMetadataReturnsOnCall[len(fake.unmarshallAndVerifyWithMetadataArgsForCall)]
 	fake.unmarshallAndVerifyWithMetadataArgsForCall = append(fake.unmarshallAndVerifyWithMetadataArgsForCall, struct {
-		arg1 token.Ledger
-		arg2 string
-		arg3 []byte
-	}{arg1, arg2, arg3Copy})
+		arg1 context.Context
+		arg2 driver.ValidatorLedger
+		arg3 string
+		arg4 []byte
+	}{arg1, arg2, arg3, arg4Copy})
 	stub := fake.UnmarshallAndVerifyWithMetadataStub
 	fakeReturns := fake.unmarshallAndVerifyWithMetadataReturns
-	fake.recordInvocation("UnmarshallAndVerifyWithMetadata", []interface{}{arg1, arg2, arg3Copy})
+	fake.recordInvocation("UnmarshallAndVerifyWithMetadata", []interface{}{arg1, arg2, arg3, arg4Copy})
 	fake.unmarshallAndVerifyWithMetadataMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -62,17 +65,17 @@ func (fake *Validator) UnmarshallAndVerifyWithMetadataCallCount() int {
 	return len(fake.unmarshallAndVerifyWithMetadataArgsForCall)
 }
 
-func (fake *Validator) UnmarshallAndVerifyWithMetadataCalls(stub func(token.Ledger, string, []byte) ([]interface{}, map[string][]byte, error)) {
+func (fake *Validator) UnmarshallAndVerifyWithMetadataCalls(stub func(context.Context, driver.ValidatorLedger, string, []byte) ([]interface{}, map[string][]byte, error)) {
 	fake.unmarshallAndVerifyWithMetadataMutex.Lock()
 	defer fake.unmarshallAndVerifyWithMetadataMutex.Unlock()
 	fake.UnmarshallAndVerifyWithMetadataStub = stub
 }
 
-func (fake *Validator) UnmarshallAndVerifyWithMetadataArgsForCall(i int) (token.Ledger, string, []byte) {
+func (fake *Validator) UnmarshallAndVerifyWithMetadataArgsForCall(i int) (context.Context, driver.ValidatorLedger, string, []byte) {
 	fake.unmarshallAndVerifyWithMetadataMutex.RLock()
 	defer fake.unmarshallAndVerifyWithMetadataMutex.RUnlock()
 	argsForCall := fake.unmarshallAndVerifyWithMetadataArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *Validator) UnmarshallAndVerifyWithMetadataReturns(result1 []interface{}, result2 map[string][]byte, result3 error) {

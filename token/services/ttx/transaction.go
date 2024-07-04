@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -37,17 +39,18 @@ type Transaction struct {
 	TMS             *token.ManagementService
 	NetworkProvider GetNetworkFunc
 	Opts            *TxOptions
+	Context         context.Context
 }
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
-func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, error) {
+func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transaction, error) {
 	txOpts, err := compile(opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed compiling tx options")
 	}
 	return NewTransaction(
-		sp,
-		network.GetInstance(sp, txOpts.TMSID.Network, txOpts.TMSID.Channel).AnonymousIdentity(),
+		context,
+		network.GetInstance(context, txOpts.TMSID.Network, txOpts.TMSID.Channel).AnonymousIdentity(),
 		opts...,
 	)
 }
@@ -55,18 +58,18 @@ func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, e
 // NewTransaction returns a new token transaction customized with the passed opts that will be signed by the passed signer.
 // A valid signer is a signer that the target network recognizes as so. For example, in case of fabric, the signer must be a valid fabric identity.
 // If the passed signer is nil, then the default identity is used.
-func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*Transaction, error) {
+func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption) (*Transaction, error) {
 	txOpts, err := compile(opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed compiling tx options")
 	}
 
 	tms := token.GetManagementService(
-		sp,
+		context,
 		token.WithTMSID(txOpts.TMSID),
 	)
-	networkService := network.GetInstance(sp, tms.Network(), tms.Channel())
-	networkProvider := network.GetProvider(sp).GetNetwork
+	networkService := network.GetInstance(context, tms.Network(), tms.Channel())
+	networkProvider := network.GetProvider(context).GetNetwork
 
 	var txID network.TxID
 	if len(txOpts.NetworkTxID.Creator) != 0 {
@@ -99,26 +102,28 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 		TMS:             tms,
 		NetworkProvider: networkProvider,
 		Opts:            txOpts,
+		Context:         context.Context(),
 	}
-	sp.OnError(tx.Release)
+	context.OnError(tx.Release)
 	return tx, nil
 }
 
-func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) {
+func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, error) {
 	tx := &Transaction{
 		Payload: &Payload{
 			Transient:    map[string][]byte{},
 			TokenRequest: token.NewRequest(nil, ""),
 		},
+		Context: context.Context(),
 	}
-	networkProvider := network.GetProvider(sp).GetNetwork
+	networkProvider := network.GetProvider(context).GetNetwork
 	if err := unmarshal(networkProvider, tx.Payload, raw); err != nil {
 		return nil, err
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.TxID.String())
 	}
-	tms := token.GetManagementService(sp,
+	tms := token.GetManagementService(context,
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
 		token.WithNamespace(tx.Namespace()),
@@ -129,7 +134,7 @@ func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) 
 	if tx.ID() != tx.TokenRequest.ID() {
 		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", tx.ID(), tx.TokenRequest.ID())
 	}
-	sp.OnError(tx.Release)
+	context.OnError(tx.Release)
 	return tx, nil
 }
 
@@ -200,18 +205,18 @@ func (t *Transaction) Bytes(eIDs ...string) ([]byte, error) {
 
 // Issue appends a new Issue operation to the TokenRequest inside this transaction
 func (t *Transaction) Issue(wallet *token.IssuerWallet, receiver view.Identity, typ string, q uint64, opts ...token.IssueOption) error {
-	_, err := t.TokenRequest.Issue(wallet, receiver, typ, q, opts...)
+	_, err := t.TokenRequest.Issue(t.Context, wallet, receiver, typ, q, opts...)
 	return err
 }
 
 // Transfer appends a new Transfer operation to the TokenRequest inside this transaction
 func (t *Transaction) Transfer(wallet *token.OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...token.TransferOption) error {
-	_, err := t.TokenRequest.Transfer(wallet, typ, values, owners, opts...)
+	_, err := t.TokenRequest.Transfer(t.Context, wallet, typ, values, owners, opts...)
 	return err
 }
 
 func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ string, value uint64, opts ...token.TransferOption) error {
-	return t.TokenRequest.Redeem(wallet, typ, value, opts...)
+	return t.TokenRequest.Redeem(t.Context, wallet, typ, value, opts...)
 }
 
 func (t *Transaction) Outputs() (*token.OutputStream, error) {

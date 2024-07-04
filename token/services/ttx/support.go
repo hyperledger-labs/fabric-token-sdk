@@ -16,7 +16,7 @@ func StoreTransactionRecords(context view.Context, tx *Transaction) error {
 	return NewOwner(context, tx.TokenRequest.TokenService).Append(tx)
 }
 
-// RunView runs passed view within the passed context and using the passed options in a separate goroutine
+// RunView runs passed view within the passed Context and using the passed options in a separate goroutine
 func RunView(context view.Context, view view.View, opts ...view.RunViewOption) {
 	defer func() {
 		if r := recover(); r != nil {

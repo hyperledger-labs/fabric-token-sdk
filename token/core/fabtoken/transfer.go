@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
@@ -41,7 +43,7 @@ func NewTransferService(
 
 // Transfer returns a TransferAction as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, tokenIDs []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driver.OwnerWallet, tokenIDs []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	// select inputs
 	inputIDs, inputTokens, err := s.TokenLoader.GetTokens(tokenIDs)
 	if err != nil {

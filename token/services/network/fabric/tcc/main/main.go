@@ -65,7 +65,7 @@ func main() {
 		err := shim.Start(
 			&tcc.TokenChaincode{
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
-					ppm, v, err := token.NewServicesFromPublicParams(bytes)
+					ppm, v, err := token.NewServicesFromPublicParams(nil, token.TMSID{}, bytes)
 					if err != nil {
 						return nil, nil, err
 					}
@@ -105,7 +105,7 @@ func main() {
 			Address: config.CCaddress,
 			CC: &tcc.TokenChaincode{
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
-					ppm, v, err := token.NewServicesFromPublicParams(bytes)
+					ppm, v, err := token.NewServicesFromPublicParams(nil, token.TMSID{}, bytes)
 					if err != nil {
 						return nil, nil, err
 					}

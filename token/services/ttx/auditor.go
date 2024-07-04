@@ -49,7 +49,7 @@ func NewAuditor(sp token.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, e
 }
 
 func (a *TxAuditor) Validate(tx *Transaction) error {
-	return a.auditor.Validate(tx.TokenRequest)
+	return a.auditor.Validate(tx.Context, tx.TokenRequest)
 }
 
 func (a *TxAuditor) Audit(tx *Transaction) (*token.InputStream, *token.OutputStream, error) {

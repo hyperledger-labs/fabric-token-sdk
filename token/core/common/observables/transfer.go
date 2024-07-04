@@ -39,11 +39,11 @@ func NewObservableTransferService(transferService driver.TransferService, metric
 	return &ObservableTransferService{TransferService: transferService, Metrics: metrics}
 }
 
-func (o *ObservableTransferService) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
-	_, span := o.Metrics.transferTracer.Start(context.Background(), "transfer")
+func (o *ObservableTransferService) Transfer(ctx context.Context, txID string, wallet driver.OwnerWallet, ids []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+	newContext, span := o.Metrics.transferTracer.Start(ctx, "transfer")
 	defer span.End()
 
-	action, meta, err := o.TransferService.Transfer(txID, wallet, ids, Outputs, opts)
+	action, meta, err := o.TransferService.Transfer(newContext, txID, wallet, ids, Outputs, opts)
 	span.SetAttributes(attribute.Bool(SuccessfulLabel, err == nil))
 	return action, meta, err
 }

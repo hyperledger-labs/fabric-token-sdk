@@ -97,7 +97,14 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read public parameters")
 	}
-	_, validator, err := token.NewServicesFromPublicParams(ppRaw)
+	_, validator, err := token.NewServicesFromPublicParams(
+		context,
+		token.TMSID{
+			Network:   request.Network,
+			Namespace: request.Namespace,
+		},
+		ppRaw,
+	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create validator")
 	}
@@ -122,6 +129,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	}
 
 	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(
+		context.Context(),
 		&LedgerWrapper{qe: qe},
 		request.TxID,
 		request.Request,

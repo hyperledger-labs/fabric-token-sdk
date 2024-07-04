@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
+import "context"
+
 // ValidationAttributeID is the type of validation attribute identifier
 type ValidationAttributeID = string
 
@@ -42,5 +44,5 @@ type Validator interface {
 	// VerifyTokenRequestFromRaw verifies the passed marshalled token request against the passed ledger and anchor.
 	// The function returns additionally a map that contains information about the token request. The content of this map
 	// is driver-dependant
-	VerifyTokenRequestFromRaw(getState GetStateFnc, anchor string, raw []byte) ([]interface{}, ValidationAttributes, error)
+	VerifyTokenRequestFromRaw(ctx context.Context, getState GetStateFnc, anchor string, raw []byte) ([]interface{}, ValidationAttributes, error)
 }
