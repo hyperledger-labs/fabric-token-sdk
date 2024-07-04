@@ -16,7 +16,6 @@ import (
 	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -47,7 +46,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
@@ -100,7 +98,7 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 
 	err := errors2.Join(
-		p.Container().Provide(func(sp view2.ServiceProvider) *network.Provider { return network.NewProvider(sp) }),
+		p.Container().Provide(NewNetwork),
 		p.Container().Provide(digutils.Identity[*network.Provider](), dig.As(new(ttx.NetworkProvider), new(token.Normalizer), new(auditor.NetworkProvider))),
 		p.Container().Provide(func(networkProvider *network.Provider) *vault.PublicParamsProvider {
 			return &vault.PublicParamsProvider{Provider: networkProvider}

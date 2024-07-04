@@ -11,7 +11,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -19,6 +18,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/pkg/errors"
 )
+
+func NewDriver() driver.NamedDriver {
+	return driver.NamedDriver{
+		Name:   "fabric",
+		Driver: &Driver{},
+	}
+}
 
 type Driver struct{}
 
@@ -60,8 +66,4 @@ func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.
 		common.NewAcceptTxInDBFilterProvider(ttxdbProvider, auditDBProvider),
 		tokensProvider,
 	), nil
-}
-
-func init() {
-	network.Register("fabric", &Driver{})
 }
