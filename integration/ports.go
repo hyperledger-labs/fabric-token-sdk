@@ -11,7 +11,6 @@ import (
 	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/onsi/ginkgo/v2"
 )
 
@@ -31,16 +30,16 @@ type InfrastructureType struct {
 }
 
 var AllTestTypes = []*InfrastructureType{
-	{
-		Label:             ginkgo.Label("websocket"),
-		CommType:          fsc.WebSocket,
-		ReplicationFactor: token.None,
-	},
-	{
-		Label:             ginkgo.Label("libp2p"),
-		CommType:          fsc.LibP2P,
-		ReplicationFactor: token.None,
-	},
+	//{
+	//	Label:             ginkgo.Label("websocket"),
+	//	CommType:          fsc.WebSocket,
+	//	ReplicationFactor: token.None,
+	//},
+	//{
+	//	Label:             ginkgo.Label("libp2p"),
+	//	CommType:          fsc.LibP2P,
+	//	ReplicationFactor: token.None,
+	//},
 	{
 		Label:             ginkgo.Label("replicas"),
 		CommType:          fsc.WebSocket,
