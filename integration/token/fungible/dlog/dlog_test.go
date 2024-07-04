@@ -119,7 +119,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names
 			HSM:             mask&HSM > 0,
 			WebEnabled:      mask&WebEnabled > 0,
 			SDKs:            []api.SDK{&fdlog.SDK{}},
-			Monitoring:      true,
+			Monitoring:      false,
 			ReplicationOpts: opts,
 			OnlyUnity:       true,
 		},

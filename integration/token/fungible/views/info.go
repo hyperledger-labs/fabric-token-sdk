@@ -70,10 +70,8 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
 	assert.NoError(err, "failed to fetch public params")
 	ppm, err := token.NewPublicParametersManagerFromPublicParams(fetchedPPRaw)
-
 	assert.NoError(err, "failed to instantiate public params manager from fetch params")
 	assert.NotNil(ppm.PublicParameters(), "failed to validate remote public parameters")
-
 	assert.Equal(fetchedPPRaw, ppRaw, "public params do not match [%s]!=[%s]", hash.Hashable(fetchedPPRaw), hash.Hashable(ppRaw))
 
 	return nil, nil
