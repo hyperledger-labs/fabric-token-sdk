@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -120,7 +119,7 @@ func (d *DBOpener) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*Op
 			"environment variable must be set to a dataSourceName that can be used with the %s golang driver",
 			d.optsKey, d.envVarKey, opts.Driver)
 	}
-	opts.TablePrefix = db.EscapeForTableName(tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	//opts.TablePrefix = db.EscapeForTableName(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	return opts, nil
 }
 

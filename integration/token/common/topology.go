@@ -32,6 +32,7 @@ type Opts struct {
 	SDKs            []api.SDK
 	WebEnabled      bool
 	Monitoring      bool
+	OnlyUnity       bool
 }
 
 func SetDefaultParams(tokenSDKDriver string, tms *topology.TMS, aries bool) {
