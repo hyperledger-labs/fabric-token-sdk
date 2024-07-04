@@ -25,6 +25,11 @@ func (d *walletDBDriver) Open(cp driver.ConfigProvider, tmsID token.TMSID) (driv
 	return d.OpenWalletDB(cp, tmsID)
 }
 
+type (
+	IdentityHolder = db.DriverHolder[driver.IdentityDB, driver.IdentityDB, *identityDBDriver]
+	WalletHolder   = db.DriverHolder[driver.WalletDB, driver.WalletDB, *walletDBDriver]
+)
+
 var (
 	identityHolder = db.NewDriverHolder[driver.IdentityDB, driver.IdentityDB, *identityDBDriver](utils.IdentityFunc[driver.IdentityDB]())
 	walletHolder   = db.NewDriverHolder[driver.WalletDB, driver.WalletDB, *walletDBDriver](utils.IdentityFunc[driver.WalletDB]())
@@ -42,7 +47,15 @@ type Manager struct {
 	walletManager   *db.Manager[driver.WalletDB, driver.WalletDB, *walletDBDriver]
 }
 
-func NewManager(cp driver.ConfigProvider, config db.Config) *Manager {
+func NewManager(drivers []db.NamedDriver[driver.IdentityDBDriver], cp driver.ConfigProvider, config db.Config) *Manager {
+	identityDrivers := make([]db.NamedDriver[*identityDBDriver], len(drivers))
+	walletDrivers := make([]db.NamedDriver[*walletDBDriver], len(drivers))
+	for i, driver := range drivers {
+		identityDrivers[i] = db.NamedDriver[*identityDBDriver]{Name: driver.Name, Driver: &identityDBDriver{IdentityDBDriver: driver.Driver}}
+		walletDrivers[i] = db.NamedDriver[*walletDBDriver]{Name: driver.Name, Driver: &walletDBDriver{IdentityDBDriver: driver.Driver}}
+	}
+	identityHolder := db.NewDriverHolder[driver.IdentityDB, driver.IdentityDB, *identityDBDriver](utils.IdentityFunc[driver.IdentityDB](), identityDrivers...)
+	walletHolder := db.NewDriverHolder[driver.WalletDB, driver.WalletDB, *walletDBDriver](utils.IdentityFunc[driver.WalletDB](), walletDrivers...)
 	return &Manager{
 		identityManager: identityHolder.NewManager(cp, config),
 		walletManager:   walletHolder.NewManager(cp, config),

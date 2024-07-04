@@ -8,6 +8,7 @@ package ttxdb
 
 import (
 	"math/big"
+	"reflect"
 	"sync"
 	"time"
 
@@ -18,27 +19,30 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	holder = db.NewDriverHolder[*DB, driver.TokenTransactionDB, driver.TTXDBDriver](newDB)
-	logger = logging.MustGetLogger("token-sdk.ttxdb")
+type (
+	Holder  = db.DriverHolder[*DB, driver.TokenTransactionDB, driver.TTXDBDriver]
+	Manager = db.Manager[*DB, driver.TokenTransactionDB, driver.TTXDBDriver]
 )
 
-func Register(name string, driver driver.TTXDBDriver) { holder.Register(name, driver) }
+var (
+	managerType = reflect.TypeOf((*Manager)(nil))
+	logger      = logging.MustGetLogger("token-sdk.ttxdb")
+)
 
-func Drivers() []string { return holder.DriverNames() }
-
-type Manager = db.Manager[*DB, driver.TokenTransactionDB, driver.TTXDBDriver]
-
-func NewManager(cp driver.ConfigProvider, config db.Config) *Manager {
-	return holder.NewManager(cp, config)
+func NewHolder(drivers []db.NamedDriver[driver.TTXDBDriver]) *Holder {
+	return db.NewDriverHolder[*DB, driver.TokenTransactionDB, driver.TTXDBDriver](newDB, drivers...)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
-	return holder.GetByTMSId(sp, tmsID)
-}
-
-func GetProvider(sp token.ServiceProvider) (*Manager, error) {
-	return holder.GetProvider(sp)
+	s, err := sp.GetService(managerType)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get manager service")
+	}
+	c, err := s.(*Manager).DBByTMSId(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
+	}
+	return c, nil
 }
 
 // TxStatus is the status of a transaction

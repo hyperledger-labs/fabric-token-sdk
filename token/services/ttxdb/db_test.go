@@ -18,9 +18,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	db3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
+	ttxdb2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	_ "modernc.org/sqlite"
@@ -33,7 +34,8 @@ func TestDB(t *testing.T) {
 	registry := registry.New()
 	assert.NoError(t, registry.RegisterService(cp))
 
-	manager := ttxdb.NewManager(cp, db.NewConfig(config2.NewService(cp), "ttxdb.persistence.type"))
+	manager := ttxdb.NewHolder([]db3.NamedDriver[driver.TTXDBDriver]{ttxdb2.NewDriver()}).
+		NewManager(cp, db.NewConfig(config2.NewService(cp), "ttxdb.persistence.type"))
 	db1, err := manager.DBByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	db2, err := manager.DBByTMSId(token.TMSID{Network: "grapes"})

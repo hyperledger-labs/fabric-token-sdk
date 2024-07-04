@@ -11,7 +11,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 )
 
 const (
@@ -37,10 +36,13 @@ func (d *Driver) OpenWalletDB(cp driver.ConfigProvider, tmsID token.TMSID) (driv
 	return d.walletDriver.Open(cp, tmsID)
 }
 
-func init() {
+func NewDriver() db.NamedDriver[driver.IdentityDBDriver] {
 	sqlDBOpener := NewSQLDBOpener()
-	identitydb.Register("sql", &Driver{
-		identityDriver: db.NewSQLDriver(sqlDBOpener, sqldb.NewCachedIdentityDB),
-		walletDriver:   db.NewSQLDriver(sqlDBOpener, sqldb.NewWalletDB),
-	})
+	return db.NamedDriver[driver.IdentityDBDriver]{
+		Name: "sql",
+		Driver: &Driver{
+			identityDriver: db.NewSQLDriver(sqlDBOpener, sqldb.NewCachedIdentityDB),
+			walletDriver:   db.NewSQLDriver(sqlDBOpener, sqldb.NewWalletDB),
+		},
+	}
 }

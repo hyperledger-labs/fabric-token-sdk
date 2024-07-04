@@ -46,13 +46,24 @@ func (o *dbOpener[S, D, O]) New(cp ConfigProvider, id token.TMSID) (S, error) {
 	return o.newDB(driverInstance), nil
 }
 
-func NewDriverHolder[S any, D any, O dbDriver[D]](newDB dbInstantiator[S, D, O]) *DriverHolder[S, D, O] {
-	return &DriverHolder[S, D, O]{
+type DriverName = string
+
+type NamedDriver[O any] struct {
+	Name   DriverName
+	Driver O
+}
+
+func NewDriverHolder[S any, D any, O dbDriver[D]](newDB dbInstantiator[S, D, O], ds ...NamedDriver[O]) *DriverHolder[S, D, O] {
+	h := &DriverHolder[S, D, O]{
 		Holder:      drivers.NewHolder[*dbOpener[S, D, O]](),
 		managerType: reflect.TypeOf((*Manager[S, D, O])(nil)),
 		zero:        utils.Zero[S](),
 		newDB:       newDB,
 	}
+	for _, d := range ds {
+		h.Register(d.Name, d.Driver)
+	}
+	return h
 }
 
 type DriverHolder[S any, D any, O dbDriver[D]] struct {

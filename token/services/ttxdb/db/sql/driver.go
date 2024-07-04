@@ -8,8 +8,8 @@ package sql
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 )
 
 const (
@@ -22,6 +22,9 @@ func NewSQLDBOpener() *sqldb.DBOpener {
 	return sqldb.NewSQLDBOpener(OptsKey, EnvVarKey)
 }
 
-func init() {
-	ttxdb.Register("sql", db.NewSQLDriver(NewSQLDBOpener(), sqldb.NewTransactionDB))
+func NewDriver() db.NamedDriver[driver.TTXDBDriver] {
+	return db.NamedDriver[driver.TTXDBDriver]{
+		Name:   "sql",
+		Driver: db.NewSQLDriver(NewSQLDBOpener(), sqldb.NewTransactionDB),
+	}
 }
