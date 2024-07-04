@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"

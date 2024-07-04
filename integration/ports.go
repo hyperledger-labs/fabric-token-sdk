@@ -8,10 +8,10 @@ package integration
 
 import (
 	"fmt"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/onsi/ginkgo/v2"
 )
 
