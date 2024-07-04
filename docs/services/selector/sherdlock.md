@@ -1,8 +1,8 @@
-# Sherdlock token selector
+# Sherdlock Token Selector
 
 ## Motivation
 
-### Problems with simple and mailman selector
+### Problems with simple selector
 
 The current token-selector implementation does not support node replication, as it assumes that only one FSC node accesses the tokens of a specific wallet/currency combination. This leads to the following problems:
 
