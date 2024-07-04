@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package tcc
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -50,7 +51,7 @@ func (a *SetupAction) GetSetupParameters() ([]byte, error) {
 //go:generate counterfeiter -o mock/validator.go -fake-name Validator . Validator
 
 type Validator interface {
-	UnmarshallAndVerifyWithMetadata(ledger token.Ledger, anchor string, raw []byte) ([]interface{}, map[string][]byte, error)
+	UnmarshallAndVerifyWithMetadata(ctx context.Context, ledger token.Ledger, anchor string, raw []byte) ([]interface{}, map[string][]byte, error)
 }
 
 //go:generate counterfeiter -o mock/public_parameters_manager.go -fake-name PublicParametersManager . PublicParametersManager
@@ -216,7 +217,7 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	}
 
 	// Verify
-	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(stub, stub.GetTxID(), raw)
+	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(context.Background(), stub, stub.GetTxID(), raw)
 	if err != nil {
 		return shim.Error("failed to verify token request: " + err.Error())
 	}

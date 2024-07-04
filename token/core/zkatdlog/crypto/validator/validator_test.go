@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package validator_test
 
 import (
+	"context"
 	"encoding/asn1"
 	"encoding/json"
 	"os"
@@ -133,7 +134,7 @@ var _ = Describe("validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(fakeLedger.GetStateStub, "1", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), fakeLedger.GetStateStub, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -168,7 +169,7 @@ var _ = Describe("validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(getState, "1", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -203,7 +204,7 @@ var _ = Describe("validator", func() {
 
 			})
 			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(getState, "1", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -240,7 +241,7 @@ var _ = Describe("validator", func() {
 
 			})
 			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(getState, "2", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "2", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -260,7 +261,7 @@ var _ = Describe("validator", func() {
 
 				})
 				It("fails", func() {
-					_, _, err := engine.VerifyTokenRequestFromRaw(getState, "2", raw)
+					_, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "2", raw)
 					Expect(err.Error()).To(ContainSubstring("pseudonym signature invalid"))
 
 				})

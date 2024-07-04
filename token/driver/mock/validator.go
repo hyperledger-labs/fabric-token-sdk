@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -21,12 +22,13 @@ type Validator struct {
 		result1 []interface{}
 		result2 error
 	}
-	VerifyTokenRequestFromRawStub        func(func(key string) ([]byte, error), string, []byte) ([]interface{}, map[string][]byte, error)
+	VerifyTokenRequestFromRawStub        func(context.Context, func(key string) ([]byte, error), string, []byte) ([]interface{}, map[string][]byte, error)
 	verifyTokenRequestFromRawMutex       sync.RWMutex
 	verifyTokenRequestFromRawArgsForCall []struct {
-		arg1 func(key string) ([]byte, error)
-		arg2 string
-		arg3 []byte
+		arg1 context.Context
+		arg2 func(key string) ([]byte, error)
+		arg3 string
+		arg4 []byte
 	}
 	verifyTokenRequestFromRawReturns struct {
 		result1 []interface{}
@@ -111,25 +113,26 @@ func (fake *Validator) UnmarshalActionsReturnsOnCall(i int, result1 []interface{
 	}{result1, result2}
 }
 
-func (fake *Validator) VerifyTokenRequestFromRaw(arg1 func(key string) ([]byte, error), arg2 string, arg3 []byte) ([]interface{}, map[string][]byte, error) {
-	var arg3Copy []byte
-	if arg3 != nil {
-		arg3Copy = make([]byte, len(arg3))
-		copy(arg3Copy, arg3)
+func (fake *Validator) VerifyTokenRequestFromRaw(arg1 context.Context, arg2 func(key string) ([]byte, error), arg3 string, arg4 []byte) ([]interface{}, map[string][]byte, error) {
+	var arg4Copy []byte
+	if arg4 != nil {
+		arg4Copy = make([]byte, len(arg4))
+		copy(arg4Copy, arg4)
 	}
 	fake.verifyTokenRequestFromRawMutex.Lock()
 	ret, specificReturn := fake.verifyTokenRequestFromRawReturnsOnCall[len(fake.verifyTokenRequestFromRawArgsForCall)]
 	fake.verifyTokenRequestFromRawArgsForCall = append(fake.verifyTokenRequestFromRawArgsForCall, struct {
-		arg1 func(key string) ([]byte, error)
-		arg2 string
-		arg3 []byte
-	}{arg1, arg2, arg3Copy})
+		arg1 context.Context
+		arg2 func(key string) ([]byte, error)
+		arg3 string
+		arg4 []byte
+	}{arg1, arg2, arg3, arg4Copy})
 	stub := fake.VerifyTokenRequestFromRawStub
 	fakeReturns := fake.verifyTokenRequestFromRawReturns
-	fake.recordInvocation("VerifyTokenRequestFromRaw", []interface{}{arg1, arg2, arg3Copy})
+	fake.recordInvocation("VerifyTokenRequestFromRaw", []interface{}{arg1, arg2, arg3, arg4Copy})
 	fake.verifyTokenRequestFromRawMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -143,17 +146,17 @@ func (fake *Validator) VerifyTokenRequestFromRawCallCount() int {
 	return len(fake.verifyTokenRequestFromRawArgsForCall)
 }
 
-func (fake *Validator) VerifyTokenRequestFromRawCalls(stub func(func(key string) ([]byte, error), string, []byte) ([]interface{}, map[string][]byte, error)) {
+func (fake *Validator) VerifyTokenRequestFromRawCalls(stub func(context.Context, func(key string) ([]byte, error), string, []byte) ([]interface{}, map[string][]byte, error)) {
 	fake.verifyTokenRequestFromRawMutex.Lock()
 	defer fake.verifyTokenRequestFromRawMutex.Unlock()
 	fake.VerifyTokenRequestFromRawStub = stub
 }
 
-func (fake *Validator) VerifyTokenRequestFromRawArgsForCall(i int) (func(key string) ([]byte, error), string, []byte) {
+func (fake *Validator) VerifyTokenRequestFromRawArgsForCall(i int) (context.Context, func(key string) ([]byte, error), string, []byte) {
 	fake.verifyTokenRequestFromRawMutex.RLock()
 	defer fake.verifyTokenRequestFromRawMutex.RUnlock()
 	argsForCall := fake.verifyTokenRequestFromRawArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *Validator) VerifyTokenRequestFromRawReturns(result1 []interface{}, result2 map[string][]byte, result3 error) {

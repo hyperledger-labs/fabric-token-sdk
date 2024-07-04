@@ -220,13 +220,13 @@ func TestGenFailure(t *testing.T) {
 	testGenRun(gt, tokengen, []string{"gen", "fabtoken", "--output", tempOutput})
 	raw, err := os.ReadFile(filepath.Join(tempOutput, "fabtoken_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
-	_, _, err = token.NewServicesFromPublicParams(raw)
+	_, _, err = token.NewServicesFromPublicParams(nil, token.TMSID{}, raw)
 	gt.Expect(err).NotTo(HaveOccurred())
 
 	testGenRun(gt, tokengen, []string{"gen", "dlog", "--idemix", "./testdata/idemix", "--output", tempOutput})
 	raw, err = os.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
-	_, _, err = token.NewServicesFromPublicParams(raw)
+	_, _, err = token.NewServicesFromPublicParams(nil, token.TMSID{}, raw)
 	gt.Expect(err).NotTo(HaveOccurred())
 }
 

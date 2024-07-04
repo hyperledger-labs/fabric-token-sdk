@@ -174,14 +174,22 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	return service, nil
 }
 
-func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator, error) {
+func (d *Driver) NewValidator(sp driver.ServiceProvider, tmsID driver.TMSID, params driver.PublicParameters) (driver.Validator, error) {
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", params.Identifier())
 
 	pp, ok := params.(*fabtoken.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return fabtoken.NewValidator(logger, pp, NewDeserializer()), nil
+	if sp == nil {
+		return fabtoken.NewValidator(logger, pp, NewDeserializer()), nil
+	}
+	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
+	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.GetProvider(sp), metricsProvider)
+	return observables.NewObservableValidator(
+		fabtoken.NewValidator(logger, pp, NewDeserializer()),
+		observables.NewValidator(tracerProvider),
+	), nil
 }
 
 func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {

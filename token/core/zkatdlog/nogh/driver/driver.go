@@ -204,7 +204,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	return service, err
 }
 
-func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator, error) {
+func (d *Driver) NewValidator(sp driver.ServiceProvider, tmsID driver.TMSID, params driver.PublicParameters) (driver.Validator, error) {
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.zkatdlog", params.Identifier())
 
 	pp, ok := params.(*crypto.PublicParams)
@@ -215,7 +215,16 @@ func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator,
 	if err != nil {
 		return nil, err
 	}
-	return validator.New(logger, pp, deserializer), nil
+	if sp == nil {
+		return validator.New(logger, pp, deserializer), nil
+	}
+
+	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
+	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.GetProvider(sp), metricsProvider)
+	return observables.NewObservableValidator(
+		validator.New(logger, pp, deserializer),
+		observables.NewValidator(tracerProvider),
+	), nil
 }
 
 func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {

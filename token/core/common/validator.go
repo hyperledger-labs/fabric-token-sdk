@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -74,7 +76,7 @@ func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA
 	}
 }
 
-func (v *Validator[P, T, TA, IA]) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, anchor string, raw []byte) ([]interface{}, driver.ValidationAttributes, error) {
+func (v *Validator[P, T, TA, IA]) VerifyTokenRequestFromRaw(ctx context.Context, getState driver.GetStateFnc, anchor string, raw []byte) ([]interface{}, driver.ValidationAttributes, error) {
 	if len(raw) == 0 {
 		return nil, nil, errors.New("empty token request")
 	}

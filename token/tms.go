@@ -303,7 +303,7 @@ func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *Management
 
 // NewServicesFromPublicParams uses the passed marshalled public parameters to create an instance
 // of PublicParametersManager and a new instance of Validator.
-func NewServicesFromPublicParams(params []byte) (*PublicParametersManager, *Validator, error) {
+func NewServicesFromPublicParams(sp ServiceProvider, tmsID TMSID, params []byte) (*PublicParametersManager, *Validator, error) {
 	logger.Debugf("unmarshall public parameters...")
 	pp, err := core.PublicParametersFromBytes(params)
 	if err != nil {
@@ -317,7 +317,7 @@ func NewServicesFromPublicParams(params []byte) (*PublicParametersManager, *Vali
 	}
 
 	logger.Debugf("instantiate validator...")
-	validator, err := core.NewValidator(pp)
+	validator, err := core.NewValidator(sp, tmsID, pp)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed instantiating validator")
 	}
