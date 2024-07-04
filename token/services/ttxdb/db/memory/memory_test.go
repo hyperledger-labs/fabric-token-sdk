@@ -25,7 +25,7 @@ func TestMemory(t *testing.T) {
 	d := NewDriver()
 
 	for _, c := range dbtest.Cases {
-		db, err := d.Open(new(mockConfigProvider), token.TMSID{Network: c.Name})
+		db, err := d.Driver.Open(new(mockConfigProvider), token.TMSID{Network: c.Name})
 		if err != nil {
 			t.Fatal(err)
 		}

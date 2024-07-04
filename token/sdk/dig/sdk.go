@@ -29,20 +29,17 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -50,18 +47,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/memory"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/memory"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/dig"
-	_ "modernc.org/sqlite"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")
@@ -120,24 +111,14 @@ func (p *SDK) Install() error {
 		}, dig.As(new(token.VaultProvider))),
 		p.Container().Provide(token.NewManagementServiceProvider),
 		p.Container().Provide(digutils.Identity[*token.ManagementServiceProvider](), dig.As(new(ttx.TMSProvider), new(tokens.TMSProvider), new(auditor.TokenManagementServiceProvider))),
-		p.Container().Provide(func(configService driver.ConfigService, configProvider *config2.Service) *ttxdb.Manager {
-			return ttxdb.NewManager(configService, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
-		}),
+		p.Container().Provide(NewTTXDBManager),
 		p.Container().Provide(digutils.Identity[*ttxdb.Manager](), dig.As(new(ttx.DBProvider), new(network2.TTXDBProvider))),
-		p.Container().Provide(func(configService driver.ConfigService, configProvider *config2.Service) *tokendb.Manager {
-			return tokendb.NewManager(configService, dbconfig.NewConfig(configProvider, "tokendb.persistence.type", "db.persistence.type"))
-		}),
+		p.Container().Provide(NewTokenDBManager),
 		p.Container().Provide(digutils.Identity[*tokendb.Manager](), dig.As(new(tokens.DBProvider))),
-		p.Container().Provide(func(configService driver.ConfigService, configProvider *config2.Service) *auditdb.Manager {
-			return auditdb.NewManager(configService, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
-		}),
+		p.Container().Provide(NewAuditDBManager),
 		p.Container().Provide(digutils.Identity[*auditdb.Manager](), dig.As(new(auditor.AuditDBProvider))),
-		p.Container().Provide(func(configService driver.ConfigService, configProvider *config2.Service) *identitydb.Manager {
-			return identitydb.NewManager(configService, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
-		}),
-		p.Container().Provide(func(configService driver.ConfigService, configProvider *config2.Service) *tokenlockdb.Manager {
-			return tokenlockdb.NewManager(configService, dbconfig.NewConfig(configProvider, "tokenlockdb.persistence.type", "db.persistence.type"))
-		}),
+		p.Container().Provide(NewIdentityDBManager),
+		p.Container().Provide(NewTokenLockDBManager),
 		p.Container().Provide(digutils.Identity[*kvs.KVS](), dig.As(new(kvs2.KVS))),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(auditor.NewManager),

@@ -8,8 +8,8 @@ package sql
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 )
 
 const (
@@ -22,6 +22,9 @@ func NewSQLDBOpener() *sql.DBOpener {
 	return sql.NewSQLDBOpener(OptsKey, EnvVarKey)
 }
 
-func init() {
-	tokenlockdb.Register("sql", db.NewSQLDriver(NewSQLDBOpener(), sql.NewTokenLockDB))
+func NewDriver() db.NamedDriver[dbdriver.TokenLockDBDriver] {
+	return db.NamedDriver[dbdriver.TokenLockDBDriver]{
+		Name:   "sql",
+		Driver: db.NewMemoryDriver(NewSQLDBOpener(), sql.NewTokenLockDB),
+	}
 }

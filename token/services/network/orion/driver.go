@@ -19,14 +19,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewDriver() driver.NamedDriver {
+func NewDriver(auditDBManager *auditdb.Manager, ttxDBManager *ttxdb.Manager, configProvider *view.ConfigService) driver.NamedDriver {
 	return driver.NamedDriver{
-		Name:   "orion",
-		Driver: &Driver{},
+		Name: "orion",
+		Driver: &Driver{
+			auditDBManager: auditDBManager,
+			ttxDBManager:   ttxDBManager,
+			configProvider: configProvider,
+		},
 	}
 }
 
-type Driver struct{}
+type Driver struct {
+	auditDBManager *auditdb.Manager
+	ttxDBManager   *ttxdb.Manager
+	configProvider configProvider
+}
 
 func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.Network, error) {
 	n, err := orion.GetOrionNetworkService(sp, network)
@@ -37,16 +45,7 @@ func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get vault manager")
 	}
-	ttxdbProvider, err := ttxdb.GetProvider(sp)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get ttxdb manager")
-	}
-	auditDBProvider, err := auditdb.GetProvider(sp)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get audit db provider")
-	}
-	configProvider := view.GetConfigService(sp)
-	enabled, err := IsCustodian(configProvider)
+	enabled, err := IsCustodian(d.configProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed checking if custodian is enabled")
 	}
@@ -66,6 +65,6 @@ func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.
 		n,
 		m.Vault,
 		cs,
-		common.NewAcceptTxInDBFilterProvider(ttxdbProvider, auditDBProvider),
+		common.NewAcceptTxInDBFilterProvider(d.ttxDBManager, d.auditDBManager),
 	), nil
 }

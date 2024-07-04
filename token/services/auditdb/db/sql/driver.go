@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 )
 
@@ -26,6 +26,9 @@ func NewSQLDBOpener() *sqldb.DBOpener {
 	return sqldb.NewSQLDBOpener(OptsKey, EnvVarKey)
 }
 
-func init() {
-	auditdb.Register("sql", db.NewSQLDriver(NewSQLDBOpener(), sqldb.NewAuditTransactionDB))
+func NewDriver() db.NamedDriver[dbdriver.AuditDBDriver] {
+	return db.NamedDriver[dbdriver.AuditDBDriver]{
+		Name:   "sql",
+		Driver: db.NewSQLDriver(NewSQLDBOpener(), sqldb.NewAuditTransactionDB),
+	}
 }

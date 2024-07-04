@@ -7,27 +7,35 @@ SPDX-License-Identifier: Apache-2.0
 package tokendb
 
 import (
+	"reflect"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/pkg/errors"
 )
 
-var (
-	holder = db.NewDriverHolder[*DB, driver.TokenDB, driver.TokenDBDriver](newDB)
+type (
+	Holder  = db.DriverHolder[*DB, driver.TokenDB, driver.TokenDBDriver]
+	Manager = db.Manager[*DB, driver.TokenDB, driver.TokenDBDriver]
 )
 
-func Register(name string, driver driver.TokenDBDriver) { holder.Register(name, driver) }
+var managerType = reflect.TypeOf((*Manager)(nil))
 
-func Drivers() []string { return holder.DriverNames() }
-
-type Manager = db.Manager[*DB, driver.TokenDB, driver.TokenDBDriver]
-
-func NewManager(cp driver.ConfigProvider, config db.Config) *Manager {
-	return holder.NewManager(cp, config)
+func NewHolder(drivers []db.NamedDriver[driver.TokenDBDriver]) *Holder {
+	return db.NewDriverHolder(newDB, drivers...)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
-	return holder.GetByTMSId(sp, tmsID)
+	s, err := sp.GetService(managerType)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get manager service")
+	}
+	c, err := s.(*Manager).DBByTMSId(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
+	}
+	return c, nil
 }
 
 type TokenRecord = driver.TokenRecord

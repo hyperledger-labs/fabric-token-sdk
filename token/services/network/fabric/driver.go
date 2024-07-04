@@ -19,14 +19,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewDriver() driver.NamedDriver {
+func NewDriver(auditDBManager *auditdb.Manager, ttxDBManager *ttxdb.Manager) driver.NamedDriver {
 	return driver.NamedDriver{
-		Name:   "fabric",
-		Driver: &Driver{},
+		Name: "fabric",
+		Driver: &Driver{
+			auditDBManager: auditDBManager,
+			ttxDBManager:   ttxDBManager,
+		},
 	}
 }
 
-type Driver struct{}
+type Driver struct {
+	auditDBManager *auditdb.Manager
+	ttxDBManager   *ttxdb.Manager
+}
 
 func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.Network, error) {
 	n, err := fabric.GetFabricNetworkService(sp, network)
@@ -40,14 +46,6 @@ func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.
 	m, err := vault.GetProvider(sp)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get vault manager")
-	}
-	ttxdbProvider, err := ttxdb.GetProvider(sp)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get ttxdb manager")
-	}
-	auditDBProvider, err := auditdb.GetProvider(sp)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get audit db provider")
 	}
 	tokensProvider, err := tokens.GetProvider(sp)
 	if err != nil {
@@ -63,7 +61,7 @@ func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.
 		ch,
 		m.Vault,
 		cs,
-		common.NewAcceptTxInDBFilterProvider(ttxdbProvider, auditDBProvider),
+		common.NewAcceptTxInDBFilterProvider(d.ttxDBManager, d.auditDBManager),
 		tokensProvider,
 	), nil
 }

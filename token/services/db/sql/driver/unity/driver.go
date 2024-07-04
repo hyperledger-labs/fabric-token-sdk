@@ -9,14 +9,9 @@ package unity
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
 
@@ -112,11 +107,11 @@ func (t *IdentityDBDriver) OpenIdentityDB(cp dbdriver.ConfigProvider, tmsID toke
 	return t.Driver.OpenIdentityDB(cp, tmsID)
 }
 
-func init() {
+func NewDBDrivers() (db.NamedDriver[dbdriver.TTXDBDriver], db.NamedDriver[dbdriver.TokenDBDriver], db.NamedDriver[dbdriver.TokenLockDBDriver], db.NamedDriver[dbdriver.AuditDBDriver], db.NamedDriver[dbdriver.IdentityDBDriver]) {
 	root := NewDriver()
-	ttxdb.Register("unity", &TtxDBDriver{Driver: root})
-	tokendb.Register("unity", &TokenDBDriver{Driver: root})
-	tokenlockdb.Register("unity", &TokenLockDBDriver{Driver: root})
-	auditdb.Register("unity", &AuditDBDriver{Driver: root})
-	identitydb.Register("unity", &IdentityDBDriver{Driver: root})
+	return db.NamedDriver[dbdriver.TTXDBDriver]{Name: "unity", Driver: &TtxDBDriver{Driver: root}},
+		db.NamedDriver[dbdriver.TokenDBDriver]{Name: "unity", Driver: &TokenDBDriver{Driver: root}},
+		db.NamedDriver[dbdriver.TokenLockDBDriver]{Name: "unity", Driver: &TokenLockDBDriver{Driver: root}},
+		db.NamedDriver[dbdriver.AuditDBDriver]{Name: "unity", Driver: &AuditDBDriver{Driver: root}},
+		db.NamedDriver[dbdriver.IdentityDBDriver]{Name: "unity", Driver: &IdentityDBDriver{Driver: root}}
 }
