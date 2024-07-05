@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
+	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -60,8 +62,8 @@ func Print(args *Args) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to read file at [%s]", args.InputFile)
 	}
-
-	pp, err := core.PublicParametersFromBytes(raw)
+	s := driver.NewTokenInstantiatorService(fabtoken.NewInstantiator(), dlog.NewInstantiator())
+	pp, err := s.PublicParametersFromBytes(raw)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal pp from [%s]", args.InputFile)
 	}

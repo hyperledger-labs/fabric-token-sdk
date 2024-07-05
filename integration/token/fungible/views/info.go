@@ -13,6 +13,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
+	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -69,7 +72,8 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 
 	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
 	assert.NoError(err, "failed to fetch public params")
-	ppm, err := token.NewPublicParametersManagerFromPublicParams(fetchedPPRaw)
+	is := driver.NewTokenInstantiatorService(fabtoken.NewInstantiator(), dlog.NewInstantiator())
+	ppm, err := token.NewPublicParametersManagerFromPublicParams(is, fetchedPPRaw)
 	assert.NoError(err, "failed to instantiate public params manager from fetch params")
 	assert.NotNil(ppm.PublicParameters(), "failed to validate remote public parameters")
 	assert.Equal(fetchedPPRaw, ppRaw, "public params do not match [%s]!=[%s]", hash.Hashable(fetchedPPRaw), hash.Hashable(ppRaw))

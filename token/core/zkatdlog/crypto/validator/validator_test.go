@@ -15,7 +15,6 @@ import (
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"

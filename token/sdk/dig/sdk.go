@@ -26,8 +26,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
@@ -38,6 +36,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
@@ -91,6 +90,7 @@ func (p *SDK) Install() error {
 	err := errors2.Join(
 		p.Container().Provide(common.NewAcceptTxInDBFilterProvider),
 		p.Container().Provide(network.NewProvider),
+		p.Container().Provide(newTokenDriverService),
 		p.Container().Provide(digutils.Identity[*network.Provider](), dig.As(new(ttx.NetworkProvider), new(token.Normalizer), new(auditor.NetworkProvider))),
 		p.Container().Provide(func(networkProvider *network.Provider) *vault.PublicParamsProvider {
 			return &vault.PublicParamsProvider{Provider: networkProvider}
@@ -122,6 +122,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(NewTokenLockDBManager),
 		p.Container().Provide(digutils.Identity[*kvs.KVS](), dig.As(new(kvs2.KVS))),
 		p.Container().Provide(identity.NewDBStorageProvider),
+		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(auditor.NewManager),
 		p.Container().Provide(ttx.NewManager),
 		p.Container().Provide(func() *tokens2.AuthorizationMultiplexer {
@@ -163,6 +164,7 @@ func (p *SDK) Install() error {
 	// Backward compatibility with SP
 	err = errors2.Join(
 		digutils.Register[*kvs.KVS](p.Container()),
+		digutils.Register[*driver2.TokenDriverService](p.Container()),
 		digutils.Register[*network.Provider](p.Container()),
 		digutils.Register[*token.ManagementServiceProvider](p.Container()),
 		digutils.Register[*ttxdb.Manager](p.Container()),

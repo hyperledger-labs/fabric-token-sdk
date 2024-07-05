@@ -11,7 +11,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
+	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -54,11 +56,12 @@ func keyPairGen(args []string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed reading public parameters from [%s]", ppPath)
 	}
-	pp, err := core.PublicParametersFromBytes(ppRaw)
+	s := driver2.NewTokenInstantiatorService(fabtoken.NewInstantiator(), dlog.NewInstantiator())
+	pp, err := s.PublicParametersFromBytes(ppRaw)
 	if err != nil {
 		return errors.Wrapf(err, "failed unmarshalling public parameters loaded from [%s], len [%d]", ppPath, len(ppRaw))
 	}
-	ppm, err := core.NewPublicParametersManager(pp)
+	ppm, err := s.NewPublicParametersManager(pp)
 	if err != nil {
 		return errors.Wrapf(err, "failed instantiating public parameters manager")
 	}

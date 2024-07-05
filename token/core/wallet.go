@@ -14,13 +14,9 @@ import (
 
 // NewWalletService returns a new instance of the driver.WalletService interface for the passed public parameters
 func NewWalletService(sp view.ServiceProvider, network string, channel string, namespace string, pp driver.PublicParameters) (driver.WalletService, error) {
-	d, ok := holder.Drivers[pp.Identifier()]
-	if !ok {
-		return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", pp.Identifier())
+	s, err := driver.GetTokenDriverService(sp)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting token driver service")
 	}
-	ed, ok := d.(driver.ExtendedDriver)
-	if !ok {
-		return nil, errors.Errorf("cannot instantiate wallet service, the driver [%s] does not support that", pp.Identifier())
-	}
-	return ed.NewWalletService(sp, network, channel, namespace, pp)
+	return s.NewWalletService(driver.TMSID{Network: network, Channel: channel, Namespace: namespace}, pp)
 }

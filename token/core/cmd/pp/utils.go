@@ -8,8 +8,6 @@ package pp
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/printpp"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	"github.com/spf13/cobra"
 )
 
