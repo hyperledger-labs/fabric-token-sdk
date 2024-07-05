@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	orionsdk "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk/dig"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	auditdb "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
 	identitydb "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
@@ -20,7 +20,6 @@ import (
 	tokenlockdb "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb/db/sql"
 	ttxdb "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 	"go.uber.org/dig"
-	_ "modernc.org/sqlite"
 )
 
 type SDK struct {
@@ -40,6 +39,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(ttxdb.NewDriver, dig.Group("ttxdb-drivers")),
 		p.Container().Provide(identitydb.NewDriver, dig.Group("identitydb-drivers")),
 		p.Container().Provide(tokensdk.NewDBDrivers),
+		p.Container().Provide(fabtoken.NewDriver, dig.Group("token-drivers")),
 	)
 	if err != nil {
 		return err

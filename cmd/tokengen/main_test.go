@@ -14,9 +14,10 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/common"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -220,13 +221,14 @@ func TestGenFailure(t *testing.T) {
 	testGenRun(gt, tokengen, []string{"gen", "fabtoken", "--output", tempOutput})
 	raw, err := os.ReadFile(filepath.Join(tempOutput, "fabtoken_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
-	_, _, err = token.NewServicesFromPublicParams(nil, token.TMSID{}, raw)
+	is := driver.NewTokenInstantiatorService(fabtoken.NewInstantiator(), dlog.NewInstantiator())
+	_, _, err = token.NewServicesFromPublicParams(is, nil, token.TMSID{}, raw)
 	gt.Expect(err).NotTo(HaveOccurred())
 
 	testGenRun(gt, tokengen, []string{"gen", "dlog", "--idemix", "./testdata/idemix", "--output", tempOutput})
 	raw, err = os.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
-	_, _, err = token.NewServicesFromPublicParams(nil, token.TMSID{}, raw)
+	_, _, err = token.NewServicesFromPublicParams(is, nil, token.TMSID{}, raw)
 	gt.Expect(err).NotTo(HaveOccurred())
 }
 

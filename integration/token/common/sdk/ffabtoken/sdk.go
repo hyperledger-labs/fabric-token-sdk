@@ -10,7 +10,7 @@ import (
 	"errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	auditdb "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
 	identitydb "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
@@ -38,6 +38,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(ttxdb.NewDriver, dig.Group("ttxdb-drivers")),
 		p.Container().Provide(identitydb.NewDriver, dig.Group("identitydb-drivers")),
 		p.Container().Provide(tokensdk.NewDBDrivers),
+		p.Container().Provide(fabtoken.NewDriver, dig.Group("token-drivers")),
 	)
 	if err != nil {
 		return err

@@ -8,6 +8,7 @@ package sdk
 
 import (
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -84,4 +85,11 @@ func NewDBDrivers() DBDriverResult {
 		AuditDBDriver:     auditDBDriver,
 		IdentityDBDriver:  identityDBDriver,
 	}
+}
+
+func newTokenDriverService(in struct {
+	dig.In
+	Drivers []driver.NamedDriver `group:"token-drivers"`
+}) *driver.TokenDriverService {
+	return driver.NewTokenDriverService(in.Drivers)
 }

@@ -13,7 +13,7 @@ import (
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
 	orionsdk "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk/dig"
 	viewsdk "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/dig"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	auditdb "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
 	identitydb "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
@@ -56,6 +56,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(ttxdb.NewDriver, dig.Group("ttxdb-drivers")),
 		p.Container().Provide(identitydb.NewDriver, dig.Group("identitydb-drivers")),
 		p.Container().Provide(tokensdk.NewDBDrivers),
+		p.Container().Provide(dlog.NewDriver, dig.Group("token-drivers")),
 	)
 	if err != nil {
 		return err

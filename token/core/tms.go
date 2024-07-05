@@ -11,7 +11,6 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -35,23 +34,23 @@ type PublicParameters struct {
 // TMSProvider is a token management service provider.
 // It is responsible for creating token management services for different networks.
 type TMSProvider struct {
-	sp             view.ServiceProvider
-	logger         logging.Logger
-	configProvider ConfigProvider
-	vault          Vault
-	callback       CallbackFunc
+	logger             logging.Logger
+	configProvider     ConfigProvider
+	vault              Vault
+	callback           CallbackFunc
+	tokenDriverService *driver.TokenDriverService
 
 	lock     sync.RWMutex
 	services map[string]driver.TokenManagerService
 }
 
-func NewTMSProvider(sp view.ServiceProvider, logger logging.Logger, configProvider ConfigProvider, vault Vault) *TMSProvider {
+func NewTMSProvider(logger logging.Logger, configProvider ConfigProvider, vault Vault, tokenDriverService *driver.TokenDriverService) *TMSProvider {
 	ms := &TMSProvider{
-		sp:             sp,
-		logger:         logger,
-		configProvider: configProvider,
-		vault:          vault,
-		services:       map[string]driver.TokenManagerService{},
+		logger:             logger,
+		configProvider:     configProvider,
+		vault:              vault,
+		services:           map[string]driver.TokenManagerService{},
+		tokenDriverService: tokenDriverService,
 	}
 	return ms
 }
@@ -182,17 +181,14 @@ func (m *TMSProvider) getTokenManagerService(opts driver.ServiceOptions) (servic
 }
 
 func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerService, error) {
-	driverName, err := m.driverFor(opts)
+	ppRaw, err := m.loadPublicParams(opts)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get driver for [%s]", opts)
 	}
-	d, ok := holder.Drivers[driverName]
-	if !ok {
-		return nil, errors.Errorf("failed instantiate token service, driver [%s] not found", driverName)
-	}
-	m.logger.Debugf("instantiating token service for [%s], with driver identifier [%s]", opts, driverName)
+	opts.PublicParams = ppRaw
+	m.logger.Debugf("instantiating token service for [%s]", opts)
 
-	ts, err := d.NewTokenService(m.sp, opts.Network, opts.Channel, opts.Namespace, opts.PublicParams)
+	ts, err := m.tokenDriverService.NewTokenService(driver.TMSID{Network: opts.Network, Channel: opts.Channel, Namespace: opts.Namespace}, opts.PublicParams)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate token service for [%s]", opts)
 	}
@@ -200,45 +196,21 @@ func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerSe
 	return ts, nil
 }
 
-func (m *TMSProvider) driverFor(opts *driver.ServiceOptions) (string, error) {
-	pp, err := m.loadPublicParams(opts)
-	if err != nil {
-		return "", errors.WithMessagef(err, "failed to identify driver for [%s]", opts)
-	}
-	return pp.Identifier, nil
-}
-
-func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) (*driver.SerializedPublicParameters, error) {
+func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) ([]byte, error) {
 	// priorities:
 	// 1. opts.PublicParams
 	// 2. vault
 	// 3. local configuration
 	// 4. public parameters fetcher, if any
-	var ppRaw []byte
-	var err error
-
 	for _, retriever := range []func(options *driver.ServiceOptions) ([]byte, error){m.ppFromOpts, m.ppFromVault, m.ppFromConfig, m.ppFromFetcher} {
-		ppRaw, err = retriever(opts)
-		if err != nil {
+		if ppRaw, err := retriever(opts); err != nil {
 			m.logger.Warnf("failed to retrieve params for [%s]: [%s]", opts, err)
+		} else if len(ppRaw) != 0 {
+			return ppRaw, nil
 		}
-		if len(ppRaw) != 0 {
-			break
-		}
 	}
-
-	if len(ppRaw) == 0 {
-		m.logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, debug.Stack())
-		return nil, errors.Errorf("cannot retrive public params for [%s]", opts)
-	}
-
-	// deserialize public params
-	pp, err := SerializedPublicParametersFromBytes(ppRaw)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed unmarshalling public parameters")
-	}
-
-	return pp, nil
+	m.logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, debug.Stack())
+	return nil, errors.Errorf("cannot retrive public params for [%s]", opts)
 }
 
 func (m *TMSProvider) ppFromOpts(opts *driver.ServiceOptions) ([]byte, error) {

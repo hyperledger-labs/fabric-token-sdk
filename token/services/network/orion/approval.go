@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/pkg/errors"
 )
@@ -97,8 +98,13 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read public parameters")
 	}
+	ds, err := driver.GetTokenDriverService(context)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get token driver")
+	}
 	_, validator, err := token.NewServicesFromPublicParams(
-		context,
+		ds.TokenInstantiatorService,
+		ds,
 		token.TMSID{
 			Network:   request.Network,
 			Namespace: request.Namespace,

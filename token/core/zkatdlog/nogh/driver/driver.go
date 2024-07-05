@@ -8,14 +8,13 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/observables"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
@@ -28,12 +27,54 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
-type Driver struct {
+func NewInstantiator() driver.NamedInstantiator {
+	return driver.NamedInstantiator{
+		Name:         crypto.DLogPublicParameters,
+		Instantiator: &Instatiator{},
+	}
 }
 
-func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
+func NewDriver(
+	metricsProvider metrics.Provider,
+	tracerProvider trace.TracerProvider,
+	configService *config.Service,
+	storageProvider identity.StorageProvider,
+	identityProvider view2.IdentityProvider,
+	endpointService *view.EndpointService,
+	networkProvider *network.Provider,
+) driver.NamedDriver {
+	return driver.NamedDriver{
+		Name: crypto.DLogPublicParameters,
+		Driver: &Driver{
+			Instatiator:      &Instatiator{},
+			metricsProvider:  metricsProvider,
+			tracerProvider:   tracerProvider,
+			configService:    configService,
+			storageProvider:  storageProvider,
+			identityProvider: identityProvider,
+			endpointService:  endpointService,
+			networkProvider:  networkProvider,
+		},
+	}
+}
+
+type Instatiator struct{}
+
+type Driver struct {
+	*Instatiator
+	metricsProvider  metrics.Provider
+	tracerProvider   trace.TracerProvider
+	configService    *config.Service
+	storageProvider  identity.StorageProvider
+	identityProvider view2.IdentityProvider
+	endpointService  *view.EndpointService
+	networkProvider  *network.Provider
+}
+
+func (d *Instatiator) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
 	pp, err := crypto.NewPublicParamsFromBytes(params, crypto.DLogPublicParameters)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
@@ -41,13 +82,16 @@ func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParamete
 	return pp, nil
 }
 
-func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (driver.TokenManagerService, error) {
+func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (driver.TokenManagerService, error) {
 	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", networkID, channel, namespace)
 
 	if len(publicParams) == 0 {
 		return nil, errors.Errorf("empty public parameters")
 	}
-	n := network.GetInstance(sp, networkID, channel)
+	n, err := d.networkProvider.GetNetwork(networkID, channel)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get network [%s]", networkID)
+	}
 	if n == nil {
 		return nil, errors.Errorf("network [%s] does not exists", networkID)
 	}
@@ -57,21 +101,13 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", networkID, namespace)
 	}
 
-	cs, err := config.GetService(sp)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get config service")
-	}
-	tmsConfig, err := cs.ConfigurationFor(networkID, channel, namespace)
+	tmsConfig, err := d.configService.ConfigurationFor(networkID, channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", networkID, channel, namespace)
 	}
 
-	fscIdentity := view.GetIdentityProvider(sp).DefaultIdentity()
+	fscIdentity := d.identityProvider.DefaultIdentity()
 	// Prepare roles
-	storageProvider, err := identity.GetStorageProvider(sp)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get identity storage provider")
-	}
 	roles := identity.NewRoles()
 	deserializerManager := sig.NewMultiplexDeserializer()
 	tmsID := token.TMSID{
@@ -79,12 +115,12 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		Channel:   channel,
 		Namespace: namespace,
 	}
-	identityDB, err := storageProvider.OpenIdentityDB(tmsID)
+	identityDB, err := d.storageProvider.OpenIdentityDB(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
-	ip := identity.NewProvider(identityDB, sigService, view.GetEndpointService(sp), NewEIDRHDeserializer(), deserializerManager)
+	ip := identity.NewProvider(identityDB, sigService, d.endpointService, NewEIDRHDeserializer(), deserializerManager)
 	ppm, err := common.NewPublicParamsManager[*crypto.PublicParams](
 		&PublicParamsDeserializer{},
 		crypto.DLogPublicParameters,
@@ -103,9 +139,9 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		fscIdentity,                              // FSC identity
 		networkLocalMembership.DefaultIdentity(), // network default identity
 		ip,
-		sigService,                  // signer service
-		view.GetEndpointService(sp), // endpoint service
-		storageProvider,
+		sigService,        // signer service
+		d.endpointService, // endpoint service
+		d.storageProvider,
 		deserializerManager,
 		false,
 	)
@@ -138,7 +174,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	// Instantiate the token service
 	qe := v.QueryEngine()
 	// wallet service
-	walletDB, err := storageProvider.OpenWalletDB(tmsID)
+	walletDB, err := d.storageProvider.OpenWalletDB(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
@@ -159,8 +195,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	)
 	tokDeserializer := &TokenDeserializer{}
 
-	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
-	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.GetProvider(sp), metricsProvider)
+	metricsProvider, tracerProvider := d.newTracerProvider(tmsID)
 	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
 	service, err := zkatdlog.NewTokenService(
 		logger,
@@ -204,30 +239,35 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	return service, err
 }
 
-func (d *Driver) NewValidator(sp driver.ServiceProvider, tmsID driver.TMSID, params driver.PublicParameters) (driver.Validator, error) {
-	logger := logging.DriverLoggerFromPP("token-sdk.driver.zkatdlog", params.Identifier())
+func (d *Driver) newTracerProvider(tmsID driver.TMSID) (metrics.Provider, trace.TracerProvider) {
+	metricsProvider := metrics.NewTMSProvider(tmsID, d.metricsProvider)
+	return metricsProvider, tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
+}
 
+func (d *Driver) NewValidator(_ driver.ServiceProvider, tmsID driver.TMSID, params driver.PublicParameters) (driver.Validator, error) {
 	pp, ok := params.(*crypto.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	deserializer, err := NewDeserializer(pp)
+
+	defaultValidator, err := d.DefaultValidator(pp)
 	if err != nil {
 		return nil, err
 	}
-	if sp == nil {
-		return validator.New(logger, pp, deserializer), nil
-	}
-
-	metricsProvider := metrics.NewTMSProvider(tmsID, metrics.GetProvider(sp))
-	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(tracing.GetProvider(sp), metricsProvider)
-	return observables.NewObservableValidator(
-		validator.New(logger, pp, deserializer),
-		observables.NewValidator(tracerProvider),
-	), nil
+	_, tracerProvider := d.newTracerProvider(tmsID)
+	return observables.NewObservableValidator(defaultValidator, observables.NewValidator(tracerProvider)), nil
 }
 
-func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
+func (d *Instatiator) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+	deserializer, err := NewDeserializer(pp.(*crypto.PublicParams))
+	if err != nil {
+		return nil, errors.Errorf("failed to create token service deserializer: %v", err)
+	}
+	logger := logging.DriverLoggerFromPP("token-sdk.driver.zkatdlog", pp.Identifier())
+	return validator.New(logger, pp.(*crypto.PublicParams), deserializer), nil
+}
+
+func (d *Instatiator) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
 	pp, ok := params.(*crypto.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
@@ -235,7 +275,7 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 	return common.NewPublicParamsManagerFromParams[*crypto.PublicParams](pp)
 }
 
-func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
+func (d *Driver) NewWalletService(_ driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
 	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", networkID, channel, namespace)
 
 	pp, ok := params.(*crypto.PublicParams)
@@ -243,21 +283,12 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	cs, err := config.GetService(sp)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get config service")
-	}
-	tmsConfig, err := cs.ConfigurationFor(networkID, channel, namespace)
+	tmsConfig, err := d.configService.ConfigurationFor(networkID, channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", networkID, channel, namespace)
 	}
 
 	// Prepare roles
-	storageProvider, err := identity.GetStorageProvider(sp)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get identity storage provider")
-	}
-
 	roles := identity.NewRoles()
 	deserializerManager := sig.NewMultiplexDeserializer()
 	tmsID := token.TMSID{
@@ -265,7 +296,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		Channel:   channel,
 		Namespace: namespace,
 	}
-	identityDB, err := storageProvider.OpenIdentityDB(tmsID)
+	identityDB, err := d.storageProvider.OpenIdentityDB(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
@@ -288,7 +319,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		ip,
 		sigService, // signer service
 		nil,        // endpoint service
-		storageProvider,
+		d.storageProvider,
 		deserializerManager,
 		true,
 	)
@@ -319,7 +350,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	roles.Register(driver.CertifierRole, role)
 
 	// Instantiate the token service
-	walletDB, err := storageProvider.OpenWalletDB(tmsID)
+	walletDB, err := d.storageProvider.OpenWalletDB(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
@@ -340,8 +371,4 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	)
 
 	return ws, nil
-}
-
-func init() {
-	core.Register(crypto.DLogPublicParameters, &Driver{})
 }

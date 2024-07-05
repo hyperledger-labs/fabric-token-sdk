@@ -12,8 +12,9 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
+	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 )
@@ -57,6 +58,7 @@ func main() {
 		Writer:  os.Stderr,
 	})
 
+	is := driver.NewTokenInstantiatorService(fabtoken.NewInstantiator(), dlog.NewInstantiator())
 	if config.CCID == "" || config.CCaddress == "" {
 		fmt.Println("CC ID or CC address is empty... Running as usual...")
 		if os.Getenv("DEVMODE_ENABLED") != "" {
@@ -65,7 +67,7 @@ func main() {
 		err := shim.Start(
 			&tcc.TokenChaincode{
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
-					ppm, v, err := token.NewServicesFromPublicParams(nil, token.TMSID{}, bytes)
+					ppm, v, err := token.NewServicesFromPublicParams(is, nil, token.TMSID{}, bytes)
 					if err != nil {
 						return nil, nil, err
 					}
@@ -105,7 +107,7 @@ func main() {
 			Address: config.CCaddress,
 			CC: &tcc.TokenChaincode{
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
-					ppm, v, err := token.NewServicesFromPublicParams(nil, token.TMSID{}, bytes)
+					ppm, v, err := token.NewServicesFromPublicParams(is, nil, token.TMSID{}, bytes)
 					if err != nil {
 						return nil, nil, err
 					}

@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	. "github.com/onsi/ginkgo/v2"
-	_ "modernc.org/sqlite"
 )
 
 var _ = Describe("Stress EndToEnd", func() {

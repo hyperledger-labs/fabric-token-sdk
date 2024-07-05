@@ -9,7 +9,6 @@ package token
 import (
 	"fmt"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
@@ -303,21 +302,26 @@ func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *Management
 
 // NewServicesFromPublicParams uses the passed marshalled public parameters to create an instance
 // of PublicParametersManager and a new instance of Validator.
-func NewServicesFromPublicParams(sp ServiceProvider, tmsID TMSID, params []byte) (*PublicParametersManager, *Validator, error) {
+func NewServicesFromPublicParams(is *driver.TokenInstantiatorService, ds *driver.TokenDriverService, tmsID TMSID, params []byte) (*PublicParametersManager, *Validator, error) {
 	logger.Debugf("unmarshall public parameters...")
-	pp, err := core.PublicParametersFromBytes(params)
+	pp, err := is.PublicParametersFromBytes(params)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed unmarshalling public parameters")
 	}
 
 	logger.Debugf("instantiate public parameters manager...")
-	ppm, err := core.NewPublicParametersManager(pp)
+	ppm, err := is.NewPublicParametersManager(pp)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed instantiating public parameters manager")
 	}
 
 	logger.Debugf("instantiate validator...")
-	validator, err := core.NewValidator(sp, tmsID, pp)
+	var validator driver.Validator
+	if ds == nil {
+		validator, err = is.DefaultValidator(pp)
+	} else {
+		validator, err = ds.NewValidator(tmsID, pp)
+	}
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed instantiating validator")
 	}
@@ -325,15 +329,15 @@ func NewServicesFromPublicParams(sp ServiceProvider, tmsID TMSID, params []byte)
 	return &PublicParametersManager{ppm: ppm}, &Validator{backend: validator}, nil
 }
 
-func NewPublicParametersManagerFromPublicParams(params []byte) (*PublicParametersManager, error) {
+func NewPublicParametersManagerFromPublicParams(s *driver.TokenInstantiatorService, params []byte) (*PublicParametersManager, error) {
 	logger.Debugf("unmarshall public parameters...")
-	pp, err := core.PublicParametersFromBytes(params)
+	pp, err := s.PublicParametersFromBytes(params)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling public parameters")
 	}
 
 	logger.Debugf("instantiate public parameters manager...")
-	ppm, err := core.NewPublicParametersManager(pp)
+	ppm, err := s.NewPublicParametersManager(pp)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed instantiating public parameters manager")
 	}
@@ -342,14 +346,18 @@ func NewPublicParametersManagerFromPublicParams(params []byte) (*PublicParameter
 }
 
 func NewWalletManager(sp ServiceProvider, network string, channel string, namespace string, params []byte) (*WalletManager, error) {
+	s, err := driver.GetTokenDriverService(sp)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get token driver")
+	}
 	logger.Debugf("unmarshall public parameters...")
-	pp, err := core.PublicParametersFromBytes(params)
+	pp, err := s.PublicParametersFromBytes(params)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling public parameters")
 	}
 
 	logger.Debugf("instantiate public parameters manager...")
-	walletService, err := core.NewWalletService(sp, network, channel, namespace, pp)
+	walletService, err := s.NewWalletService(driver.TMSID{Network: network, Channel: channel, Namespace: namespace}, pp)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed instantiating wallet service")
 	}
