@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 )
 
 type ResponderRegistry interface {
-	RegisterResponder(responder view.View, initiatedBy interface{}) error
+	RegisterResponder(responder view2.View, initiatedBy interface{}) error
 }
 
 func InstallViews(viewRegistry ResponderRegistry) error {

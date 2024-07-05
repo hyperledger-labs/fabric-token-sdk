@@ -9,62 +9,79 @@ package orion
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/pkg/errors"
 )
 
-func NewDriver(auditDBManager *auditdb.Manager, ttxDBManager *ttxdb.Manager, configProvider *view.ConfigService) driver.NamedDriver {
+func NewDriver(
+	onsProvider *orion.NetworkServiceProvider,
+	viewRegistry driver2.Registry,
+	viewManager *view.Manager,
+	vaultProvider *vault2.Provider,
+	configProvider *view.ConfigService,
+	configService *config.Service,
+	identityProvider view2.IdentityProvider,
+	filterProvider *common.AcceptTxInDBFilterProvider,
+	tmsProvider *token.ManagementServiceProvider) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name: "orion",
 		Driver: &Driver{
-			auditDBManager: auditDBManager,
-			ttxDBManager:   ttxDBManager,
-			configProvider: configProvider,
+			onsProvider:      onsProvider,
+			viewRegistry:     viewRegistry,
+			viewManager:      viewManager,
+			vaultProvider:    vaultProvider,
+			configProvider:   configProvider,
+			configService:    configService,
+			identityProvider: identityProvider,
+			filterProvider:   filterProvider,
+			tmsProvider:      tmsProvider,
 		},
 	}
 }
 
 type Driver struct {
-	auditDBManager *auditdb.Manager
-	ttxDBManager   *ttxdb.Manager
-	configProvider configProvider
+	onsProvider      *orion.NetworkServiceProvider
+	viewRegistry     driver2.Registry
+	viewManager      *view.Manager
+	vaultProvider    vault.Provider
+	configProvider   configProvider
+	configService    *config.Service
+	identityProvider view2.IdentityProvider
+	filterProvider   *common.AcceptTxInDBFilterProvider
+	tmsProvider      *token.ManagementServiceProvider
 }
 
-func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.Network, error) {
-	n, err := orion.GetOrionNetworkService(sp, network)
+func (d *Driver) New(network, _ string) (driver.Network, error) {
+	n, err := d.onsProvider.NetworkService(network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "network [%s] not found", network)
 	}
-	m, err := vault.GetProvider(sp)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get vault manager")
-	}
+
 	enabled, err := IsCustodian(d.configProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed checking if custodian is enabled")
 	}
 	logger.Infof("Orion Custodian enabled: %t", enabled)
 	if enabled {
-		if err := InstallViews(view.GetRegistry(sp)); err != nil {
+		if err := InstallViews(d.viewRegistry); err != nil {
 			return nil, errors.WithMessagef(err, "failed installing views")
 		}
 	}
-	cs, err := config.GetService(sp)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get config service")
-	}
+
 	return NewNetwork(
-		sp,
-		view.GetIdentityProvider(sp),
+		d.viewManager,
+		d.tmsProvider,
+		d.identityProvider,
 		n,
-		m.Vault,
-		cs,
-		common.NewAcceptTxInDBFilterProvider(d.ttxDBManager, d.auditDBManager),
+		d.vaultProvider.Vault,
+		d.configService,
+		d.filterProvider,
 	), nil
 }

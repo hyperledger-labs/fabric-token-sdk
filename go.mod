@@ -7,9 +7,8 @@ require (
 	github.com/IBM/idemix/bccsp/types v0.0.0-20231107110234-4cf31dd43660
 	github.com/IBM/mathlib v0.0.3-0.20231011094432-44ee0eb539da
 	github.com/dgraph-io/badger/v3 v3.2103.2
-	github.com/gammazero/deque v0.2.1
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240705094120-694d3efda4ec
+	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240705125932-41da7decb16b
 	github.com/hyperledger-labs/fabric-token-sdk/txgen v0.0.0-00010101000000-000000000000
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5

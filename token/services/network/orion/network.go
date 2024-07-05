@@ -34,7 +34,6 @@ type IdentityProvider interface {
 }
 
 type Network struct {
-	sp             token2.ServiceProvider
 	viewManager    *view2.Manager
 	tmsProvider    *token2.ManagementServiceProvider
 	n              *orion.NetworkService
@@ -48,7 +47,8 @@ type Network struct {
 }
 
 func NewNetwork(
-	sp token2.ServiceProvider,
+	viewManager *view2.Manager,
+	tmsProvider *token2.ManagementServiceProvider,
 	ip IdentityProvider,
 	n *orion.NetworkService,
 	newVault NewVaultFunc,
@@ -61,19 +61,17 @@ func NewNetwork(
 		channel:  "",
 		vault:    n.Vault(),
 	}
-	net := &Network{
-		sp:             sp,
+	return &Network{
 		nsFinder:       nsFinder,
 		filterProvider: filterProvider,
 		ip:             ip,
 		n:              n,
-		viewManager:    view2.GetManager(sp),
-		tmsProvider:    token2.GetManagementServiceProvider(sp),
+		viewManager:    viewManager,
+		tmsProvider:    tmsProvider,
 		vaultLazyCache: utils.NewLazyProvider(loader.load),
 		subscribers:    events.NewSubscribers(),
+		ledger:         &ledger{network: n.Name(), viewManager: viewManager},
 	}
-	net.ledger = &ledger{n: net}
-	return net
 }
 
 func (n *Network) Name() string {
@@ -319,11 +317,12 @@ func (v *nv) DiscardTx(id string, message string) error {
 }
 
 type ledger struct {
-	n *Network
+	network     string
+	viewManager *view2.Manager
 }
 
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
-	boxed, err := view2.GetManager(l.n.sp).InitiateView(NewRequestTxStatusView(l.n.Name(), "", id), context.TODO())
+	boxed, err := l.viewManager.InitiateView(NewRequestTxStatusView(l.network, "", id), context.TODO())
 	if err != nil {
 		return driver.Unknown, err
 	}

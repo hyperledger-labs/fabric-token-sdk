@@ -33,10 +33,23 @@ func NewSDK(registry node.Registry) *SDK {
 	return &SDK{SDK: tokensdk.NewFrom(fabricsdk.NewFrom(orionsdk.NewFrom(viewsdk.NewSDK(registry))))}
 }
 
+func (p *SDK) FabricEnabled() bool {
+	return p.ConfigService().GetBool("fabric.enabled")
+}
+func (p *SDK) OrionEnabled() bool { return p.ConfigService().GetBool("orion.enabled") }
+
 func (p *SDK) Install() error {
+	if p.FabricEnabled() {
+		if err := p.Container().Provide(fabric.NewDriver, dig.Group("network-drivers")); err != nil {
+			return err
+		}
+	}
+	if p.OrionEnabled() {
+		if err := p.Container().Provide(orion.NewDriver, dig.Group("network-drivers")); err != nil {
+			return err
+		}
+	}
 	err := errors.Join(
-		p.Container().Provide(fabric.NewDriver, dig.Group("network-drivers")),
-		p.Container().Provide(orion.NewDriver, dig.Group("network-drivers")),
 		p.Container().Provide(tokenlockdb.NewDriver, dig.Group("tokenlockdb-drivers")),
 		p.Container().Provide(auditdb.NewDriver, dig.Group("auditdb-drivers")),
 		p.Container().Provide(tokendb.NewDriver, dig.Group("tokendb-drivers")),

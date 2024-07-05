@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package sdk
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
@@ -16,21 +15,11 @@ import (
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/unity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"go.uber.org/dig"
 )
-
-func NewNetwork(in struct {
-	dig.In
-	SP      view2.ServiceProvider
-	Drivers []driver.NamedDriver `group:"network-drivers"`
-}) *network.Provider {
-	return network.NewProvider(in.SP, in.Drivers)
-}
 
 func NewTokenLockDBManager(in struct {
 	dig.In

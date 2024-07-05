@@ -119,7 +119,8 @@ type Network struct {
 }
 
 func NewNetwork(
-	sp token2.ServiceProvider,
+	viewManager *view2.Manager,
+	tmsProvider *token2.ManagementServiceProvider,
 	n *fabric.NetworkService,
 	ch *fabric.Channel,
 	newVault NewVaultFunc,
@@ -139,8 +140,8 @@ func NewNetwork(
 		nsFinder:       nsFinder,
 		filterProvider: filterProvider,
 		tokensProvider: tokensProvider,
-		tmsProvider:    token2.GetManagementServiceProvider(sp),
-		viewManager:    view2.GetManager(sp),
+		tmsProvider:    tmsProvider,
+		viewManager:    viewManager,
 		ledger:         &ledger{ch.Ledger()},
 		subscribers:    events.NewSubscribers(),
 		vaultLazyCache: utils.NewLazyProvider(loader.load),
