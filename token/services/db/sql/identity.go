@@ -64,7 +64,7 @@ func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfo
 		Signers:                tables.Signers,
 	}, signerInfoCache)
 	if createSchema {
-		if err = initSchema(db, identityDB.GetSchema()); err != nil {
+		if err = initSchema(db, identityDB.GetSchema(tablePrefix)); err != nil {
 			return nil, err
 		}
 	}
@@ -267,7 +267,7 @@ func (w *IdentityConfigurationIterator) Next() (driver.IdentityConfiguration, er
 	return c, err
 }
 
-func (db *IdentityDB) GetSchema() string {
+func (db *IdentityDB) GetSchema(string) string {
 	return fmt.Sprintf(`
 		-- IdentityConfigurations
 		CREATE TABLE IF NOT EXISTS %s (

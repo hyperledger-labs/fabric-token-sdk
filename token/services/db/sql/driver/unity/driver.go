@@ -7,11 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package unity
 
 import (
+	"database/sql"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/ext"
 	"github.com/pkg/errors"
 )
 
@@ -22,12 +25,14 @@ const (
 )
 
 type Driver struct {
-	DBOpener *sqldb.DBOpener
+	DBOpener          *sqldb.DBOpener
+	TokenDBExtensions []ext.Factory[ext.TokenDBExtension] `optional=true`
 }
 
-func NewDriver() *Driver {
+func NewDriver(tokenDBExtensions []ext.Factory[ext.TokenDBExtension]) *Driver {
 	return &Driver{
-		DBOpener: sqldb.NewSQLDBOpener(optsKey, envVarKey),
+		DBOpener:          sqldb.NewSQLDBOpener(optsKey, envVarKey),
+		TokenDBExtensions: tokenDBExtensions,
 	}
 }
 
@@ -36,7 +41,17 @@ func (d *Driver) OpenTokenTransactionDB(cp dbdriver.ConfigProvider, tmsID token.
 }
 
 func (d *Driver) OpenTokenDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, sqldb.NewTokenDB)
+	return openDB(d.DBOpener, cp, tmsID, func(db *sql.DB, tablePrefix string, createSchema bool) (dbdriver.TokenDB, error) {
+		extensions := make([]ext.TokenDBExtension, len(d.TokenDBExtensions))
+		for i, factory := range d.TokenDBExtensions {
+			ext, err := factory.NewExtension(tablePrefix)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed creating token DB extension [%d]", i)
+			}
+			extensions = append(extensions, ext)
+		}
+		return sqldb.NewTokenDB(db, tablePrefix, createSchema, extensions...)
+	})
 }
 
 func (d *Driver) OpenTokenLockDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenLockDB, error) {
@@ -107,8 +122,8 @@ func (t *IdentityDBDriver) OpenIdentityDB(cp dbdriver.ConfigProvider, tmsID toke
 	return t.Driver.OpenIdentityDB(cp, tmsID)
 }
 
-func NewDBDrivers() (db.NamedDriver[dbdriver.TTXDBDriver], db.NamedDriver[dbdriver.TokenDBDriver], db.NamedDriver[dbdriver.TokenLockDBDriver], db.NamedDriver[dbdriver.AuditDBDriver], db.NamedDriver[dbdriver.IdentityDBDriver]) {
-	root := NewDriver()
+func NewDBDrivers(tokenDBExtensions []ext.Factory[ext.TokenDBExtension]) (db.NamedDriver[dbdriver.TTXDBDriver], db.NamedDriver[dbdriver.TokenDBDriver], db.NamedDriver[dbdriver.TokenLockDBDriver], db.NamedDriver[dbdriver.AuditDBDriver], db.NamedDriver[dbdriver.IdentityDBDriver]) {
+	root := NewDriver(tokenDBExtensions)
 	return db.NamedDriver[dbdriver.TTXDBDriver]{Name: "unity", Driver: &TtxDBDriver{Driver: root}},
 		db.NamedDriver[dbdriver.TokenDBDriver]{Name: "unity", Driver: &TokenDBDriver{Driver: root}},
 		db.NamedDriver[dbdriver.TokenLockDBDriver]{Name: "unity", Driver: &TokenLockDBDriver{Driver: root}},

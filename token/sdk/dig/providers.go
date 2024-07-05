@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/unity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/ext"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -86,8 +87,11 @@ type DBDriverResult struct {
 	IdentityDBDriver  db.NamedDriver[dbdriver.IdentityDBDriver]  `group:"identitydb-drivers"`
 }
 
-func NewDBDrivers() DBDriverResult {
-	ttxDBDriver, tokenDBDriver, tokenLockDBDriver, auditDBDriver, identityDBDriver := unity.NewDBDrivers()
+func NewDBDrivers(in struct {
+	dig.In
+	TokenDBExtensions []ext.Factory[ext.TokenDBExtension] `group:"tokendb-extensions"`
+}) DBDriverResult {
+	ttxDBDriver, tokenDBDriver, tokenLockDBDriver, auditDBDriver, identityDBDriver := unity.NewDBDrivers(in.TokenDBExtensions)
 	return DBDriverResult{
 		TTXDBDriver:       ttxDBDriver,
 		TokenDBDriver:     tokenDBDriver,

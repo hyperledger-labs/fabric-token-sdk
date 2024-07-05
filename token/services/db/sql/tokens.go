@@ -34,14 +34,15 @@ type TokenDB struct {
 	extensions []ext.TokenDBExtension
 }
 
-func newTokenDB(db *sql.DB, tables tokenTables) *TokenDB {
+func newTokenDB(db *sql.DB, tables tokenTables, extensions ...ext.TokenDBExtension) *TokenDB {
 	return &TokenDB{
-		db:    db,
-		table: tables,
+		db:         db,
+		table:      tables,
+		extensions: extensions,
 	}
 }
 
-func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.TokenDB, error) {
+func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool, extensions ...ext.TokenDBExtension) (driver.TokenDB, error) {
 	tables, err := getTableNames(tablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
@@ -52,13 +53,13 @@ func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.Token
 		Ownership:      tables.Ownership,
 		PublicParams:   tables.PublicParams,
 		Certifications: tables.Certifications,
-	})
+	}, extensions...)
 	if createSchema {
-		if err = initSchema(db, tokenDB.GetSchema()); err != nil {
+		if err = initSchema(db, tokenDB.GetSchema(tablePrefix)); err != nil {
 			return nil, err
 		}
 		for _, extension := range tokenDB.extensions {
-			if err = initSchema(db, extension.GetSchema()); err != nil {
+			if err = initSchema(db, extension.GetSchema(tablePrefix)); err != nil {
 				return nil, err
 			}
 		}
@@ -82,7 +83,7 @@ func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error
 			if err1 := tx.Rollback(); err1 != nil {
 				logger.Errorf("error rolling back: %s", err1.Error())
 			}
-			return
+			return err
 		}
 	}
 	if err = tx.Commit(); err != nil {
@@ -754,7 +755,7 @@ func (db *TokenDB) GetCertifications(ids []*token.ID) ([][]byte, error) {
 	return certifications, nil
 }
 
-func (db *TokenDB) GetSchema() string {
+func (db *TokenDB) GetSchema(string) string {
 	return fmt.Sprintf(`
 		-- Tokens
 		CREATE TABLE IF NOT EXISTS %s (

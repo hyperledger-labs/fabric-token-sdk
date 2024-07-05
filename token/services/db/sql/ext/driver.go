@@ -14,7 +14,7 @@ import (
 )
 
 type Extension interface {
-	GetSchema() string
+	GetSchema(tablePrefix string) string
 }
 
 type TokenDBExtension interface {
@@ -22,4 +22,8 @@ type TokenDBExtension interface {
 	Delete(tx *sql.Tx, txID string, index uint64, deletedBy string) error
 	StoreToken(tx *sql.Tx, tr driver.TokenRecord, owners []string) error
 	DeleteTokens(tx *sql.Tx, deletedBy string, ids ...*token.ID) error
+}
+
+type Factory[T Extension] interface {
+	NewExtension(prefix string) (T, error)
 }

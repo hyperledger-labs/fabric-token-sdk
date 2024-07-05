@@ -10,29 +10,48 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"runtime/debug"
+	"strings"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/ext"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 var logger = logging.MustGetLogger("token-sdk.sql.htlc")
 
-type htlcTokenDBExtensionTables struct {
+type tableNames struct {
 	Tokens string
 }
 
+type HTLCTokenDBExtensionFactory struct{}
+
+func NewHTLCTokenDBExtensionFactory() *HTLCTokenDBExtensionFactory {
+	return &HTLCTokenDBExtensionFactory{}
+}
+
+func (H *HTLCTokenDBExtensionFactory) NewExtension(prefix string) (ext.TokenDBExtension, error) {
+	return NewHTLCTokenDBExtension(prefix)
+}
+
 type HTLCTokenDBExtension struct {
-	table htlcTokenDBExtensionTables
+	table tableNames
 }
 
-func NewHTLCTokenDBExtension(table htlcTokenDBExtensionTables) *HTLCTokenDBExtension {
-	return &HTLCTokenDBExtension{table: table}
+func NewHTLCTokenDBExtension(prefix string) (*HTLCTokenDBExtension, error) {
+	table, err := getTableNames(prefix)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting table names for prefix [%s]", prefix)
+	}
+	return &HTLCTokenDBExtension{table: table}, nil
 }
 
-func (e *HTLCTokenDBExtension) GetSchema() string {
+func (e *HTLCTokenDBExtension) GetSchema(string) string {
 	return fmt.Sprintf(`
 		-- Tokens
 		CREATE TABLE IF NOT EXISTS %s (
@@ -94,4 +113,26 @@ func (e *HTLCTokenDBExtension) StoreToken(tx *sql.Tx, tr driver.TokenRecord, own
 	}
 
 	return nil
+}
+
+func (e *HTLCTokenDBExtension) DeleteTokens(tx *sql.Tx, deletedBy string, ids ...*token.ID) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func getTableNames(prefix string) (tableNames, error) {
+	if prefix != "" {
+		if len(prefix) > 100 {
+			return tableNames{}, errors.New("table prefix must be shorter than 100 characters")
+		}
+		r := regexp.MustCompile("^[a-zA-Z_]+$")
+		if !r.MatchString(prefix) {
+			return tableNames{}, errors.New("illegal character in table prefix, only letters and underscores allowed")
+		}
+		prefix = strings.ToLower(prefix) + "_"
+	}
+
+	return tableNames{
+		Tokens: fmt.Sprintf("%stokens", prefix),
+	}, nil
 }

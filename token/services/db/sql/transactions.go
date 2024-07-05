@@ -57,7 +57,7 @@ func NewTransactionDB(db *sql.DB, tablePrefix string, createSchema bool) (driver
 		TransactionEndorseAck: tables.TransactionEndorseAck,
 	})
 	if createSchema {
-		if err = initSchema(db, transactionsDB.GetSchema()); err != nil {
+		if err = initSchema(db, transactionsDB.GetSchema(tablePrefix)); err != nil {
 			return nil, err
 		}
 	}
@@ -253,7 +253,7 @@ func (db *TransactionDB) SetStatus(txID string, status driver.TxStatus, message 
 	return
 }
 
-func (db *TransactionDB) GetSchema() string {
+func (db *TransactionDB) GetSchema(string) string {
 	return fmt.Sprintf(`
 		-- requests
 		CREATE TABLE IF NOT EXISTS %s (

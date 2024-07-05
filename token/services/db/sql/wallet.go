@@ -40,7 +40,7 @@ func NewWalletDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.Wall
 
 	walletDB := newWalletDB(db, walletTables{Wallets: tables.Wallets})
 	if createSchema {
-		if err = initSchema(db, walletDB.GetSchema()); err != nil {
+		if err = initSchema(db, walletDB.GetSchema(tablePrefix)); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema")
 		}
 	}
@@ -127,7 +127,7 @@ func (db *WalletDB) IdentityExists(identity token.Identity, wID driver.WalletID,
 	return result != ""
 }
 
-func (db *WalletDB) GetSchema() string {
+func (db *WalletDB) GetSchema(string) string {
 	return fmt.Sprintf(`
 		-- Wallets
 		CREATE TABLE IF NOT EXISTS %s (

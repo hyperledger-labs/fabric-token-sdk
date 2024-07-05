@@ -12,6 +12,7 @@ import (
 	"time"
 
 	utils2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/testutils"
 	_ "github.com/lib/pq"
@@ -74,7 +75,9 @@ func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedM
 		return nil, err
 	}
 
-	tokenDB, err := initDB("postgres", pgConnStr, "test", 10, sql.NewTokenDB)
+	tokenDB, err := initDB("postgres", pgConnStr, "test", 10, func(db *sql2.DB, tablePrefix string, createSchema bool) (dbdriver.TokenDB, error) {
+		return sql.NewTokenDB(db, tablePrefix, createSchema)
+	})
 	if err != nil {
 		return nil, err
 	}
