@@ -344,7 +344,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 		if len(ia.OutputTokens) != len(md.ReceiversAuditInfos) || len(ia.OutputTokens) != len(md.OutputsMetadata) {
 			return nil, errors.Errorf("number of output does not match number of provided metadata")
 		}
-		outputs[k] = make([]*AuditableToken, len(md.ReceiversAuditInfos))
+		outputs[k] = make([]*AuditableToken, 0, len(md.ReceiversAuditInfos))
 		for i := 0; i < len(md.ReceiversAuditInfos); i++ {
 			ti := &token.Metadata{}
 			err := json.Unmarshal(md.OutputsMetadata[i], ti)
@@ -361,7 +361,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 			if err != nil {
 				return nil, err
 			}
-			outputs[k][i] = ao
+			outputs[k] = append(outputs[k], ao)
 		}
 	}
 	return outputs, nil
