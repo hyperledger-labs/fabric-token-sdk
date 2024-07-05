@@ -32,6 +32,7 @@ type Opts struct {
 	SDKs            []api.SDK
 	WebEnabled      bool
 	Monitoring      bool
+	TokenSelector   string
 	OnlyUnity       bool
 }
 

@@ -22,6 +22,13 @@ const (
 	basePort      = 20000
 	portsPerNode  = 50
 	portsPerSuite = 10 * portsPerNode
+
+	SimpleTokenSelector    = "simple"
+	SherdLockTokenSelector = "sherdlock"
+)
+
+var (
+	TokenSelectors = []string{SimpleTokenSelector, SherdLockTokenSelector}
 )
 
 type InfrastructureType struct {
@@ -30,23 +37,27 @@ type InfrastructureType struct {
 	ReplicationFactor int
 }
 
-var AllTestTypes = []*InfrastructureType{
-	{
+var (
+	WebSocketNoReplication = &InfrastructureType{
 		Label:             ginkgo.Label("websocket"),
 		CommType:          fsc.WebSocket,
 		ReplicationFactor: token.None,
-	},
-	{
-		Label:             ginkgo.Label("libp2p"),
-		CommType:          fsc.LibP2P,
-		ReplicationFactor: token.None,
-	},
-	{
-		Label:             ginkgo.Label("replicas"),
-		CommType:          fsc.WebSocket,
-		ReplicationFactor: 3,
-	},
-}
+	}
+
+	AllTestTypes = []*InfrastructureType{
+		WebSocketNoReplication,
+		{
+			Label:             ginkgo.Label("libp2p"),
+			CommType:          fsc.LibP2P,
+			ReplicationFactor: token.None,
+		},
+		{
+			Label:             ginkgo.Label("replicas"),
+			CommType:          fsc.WebSocket,
+			ReplicationFactor: 3,
+		},
+	}
+)
 
 const (
 	BasePort TestPortRange = basePort + portsPerSuite*iota

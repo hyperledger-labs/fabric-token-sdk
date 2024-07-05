@@ -37,14 +37,14 @@ const (
 var _ = Describe("EndToEnd", func() {
 	for _, t := range integration2.AllTestTypes {
 		Describe("T1 Fungible with Auditor ne Issuer", t.Label, func() {
-			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "alice", "bob", "charlie")
+			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
 			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
 		})
 
 		Describe("Extras with websockets and replicas", t.Label, func() {
-			ts, selector := newTestSuite(t.CommType, Aries|WebEnabled, t.ReplicationFactor, "alice", "bob", "charlie")
+			ts, selector := newTestSuite(t.CommType, Aries|WebEnabled, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
 			It("Update public params", Label("T2"), func() {
@@ -56,7 +56,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		Describe("Fungible with Auditor = Issuer", t.Label, func() {
-			ts, selector := newTestSuite(t.CommType, Aries|AuditorAsIssuer, t.ReplicationFactor, "alice", "bob", "charlie")
+			ts, selector := newTestSuite(t.CommType, Aries|AuditorAsIssuer, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
 			It("succeeded", Label("T6"), func() { fungible.TestAll(ts.II, "issuer", nil, true, selector) })
@@ -66,17 +66,26 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		Describe("Fungible with Auditor ne Issuer + Fabric CA", t.Label, func() {
-			ts, selector := newTestSuite(t.CommType, None, t.ReplicationFactor, "alice", "bob", "charlie")
+			ts, selector := newTestSuite(t.CommType, None, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
 			It("succeeded", Label("T8"), func() { fungible.TestAll(ts.II, "auditor", nil, false, selector) })
 		})
 
 		Describe("Malicious Transactions", t.Label, func() {
-			ts, selector := newTestSuite(t.CommType, Aries|NoAuditor, t.ReplicationFactor, "alice", "bob", "charlie")
+			ts, selector := newTestSuite(t.CommType, Aries|NoAuditor, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
 			It("Malicious Transactions", Label("T9"), func() { fungible.TestMaliciousTransactions(ts.II, selector) })
+		})
+	}
+
+	for _, tokenSelector := range integration2.TokenSelectors {
+		Describe("T10 TokenSelector Test", integration2.WebSocketNoReplication.Label, Label(tokenSelector), func() {
+			ts, replicaSelector := newTestSuite(integration2.WebSocketNoReplication.CommType, Aries, integration2.WebSocketNoReplication.ReplicationFactor, tokenSelector, "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T10"), func() { fungible.TestSelector(ts.II, "auditor", replicaSelector) })
 		})
 	}
 })
@@ -106,7 +115,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	return ppBytes
 }
 
-func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
+func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, tokenSelector string, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
 	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
 		common.Opts{
@@ -121,7 +130,9 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names
 			SDKs:            []api.SDK{&fdlog.SDK{}},
 			Monitoring:      false,
 			ReplicationOpts: opts,
-			OnlyUnity:       true,
+			TokenSelector:   tokenSelector,
+			//FSCLogSpec:      "fabric-sdk=debug:token-sdk=debug:orion-sdk=debug:info",
+			OnlyUnity: true,
 		},
 	))
 	return ts, selector
