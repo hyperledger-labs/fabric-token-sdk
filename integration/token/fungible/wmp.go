@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
+	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
@@ -110,7 +111,7 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	configProvider, err := config.NewProvider(filepath.Join(ctx.RootDir(), "fsc", "nodes", node.ReplicaUniqueName(user, 0)))
 	Expect(err).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(config2.NewService(configProvider))).ToNot(HaveOccurred())
-	kvss, err := kvs.NewWithConfig("memory", "", configProvider)
+	kvss, err := kvs.NewWithConfig(&mem.Driver{}, "", configProvider)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(kvss)).ToNot(HaveOccurred())
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
