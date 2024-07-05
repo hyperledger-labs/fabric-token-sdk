@@ -43,7 +43,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
+	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
@@ -88,7 +89,8 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 
 	err := errors2.Join(
-		p.Container().Provide(NewNetwork),
+		p.Container().Provide(common.NewAcceptTxInDBFilterProvider),
+		p.Container().Provide(network.NewProvider),
 		p.Container().Provide(digutils.Identity[*network.Provider](), dig.As(new(ttx.NetworkProvider), new(token.Normalizer), new(auditor.NetworkProvider))),
 		p.Container().Provide(func(networkProvider *network.Provider) *vault.PublicParamsProvider {
 			return &vault.PublicParamsProvider{Provider: networkProvider}
@@ -198,30 +200,46 @@ func (p *SDK) Start(ctx context.Context) error {
 	}
 	logger.Infof("Token platform enabled, starting...")
 
-	return p.Container().Invoke(func(configService *config2.Service, networkProvider *network.Provider, tmsProvider *token.ManagementServiceProvider) error {
-		configurations, err := configService.Configurations()
-		if err != nil {
-			return err
-		}
-		for _, tmsConfig := range configurations {
-			tmsID := tmsConfig.ID()
-			logger.Infof("start token management service [%s]...", tmsID)
+	return errors2.Join(
+		p.Container().Invoke(registerNetworkDrivers),
+		p.Container().Invoke(connectNetworks),
+	)
+}
 
-			// connect network
-			net, err := networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
-			if err != nil {
-				return errors.Wrapf(err, "failed to get network [%s]", tmsID)
-			}
-			opts, err := net.Connect(tmsID.Namespace)
-			if err != nil {
-				return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
-			}
-			_, err = tmsProvider.GetManagementService(opts...)
-			if err != nil {
-				return errors.WithMessagef(err, "failed to instantiate tms [%s]", tmsID)
-			}
+func connectNetworks(configService *config2.Service, networkProvider *network.Provider, tmsProvider *token.ManagementServiceProvider) error {
+	configurations, err := configService.Configurations()
+	if err != nil {
+		return err
+	}
+	for _, tmsConfig := range configurations {
+		tmsID := tmsConfig.ID()
+		logger.Infof("start token management service [%s]...", tmsID)
+
+		// connect network
+		net, err := networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get network [%s]", tmsID)
 		}
-		logger.Infof("Token platform enabled, starting...done")
-		return nil
-	})
+		opts, err := net.Connect(tmsID.Namespace)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
+		}
+		_, err = tmsProvider.GetManagementService(opts...)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to instantiate tms [%s]", tmsID)
+		}
+	}
+	logger.Infof("Token platform enabled, starting...done")
+	return nil
+}
+
+func registerNetworkDrivers(in struct {
+	dig.In
+	NetworkProvider *network.Provider
+	Drivers         []driver3.NamedDriver `group:"network-drivers"`
+}) {
+	for _, driver := range in.Drivers {
+		in.NetworkProvider.RegisterDriver(driver)
+	}
+
 }

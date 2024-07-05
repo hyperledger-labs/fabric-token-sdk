@@ -8,34 +8,52 @@ package fabric
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/pkg/errors"
 )
 
-func NewDriver(auditDBManager *auditdb.Manager, ttxDBManager *ttxdb.Manager) driver.NamedDriver {
+func NewDriver(
+	fnsProvider *fabric.NetworkServiceProvider,
+	vaultProvider *vault2.Provider,
+	tokensManager *tokens.Manager,
+	configService *config.Service,
+	viewManager *view.Manager,
+	filterProvider *common.AcceptTxInDBFilterProvider,
+	tmsProvider *token.ManagementServiceProvider,
+) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name: "fabric",
 		Driver: &Driver{
-			auditDBManager: auditDBManager,
-			ttxDBManager:   ttxDBManager,
+			fnsProvider:    fnsProvider,
+			vaultProvider:  vaultProvider,
+			tokensManager:  tokensManager,
+			configService:  configService,
+			viewManager:    viewManager,
+			filterProvider: filterProvider,
+			tmsProvider:    tmsProvider,
 		},
 	}
 }
 
 type Driver struct {
-	auditDBManager *auditdb.Manager
-	ttxDBManager   *ttxdb.Manager
+	fnsProvider    *fabric.NetworkServiceProvider
+	vaultProvider  vault.Provider
+	tokensManager  *tokens.Manager
+	configService  *config.Service
+	viewManager    *view.Manager
+	filterProvider *common.AcceptTxInDBFilterProvider
+	tmsProvider    *token.ManagementServiceProvider
 }
 
-func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.Network, error) {
-	n, err := fabric.GetFabricNetworkService(sp, network)
+func (d *Driver) New(network, channel string) (driver.Network, error) {
+	n, err := d.fnsProvider.FabricNetworkService(network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "fabric network [%s] not found", network)
 	}
@@ -43,25 +61,15 @@ func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.
 	if err != nil {
 		return nil, errors.WithMessagef(err, "fabric channel [%s:%s] not found", network, channel)
 	}
-	m, err := vault.GetProvider(sp)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get vault manager")
-	}
-	tokensProvider, err := tokens.GetProvider(sp)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get tokens db provider")
-	}
-	cs, err := config.GetService(sp)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get config service")
-	}
+
 	return NewNetwork(
-		sp,
+		d.viewManager,
+		d.tmsProvider,
 		n,
 		ch,
-		m.Vault,
-		cs,
-		common.NewAcceptTxInDBFilterProvider(d.ttxDBManager, d.auditDBManager),
-		tokensProvider,
+		d.vaultProvider.Vault,
+		d.configService,
+		d.filterProvider,
+		d.tokensManager,
 	), nil
 }
