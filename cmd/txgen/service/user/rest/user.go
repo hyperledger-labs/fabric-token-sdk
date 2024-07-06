@@ -24,26 +24,33 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
 )
 
-func newRestUser(user model.UserConfig, metricsCollector metrics.Collector, httpClient *http.Client, logger logging.ILogger) *restUser {
+var operationTypeMap = map[c.ApiRequestType]metrics.OperationType{
+	c.PaymentInitiationRequest: metrics.Transfer,
+	c.PaymentTransferRequest:   metrics.Transfer,
+	c.BalanceRequest:           metrics.Balance,
+	c.WithdrawRequest:          metrics.Withdraw,
+}
+
+func newRestUser(user model.UserConfig, metrics *metrics.Metrics, httpClient *http.Client, logger logging.ILogger) *restUser {
 	return &restUser{
-		logger:           logger,
-		httpClient:       httpClient,
-		username:         user.Username,
-		endpoint:         user.Endpoint,
-		password:         user.Password,
-		metricsCollector: metricsCollector,
+		logger:     logger,
+		httpClient: httpClient,
+		username:   user.Username,
+		endpoint:   user.Endpoint,
+		password:   user.Password,
+		metrics:    metrics,
 	}
 }
 
 type restUser struct {
-	logger           logging.ILogger
-	httpClient       *http.Client
-	accessTokenExp   time.Time
-	username         model.Username
-	endpoint         string
-	password         string
-	accessToken      string
-	metricsCollector metrics.Collector
+	logger         logging.ILogger
+	httpClient     *http.Client
+	accessTokenExp time.Time
+	username       model.Username
+	endpoint       string
+	password       string
+	accessToken    string
+	metrics        *metrics.Metrics
 }
 
 func (u *restUser) hasTokenExpired() bool {
@@ -86,52 +93,6 @@ func (u *restUser) Withdraw(value api.Amount) api.Error {
 
 	_, err := u.doRequest(request, c.WithdrawRequest)
 	return err
-}
-
-func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType) ([]byte, api.Error) {
-	request.Header.Set(c.HeaderAuthorization, fmt.Sprintf("Bearer %s", u.accessToken))
-
-	u.metricsCollector.IncrementRequests()
-
-	start := time.Now()
-
-	response, err := u.httpClient.Do(request)
-
-	requestDuration := time.Since(start)
-
-	u.metricsCollector.DecrementRequests()
-
-	if err != nil {
-		u.metricsCollector.AddDuration(requestDuration, requestType, false)
-		u.logger.Errorf(
-			"Can't make request %s for %s. Path: %s\n",
-			err.Error(),
-			u.username,
-			request.URL.RequestURI(),
-		)
-		return nil, api.NewBadRequestError(err, "Can't make request")
-	}
-
-	defer response.Body.Close()
-	respBody, _ := io.ReadAll(response.Body)
-
-	if response.StatusCode >= http.StatusBadRequest {
-		u.metricsCollector.AddDuration(requestDuration, requestType, false)
-		u.logger.Errorf(
-			"Request failed: %s for %s. Path: %s\n",
-			string(respBody),
-			u.username,
-			request.URL.RequestURI(),
-		)
-		return nil, &api.AppError{
-			Code:    response.StatusCode,
-			Message: string(respBody),
-		}
-	}
-
-	u.metricsCollector.AddDuration(requestDuration, requestType, true)
-
-	return respBody, nil
 }
 
 func (u *restUser) GetBalance() (api.Amount, api.Error) {
@@ -182,10 +143,6 @@ func (u *restUser) Transfer(value api.Amount, recipient model.Username, nonce ap
 	return err
 }
 
-func (u *restUser) Username() model.Username {
-	return u.username
-}
-
 func (u *restUser) InitiateTransfer(value api.Amount, nonce api.UUID) api.Error {
 	u.logger.Debugf("Initiate payment with nonce %s to %s ", nonce, u.username)
 	if err := u.refreshAuthToken(); err != nil {
@@ -200,6 +157,48 @@ func (u *restUser) InitiateTransfer(value api.Amount, nonce api.UUID) api.Error 
 
 	_, err := u.doRequest(request, c.PaymentInitiationRequest)
 	return err
+}
+
+func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType) ([]byte, api.Error) {
+	request.Header.Set(c.HeaderAuthorization, fmt.Sprintf("Bearer %s", u.accessToken))
+
+	operationType := operationTypeMap[requestType]
+
+	u.metrics.RequestsSent.
+		With(metrics.OperationLabel, operationType).Add(1)
+
+	start := time.Now()
+	response, err := u.httpClient.Do(request)
+
+	successType := metrics.SuccessValues[err == nil || response != nil && response.StatusCode >= http.StatusBadRequest]
+	u.metrics.RequestsReceived.
+		With(metrics.OperationLabel, operationType, metrics.SuccessLabel, successType).
+		Add(1)
+	u.metrics.RequestDuration.
+		With(metrics.OperationLabel, operationType, metrics.SuccessLabel, successType).
+		Observe(time.Since(start).Seconds())
+
+	if err != nil {
+		u.logger.Errorf("Can't make request %s for %s. Path: %s\n", err, u.username, request.URL.RequestURI())
+		return nil, api.NewBadRequestError(err, "Can't make request")
+	}
+
+	defer response.Body.Close()
+	respBody, _ := io.ReadAll(response.Body)
+
+	if response.StatusCode >= http.StatusBadRequest {
+		u.logger.Errorf("Request failed: %s for %s. Path: %s\n", string(respBody), u.username, request.URL.RequestURI())
+		return nil, &api.AppError{
+			Code:    response.StatusCode,
+			Message: string(respBody),
+		}
+	}
+
+	return respBody, nil
+}
+
+func (u *restUser) Username() model.Username {
+	return u.username
 }
 
 func newTransferForm(value api.Amount, nonce api.UUID, username model.Username) url.Values {

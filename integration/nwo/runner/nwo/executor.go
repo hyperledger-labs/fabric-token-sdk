@@ -48,8 +48,8 @@ func NewSuiteExecutor(nw *integration.Infrastructure, auditor, issuer model.User
 				Otpl:     tracing.OtplConfig{Address: fmt.Sprintf(":%d", optl.JaegerCollectorPort)},
 			})
 		}),
-		s.C.Provide(func(nw *integration.Infrastructure, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
-			return newUserProvider(nw, metricsCollector, tracerProvider, logger, auditor)
+		s.C.Provide(func(nw *integration.Infrastructure, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
+			return newUserProvider(nw, metrics, tracerProvider, logger, auditor)
 		}),
 	)
 	if err != nil {

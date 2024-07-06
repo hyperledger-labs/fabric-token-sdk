@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func newUserProvider(nw *integration.Infrastructure, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger, auditor model.Username) (*runner2.ViewUserProvider, error) {
+func newUserProvider(nw *integration.Infrastructure, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.ILogger, auditor model.Username) (*runner2.ViewUserProvider, error) {
 	fscTopology, err := getFscTopology(nw.Topologies)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func newUserProvider(nw *integration.Infrastructure, metricsCollector metrics.Co
 			if client == nil {
 				return nil, errors2.Errorf("could not find client for %s, only following found: [%v]", replicaName, collections.Keys(nw.Ctx.ViewClients))
 			}
-			replicas[i] = runner2.NewViewUser(username, auditor, client, nw, metricsCollector, tracerProvider, logger)
+			replicas[i] = runner2.NewViewUser(username, auditor, client, nw, metrics, tracerProvider, logger)
 		}
 		users[username] = replicas
 	}

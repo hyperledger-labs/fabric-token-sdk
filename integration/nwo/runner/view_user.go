@@ -21,7 +21,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/api"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/constants"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
@@ -29,6 +28,12 @@ import (
 )
 
 const currency = "CHF"
+
+var operationTypeMap = map[string]metrics.OperationType{
+	"transfer":   metrics.Transfer,
+	"balance":    metrics.Balance,
+	"withdrawal": metrics.Withdraw,
+}
 
 type ViewUserProvider struct {
 	users map[model.UserAlias][]user.User
@@ -49,14 +54,14 @@ type idResolver interface {
 	Identity(model.Username) view.Identity
 }
 
-func NewViewUser(username model.Username, auditor model.Username, client api2.ViewClient, idResolver idResolver, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger) *viewUser {
+func NewViewUser(username model.Username, auditor model.Username, client api2.ViewClient, idResolver idResolver, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.ILogger) *viewUser {
 	return &viewUser{
-		username:         username,
-		auditor:          auditor,
-		client:           client,
-		idResolver:       idResolver,
-		metricsCollector: metricsCollector,
-		logger:           logger,
+		username:   username,
+		auditor:    auditor,
+		client:     client,
+		idResolver: idResolver,
+		metrics:    metrics,
+		logger:     logger,
 		tracer: tracerProvider.Tracer("user", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "token_sdk",
 			LabelNames: []metrics2.MetricLabel{},
@@ -65,13 +70,13 @@ func NewViewUser(username model.Username, auditor model.Username, client api2.Vi
 }
 
 type viewUser struct {
-	username         model.Username
-	auditor          model.Username
-	client           api2.ViewClient
-	idResolver       idResolver
-	metricsCollector metrics.Collector
-	logger           logging.ILogger
-	tracer           trace.Tracer
+	username   model.Username
+	auditor    model.Username
+	client     api2.ViewClient
+	idResolver idResolver
+	metrics    *metrics.Metrics
+	logger     logging.ILogger
+	tracer     trace.Tracer
 }
 
 func (u *viewUser) CallView(fid string, in []byte) (interface{}, error) {
@@ -83,13 +88,8 @@ func (u *viewUser) Username() model.Username { return u.username }
 func (u *viewUser) InitiateTransfer(_ api.Amount, _ api.UUID) api.Error { return nil }
 
 func (u *viewUser) Transfer(value api.Amount, recipient model.Username, _ api.UUID) api.Error {
-	ctx, span := u.tracer.Start(context.Background(), "transfer")
-	defer span.End()
 	u.logger.Infof("Call view for transfer of %d to %s\n", value, recipient)
-	u.metricsCollector.IncrementRequests()
-	defer u.metricsCollector.DecrementRequests()
-	start := time.Now()
-	input, err := json.Marshal(&views.Transfer{
+	_, err := u.callView("transfer", &views.Transfer{
 		Auditor:      u.auditor,
 		Type:         currency,
 		Amount:       uint64(value),
@@ -99,24 +99,13 @@ func (u *viewUser) Transfer(value api.Amount, recipient model.Username, _ api.UU
 	if err != nil {
 		return api.NewInternalServerError(err, err.Error())
 	}
-	_, err = u.client.CallViewWithContext(ctx, "transfer", input)
-	u.metricsCollector.AddDuration(time.Since(start), constants.PaymentTransferRequest, err == nil)
-	if err != nil {
-		u.logger.Errorf("Failed to call view transfer: %s", err)
-		return api.NewInternalServerError(err, err.Error())
-	}
-	u.logger.Infof("Transfer of %d to %s took %s", value, recipient, time.Since(start))
 	return nil
 }
 
 func (u *viewUser) Withdraw(value api.Amount) api.Error {
-	ctx, span := u.tracer.Start(context.Background(), "withdraw")
-	defer span.End()
 	u.logger.Infof("Call view to withdraw %d\n", value)
-	u.metricsCollector.IncrementRequests()
-	defer u.metricsCollector.DecrementRequests()
-	start := time.Now()
-	input, err := json.Marshal(&views.Withdrawal{
+
+	_, err := u.callView("withdrawal", &views.Withdrawal{
 		Wallet:    u.username,
 		TokenType: currency,
 		Amount:    uint64(value),
@@ -125,32 +114,17 @@ func (u *viewUser) Withdraw(value api.Amount) api.Error {
 	if err != nil {
 		return api.NewInternalServerError(err, err.Error())
 	}
-	_, err = u.client.CallViewWithContext(ctx, "withdrawal", input)
-	u.metricsCollector.AddDuration(time.Since(start), constants.WithdrawRequest, err == nil)
-	if err != nil {
-		u.logger.Errorf("Failed to call view withdrawal: %s", err)
-		return api.NewInternalServerError(err, err.Error())
-	}
-	u.logger.Infof("Successfully completed withdrawal")
 	return nil
 }
 
 func (u *viewUser) GetBalance() (api.Amount, api.Error) {
-	ctx, span := u.tracer.Start(context.Background(), "balance")
-	defer span.End()
 	u.logger.Infof("Call view to get balance of %s\n", u.username)
-	u.metricsCollector.IncrementRequests()
-	defer u.metricsCollector.DecrementRequests()
-	input, err := json.Marshal(&views.BalanceQuery{
+
+	res, err := u.callView("balance", &views.BalanceQuery{
 		Wallet: u.username,
 		Type:   currency,
 	})
 	if err != nil {
-		return 0, api.NewInternalServerError(err, err.Error())
-	}
-	res, err := u.client.CallViewWithContext(ctx, "balance", input)
-	if err != nil {
-		u.logger.Errorf("Failed to call view balance: %s", err)
 		return 0, api.NewInternalServerError(err, err.Error())
 	}
 
@@ -164,4 +138,39 @@ func (u *viewUser) GetBalance() (api.Amount, api.Error) {
 		return 0, api.NewInternalServerError(err, err.Error())
 	}
 	return q.ToBigInt().Int64(), nil
+}
+
+func (u *viewUser) callView(fid string, input interface{}) (interface{}, error) {
+	marshaled, err := json.Marshal(input)
+	if err != nil {
+		return nil, err
+	}
+
+	operationType := operationTypeMap[fid]
+
+	ctx, span := u.tracer.Start(context.Background(), operationType)
+	defer span.End()
+
+	u.metrics.RequestsSent.
+		With(metrics.OperationLabel, operationType).
+		Add(1)
+
+	start := time.Now()
+	result, err := u.client.CallViewWithContext(ctx, fid, marshaled)
+
+	successType := metrics.SuccessValues[err == nil]
+	u.metrics.RequestsReceived.
+		With(metrics.OperationLabel, operationType, metrics.SuccessLabel, successType).
+		Add(1)
+	u.metrics.RequestDuration.
+		With(metrics.OperationLabel, operationType, metrics.SuccessLabel, successType).
+		Observe(time.Since(start).Seconds())
+
+	if err != nil {
+		u.logger.Warnf("Failed to call view %s: %v", fid, err)
+	} else {
+		u.logger.Infof("View %s completed successfully in %s\n", fid, time.Since(start))
+	}
+
+	return result, err
 }

@@ -71,10 +71,10 @@ const (
 	GRPC ConnectionType = "GRPC"
 )
 
-func newUserProvider(c UserProviderConfig, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
+func newUserProvider(c UserProviderConfig, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
 	users := make(map[model.UserAlias][]user.User, len(c.Users))
 	for _, uc := range append(append(c.Users, c.Auditors...), c.Issuers...) {
-		u, err := newUser(uc.CorePath, uc.Host, c.ConnectionType, metricsCollector, tracerProvider, logger, c.Auditors[0].Name)
+		u, err := newUser(uc.CorePath, uc.Host, c.ConnectionType, metrics, tracerProvider, logger, c.Auditors[0].Name)
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +83,7 @@ func newUserProvider(c UserProviderConfig, metricsCollector metrics.Collector, t
 	return runner2.NewViewUserProvider(users), nil
 }
 
-func newUser(corePath string, host string, connType ConnectionType, metricsCollector metrics.Collector, tracerProvider trace.TracerProvider, logger logging.ILogger, auditor model.Username) (user.User, error) {
+func newUser(corePath string, host string, connType ConnectionType, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.ILogger, auditor model.Username) (user.User, error) {
 	cfg, cli, err := newClient(corePath, host, connType)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func newUser(corePath string, host string, connType ConnectionType, metricsColle
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create identity resolver")
 	}
-	return runner2.NewViewUser(cfg.GetString("fsc.id"), auditor, cli, idResolver, metricsCollector, tracerProvider, logger), nil
+	return runner2.NewViewUser(cfg.GetString("fsc.id"), auditor, cli, idResolver, metrics, tracerProvider, logger), nil
 }
 
 func newClient(corePath string, host string, connType ConnectionType) (driver.ConfigService, api2.ViewClient, error) {
