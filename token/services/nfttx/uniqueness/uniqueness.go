@@ -84,7 +84,9 @@ func (s *Service) ComputeID(state interface{}) (string, error) {
 
 // GetService returns the uniqueness service.
 func GetService(sp token.ServiceProvider) *Service {
-	return &Service{
-		kvs: kvs.GetService(sp),
+	kvss, err := sp.GetService(&kvs.KVS{})
+	if err != nil {
+		panic(err)
 	}
+	return &Service{kvs: kvss.(*kvs.KVS)}
 }

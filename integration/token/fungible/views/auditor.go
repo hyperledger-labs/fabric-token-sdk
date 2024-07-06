@@ -152,7 +152,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 		}
 	}
 
-	kvsInstance := kvs.GetService(context)
+	kvsInstance := GetKVS(context)
 
 	for _, rID := range inputs.RevocationHandles() {
 		rh := hash.Hashable(rID).String()

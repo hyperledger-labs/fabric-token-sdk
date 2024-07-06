@@ -367,9 +367,10 @@ func (f *fakeProv) TranslatePath(path string) string {
 
 func getIdemixInfo(dir string) (driver.Identity, *msp3.AuditInfo, driver.SigningIdentity) {
 	registry := registry2.New()
-	Expect(registry.RegisterService(&fakeProv{typ: "memory"})).NotTo(HaveOccurred())
+	configService := &fakeProv{typ: "memory"}
+	Expect(registry.RegisterService(configService)).NotTo(HaveOccurred())
 
-	backend, err := kvs.New(registry, &mem.Driver{}, "")
+	backend, err := kvs.NewWithConfig(&mem.Driver{}, "", configService)
 	Expect(err).NotTo(HaveOccurred())
 	err = registry.RegisterService(backend)
 	Expect(err).NotTo(HaveOccurred())

@@ -96,7 +96,9 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 				return errors.Wrap(err, "failed to generate key to store signature request")
 			}
 			var srRaw []byte
-			if err := kvs.GetService(context).Get(k, &srRaw); err != nil {
+			if kvss, err := context.GetService(&kvs.KVS{}); err != nil {
+				return errors.Wrap(err, "failed to get KVS from context")
+			} else if err := kvss.(*kvs.KVS).Get(k, &srRaw); err != nil {
 				return errors.Wrap(err, "failed to to store signature request")
 			}
 			if err := Unmarshal(srRaw, signatureRequest); err != nil {
