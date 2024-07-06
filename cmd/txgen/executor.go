@@ -43,8 +43,8 @@ func NewSuiteExecutor(userProviderConfig model.UserProviderConfig, intermediaryC
 		c.Provide(func() model.ServerConfig { return serverConfig }),
 		c.Provide(user.NewIntermediaryClient),
 		c.Provide(runner.NewTestCaseRunner),
-		c.Provide(func(p metrics2.Provider) (metrics.Collector, metrics.Reporter) {
-			c := metrics.NewCollector(p)
+		c.Provide(func(p metrics2.Provider) (*metrics.Metrics, metrics.Reporter) {
+			c := metrics.NewMetrics(p)
 			return c, metrics.NewReporter(c)
 		}),
 	)
