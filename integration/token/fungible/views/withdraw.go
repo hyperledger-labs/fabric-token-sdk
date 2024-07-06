@@ -12,7 +12,6 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -126,7 +125,7 @@ func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error
 		var tx *ttx.Transaction
 		var auditorID string
 		if len(p.Auditor) == 0 {
-			assert.NoError(kvs.GetService(context).Get("auditor", &auditorID), "failed to retrieve auditor id")
+			assert.NoError(GetKVS(context).Get("auditor", &auditorID), "failed to retrieve auditor id")
 		} else {
 			auditorID = p.Auditor
 		}

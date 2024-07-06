@@ -27,7 +27,7 @@ type RevokeUserView struct {
 func (u *RevokeUserView) Call(context view.Context) (interface{}, error) {
 	rh := hash.Hashable(u.RH).String()
 	logger.Infof("revoke [%s][%s]", u.RH, rh)
-	kvsInstance := kvs.GetService(context)
+	kvsInstance := GetKVS(context)
 	k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
 	assert.False(kvsInstance.Exists(k), "Identity already in revoked state")
 	assert.NoError(kvsInstance.Put(k, rh), "failed to put revocation handle")

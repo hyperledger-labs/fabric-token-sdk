@@ -241,9 +241,9 @@ func (n *Network) AddFinalityListener(namespace string, txID string, listener dr
 		net:         n,
 		root:        listener,
 		network:     n.n.Name(),
-		sp:          n.n.SP,
 		namespace:   namespace,
 		retryRunner: db.NewRetryRunner(-1, time.Second, true),
+		viewManager: n.viewManager,
 	}
 	n.subscribers.Set(txID, listener, wrapper)
 	return n.n.Committer().AddFinalityListener(txID, wrapper)
@@ -332,10 +332,10 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 type FinalityListener struct {
 	net         *Network
 	root        driver.FinalityListener
-	sp          token2.ServiceProvider
 	network     string
 	namespace   string
 	retryRunner db.RetryRunner
+	viewManager *view2.Manager
 }
 
 func (t *FinalityListener) OnStatus(txID string, status int, message string) {
@@ -346,7 +346,7 @@ func (t *FinalityListener) OnStatus(txID string, status int, message string) {
 
 func (t *FinalityListener) runOnStatus(txID string, status int, message string) (err error) {
 	defer func() { err = wrapRecover(recover()) }()
-	boxed, err := view2.GetManager(t.sp).InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID), context.TODO())
+	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID), context.TODO())
 	if err != nil {
 		return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
 	}

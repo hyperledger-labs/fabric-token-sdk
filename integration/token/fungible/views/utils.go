@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -51,7 +52,7 @@ type SetKVSEntryView struct {
 }
 
 func (s *SetKVSEntryView) Call(context view.Context) (interface{}, error) {
-	assert.NoError(kvs.GetService(context).Put(s.Key, s.Value), "failed to put in KVS [%s:%s]", s.Key, s.Value)
+	assert.NoError(GetKVS(context).Put(s.Key, s.Value), "failed to put in KVS [%s:%s]", s.Key, s.Value)
 	return nil, nil
 }
 
@@ -80,4 +81,12 @@ func TxOpts(tmsId *token.TMSID) []ttx.TxOption {
 		txOpts = append(txOpts, ttx.WithTMSID(*tmsId))
 	}
 	return txOpts
+}
+
+func GetKVS(sp view2.ServiceProvider) *kvs.KVS {
+	kvss, err := sp.GetService(&kvs.KVS{})
+	if err != nil {
+		panic(err)
+	}
+	return kvss.(*kvs.KVS)
 }
