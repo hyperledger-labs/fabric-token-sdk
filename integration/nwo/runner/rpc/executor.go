@@ -68,6 +68,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 				Provider: config.Monitoring.TracerExporterType,
 				Otpl:     tracing.OtplConfig{Address: config.Monitoring.TracerCollectorEndpoint},
 				File:     tracing.FileConfig{Path: config.Monitoring.TracerCollectorFile},
+				Sampling: tracing.SamplingConfig{Ratio: config.Monitoring.TracerSamplingRatio},
 			})
 			if err != nil {
 				return nil, err

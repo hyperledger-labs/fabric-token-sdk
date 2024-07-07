@@ -48,6 +48,7 @@ type MonitoringConfig struct {
 	TracerExporterType      tracing.TracerType `yaml:"tracerExporterType"`
 	TracerCollectorEndpoint string             `yaml:"tracerCollectorEndpoint"`
 	TracerCollectorFile     string             `yaml:"tracerCollectorFile"`
+	TracerSamplingRatio     float64            `yaml:"tracerSamplingRatio"`
 }
 
 func (c *UserProviderConfig) IssuerNames() []model.Username {
