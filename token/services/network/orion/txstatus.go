@@ -9,6 +9,8 @@ package orion
 import (
 	"encoding/base64"
 
+	"go.uber.org/zap/zapcore"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 
 	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -130,7 +132,9 @@ func (r *RequestTxStatusResponderView) process(context view.Context, request *Tx
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get token request reference [%s] for orion network [%s]", request.TxID, request.Network)
 		}
-		logger.Debugf("retrieved token request hash for [%s][%s]:[%s]", key, request.TxID, base64.StdEncoding.EncodeToString(trRef))
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("retrieved token request hash for [%s][%s]:[%s]", key, request.TxID, base64.StdEncoding.EncodeToString(trRef))
+		}
 	}
 
 	switch tx.ValidationCode() {

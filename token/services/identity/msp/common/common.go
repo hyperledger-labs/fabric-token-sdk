@@ -25,8 +25,12 @@ type SigService interface {
 	RegisterVerifier(identity driver.Identity, v driver.Verifier) error
 }
 
-type BinderService interface {
+type NetworkBinderService interface {
 	Bind(longTerm driver.Identity, ephemeral driver.Identity) error
+}
+
+type BinderService interface {
+	Bind(longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error
 }
 
 type IdentityProvider interface {

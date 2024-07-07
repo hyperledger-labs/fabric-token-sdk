@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
@@ -95,14 +95,14 @@ func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ st
 }
 
 type AuditDeserializer struct {
-	AuditInfoDeserializer deserializer.AuditInfoDeserializer
+	AuditInfoDeserializer driver2.AuditInfoDeserializer
 }
 
-func NewAuditDeserializer(auditInfoDeserializer deserializer.AuditInfoDeserializer) *AuditDeserializer {
+func NewAuditDeserializer(auditInfoDeserializer driver2.AuditInfoDeserializer) *AuditDeserializer {
 	return &AuditDeserializer{AuditInfoDeserializer: auditInfoDeserializer}
 }
 
-func (a *AuditDeserializer) DeserializeAuditInfo(bytes []byte) (deserializer.AuditInfo, error) {
+func (a *AuditDeserializer) DeserializeAuditInfo(bytes []byte) (driver2.AuditInfo, error) {
 	si := &ScriptInfo{}
 	err := json.Unmarshal(bytes, si)
 	if err != nil || (len(si.Sender) == 0 && len(si.Recipient) == 0) {

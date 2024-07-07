@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
@@ -62,7 +64,7 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
 	response := &ApprovalResponse{}
-	if err := session.Receive(response); err != nil {
+	if err := session.ReceiveWithTimeout(response, 30*time.Second); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
 	env := r.Network.TransactionManager().NewEnvelope()
@@ -113,15 +115,30 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	}
 
 	// Verify
-	ons, err := orion.GetOrionNetworkService(context, request.Network)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get orion network service for network [%s]", request.Network)
-	}
 	custodianID, err := GetCustodian(view2.GetConfigService(context), request.Network)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get custodian identifier")
 	}
+
+	for i := 0; i < 3; i++ {
+		envelopeRaw, err := r.commit(context, request, validator, custodianID)
+		if err != nil {
+			logger.Errorf("failed to commit transaction [%s], retry [%d]", err, i)
+			time.Sleep(100 * time.Minute)
+			continue
+		}
+		return envelopeRaw, nil
+	}
+
+	return nil, errors.Wrapf(err, "failed to commit transaction [%s]", request.TxID)
+}
+
+func (r *RequestApprovalResponderView) commit(context view.Context, request *ApprovalRequest, validator driver.Validator, custodianID string) ([]byte, error) {
 	logger.Debugf("open session to orion [%s]", custodianID)
+	ons, err := orion.GetOrionNetworkService(context, request.Network)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get orion network service for network [%s]", request.Network)
+	}
 	oSession, err := ons.SessionManager().NewSession(custodianID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create session to orion network [%s]", request.Network)
@@ -130,7 +147,6 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s]", request.Network)
 	}
-
 	actions, attributes, err := token.NewValidator(validator).UnmarshallAndVerifyWithMetadata(
 		context.Context(),
 		&LedgerWrapper{qe: qe},
@@ -168,7 +184,6 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to sign and close transaction [%s]", request.TxID)
 	}
-
 	return envelopeRaw, nil
 }
 

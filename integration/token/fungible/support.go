@@ -972,7 +972,7 @@ func JSONUnmarshalFloat64(v interface{}) float64 {
 }
 
 func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*token3.NodeReference) {
-	logger.Infof("restart [%s], [%v]", ids, RestartEnabled)
+	logger.Infof("restart [%v], [%v]", ids, RestartEnabled)
 	if !RestartEnabled {
 		return
 	}

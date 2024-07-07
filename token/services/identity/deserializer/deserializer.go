@@ -9,31 +9,23 @@ package deserializer
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/pkg/errors"
 )
 
-type AuditInfo interface {
-	EnrollmentID() string
-	RevocationHandle() string
-}
-
-type AuditInfoDeserializer interface {
-	DeserializeAuditInfo([]byte) (AuditInfo, error)
-}
-
 // EIDRHDeserializer returns enrollment IDs behind the owners of token
 type EIDRHDeserializer struct {
-	deserializers map[identity.Type]AuditInfoDeserializer
+	deserializers map[identity.Type]driver2.AuditInfoDeserializer
 }
 
 // NewEIDRHDeserializer returns an enrollmentService
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	return &EIDRHDeserializer{
-		deserializers: map[string]AuditInfoDeserializer{},
+		deserializers: map[string]driver2.AuditInfoDeserializer{},
 	}
 }
 
-func (e *EIDRHDeserializer) AddDeserializer(typ string, d AuditInfoDeserializer) {
+func (e *EIDRHDeserializer) AddDeserializer(typ string, d driver2.AuditInfoDeserializer) {
 	e.deserializers[typ] = d
 }
 
@@ -55,7 +47,15 @@ func (e *EIDRHDeserializer) GetRevocationHandler(identity driver.Identity, audit
 	return ai.RevocationHandle(), nil
 }
 
-func (e *EIDRHDeserializer) getAuditInfo(id driver.Identity, auditInfo []byte) (AuditInfo, error) {
+func (e *EIDRHDeserializer) GetEIDAndRH(identity driver.Identity, auditInfo []byte) (string, string, error) {
+	ai, err := e.getAuditInfo(identity, auditInfo)
+	if err != nil {
+		return "", "", err
+	}
+	return ai.EnrollmentID(), ai.RevocationHandle(), nil
+}
+
+func (e *EIDRHDeserializer) getAuditInfo(id driver.Identity, auditInfo []byte) (driver2.AuditInfo, error) {
 	if len(auditInfo) == 0 {
 		return nil, errors.Errorf("nil audit info")
 	}

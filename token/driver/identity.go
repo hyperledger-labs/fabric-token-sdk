@@ -68,9 +68,12 @@ type IdentityProvider interface {
 	// GetRevocationHandler extracts the revocation handler from the passed audit info
 	GetRevocationHandler(identity Identity, auditInfo []byte) (string, error)
 
-	// Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
-	// identity is associated to id.
-	Bind(id Identity, longTerm Identity) error
+	// GetEIDAndRH returns both enrollment ID and revocation handle
+	GetEIDAndRH(identity Identity, auditInfo []byte) (string, string, error)
+
+	// Bind binds longTerm to the passed ephemeral identity. The same signer, verifier, and audit of the long term
+	// identity is associated to id, if copyAll is true.
+	Bind(longTerm Identity, ephemeral Identity, copyAll bool) error
 
 	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
 	RegisterRecipientIdentity(id Identity) error

@@ -7,7 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package support
 
 import (
+	"context"
+	"fmt"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 type Task func()
@@ -15,24 +19,74 @@ type Task func()
 type Pool struct {
 	taskQueue chan Task
 	wg        sync.WaitGroup
-	shutdown  chan struct{}
+	ctx       context.Context
+	cancel    context.CancelFunc
+	label     string
+	stop      atomic.Bool
 }
 
-func NewPool(numWorkers int) *Pool {
+func NewPool(label string, numWorkers int) *Pool {
+	ctx, cancel := context.WithCancel(context.Background())
 	pool := &Pool{
 		taskQueue: make(chan Task, numWorkers),
 		wg:        sync.WaitGroup{},
+		ctx:       ctx,
+		cancel:    cancel,
+		label:     label,
 	}
 
 	pool.wg.Add(numWorkers)
+	pool.stop.Store(false)
 	for i := 0; i < numWorkers; i++ {
 		go func() {
-			defer pool.wg.Done()
+			counter := atomic.Int64{}
+			var taskDurations []time.Duration
+			workerStart := time.Now()
+
+			defer func() {
+				fmt.Printf("Context done for [%s], shutdown after, computing statistics\n", pool.label)
+				workerEnd := time.Since(workerStart)
+				var sum int64
+				numTasks := counter.Load()
+				for _, duration := range taskDurations {
+					sum += duration.Milliseconds()
+				}
+				avgDuration := sum / numTasks
+				throughput := workerEnd.Milliseconds() / numTasks
+
+				fmt.Printf(
+					"Context done for [%s], shutdown after # task [%d], avg duration [%d], throughput (%d,%d) \n",
+					pool.label,
+					numTasks,
+					avgDuration,
+					throughput,
+					workerEnd.Milliseconds(),
+				)
+				pool.wg.Done()
+			}()
 			for {
-				if task, ok := <-pool.taskQueue; ok {
-					task()
-				} else {
+				select {
+				case <-pool.ctx.Done():
+					fmt.Printf("Context done for [%s], shutdown after # %d workers\n", pool.label, numWorkers)
+					pool.stop.Store(true)
 					return
+				case task := <-pool.taskQueue:
+					if pool.stop.Load() {
+						fmt.Printf("No more tasks for [%s] to run...\n", pool.label)
+						return
+					}
+					if task == nil {
+						fmt.Printf("Got nil task for [%s], shutdown...\n", pool.label)
+						return
+					}
+					fmt.Printf("Schedule new task for [%s]: [%d]\n", pool.label, counter.Add(1))
+					start := time.Now()
+					task()
+					end := time.Since(start)
+					taskDurations = append(taskDurations, end)
+					fmt.Printf("Task for [%s][%d], took [%v]\n", pool.label, counter.Load(), end.Milliseconds())
+				default:
+					fmt.Printf("Nothing to do for [%s]\n", pool.label)
 				}
 			}
 		}()
@@ -41,17 +95,33 @@ func NewPool(numWorkers int) *Pool {
 }
 
 func (p *Pool) ScheduleTask(task Task) {
-	for {
-		select {
-		case <-p.shutdown:
-			return
-		default:
-			p.taskQueue <- task
+	go func() {
+		for {
+			select {
+			case <-p.ctx.Done():
+				fmt.Printf("Context done for [%s], shutdown scheduler\n", p.label)
+				p.stop.Store(true)
+				return
+			default:
+				if p.stop.Load() {
+					fmt.Printf("Stop for [%s], shutdown scheduler\n", p.label)
+					return
+				}
+				p.taskQueue <- task
+			}
 		}
-	}
+	}()
 }
 
-func (p *Pool) Shutdown() {
-	close(p.taskQueue)
+func (p *Pool) Stop() {
+	fmt.Printf("Shutting down workers for [%s]\n", p.label)
+	p.stop.Store(true)
+	fmt.Printf("Shutting down workers for [%s], cancel context...\n", p.label)
+	p.cancel()
+}
+
+func (p *Pool) Wait() {
+	fmt.Printf("Shutting down workers for [%s], wait workers...\n", p.label)
 	p.wg.Wait()
+	fmt.Printf("All workers shut down for [%s]\n", p.label)
 }

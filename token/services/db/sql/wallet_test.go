@@ -32,7 +32,7 @@ func TestWalletSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 
 	for _, c := range WalletCases {
-		db, err := initWalletDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initWalletDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(10000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -44,7 +44,7 @@ func TestWalletSqlite(t *testing.T) {
 
 func TestWalletSqliteMemory(t *testing.T) {
 	for _, c := range WalletCases {
-		db, err := initWalletDB("sqlite", "file:tmp?_pragma=busy_timeout(5000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initWalletDB("sqlite", "file:tmp?_pragma=busy_timeout(10000)&mode=memory&cache=shared", c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}

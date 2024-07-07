@@ -38,7 +38,7 @@ func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 
 func (d *base) newWalletService(
 	tmsConfig driver.Config,
-	binder common2.BinderService,
+	binder common2.NetworkBinderService,
 	storageProvider identity.StorageProvider,
 	qe common.TokenVault,
 	logger logging.Logger,
@@ -57,7 +57,7 @@ func (d *base) newWalletService(
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
-	ip := identity.NewProvider(identityDB, sigService, binder, NewEIDRHDeserializer(), deserializerManager)
+	ip := identity.NewProvider(identityDB, sigService, binder, NewEIDRHDeserializer())
 	identityConfig, err := config2.NewIdentityConfig(tmsConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create identity config")
@@ -69,8 +69,8 @@ func (d *base) newWalletService(
 		fscIdentity,            // FSC identity
 		networkDefaultIdentity, // network default identity
 		ip,
-		sigService, // signer service
-		binder,     // endpoint service
+		ip, // signer service
+		ip, // endpoint service
 		storageProvider,
 		deserializerManager,
 		ignoreRemote,

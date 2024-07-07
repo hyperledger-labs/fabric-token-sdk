@@ -179,9 +179,6 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(uniqueName))
 
 	t, err := template.New("peer").Funcs(template.FuncMap{
-		"TMSID":   func() string { return tms.ID() },
-		"TMS":     func() *topology2.TMS { return tms },
-		"Wallets": func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
 		"IsCustodian": func() bool {
 			custodianNode, ok := tms.BackendParams[Custodian]
 			if !ok {
@@ -192,10 +189,14 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 		"CustodianID": func() string {
 			return tms.BackendParams[Custodian].(string)
 		},
+		"TMSID":               func() string { return tms.ID() },
+		"TMS":                 func() *topology2.TMS { return tms },
+		"Wallets":             func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
 		"SQLDriver":           func() string { return GetTokenPersistenceDriver(node.Options) },
 		"SQLDataSource":       func() string { return p.GetSQLDataSource(node.Options, uniqueName, tms) },
 		"TokensSQLDriver":     func() string { return GetTokenPersistenceDriver(node.Options) },
 		"TokensSQLDataSource": func() string { return p.GetTokensSQLDataSource(node.Options, uniqueName, tms) },
+		"OnlyUnity":           func() bool { return common2.IsOnlyUnity(tms) },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 

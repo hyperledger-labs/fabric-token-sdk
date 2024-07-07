@@ -71,7 +71,7 @@ func (p *NetworkHandler) DBPath(root string, tms *topology2.TMS) string {
 		filepath.Join(
 			root,
 			fmt.Sprintf("%s_%s_%s", tms.Network, tms.Channel, tms.Namespace)+"_db.sqlite",
-		) + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
+		) + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(10000)"
 }
 
 func (p *NetworkHandler) FSCNodeKVSDir(uniqueName string) string {

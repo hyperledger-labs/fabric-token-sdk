@@ -486,13 +486,9 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
-		eID, err := tms.WalletService().GetEnrollmentID(issueMeta.Receivers[j], issueMeta.ReceiversAuditInfos[j])
+		eID, rID, err := tms.WalletService().GetEIDAndRH(issueMeta.Receivers[j], issueMeta.ReceiversAuditInfos[j])
 		if err != nil {
-			return nil, 0, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
-		}
-		rID, err := tms.WalletService().GetRevocationHandler(issueMeta.Receivers[j], issueMeta.ReceiversAuditInfos[j])
-		if err != nil {
-			return nil, 0, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
+			return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
 		}
 		q, err := token.ToQuantity(tok.Quantity, precision)
 		if err != nil {
@@ -551,13 +547,9 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		var receiverAuditInfo []byte
 		if len(tok.Owner.Raw) != 0 {
 			receiverAuditInfo = transferMeta.ReceiverAuditInfos[j]
-			eID, err = tms.WalletService().GetEnrollmentID(transferMeta.Receivers[j], receiverAuditInfo)
+			eID, rID, err = tms.WalletService().GetEIDAndRH(transferMeta.Receivers[j], receiverAuditInfo)
 			if err != nil {
-				return nil, 0, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
-			}
-			rID, err = tms.WalletService().GetRevocationHandler(transferMeta.Receivers[j], receiverAuditInfo)
-			if err != nil {
-				return nil, 0, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
+				return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
 			}
 		}
 
@@ -648,14 +640,9 @@ func (r *Request) extractInputs(i int, transferMeta *TransferMetadata, failOnMis
 			continue
 		}
 
-		eID, err := tms.WalletService().GetEnrollmentID(transferMeta.Senders[j], senderAuditInfo)
+		eID, rID, err := tms.WalletService().GetEIDAndRH(transferMeta.Senders[j], senderAuditInfo)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
-		}
-
-		rID, err := tms.WalletService().GetRevocationHandler(transferMeta.Senders[j], senderAuditInfo)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
+			return nil, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
 		}
 
 		inputs = append(inputs, &Input{

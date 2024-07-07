@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -18,7 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -37,7 +38,7 @@ type LocalMembership struct {
 	defaultNetworkIdentity driver.Identity
 	signerService          common.SigService
 	binderService          common.BinderService
-	deserializerManager    sig.Manager
+	deserializerManager    driver3.DeserializerManager
 	identityDB             driver2.IdentityDB
 	mspID                  string
 
@@ -55,7 +56,7 @@ func NewLocalMembership(
 	defaultNetworkIdentity driver.Identity,
 	signerService common.SigService,
 	binderService common.BinderService,
-	deserializerManager sig.Manager,
+	deserializerManager driver3.DeserializerManager,
 	identityDB driver2.IdentityDB,
 	mspID string,
 	ignoreVerifyOnlyWallet bool,
@@ -288,8 +289,8 @@ func (lm *LocalMembership) addResolver(identityConfig *config.Identity, provider
 
 	// bind
 	if lm.binderService != nil {
-		if err := lm.binderService.Bind(lm.defaultNetworkIdentity, walletId); err != nil {
-			return errors.WithMessagef(err, "cannot bing identity for [%s,%s]", walletId, eID)
+		if err := lm.binderService.Bind(lm.defaultNetworkIdentity, walletId, false); err != nil {
+			return errors.WithMessagef(err, "cannot bind identity for [%s,%s]", walletId, eID)
 		}
 	}
 

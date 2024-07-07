@@ -8,7 +8,6 @@ package orion
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
@@ -255,7 +254,7 @@ func (n *Network) AddFinalityListener(namespace string, txID string, listener dr
 		root:        listener,
 		network:     n.n.Name(),
 		namespace:   namespace,
-		retryRunner: db.NewRetryRunner(-1, time.Second, true),
+		retryRunner: db.NewRetryRunner(3, 100*time.Millisecond, true),
 		viewManager: n.viewManager,
 	}
 	n.subscribers.Set(txID, listener, wrapper)
@@ -364,19 +363,35 @@ func (t *FinalityListener) OnStatus(txID string, status int, message string) {
 }
 
 func (t *FinalityListener) runOnStatus(txID string, status int, message string) (err error) {
-	defer func() { err = wrapRecover(recover()) }()
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.Errorf("panic caught: %v", r)
+		}
+	}()
 	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID), context.TODO())
 	if err != nil {
-		return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+		return errors.Wrapf(err, "failed retrieving token request [%s]", txID)
 	}
-	t.root.OnStatus(txID, status, message, boxed.(*TxStatusResponse).TokenRequestReference)
-	return
-}
+	statusResponse, ok := boxed.(*TxStatusResponse)
+	if !ok {
+		return errors.Errorf("failed retrieving token request, expected TxStatusResponse [%s]", txID)
+	}
+	if statusResponse == nil {
+		return errors.Errorf("expected status response to be non-nil for [%s]", txID)
+	}
+	if statusResponse.Status != status {
+		return errors.Errorf("expected status [%v], got [%v]", status, statusResponse.Status)
+	}
+	if statusResponse.Status == driver.Valid && len(statusResponse.TokenRequestReference) == 0 {
+		return errors.Errorf("expected status response to be non-nil for a valid transaction")
+	}
 
-func wrapRecover(r any) error {
-	if r != nil {
-		return fmt.Errorf("panic caught: %v", r)
-	}
+	t.root.OnStatus(
+		txID,
+		status,
+		message,
+		boxed.(*TxStatusResponse).TokenRequestReference,
+	)
 	return nil
 }
 
