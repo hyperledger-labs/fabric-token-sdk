@@ -15,7 +15,6 @@ import (
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
@@ -25,8 +24,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	. "github.com/onsi/gomega"
 )
 
@@ -110,26 +107,20 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	ppRaw := tp.PublicParameters(tms)
 
 	// prepare a service provider with the required services
-	sp := registry.New()
 	configProvider, err := config.NewProvider(filepath.Join(ctx.RootDir(), "fsc", "nodes", node.ReplicaUniqueName(user, 0)))
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	configService := config2.NewService(configProvider)
-	Expect(sp.RegisterService(configService)).ToNot(HaveOccurred())
 	kvss, err := kvs.NewWithConfig(&mem.Driver{}, "", configProvider)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(sp.RegisterService(kvss)).ToNot(HaveOccurred())
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
-	Expect(sp.RegisterService(sigService)).ToNot(HaveOccurred())
 	storageProvider := identity2.NewKVSStorageProvider(kvss)
-	Expect(sp.RegisterService(storageProvider)).ToNot(HaveOccurred())
-	Expect(sp.RegisterService(driver.NewTokenDriverService([]driver.NamedDriver{
-		fabtoken.NewDriver(nil, nil, configService, storageProvider, nil, nil, nil),
-		dlog.NewDriver(nil, nil, configService, storageProvider, nil, nil, nil),
-	}))).To(Succeed())
-
-	wm, err := token.NewWalletManager(sp, tms.Network, tms.Channel, tms.Namespace, ppRaw)
+	s := driver.NewWalletServiceFactoryService(
+		fabtoken.NewWalletServiceFactory(storageProvider),
+		dlog.NewWalletServiceFactory(storageProvider))
+	tmsConfig, err := configService.ConfigurationFor(tms.Network, tms.Channel, tms.Namespace)
 	Expect(err).ToNot(HaveOccurred())
-	return wm
+	walletService, err := s.NewWalletService(tmsConfig, ppRaw)
+	Expect(err).ToNot(HaveOccurred())
+	return token.NewWalletManager(walletService)
 }
 
 // SignerProvider provides instances of the token.Signer interface for the passed identity

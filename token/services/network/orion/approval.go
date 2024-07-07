@@ -102,15 +102,12 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get token driver")
 	}
-	_, validator, err := token.NewServicesFromPublicParams(
-		ds.TokenInstantiatorService,
-		ds,
-		token.TMSID{
-			Network:   request.Network,
-			Namespace: request.Namespace,
-		},
-		ppRaw,
-	)
+	pp, err := ds.PublicParametersFromBytes(ppRaw)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
+	}
+	validator, err := ds.NewValidator(token.TMSID{Network: request.Network, Namespace: request.Namespace}, pp)
+
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create validator")
 	}
@@ -134,7 +131,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s]", request.Network)
 	}
 
-	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(
+	actions, attributes, err := token.NewValidator(validator).UnmarshallAndVerifyWithMetadata(
 		context.Context(),
 		&LedgerWrapper{qe: qe},
 		request.TxID,

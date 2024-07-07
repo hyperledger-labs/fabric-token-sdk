@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/common"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
@@ -221,14 +220,18 @@ func TestGenFailure(t *testing.T) {
 	testGenRun(gt, tokengen, []string{"gen", "fabtoken", "--output", tempOutput})
 	raw, err := os.ReadFile(filepath.Join(tempOutput, "fabtoken_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
-	is := driver.NewTokenInstantiatorService(fabtoken.NewInstantiator(), dlog.NewInstantiator())
-	_, _, err = token.NewServicesFromPublicParams(is, nil, token.TMSID{}, raw)
+	is := driver.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
+	pp, err := is.PublicParametersFromBytes(raw)
+	gt.Expect(err).NotTo(HaveOccurred())
+	_, err = is.DefaultValidator(pp)
 	gt.Expect(err).NotTo(HaveOccurred())
 
 	testGenRun(gt, tokengen, []string{"gen", "dlog", "--idemix", "./testdata/idemix", "--output", tempOutput})
 	raw, err = os.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
-	_, _, err = token.NewServicesFromPublicParams(is, nil, token.TMSID{}, raw)
+	pp, err = is.PublicParametersFromBytes(raw)
+	gt.Expect(err).NotTo(HaveOccurred())
+	_, err = is.DefaultValidator(pp)
 	gt.Expect(err).NotTo(HaveOccurred())
 }
 

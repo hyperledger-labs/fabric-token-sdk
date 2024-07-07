@@ -128,14 +128,14 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 
 // NewX509 creates a new X509-based role
 func (f *RoleFactory) NewX509(role driver.IdentityRole) (identity.Role, error) {
-	return f.NewX509WithType(role, "")
+	return f.newX509WithType(role, "", false)
 }
 
-func (f *RoleFactory) NewWrappedX509(role driver.IdentityRole) (identity.Role, error) {
-	return f.NewX509WithType(role, X509Identity)
+func (f *RoleFactory) NewWrappedX509(role driver.IdentityRole, ignoreRemote bool) (identity.Role, error) {
+	return f.newX509WithType(role, X509Identity, ignoreRemote)
 }
 
-func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType string) (identity.Role, error) {
+func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType string, ignoreRemote bool) (identity.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -152,7 +152,7 @@ func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType str
 		f.DeserializerManager,
 		identityDB,
 		RoleToMSPID[role],
-		false,
+		ignoreRemote,
 	)
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load identities")
@@ -160,38 +160,6 @@ func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType str
 	return &BindingRole{
 		Role:             x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
 		IdentityType:     identityType,
-		RootIdentity:     f.FSCIdentity,
-		IdentityProvider: f.IdentityProvider,
-		BinderService:    f.BinderService,
-	}, nil
-}
-
-// NewX509IgnoreRemote creates a new X509-based role treating the long-term identities as local
-func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity.Role, error) {
-	identities, err := f.IdentitiesForRole(role)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
-	}
-	identityDB, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get wallet path storage")
-	}
-	lm := x5092.NewLocalMembership(
-		f.Config,
-		f.NetworkDefaultIdentity,
-		f.SignerService,
-		f.BinderService,
-		f.DeserializerManager,
-		identityDB,
-		RoleToMSPID[role],
-		true,
-	)
-	if err := lm.Load(identities); err != nil {
-		return nil, errors.WithMessage(err, "failed to load identities")
-	}
-	return &BindingRole{
-		Role:             x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
-		IdentityType:     X509Identity,
 		RootIdentity:     f.FSCIdentity,
 		IdentityProvider: f.IdentityProvider,
 		BinderService:    f.BinderService,

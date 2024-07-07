@@ -58,7 +58,7 @@ func main() {
 		Writer:  os.Stderr,
 	})
 
-	is := driver.NewTokenInstantiatorService(fabtoken.NewInstantiator(), dlog.NewInstantiator())
+	is := driver.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
 	if config.CCID == "" || config.CCaddress == "" {
 		fmt.Println("CC ID or CC address is empty... Running as usual...")
 		if os.Getenv("DEVMODE_ENABLED") != "" {
@@ -67,11 +67,15 @@ func main() {
 		err := shim.Start(
 			&tcc.TokenChaincode{
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
-					ppm, v, err := token.NewServicesFromPublicParams(is, nil, token.TMSID{}, bytes)
+					ppm, err := is.PublicParametersFromBytes(bytes)
 					if err != nil {
 						return nil, nil, err
 					}
-					return ppm.PublicParameters(), v, nil
+					v, err := is.DefaultValidator(ppm)
+					if err != nil {
+						return nil, nil, err
+					}
+					return ppm, token.NewValidator(v), nil
 				},
 			},
 		)
@@ -107,11 +111,15 @@ func main() {
 			Address: config.CCaddress,
 			CC: &tcc.TokenChaincode{
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
-					ppm, v, err := token.NewServicesFromPublicParams(is, nil, token.TMSID{}, bytes)
+					ppm, err := is.PublicParametersFromBytes(bytes)
 					if err != nil {
 						return nil, nil, err
 					}
-					return ppm.PublicParameters(), v, nil
+					v, err := is.DefaultValidator(ppm)
+					if err != nil {
+						return nil, nil, err
+					}
+					return ppm, token.NewValidator(v), nil
 				},
 			},
 			TLSProps: tlsProps,

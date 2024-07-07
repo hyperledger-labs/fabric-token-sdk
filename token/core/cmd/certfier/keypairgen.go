@@ -56,7 +56,7 @@ func keyPairGen(args []string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed reading public parameters from [%s]", ppPath)
 	}
-	s := driver2.NewTokenInstantiatorService(fabtoken.NewInstantiator(), dlog.NewInstantiator())
+	s := driver2.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
 	pp, err := s.PublicParametersFromBytes(ppRaw)
 	if err != nil {
 		return errors.Wrapf(err, "failed unmarshalling public parameters loaded from [%s], len [%d]", ppPath, len(ppRaw))

@@ -72,10 +72,11 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 
 	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
 	assert.NoError(err, "failed to fetch public params")
-	is := driver.NewTokenInstantiatorService(fabtoken.NewInstantiator(), dlog.NewInstantiator())
-	ppm, err := token.NewPublicParametersManagerFromPublicParams(is, fetchedPPRaw)
-	assert.NoError(err, "failed to instantiate public params manager from fetch params")
-	assert.NotNil(ppm.PublicParameters(), "failed to validate remote public parameters")
+	is := driver.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
+	pp, err := is.PublicParametersFromBytes(fetchedPPRaw)
+	assert.NoError(err, "failed deserializing public parameters")
+	assert.NotNil(pp)
+	assert.NoError(pp.Validate())
 	assert.Equal(fetchedPPRaw, ppRaw, "public params do not match [%s]!=[%s]", hash.Hashable(fetchedPPRaw), hash.Hashable(ppRaw))
 
 	return nil, nil
