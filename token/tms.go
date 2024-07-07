@@ -300,67 +300,6 @@ func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *Management
 	return ms
 }
 
-// NewServicesFromPublicParams uses the passed marshalled public parameters to create an instance
-// of PublicParametersManager and a new instance of Validator.
-func NewServicesFromPublicParams(is *driver.TokenInstantiatorService, ds *driver.TokenDriverService, tmsID TMSID, params []byte) (*PublicParametersManager, *Validator, error) {
-	logger.Debugf("unmarshall public parameters...")
-	pp, err := is.PublicParametersFromBytes(params)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed unmarshalling public parameters")
-	}
-
-	logger.Debugf("instantiate public parameters manager...")
-	ppm, err := is.NewPublicParametersManager(pp)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed instantiating public parameters manager")
-	}
-
-	logger.Debugf("instantiate validator...")
-	var validator driver.Validator
-	if ds == nil {
-		validator, err = is.DefaultValidator(pp)
-	} else {
-		validator, err = ds.NewValidator(tmsID, pp)
-	}
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed instantiating validator")
-	}
-
-	return &PublicParametersManager{ppm: ppm}, &Validator{backend: validator}, nil
-}
-
-func NewPublicParametersManagerFromPublicParams(s *driver.TokenInstantiatorService, params []byte) (*PublicParametersManager, error) {
-	logger.Debugf("unmarshall public parameters...")
-	pp, err := s.PublicParametersFromBytes(params)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed unmarshalling public parameters")
-	}
-
-	logger.Debugf("instantiate public parameters manager...")
-	ppm, err := s.NewPublicParametersManager(pp)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed instantiating public parameters manager")
-	}
-
-	return &PublicParametersManager{ppm: ppm}, nil
-}
-
-func NewWalletManager(sp ServiceProvider, network string, channel string, namespace string, params []byte) (*WalletManager, error) {
-	s, err := driver.GetTokenDriverService(sp)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get token driver")
-	}
-	logger.Debugf("unmarshall public parameters...")
-	pp, err := s.PublicParametersFromBytes(params)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed unmarshalling public parameters")
-	}
-
-	logger.Debugf("instantiate public parameters manager...")
-	walletService, err := s.NewWalletService(driver.TMSID{Network: network, Channel: channel, Namespace: namespace}, pp)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed instantiating wallet service")
-	}
-
-	return &WalletManager{walletService: walletService}, nil
+func NewWalletManager(walletService driver.WalletService) *WalletManager {
+	return &WalletManager{walletService: walletService}
 }

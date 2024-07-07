@@ -62,7 +62,7 @@ func Print(args *Args) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to read file at [%s]", args.InputFile)
 	}
-	s := driver.NewTokenInstantiatorService(fabtoken.NewInstantiator(), dlog.NewInstantiator())
+	s := driver.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
 	pp, err := s.PublicParametersFromBytes(raw)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal pp from [%s]", args.InputFile)

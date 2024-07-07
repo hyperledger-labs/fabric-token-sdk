@@ -27,11 +27,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func NewInstantiator() driver.NamedInstantiator {
-	return driver.NamedInstantiator{
-		Name:         fabtoken.PublicParameters,
-		Instantiator: &Instatiator{},
-	}
+// Driver contains the non-static logic of the driver (including services)
+type Driver struct {
+	*base
+	metricsProvider  metrics.Provider
+	tracerProvider   trace.TracerProvider
+	configService    *config.Service
+	storageProvider  identity.StorageProvider
+	identityProvider view2.IdentityProvider
+	endpointService  *view.EndpointService
+	networkProvider  *network.Provider
 }
 
 func NewDriver(
@@ -42,11 +47,11 @@ func NewDriver(
 	identityProvider view2.IdentityProvider,
 	endpointService *view.EndpointService,
 	networkProvider *network.Provider,
-) driver.NamedDriver {
-	return driver.NamedDriver{
+) driver.NamedFactory[driver.Driver] {
+	return driver.NamedFactory[driver.Driver]{
 		Name: fabtoken.PublicParameters,
 		Driver: &Driver{
-			Instatiator:      &Instatiator{},
+			base:             &base{},
 			metricsProvider:  metricsProvider,
 			tracerProvider:   tracerProvider,
 			configService:    configService,
@@ -56,27 +61,6 @@ func NewDriver(
 			networkProvider:  networkProvider,
 		},
 	}
-}
-
-type Instatiator struct{}
-
-func (d *Instatiator) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := fabtoken.NewPublicParamsFromBytes(params, fabtoken.PublicParameters)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
-	}
-	return pp, nil
-}
-
-type Driver struct {
-	*Instatiator
-	metricsProvider  metrics.Provider
-	tracerProvider   trace.TracerProvider
-	configService    *config.Service
-	storageProvider  identity.StorageProvider
-	identityProvider view2.IdentityProvider
-	endpointService  *view.EndpointService
-	networkProvider  *network.Provider
 }
 
 func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (driver.TokenManagerService, error) {
@@ -135,7 +119,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 		deserializerManager,
 		false,
 	)
-	role, err := roleFactory.NewWrappedX509(driver.OwnerRole)
+	role, err := roleFactory.NewWrappedX509(driver.OwnerRole, false)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
@@ -219,99 +203,9 @@ func (d *Driver) NewValidator(_ driver.ServiceProvider, tmsID driver.TMSID, para
 
 	metricsProvider := metrics.NewTMSProvider(tmsID, d.metricsProvider)
 	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
-	defaultValidator, _ := d.DefaultValidator(pp)
+	defaultValidator, err := d.DefaultValidator(pp)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create default validator")
+	}
 	return observables.NewObservableValidator(defaultValidator, observables.NewValidator(tracerProvider)), nil
-}
-
-func (d *Instatiator) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", pp.Identifier())
-	deserializer := NewDeserializer()
-	return fabtoken.NewValidator(logger, pp.(*fabtoken.PublicParams), deserializer), nil
-}
-
-func (d *Instatiator) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
-	pp, ok := params.(*fabtoken.PublicParams)
-	if !ok {
-		return nil, errors.Errorf("invalid public parameters type [%T]", params)
-	}
-	return common.NewPublicParamsManagerFromParams[*fabtoken.PublicParams](pp)
-}
-
-func (d *Driver) NewWalletService(_ driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
-	logger := logging.DriverLogger("token-sdk.driver.fabtoken", networkID, channel, namespace)
-
-	tmsConfig, err := d.configService.ConfigurationFor(networkID, channel, namespace)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", networkID, channel, namespace)
-	}
-
-	// Prepare roles
-	roles := identity.NewRoles()
-	deserializerManager := sig.NewMultiplexDeserializer()
-	tmsID := token.TMSID{
-		Network:   networkID,
-		Channel:   channel,
-		Namespace: namespace,
-	}
-	identityDB, err := d.storageProvider.OpenIdentityDB(tmsID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
-	}
-	sigService := sig.NewService(deserializerManager, identityDB)
-	ip := identity.NewProvider(identityDB, sigService, nil, NewEIDRHDeserializer(), deserializerManager)
-	identityConfig, err := config2.NewIdentityConfig(tmsConfig)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create identity config")
-	}
-	roleFactory := msp.NewRoleFactory(
-		tmsID,
-		identityConfig, // config
-		nil,            // FSC identity
-		nil,            // network default identity
-		ip,
-		sigService, // signer service
-		nil,        // endpoint service
-		d.storageProvider,
-		deserializerManager,
-		true,
-	)
-	role, err := roleFactory.NewX509IgnoreRemote(driver.OwnerRole)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create owner role")
-	}
-	roles.Register(driver.OwnerRole, role)
-	role, err = roleFactory.NewX509(driver.IssuerRole)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create issuer role")
-	}
-	roles.Register(driver.IssuerRole, role)
-	role, err = roleFactory.NewX509(driver.AuditorRole)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create auditor role")
-	}
-	roles.Register(driver.AuditorRole, role)
-	role, err = roleFactory.NewX509(driver.CertifierRole)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create certifier role")
-	}
-	roles.Register(driver.CertifierRole, role)
-
-	// Instantiate the token service
-	// wallet service
-	walletDB, err := d.storageProvider.OpenWalletDB(tmsID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get identity storage provider")
-	}
-	ws := common.NewWalletService(
-		logger,
-		ip,
-		NewDeserializer(),
-		fabtoken.NewWalletFactory(logger, ip, nil),
-		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
-		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
-		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
-		nil,
-	)
-
-	return ws, nil
 }

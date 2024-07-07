@@ -20,6 +20,10 @@ type Validator struct {
 	backend driver.Validator
 }
 
+func NewValidator(backend driver.Validator) *Validator {
+	return &Validator{backend: backend}
+}
+
 // UnmarshalActions returns the actions contained in the serialized token request
 func (c *Validator) UnmarshalActions(raw []byte) ([]interface{}, error) {
 	return c.backend.UnmarshalActions(raw)

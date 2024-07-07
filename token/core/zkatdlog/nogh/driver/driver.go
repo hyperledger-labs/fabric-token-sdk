@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/observables"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -30,11 +29,15 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func NewInstantiator() driver.NamedInstantiator {
-	return driver.NamedInstantiator{
-		Name:         crypto.DLogPublicParameters,
-		Instantiator: &Instatiator{},
-	}
+type Driver struct {
+	*base
+	metricsProvider  metrics.Provider
+	tracerProvider   trace.TracerProvider
+	configService    *config.Service
+	storageProvider  identity.StorageProvider
+	identityProvider view2.IdentityProvider
+	endpointService  *view.EndpointService
+	networkProvider  *network.Provider
 }
 
 func NewDriver(
@@ -45,11 +48,11 @@ func NewDriver(
 	identityProvider view2.IdentityProvider,
 	endpointService *view.EndpointService,
 	networkProvider *network.Provider,
-) driver.NamedDriver {
-	return driver.NamedDriver{
+) driver.NamedFactory[driver.Driver] {
+	return driver.NamedFactory[driver.Driver]{
 		Name: crypto.DLogPublicParameters,
 		Driver: &Driver{
-			Instatiator:      &Instatiator{},
+			base:             &base{},
 			metricsProvider:  metricsProvider,
 			tracerProvider:   tracerProvider,
 			configService:    configService,
@@ -59,27 +62,6 @@ func NewDriver(
 			networkProvider:  networkProvider,
 		},
 	}
-}
-
-type Instatiator struct{}
-
-type Driver struct {
-	*Instatiator
-	metricsProvider  metrics.Provider
-	tracerProvider   trace.TracerProvider
-	configService    *config.Service
-	storageProvider  identity.StorageProvider
-	identityProvider view2.IdentityProvider
-	endpointService  *view.EndpointService
-	networkProvider  *network.Provider
-}
-
-func (d *Instatiator) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := crypto.NewPublicParamsFromBytes(params, crypto.DLogPublicParameters)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
-	}
-	return pp, nil
 }
 
 func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (driver.TokenManagerService, error) {
@@ -195,7 +177,8 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	)
 	tokDeserializer := &TokenDeserializer{}
 
-	metricsProvider, tracerProvider := d.newTracerProvider(tmsID)
+	metricsProvider := metrics.NewTMSProvider(tmsID, d.metricsProvider)
+	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
 	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
 	service, err := zkatdlog.NewTokenService(
 		logger,
@@ -239,11 +222,6 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	return service, err
 }
 
-func (d *Driver) newTracerProvider(tmsID driver.TMSID) (metrics.Provider, trace.TracerProvider) {
-	metricsProvider := metrics.NewTMSProvider(tmsID, d.metricsProvider)
-	return metricsProvider, tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
-}
-
 func (d *Driver) NewValidator(_ driver.ServiceProvider, tmsID driver.TMSID, params driver.PublicParameters) (driver.Validator, error) {
 	pp, ok := params.(*crypto.PublicParams)
 	if !ok {
@@ -254,121 +232,7 @@ func (d *Driver) NewValidator(_ driver.ServiceProvider, tmsID driver.TMSID, para
 	if err != nil {
 		return nil, err
 	}
-	_, tracerProvider := d.newTracerProvider(tmsID)
+	metricsProvider := metrics.NewTMSProvider(tmsID, d.metricsProvider)
+	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
 	return observables.NewObservableValidator(defaultValidator, observables.NewValidator(tracerProvider)), nil
-}
-
-func (d *Instatiator) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	deserializer, err := NewDeserializer(pp.(*crypto.PublicParams))
-	if err != nil {
-		return nil, errors.Errorf("failed to create token service deserializer: %v", err)
-	}
-	logger := logging.DriverLoggerFromPP("token-sdk.driver.zkatdlog", pp.Identifier())
-	return validator.New(logger, pp.(*crypto.PublicParams), deserializer), nil
-}
-
-func (d *Instatiator) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
-	pp, ok := params.(*crypto.PublicParams)
-	if !ok {
-		return nil, errors.Errorf("invalid public parameters type [%T]", params)
-	}
-	return common.NewPublicParamsManagerFromParams[*crypto.PublicParams](pp)
-}
-
-func (d *Driver) NewWalletService(_ driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
-	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", networkID, channel, namespace)
-
-	pp, ok := params.(*crypto.PublicParams)
-	if !ok {
-		return nil, errors.Errorf("invalid public parameters type [%T]", params)
-	}
-
-	tmsConfig, err := d.configService.ConfigurationFor(networkID, channel, namespace)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", networkID, channel, namespace)
-	}
-
-	// Prepare roles
-	roles := identity.NewRoles()
-	deserializerManager := sig.NewMultiplexDeserializer()
-	tmsID := token.TMSID{
-		Network:   networkID,
-		Channel:   channel,
-		Namespace: namespace,
-	}
-	identityDB, err := d.storageProvider.OpenIdentityDB(tmsID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
-	}
-	sigService := sig.NewService(deserializerManager, identityDB)
-	ip := identity.NewProvider(identityDB, sigService, nil, NewEIDRHDeserializer(), deserializerManager)
-	// public parameters manager
-	ppm, err := common.NewPublicParamsManagerFromParams[*crypto.PublicParams](pp)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to load public parameters")
-	}
-	identityConfig, err := config2.NewIdentityConfig(tmsConfig)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create identity config")
-	}
-	roleFactory := msp.NewRoleFactory(
-		tmsID,
-		identityConfig, // config
-		nil,            // FSC identity
-		nil,            // network default identity
-		ip,
-		sigService, // signer service
-		nil,        // endpoint service
-		d.storageProvider,
-		deserializerManager,
-		true,
-	)
-	role, err := roleFactory.NewIdemix(
-		driver.OwnerRole,
-		identityConfig.DefaultCacheSize(),
-		ppm.PublicParams().IdemixIssuerPK,
-		ppm.PublicParams().IdemixCurveID,
-	)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create owner role")
-	}
-	roles.Register(driver.OwnerRole, role)
-	role, err = roleFactory.NewX509(driver.IssuerRole)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create issuer role")
-	}
-	roles.Register(driver.IssuerRole, role)
-	role, err = roleFactory.NewX509(driver.AuditorRole)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create auditor role")
-	}
-	roles.Register(driver.AuditorRole, role)
-	role, err = roleFactory.NewX509(driver.CertifierRole)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create certifier role")
-	}
-	roles.Register(driver.CertifierRole, role)
-
-	// Instantiate the token service
-	walletDB, err := d.storageProvider.OpenWalletDB(tmsID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get identity storage provider")
-	}
-	deserializer, err := NewDeserializer(ppm.PublicParams())
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to instantiate the deserializer")
-	}
-	// role service
-	ws := common.NewWalletService(
-		logger,
-		ip,
-		deserializer,
-		zkatdlog.NewWalletFactory(logger, ip, nil, identityConfig, deserializer),
-		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
-		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
-		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
-		nil,
-	)
-
-	return ws, nil
 }

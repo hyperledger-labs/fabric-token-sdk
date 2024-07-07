@@ -89,7 +89,7 @@ func NewDBDrivers() DBDriverResult {
 
 func newTokenDriverService(in struct {
 	dig.In
-	Drivers []driver.NamedDriver `group:"token-drivers"`
+	Drivers []driver.NamedFactory[driver.Driver] `group:"token-drivers"`
 }) *driver.TokenDriverService {
 	return driver.NewTokenDriverService(in.Drivers)
 }
