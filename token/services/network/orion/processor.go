@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -41,7 +43,7 @@ func NewTokenRWSetProcessor(network string, ns string, GetTokens GetTokensFunc, 
 	}
 }
 
-func (r *RWSetProcessor) Process(req orion.Request, tx orion.ProcessTransaction, rws *orion.RWSet, ns string) error {
+func (r *RWSetProcessor) Process(ctx context.Context, req orion.Request, tx orion.ProcessTransaction, rws *orion.RWSet, ns string) error {
 	found := false
 	for _, ans := range r.nss {
 		if ns == ans {
@@ -60,10 +62,10 @@ func (r *RWSetProcessor) Process(req orion.Request, tx orion.ProcessTransaction,
 		return nil
 	}
 
-	return r.tokenRequest(tx, ns)
+	return r.tokenRequest(ctx, tx, ns)
 }
 
-func (r *RWSetProcessor) tokenRequest(tx orion.ProcessTransaction, ns string) error {
+func (r *RWSetProcessor) tokenRequest(ctx context.Context, tx orion.ProcessTransaction, ns string) error {
 	txID := tx.ID()
 
 	tms, err := r.GetTMSProvider().GetManagementService(
@@ -104,7 +106,7 @@ func (r *RWSetProcessor) tokenRequest(tx orion.ProcessTransaction, ns string) er
 	if err != nil {
 		return err
 	}
-	return tokens.AppendTransaction(&Transaction{
+	return tokens.AppendTransaction(ctx, &Transaction{
 		id:        txID,
 		network:   tms.Network(),
 		channel:   tms.Channel(),

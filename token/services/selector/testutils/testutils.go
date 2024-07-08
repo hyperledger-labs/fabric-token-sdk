@@ -8,6 +8,7 @@ package testutils
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"time"
 
@@ -124,7 +125,7 @@ func (q *MockQueryService) UnspentTokensIterator() (*token.UnspentTokensIterator
 	return &token.UnspentTokensIterator{UnspentTokensIterator: &MockIterator{q, q.allKeys, 0}}, nil
 }
 
-func (q *MockQueryService) UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error) {
+func (q *MockQueryService) UnspentTokensIteratorBy(_ context.Context, id, _ string) (driver.UnspentTokensIterator, error) {
 	return &token.UnspentTokensIterator{UnspentTokensIterator: &MockIterator{q, q.cache[id], 0}}, nil
 }
 

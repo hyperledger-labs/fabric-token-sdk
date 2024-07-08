@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -65,10 +67,10 @@ type OwnerWallet interface {
 	GetTokenMetadataAuditInfo(id Identity) ([]byte, error)
 
 	// ListTokens returns the list of unspent tokens owned by this wallet filtered using the passed options.
-	ListTokens(opts *ListTokensOptions) (*token.UnspentTokens, error)
+	ListTokens(ctx context.Context, opts *ListTokensOptions) (*token.UnspentTokens, error)
 
 	// ListTokensIterator returns an iterator of unspent tokens owned by this wallet filtered using the passed options.
-	ListTokensIterator(opts *ListTokensOptions) (UnspentTokensIterator, error)
+	ListTokensIterator(ctx context.Context, opts *ListTokensOptions) (UnspentTokensIterator, error)
 
 	// EnrollmentID returns the enrollment ID of the owner wallet
 	EnrollmentID() string

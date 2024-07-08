@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -60,7 +62,7 @@ type QueryEngine interface {
 	UnspentTokensIterator() (UnspentTokensIterator, error)
 	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 	// The token type can be empty. In that case, tokens of any type are returned.
-	UnspentTokensIteratorBy(id, typ string) (UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (UnspentTokensIterator, error)
 	// ListUnspentTokens returns the list of unspent tokens
 	ListUnspentTokens() (*token.UnspentTokens, error)
 	// ListAuditTokens returns the audited tokens associated to the passed ids
@@ -76,7 +78,7 @@ type QueryEngine interface {
 	// For each id, the callback is invoked to unmarshal the output
 	GetTokenOutputs(ids []*token.ID, callback QueryCallbackFunc) error
 	// GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
-	GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error)
+	GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([]string, [][]byte, [][]byte, error)
 	// GetTokens returns the list of tokens with their respective vault keys
 	GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error)
 	// WhoDeletedTokens returns info about who deleted the passed tokens.

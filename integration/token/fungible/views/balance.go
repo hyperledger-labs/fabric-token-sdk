@@ -42,7 +42,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	}
 
 	span.AddEvent("list_unspent_tokens")
-	unspentTokens, err := wallet.ListUnspentTokens(token.WithType(b.Type))
+	unspentTokens, err := wallet.ListUnspentTokens(context.Context(), token.WithType(b.Type))
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -44,8 +46,8 @@ func (a *TxOwner) TransactionInfo(txID string) (*TransactionInfo, error) {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *TxOwner) SetStatus(txID string, status TxStatus, message string) error {
-	return a.owner.SetStatus(txID, status, message)
+func (a *TxOwner) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
+	return a.owner.SetStatus(ctx, txID, status, message)
 }
 
 // GetStatus return the status of the given transaction id.

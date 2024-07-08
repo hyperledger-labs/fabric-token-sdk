@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
+	"context"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -92,7 +94,7 @@ var _ = Describe("Sender", func() {
 		When("transfer is computed correctly", func() {
 			It("succeeds", func() {
 				var err error
-				transfer, _, err = sender.GenerateZKTransfer(outvalues, owners)
+				transfer, _, err = sender.GenerateZKTransfer(context.TODO(), outvalues, owners)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(transfer).NotTo(BeNil())
 				raw, err := transfer.Serialize()
@@ -110,7 +112,7 @@ var _ = Describe("Sender", func() {
 			})
 			It("no signature is returned", func() {
 				var err error
-				transfer, _, err = sender.GenerateZKTransfer(outvalues, owners)
+				transfer, _, err = sender.GenerateZKTransfer(context.TODO(), outvalues, owners)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(transfer).NotTo(BeNil())
 				raw, err := transfer.Serialize()

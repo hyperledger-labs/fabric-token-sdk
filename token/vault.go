@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -59,8 +60,8 @@ func (q *QueryEngine) UnspentTokensIterator() (*UnspentTokensIterator, error) {
 }
 
 // UnspentTokensIteratorBy is an iterator over all unspent tokens in this vault owned by passed wallet id and whose token type matches the passed token type
-func (q *QueryEngine) UnspentTokensIteratorBy(walletID, tokenType string) (driver.UnspentTokensIterator, error) {
-	it, err := q.qe.UnspentTokensIteratorBy(walletID, tokenType)
+func (q *QueryEngine) UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error) {
+	it, err := q.qe.UnspentTokensIteratorBy(ctx, id, tokenType)
 	if err != nil {
 		return nil, err
 	}

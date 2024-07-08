@@ -43,7 +43,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(wallet, "failed to get wallet [%s]", b.Wallet)
 
 	// owned
-	unspentTokens, err := wallet.ListUnspentTokensIterator(token.WithType(b.Type))
+	unspentTokens, err := wallet.ListUnspentTokensIterator(context.Context(), token.WithType(b.Type))
 	assert.NoError(err, "failed to get unspent tokens")
 	precision := tms.PublicParametersManager().PublicParameters().Precision()
 	ownedSum, err := unspentTokens.Sum(precision)

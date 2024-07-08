@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -16,7 +18,7 @@ import (
 
 type TokenVault interface {
 	IsPending(id *token.ID) (bool, error)
-	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
 }
 

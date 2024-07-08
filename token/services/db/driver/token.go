@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -106,11 +107,11 @@ type CertificationDB interface {
 
 type TokenDBTransaction interface {
 	// GetToken returns the owned tokens and their identifier keys for the passed ids.
-	GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error)
+	GetToken(ctx context.Context, txID string, index uint64, includeDeleted bool) (*token.Token, []string, error)
 	// Delete marks the passed token as deleted by a given identifier (idempotent)
-	Delete(txID string, index uint64, deletedBy string) error
+	Delete(ctx context.Context, txID string, index uint64, deletedBy string) error
 	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
-	StoreToken(tr TokenRecord, owners []string) error
+	StoreToken(ctx context.Context, tr TokenRecord, owners []string) error
 	// Commit commits this transaction
 	Commit() error
 	// Rollback rollbacks this transaction
@@ -127,7 +128,7 @@ type TokenDB interface {
 	// UnspentTokensIterator returns an iterator over all owned tokens
 	UnspentTokensIterator() (driver.UnspentTokensIterator, error)
 	// UnspentTokensIteratorBy returns an iterator over all tokens owned by the passed identifier of a given type
-	UnspentTokensIteratorBy(ownerEID, typ string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
 	// ListUnspentTokensBy returns the list of all tokens owned by the passed identifier of a given type
 	ListUnspentTokensBy(ownerEID, typ string) (*token.UnspentTokens, error)
 	// ListUnspentTokens returns the list of all owned tokens
@@ -144,7 +145,7 @@ type TokenDB interface {
 	GetTokenInfos(ids []*token.ID) ([][]byte, error)
 	// GetTokenInfoAndOutputs returns both value and metadata of the tokens for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
-	GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error)
+	GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([]string, [][]byte, [][]byte, error)
 	// GetAllTokenInfos returns the token metadata for the passed ids
 	GetAllTokenInfos(ids []*token.ID) ([][]byte, error)
 	// GetTokens returns the owned tokens and their identifier keys for the passed ids.
@@ -152,13 +153,13 @@ type TokenDB interface {
 	// WhoDeletedTokens for each id, the function return if it was deleted and by who as per the Delete function
 	WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
 	// TransactionExists returns true if a token with that transaction id exists in the db
-	TransactionExists(id string) (bool, error)
+	TransactionExists(ctx context.Context, id string) (bool, error)
 	// StorePublicParams stores the public parameters
 	StorePublicParams(raw []byte) error
 	// PublicParams returns the stored public parameters
 	PublicParams() ([]byte, error)
 	// NewTokenDBTransaction returns a new Transaction to commit atomically multiple operations
-	NewTokenDBTransaction() (TokenDBTransaction, error)
+	NewTokenDBTransaction(ctx context.Context) (TokenDBTransaction, error)
 	// QueryTokenDetails provides detailed information about tokens
 	QueryTokenDetails(params QueryTokenDetailsParams) ([]TokenDetails, error)
 }

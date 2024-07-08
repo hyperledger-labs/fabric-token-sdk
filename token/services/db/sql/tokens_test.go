@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"sync"
@@ -90,11 +91,11 @@ var TokensCases = []struct {
 }
 
 func TTransaction(t *testing.T, db *TokenDB) {
-	tx, err := db.NewTokenDBTransaction()
+	tx, err := db.NewTokenDBTransaction(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = tx.StoreToken(driver.TokenRecord{
+	err = tx.StoreToken(context.TODO(), driver.TokenRecord{
 		TxID:           "tx1",
 		Index:          0,
 		IssuerRaw:      []byte{},
@@ -113,43 +114,43 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	assert.NoError(t, err)
 	assert.NoError(t, tx.Commit())
 
-	tx, err = db.NewTokenDBTransaction()
+	tx, err = db.NewTokenDBTransaction(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tok, owners, err := tx.GetToken("tx1", 0, false)
+	tok, owners, err := tx.GetToken(context.TODO(), "tx1", 0, false)
 	assert.NoError(t, err, "get token")
 	assert.Equal(t, "0x02", tok.Quantity)
 	assert.Equal(t, []string{"alice"}, owners)
 
-	assert.NoError(t, tx.Delete("tx1", 0, "me"))
-	tok, owners, err = tx.GetToken("tx1", 0, false)
+	assert.NoError(t, tx.Delete(context.TODO(), "tx1", 0, "me"))
+	tok, owners, err = tx.GetToken(context.TODO(), "tx1", 0, false)
 	assert.NoError(t, err)
 	assert.Nil(t, tok)
 	assert.Len(t, owners, 0)
 
-	tok, _, err = tx.GetToken("tx1", 0, true) // include deleted
+	tok, _, err = tx.GetToken(context.TODO(), "tx1", 0, true) // include deleted
 	assert.NoError(t, err)
 	assert.Equal(t, "0x02", tok.Quantity)
 	assert.NoError(t, tx.Rollback())
 
-	tx, err = db.NewTokenDBTransaction()
+	tx, err = db.NewTokenDBTransaction(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tok, owners, err = tx.GetToken("tx1", 0, false)
+	tok, owners, err = tx.GetToken(context.TODO(), "tx1", 0, false)
 	assert.NoError(t, err)
 	assert.NotNil(t, tok)
 	assert.Equal(t, "0x02", tok.Quantity)
 	assert.Equal(t, []string{"alice"}, owners)
-	assert.NoError(t, tx.Delete("tx1", 0, "me"))
+	assert.NoError(t, tx.Delete(context.TODO(), "tx1", 0, "me"))
 	assert.NoError(t, tx.Commit())
 
-	tx, err = db.NewTokenDBTransaction()
+	tx, err = db.NewTokenDBTransaction(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tok, owners, err = tx.GetToken("tx1", 0, false)
+	tok, owners, err = tx.GetToken(context.TODO(), "tx1", 0, false)
 	assert.NoError(t, err)
 	assert.Nil(t, tok)
 	assert.Equal(t, []string{}, owners)
@@ -260,7 +261,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 }
 
 func getTokensBy(t *testing.T, db *TokenDB, ownerEID, typ string) []*token.UnspentToken {
-	it, err := db.UnspentTokensIteratorBy(ownerEID, typ)
+	it, err := db.UnspentTokensIteratorBy(nil, ownerEID, typ)
 	assert.NoError(t, err)
 	defer it.Close()
 
@@ -598,7 +599,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 	assert.Equal(t, "tx101", string(infos[2]))
 
 	// infos and outputs
-	keys, toks, infos, err := db.GetTokenInfoAndOutputs(ids)
+	keys, toks, infos, err := db.GetTokenInfoAndOutputs(context.TODO(), ids)
 	assert.NoError(t, err)
 	assert.Len(t, infos, 3)
 	assert.Equal(t, "tx102", string(infos[0]))
@@ -763,7 +764,7 @@ func TCertification(t *testing.T, db *TokenDB) {
 }
 
 func TQueryTokenDetails(t *testing.T, db *TokenDB) {
-	tx, err := db.NewTokenDBTransaction()
+	tx, err := db.NewTokenDBTransaction(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -816,15 +817,15 @@ func TQueryTokenDetails(t *testing.T, db *TokenDB) {
 		Issuer:         false,
 	}
 
-	err = tx.StoreToken(tx1, []string{"alice"})
+	err = tx.StoreToken(context.TODO(), tx1, []string{"alice"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = tx.StoreToken(tx2, []string{"alice"})
+	err = tx.StoreToken(context.TODO(), tx2, []string{"alice"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = tx.StoreToken(tx21, []string{"bob"})
+	err = tx.StoreToken(context.TODO(), tx21, []string{"bob"})
 	if err != nil {
 		t.Fatal(err)
 	}
