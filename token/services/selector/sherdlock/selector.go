@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
@@ -162,7 +163,7 @@ type fetcher struct {
 }
 
 func (f *fetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.UnspentToken], error) {
-	it, err := f.TokenDB.UnspentTokensIteratorBy(walletID, currency)
+	it, err := f.TokenDB.UnspentTokensIteratorBy(context.TODO(), walletID, currency)
 	if err != nil {
 		return nil, err
 	}

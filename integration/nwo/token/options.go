@@ -40,7 +40,7 @@ func WithIssuerIdentityWithHSM(label string) fsc.Option {
 	}
 }
 
-func WithPostgresPersistence(config *sql.PostgresConfig) fsc.Option {
+func WithPostgresPersistence(config sql.DataSourceProvider) fsc.Option {
 	return func(o *fsc.Options) error {
 		if config != nil {
 			o.Put("token.persistence.sql", config.DataSource())

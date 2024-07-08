@@ -7,13 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package db
 
 import (
+	"context"
 	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type StatusEvent struct {
+	Ctx               context.Context
 	TxID              string
 	ValidationCode    driver.TxStatus
 	ValidationMessage string
@@ -62,6 +65,9 @@ func (c *StatusSupport) DeleteStatusListener(txID string, ch chan StatusEvent) {
 }
 
 func (c *StatusSupport) Notify(event StatusEvent) {
+	span := trace.SpanFromContext(event.Ctx)
+	span.AddEvent("start_notify")
+	defer span.AddEvent("end_notify")
 	c.mutex.RLock()
 	listeners := c.listeners[event.TxID]
 	if len(listeners) == 0 {

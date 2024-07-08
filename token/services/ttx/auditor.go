@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"context"
 	"encoding/base64"
 	"time"
 
@@ -78,8 +79,8 @@ func (a *TxAuditor) NewHoldingsFilter() *auditdb.HoldingsFilter {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *TxAuditor) SetStatus(txID string, status TxStatus, message string) error {
-	return a.auditDB.SetStatus(txID, status, message)
+func (a *TxAuditor) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
+	return a.auditDB.SetStatus(ctx, txID, status, message)
 }
 
 func (a *TxAuditor) GetTokenRequest(txID string) ([]byte, error) {

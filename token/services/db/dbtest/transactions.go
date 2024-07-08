@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -115,7 +116,7 @@ func TStatus(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Len(t, mvs, 1)
 	assert.Equal(t, driver.Pending, mvs[0].Status, "movement status should be pending")
 
-	assert.NoError(t, db.SetStatus("tx1", driver.Confirmed, "message"))
+	assert.NoError(t, db.SetStatus(context.TODO(), "tx1", driver.Confirmed, "message"))
 	s, mess, err = db.GetStatus("tx1")
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Confirmed, s, "status should be changed to confirmed")
@@ -213,13 +214,13 @@ func TMovements(t *testing.T, db driver.TokenTransactionDB) {
 	assert.NoError(t, err)
 	assert.Len(t, records, 1)
 
-	assert.NoError(t, db.SetStatus("2", driver.Confirmed, "message"))
+	assert.NoError(t, db.SetStatus(context.TODO(), "2", driver.Confirmed, "message"))
 	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Pending}, SearchDirection: driver.FromLast, MovementDirection: driver.Received, NumRecords: 3})
 	assert.NoError(t, err)
 	assert.Len(t, records, 2)
 
 	// setting same status twice should not change the results
-	assert.NoError(t, db.SetStatus("2", driver.Confirmed, ""))
+	assert.NoError(t, db.SetStatus(context.TODO(), "2", driver.Confirmed, ""))
 
 	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Confirmed}})
 	assert.NoError(t, err)
@@ -301,8 +302,8 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Empty(t, tr)
 
 	// update status
-	assert.NoError(t, db.SetStatus("tx2", driver.Confirmed, "pineapple"))
-	assert.NoError(t, db.SetStatus("tx3", driver.Confirmed, ""))
+	assert.NoError(t, db.SetStatus(context.TODO(), "tx2", driver.Confirmed, "pineapple"))
+	assert.NoError(t, db.SetStatus(context.TODO(), "tx3", driver.Confirmed, ""))
 
 	status, message, err := db.GetStatus("tx2")
 	assert.NoError(t, err)
@@ -375,7 +376,7 @@ func TTokenRequest(t *testing.T, db driver.TokenTransactionDB) {
 	err = w.AddTokenRequest("id2", tr2, map[string][]byte{})
 	assert.NoError(t, err)
 	assert.NoError(t, w.Commit())
-	assert.NoError(t, db.SetStatus("id2", driver.Confirmed, ""))
+	assert.NoError(t, db.SetStatus(context.TODO(), "id2", driver.Confirmed, ""))
 
 	trq, err := db.GetTokenRequest("id1")
 	assert.NoError(t, err)
@@ -761,7 +762,7 @@ func TTransactionQueries(t *testing.T, db driver.TokenTransactionDB) {
 	assert.NoError(t, w.Commit())
 	for _, r := range tr {
 		if r.Status != driver.Pending {
-			assert.NoError(t, db.SetStatus(r.TxID, r.Status, ""))
+			assert.NoError(t, db.SetStatus(context.TODO(), r.TxID, r.Status, ""))
 		}
 	}
 
@@ -831,7 +832,7 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
 	assert.NoError(t, w.Commit(), "Commit")
 	for _, e := range exp {
 		if e.Status != driver.Pending {
-			assert.NoError(t, db.SetStatus(e.TxID, e.Status, ""))
+			assert.NoError(t, db.SetStatus(context.TODO(), e.TxID, e.Status, ""))
 		}
 	}
 	all := getValidationRecords(t, db, driver.QueryValidationRecordsParams{})

@@ -10,12 +10,14 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type DBProvider interface {
@@ -36,6 +38,7 @@ type Manager struct {
 	tmsProvider     TMSProvider
 	ttxDBProvider   DBProvider
 	tokensProvider  TokensProvider
+	tracerProvider  trace.TracerProvider
 
 	mutex sync.Mutex
 	dbs   map[string]*DB
@@ -47,12 +50,14 @@ func NewManager(
 	tmsProvider TMSProvider,
 	ttxDBProvider DBProvider,
 	tokensBProvider TokensProvider,
+	tracerProvider trace.TracerProvider,
 ) *Manager {
 	return &Manager{
 		networkProvider: np,
 		tmsProvider:     tmsProvider,
 		ttxDBProvider:   ttxDBProvider,
 		tokensProvider:  tokensBProvider,
+		tracerProvider:  tracerProvider,
 		dbs:             map[string]*DB{},
 	}
 }
@@ -91,6 +96,10 @@ func (m *Manager) newDB(tmsID token.TMSID) (*DB, error) {
 		tmsProvider:     m.tmsProvider,
 		ttxDB:           ttxDB,
 		tokenDB:         tokenDB,
+		finalityTracer: m.tracerProvider.Tracer("db", tracing.WithMetricsOpts(tracing.MetricsOpts{
+			Namespace:  "tokensdk",
+			LabelNames: []tracing.LabelName{txIdLabel},
+		})),
 	}
 	_, err = m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
@@ -125,7 +134,7 @@ func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
 			break
 		}
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, common.NewFinalityListener(logger, db.tmsProvider, db.tmsID, db.ttxDB, db.tokenDB)); err != nil {
+		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, common.NewFinalityListener(logger, db.tmsProvider, db.tmsID, db.ttxDB, db.tokenDB, db.finalityTracer)); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tmsID.Network, tmsID.Channel, record.TxID)
 		}
 		counter++

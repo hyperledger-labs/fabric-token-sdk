@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -54,7 +55,7 @@ type TransactionDB interface {
 
 	// SetStatus sets the status of a TokenRequest
 	// (and with that, the associated ValidationRecord, Movement and Transaction)
-	SetStatus(txID string, status TxStatus, message string) error
+	SetStatus(ctx context.Context, txID string, status TxStatus, message string) error
 
 	// GetStatus returns the status of a given transaction.
 	// It returns an error if the transaction is not found

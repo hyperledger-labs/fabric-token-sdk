@@ -7,14 +7,21 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"context"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
+
+const txIdLabel tracing.LabelName = "tx_id"
 
 type QueryTransactionsParams = ttxdb.QueryTransactionsParams
 
@@ -29,6 +36,7 @@ type DB struct {
 	ttxDB           *ttxdb.DB
 	tokenDB         *tokens.Tokens
 	tmsProvider     TMSProvider
+	finalityTracer  trace.Tracer
 }
 
 // Append adds the passed transaction to the database
@@ -45,7 +53,7 @@ func (a *DB) Append(tx *Transaction) error {
 	}
 	logger.Debugf("register tx status listener for tx [%s:%s] at network", tx.ID(), tx.Network())
 
-	if err := net.AddFinalityListener(tx.Namespace(), tx.ID(), common.NewFinalityListener(logger, a.tmsProvider, a.tmsID, a.ttxDB, a.tokenDB)); err != nil {
+	if err := net.AddFinalityListener(tx.Namespace(), tx.ID(), common.NewFinalityListener(logger, a.tmsProvider, a.tmsID, a.ttxDB, a.tokenDB, a.finalityTracer)); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("append done for request %s", tx.ID())
@@ -53,8 +61,8 @@ func (a *DB) Append(tx *Transaction) error {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *DB) SetStatus(txID string, status TxStatus, statusMessage string) error {
-	return a.ttxDB.SetStatus(txID, status, statusMessage)
+func (a *DB) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
+	return a.ttxDB.SetStatus(ctx, txID, status, message)
 }
 
 // GetStatus return the status of the given transaction id.
