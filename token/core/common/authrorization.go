@@ -27,10 +27,18 @@ type Authorization interface {
 type WalletBasedAuthorization struct {
 	PublicParameters driver.PublicParameters
 	WalletService    driver.WalletService
+	amIAnAuditor     bool
 }
 
 func NewTMSAuthorization(publicParameters driver.PublicParameters, walletService driver.WalletService) *WalletBasedAuthorization {
-	return &WalletBasedAuthorization{PublicParameters: publicParameters, WalletService: walletService}
+	amIAnAuditor := false
+	for _, identity := range publicParameters.Auditors() {
+		if _, err := walletService.AuditorWallet(identity); err == nil {
+			amIAnAuditor = true
+			break
+		}
+	}
+	return &WalletBasedAuthorization{PublicParameters: publicParameters, WalletService: walletService, amIAnAuditor: amIAnAuditor}
 }
 
 // IsMine returns true if the passed token is owned by an owner wallet in the passed TMS
@@ -45,13 +53,7 @@ func (w *WalletBasedAuthorization) IsMine(tok *token2.Token) ([]string, bool) {
 // AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 // defined in the public parameters of the passed TMS.
 func (w *WalletBasedAuthorization) AmIAnAuditor() bool {
-	for _, identity := range w.PublicParameters.Auditors() {
-		if _, err := w.WalletService.AuditorWallet(identity); err == nil {
-			return true
-			break
-		}
-	}
-	return false
+	return w.amIAnAuditor
 }
 
 func (w *WalletBasedAuthorization) Issued(issuer token.Identity, tok *token2.Token) bool {
