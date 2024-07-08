@@ -9,6 +9,7 @@ package auditor
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -17,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var logger = logging.MustGetLogger("token-sdk.auditor")
@@ -32,6 +34,8 @@ const (
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
 	Deleted = auditdb.Deleted
 )
+
+const txIdLabel tracing.LabelName = "tx_id"
 
 var TxStatusMessage = auditdb.TxStatusMessage
 
@@ -50,11 +54,12 @@ type NetworkProvider interface {
 
 // Auditor is the interface for the auditor service
 type Auditor struct {
-	np          NetworkProvider
-	tmsID       token.TMSID
-	auditDB     *auditdb.DB
-	tokenDB     *tokens.Tokens
-	tmsProvider TokenManagementServiceProvider
+	np             NetworkProvider
+	tmsID          token.TMSID
+	auditDB        *auditdb.DB
+	tokenDB        *tokens.Tokens
+	tmsProvider    TokenManagementServiceProvider
+	finalityTracer trace.Tracer
 }
 
 // Validate validates the passed token request
@@ -101,7 +106,7 @@ func (a *Auditor) Append(tx Transaction) error {
 		return errors.WithMessagef(err, "failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("register tx status listener for tx [%s] at network [%s]", tx.ID(), tx.Network())
-	var r driver.FinalityListener = common.NewFinalityListener(logger, a.tmsProvider, a.tmsID, a.auditDB, a.tokenDB)
+	var r driver.FinalityListener = common.NewFinalityListener(logger, a.tmsProvider, a.tmsID, a.auditDB, a.tokenDB, a.finalityTracer)
 	if err := net.AddFinalityListener(tx.Namespace(), tx.ID(), r); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}

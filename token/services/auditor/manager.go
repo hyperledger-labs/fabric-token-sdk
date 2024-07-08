@@ -10,12 +10,14 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type TokenManagementServiceProvider interface {
@@ -36,6 +38,7 @@ type Manager struct {
 	auditDBProvider AuditDBProvider
 	tokenDBProvider TokenDBProvider
 	tmsProvider     TokenManagementServiceProvider
+	tracerProvider  trace.TracerProvider
 
 	mutex    sync.Mutex
 	auditors map[string]*Auditor
@@ -47,12 +50,14 @@ func NewManager(
 	auditDBProvider AuditDBProvider,
 	tokenDBProvider TokenDBProvider,
 	tmsProvider TokenManagementServiceProvider,
+	tracerProvider trace.TracerProvider,
 ) *Manager {
 	return &Manager{
 		networkProvider: networkProvider,
 		auditDBProvider: auditDBProvider,
 		tokenDBProvider: tokenDBProvider,
 		tmsProvider:     tmsProvider,
+		tracerProvider:  tracerProvider,
 		auditors:        map[string]*Auditor{},
 	}
 }
@@ -108,6 +113,10 @@ func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
 		auditDB:     auditDB,
 		tokenDB:     tokenDB,
 		tmsProvider: cm.tmsProvider,
+		finalityTracer: cm.tracerProvider.Tracer("auditor", tracing.WithMetricsOpts(tracing.MetricsOpts{
+			Namespace:  "tokensdk",
+			LabelNames: []tracing.LabelName{txIdLabel},
+		})),
 	}
 	return auditor, nil
 }
@@ -140,7 +149,7 @@ func (cm *Manager) restore(tmsID token.TMSID) error {
 			break
 		}
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-		var r driver.FinalityListener = common.NewFinalityListener(logger, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB)
+		var r driver.FinalityListener = common.NewFinalityListener(logger, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB, auditor.finalityTracer)
 		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, r); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s] for [%s]", tmsID, record.TokenRequest)
 		}

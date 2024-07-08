@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type transactionDB interface {
@@ -36,27 +38,31 @@ type FinalityListener struct {
 	tmsID       token.TMSID
 	ttxDB       transactionDB
 	tokens      *tokens.Tokens
+	tracer      trace.Tracer
 	retryRunner db.RetryRunner
 }
 
-func NewFinalityListener(logger logging.Logger, tmsProvider TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Tokens) *FinalityListener {
+func NewFinalityListener(logger logging.Logger, tmsProvider TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Tokens, tracer trace.Tracer) *FinalityListener {
 	return &FinalityListener{
 		logger:      logger,
 		tmsProvider: tmsProvider,
 		tmsID:       tmsID,
 		ttxDB:       ttxDB,
 		tokens:      tokens,
+		tracer:      tracer,
 		retryRunner: db.NewRetryRunner(db.Infinitely, time.Second, true),
 	}
 }
 
-func (t *FinalityListener) OnStatus(txID string, status int, message string, tokenRequestHash []byte) {
-	if err := t.retryRunner.Run(func() error { return t.runOnStatus(txID, status, message, tokenRequestHash) }); err != nil {
+func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
+	if err := t.retryRunner.Run(func() error { return t.runOnStatus(ctx, txID, status, message, tokenRequestHash) }); err != nil {
 		t.logger.Errorf("Listener failed")
 	}
 }
 
-func (t *FinalityListener) runOnStatus(txID string, status int, message string, tokenRequestHash []byte) error {
+func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) error {
+	_, span := t.tracer.Start(ctx, "on_status")
+	defer span.End()
 	t.logger.Debugf("tx status changed for tx [%s]: [%s]", txID, status)
 	var txStatus driver.TxStatus
 	switch status {
@@ -67,11 +73,13 @@ func (t *FinalityListener) runOnStatus(txID string, status int, message string, 
 		tr := t.tokens.GetCachedTokenRequest(txID)
 		if tr == nil {
 			// load it
+			span.AddEvent("get_token_request")
 			tokenRequestRaw, err := t.ttxDB.GetTokenRequest(txID)
 			if err != nil {
 				t.logger.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
 				return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
 			}
+			span.AddEvent("read_token_request")
 			tms, err := t.tmsProvider.GetManagementService(token.WithTMSID(t.tmsID))
 			if err != nil {
 				return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
@@ -81,12 +89,14 @@ func (t *FinalityListener) runOnStatus(txID string, status int, message string, 
 				return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
 			}
 		}
+		span.AddEvent("check_token_request")
 		if err := t.checkTokenRequest(txID, tr, tokenRequestHash); err != nil {
 			t.logger.Errorf("tx [%d], %s", txID, err)
 			txStatus = driver.Deleted
 			message = err.Error()
 		} else {
 			t.logger.Debugf("append token request for [%s]", txID)
+			span.AddEvent("append_token_request")
 			if err := t.tokens.Append(t.tmsID, txID, tr); err != nil {
 				// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
 				t.logger.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
@@ -97,6 +107,7 @@ func (t *FinalityListener) runOnStatus(txID string, status int, message string, 
 	case network.Invalid:
 		txStatus = driver.Deleted
 	}
+	span.AddEvent("set_tx_status")
 	if err := t.ttxDB.SetStatus(txID, txStatus, message); err != nil {
 		t.logger.Errorf("<message> [%s]: [%s]", txID, err)
 		return fmt.Errorf("<message> [%s]: [%s]", txID, err)
