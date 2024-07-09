@@ -44,6 +44,7 @@ type Network struct {
 	vaultLazyCache      utils.LazyProvider[string, driver.Vault]
 	tokenVaultLazyCache utils.LazyProvider[string, driver.TokenVault]
 	subscribers         *events.Subscribers
+	dbManager           *DBManager
 }
 
 func NewNetwork(
@@ -54,6 +55,7 @@ func NewNetwork(
 	newVault NewVaultFunc,
 	nsFinder common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
+	dbManager *DBManager,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -70,7 +72,8 @@ func NewNetwork(
 		tmsProvider:         tmsProvider,
 		vaultLazyCache:      utils.NewLazyProvider(loader.loadVault),
 		tokenVaultLazyCache: utils.NewLazyProvider(loader.loadTokenVault),
-		subscribers:         events.NewSubscribers(), ledger: &ledger{network: n.Name(), viewManager: viewManager},
+		subscribers:         events.NewSubscribers(), ledger: &ledger{network: n.Name(), viewManager: viewManager, dbManager: dbManager},
+		dbManager: dbManager,
 	}
 }
 
@@ -256,6 +259,7 @@ func (n *Network) AddFinalityListener(namespace string, txID string, listener dr
 		namespace:   namespace,
 		retryRunner: db.NewRetryRunner(3, 100*time.Millisecond, true),
 		viewManager: n.viewManager,
+		dbManager:   n.dbManager,
 	}
 	n.subscribers.Set(txID, listener, wrapper)
 	return n.n.Committer().AddFinalityListener(txID, wrapper)
@@ -337,10 +341,11 @@ func (v *tokenVault) DeleteTokens(ids ...*token.ID) error {
 type ledger struct {
 	network     string
 	viewManager *view2.Manager
+	dbManager   *DBManager
 }
 
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
-	boxed, err := l.viewManager.InitiateView(NewRequestTxStatusView(l.network, "", id), context.TODO())
+	boxed, err := l.viewManager.InitiateView(NewRequestTxStatusView(l.network, "", id, l.dbManager), context.TODO())
 	if err != nil {
 		return driver.Unknown, err
 	}
@@ -354,6 +359,7 @@ type FinalityListener struct {
 	namespace   string
 	retryRunner db.RetryRunner
 	viewManager *view2.Manager
+	dbManager   *DBManager
 }
 
 func (t *FinalityListener) OnStatus(txID string, status int, message string) {
@@ -368,7 +374,7 @@ func (t *FinalityListener) runOnStatus(txID string, status int, message string) 
 			err = errors.Errorf("panic caught: %v", r)
 		}
 	}()
-	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID), context.TODO())
+	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID, t.dbManager), context.TODO())
 	if err != nil {
 		return errors.Wrapf(err, "failed retrieving token request [%s]", txID)
 	}

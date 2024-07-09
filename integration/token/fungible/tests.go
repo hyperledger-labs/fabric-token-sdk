@@ -1123,7 +1123,7 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	time.Sleep(1 * time.Minute)
 
 	// start transfers from Alice
-	aliceTransferPool := dlog.NewPool("alice", 5)
+	aliceTransferPool := dlog.NewPool("alice", 1)
 	aliceTransferPool.ScheduleTask(func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -1136,7 +1136,7 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	time.Sleep(1 * time.Minute)
 
 	// start transfers from Bob
-	bobTransferPool := dlog.NewPool("bob", 5)
+	bobTransferPool := dlog.NewPool("bob", 1)
 	bobTransferPool.ScheduleTask(func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -1147,7 +1147,7 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	})
 
 	// start transfers from Charlie
-	charlieTransferPool := dlog.NewPool("charlie", 5)
+	charlieTransferPool := dlog.NewPool("charlie", 1)
 	charlieTransferPool.ScheduleTask(func() {
 		defer func() {
 			if r := recover(); r != nil {

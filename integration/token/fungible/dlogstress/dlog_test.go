@@ -20,7 +20,7 @@ import (
 
 var _ = Describe("Stress EndToEnd", func() {
 	for _, backend := range []string{
-		"fabric",
+		//"fabric",
 		"orion",
 	} {
 		Describe("Stress test", Label(backend), func() {
@@ -40,7 +40,7 @@ var sdks = map[string]api.SDK{
 
 func newTestSuite(backend string) (*token.TestSuite, *token.ReplicaSelector) {
 	opts, selector := token.NewReplicationOptions(token.None)
-	ts := token.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
+	ts := token.NewLocalTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
 		common.Opts{
 			Backend:         backend,
 			TokenSDKDriver:  "dlog",

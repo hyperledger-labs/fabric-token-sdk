@@ -9,9 +9,9 @@ package ttxdb
 import (
 	"math/big"
 	"reflect"
-	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -149,21 +149,24 @@ type Wallet interface {
 	TMS() *token.ManagementService
 }
 
+type Cache interface {
+	Get(key string) ([]byte, bool)
+	Add(key string, value []byte)
+	Delete(key string)
+}
+
 // DB is a database that stores token transactions related information
 type DB struct {
 	*db.StatusSupport
-	db        driver.TokenTransactionDB
-	eIDsLocks sync.Map
-	// status related fields
-	pendingTXs []string
+	db    driver.TokenTransactionDB
+	cache Cache
 }
 
 func newDB(p driver.TokenTransactionDB) *DB {
 	return &DB{
 		StatusSupport: db.NewStatusSupport(),
 		db:            p,
-		eIDsLocks:     sync.Map{},
-		pendingTXs:    make([]string, 0, 10000),
+		cache:         secondcache.NewTyped[[]byte](1000),
 	}
 }
 
@@ -223,6 +226,7 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
+	d.cache.Add(record.Anchor, raw)
 	if err := w.AddTokenRequest(record.Anchor, raw, req.Metadata.Application); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
@@ -271,6 +275,10 @@ func (d *DB) GetStatus(txID string) (TxStatus, string, error) {
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
 func (d *DB) GetTokenRequest(txID string) ([]byte, error) {
+	res, ok := d.cache.Get(txID)
+	if ok {
+		return res, nil
+	}
 	return d.db.GetTokenRequest(txID)
 }
 
@@ -293,6 +301,7 @@ func (d *DB) AppendValidationRecord(txID string, tokenRequest []byte, meta map[s
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
 	// we store the token request, but don't have or care about the application metadata
+	d.cache.Add(txID, tokenRequest)
 	if err := w.AddTokenRequest(txID, tokenRequest, nil); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", txID)

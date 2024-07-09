@@ -83,7 +83,7 @@ func (t *FinalityListener) runOnStatus(txID string, status int, message string, 
 			message = err.Error()
 		} else {
 			t.logger.Debugf("append token request for [%s]", txID)
-			if err := t.tokens.AppendRaw(t.tmsID, txID, tokenRequestRaw); err != nil {
+			if err := t.tokens.Append(t.tmsID, txID, tr); err != nil {
 				// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
 				t.logger.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
 				return fmt.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)

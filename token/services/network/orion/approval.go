@@ -74,7 +74,9 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 	return env, nil
 }
 
-type RequestApprovalResponderView struct{}
+type RequestApprovalResponderView struct {
+	dbManager *DBManager
+}
 
 func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
 	// receive request
@@ -114,14 +116,9 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 		return nil, errors.Wrapf(err, "failed to create validator")
 	}
 
-	// Verify
-	custodianID, err := GetCustodian(view2.GetConfigService(context), request.Network)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get custodian identifier")
-	}
-
+	// commit
 	for i := 0; i < 3; i++ {
-		envelopeRaw, err := r.commit(context, request, validator, custodianID)
+		envelopeRaw, err := r.commit(context, request, validator)
 		if err != nil {
 			logger.Errorf("failed to commit transaction [%s], retry [%d]", err, i)
 			time.Sleep(100 * time.Minute)
@@ -133,13 +130,12 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	return nil, errors.Wrapf(err, "failed to commit transaction [%s]", request.TxID)
 }
 
-func (r *RequestApprovalResponderView) commit(context view.Context, request *ApprovalRequest, validator driver.Validator, custodianID string) ([]byte, error) {
-	logger.Debugf("open session to orion [%s]", custodianID)
-	ons, err := orion.GetOrionNetworkService(context, request.Network)
+func (r *RequestApprovalResponderView) commit(context view.Context, request *ApprovalRequest, validator driver.Validator) ([]byte, error) {
+	sm, err := r.dbManager.GetSessionManager(request.Network)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get orion network service for network [%s]", request.Network)
+		return nil, errors.Wrapf(err, "failed to get session manager for network [%s]", request.Network)
 	}
-	oSession, err := ons.SessionManager().NewSession(custodianID)
+	oSession, err := sm.GetSession()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create session to orion network [%s]", request.Network)
 	}
@@ -158,12 +154,12 @@ func (r *RequestApprovalResponderView) commit(context view.Context, request *App
 	}
 
 	// Write
-	tx, err := ons.TransactionManager().NewTransaction(request.TxID, custodianID)
+	tx, err := sm.Orion.TransactionManager().NewTransaction(request.TxID, sm.CustodianID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create transaction [%s]", request.TxID)
 	}
 	rws := &TxRWSWrapper{
-		me: custodianID,
+		me: sm.CustodianID,
 		db: request.Namespace,
 		tx: tx,
 	}
