@@ -101,6 +101,7 @@ type TokenDriverService struct {
 func NewTokenDriverService(factories []NamedFactory[Driver]) *TokenDriverService {
 	return &TokenDriverService{factoryDirectory: newFactoryDirectory(factories...)}
 }
+
 func (s *TokenDriverService) NewTokenService(tmsID TMSID, publicParams []byte) (TokenManagerService, error) {
 	pp, err := s.PublicParametersFromBytes(publicParams)
 	if err != nil {

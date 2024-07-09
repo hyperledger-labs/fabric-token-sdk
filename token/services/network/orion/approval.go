@@ -32,42 +32,56 @@ type ApprovalResponse struct {
 }
 
 type RequestApprovalView struct {
-	Network    *orion.NetworkService
+	DBManager  *DBManager
+	Network    string
 	Namespace  string
 	RequestRaw []byte
 	Signer     view.Identity
 	TxID       string
 }
 
-func NewRequestApprovalView(network *orion.NetworkService, namespace string, requestRaw []byte, signer view.Identity, txID string) *RequestApprovalView {
-	return &RequestApprovalView{Network: network, Namespace: namespace, RequestRaw: requestRaw, Signer: signer, TxID: txID}
+func NewRequestApprovalView(
+	dbManager *DBManager,
+	network string,
+	namespace string,
+	requestRaw []byte,
+	signer view.Identity,
+	txID string,
+) *RequestApprovalView {
+	return &RequestApprovalView{
+		DBManager:  dbManager,
+		Network:    network,
+		Namespace:  namespace,
+		RequestRaw: requestRaw,
+		Signer:     signer,
+		TxID:       txID,
+	}
 }
 
 func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
-	custodian, err := GetCustodian(view2.GetConfigService(context), r.Network.Name())
+	sm, err := r.DBManager.GetSessionManager(r.Network)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get custodian identifier")
+		return nil, errors.WithMessagef(err, "failed getting session manager for network [%s]", r.Network)
 	}
-	logger.Debugf("custodian: %s", custodian)
-	session, err := session2.NewJSON(context, context.Initiator(), view2.GetIdentityProvider(context).Identity(custodian))
+	session, err := session2.NewJSON(context, context.Initiator(), view2.GetIdentityProvider(context).Identity(sm.CustodianID))
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
+		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", sm.CustodianID)
 	}
 	// TODO: Should we sign the approval request?
 	request := &ApprovalRequest{
-		Network:   r.Network.Name(),
+		Network:   r.Network,
 		Namespace: r.Namespace,
 		TxID:      r.TxID,
 		Request:   r.RequestRaw,
 	}
 	if err := session.Send(request); err != nil {
-		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
+		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", sm.CustodianID)
 	}
 	response := &ApprovalResponse{}
 	if err := session.ReceiveWithTimeout(response, 30*time.Second); err != nil {
-		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
+		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", sm.CustodianID)
 	}
-	env := r.Network.TransactionManager().NewEnvelope()
+	env := sm.Orion.TransactionManager().NewEnvelope()
 	if err := env.FromBytes(response.Envelope); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal transaction")
 	}
@@ -98,20 +112,19 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 }
 
 func (r *RequestApprovalResponderView) process(context view.Context, request *ApprovalRequest) ([]byte, error) {
-	ppRaw, err := ReadPublicParameters(context, request.Network, request.Namespace)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read public parameters")
-	}
 	ds, err := driver.GetTokenDriverService(context)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get token driver")
 	}
-	pp, err := ds.PublicParametersFromBytes(ppRaw)
+	sm, err := r.dbManager.GetSessionManager(request.Network)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
+		return nil, errors.Wrapf(err, "failed to get session manager for network [%s]", request.Network)
+	}
+	pp, err := sm.PublicParameters(ds, request.Namespace)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get public parameters for network [%s]", request.Network)
 	}
 	validator, err := ds.NewValidator(token.TMSID{Network: request.Network, Namespace: request.Namespace}, pp)
-
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create validator")
 	}

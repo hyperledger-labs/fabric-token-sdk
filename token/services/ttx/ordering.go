@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 )
 
@@ -40,6 +41,15 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 	}
 	if err := o.broadcast(context, options.Transaction); err != nil {
 		return nil, err
+	}
+
+	// cache the token request into the tokens db
+	t, err := tokens.GetService(context, options.Transaction.TMSID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", options.Transaction.TMSID())
+	}
+	if err := t.CacheRequest(options.Transaction.TMSID(), options.Transaction.TokenRequest); err != nil {
+		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", options.Transaction.TokenRequest.Anchor, err)
 	}
 	return nil, nil
 }

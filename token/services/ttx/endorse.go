@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -793,6 +794,15 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	}
 	if err := session.Send(sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
+	}
+
+	// cache the token request into the tokens db
+	t, err := tokens.GetService(context, s.tx.TMSID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
+	}
+	if err := t.CacheRequest(s.tx.TMSID(), s.tx.TokenRequest); err != nil {
+		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
 	}
 
 	return s.tx, nil

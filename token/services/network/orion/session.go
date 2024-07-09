@@ -9,8 +9,11 @@ package orion
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/pkg/errors"
 )
 
@@ -63,6 +66,9 @@ type SessionManager struct {
 	reuse         bool
 	reuseOnce     sync.Once
 	sharedSession *orion.Session
+
+	ppMutex sync.RWMutex
+	ppMap   map[string]driver.PublicParameters
 }
 
 func NewSessionManager(dbManager *DBManager, network string) (*SessionManager, error) {
@@ -79,6 +85,7 @@ func NewSessionManager(dbManager *DBManager, network string) (*SessionManager, e
 		Orion:       ons,
 		CustodianID: custodianID,
 		reuse:       true,
+		ppMap:       map[string]driver.PublicParameters{},
 	}, nil
 }
 
@@ -106,4 +113,67 @@ func (s *SessionManager) GetSession() (os *orion.Session, err error) {
 		return nil, errors.Wrapf(err, "failed to create session to orion network [%s]", s.CustodianID)
 	}
 	return oSession, nil
+}
+
+func (s *SessionManager) PublicParameters(tds *driver.TokenDriverService, namespace string) (driver.PublicParameters, error) {
+	s.ppMutex.RLock()
+	pp, ok := s.ppMap[namespace]
+	s.ppMutex.RUnlock()
+	if ok {
+		return pp, nil
+	}
+
+	s.ppMutex.Lock()
+	defer s.ppMutex.Unlock()
+
+	pp, ok = s.ppMap[namespace]
+	if ok {
+		return pp, nil
+	}
+
+	ppRaw, err := s.ReadPublicParameters(namespace)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read public parameters")
+	}
+
+	pp, err = tds.PublicParametersFromBytes(ppRaw)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
+	}
+	s.ppMap[namespace] = pp
+	return pp, nil
+}
+
+func (s *SessionManager) ReadPublicParameters(namespace string) ([]byte, error) {
+	for i := 0; i < 3; i++ {
+		pp, err := s.readPublicParameters(namespace)
+		if err != nil {
+			logger.Errorf("failed to read public parameters from orion network [%s], retry [%d]", s.Orion.Name(), i)
+			time.Sleep(100 * time.Minute)
+			continue
+		}
+		return pp, nil
+	}
+	return nil, errors.Errorf("failed to read public parameters after 3 retries")
+}
+
+func (s *SessionManager) readPublicParameters(namespace string) ([]byte, error) {
+	oSession, err := s.Orion.SessionManager().NewSession(s.CustodianID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create session to orion network [%s]", s.Orion.Name())
+	}
+	qe, err := oSession.QueryExecutor(namespace)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s]", s.Orion.Name())
+	}
+	w := translator.New("", &ReadOnlyRWSWrapper{qe: qe}, "")
+	ppRaw, err := w.ReadSetupParameters()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to retrieve public parameters")
+	}
+	if len(ppRaw) == 0 {
+		return nil, errors.Errorf("public parameters are not initiliazed yet")
+	}
+	logger.Debugf("public parameters read: %d", len(ppRaw))
+	return ppRaw, nil
 }

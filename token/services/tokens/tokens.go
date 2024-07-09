@@ -36,6 +36,11 @@ type Issued interface {
 	Issued(tms *token.ManagementService, issuer token.Identity, tok *token2.Token) bool
 }
 
+type MetaData interface {
+	SpentTokenID() []*token2.ID
+	GetToken(raw []byte) (*token2.Token, token.Identity, []byte, error)
+}
+
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 
 // Transaction models a token transaction
@@ -47,21 +52,29 @@ type Transaction interface {
 	Request() *token.Request
 }
 
+type Cache interface {
+	Get(key string) (*CacheEntry, bool)
+	Add(key string, value *CacheEntry)
+	Delete(key string)
+}
+
+type CacheEntry struct {
+	Request  *token.Request
+	ToSpend  []*token2.ID
+	ToAppend []TokenToAppend
+}
+
 // Tokens is the interface for the token service
 type Tokens struct {
 	TMSProvider TMSProvider
 	Ownership   Authorization
 	Issued      Issued
 	Storage     *DBStorage
+
+	RequestsCache Cache
 }
 
 func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) (err error) {
-	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
-	if err != nil {
-		return errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
-	}
-
-	logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	if request == nil {
 		logger.Debugf("transaction [%s], no request found, skip it", txID)
 		return nil
@@ -81,24 +94,10 @@ func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) 
 		return nil
 	}
 
-	graphHiding := tms.PublicParametersManager().PublicParameters().GraphHiding()
-	precision := tms.PublicParametersManager().PublicParameters().Precision()
-	auditorFlag := t.Ownership.AmIAnAuditor(tms)
-	if auditorFlag {
-		logger.Debugf("transaction [%s], I must be the auditor", txID)
-	}
-
-	md, err := request.GetMetadata()
+	toSpend, toAppend, err := t.getActions(tmsID, txID, request)
 	if err != nil {
-		logger.Debugf("transaction [%s], failed to get metadata [%s]", txID, err)
-		return errors.WithMessagef(err, "transaction [%s], failed to get request metadata", txID)
+		return errors.WithMessagef(err, "transaction [%s], failed to extract actions", txID)
 	}
-
-	is, os, err := request.InputsAndOutputs()
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get request's outputs")
-	}
-	toSpend, toAppend := t.parse(tms, txID, md, is, os, auditorFlag, precision, graphHiding)
 
 	logger.Debugf("transaction [%s] start db transaction", txID)
 	ts, err := t.Storage.NewTransaction()
@@ -133,9 +132,105 @@ func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) 
 	return nil
 }
 
-type MetaData interface {
-	SpentTokenID() []*token2.ID
-	GetToken(raw []byte) (*token2.Token, token.Identity, []byte, error)
+func (t *Tokens) AppendRaw(tmsID token.TMSID, txID string, requestRaw []byte) (err error) {
+	logger.Debugf("get tms for [%s]", txID)
+	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
+	}
+	logger.Debugf("get tms for [%s], done", txID)
+	tr, err := tms.NewFullRequestFromBytes(requestRaw)
+	if err != nil {
+		return errors.WithMessagef(err, "failed unmarshal token request [%s]", txID)
+	}
+	logger.Debugf("append token request for [%s]", txID)
+	return t.Append(tmsID, txID, tr)
+}
+
+func (t *Tokens) CacheRequest(tmsID token.TMSID, request *token.Request) error {
+	toSpend, toAppend, err := t.extractActions(tmsID, request.Anchor, request)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to extract actions for request [%s]", request.ID())
+	}
+	logger.Debugf("cache request [%s]", request.ID())
+	// append to cache
+	t.RequestsCache.Add(request.Anchor, &CacheEntry{
+		Request:  request,
+		ToSpend:  toSpend,
+		ToAppend: toAppend,
+	})
+	return nil
+}
+
+func (t *Tokens) GetCachedTokenRequest(txID string) *token.Request {
+	res, ok := t.RequestsCache.Get(txID)
+	if !ok {
+		return nil
+	}
+	return res.Request
+}
+
+// AppendTransaction appends the content of the passed transaction to the token db.
+// If the transaction is already in there, nothing more happens.
+// The operation is atomic.
+func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
+	return t.Append(
+		token.TMSID{
+			Network:   tx.Network(),
+			Channel:   tx.Channel(),
+			Namespace: tx.Namespace(),
+		},
+		tx.ID(),
+		tx.Request(),
+	)
+}
+
+// StorePublicParams stores the passed public parameters in the token db
+func (t *Tokens) StorePublicParams(raw []byte) error {
+	return t.Storage.StorePublicParams(raw)
+}
+
+// DeleteToken marks the entries corresponding to the passed token ids as deleted.
+// The deletion is attributed to the passed deletedBy argument.
+func (t *Tokens) DeleteToken(deletedBy string, ids ...*token2.ID) (err error) {
+	return t.Storage.tokenDB.DeleteTokens(deletedBy, ids...)
+}
+
+func (t *Tokens) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
+	// check the cache first
+	entry, ok := t.RequestsCache.Get(txID)
+	if ok {
+		return entry.ToSpend, entry.ToAppend, nil
+	}
+	// extract
+	return t.extractActions(tmsID, txID, request)
+}
+
+func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
+	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
+	if err != nil {
+		return nil, nil, errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
+	}
+
+	logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
+	graphHiding := tms.PublicParametersManager().PublicParameters().GraphHiding()
+	precision := tms.PublicParametersManager().PublicParameters().Precision()
+	auditorFlag := t.Ownership.AmIAnAuditor(tms)
+	if auditorFlag {
+		logger.Debugf("transaction [%s], I must be the auditor", txID)
+	}
+	md, err := request.GetMetadata()
+	if err != nil {
+		logger.Debugf("transaction [%s], failed to get metadata [%s]", txID, err)
+		return nil, nil, errors.WithMessagef(err, "transaction [%s], failed to get request metadata", txID)
+	}
+
+	is, os, err := request.InputsAndOutputs()
+	if err != nil {
+		return nil, nil, errors.WithMessagef(err, "failed to get request's outputs")
+	}
+	toSpend, toAppend := t.parse(tms, txID, md, is, os, auditorFlag, precision, graphHiding)
+	return toSpend, toAppend, nil
 }
 
 // parse returns the tokens to store and spend as the result of a transaction
@@ -217,45 +312,4 @@ func (t *Tokens) parse(tms *token.ManagementService, txID string, md MetaData, i
 		}
 	}
 	return
-}
-
-func (t *Tokens) AppendRaw(tmsID token.TMSID, txID string, requestRaw []byte) (err error) {
-	logger.Debugf("get tms for [%s]", txID)
-	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
-	if err != nil {
-		return errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
-	}
-	logger.Debugf("get tms for [%s], done", txID)
-	tr, err := tms.NewFullRequestFromBytes(requestRaw)
-	if err != nil {
-		return errors.WithMessagef(err, "failed unmarshal token request [%s]", txID)
-	}
-	logger.Debugf("append token request for [%s]", txID)
-	return t.Append(tmsID, txID, tr)
-}
-
-// AppendTransaction appends the content of the passed transaction to the token db.
-// If the transaction is already in there, nothing more happens.
-// The operation is atomic.
-func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
-	return t.Append(
-		token.TMSID{
-			Network:   tx.Network(),
-			Channel:   tx.Channel(),
-			Namespace: tx.Namespace(),
-		},
-		tx.ID(),
-		tx.Request(),
-	)
-}
-
-// StorePublicParams stores the passed public parameters in the token db
-func (t *Tokens) StorePublicParams(raw []byte) error {
-	return t.Storage.StorePublicParams(raw)
-}
-
-// DeleteToken marks the entries corresponding to the passed token ids as deleted.
-// The deletion is attributed to the passed deletedBy argument.
-func (t *Tokens) DeleteToken(deletedBy string, ids ...*token2.ID) (err error) {
-	return t.Storage.tokenDB.DeleteTokens(deletedBy, ids...)
 }

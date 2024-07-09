@@ -190,7 +190,8 @@ func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
 
 func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
 	envBoxed, err := view2.GetManager(context).InitiateView(NewRequestApprovalView(
-		n.n, tms.Namespace(),
+		n.dbManager,
+		n.n.Name(), tms.Namespace(),
 		requestRaw, signer, n.ComputeTxID(&txID),
 	), context.Context())
 	if err != nil {
