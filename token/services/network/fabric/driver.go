@@ -11,20 +11,25 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/pkg/errors"
 )
 
 type Driver struct {
-	auditDBManager *auditdb.Manager
-	ttxDBManager   *ttxdb.Manager
+	fnsProvider      *fabric.NetworkServiceProvider
+	vaultProvider    vault.Provider
+	tokensManager    *tokens.Manager
+	configService    *config.Service
+	viewManager      *view.Manager
+	viewRegistry     *view.Registry
+	filterProvider   *common.AcceptTxInDBFilterProvider
+	tmsProvider      *token.ManagementServiceProvider
+	identityProvider *view.IdentityProvider
 }
 
 func NewDriver(
@@ -33,6 +38,7 @@ func NewDriver(
 	tokensManager *tokens.Manager,
 	configService *config.Service,
 	viewManager *view.Manager,
+	viewRegistry *view.Registry,
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 ) driver.NamedDriver {
@@ -44,24 +50,15 @@ func NewDriver(
 			tokensManager:  tokensManager,
 			configService:  configService,
 			viewManager:    viewManager,
+			viewRegistry:   viewRegistry,
 			filterProvider: filterProvider,
 			tmsProvider:    tmsProvider,
 		},
 	}
 }
 
-type Driver struct {
-	fnsProvider    *fabric.NetworkServiceProvider
-	vaultProvider  vault.Provider
-	tokensManager  *tokens.Manager
-	configService  *config.Service
-	viewManager    *view.Manager
-	filterProvider *common.AcceptTxInDBFilterProvider
-	tmsProvider    *token.ManagementServiceProvider
-}
-
 func (d *Driver) New(network, channel string) (driver.Network, error) {
-	n, err := d.fnsProvider.FabricNetworkService(network)
+	fns, err := d.fnsProvider.FabricNetworkService(network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "fabric network [%s] not found", network)
 	}
@@ -71,25 +68,21 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 	}
 
 	return NewNetwork(
-		d.viewManager,
-		d.tmsProvider,
-		n,
+		fns,
 		ch,
 		d.vaultProvider.Vault,
 		d.configService,
 		d.filterProvider,
 		d.tokensManager,
-		view.GetIdentityProvider(sp),
-		view.GetManager(sp),
-		view.GetRegistry(sp),
-		token.GetManagementServiceProvider(sp),
+		d.viewManager,
+		d.tmsProvider,
 		endorsement.NewServiceProvider(
 			fns,
-			cs,
-			view.GetManager(sp),
-			view.GetRegistry(sp),
-			view.GetIdentityProvider(sp),
-			token.GetManagementServiceProvider(sp),
+			d.configService,
+			d.viewManager,
+			d.viewRegistry,
+			d.identityProvider,
+			d.tmsProvider,
 		),
 	), nil
 }

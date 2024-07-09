@@ -133,10 +133,6 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	}
 }
 
-type IdentityProvider interface {
-	Identity(string) view.Identity
-}
-
 type ViewManager interface {
 	InitiateView(view view2.View, ctx context.Context) (interface{}, error)
 }
@@ -146,16 +142,14 @@ type ViewRegistry interface {
 }
 
 type Network struct {
-	n                *fabric.NetworkService
-	ch               *fabric.Channel
-	tmsProvider      *token2.ManagementServiceProvider
-	viewManager      ViewManager
-	viewRegistry     ViewRegistry
-	ledger           *ledger
-	configuration    common2.Configuration
-	filterProvider   common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
-	tokensProvider   *tokens2.Manager
-	identityProvider IdentityProvider
+	n              *fabric.NetworkService
+	ch             *fabric.Channel
+	tmsProvider    *token2.ManagementServiceProvider
+	viewManager    ViewManager
+	ledger         *ledger
+	configuration  common2.Configuration
+	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
+	tokensProvider *tokens2.Manager
 
 	vaultLazyCache      utils.LazyProvider[string, driver.Vault]
 	tokenVaultLazyCache utils.LazyProvider[string, driver.TokenVault]
@@ -168,13 +162,10 @@ func NewNetwork(
 	n *fabric.NetworkService,
 	ch *fabric.Channel,
 	newVault NewVaultFunc,
-	nsFinder common2.NamespaceFinder,
 	configuration common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
 	tokensProvider *tokens2.Manager,
-	identityProvider IdentityProvider,
 	viewManager ViewManager,
-	viewRegistry ViewRegistry,
 	tmsProvider *token2.ManagementServiceProvider,
 	endorsementServiceProvider *endorsement.ServiceProvider,
 ) *Network {
@@ -187,28 +178,16 @@ func NewNetwork(
 	return &Network{
 		n:                          n,
 		ch:                         ch,
+		tmsProvider:                tmsProvider,
+		viewManager:                viewManager,
+		ledger:                     &ledger{l: ch.Ledger()},
 		configuration:              configuration,
 		filterProvider:             filterProvider,
 		tokensProvider:             tokensProvider,
-		tmsProvider:                tmsProvider,
-		viewManager:                viewManager,
-		viewRegistry:               viewRegistry,
-		ledger:                     &ledger{ch.Ledger()},
-		subscribers:                events.NewSubscribers(),
 		vaultLazyCache:             utils.NewLazyProvider(loader.loadVault),
 		tokenVaultLazyCache:        utils.NewLazyProvider(loader.loadTokenVault),
-		endorsementServiceProvider: endorsementServiceProvider,
-		identityProvider:           identityProvider,
-		n:                          n,
-		ch:                         ch,
-		nsFinder:                   nsFinder,
-		filterProvider:             filterProvider,
-		tokensProvider:             tokensProvider,
-		tmsProvider:                tmsProvider,
-		viewManager:                viewManager,
-		ledger:                     &ledger{ch.Ledger()},
 		subscribers:                events.NewSubscribers(),
-		vaultLazyCache:             utils.NewLazyProvider(loader.load),
+		endorsementServiceProvider: endorsementServiceProvider,
 	}
 }
 
