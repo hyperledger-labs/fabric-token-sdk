@@ -29,20 +29,21 @@ type BroadcastResponse struct {
 }
 
 type BroadcastView struct {
-	Network driver.Network
-	Blob    interface{}
+	DBManager *DBManager
+	Network   string
+	Blob      interface{}
 }
 
-func NewBroadcastView(network driver.Network, blob interface{}) *BroadcastView {
-	return &BroadcastView{Network: network, Blob: blob}
+func NewBroadcastView(dbManager *DBManager, network string, blob interface{}) *BroadcastView {
+	return &BroadcastView{DBManager: dbManager, Network: network, Blob: blob}
 }
 
 func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
-	custodian, err := GetCustodian(view2.GetConfigService(context), r.Network.Name())
+	sm, err := r.DBManager.GetSessionManager(r.Network)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get custodian identifier")
+		return nil, errors.Wrapf(err, "failed getting session manager for network [%s]", r.Network)
 	}
-	logger.Debugf("custodian: %s", custodian)
+	custodian := sm.CustodianID
 	session, err := session2.NewJSON(context, context.Initiator(), view2.GetIdentityProvider(context).Identity(custodian))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
@@ -62,7 +63,7 @@ func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
 
 	// TODO: Should we sign the broadcast request?
 	request := &BroadcastRequest{
-		Network: r.Network.Name(),
+		Network: r.Network,
 		Blob:    blob,
 	}
 	if err := session.Send(request); err != nil {

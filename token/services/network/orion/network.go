@@ -161,9 +161,9 @@ func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
 	var err error
 	switch b := blob.(type) {
 	case driver.Envelope:
-		_, err = n.viewManager.InitiateView(NewBroadcastView(n, b), ctx)
+		_, err = n.viewManager.InitiateView(NewBroadcastView(n.dbManager, n.Name(), b), ctx)
 	default:
-		_, err = n.viewManager.InitiateView(NewBroadcastView(n, b), ctx)
+		_, err = n.viewManager.InitiateView(NewBroadcastView(n.dbManager, n.Name(), b), ctx)
 	}
 	return err
 }
