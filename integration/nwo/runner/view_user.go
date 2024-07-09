@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const currency = "CHF"
+const currency = "MAX"
 
 var operationTypeMap = map[string]metrics.OperationType{
 	"transfer":   metrics.Transfer,
