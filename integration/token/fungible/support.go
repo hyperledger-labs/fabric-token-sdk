@@ -321,6 +321,18 @@ func TransferCashForTMSID(network *integration.Infrastructure, sender *token3.No
 	return ""
 }
 
+func TransferCashNoFinalityCheck(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference) {
+	_, err := network.Client(sender.ReplicaName()).CallView("transfer", common.JSONMarshall(&views.Transfer{
+		Auditor:      auditor.Id(),
+		Wallet:       wallet,
+		Type:         typ,
+		Amount:       amount,
+		Recipient:    network.Identity(receiver.Id()),
+		RecipientEID: receiver.Id(),
+	}))
+	Expect(err).NotTo(HaveOccurred())
+}
+
 func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, websSocket bool, sender *token3.NodeReference, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, expectedErrorMsgs ...string) string {
 	// obtain the recipient for the rest
 	restRecipient := wmp.RecipientData(sender.Id(), wallet)

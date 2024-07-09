@@ -19,7 +19,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-sdk.network.orion.custodian")
+var logger = logging.MustGetLogger("token-sdk.network.orion")
 
 type PublicParamsRequest struct {
 	Network   string

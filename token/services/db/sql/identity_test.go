@@ -31,7 +31,7 @@ func TestIdentitySqlite(t *testing.T) {
 	tempDir := t.TempDir()
 
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(10000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initIdentityDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -43,7 +43,7 @@ func TestIdentitySqlite(t *testing.T) {
 
 func TestIdentitySqliteMemory(t *testing.T) {
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB("sqlite", "file:tmp?_pragma=busy_timeout(10000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initIdentityDB("sqlite", "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}

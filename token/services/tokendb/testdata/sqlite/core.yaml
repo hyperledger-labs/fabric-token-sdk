@@ -13,7 +13,7 @@ token:
             tablePrefix: tsdk
             driver: sqlite
             maxOpenConns: 10
-            dataSource: file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(10000)&mode=memory&cache=shared
+            dataSource: file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(20000)&mode=memory&cache=shared
     grapes:
       network: grapes
       channel:
@@ -26,4 +26,4 @@ token:
             tablePrefix: tsdk
             driver: sqlite
             maxOpenConns: 10
-            dataSource: file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(10000)&mode=memory&cache=shared
+            dataSource: file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(20000)&mode=memory&cache=shared

@@ -55,12 +55,13 @@ func NewPool(label string, numWorkers int) *Pool {
 				throughput := workerEnd.Milliseconds() / numTasks
 
 				fmt.Printf(
-					"Context done for [%s], shutdown after # task [%d], avg duration [%d], throughput (%d,%d) \n",
+					"Context done for [%s], shutdown after # task [%d], avg duration [%d], throughput (%d,%d): [%v] \n",
 					pool.label,
 					numTasks,
 					avgDuration,
 					throughput,
 					workerEnd.Milliseconds(),
+					taskDurations,
 				)
 				pool.wg.Done()
 			}()

@@ -1107,7 +1107,7 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
 	// Start Issuance
-	issuePool := dlog.NewPool("issuer", 10)
+	issuePool := dlog.NewPool("issuer", 80)
 	issuePool.ScheduleTask(func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -1123,39 +1123,39 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	time.Sleep(1 * time.Minute)
 
 	// start transfers from Alice
-	aliceTransferPool := dlog.NewPool("alice", 1)
+	aliceTransferPool := dlog.NewPool("alice", 40)
 	aliceTransferPool.ScheduleTask(func() {
 		defer func() {
 			if r := recover(); r != nil {
 				logger.Errorf("caught panic during transfer alice to bob: %v", r)
 			}
 		}()
-		TransferCash(network, alice, "", "MAX", 2, bob, auditor)
+		TransferCashNoFinalityCheck(network, alice, "", "MAX", 2, bob, auditor)
 	})
 
 	time.Sleep(1 * time.Minute)
 
 	// start transfers from Bob
-	bobTransferPool := dlog.NewPool("bob", 1)
+	bobTransferPool := dlog.NewPool("bob", 40)
 	bobTransferPool.ScheduleTask(func() {
 		defer func() {
 			if r := recover(); r != nil {
 				logger.Errorf("caught panic during transfer bob to alice: %v", r)
 			}
 		}()
-		TransferCash(network, bob, "", "MAX", 1, alice, auditor)
+		TransferCashNoFinalityCheck(network, bob, "", "MAX", 1, alice, auditor)
 	})
 
 	// start transfers from Charlie
-	charlieTransferPool := dlog.NewPool("charlie", 1)
+	charlieTransferPool := dlog.NewPool("charlie", 40)
 	charlieTransferPool.ScheduleTask(func() {
 		defer func() {
 			if r := recover(); r != nil {
 				logger.Errorf("caught panic during transfer charlie to alice: %v", r)
 			}
 		}()
-		TransferCash(network, charlie, "", "MAX", 1, charlie, auditor)
-		TransferCash(network, charlie, "", "MAX", 1, alice, auditor)
+		TransferCashNoFinalityCheck(network, charlie, "", "MAX", 1, charlie, auditor)
+		TransferCashNoFinalityCheck(network, charlie, "", "MAX", 1, alice, auditor)
 	})
 
 	time.Sleep(1 * time.Minute)

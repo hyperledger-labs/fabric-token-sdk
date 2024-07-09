@@ -7,13 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"fmt"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -24,7 +25,7 @@ type BroadcastRequest struct {
 }
 
 type BroadcastResponse struct {
-	Err error
+	Err string
 }
 
 type BroadcastView struct {
@@ -71,8 +72,8 @@ func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
 	if err := session.ReceiveWithTimeout(response, 30*time.Second); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
-	if response.Err != nil {
-		return nil, errors.Wrapf(response.Err, "failed to broadcast")
+	if len(response.Err) != 0 {
+		return nil, errors.Errorf("failed to broadcast with response err [%s]", response.Err)
 	}
 	return nil, nil
 }
@@ -98,49 +99,68 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 
 	done := false
 	err = nil
-	for i := 0; i < 3; i++ {
-		if _, err2 := r.broadcast(context, sm, request); err2 != nil {
-			logger.Errorf("failed to broadcast to [%s] with err [%s], retry [%d]", sm.CustodianID, err2, i)
-			err = err2
+	txStatusFetcher := &RequestTxStatusResponderView{r.dbManager}
+	numRetries := 5
+	sleepDuration := 1 * time.Second
+	for i := 0; i < numRetries; i++ {
+		if _, txID, err2 := r.broadcast(context, sm, request); err2 != nil {
+			logger.Errorf("failed to broadcast to [%s], txID [%s] with err [%s], retry [%d]", sm.CustodianID, txID, err2, i)
 
-			var errorTxValidation *bcdb.ErrorTxValidation
-			ok := errors.As(err2, &errorTxValidation)
-			if ok {
-				break
+			if len(txID) != 0 {
+				// was the transaction committed, by any chance?
+				logger.Errorf("check transaction [%s] status on [%s], retry [%d]", txID, sm.CustodianID, i)
+				status, err := txStatusFetcher.process(context, &TxStatusRequest{
+					Network: request.Network,
+					TxID:    txID,
+				})
+				if err != nil {
+					logger.Errorf("failed to ask transaction status [%s][%s], retry [%d]", txID, err, i)
+				}
+				if status != nil {
+					if status.Status == network.Valid {
+						done = true
+						break
+					}
+					if status.Status == network.Invalid {
+						break
+					}
+					logger.Debugf("transaction [%s] status [%d], retry [%d], wait a bit and resubmit", txID, status, i)
+				} else {
+					logger.Errorf("failed to ask transaction status [%s], got a nil answert, retry [%d]", txID, i)
+				}
 			}
-			time.Sleep(1 * time.Second)
+			time.Sleep(sleepDuration)
+			sleepDuration = sleepDuration * 2
 			continue
 		}
 		done = true
 		break
 	}
+	var broadcastError string
 	if !done {
-		return nil, errors.Errorf("failed to broadcast to [%s] with err [%s]", sm.CustodianID, err)
+		broadcastError = fmt.Sprintf("failed to broadcast to [%s] with err [%s]", sm.CustodianID, err)
 	}
-
-	// all good
-	if err := session.Send(&BroadcastResponse{}); err != nil {
+	if err := session.Send(&BroadcastResponse{Err: broadcastError}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
-
 	return nil, nil
 }
 
-func (r *BroadcastResponderView) broadcast(context view.Context, sm *SessionManager, request *BroadcastRequest) (interface{}, error) {
+func (r *BroadcastResponderView) broadcast(context view.Context, sm *SessionManager, request *BroadcastRequest) (interface{}, string, error) {
 	oSession, err := sm.GetSession()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create session to orion network [%s]", request.Network)
+		return nil, "", errors.Wrapf(err, "failed to create session to orion network [%s]", request.Network)
 	}
 	tm := sm.Orion.TransactionManager()
 	env := tm.NewEnvelope()
 	if err := env.FromBytes(request.Blob); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal envelope")
+		return nil, "", errors.Wrap(err, "failed to unmarshal envelope")
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("commit envelope... [%s][%s]", env.TxID(), env.String())
 	}
 	if err := sm.Orion.TransactionManager().CommitEnvelope(oSession, env); err != nil {
-		return nil, err
+		return nil, env.TxID(), err
 	}
-	return nil, nil
+	return nil, env.TxID(), nil
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/pkg/errors"
 )
@@ -130,11 +131,36 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	}
 
 	// commit
-	for i := 0; i < 3; i++ {
-		envelopeRaw, err := r.commit(context, request, validator)
+	txStatusFetcher := &RequestTxStatusResponderView{r.dbManager}
+	numRetries := 5
+	sleepDuration := 1 * time.Second
+	for i := 0; i < numRetries; i++ {
+		envelopeRaw, err := r.validate(context, request, validator)
 		if err != nil {
 			logger.Errorf("failed to commit transaction [%s], retry [%d]", err, i)
-			time.Sleep(100 * time.Minute)
+
+			// was the transaction committed, by any chance?
+			status, err := txStatusFetcher.process(context, &TxStatusRequest{
+				Network:   request.Network,
+				Namespace: request.Namespace,
+				TxID:      request.TxID,
+			})
+			if err != nil {
+				logger.Errorf("failed to ask transaction status [%s], retry [%d]", err, i)
+			}
+			if status != nil {
+				if status.Status == network.Valid {
+					return nil, nil
+				}
+				if status.Status == network.Invalid {
+					break
+				}
+				logger.Debugf("transaction [%s] status [%s], retry [%d], wait a bit and resubmit", request.TxID, status, i)
+			} else {
+				logger.Errorf("failed to ask transaction status [%s], got a nil answert, retry [%d]", request.TxID, i)
+			}
+			time.Sleep(sleepDuration)
+			sleepDuration = sleepDuration * 2
 			continue
 		}
 		return envelopeRaw, nil
@@ -143,7 +169,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	return nil, errors.Wrapf(err, "failed to commit transaction [%s]", request.TxID)
 }
 
-func (r *RequestApprovalResponderView) commit(context view.Context, request *ApprovalRequest, validator driver.Validator) ([]byte, error) {
+func (r *RequestApprovalResponderView) validate(context view.Context, request *ApprovalRequest, validator driver.Validator) ([]byte, error) {
 	sm, err := r.dbManager.GetSessionManager(request.Network)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session manager for network [%s]", request.Network)
