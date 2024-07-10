@@ -16,7 +16,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-func newFSCService(nw *fabric.NetworkService, tms *token.ManagementService, configuration tdriver.Configuration, viewRegistry ViewRegistry, viewManager ViewManager, identityProvider IdentityProvider) (*fscService, error) {
+func newFSCService(
+	nw *fabric.NetworkService,
+	tms *token.ManagementService,
+	configuration tdriver.Configuration,
+	viewRegistry ViewRegistry,
+	viewManager ViewManager,
+	identityProvider IdentityProvider,
+) (*fscService, error) {
 	tmsID := tms.ID()
 	ch, err := nw.Channel(tmsID.Channel)
 	if err != nil {

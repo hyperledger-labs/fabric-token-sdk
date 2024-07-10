@@ -30,7 +30,7 @@ type Driver struct {
 	viewRegistry     driver2.Registry
 	filterProvider   *common.AcceptTxInDBFilterProvider
 	tmsProvider      *token.ManagementServiceProvider
-	identityProvider *view.IdentityProvider
+	identityProvider driver2.IdentityProvider
 }
 
 func NewDriver(
@@ -42,18 +42,20 @@ func NewDriver(
 	viewRegistry driver2.Registry,
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
+	identityProvider driver2.IdentityProvider,
 ) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name: "fabric",
 		Driver: &Driver{
-			fnsProvider:    fnsProvider,
-			vaultProvider:  vaultProvider,
-			tokensManager:  tokensManager,
-			configService:  configService,
-			viewManager:    viewManager,
-			viewRegistry:   viewRegistry,
-			filterProvider: filterProvider,
-			tmsProvider:    tmsProvider,
+			fnsProvider:      fnsProvider,
+			vaultProvider:    vaultProvider,
+			tokensManager:    tokensManager,
+			configService:    configService,
+			viewManager:      viewManager,
+			viewRegistry:     viewRegistry,
+			filterProvider:   filterProvider,
+			tmsProvider:      tmsProvider,
+			identityProvider: identityProvider,
 		},
 	}
 }
