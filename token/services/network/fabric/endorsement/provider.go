@@ -10,8 +10,8 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -33,9 +33,7 @@ type ViewManager interface {
 	InitiateView(view view2.View, ctx context.Context) (interface{}, error)
 }
 
-type ViewRegistry interface {
-	RegisterResponder(responder view2.View, initiatedBy interface{}) error
-}
+type ViewRegistry = driver2.Registry
 
 type ServiceProvider struct {
 	utils.LazyProvider[token2.TMSID, Service]

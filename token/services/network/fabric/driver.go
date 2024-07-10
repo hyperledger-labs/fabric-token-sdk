@@ -9,6 +9,7 @@ package fabric
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -26,7 +27,7 @@ type Driver struct {
 	tokensManager    *tokens.Manager
 	configService    *config.Service
 	viewManager      *view.Manager
-	viewRegistry     *view.Registry
+	viewRegistry     driver2.Registry
 	filterProvider   *common.AcceptTxInDBFilterProvider
 	tmsProvider      *token.ManagementServiceProvider
 	identityProvider *view.IdentityProvider
@@ -38,7 +39,7 @@ func NewDriver(
 	tokensManager *tokens.Manager,
 	configService *config.Service,
 	viewManager *view.Manager,
-	viewRegistry *view.Registry,
+	viewRegistry driver2.Registry,
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 ) driver.NamedDriver {

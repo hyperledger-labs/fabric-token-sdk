@@ -138,7 +138,7 @@ type ViewManager interface {
 }
 
 type ViewRegistry interface {
-	RegisterResponder(responder view2.View, initiatedBy interface{}) error
+	RegisterResponder(responder view.View, initiatedBy interface{}) error
 }
 
 type Network struct {
