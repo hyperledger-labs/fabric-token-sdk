@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttxdb
 
 import (
+	"context"
 	"math/big"
 	"reflect"
 	"time"
@@ -246,14 +247,15 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (d *DB) SetStatus(txID string, status TxStatus, message string) error {
+func (d *DB) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
 	logger.Debugf("set status [%s][%s]...", txID, status)
-	if err := d.db.SetStatus(txID, status, message); err != nil {
+	if err := d.db.SetStatus(ctx, txID, status, message); err != nil {
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TxStatusMessage[status])
 	}
 
 	// notify the listeners
 	d.Notify(db.StatusEvent{
+		Ctx:            ctx,
 		TxID:           txID,
 		ValidationCode: status,
 	})

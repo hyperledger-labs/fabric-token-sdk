@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock
 
 import (
+	"context"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -33,7 +34,7 @@ type manager struct {
 }
 
 type TokenDB interface {
-	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
 }
 
 type iterator[k any] interface {

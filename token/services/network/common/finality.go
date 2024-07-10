@@ -25,7 +25,7 @@ import (
 
 type transactionDB interface {
 	GetTokenRequest(txID string) ([]byte, error)
-	SetStatus(txID string, status driver.TxStatus, message string) error
+	SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error
 }
 
 type TokenManagementServiceProvider interface {
@@ -61,7 +61,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 }
 
 func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) error {
-	_, span := t.tracer.Start(ctx, "on_status")
+	newCtx, span := t.tracer.Start(ctx, "on_status")
 	defer span.End()
 	t.logger.Debugf("tx status changed for tx [%s]: [%s]", txID, status)
 	var txStatus driver.TxStatus
@@ -97,7 +97,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 		} else {
 			t.logger.Debugf("append token request for [%s]", txID)
 			span.AddEvent("append_token_request")
-			if err := t.tokens.Append(t.tmsID, txID, tr); err != nil {
+			if err := t.tokens.Append(newCtx, t.tmsID, txID, tr); err != nil {
 				// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
 				t.logger.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
 				return fmt.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
@@ -108,7 +108,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 		txStatus = driver.Deleted
 	}
 	span.AddEvent("set_tx_status")
-	if err := t.ttxDB.SetStatus(txID, txStatus, message); err != nil {
+	if err := t.ttxDB.SetStatus(newCtx, txID, txStatus, message); err != nil {
 		t.logger.Errorf("<message> [%s]: [%s]", txID, err)
 		return fmt.Errorf("<message> [%s]: [%s]", txID, err)
 	}

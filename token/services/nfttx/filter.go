@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package nfttx
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -24,7 +26,7 @@ type Filter interface {
 
 type QueryService interface {
 	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
-	UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
@@ -61,7 +63,7 @@ func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Q
 		return nil, nil, errors.Wrap(err, "failed to convert quantity")
 	}
 
-	unspentTokens, err := s.queryService.UnspentTokensIteratorBy(s.wallet, "")
+	unspentTokens, err := s.queryService.UnspentTokensIteratorBy(context.TODO(), s.wallet, "")
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "token selection failed")
 	}

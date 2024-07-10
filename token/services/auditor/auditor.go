@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -120,8 +121,10 @@ func (a *Auditor) Release(tx Transaction) {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *Auditor) SetStatus(txID string, status TxStatus, message string) error {
-	return a.auditDB.SetStatus(txID, status, message)
+func (a *Auditor) SetStatus(ctx context.Context, txID string, status db.TxStatus, message string) error {
+	newCtx, span := a.finalityTracer.Start(ctx, "set_status", tracing.WithAttributes(tracing.String(txIdLabel, txID)))
+	defer span.End()
+	return a.auditDB.SetStatus(newCtx, txID, status, message)
 }
 
 // GetStatus return the status of the given transaction id.

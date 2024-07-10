@@ -391,7 +391,8 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 			err = errors.Errorf("panic caught: %v", r)
 		}
 	}()
-	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID, t.dbManager), context.TODO())
+	span.AddEvent("request_tx_status_view")
+	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID, t.dbManager), newCtx)
 	if err != nil {
 		return errors.Wrapf(err, "failed retrieving token request [%s]", txID)
 	}

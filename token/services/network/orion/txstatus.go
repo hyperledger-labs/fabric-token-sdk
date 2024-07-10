@@ -44,13 +44,17 @@ func NewRequestTxStatusView(network string, namespace string, txID string, dbMan
 }
 
 func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("tx_status_request")
+	defer span.End()
 	sm, err := r.dbManager.GetSessionManager(r.Network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting session manager for network [%s]", r.Network)
 	}
 	custodian := sm.CustodianID
+	span.AddEvent("create_custodian_session")
 	session, err := session2.NewJSON(context, context.Initiator(), view2.GetIdentityProvider(context).Identity(custodian))
 	if err != nil {
+		span.RecordError(err)
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
 	}
 	// TODO: Should we sign the txStatus request?
@@ -59,11 +63,15 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 		Namespace: r.Namespace,
 		TxID:      r.TxID,
 	}
+	span.AddEvent("send_request")
 	if err := session.Send(request); err != nil {
+		span.RecordError(err)
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
+	span.AddEvent("receive_response")
 	response := &TxStatusResponse{}
 	if err := session.Receive(response); err != nil {
+		span.RecordError(err)
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
 	return response, nil

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -25,7 +26,7 @@ type Vault interface {
 
 type QueryEngine interface {
 	// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id. Type can be empty
-	UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
 }
 
 type TokenVault interface {
@@ -297,7 +298,7 @@ func (w *OwnerWallet) filterIterator(tokenType string, sender bool, selector Sel
 	} else {
 		walletID = recipientWallet(w.wallet)
 	}
-	it, err := w.queryEngine.UnspentTokensIteratorBy(walletID, tokenType)
+	it, err := w.queryEngine.UnspentTokensIteratorBy(context.TODO(), walletID, tokenType)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get iterator over unspent tokens")
 	}

@@ -44,7 +44,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 		if output.Type == "MAX" {
 			continue
 		}
-		unspentTokens, err := ttx.MyWallet(context, token.WithTMSID(tx.TMSID())).ListUnspentTokens(ttx.WithType(output.Type))
+		unspentTokens, err := ttx.MyWallet(context, token.WithTMSID(tx.TMSID())).ListUnspentTokens(context.Context(), ttx.WithType(output.Type))
 		assert.NoError(err, "failed retrieving the unspent tokens for type [%s]", output.Type)
 		upperBound, err := token2.UInt64ToQuantity(3000, precision)
 		assert.NoError(err, "failed to convert to quantity")

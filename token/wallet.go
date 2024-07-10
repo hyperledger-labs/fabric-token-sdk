@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -259,22 +261,22 @@ func (o *OwnerWallet) GetSigner(identity Identity) (driver.Signer, error) {
 
 // ListUnspentTokens returns a list of unspent tokens owned by identities in this wallet and filtered by the passed options.
 // Options: WithType
-func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token.UnspentTokens, error) {
+func (o *OwnerWallet) ListUnspentTokens(ctx context.Context, opts ...ListTokensOption) (*token.UnspentTokens, error) {
 	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
 	}
-	return o.w.ListTokens(compiledOpts)
+	return o.w.ListTokens(ctx, compiledOpts)
 }
 
 // ListUnspentTokensIterator returns an iterator of unspent tokens owned by identities in this wallet and filtered by the passed options.
 // Options: WithType
-func (o *OwnerWallet) ListUnspentTokensIterator(opts ...ListTokensOption) (*UnspentTokensIterator, error) {
+func (o *OwnerWallet) ListUnspentTokensIterator(ctx context.Context, opts ...ListTokensOption) (*UnspentTokensIterator, error) {
 	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
 	}
-	it, err := o.w.ListTokensIterator(compiledOpts)
+	it, err := o.w.ListTokensIterator(ctx, compiledOpts)
 	if err != nil {
 		return nil, err
 	}

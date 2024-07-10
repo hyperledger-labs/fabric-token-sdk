@@ -11,6 +11,7 @@ import (
 	"time"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
@@ -20,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type TransferService struct {
@@ -29,6 +31,7 @@ type TransferService struct {
 	TokenLoader             TokenLoader
 	Deserializer            driver.Deserializer
 	Metrics                 *Metrics
+	tracer                  trace.Tracer
 }
 
 func NewTransferService(
@@ -38,6 +41,7 @@ func NewTransferService(
 	tokenLoader TokenLoader,
 	deserializer driver.Deserializer,
 	metrics *Metrics,
+	tracerProvider trace.TracerProvider,
 ) *TransferService {
 	return &TransferService{
 		Logger:                  logger,
@@ -46,15 +50,22 @@ func NewTransferService(
 		TokenLoader:             tokenLoader,
 		Deserializer:            deserializer,
 		Metrics:                 metrics,
+		tracer: tracerProvider.Tracer("transfer_service", tracing.WithMetricsOpts(tracing.MetricsOpts{
+			Namespace:  "tokensdk_dlog",
+			LabelNames: []tracing.LabelName{},
+		})),
 	}
 }
 
 // Transfer returns a TransferActionMetadata as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
 func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driver.OwnerWallet, tokenIDs []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+	newCtx, span := s.tracer.Start(ctx, "transfer")
+	defer span.End()
 	s.Logger.Debugf("Prepare Transfer Action [%s,%v]", txID, tokenIDs)
 	// load tokens with the passed token identifiers
-	inputIDs, tokens, inputInf, senders, err := s.TokenLoader.LoadTokens(tokenIDs)
+	span.AddEvent("load_tokens")
+	inputIDs, tokens, inputInf, senders, err := s.TokenLoader.LoadTokens(newCtx, tokenIDs)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
@@ -71,6 +82,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	var outputAuditInfos [][]byte
 
 	// get values and owners of outputs
+	span.AddEvent("prepare_output_tokens")
 	for i, output := range outputTokens {
 		q, err := token3.ToQuantity(output.Quantity, pp.Precision())
 		if err != nil {
@@ -100,7 +112,9 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
 	start := time.Now()
-	zkTransfer, outputMetadata, err := sender.GenerateZKTransfer(values, owners)
+	span.AddEvent("start_generate_zk_transfer")
+	zkTransfer, outputMetadata, err := sender.GenerateZKTransfer(newCtx, values, owners)
+	span.AddEvent("end_generate_zk_transfer")
 	duration := time.Since(start)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", txID)
