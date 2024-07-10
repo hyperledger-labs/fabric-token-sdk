@@ -8,10 +8,10 @@ require (
 	github.com/IBM/mathlib v0.0.3-0.20231011094432-44ee0eb539da
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240705125932-41da7decb16b
+	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240710130734-d15e0a56959e
 	github.com/hyperledger-labs/fabric-token-sdk/txgen v0.0.0-00010101000000-000000000000
-	github.com/hyperledger-labs/orion-sdk-go v0.2.5
-	github.com/hyperledger-labs/orion-server v0.2.5
+	github.com/hyperledger-labs/orion-sdk-go v0.2.10
+	github.com/hyperledger-labs/orion-server v0.2.10
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20230228194215-b84622ba6a7a
 	github.com/hyperledger/fabric-protos-go v0.3.0
@@ -59,7 +59,7 @@ require (
 	github.com/Microsoft/hcsshim v0.11.4 // indirect
 	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
 	github.com/SmartBFT-Go/consensus v0.0.0-20230212211744-e5a79afcea81 // indirect
-	github.com/VictoriaMetrics/fastcache v1.9.0 // indirect
+	github.com/VictoriaMetrics/fastcache v1.12.0 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
@@ -226,7 +226,7 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/sykesm/zap-logfmt v0.0.4 // indirect
-	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
+	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
