@@ -123,6 +123,20 @@ func NewTestSuite(sqlConfigs map[string]*sql.PostgresConfig, startPort func() in
 	}
 }
 
+// NewLocalTestSuite returns a new test suite that stores configuration data in `./testdata` and does not remove it when
+// the test is done.
+func NewLocalTestSuite(sqlConfigs map[string]*sql.PostgresConfig, startPort func() int, topologies []api.Topology) *TestSuite {
+	return &TestSuite{
+		sqlConfigs: sqlConfigs,
+		generator: func() (*integration.Infrastructure, error) {
+			i, err := integration.New(startPort(), "./testdata", integration.ReplaceTemplate(topologies)...)
+			i.DeleteOnStop = false
+			return i, err
+		},
+		closeFunc: func() {},
+	}
+}
+
 type TestSuite struct {
 	sqlConfigs map[string]*sql.PostgresConfig
 	generator  func() (*integration.Infrastructure, error)

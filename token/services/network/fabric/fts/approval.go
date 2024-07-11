@@ -228,7 +228,7 @@ func (r *RequestApprovalResponderView) validate(
 
 func (r *RequestApprovalResponderView) endorserID(tms *token2.ManagementService, fns *fabric2.NetworkService) (view.Identity, error) {
 	var endorserIDLabel string
-	if err := tms.Configuration().UnmarshalKey("services.network.fabric.endorsement.id", &endorserIDLabel); err != nil {
+	if err := tms.Configuration().UnmarshalKey("services.network.fabric.fsc_endorsement.id", &endorserIDLabel); err != nil {
 		return nil, errors.WithMessage(err, "failed to load endorserID")
 	}
 	var endorserID view.Identity

@@ -16,6 +16,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	AmIAnEndorserKey = "services.network.fabric.fsc_endorsement.endorser"
+	EndorsersKey     = "services.network.fabric.fsc_endorsement.endorsers"
+)
+
 func newFSCService(
 	nw *fabric.NetworkService,
 	tms *token.ManagementService,
@@ -30,7 +35,7 @@ func newFSCService(
 		return nil, errors.Wrapf(err, "failed getting channel [%s]", tmsID.Channel)
 	}
 	committer := ch.Committer()
-	if configuration.GetBool("services.network.fabric.endorsement.endorser") {
+	if configuration.GetBool(AmIAnEndorserKey) {
 		logger.Info("this node is an endorser, prepare it...")
 		if err := committer.ProcessNamespace(tmsID.Namespace); err != nil {
 			return nil, errors.WithMessagef(err, "failed to add namespace to committer [%s]", tmsID.Namespace)
@@ -38,10 +43,12 @@ func newFSCService(
 		if err := viewRegistry.RegisterResponder(&fts.RequestApprovalResponderView{}, &fts.RequestApprovalView{}); err != nil {
 			return nil, errors.WithMessagef(err, "failed to register approval view for [%s]", tmsID)
 		}
+	} else {
+		logger.Infof("this node is an not endorser, is key set? [%v].", configuration.IsSet(AmIAnEndorserKey))
 	}
 
 	var endorserIDs []string
-	if err := configuration.UnmarshalKey("services.network.fabric.endorsement.endorsers", &endorserIDs); err != nil {
+	if err := configuration.UnmarshalKey(EndorsersKey, &endorserIDs); err != nil {
 		return nil, errors.WithMessage(err, "failed to load endorsers")
 	}
 	logger.Infof("defined [%s] as endorsers for [%s]", endorserIDs, tmsID)

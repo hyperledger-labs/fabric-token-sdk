@@ -80,7 +80,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		Describe("T10 Fungible with Auditor ne Issuer and Endorsers", t.Label, func() {
-			ts, selector := newTestSuite(t.CommType, Aries|WithEndorsers, t.ReplicationFactor, "alice", "bob", "charlie")
+			ts, selector := newTestSuite(t.CommType, Aries|WithEndorsers, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
 			It("succeeded", Label("T10"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
@@ -88,11 +88,11 @@ var _ = Describe("EndToEnd", func() {
 	}
 
 	for _, tokenSelector := range integration2.TokenSelectors {
-		Describe("T10 TokenSelector Test", integration2.WebSocketNoReplication.Label, Label(tokenSelector), func() {
+		Describe("T11 TokenSelector Test", integration2.WebSocketNoReplication.Label, Label(tokenSelector), func() {
 			ts, replicaSelector := newTestSuite(integration2.WebSocketNoReplication.CommType, Aries, integration2.WebSocketNoReplication.ReplicationFactor, tokenSelector, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T10"), func() { fungible.TestSelector(ts.II, "auditor", replicaSelector) })
+			It("succeeded", Label("T11"), func() { fungible.TestSelector(ts.II, "auditor", replicaSelector) })
 		})
 	}
 })
@@ -139,7 +139,8 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			ReplicationOpts:     opts,
 			FSCBasedEndorsement: mask&WithEndorsers > 0,
 			//FSCLogSpec:          "token-sdk=debug:fabric-sdk=debug:info",
-			OnlyUnity: true,
+			OnlyUnity:     true,
+			TokenSelector: tokenSelector,
 		},
 	))
 	return ts, selector

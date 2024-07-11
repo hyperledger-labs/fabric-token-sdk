@@ -21,6 +21,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	FSCEndorsementKey = "services.network.fabric.fsc_endorsement"
+)
+
 var (
 	logger = flogging.MustGetLogger("token-sdk.network.fabric.endorsement")
 )
@@ -78,10 +82,12 @@ func (l *loader) load(tmsID token2.TMSID) (Service, error) {
 		return nil, errors.WithMessagef(err, "failed to get configuration for [%s]", tmsID)
 	}
 
-	if !configuration.IsSet("services.network.fabric.endorsement") {
+	if !configuration.IsSet(FSCEndorsementKey) {
+		logger.Infof("chaincode endorsement enabled...")
 		return newChaincodeEndorsementService(tmsID), nil
 	}
 
+	logger.Infof("FSC endorsement enabled...")
 	tms, err := l.tmsProvider.GetManagementService(token2.WithTMSID(tmsID))
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get tms for [%s]", tmsID)

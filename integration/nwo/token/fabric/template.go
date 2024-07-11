@@ -29,7 +29,7 @@ token:
       services:
         network:
           fabric:
-            endorsement:
+            fsc_endorsement:
               endorser: {{ Endorser }}
               id: {{ EndorserID }}
               endorsers: {{ range Endorsers }}
