@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
@@ -21,9 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -88,21 +84,6 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", networkID, channel, namespace)
 	}
 
-	fscIdentity := d.identityProvider.DefaultIdentity()
-	// Prepare roles
-	roles := identity.NewRoles()
-	deserializerManager := sig.NewMultiplexDeserializer()
-	tmsID := token.TMSID{
-		Network:   networkID,
-		Channel:   channel,
-		Namespace: namespace,
-	}
-	identityDB, err := d.storageProvider.OpenIdentityDB(tmsID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
-	}
-	sigService := sig.NewService(deserializerManager, identityDB)
-	ip := identity.NewProvider(identityDB, sigService, d.endpointService, NewEIDRHDeserializer(), deserializerManager)
 	ppm, err := common.NewPublicParamsManager[*crypto.PublicParams](
 		&PublicParamsDeserializer{},
 		crypto.DLogPublicParameters,
@@ -111,73 +92,18 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
-	identityConfig, err := config2.NewIdentityConfig(tmsConfig)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create identity config")
-	}
-	roleFactory := msp.NewRoleFactory(
-		tmsID,
-		identityConfig,                           // config
-		fscIdentity,                              // FSC identity
-		networkLocalMembership.DefaultIdentity(), // network default identity
-		ip,
-		sigService,        // signer service
-		d.endpointService, // endpoint service
-		d.storageProvider,
-		deserializerManager,
-		false,
-	)
-	role, err := roleFactory.NewIdemix(
-		driver.OwnerRole,
-		identityConfig.DefaultCacheSize(),
-		ppm.PublicParams().IdemixIssuerPK,
-		ppm.PublicParams().IdemixCurveID,
-	)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create owner role")
-	}
-	roles.Register(driver.OwnerRole, role)
-	role, err = roleFactory.NewX509(driver.IssuerRole)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create issuer role")
-	}
-	roles.Register(driver.IssuerRole, role)
-	role, err = roleFactory.NewX509(driver.AuditorRole)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create auditor role")
-	}
-	roles.Register(driver.AuditorRole, role)
-	role, err = roleFactory.NewX509(driver.CertifierRole)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create certifier role")
-	}
-	roles.Register(driver.CertifierRole, role)
 
-	// Instantiate the token service
 	qe := v.QueryEngine()
-	// wallet service
-	walletDB, err := d.storageProvider.OpenWalletDB(tmsID)
+	ws, err := d.newWalletService(tmsConfig, d.endpointService, d.storageProvider, qe, logger, d.identityProvider.DefaultIdentity(), networkLocalMembership.DefaultIdentity(), ppm.PublicParams(), false)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get identity storage provider")
+		return nil, errors.Wrapf(err, "failed to initiliaze wallet service for [%s:%s]", networkID, namespace)
 	}
+	deserializer := ws.Deserializer
+	ip := ws.IdentityProvider
 
-	deserializer, err := NewDeserializer(ppm.PublicParams())
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to instantiate the deserializer")
-	}
-	ws := common.NewWalletService(
-		logger,
-		ip,
-		deserializer,
-		zkatdlog.NewWalletFactory(logger, ip, qe, identityConfig, deserializer),
-		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
-		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
-		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
-		nil,
-	)
 	tokDeserializer := &TokenDeserializer{}
 
-	metricsProvider := metrics.NewTMSProvider(tmsID, d.metricsProvider)
+	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
 	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
 	service, err := zkatdlog.NewTokenService(
