@@ -68,6 +68,10 @@ func (m *configuration) GetString(key string) string {
 	return m.cp.GetString("token.tms." + m.keyID + "." + key)
 }
 
+func (m *configuration) GetBool(key string) bool {
+	return m.cp.GetBool("token.tms." + m.keyID + "." + key)
+}
+
 func (m *configuration) IsSet(key string) bool {
 	return m.cp.IsSet("token.tms." + m.keyID + "." + key)
 }

@@ -12,6 +12,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Vault struct {
+	*network.TokenVault
+}
+
+func (v *Vault) QueryEngine() driver.QueryEngine {
+	return v.TokenVault.QueryEngine()
+}
+
+func (v *Vault) CertificationStorage() driver.CertificationStorage {
+	return v.TokenVault.CertificationStorage()
+}
+
 type ProviderAdaptor struct {
 	Provider *network.Provider
 }
@@ -21,11 +33,11 @@ func (p *ProviderAdaptor) Vault(networkID string, channel string, namespace stri
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network for [%s:%s:%s]", networkID, channel, namespace)
 	}
-	v, err := net.Vault(namespace)
+	v, err := net.TokenVault(namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", networkID, channel, namespace)
 	}
-	return v, nil
+	return &Vault{TokenVault: v}, nil
 }
 
 type PublicParamsProvider struct {
@@ -37,7 +49,7 @@ func (p *PublicParamsProvider) PublicParams(networkID string, channel string, na
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network for [%s:%s:%s]", networkID, channel, namespace)
 	}
-	v, err := net.Vault(namespace)
+	v, err := net.TokenVault(namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", networkID, channel, namespace)
 	}

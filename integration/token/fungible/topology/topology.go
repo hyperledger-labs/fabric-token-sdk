@@ -307,6 +307,18 @@ func Topology(opts common.Opts) []api.Topology {
 	manager.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	manager.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
+	if opts.FSCBasedEndorsement {
+		endorserTemplate := fscTopology.NewTemplate("endorser")
+		endorserTemplate.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+		endorserTemplate.AddOptions(
+			fabric.WithOrganization("Org1"),
+			fabric2.WithEndorserRole(),
+		)
+		fscTopology.AddNodeFromTemplate("endorser-1", endorserTemplate)
+		fscTopology.AddNodeFromTemplate("endorser-2", endorserTemplate)
+		fscTopology.AddNodeFromTemplate("endorser-3", endorserTemplate)
+	}
+
 	tokenTopology := token.NewTopology()
 	tokenTopology.TokenSelector = opts.TokenSelector
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.TokenSDKDriver)
@@ -315,6 +327,9 @@ func Topology(opts common.Opts) []api.Topology {
 	if !opts.Aries {
 		// Enable Fabric-CA
 		fabric2.WithFabricCA(tms)
+	}
+	if opts.FSCBasedEndorsement {
+		fabric2.WithFSCEndorsers(tms, "endorser-1", "endorser-2", "endorser-3")
 	}
 	fabric2.SetOrgs(tms, "Org1")
 	if opts.Backend == "orion" {

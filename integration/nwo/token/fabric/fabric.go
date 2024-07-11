@@ -181,6 +181,10 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 		"SQLDataSource":       func() string { return p.GetSQLDataSource(node.Options, uniqueName, tms) },
 		"TokensSQLDriver":     func() string { return GetTokenPersistenceDriver(node.Options) },
 		"TokensSQLDataSource": func() string { return p.GetTokensSQLDataSource(node.Options, uniqueName, tms) },
+		"Endorsement":         func() bool { return IsFSCEndorsementEnabled(tms) },
+		"Endorsers":           func() []string { return Endorsers(tms) },
+		"EndorserID":          func() string { return "" },
+		"Endorser":            func() bool { return topology2.ToOptions(node.Options).Endorser() },
 		"OnlyUnity":           func() bool { return common2.IsOnlyUnity(tms) },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())

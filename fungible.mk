@@ -38,6 +38,10 @@ integration-tests-dlog-fabric-t9:
 integration-tests-dlog-fabric-t10:
 	make integration-tests-dlog-fabric TEST_FILTER="T10"
 
+.PHONY: integration-tests-dlog-fabric-t11
+integration-tests-dlog-fabric-t11:
+	make integration-tests-dlog-fabric TEST_FILTER="T11"
+
 .PHONY: integration-tests-dlog-fabric
 integration-tests-dlog-fabric:
 	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --label-filter="$(TEST_FILTER)" .

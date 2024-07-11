@@ -9,6 +9,7 @@ package sdk
 import (
 	"context"
 	errors2 "errors"
+	"fmt"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
@@ -87,6 +88,7 @@ func (p *SDK) Install() error {
 
 	logger.Infof("Token platform enabled, installing...")
 
+	fmt.Printf("token selector [%s]\n", p.ConfigService().GetString("token.selector.driver"))
 	err := errors2.Join(
 		p.Container().Provide(common.NewAcceptTxInDBFilterProvider),
 		p.Container().Provide(network.NewProvider),
@@ -135,13 +137,12 @@ func (p *SDK) Install() error {
 		p.Container().Provide(tms.NewPostInitializer),
 		p.Container().Provide(ttx.NewMetrics),
 	)
-
 	if err != nil {
-		return err
+		return errors.WithMessagef(err, "failed setting up dig container")
 	}
 
 	if err := p.SDK.Install(); err != nil {
-		return err
+		return errors.WithMessagef(err, "failed installing dig chain")
 	}
 
 	// Overwrite dependencies
@@ -158,7 +159,7 @@ func (p *SDK) Install() error {
 		}),
 	)
 	if err != nil {
-		return err
+		return errors.WithMessagef(err, "failed setting up decorator")
 	}
 
 	// Backward compatibility with SP
@@ -183,14 +184,18 @@ func (p *SDK) Install() error {
 		digutils.Register[metrics.Provider](p.Container()),
 	)
 	if err != nil {
-		return err
+		return errors.WithMessagef(err, "failed setting backward comaptibility with SP")
 	}
 
-	return errors2.Join(
+	err = errors2.Join(
 		p.Container().Invoke(func(tmsProvider *core2.TMSProvider, postInitializer *tms.PostInitializer) {
 			tmsProvider.SetCallback(postInitializer.PostInit)
 		}),
 	)
+	if err != nil {
+		return errors.WithMessagef(err, "failed post-inititialization")
+	}
+	return nil
 }
 
 func (p *SDK) Start(ctx context.Context) error {
@@ -241,8 +246,8 @@ func registerNetworkDrivers(in struct {
 	NetworkProvider *network.Provider
 	Drivers         []driver3.NamedDriver `group:"network-drivers"`
 }) {
-	for _, driver := range in.Drivers {
-		in.NetworkProvider.RegisterDriver(driver)
+	for _, d := range in.Drivers {
+		in.NetworkProvider.RegisterDriver(d)
 	}
 
 }

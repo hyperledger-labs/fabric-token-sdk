@@ -22,24 +22,33 @@ const (
 	Unknown                // Transaction is unknown
 )
 
-// UnspentTokensIterator models an iterator of unspent tokens
-type UnspentTokensIterator = driver2.UnspentTokensIterator
+type (
+	// UnspentTokensIterator models an iterator of unspent tokens
+	UnspentTokensIterator = driver2.UnspentTokensIterator
+	QueryEngine           = vault.QueryEngine
+	CertificationStorage  = vault.CertificationStorage
+)
 
 // TokenVault models the token vault
 type TokenVault interface {
 	// QueryEngine returns the query engine over this vault
-	QueryEngine() vault.QueryEngine
+	QueryEngine() QueryEngine
 
 	// CertificationStorage returns the certification storage over this vault
-	CertificationStorage() vault.CertificationStorage
+	CertificationStorage() CertificationStorage
 
 	// DeleteTokens delete the passed tokens in the passed namespace
 	DeleteTokens(ids ...*token.ID) error
 }
 
+type QueryExecutor interface {
+	GetState(key string) ([]byte, error)
+	Done()
+}
+
 // Vault models the vault service
 type Vault interface {
-	TokenVault
+	NewQueryExecutor() (QueryExecutor, error)
 
 	// GetLastTxID returns the last transaction ID committed into the vault
 	GetLastTxID() (string, error)

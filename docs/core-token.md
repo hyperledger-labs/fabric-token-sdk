@@ -52,6 +52,32 @@ token:
             maxOpenConns: 10
             dataSource: /some/path/tokendb
 
+      services:
+        # This section contains network specific configuration
+        network:
+          # Configuration related to the Fabric network
+          fabric:
+            # In Fabric, the execution of the token chaincode can be endorsed by any node equipped with
+            # a proper endorsement key.
+            # Therefore, also FSC nodes equipped with proper endorsement keys can perform the same function.
+            # This section is dedicated to the configuration of the endorsement of the token chaincode by
+            # other FSC nodes.
+            endorsement:
+              # Is this node an endorser?: true/false
+              endorser: true
+              # If this node is an endorser, which Fabric identity should be used to sign the endorsement?
+              # If empty, the default identity will be used
+              id:
+              # This section is used to set the policy to be used to select the endorsers to contact.
+              # Available policies are: `1outn`, `all`. Default policy is `all`
+              policy:
+                type: 1outn
+              # A list of FSC node identifiers that must be contacted to obtain the endorsement 
+              endorsers:
+              - endorser1
+              - endorser2
+              - endorser2
+
       # sections dedicated to the definition of the wallets
       wallets:
         # Default cache size reference that can be used by any wallet that support caching

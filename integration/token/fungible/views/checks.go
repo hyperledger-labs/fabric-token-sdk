@@ -51,6 +51,8 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(net, "failed to get network [%s:%s]", tms.Network(), tms.Channel())
 	v, err := net.Vault(tms.Namespace())
 	assert.NoError(err, "failed to get vault [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
+	tv, err := net.TokenVault(tms.Namespace())
+	assert.NoError(err, "failed to get token vault [%s:%s:%s]", tms.Namespace(), tms.Channel(), tms.Namespace())
 	l, err := net.Ledger()
 	assert.NoError(err, "failed to get ledger [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 
@@ -152,7 +154,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// check unspent tokens
-	uit, err := v.QueryEngine().UnspentTokensIterator()
+	uit, err := tv.QueryEngine().UnspentTokensIterator()
 	assert.NoError(err, "failed to get unspent tokens")
 	defer uit.Close()
 	var unspentTokenIDs []*token2.ID
@@ -170,7 +172,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	} else {
 		assert.Equal(len(unspentTokenIDs), len(ledgerTokenContent))
 		index := 0
-		assert.NoError(v.QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
+		assert.NoError(tv.QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
 			if !bytes.Equal(ledgerTokenContent[index], tokenRaw) {
 				errorMessages = append(errorMessages, fmt.Sprintf("token content does not match at [%s][%d], [%s]!=[%s]",
 					id,
@@ -206,7 +208,7 @@ type PruneInvalidUnspentTokensView struct {
 func (p *PruneInvalidUnspentTokensView) Call(context view.Context) (interface{}, error) {
 	net := network.GetInstance(context, p.TMSID.Network, p.TMSID.Channel)
 	assert.NotNil(net, "cannot find network [%s:%s]", p.TMSID.Network, p.TMSID.Channel)
-	vault, err := net.Vault(p.TMSID.Namespace)
+	vault, err := net.TokenVault(p.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", p.TMSID.Network, p.TMSID.Channel, p.TMSID.Namespace)
 
 	return vault.PruneInvalidUnspentTokens(context)
@@ -233,7 +235,7 @@ type ListVaultUnspentTokensView struct {
 func (l *ListVaultUnspentTokensView) Call(context view.Context) (interface{}, error) {
 	net := network.GetInstance(context, l.TMSID.Network, l.TMSID.Channel)
 	assert.NotNil(net, "cannot find network [%s:%s]", l.TMSID.Network, l.TMSID.Channel)
-	vault, err := net.Vault(l.TMSID.Namespace)
+	vault, err := net.TokenVault(l.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", l.TMSID.Network, l.TMSID.Channel, l.TMSID.Namespace)
 
 	return vault.QueryEngine().ListUnspentTokens()
@@ -261,7 +263,7 @@ type CheckIfExistsInVaultView struct {
 func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, error) {
 	net := network.GetInstance(context, c.TMSID.Network, c.TMSID.Channel)
 	assert.NotNil(net, "cannot find network [%s:%s]", c.TMSID.Network, c.TMSID.Channel)
-	vault, err := net.Vault(c.TMSID.Namespace)
+	vault, err := net.TokenVault(c.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", c.TMSID.Network, c.TMSID.Channel, c.TMSID.Namespace)
 	qe := vault.QueryEngine()
 	var IDs []*token2.ID

@@ -39,11 +39,12 @@ type Network struct {
 	n              *orion.NetworkService
 	ip             IdentityProvider
 	ledger         *ledger
-	nsFinder       common2.NamespaceFinder
+	nsFinder       common2.Configuration
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
 
-	vaultLazyCache utils.LazyProvider[string, driver.Vault]
-	subscribers    *events.Subscribers
+	vaultLazyCache      utils.LazyProvider[string, driver.Vault]
+	tokenVaultLazyCache utils.LazyProvider[string, driver.TokenVault]
+	subscribers         *events.Subscribers
 }
 
 func NewNetwork(
@@ -52,7 +53,7 @@ func NewNetwork(
 	ip IdentityProvider,
 	n *orion.NetworkService,
 	newVault NewVaultFunc,
-	nsFinder common2.NamespaceFinder,
+	nsFinder common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
 ) *Network {
 	loader := &loader{
@@ -62,15 +63,15 @@ func NewNetwork(
 		vault:    n.Vault(),
 	}
 	return &Network{
-		nsFinder:       nsFinder,
-		filterProvider: filterProvider,
-		ip:             ip,
-		n:              n,
-		viewManager:    viewManager,
-		tmsProvider:    tmsProvider,
-		vaultLazyCache: utils.NewLazyProvider(loader.load),
-		subscribers:    events.NewSubscribers(),
-		ledger:         &ledger{network: n.Name(), viewManager: viewManager},
+		nsFinder:            nsFinder,
+		filterProvider:      filterProvider,
+		ip:                  ip,
+		n:                   n,
+		viewManager:         viewManager,
+		tmsProvider:         tmsProvider,
+		vaultLazyCache:      utils.NewLazyProvider(loader.loadVault),
+		tokenVaultLazyCache: utils.NewLazyProvider(loader.loadTokenVault),
+		subscribers:         events.NewSubscribers(), ledger: &ledger{network: n.Name(), viewManager: viewManager},
 	}
 }
 
@@ -140,6 +141,18 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 	}
 
 	return n.vaultLazyCache.Get(namespace)
+}
+
+func (n *Network) TokenVault(namespace string) (driver.TokenVault, error) {
+	if len(namespace) == 0 {
+		tms, err := n.tmsProvider.GetManagementService(token2.WithNetwork(n.n.Name()))
+		if tms == nil || err != nil {
+			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s]: %v", n.n.Name(), err)
+		}
+		namespace = tms.Namespace()
+	}
+
+	return n.tokenVaultLazyCache.Get(namespace)
 }
 
 func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
@@ -287,33 +300,39 @@ func (n *Network) ProcessNamespace(namespace string) error {
 }
 
 type nv struct {
-	v          orion.Vault
-	tokenVault driver.TokenVault
-}
-
-func (v *nv) QueryEngine() vault.QueryEngine {
-	return v.tokenVault.QueryEngine()
-}
-
-func (v *nv) CertificationStorage() vault.CertificationStorage {
-	return v.tokenVault.CertificationStorage()
-}
-
-func (v *nv) DeleteTokens(ids ...*token.ID) error {
-	return v.tokenVault.DeleteTokens(ids...)
+	v orion.Vault
 }
 
 func (v *nv) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
+func (v *nv) NewQueryExecutor() (driver.QueryExecutor, error) {
+	panic("not supported")
+}
+
 func (v *nv) Status(id string) (driver.ValidationCode, string, error) {
-	vc, message, err := v.v.Status(id)
-	return vc, message, err
+	return v.v.Status(id)
 }
 
 func (v *nv) DiscardTx(id string, message string) error {
 	return v.v.DiscardTx(id, message)
+}
+
+type tokenVault struct {
+	tokenVault driver.TokenVault
+}
+
+func (v *tokenVault) QueryEngine() vault.QueryEngine {
+	return v.tokenVault.QueryEngine()
+}
+
+func (v *tokenVault) CertificationStorage() vault.CertificationStorage {
+	return v.tokenVault.CertificationStorage()
+}
+
+func (v *tokenVault) DeleteTokens(ids ...*token.ID) error {
+	return v.tokenVault.DeleteTokens(ids...)
 }
 
 type ledger struct {
@@ -368,10 +387,14 @@ type loader struct {
 	vault    orion.Vault
 }
 
-func (l *loader) load(namespace string) (driver.Vault, error) {
-	tokenVault, err := l.newVault(l.name, l.channel, namespace)
+func (l *loader) loadVault(namespace string) (driver.Vault, error) {
+	return &nv{v: l.vault}, nil
+}
+
+func (l *loader) loadTokenVault(namespace string) (driver.TokenVault, error) {
+	tv, err := l.newVault(l.name, l.channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token vault")
 	}
-	return &nv{v: l.vault, tokenVault: tokenVault}, nil
+	return &tokenVault{tokenVault: tv}, nil
 }
