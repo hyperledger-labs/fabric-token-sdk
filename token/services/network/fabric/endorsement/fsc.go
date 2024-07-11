@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package endorsement
 
 import (
+	"math/rand"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -19,6 +21,10 @@ import (
 const (
 	AmIAnEndorserKey = "services.network.fabric.fsc_endorsement.endorser"
 	EndorsersKey     = "services.network.fabric.fsc_endorsement.endorsers"
+	PolicyType       = "services.network.fabric.fsc_endorsement.policy.type"
+
+	OneOutNPolicy = "1outn"
+	AllPolicy     = "all"
 )
 
 func newFSCService(
@@ -47,6 +53,11 @@ func newFSCService(
 		logger.Infof("this node is an not endorser, is key set? [%v].", configuration.IsSet(AmIAnEndorserKey))
 	}
 
+	policyType := configuration.GetString(PolicyType)
+	if len(policyType) == 0 {
+		policyType = AllPolicy
+	}
+
 	var endorserIDs []string
 	if err := configuration.UnmarshalKey(EndorsersKey, &endorserIDs); err != nil {
 		return nil, errors.WithMessage(err, "failed to load endorsers")
@@ -64,22 +75,38 @@ func newFSCService(
 		}
 	}
 
-	return &fscService{endorsers: endorsers, tms: tms, viewManager: viewManager}, nil
+	return &fscService{
+		endorsers:   endorsers,
+		tms:         tms,
+		viewManager: viewManager,
+		policyType:  policyType,
+	}, nil
 }
 
 type fscService struct {
 	tms         *token.ManagementService
 	endorsers   []view.Identity
 	viewManager ViewManager
+	policyType  string
 }
 
 func (e *fscService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
-	logger.Debugf("request approval via fts endrosers...")
+	var endorsers []view.Identity
+	switch e.policyType {
+	case OneOutNPolicy:
+		endorsers = []view.Identity{e.endorsers[rand.Intn(len(e.endorsers))]}
+	case AllPolicy:
+		endorsers = e.endorsers
+	default:
+		endorsers = e.endorsers
+	}
+	logger.Debugf("request approval via fts endrosers with policy [%s]: [%d]...", e.policyType, len(endorsers))
+
 	envBoxed, err := e.viewManager.InitiateView(&fts.RequestApprovalView{
 		TMS:        e.tms,
 		RequestRaw: requestRaw,
 		TxID:       txID,
-		Endorsers:  e.endorsers,
+		Endorsers:  endorsers,
 	}, context.Context())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to request approval")

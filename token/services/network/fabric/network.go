@@ -272,6 +272,11 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 	if len(ppRaw) != 0 {
 		return []token2.ServiceOption{token2.WithTMSID(tmsID), token2.WithPublicParameter(ppRaw)}, nil
 	}
+	// Let the endorsement service initialize itself, if needed
+	_, err = n.endorsementServiceProvider.Get(tmsID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get endorsement service at [%s]", tmsID)
+	}
 	return []token2.ServiceOption{token2.WithTMSID(tmsID)}, nil
 }
 

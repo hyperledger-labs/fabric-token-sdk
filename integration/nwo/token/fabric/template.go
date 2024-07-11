@@ -32,6 +32,8 @@ token:
             fsc_endorsement:
               endorser: {{ Endorser }}
               id: {{ EndorserID }}
+              policy:
+                type: 1outn
               endorsers: {{ range Endorsers }}
               - {{ . }}{{ end }}
       {{ end }}

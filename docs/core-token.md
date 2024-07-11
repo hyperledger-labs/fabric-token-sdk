@@ -67,7 +67,11 @@ token:
               endorser: true
               # If this node is an endorser, which Fabric identity should be used to sign the endorsement?
               # If empty, the default identity will be used
-              id: 
+              id:
+              # This section is used to set the policy to be used to select the endorsers to contact.
+              # Available policies are: `1outn`, `all`. Default policy is `all`
+              policy:
+                type: 1outn
               # A list of FSC node identifiers that must be contacted to obtain the endorsement 
               endorsers:
               - endorser1
