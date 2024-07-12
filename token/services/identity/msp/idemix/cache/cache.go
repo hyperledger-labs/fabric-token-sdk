@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package cache
 
 import (
-	"runtime"
+	"bytes"
 	"sync"
 	"time"
 
@@ -34,6 +34,7 @@ type IdentityCache struct {
 }
 
 func NewIdentityCache(backed IdentityCacheBackendFunc, size int, opts *common.IdentityOptions) *IdentityCache {
+	logger.Debugf("new identity cache with size [%d]", size)
 	ci := &IdentityCache{
 		backed: backed,
 		cache:  make(chan identityCacheEntry, size),
@@ -45,15 +46,16 @@ func NewIdentityCache(backed IdentityCacheBackendFunc, size int, opts *common.Id
 
 func (c *IdentityCache) Identity(opts *common.IdentityOptions) (driver.Identity, []byte, error) {
 	if opts != nil {
-		return c.fetchIdentityFromBackend(opts)
+		// are the opts equal to the cache opts, if yes, use the cache
+		if c.opts != nil && (opts.EIDExtension != c.opts.EIDExtension || !bytes.Equal(opts.AuditInfo, c.opts.AuditInfo)) {
+			return c.fetchIdentityFromBackend(opts)
+		}
 	}
 
 	c.once.Do(func() {
+		logger.Debugf("provision identities with cache size [%d]", cap(c.cache))
 		if cap(c.cache) > 0 {
-			// Spin up as many background goroutines as we need to prepare identities in the background.
-			for i := 0; i < runtime.NumCPU(); i++ {
-				go c.provisionIdentities()
-			}
+			go c.provisionIdentities()
 		}
 	})
 
@@ -61,11 +63,10 @@ func (c *IdentityCache) Identity(opts *common.IdentityOptions) (driver.Identity,
 		logger.Debugf("fetching identity from cache...")
 	}
 
-	return c.fetchIdentityFromCache(opts)
-
+	return c.fetchIdentityFromCache()
 }
 
-func (c *IdentityCache) fetchIdentityFromCache(opts *common.IdentityOptions) (driver.Identity, []byte, error) {
+func (c *IdentityCache) fetchIdentityFromCache() (driver.Identity, []byte, error) {
 	var identity driver.Identity
 	var audit []byte
 
@@ -79,17 +80,15 @@ func (c *IdentityCache) fetchIdentityFromCache(opts *common.IdentityOptions) (dr
 	defer timeout.Stop()
 
 	select {
-
 	case entry := <-c.cache:
 		identity = entry.Identity
 		audit = entry.Audit
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("fetching identity from cache [%s][%d] took %v", identity, len(audit), time.Since(start))
+			logger.Debugf("fetching identity from cache [%s][%d] took [%v]", identity, len(audit), time.Since(start))
 		}
-
 	case <-timeout.C:
-		id, a, err := c.backed(opts)
+		id, a, err := c.backed(c.opts)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -97,10 +96,9 @@ func (c *IdentityCache) fetchIdentityFromCache(opts *common.IdentityOptions) (dr
 		audit = a
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("fetching identity from backend after a timeout [%s][%d] took %v", identity, len(audit), time.Since(start))
+			logger.Debugf("fetching identity from backend after a timeout [%s][%d] took [%v]", identity, len(audit), time.Since(start))
 		}
 	}
-
 	return identity, audit, nil
 }
 

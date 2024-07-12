@@ -8,7 +8,6 @@ package views
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -69,6 +68,6 @@ type finalityListener struct {
 }
 
 func (l *finalityListener) OnStatus(txID string, status int, message string, tokenRequestHash []byte) {
-	fmt.Printf("Received finality from network for TX [%s][%d]", txID, status)
+	//fmt.Printf("Received finality from network for TX [%s][%d]", txID, status)
 	l.errs <- nil
 }

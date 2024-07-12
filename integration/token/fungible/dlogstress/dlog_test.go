@@ -9,7 +9,7 @@ package dlog
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/odlog"
@@ -19,7 +19,10 @@ import (
 )
 
 var _ = Describe("Stress EndToEnd", func() {
-	for _, backend := range []string{"fabric", "orion"} {
+	for _, backend := range []string{
+		"fabric",
+		"orion",
+	} {
 		Describe("Stress test", Label(backend), func() {
 			ts, selector := newTestSuite(backend)
 			AfterEach(ts.TearDown)
@@ -35,16 +38,17 @@ var sdks = map[string]api.SDK{
 	"orion":  &odlog.SDK{},
 }
 
-func newTestSuite(backend string) (*token2.TestSuite, *token2.ReplicaSelector) {
-	opts, selector := token2.NewReplicationOptions(token2.None)
-	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
+func newTestSuite(backend string) (*token.TestSuite, *token.ReplicaSelector) {
+	//opts, selector := token.NewReplicationOptions(token.None)
+	opts, selector := token.NewReplicationOptions(1, "alice", "bob", "charlie", "issuer", "auditor")
+	ts := token.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
 		common.Opts{
 			Backend:         backend,
 			TokenSDKDriver:  "dlog",
 			Aries:           true,
 			ReplicationOpts: opts,
-			CommType:        fsc.WebSocket,
-			//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
+			CommType:        fsc.LibP2P,
+			//FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:info",
 			SDKs:       []api.SDK{sdks[backend]},
 			Monitoring: true,
 		},

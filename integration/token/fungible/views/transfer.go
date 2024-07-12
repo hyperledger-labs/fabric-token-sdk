@@ -640,7 +640,7 @@ func (t *MaliciousTransferView) Call(context view.Context) (txID interface{}, er
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx2, endorserOpts...))
 	assert.NoError(err, "failed to sign transaction [<<<%s>>>]", tx2.ID())
 	// Send to the ordering service and wait for finality
-	_, err = context.RunView(ttx.NewOrderingView(tx2))
+	_, err = context.RunView(ttx.NewOrderingView(tx2, ttx.WithNoCachingRequest()))
 	assert.NoError(err, "failed asking ordering")
 
 	return tx2.ID(), nil

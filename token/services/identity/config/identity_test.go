@@ -33,7 +33,7 @@ func TestCacheSizeIdentityConfig(t *testing.T) {
 	assert.NoError(t, err, "failed creating identity config")
 	assert.Equal(t, 3, identityConfig.DefaultCacheSize(), "default cache size should be 3")
 	assert.Equal(t, 5, identityConfig.CacheSizeForOwnerID("owner1"), "alice cache size should be 5")
-	assert.Equal(t, -1, identityConfig.CacheSizeForOwnerID("unknown"))
+	assert.Equal(t, 3, identityConfig.CacheSizeForOwnerID("unknown"))
 }
 
 func TestTranslatePath(t *testing.T) {

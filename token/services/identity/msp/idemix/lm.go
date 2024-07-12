@@ -17,11 +17,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/cache"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
@@ -37,7 +37,7 @@ type LocalMembership struct {
 	config                 config2.Config
 	defaultNetworkIdentity driver.Identity
 	signerService          common.SigService
-	deserializerManager    sig.Manager
+	deserializerManager    driver2.DeserializerManager
 	identityDB             driver3.IdentityDB
 	keyStore               bccsp.KeyStore
 	mspID                  string
@@ -58,7 +58,7 @@ func NewLocalMembership(
 	config config2.Config,
 	defaultNetworkIdentity driver.Identity,
 	signerService common.SigService,
-	deserializerManager sig.Manager,
+	deserializerManager driver2.DeserializerManager,
 	identityDB driver3.IdentityDB,
 	keyStore bccsp.KeyStore,
 	mspID string,
@@ -263,7 +263,13 @@ func (l *LocalMembership) registerProvider(identityConfig driver.IdentityConfigu
 			return nil, nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms")
 		}
 	} else {
-		getIdentityFunc = cache.NewIdentityCache(provider.Identity, cacheSize, &common.IdentityOptions{}).Identity
+		getIdentityFunc = cache.NewIdentityCache(
+			provider.Identity,
+			cacheSize,
+			&common.IdentityOptions{
+				EIDExtension: true,
+			},
+		).Identity
 	}
 	l.addResolver(identityConfig.ID, provider.EnrollmentID(), provider.IsRemote(), defaultIdentity, getIdentityFunc)
 
@@ -343,7 +349,7 @@ func (l *LocalMembership) getResolver(label string) *common.Resolver {
 
 func (l *LocalMembership) cacheSizeForID(id string) (int, error) {
 	cacheSize := l.config.CacheSizeForOwnerID(id)
-	if cacheSize == -1 {
+	if cacheSize <= 0 {
 		logger.Debugf("cache size for %s not configured, using default (%d)", id, l.cacheSize)
 		cacheSize = l.cacheSize
 	}

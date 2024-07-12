@@ -10,65 +10,55 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-type Deserializer interface {
-	DeserializeVerifier(raw []byte) (driver.Verifier, error)
-	DeserializeSigner(raw []byte) (driver.Signer, error)
-	Info(raw []byte, auditInfo []byte) (string, error)
-}
-
-type Manager interface {
-	AddDeserializer(deserializer Deserializer)
-	DeserializeSigner(raw []byte) (driver.Signer, error)
-}
-
 type MultiplexDeserializer struct {
 	deserializersMutex sync.RWMutex
-	deserializers      []Deserializer
+	deserializers      []idriver.Deserializer
 }
 
 func NewMultiplexDeserializer() *MultiplexDeserializer {
 	return &MultiplexDeserializer{
-		deserializers: []Deserializer{},
+		deserializers: []idriver.Deserializer{},
 	}
 }
 
-func (d *MultiplexDeserializer) AddDeserializer(newD Deserializer) {
+func (d *MultiplexDeserializer) AddDeserializer(newD idriver.Deserializer) {
 	d.deserializersMutex.Lock()
 	d.deserializers = append(d.deserializers, newD)
 	d.deserializersMutex.Unlock()
 }
 
 func (d *MultiplexDeserializer) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer Deserializer) (driver.Verifier, error) {
+	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer idriver.Deserializer) (driver.Verifier, error) {
 		return deserializer.DeserializeVerifier(raw)
 	})
 }
 
 func (d *MultiplexDeserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
-	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer Deserializer) (driver.Signer, error) {
+	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer idriver.Deserializer) (driver.Signer, error) {
 		return deserializer.DeserializeSigner(raw)
 	})
 }
 
 func (d *MultiplexDeserializer) Info(raw []byte, auditInfo []byte) (string, error) {
-	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer Deserializer) (string, error) {
+	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer idriver.Deserializer) (string, error) {
 		return deserializer.Info(raw, auditInfo)
 	})
 }
 
-func (d *MultiplexDeserializer) threadSafeCopyDeserializers() []Deserializer {
+func (d *MultiplexDeserializer) threadSafeCopyDeserializers() []idriver.Deserializer {
 	d.deserializersMutex.RLock()
-	res := make([]Deserializer, len(d.deserializers))
+	res := make([]idriver.Deserializer, len(d.deserializers))
 	copy(res, d.deserializers)
 	d.deserializersMutex.RUnlock()
 	return res
 }
 
-func deserialize[V any](copyDeserial []Deserializer, extractor func(Deserializer) (V, error)) (V, error) {
+func deserialize[V any](copyDeserial []idriver.Deserializer, extractor func(idriver.Deserializer) (V, error)) (V, error) {
 	var defaultV V
 	var errs []error
 

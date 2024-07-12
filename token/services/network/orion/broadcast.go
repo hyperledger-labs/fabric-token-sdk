@@ -7,12 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
+	"fmt"
+	"strings"
+	"time"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type BroadcastRequest struct {
@@ -21,24 +26,25 @@ type BroadcastRequest struct {
 }
 
 type BroadcastResponse struct {
-	Err error
+	Err string
 }
 
 type BroadcastView struct {
-	Network driver.Network
-	Blob    interface{}
+	DBManager *DBManager
+	Network   string
+	Blob      interface{}
 }
 
-func NewBroadcastView(network driver.Network, blob interface{}) *BroadcastView {
-	return &BroadcastView{Network: network, Blob: blob}
+func NewBroadcastView(dbManager *DBManager, network string, blob interface{}) *BroadcastView {
+	return &BroadcastView{DBManager: dbManager, Network: network, Blob: blob}
 }
 
 func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
-	custodian, err := GetCustodian(view2.GetConfigService(context), r.Network.Name())
+	sm, err := r.DBManager.GetSessionManager(r.Network)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get custodian identifier")
+		return nil, errors.Wrapf(err, "failed getting session manager for network [%s]", r.Network)
 	}
-	logger.Debugf("custodian: %s", custodian)
+	custodian := sm.CustodianID
 	session, err := session2.NewJSON(context, context.Initiator(), view2.GetIdentityProvider(context).Identity(custodian))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
@@ -58,23 +64,25 @@ func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
 
 	// TODO: Should we sign the broadcast request?
 	request := &BroadcastRequest{
-		Network: r.Network.Name(),
+		Network: r.Network,
 		Blob:    blob,
 	}
 	if err := session.Send(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
 	response := &BroadcastResponse{}
-	if err := session.Receive(response); err != nil {
+	if err := session.ReceiveWithTimeout(response, 30*time.Second); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
-	if response.Err != nil {
-		return nil, errors.Wrapf(response.Err, "failed to broadcast")
+	if len(response.Err) != 0 {
+		return nil, errors.Errorf("failed to broadcast with response err [%s]", response.Err)
 	}
 	return nil, nil
 }
 
-type BroadcastResponderView struct{}
+type BroadcastResponderView struct {
+	dbManager *DBManager
+}
 
 func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error) {
 	// receive request
@@ -86,33 +94,78 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 	logger.Debugf("request: %+v", request)
 
 	// commit
-	ons, err := orion.GetOrionNetworkService(context, request.Network)
+	sm, err := r.dbManager.GetSessionManager(request.Network)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get orion network service for network [%s]", request.Network)
-	}
-	custodianID, err := GetCustodian(view2.GetConfigService(context), request.Network)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get custodian identifier")
-	}
-	logger.Debugf("open session to orion [%s]", custodianID)
-	oSession, err := ons.SessionManager().NewSession(custodianID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create session to orion network [%s]", request.Network)
-	}
-	tm := ons.TransactionManager()
-	env := tm.NewEnvelope()
-	if err := env.FromBytes(request.Blob); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal envelope")
-	}
-	logger.Debugf("commit envelope [%s][%s]", env.TxID(), env.String())
-	if err := ons.TransactionManager().CommitEnvelope(oSession, env); err != nil {
-		return nil, errors.Wrap(err, "failed to commit envelope")
+		return nil, errors.Wrapf(err, "failed to get session manager for [%s]", request.Network)
 	}
 
-	// all good
-	if err := session.Send(&BroadcastResponse{}); err != nil {
+	done := false
+	err = nil
+	txStatusFetcher := &RequestTxStatusResponderView{r.dbManager}
+	numRetries := 5
+	sleepDuration := 1 * time.Second
+	for i := 0; i < numRetries; i++ {
+		if _, txID, err2 := r.broadcast(context, sm, request); err2 != nil {
+			logger.Errorf("failed to broadcast to [%s], txID [%s] with err [%s], retry [%d]", sm.CustodianID, txID, err2, i)
+			if strings.Contains(err2.Error(), "is not valid") {
+				err = err2
+				break
+			}
+			if len(txID) != 0 {
+				// was the transaction committed, by any chance?
+				logger.Errorf("check transaction [%s] status on [%s], retry [%d]", txID, sm.CustodianID, i)
+				status, err := txStatusFetcher.process(context, &TxStatusRequest{
+					Network: request.Network,
+					TxID:    txID,
+				})
+				if err != nil {
+					logger.Errorf("failed to ask transaction status [%s][%s], retry [%d]", txID, err, i)
+				}
+				if status != nil {
+					if status.Status == network.Valid {
+						done = true
+						break
+					}
+					if status.Status == network.Invalid {
+						break
+					}
+					logger.Debugf("transaction [%s] status [%d], retry [%d], wait a bit and resubmit", txID, status, i)
+				} else {
+					logger.Errorf("failed to ask transaction status [%s], got a nil answert, retry [%d]", txID, i)
+				}
+			}
+			time.Sleep(sleepDuration)
+			sleepDuration = sleepDuration * 2
+			continue
+		}
+		done = true
+		break
+	}
+	var broadcastError string
+	if !done {
+		broadcastError = fmt.Sprintf("failed to broadcast to [%s] with err [%s]", sm.CustodianID, err)
+	}
+	if err := session.Send(&BroadcastResponse{Err: broadcastError}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
-
 	return nil, nil
+}
+
+func (r *BroadcastResponderView) broadcast(context view.Context, sm *SessionManager, request *BroadcastRequest) (interface{}, string, error) {
+	oSession, err := sm.GetSession()
+	if err != nil {
+		return nil, "", errors.Wrapf(err, "failed to create session to orion network [%s]", request.Network)
+	}
+	tm := sm.Orion.TransactionManager()
+	env := tm.NewEnvelope()
+	if err := env.FromBytes(request.Blob); err != nil {
+		return nil, "", errors.Wrap(err, "failed to unmarshal envelope")
+	}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("commit envelope... [%s][%s]", env.TxID(), env.String())
+	}
+	if err := sm.Orion.TransactionManager().CommitEnvelope(oSession, env); err != nil {
+		return nil, env.TxID(), err
+	}
+	return nil, env.TxID(), nil
 }

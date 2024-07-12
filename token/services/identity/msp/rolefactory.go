@@ -12,12 +12,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	x5092 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/pkg/errors"
 )
 
@@ -50,7 +50,7 @@ type RoleFactory struct {
 	SignerService          common.SigService
 	BinderService          common.BinderService
 	StorageProvider        identity.StorageProvider
-	DeserializerManager    sig.Manager
+	DeserializerManager    driver2.DeserializerManager
 	ignoreRemote           bool
 }
 
@@ -64,7 +64,7 @@ func NewRoleFactory(
 	signerService common.SigService,
 	binderService common.BinderService,
 	storageProvider identity.StorageProvider,
-	deserializerManager sig.Manager,
+	deserializerManager driver2.DeserializerManager,
 	ignoreRemote bool,
 ) *RoleFactory {
 	return &RoleFactory{
@@ -217,33 +217,38 @@ func (i *Info) Get() (driver.Identity, []byte, error) {
 	// get the identity
 	id, ai, err := i.IdentityInfo.Get()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrapf(err, "failed to get root identity")
 	}
 	// register the audit info
 	if err := i.IdentityProvider.RegisterAuditInfo(id, ai); err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrapf(err, "failed to register audit info for identity [%s]", id)
 	}
 	// bind the identity to the default FSC node identity
 	if i.BinderService != nil {
-		if err := i.BinderService.Bind(i.RootIdentity, id); err != nil {
-			return nil, nil, err
+		if err := i.BinderService.Bind(i.RootIdentity, id, false); err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
 		}
 	}
 	// wrap the backend identity, and bind it
 	if len(i.IdentityType) != 0 {
-		raw, err := identity.WrapWithType(i.IdentityType, id)
+		typedIdentity, err := identity.WrapWithType(i.IdentityType, id)
 		if err != nil {
-			return nil, nil, err
-		}
-		if err := i.IdentityProvider.RegisterAuditInfo(raw, ai); err != nil {
-			return nil, nil, err
+			return nil, nil, errors.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
 		}
 		if i.BinderService != nil {
-			if err := i.BinderService.Bind(i.RootIdentity, raw); err != nil {
-				return nil, nil, err
+			if err := i.BinderService.Bind(id, typedIdentity, true); err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
+			}
+			if err := i.BinderService.Bind(i.RootIdentity, typedIdentity, false); err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, i.RootIdentity)
+			}
+		} else {
+			// register at the list the audit info
+			if err := i.IdentityProvider.RegisterAuditInfo(typedIdentity, ai); err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to register audit info for identity [%s]", id)
 			}
 		}
-		id = raw
+		id = typedIdentity
 	}
 	return id, ai, nil
 }

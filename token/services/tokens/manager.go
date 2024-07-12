@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
@@ -84,10 +85,11 @@ func (cm *Manager) newTokens(tmsID token.TMSID) (*Tokens, error) {
 		return nil, errors.WithMessagef(err, "failed to get token store for [%s]", tmsID)
 	}
 	tokens := &Tokens{
-		TMSProvider: cm.tmsProvider,
-		Ownership:   cm.authorization,
-		Issued:      cm.issued,
-		Storage:     storage,
+		TMSProvider:   cm.tmsProvider,
+		Ownership:     cm.authorization,
+		Issued:        cm.issued,
+		Storage:       storage,
+		RequestsCache: secondcache.NewTyped[*CacheEntry](1000),
 	}
 	return tokens, nil
 }

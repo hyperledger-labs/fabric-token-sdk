@@ -11,12 +11,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
@@ -64,18 +63,23 @@ func (t *FinalityListener) runOnStatus(txID string, status int, message string, 
 	case network.Valid:
 		txStatus = driver.Confirmed
 		t.logger.Debugf("get token request for [%s]", txID)
-		tokenRequestRaw, err := t.ttxDB.GetTokenRequest(txID)
-		if err != nil {
-			t.logger.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
-			return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
-		}
-		tms, err := t.tmsProvider.GetManagementService(token.WithTMSID(t.tmsID))
-		if err != nil {
-			return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
-		}
-		tr, err := tms.NewFullRequestFromBytes(tokenRequestRaw)
-		if err != nil {
-			return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+
+		tr := t.tokens.GetCachedTokenRequest(txID)
+		if tr == nil {
+			// load it
+			tokenRequestRaw, err := t.ttxDB.GetTokenRequest(txID)
+			if err != nil {
+				t.logger.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+				return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+			}
+			tms, err := t.tmsProvider.GetManagementService(token.WithTMSID(t.tmsID))
+			if err != nil {
+				return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+			}
+			tr, err = tms.NewFullRequestFromBytes(tokenRequestRaw)
+			if err != nil {
+				return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+			}
 		}
 		if err := t.checkTokenRequest(txID, tr, tokenRequestHash); err != nil {
 			t.logger.Errorf("tx [%d], %s", txID, err)
@@ -83,7 +87,7 @@ func (t *FinalityListener) runOnStatus(txID string, status int, message string, 
 			message = err.Error()
 		} else {
 			t.logger.Debugf("append token request for [%s]", txID)
-			if err := t.tokens.AppendRaw(t.tmsID, txID, tokenRequestRaw); err != nil {
+			if err := t.tokens.Append(t.tmsID, txID, tr); err != nil {
 				// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
 				t.logger.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
 				return fmt.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)

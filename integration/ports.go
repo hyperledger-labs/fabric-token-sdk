@@ -44,7 +44,9 @@ var (
 		ReplicationFactor: token.None,
 	}
 
-	WebSocketNoReplicationOnly = []*InfrastructureType{WebSocketNoReplication}
+	WebSocketNoReplicationOnly = []*InfrastructureType{
+		WebSocketNoReplication,
+	}
 
 	AllTestTypes = []*InfrastructureType{
 		WebSocketNoReplication,

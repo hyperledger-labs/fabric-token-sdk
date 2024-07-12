@@ -23,7 +23,7 @@ import (
 
 const sqlitePragmas = `
 	PRAGMA journal_mode = WAL;
-	PRAGMA busy_timeout = 5000;
+	PRAGMA busy_timeout = 20000;
 	PRAGMA synchronous = NORMAL;
 	PRAGMA cache_size = 1000000000;
 	PRAGMA temp_store = memory;

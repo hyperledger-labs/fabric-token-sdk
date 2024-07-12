@@ -8,7 +8,6 @@ package orion
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
@@ -45,6 +44,7 @@ type Network struct {
 	vaultLazyCache      utils.LazyProvider[string, driver.Vault]
 	tokenVaultLazyCache utils.LazyProvider[string, driver.TokenVault]
 	subscribers         *events.Subscribers
+	dbManager           *DBManager
 }
 
 func NewNetwork(
@@ -55,6 +55,7 @@ func NewNetwork(
 	newVault NewVaultFunc,
 	nsFinder common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
+	dbManager *DBManager,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -71,7 +72,8 @@ func NewNetwork(
 		tmsProvider:         tmsProvider,
 		vaultLazyCache:      utils.NewLazyProvider(loader.loadVault),
 		tokenVaultLazyCache: utils.NewLazyProvider(loader.loadTokenVault),
-		subscribers:         events.NewSubscribers(), ledger: &ledger{network: n.Name(), viewManager: viewManager},
+		subscribers:         events.NewSubscribers(), ledger: &ledger{network: n.Name(), viewManager: viewManager, dbManager: dbManager},
+		dbManager: dbManager,
 	}
 }
 
@@ -159,9 +161,9 @@ func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
 	var err error
 	switch b := blob.(type) {
 	case driver.Envelope:
-		_, err = n.viewManager.InitiateView(NewBroadcastView(n, b), ctx)
+		_, err = n.viewManager.InitiateView(NewBroadcastView(n.dbManager, n.Name(), b), ctx)
 	default:
-		_, err = n.viewManager.InitiateView(NewBroadcastView(n, b), ctx)
+		_, err = n.viewManager.InitiateView(NewBroadcastView(n.dbManager, n.Name(), b), ctx)
 	}
 	return err
 }
@@ -188,7 +190,8 @@ func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
 
 func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
 	envBoxed, err := view2.GetManager(context).InitiateView(NewRequestApprovalView(
-		n.n, tms.Namespace(),
+		n.dbManager,
+		n.n.Name(), tms.Namespace(),
 		requestRaw, signer, n.ComputeTxID(&txID),
 	), context.Context())
 	if err != nil {
@@ -255,8 +258,9 @@ func (n *Network) AddFinalityListener(namespace string, txID string, listener dr
 		root:        listener,
 		network:     n.n.Name(),
 		namespace:   namespace,
-		retryRunner: db.NewRetryRunner(-1, time.Second, true),
+		retryRunner: db.NewRetryRunner(3, 100*time.Millisecond, true),
 		viewManager: n.viewManager,
+		dbManager:   n.dbManager,
 	}
 	n.subscribers.Set(txID, listener, wrapper)
 	return n.n.Committer().AddFinalityListener(txID, wrapper)
@@ -338,10 +342,11 @@ func (v *tokenVault) DeleteTokens(ids ...*token.ID) error {
 type ledger struct {
 	network     string
 	viewManager *view2.Manager
+	dbManager   *DBManager
 }
 
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
-	boxed, err := l.viewManager.InitiateView(NewRequestTxStatusView(l.network, "", id), context.TODO())
+	boxed, err := l.viewManager.InitiateView(NewRequestTxStatusView(l.network, "", id, l.dbManager), context.TODO())
 	if err != nil {
 		return driver.Unknown, err
 	}
@@ -355,6 +360,7 @@ type FinalityListener struct {
 	namespace   string
 	retryRunner db.RetryRunner
 	viewManager *view2.Manager
+	dbManager   *DBManager
 }
 
 func (t *FinalityListener) OnStatus(txID string, status int, message string) {
@@ -364,19 +370,35 @@ func (t *FinalityListener) OnStatus(txID string, status int, message string) {
 }
 
 func (t *FinalityListener) runOnStatus(txID string, status int, message string) (err error) {
-	defer func() { err = wrapRecover(recover()) }()
-	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID), context.TODO())
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.Errorf("panic caught: %v", r)
+		}
+	}()
+	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID, t.dbManager), context.TODO())
 	if err != nil {
-		return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+		return errors.Wrapf(err, "failed retrieving token request [%s]", txID)
 	}
-	t.root.OnStatus(txID, status, message, boxed.(*TxStatusResponse).TokenRequestReference)
-	return
-}
+	statusResponse, ok := boxed.(*TxStatusResponse)
+	if !ok {
+		return errors.Errorf("failed retrieving token request, expected TxStatusResponse [%s]", txID)
+	}
+	if statusResponse == nil {
+		return errors.Errorf("expected status response to be non-nil for [%s]", txID)
+	}
+	if statusResponse.Status != status {
+		return errors.Errorf("expected status [%v], got [%v]", status, statusResponse.Status)
+	}
+	if statusResponse.Status == driver.Valid && len(statusResponse.TokenRequestReference) == 0 {
+		return errors.Errorf("expected status response to be non-nil for a valid transaction")
+	}
 
-func wrapRecover(r any) error {
-	if r != nil {
-		return fmt.Errorf("panic caught: %v", r)
-	}
+	t.root.OnStatus(
+		txID,
+		status,
+		message,
+		boxed.(*TxStatusResponse).TokenRequestReference,
+	)
 	return nil
 }
 

@@ -9,16 +9,16 @@ package orion
 import (
 	"encoding/base64"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
-
 	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type TxStatusRequest struct {
@@ -36,18 +36,19 @@ type RequestTxStatusView struct {
 	Network   string
 	Namespace string
 	TxID      string
+	dbManager *DBManager
 }
 
-func NewRequestTxStatusView(network string, namespace string, txID string) *RequestTxStatusView {
-	return &RequestTxStatusView{Network: network, Namespace: namespace, TxID: txID}
+func NewRequestTxStatusView(network string, namespace string, txID string, dbManager *DBManager) *RequestTxStatusView {
+	return &RequestTxStatusView{Network: network, Namespace: namespace, TxID: txID, dbManager: dbManager}
 }
 
 func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
-	custodian, err := GetCustodian(view2.GetConfigService(context), r.Network)
+	sm, err := r.dbManager.GetSessionManager(r.Network)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get custodian identifier")
+		return nil, errors.WithMessagef(err, "failed getting session manager for network [%s]", r.Network)
 	}
-	logger.Debugf("custodian: %s", custodian)
+	custodian := sm.CustodianID
 	session, err := session2.NewJSON(context, context.Initiator(), view2.GetIdentityProvider(context).Identity(custodian))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
@@ -68,7 +69,9 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 	return response, nil
 }
 
-type RequestTxStatusResponderView struct{}
+type RequestTxStatusResponderView struct {
+	dbManager *DBManager
+}
 
 func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, error) {
 	// receive request
@@ -90,16 +93,11 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 }
 
 func (r *RequestTxStatusResponderView) process(context view.Context, request *TxStatusRequest) (*TxStatusResponse, error) {
-	ons, err := orion.GetOrionNetworkService(context, request.Network)
+	sm, err := r.dbManager.GetSessionManager(request.Network)
 	if err != nil {
-		return nil, errors.Errorf("failed to get orion network service for network [%s]", request.Network)
+		return nil, errors.Wrapf(err, "failed to get session manager for network [%s]", request.Network)
 	}
-	custodianID, err := GetCustodian(view2.GetConfigService(context), request.Network)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get custodian identifier")
-	}
-	logger.Debugf("open session to orion [%s]", custodianID)
-	oSession, err := ons.SessionManager().NewSession(custodianID)
+	oSession, err := sm.GetSession()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create session to orion network [%s]", request.Network)
 	}
@@ -130,7 +128,9 @@ func (r *RequestTxStatusResponderView) process(context view.Context, request *Tx
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get token request reference [%s] for orion network [%s]", request.TxID, request.Network)
 		}
-		logger.Debugf("retrieved token request hash for [%s][%s]:[%s]", key, request.TxID, base64.StdEncoding.EncodeToString(trRef))
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("retrieved token request hash for [%s][%s]:[%s]", key, request.TxID, base64.StdEncoding.EncodeToString(trRef))
+		}
 	}
 
 	switch tx.ValidationCode() {

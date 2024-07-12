@@ -268,14 +268,14 @@ func (d *DB) AcquireLocks(anchor string, eIDs ...string) error {
 	// and another tries to lock (Bob, Alice).
 	// Without sorting, these two calls could deadlock. Sorting prevents this issue.
 	dedup := deduplicateAndSort(eIDs)
-	logger.Infof("Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
+	logger.Debugf("Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
 	d.eIDsLocks.LoadOrStore(anchor, dedup)
 	for _, id := range dedup {
 		lock, _ := d.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
 		lock.(*sync.RWMutex).Lock()
-		logger.Infof("Acquire locks for [%s:%v] enrollment id done", anchor, id)
+		logger.Debugf("Acquire locks for [%s:%v] enrollment id done", anchor, id)
 	}
-	logger.Infof("Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
+	logger.Debugf("Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
 	return nil
 }
 

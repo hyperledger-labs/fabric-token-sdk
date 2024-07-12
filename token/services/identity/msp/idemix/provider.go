@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
-
 	"github.com/IBM/idemix"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/IBM/idemix/idemixmsp"
@@ -19,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"

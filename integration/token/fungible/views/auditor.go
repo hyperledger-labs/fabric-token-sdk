@@ -156,7 +156,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	for _, rID := range inputs.RevocationHandles() {
 		rh := hash.Hashable(rID).String()
-		logger.Infof("input RH [%s]", rh)
+		//logger.Infof("input RH [%s]", rh)
 		assert.NotNil(rID, "found an input with empty RH")
 		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
 		if kvsInstance.Exists(k) {
@@ -166,7 +166,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	for _, rID := range outputs.RevocationHandles() {
 		rh := hash.Hashable(rID).String()
-		logger.Infof("output RH [%s]", rh)
+		//logger.Infof("output RH [%s]", rh)
 		assert.NotNil(rID, "found an output with empty RH")
 		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
 		if kvsInstance.Exists(k) {

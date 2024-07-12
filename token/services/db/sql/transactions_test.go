@@ -30,7 +30,7 @@ func initTransactionsDB(driverName, dataSourceName, tablePrefix string, maxOpenC
 func TestTransactionsSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 	for _, c := range dbtest.Cases {
-		db, err := initTransactionsDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initTransactionsDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -44,7 +44,7 @@ func TestTransactionsSqlite(t *testing.T) {
 
 func TestTransactionsSqliteMemory(t *testing.T) {
 	for _, c := range dbtest.Cases {
-		db, err := initTransactionsDB("sqlite", "file:tmp?_pragma=busy_timeout(5000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initTransactionsDB("sqlite", "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}

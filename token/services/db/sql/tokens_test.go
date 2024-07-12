@@ -33,7 +33,7 @@ func initTokenDB(driverName, dataSourceName, tablePrefix string, maxOpenConns in
 func TestTokensSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 	for _, c := range TokensCases {
-		db, err := initTokenDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initTokenDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)&_pragma=foreign_keys(1)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -46,7 +46,7 @@ func TestTokensSqlite(t *testing.T) {
 
 func TestTokensSqliteMemory(t *testing.T) {
 	for _, c := range TokensCases {
-		db, err := initTokenDB("sqlite", "file:tmp?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initTokenDB("sqlite", "file:tmp?_pragma=busy_timeout(20000)&_pragma=foreign_keys(1)&mode=memory&cache=shared", c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}

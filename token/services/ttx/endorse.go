@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -185,7 +186,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			}
 			sigma, err := c.signLocal(party, signer, signatureRequest)
 			if err != nil {
-				return nil, err
+				return nil, errors.WithMessagef(err, "failed signing local for party [%s]", party)
 			}
 			sigmas[party.UniqueID()] = sigma
 			continue
@@ -203,7 +204,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			externalWallets[w.ID()] = ews
 			sigma, err := c.signExternal(party, ews, signatureRequest)
 			if err != nil {
-				return nil, err
+				return nil, errors.WithMessagef(err, "failed signing external for party [%s]", party)
 			}
 			sigmas[party.UniqueID()] = sigma
 			continue
@@ -215,7 +216,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 		}
 		sigma, err := c.signRemote(context, party, signatureRequest, verifierGetter)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithMessagef(err, "failed signing remote for party [%s]", party)
 		}
 		sigmas[party.UniqueID()] = sigma
 	}
@@ -302,9 +303,18 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
 	}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("verify signature [%s][%s][%s] for txid [%s]",
+			hash.Hashable(signatureRequest.MessageToSign()).String(),
+			hash.Hashable(sigma).String(),
+			party,
+			c.tx.ID(),
+		)
+	}
+
 	err = verifier.Verify(signatureRequest.MessageToSign(), sigma)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed verifying signature from [%s]", party)
+		return nil, errors.Wrapf(err, "failed verifying signature [%s] from [%s]", sigma, party)
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -523,7 +533,7 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			}
 		}
 
-		// The party is not me, open a connection to the party.
+		// The party is not mex, open a connection to the party.
 		// If the party is an auditor, then send the full set of metadata.
 		// Otherwise, filter the metadata by Enrollment ID.
 		var txRaw []byte
@@ -698,10 +708,13 @@ func NewEndorseView(tx *Transaction) *EndorseView {
 // 4. It sends back an ack.
 func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	// Process signature requests
+	logger.Debugf("chec expected numer of requests to sign for txid [%s]", s.tx.ID())
 	requestsToBeSigned, err := requestsToBeSigned(s.tx.Request())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed collecting requests of signature")
 	}
+
+	logger.Debugf("expect [%d] requests to sign for txid [%s]", len(requestsToBeSigned), s.tx.ID())
 
 	session := context.Session()
 	for range requestsToBeSigned {
@@ -745,7 +758,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			return nil, errors.Wrapf(err, "failed signing request")
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("Send back signature...")
+			logger.Debugf("Send back signature [%s][%s]", signatureRequest.Signer, hash.Hashable(sigma))
 		}
 		err = session.Send(sigma)
 		if err != nil {
@@ -781,6 +794,15 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	}
 	if err := session.Send(sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
+	}
+
+	// cache the token request into the tokens db
+	t, err := tokens.GetService(context, s.tx.TMSID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
+	}
+	if err := t.CacheRequest(s.tx.TMSID(), s.tx.TokenRequest); err != nil {
+		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
 	}
 
 	return s.tx, nil
@@ -819,19 +841,19 @@ func requestsToBeSigned(request *token.Request) ([]any, error) {
 	sigService := request.TokenService.SigService()
 	for _, issue := range issues {
 		for _, sender := range issue.ExtraSigners {
-			if _, err := sigService.GetSigner(sender); err == nil {
+			if sigService.IsMe(sender) {
 				res = append(res, issue)
 			}
 		}
 	}
 	for _, transfer := range transfers {
 		for _, sender := range transfer.Senders {
-			if _, err := sigService.GetSigner(sender); err == nil {
+			if sigService.IsMe(sender) {
 				res = append(res, transfer)
 			}
 		}
 		for _, sender := range transfer.ExtraSigners {
-			if _, err := sigService.GetSigner(sender); err == nil {
+			if sigService.IsMe(sender) {
 				res = append(res, transfer)
 			}
 		}

@@ -12,6 +12,8 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -38,14 +40,15 @@ type SignerEntry struct {
 }
 
 type Service struct {
-	signers      map[string]SignerEntry
-	verifiers    map[string]VerifierEntry
-	deserializer Deserializer
-	viewsSync    sync.RWMutex
-	storage      Storage
+	sync      sync.RWMutex
+	signers   map[string]SignerEntry
+	verifiers map[string]VerifierEntry
+	storage   Storage
+
+	deserializer idriver.Deserializer
 }
 
-func NewService(deserializer Deserializer, storage Storage) *Service {
+func NewService(deserializer idriver.Deserializer, storage Storage) *Service {
 	return &Service{
 		signers:      map[string]SignerEntry{},
 		verifiers:    map[string]VerifierEntry{},
@@ -63,15 +66,24 @@ func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer,
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("register signer and verifier [%s]:[%s][%s]", idHash, GetIdentifier(signer), GetIdentifier(verifier))
 	}
-	o.viewsSync.RLock()
+	o.sync.RLock()
 	s, ok := o.signers[idHash]
-	o.viewsSync.RUnlock()
+	o.sync.RUnlock()
 	if ok {
 		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, GetIdentifier(s), GetIdentifier(signer), string(s.DebugStack))
 		return nil
 	}
 
-	o.viewsSync.Lock()
+	o.sync.Lock()
+
+	// check again the cache
+	s, ok = o.signers[idHash]
+	if ok {
+		o.sync.Unlock()
+		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, GetIdentifier(s), GetIdentifier(signer), string(s.DebugStack))
+		return nil
+	}
+
 	entry := SignerEntry{Signer: signer}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
@@ -80,11 +92,11 @@ func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer,
 	o.signers[idHash] = entry
 	if o.storage != nil {
 		if err := o.storage.StoreSignerInfo(identity, signerInfo); err != nil {
-			o.viewsSync.Unlock()
+			o.sync.Unlock()
 			return errors.Wrap(err, "failed to store entry in storage for the passed signer")
 		}
 	}
-	o.viewsSync.Unlock()
+	o.sync.Unlock()
 
 	if verifier != nil {
 		if err := o.RegisterVerifier(identity, verifier); err != nil {
@@ -104,9 +116,18 @@ func (o *Service) RegisterVerifier(identity driver.Identity, verifier driver.Ver
 	}
 
 	idHash := identity.UniqueID()
-	o.viewsSync.Lock()
+	o.sync.Lock()
 	v, ok := o.verifiers[idHash]
-	o.viewsSync.Unlock()
+	o.sync.Unlock()
+	if ok {
+		logger.Warnf("another verifier bound to [%s]:[%s][%s] from [%s]", idHash, GetIdentifier(v), GetIdentifier(verifier), string(v.DebugStack))
+		return nil
+	}
+
+	o.sync.Lock()
+
+	// check again
+	v, ok = o.verifiers[idHash]
 	if ok {
 		logger.Warnf("another verifier bound to [%s]:[%s][%s] from [%s]", idHash, GetIdentifier(v), GetIdentifier(verifier), string(v.DebugStack))
 		return nil
@@ -116,9 +137,9 @@ func (o *Service) RegisterVerifier(identity driver.Identity, verifier driver.Ver
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
 	}
-	o.viewsSync.Lock()
 	o.verifiers[idHash] = entry
-	o.viewsSync.Unlock()
+	o.sync.Unlock()
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("register verifier to [%s]:[%s]", idHash, GetIdentifier(verifier))
 	}
@@ -130,10 +151,11 @@ func (o *Service) IsMe(identity driver.Identity) bool {
 		logger.Debugf("is me [%s]?", identity)
 	}
 	idHash := identity.UniqueID()
+
 	// check local cache
-	o.viewsSync.RLock()
+	o.sync.RLock()
 	_, ok := o.signers[idHash]
-	o.viewsSync.RUnlock()
+	o.sync.RUnlock()
 	if ok {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("is me [%s]? yes, from cache", identity)
@@ -157,15 +179,19 @@ func (o *Service) IsMe(identity driver.Identity) bool {
 			return true
 		}
 	}
+
 	// last chance, deserialize
 	//signer, err := o.GetSigner(identity)
 	//if err != nil {
+	//	if logger.IsEnabledFor(zapcore.DebugLevel) {
+	//		logger.Debugf("is me [%s]? no", identity)
+	//	}
 	//	return false
 	//}
+	//if logger.IsEnabledFor(zapcore.DebugLevel) {
+	//	logger.Debugf("is me [%s]? %v", identity, signer != nil)
+	//}
 	//return signer != nil
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("is me [%s]? no", identity)
-	}
 	return false
 }
 
@@ -175,19 +201,22 @@ func (o *Service) GetSigner(identity driver.Identity) (driver.Signer, error) {
 		logger.Debugf("get signer for [%s]", idHash)
 	}
 	// check the cache
-	o.viewsSync.RLock()
+	o.sync.RLock()
 	entry, ok := o.signers[idHash]
-	o.viewsSync.RUnlock()
+	o.sync.RUnlock()
 	if ok {
 		logger.Debugf("signer for [%s] found", idHash)
 		return entry.Signer, nil
 	}
+	o.sync.Lock()
+	defer o.sync.Unlock()
 
-	o.viewsSync.Lock()
-	defer o.viewsSync.Unlock()
+	return o.getSigner(identity, idHash)
+}
 
+func (o *Service) getSigner(identity driver.Identity, idHash string) (driver.Signer, error) {
 	// check again the cache
-	entry, ok = o.signers[idHash]
+	entry, ok := o.signers[idHash]
 	if ok {
 		logger.Debugf("signer for [%s] found", idHash)
 		return entry.Signer, nil
@@ -197,11 +226,7 @@ func (o *Service) GetSigner(identity driver.Identity) (driver.Signer, error) {
 		logger.Debugf("signer for [%s] not found, try to deserialize", idHash)
 	}
 	// ask the deserializer
-	if o.deserializer == nil {
-		return nil, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
-	}
-	var err error
-	signer, err := o.deserializer.DeserializeSigner(identity)
+	signer, err := o.deserializeSigner(identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing identity for signer [%s]", identity)
 	}
@@ -210,8 +235,39 @@ func (o *Service) GetSigner(identity driver.Identity) (driver.Signer, error) {
 		entry.DebugStack = debug.Stack()
 	}
 	o.signers[idHash] = entry
-
+	if o.storage != nil {
+		if err := o.storage.StoreSignerInfo(identity, nil); err != nil {
+			return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
+		}
+	}
 	return entry.Signer, nil
+}
+
+func (o *Service) deserializeSigner(identity driver.Identity) (driver.Signer, error) {
+	if o.deserializer == nil {
+		return nil, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
+	}
+	var err error
+	signer, err := o.deserializer.DeserializeSigner(identity)
+	if err == nil {
+		return signer, nil
+	}
+
+	// give it a second chance
+
+	// is the identity wrapped in TypedIdentity?
+	ro, err2 := identity2.UnmarshalTypedIdentity(identity)
+	if err2 != nil {
+		// No
+		return nil, errors.Wrapf(err2, "failed to unmarshal raw owner for identity [%s] and failed deserialization [%s]", identity.String(), err)
+	}
+
+	// yes, check ro.Identity
+	signer, err = o.getSigner(ro.Identity, ro.Identity.UniqueID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting signer for identity [%s]", ro.Identity)
+	}
+	return signer, nil
 }
 
 func (o *Service) GetSignerInfo(identity driver.Identity) ([]byte, error) {
@@ -222,15 +278,15 @@ func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error)
 	idHash := identity.UniqueID()
 
 	// check cache
-	o.viewsSync.RLock()
+	o.sync.RLock()
 	entry, ok := o.verifiers[idHash]
-	o.viewsSync.RUnlock()
+	o.sync.RUnlock()
 	if ok {
 		return entry.Verifier, nil
 	}
 
-	o.viewsSync.Lock()
-	defer o.viewsSync.Unlock()
+	o.sync.Lock()
+	defer o.sync.Unlock()
 
 	// check cache again
 	entry, ok = o.verifiers[idHash]

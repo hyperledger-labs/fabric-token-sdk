@@ -486,7 +486,7 @@ func (w *AtomicWrite) Rollback() {
 }
 
 func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
-	logger.Debugf("adding transaction record [%s:%d:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
+	logger.Debugf("adding transaction record [%s:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
 	}

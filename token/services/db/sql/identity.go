@@ -102,6 +102,7 @@ func (db *IdentityDB) ConfigurationExists(id, typ string) (bool, error) {
 }
 
 func (db *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
+	//logger.Infof("store identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
 	query := fmt.Sprintf("INSERT INTO %s (identity_hash, identity, identity_audit_info, token_metadata, token_metadata_audit_info) VALUES ($1, $2, $3, $4, $5)", db.table.IdentityInfo)
 	logger.Debug(query)
 
@@ -114,7 +115,7 @@ func (db *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMe
 			return err
 		}
 		if !bytes.Equal(auditInfo, identityAudit) {
-			return errors.Wrapf(err, "different audit info stored for [%s], [%s]!=[%s]", id, hash.Hashable(auditInfo), hash.Hashable(identityAudit))
+			return errors.Wrapf(err, "different audit info stored for [%s], [%s]!=[%s]", h, hash.Hashable(auditInfo), hash.Hashable(identityAudit))
 		}
 		return nil
 	}
@@ -123,6 +124,7 @@ func (db *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMe
 
 func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 	h := token.Identity(id).String()
+	//logger.Infof("get identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
 	query := fmt.Sprintf("SELECT identity_audit_info FROM %s WHERE identity_hash = $1", db.table.IdentityInfo)
 	logger.Debug(query)
 	row := db.db.QueryRow(query, h)
@@ -139,6 +141,7 @@ func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 
 func (db *IdentityDB) GetTokenInfo(id []byte) ([]byte, []byte, error) {
 	h := token.Identity(id).String()
+	//logger.Infof("get identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
 	query := fmt.Sprintf("SELECT token_metadata, token_metadata_audit_info FROM %s WHERE identity_hash = $1", db.table.IdentityInfo)
 	logger.Debug(query)
 	row := db.db.QueryRow(query, h)

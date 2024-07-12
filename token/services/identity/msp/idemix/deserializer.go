@@ -9,13 +9,12 @@ package idemix
 import (
 	"fmt"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
-
 	msp "github.com/IBM/idemix"
 	csp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/pkg/errors"
 )
@@ -26,7 +25,7 @@ type Deserializer struct {
 
 // NewDeserializer returns a new deserializer for the idemix ExpectEidNymRhNym verification strategy
 func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
-	logger.Infof("new deserialized for dlog idemix")
+	logger.Debugf("new deserialized for dlog idemix")
 	cryptoProvider, err := msp2.NewBCCSPWithDummyKeyStore(curveID, curveID == math.BLS12_381_BBS)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
@@ -108,7 +107,7 @@ func (i *Deserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
 	return nil, errors.New("not supported")
 }
 
-func (i *Deserializer) DeserializeAuditInfo(raw []byte) (deserializer.AuditInfo, error) {
+func (i *Deserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
 	return i.Deserializer.DeserializeAuditInfo(raw)
 }
 
@@ -151,7 +150,7 @@ func (i *Deserializer) String() string {
 
 type AuditInfoDeserializer struct{}
 
-func (c *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (deserializer.AuditInfo, error) {
+func (c *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
 	ai, err := msp2.DeserializeAuditInfo(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))

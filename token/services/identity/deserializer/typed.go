@@ -11,8 +11,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
+
+var logger = logging.MustGetLogger("token-sdk.services.identity.deserializer")
 
 type TypedVerifierDeserializer interface {
 	DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error)
@@ -47,7 +51,14 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(id driver.Ident
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
 	}
-	return d.DeserializeVerifier(si.Type, si.Identity)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Deserializing [%s] with type [%s]", id, si.Type)
+	}
+	verifier, err := d.DeserializeVerifier(si.Type, si.Identity)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed deserializing [%s]", si.Type)
+	}
+	return verifier, nil
 }
 
 func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]driver.Identity, error) {

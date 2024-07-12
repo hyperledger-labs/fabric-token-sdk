@@ -49,6 +49,22 @@ type WalletService struct {
 		result1 []byte
 		result2 error
 	}
+	GetEIDAndRHStub        func(view.Identity, []byte) (string, string, error)
+	getEIDAndRHMutex       sync.RWMutex
+	getEIDAndRHArgsForCall []struct {
+		arg1 view.Identity
+		arg2 []byte
+	}
+	getEIDAndRHReturns struct {
+		result1 string
+		result2 string
+		result3 error
+	}
+	getEIDAndRHReturnsOnCall map[int]struct {
+		result1 string
+		result2 string
+		result3 error
+	}
 	GetEnrollmentIDStub        func(view.Identity, []byte) (string, error)
 	getEnrollmentIDMutex       sync.RWMutex
 	getEnrollmentIDArgsForCall []struct {
@@ -63,17 +79,17 @@ type WalletService struct {
 		result1 string
 		result2 error
 	}
-	GetRevocationHandlerStub        func(view.Identity, []byte) (string, error)
-	getRevocationHandlerMutex       sync.RWMutex
-	getRevocationHandlerArgsForCall []struct {
+	GetRevocationHandleStub        func(view.Identity, []byte) (string, error)
+	getRevocationHandleMutex       sync.RWMutex
+	getRevocationHandleArgsForCall []struct {
 		arg1 view.Identity
 		arg2 []byte
 	}
-	getRevocationHandlerReturns struct {
+	getRevocationHandleReturns struct {
 		result1 string
 		result2 error
 	}
-	getRevocationHandlerReturnsOnCall map[int]struct {
+	getRevocationHandleReturnsOnCall map[int]struct {
 		result1 string
 		result2 error
 	}
@@ -368,6 +384,79 @@ func (fake *WalletService) GetAuditInfoReturnsOnCall(i int, result1 []byte, resu
 	}{result1, result2}
 }
 
+func (fake *WalletService) GetEIDAndRH(arg1 view.Identity, arg2 []byte) (string, string, error) {
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.getEIDAndRHMutex.Lock()
+	ret, specificReturn := fake.getEIDAndRHReturnsOnCall[len(fake.getEIDAndRHArgsForCall)]
+	fake.getEIDAndRHArgsForCall = append(fake.getEIDAndRHArgsForCall, struct {
+		arg1 view.Identity
+		arg2 []byte
+	}{arg1, arg2Copy})
+	stub := fake.GetEIDAndRHStub
+	fakeReturns := fake.getEIDAndRHReturns
+	fake.recordInvocation("GetEIDAndRH", []interface{}{arg1, arg2Copy})
+	fake.getEIDAndRHMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+}
+
+func (fake *WalletService) GetEIDAndRHCallCount() int {
+	fake.getEIDAndRHMutex.RLock()
+	defer fake.getEIDAndRHMutex.RUnlock()
+	return len(fake.getEIDAndRHArgsForCall)
+}
+
+func (fake *WalletService) GetEIDAndRHCalls(stub func(view.Identity, []byte) (string, string, error)) {
+	fake.getEIDAndRHMutex.Lock()
+	defer fake.getEIDAndRHMutex.Unlock()
+	fake.GetEIDAndRHStub = stub
+}
+
+func (fake *WalletService) GetEIDAndRHArgsForCall(i int) (view.Identity, []byte) {
+	fake.getEIDAndRHMutex.RLock()
+	defer fake.getEIDAndRHMutex.RUnlock()
+	argsForCall := fake.getEIDAndRHArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *WalletService) GetEIDAndRHReturns(result1 string, result2 string, result3 error) {
+	fake.getEIDAndRHMutex.Lock()
+	defer fake.getEIDAndRHMutex.Unlock()
+	fake.GetEIDAndRHStub = nil
+	fake.getEIDAndRHReturns = struct {
+		result1 string
+		result2 string
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *WalletService) GetEIDAndRHReturnsOnCall(i int, result1 string, result2 string, result3 error) {
+	fake.getEIDAndRHMutex.Lock()
+	defer fake.getEIDAndRHMutex.Unlock()
+	fake.GetEIDAndRHStub = nil
+	if fake.getEIDAndRHReturnsOnCall == nil {
+		fake.getEIDAndRHReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 string
+			result3 error
+		})
+	}
+	fake.getEIDAndRHReturnsOnCall[i] = struct {
+		result1 string
+		result2 string
+		result3 error
+	}{result1, result2, result3}
+}
+
 func (fake *WalletService) GetEnrollmentID(arg1 view.Identity, arg2 []byte) (string, error) {
 	var arg2Copy []byte
 	if arg2 != nil {
@@ -438,22 +527,22 @@ func (fake *WalletService) GetEnrollmentIDReturnsOnCall(i int, result1 string, r
 	}{result1, result2}
 }
 
-func (fake *WalletService) GetRevocationHandler(arg1 view.Identity, arg2 []byte) (string, error) {
+func (fake *WalletService) GetRevocationHandle(arg1 view.Identity, arg2 []byte) (string, error) {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
 		copy(arg2Copy, arg2)
 	}
-	fake.getRevocationHandlerMutex.Lock()
-	ret, specificReturn := fake.getRevocationHandlerReturnsOnCall[len(fake.getRevocationHandlerArgsForCall)]
-	fake.getRevocationHandlerArgsForCall = append(fake.getRevocationHandlerArgsForCall, struct {
+	fake.getRevocationHandleMutex.Lock()
+	ret, specificReturn := fake.getRevocationHandleReturnsOnCall[len(fake.getRevocationHandleArgsForCall)]
+	fake.getRevocationHandleArgsForCall = append(fake.getRevocationHandleArgsForCall, struct {
 		arg1 view.Identity
 		arg2 []byte
 	}{arg1, arg2Copy})
-	stub := fake.GetRevocationHandlerStub
-	fakeReturns := fake.getRevocationHandlerReturns
-	fake.recordInvocation("GetRevocationHandler", []interface{}{arg1, arg2Copy})
-	fake.getRevocationHandlerMutex.Unlock()
+	stub := fake.GetRevocationHandleStub
+	fakeReturns := fake.getRevocationHandleReturns
+	fake.recordInvocation("GetRevocationHandle", []interface{}{arg1, arg2Copy})
+	fake.getRevocationHandleMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -463,46 +552,46 @@ func (fake *WalletService) GetRevocationHandler(arg1 view.Identity, arg2 []byte)
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *WalletService) GetRevocationHandlerCallCount() int {
-	fake.getRevocationHandlerMutex.RLock()
-	defer fake.getRevocationHandlerMutex.RUnlock()
-	return len(fake.getRevocationHandlerArgsForCall)
+func (fake *WalletService) GetRevocationHandleCallCount() int {
+	fake.getRevocationHandleMutex.RLock()
+	defer fake.getRevocationHandleMutex.RUnlock()
+	return len(fake.getRevocationHandleArgsForCall)
 }
 
-func (fake *WalletService) GetRevocationHandlerCalls(stub func(view.Identity, []byte) (string, error)) {
-	fake.getRevocationHandlerMutex.Lock()
-	defer fake.getRevocationHandlerMutex.Unlock()
-	fake.GetRevocationHandlerStub = stub
+func (fake *WalletService) GetRevocationHandleCalls(stub func(view.Identity, []byte) (string, error)) {
+	fake.getRevocationHandleMutex.Lock()
+	defer fake.getRevocationHandleMutex.Unlock()
+	fake.GetRevocationHandleStub = stub
 }
 
-func (fake *WalletService) GetRevocationHandlerArgsForCall(i int) (view.Identity, []byte) {
-	fake.getRevocationHandlerMutex.RLock()
-	defer fake.getRevocationHandlerMutex.RUnlock()
-	argsForCall := fake.getRevocationHandlerArgsForCall[i]
+func (fake *WalletService) GetRevocationHandleArgsForCall(i int) (view.Identity, []byte) {
+	fake.getRevocationHandleMutex.RLock()
+	defer fake.getRevocationHandleMutex.RUnlock()
+	argsForCall := fake.getRevocationHandleArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *WalletService) GetRevocationHandlerReturns(result1 string, result2 error) {
-	fake.getRevocationHandlerMutex.Lock()
-	defer fake.getRevocationHandlerMutex.Unlock()
-	fake.GetRevocationHandlerStub = nil
-	fake.getRevocationHandlerReturns = struct {
+func (fake *WalletService) GetRevocationHandleReturns(result1 string, result2 error) {
+	fake.getRevocationHandleMutex.Lock()
+	defer fake.getRevocationHandleMutex.Unlock()
+	fake.GetRevocationHandleStub = nil
+	fake.getRevocationHandleReturns = struct {
 		result1 string
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *WalletService) GetRevocationHandlerReturnsOnCall(i int, result1 string, result2 error) {
-	fake.getRevocationHandlerMutex.Lock()
-	defer fake.getRevocationHandlerMutex.Unlock()
-	fake.GetRevocationHandlerStub = nil
-	if fake.getRevocationHandlerReturnsOnCall == nil {
-		fake.getRevocationHandlerReturnsOnCall = make(map[int]struct {
+func (fake *WalletService) GetRevocationHandleReturnsOnCall(i int, result1 string, result2 error) {
+	fake.getRevocationHandleMutex.Lock()
+	defer fake.getRevocationHandleMutex.Unlock()
+	fake.GetRevocationHandleStub = nil
+	if fake.getRevocationHandleReturnsOnCall == nil {
+		fake.getRevocationHandleReturnsOnCall = make(map[int]struct {
 			result1 string
 			result2 error
 		})
 	}
-	fake.getRevocationHandlerReturnsOnCall[i] = struct {
+	fake.getRevocationHandleReturnsOnCall[i] = struct {
 		result1 string
 		result2 error
 	}{result1, result2}
@@ -1009,10 +1098,12 @@ func (fake *WalletService) Invocations() map[string][][]interface{} {
 	defer fake.certifierWalletMutex.RUnlock()
 	fake.getAuditInfoMutex.RLock()
 	defer fake.getAuditInfoMutex.RUnlock()
+	fake.getEIDAndRHMutex.RLock()
+	defer fake.getEIDAndRHMutex.RUnlock()
 	fake.getEnrollmentIDMutex.RLock()
 	defer fake.getEnrollmentIDMutex.RUnlock()
-	fake.getRevocationHandlerMutex.RLock()
-	defer fake.getRevocationHandlerMutex.RUnlock()
+	fake.getRevocationHandleMutex.RLock()
+	defer fake.getRevocationHandleMutex.RUnlock()
 	fake.issuerWalletMutex.RLock()
 	defer fake.issuerWalletMutex.RUnlock()
 	fake.ownerWalletMutex.RLock()

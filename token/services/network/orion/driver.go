@@ -69,8 +69,9 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		return nil, errors.Wrapf(err, "failed checking if custodian is enabled")
 	}
 	logger.Infof("Orion Custodian enabled: %t", enabled)
+	dbManager := NewDBManager(d.onsProvider, d.configProvider, enabled)
 	if enabled {
-		if err := InstallViews(d.viewRegistry); err != nil {
+		if err := InstallViews(d.viewRegistry, dbManager); err != nil {
 			return nil, errors.WithMessagef(err, "failed installing views")
 		}
 	}
@@ -83,5 +84,6 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		d.vaultProvider.Vault,
 		d.configService,
 		d.filterProvider,
+		dbManager,
 	), nil
 }

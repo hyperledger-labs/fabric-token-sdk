@@ -299,6 +299,26 @@ type ExchangeRecipientIdentitiesView struct {
 	Other  view.Identity
 }
 
+// ExchangeRecipientIdentities executes the ExchangeRecipientIdentitiesView using by passed wallet id to
+// derive the recipient identity to send to the passed recipient.
+// The function returns, the recipient identity of the sender, the recipient identity of the recipient
+func ExchangeRecipientIdentities(context view.Context, walletID string, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, view.Identity, error) {
+	options, err := CompileServiceOptions(opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+	ids, err := context.RunView(&ExchangeRecipientIdentitiesView{
+		TMSID:  options.TMSID(),
+		Wallet: walletID,
+		Other:  recipient,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return ids.([]view.Identity)[0], ids.([]view.Identity)[1], nil
+}
+
 func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
 	ts := token.GetManagementService(context, token.WithTMSID(f.TMSID))
 
@@ -388,26 +408,6 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 
 		return []view.Identity{me, recipientData.Identity}, nil
 	}
-}
-
-// ExchangeRecipientIdentities executes the ExchangeRecipientIdentitiesView using by passed wallet id to
-// derive the recipient identity to send to the passed recipient.
-// The function returns, the recipient identity of the sender, the recipient identity of the recipient
-func ExchangeRecipientIdentities(context view.Context, walletID string, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, view.Identity, error) {
-	options, err := CompileServiceOptions(opts...)
-	if err != nil {
-		return nil, nil, err
-	}
-	ids, err := context.RunView(&ExchangeRecipientIdentitiesView{
-		TMSID:  options.TMSID(),
-		Wallet: walletID,
-		Other:  recipient,
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return ids.([]view.Identity)[0], ids.([]view.Identity)[1], nil
 }
 
 type RespondExchangeRecipientIdentitiesView struct {

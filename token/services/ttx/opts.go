@@ -22,6 +22,7 @@ type TxOptions struct {
 	TxID                      string
 	Transaction               *Transaction
 	NetworkTxID               network.TxID
+	NoCachingRequest          bool
 }
 
 func compile(opts ...TxOption) (*TxOptions, error) {
@@ -60,6 +61,14 @@ func WithChannel(channel string) TxOption {
 func WithNamespace(namespace string) TxOption {
 	return func(o *TxOptions) error {
 		o.TMSID.Namespace = namespace
+		return nil
+	}
+}
+
+// WithNoCachingRequest is used to tell the ordering view to not cache the token request
+func WithNoCachingRequest() TxOption {
+	return func(o *TxOptions) error {
+		o.NoCachingRequest = true
 		return nil
 	}
 }

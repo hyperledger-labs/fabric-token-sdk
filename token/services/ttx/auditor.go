@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -276,6 +277,15 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 
 	if err := a.signAndSendBack(context); err != nil {
 		return nil, err
+	}
+
+	// cache the token request into the tokens db
+	t, err := tokens.GetService(context, a.tx.TMSID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", a.tx.TMSID())
+	}
+	if err := t.CacheRequest(a.tx.TMSID(), a.tx.TokenRequest); err != nil {
+		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", a.tx.TokenRequest.Anchor, err)
 	}
 
 	labels := []string{

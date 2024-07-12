@@ -9,11 +9,12 @@ import (
 )
 
 type IdentityProvider struct {
-	BindStub        func(view.Identity, view.Identity) error
+	BindStub        func(view.Identity, view.Identity, bool) error
 	bindMutex       sync.RWMutex
 	bindArgsForCall []struct {
 		arg1 view.Identity
 		arg2 view.Identity
+		arg3 bool
 	}
 	bindReturns struct {
 		result1 error
@@ -33,6 +34,22 @@ type IdentityProvider struct {
 	getAuditInfoReturnsOnCall map[int]struct {
 		result1 []byte
 		result2 error
+	}
+	GetEIDAndRHStub        func(view.Identity, []byte) (string, string, error)
+	getEIDAndRHMutex       sync.RWMutex
+	getEIDAndRHArgsForCall []struct {
+		arg1 view.Identity
+		arg2 []byte
+	}
+	getEIDAndRHReturns struct {
+		result1 string
+		result2 string
+		result3 error
+	}
+	getEIDAndRHReturnsOnCall map[int]struct {
+		result1 string
+		result2 string
+		result3 error
 	}
 	GetEnrollmentIDStub        func(view.Identity, []byte) (string, error)
 	getEnrollmentIDMutex       sync.RWMutex
@@ -138,19 +155,20 @@ type IdentityProvider struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *IdentityProvider) Bind(arg1 view.Identity, arg2 view.Identity) error {
+func (fake *IdentityProvider) Bind(arg1 view.Identity, arg2 view.Identity, arg3 bool) error {
 	fake.bindMutex.Lock()
 	ret, specificReturn := fake.bindReturnsOnCall[len(fake.bindArgsForCall)]
 	fake.bindArgsForCall = append(fake.bindArgsForCall, struct {
 		arg1 view.Identity
 		arg2 view.Identity
-	}{arg1, arg2})
+		arg3 bool
+	}{arg1, arg2, arg3})
 	stub := fake.BindStub
 	fakeReturns := fake.bindReturns
-	fake.recordInvocation("Bind", []interface{}{arg1, arg2})
+	fake.recordInvocation("Bind", []interface{}{arg1, arg2, arg3})
 	fake.bindMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -164,17 +182,17 @@ func (fake *IdentityProvider) BindCallCount() int {
 	return len(fake.bindArgsForCall)
 }
 
-func (fake *IdentityProvider) BindCalls(stub func(view.Identity, view.Identity) error) {
+func (fake *IdentityProvider) BindCalls(stub func(view.Identity, view.Identity, bool) error) {
 	fake.bindMutex.Lock()
 	defer fake.bindMutex.Unlock()
 	fake.BindStub = stub
 }
 
-func (fake *IdentityProvider) BindArgsForCall(i int) (view.Identity, view.Identity) {
+func (fake *IdentityProvider) BindArgsForCall(i int) (view.Identity, view.Identity, bool) {
 	fake.bindMutex.RLock()
 	defer fake.bindMutex.RUnlock()
 	argsForCall := fake.bindArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *IdentityProvider) BindReturns(result1 error) {
@@ -262,6 +280,79 @@ func (fake *IdentityProvider) GetAuditInfoReturnsOnCall(i int, result1 []byte, r
 		result1 []byte
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *IdentityProvider) GetEIDAndRH(arg1 view.Identity, arg2 []byte) (string, string, error) {
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.getEIDAndRHMutex.Lock()
+	ret, specificReturn := fake.getEIDAndRHReturnsOnCall[len(fake.getEIDAndRHArgsForCall)]
+	fake.getEIDAndRHArgsForCall = append(fake.getEIDAndRHArgsForCall, struct {
+		arg1 view.Identity
+		arg2 []byte
+	}{arg1, arg2Copy})
+	stub := fake.GetEIDAndRHStub
+	fakeReturns := fake.getEIDAndRHReturns
+	fake.recordInvocation("GetEIDAndRH", []interface{}{arg1, arg2Copy})
+	fake.getEIDAndRHMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+}
+
+func (fake *IdentityProvider) GetEIDAndRHCallCount() int {
+	fake.getEIDAndRHMutex.RLock()
+	defer fake.getEIDAndRHMutex.RUnlock()
+	return len(fake.getEIDAndRHArgsForCall)
+}
+
+func (fake *IdentityProvider) GetEIDAndRHCalls(stub func(view.Identity, []byte) (string, string, error)) {
+	fake.getEIDAndRHMutex.Lock()
+	defer fake.getEIDAndRHMutex.Unlock()
+	fake.GetEIDAndRHStub = stub
+}
+
+func (fake *IdentityProvider) GetEIDAndRHArgsForCall(i int) (view.Identity, []byte) {
+	fake.getEIDAndRHMutex.RLock()
+	defer fake.getEIDAndRHMutex.RUnlock()
+	argsForCall := fake.getEIDAndRHArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *IdentityProvider) GetEIDAndRHReturns(result1 string, result2 string, result3 error) {
+	fake.getEIDAndRHMutex.Lock()
+	defer fake.getEIDAndRHMutex.Unlock()
+	fake.GetEIDAndRHStub = nil
+	fake.getEIDAndRHReturns = struct {
+		result1 string
+		result2 string
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *IdentityProvider) GetEIDAndRHReturnsOnCall(i int, result1 string, result2 string, result3 error) {
+	fake.getEIDAndRHMutex.Lock()
+	defer fake.getEIDAndRHMutex.Unlock()
+	fake.GetEIDAndRHStub = nil
+	if fake.getEIDAndRHReturnsOnCall == nil {
+		fake.getEIDAndRHReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 string
+			result3 error
+		})
+	}
+	fake.getEIDAndRHReturnsOnCall[i] = struct {
+		result1 string
+		result2 string
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *IdentityProvider) GetEnrollmentID(arg1 view.Identity, arg2 []byte) (string, error) {
@@ -789,6 +880,8 @@ func (fake *IdentityProvider) Invocations() map[string][][]interface{} {
 	defer fake.bindMutex.RUnlock()
 	fake.getAuditInfoMutex.RLock()
 	defer fake.getAuditInfoMutex.RUnlock()
+	fake.getEIDAndRHMutex.RLock()
+	defer fake.getEIDAndRHMutex.RUnlock()
 	fake.getEnrollmentIDMutex.RLock()
 	defer fake.getEnrollmentIDMutex.RUnlock()
 	fake.getRevocationHandlerMutex.RLock()

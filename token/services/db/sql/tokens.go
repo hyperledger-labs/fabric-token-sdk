@@ -842,7 +842,7 @@ func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bo
 }
 
 func (t *TokenTransaction) Delete(txID string, index uint64, deletedBy string) error {
-	logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
+	//logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
 	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE tx_id = $3 AND idx = $4;", t.db.table.Tokens)
@@ -854,7 +854,7 @@ func (t *TokenTransaction) Delete(txID string, index uint64, deletedBy string) e
 }
 
 func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) error {
-	logger.Debugf("store record [%s:%d,%v] in table [%s]", tr.TxID, tr.Index, owners, t.db.table.Tokens)
+	//logger.Debugf("store record [%s:%d,%v] in table [%s]", tr.TxID, tr.Index, owners, t.db.table.Tokens)
 
 	// Store token
 	now := time.Now().UTC()

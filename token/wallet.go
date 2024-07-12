@@ -156,7 +156,7 @@ func (wm *WalletManager) GetRevocationHandle(identity Identity) (string, error) 
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
 
-	return wm.walletService.GetRevocationHandler(identity, auditInfo)
+	return wm.walletService.GetRevocationHandle(identity, auditInfo)
 }
 
 // SpentIDs returns the spent keys corresponding to the passed token IDs
