@@ -111,6 +111,12 @@ func (l *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
 }
 
 func (l *LocalMembership) GetDefaultIdentifier() string {
+	l.resolversMutex.RLock()
+	defer l.resolversMutex.RUnlock()
+	return l.getDefaultIdentifier()
+}
+
+func (l *LocalMembership) getDefaultIdentifier() string {
 	for _, resolver := range l.resolvers {
 		if resolver.Default {
 			return resolver.Name
@@ -148,7 +154,7 @@ func (l *LocalMembership) RegisterIdentity(idConfig driver.IdentityConfiguration
 	l.resolversMutex.Lock()
 	defer l.resolversMutex.Unlock()
 
-	return l.registerIdentityConfiguration(idConfig, l.GetDefaultIdentifier() == "")
+	return l.registerIdentityConfiguration(idConfig, l.getDefaultIdentifier() == "")
 }
 
 func (l *LocalMembership) IDs() ([]string, error) {
@@ -187,7 +193,7 @@ func (l *LocalMembership) Load() error {
 	logger.Debugf("load identities from storage...done")
 
 	// if no default identity, use the first one
-	defaultIdentifier := l.GetDefaultIdentifier()
+	defaultIdentifier := l.getDefaultIdentifier()
 	if len(defaultIdentifier) == 0 {
 		logger.Warnf("no default identity, use the first one available")
 		if len(l.resolvers) > 0 {
@@ -385,7 +391,7 @@ func (l *LocalMembership) loadFromStorage() error {
 			URL:    entry.URL,
 			Config: entry.Config,
 			Raw:    entry.Raw,
-		}, l.GetDefaultIdentifier() == ""); err != nil {
+		}, l.getDefaultIdentifier() == ""); err != nil {
 			return err
 		}
 	}
