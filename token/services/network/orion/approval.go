@@ -135,10 +135,13 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	numRetries := 5
 	sleepDuration := 1 * time.Second
 	for i := 0; i < numRetries; i++ {
-		envelopeRaw, err := r.validate(context, request, validator)
+		envelopeRaw, retry, err := r.validate(context, request, validator)
 		if err != nil {
+			if !retry {
+				logger.Errorf("failed to commit transaction [%s], no more retry after this [%d]", err, i)
+				return nil, errors.Wrapf(err, "failed to commit transaction [%s]", request.TxID)
+			}
 			logger.Errorf("failed to commit transaction [%s], retry [%d]", err, i)
-
 			// was the transaction committed, by any chance?
 			status, err := txStatusFetcher.process(context, &TxStatusRequest{
 				Network:   request.Network,
@@ -169,18 +172,18 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	return nil, errors.Wrapf(err, "failed to commit transaction [%s]", request.TxID)
 }
 
-func (r *RequestApprovalResponderView) validate(context view.Context, request *ApprovalRequest, validator driver.Validator) ([]byte, error) {
+func (r *RequestApprovalResponderView) validate(context view.Context, request *ApprovalRequest, validator driver.Validator) ([]byte, bool, error) {
 	sm, err := r.dbManager.GetSessionManager(request.Network)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get session manager for network [%s]", request.Network)
+		return nil, true, errors.Wrapf(err, "failed to get session manager for network [%s]", request.Network)
 	}
 	oSession, err := sm.GetSession()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create session to orion network [%s]", request.Network)
+		return nil, true, errors.Wrapf(err, "failed to create session to orion network [%s]", request.Network)
 	}
 	qe, err := oSession.QueryExecutor(request.Namespace)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s]", request.Network)
+		return nil, true, errors.Wrapf(err, "failed to get query executor for orion network [%s]", request.Network)
 	}
 	actions, attributes, err := token.NewValidator(validator).UnmarshallAndVerifyWithMetadata(
 		context.Context(),
@@ -189,13 +192,13 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 		request.Request,
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshall and verify request")
+		return nil, true, errors.Wrapf(err, "failed to unmarshall and verify request")
 	}
 
 	// Write
 	tx, err := sm.Orion.TransactionManager().NewTransaction(request.TxID, sm.CustodianID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create transaction [%s]", request.TxID)
+		return nil, true, errors.Wrapf(err, "failed to create transaction [%s]", request.TxID)
 	}
 	rws := &TxRWSWrapper{
 		me: sm.CustodianID,
@@ -206,20 +209,20 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 	for _, action := range actions {
 		err = t.Write(action)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to write action")
+			return nil, false, errors.Wrapf(err, "failed to write action")
 		}
 	}
 	err = t.CommitTokenRequest(attributes[common.TokenRequestToSign], true)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to commit token request")
+		return nil, false, errors.Wrapf(err, "failed to commit token request")
 	}
 
 	// close transaction
 	envelopeRaw, err := tx.SignAndClose()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to sign and close transaction [%s]", request.TxID)
+		return nil, true, errors.Wrapf(err, "failed to sign and close transaction [%s]", request.TxID)
 	}
-	return envelopeRaw, nil
+	return envelopeRaw, false, nil
 }
 
 type LedgerWrapper struct {
