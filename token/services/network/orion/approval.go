@@ -192,7 +192,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 		request.Request,
 	)
 	if err != nil {
-		return nil, true, errors.Wrapf(err, "failed to unmarshall and verify request")
+		return nil, false, errors.Wrapf(err, "failed to unmarshall and verify request")
 	}
 
 	// Write
