@@ -8,6 +8,7 @@ package orion
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -106,7 +107,10 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 	for i := 0; i < numRetries; i++ {
 		if _, txID, err2 := r.broadcast(context, sm, request); err2 != nil {
 			logger.Errorf("failed to broadcast to [%s], txID [%s] with err [%s], retry [%d]", sm.CustodianID, txID, err2, i)
-
+			if strings.Contains(err2.Error(), "is not valid") {
+				err = err2
+				break
+			}
 			if len(txID) != 0 {
 				// was the transaction committed, by any chance?
 				logger.Errorf("check transaction [%s] status on [%s], retry [%d]", txID, sm.CustodianID, i)
