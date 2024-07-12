@@ -97,7 +97,7 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 		return nil, errors.Wrapf(err, "failed to get session to [%s]", r.Issuer)
 	}
 
-	err = session.Send(wr)
+	err = session.SendWithContext(context.Context(), wr)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to send recipient data")

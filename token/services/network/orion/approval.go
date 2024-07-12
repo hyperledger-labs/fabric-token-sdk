@@ -75,7 +75,7 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		TxID:      r.TxID,
 		Request:   r.RequestRaw,
 	}
-	if err := session.Send(request); err != nil {
+	if err := session.SendWithContext(context.Context(), request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", sm.CustodianID)
 	}
 	response := &ApprovalResponse{}
@@ -106,7 +106,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to process request")
 	}
-	if err := session.Send(&ApprovalResponse{Envelope: txRaw}); err != nil {
+	if err := session.SendWithContext(context.Context(), &ApprovalResponse{Envelope: txRaw}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil
