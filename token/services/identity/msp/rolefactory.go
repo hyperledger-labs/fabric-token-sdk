@@ -235,16 +235,17 @@ func (i *Info) Get() (driver.Identity, []byte, error) {
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
 		}
-		// register the audit info
-		if err := i.IdentityProvider.RegisterAuditInfo(typedIdentity, ai); err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to register audit info for identity [%s]", id)
-		}
 		if i.BinderService != nil {
 			if err := i.BinderService.Bind(id, typedIdentity, true); err != nil {
 				return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
 			}
 			if err := i.BinderService.Bind(i.RootIdentity, typedIdentity, false); err != nil {
 				return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, i.RootIdentity)
+			}
+		} else {
+			// register at the list the audit info
+			if err := i.IdentityProvider.RegisterAuditInfo(typedIdentity, ai); err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to register audit info for identity [%s]", id)
 			}
 		}
 		id = typedIdentity
