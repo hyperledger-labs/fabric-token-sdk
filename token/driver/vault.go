@@ -37,6 +37,11 @@ type UnspentTokensIterator interface {
 	Next() (*token.UnspentToken, error)
 }
 
+type MinTokenInfoIterator interface {
+	Close()
+	Next() (*token.MinTokenInfo, error)
+}
+
 type Vault interface {
 	QueryEngine() QueryEngine
 	CertificationStorage() CertificationStorage

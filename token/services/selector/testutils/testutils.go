@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -123,6 +124,21 @@ func (q *MockQueryService) GetUnspentTokens(inputs ...*token2.ID) ([]*token2.Uns
 
 func (q *MockQueryService) UnspentTokensIterator() (*token.UnspentTokensIterator, error) {
 	return &token.UnspentTokensIterator{UnspentTokensIterator: &MockIterator{q, q.allKeys, 0}}, nil
+}
+
+func (q *MockQueryService) MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (driver.MinTokenInfoIterator, error) {
+	it, err := q.UnspentTokensIteratorBy(ctx, ownerEID, typ)
+	if err != nil {
+		return nil, err
+	}
+	return collections.Map(it, func(ut *token2.UnspentToken) (*token2.MinTokenInfo, error) {
+		return &token2.MinTokenInfo{
+			Id:       ut.Id,
+			Owner:    string(ut.Owner.Raw),
+			Type:     ut.Type,
+			Quantity: ut.Quantity,
+		}, nil
+	}), nil
 }
 
 func (q *MockQueryService) UnspentTokensIteratorBy(_ context.Context, id, _ string) (driver.UnspentTokensIterator, error) {

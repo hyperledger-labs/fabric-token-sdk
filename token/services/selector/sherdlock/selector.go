@@ -42,7 +42,7 @@ type tokenLocker interface {
 
 type selector struct {
 	logger    logging2.Logger
-	cache     iterator[*token2.UnspentToken]
+	cache     iterator[*token2.MinTokenInfo]
 	fetcher   tokenFetcher
 	locker    tokenLocker
 	precision uint64
@@ -83,7 +83,7 @@ func NewStubbornSelector(logger logging2.Logger, tokenDB tokenFetcher, lockDB to
 func NewSelector(logger logging2.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64) *selector {
 	return &selector{
 		logger:    logger,
-		cache:     collections.NewEmptyIterator[*token2.UnspentToken](),
+		cache:     collections.NewEmptyIterator[*token2.MinTokenInfo](),
 		fetcher:   tokenDB,
 		locker:    lockDB,
 		precision: precision,
