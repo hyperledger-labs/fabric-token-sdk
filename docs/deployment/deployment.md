@@ -57,3 +57,9 @@ func main() {
 	})
 }
 ```
+
+## HSM Support
+
+In order to use a hardware HSM for x.509 identities, you have to build the application with
+`CGO_ENABLED=1 go build -tags pkcs11` and configure the PKCS11 settings in the configuration
+file (see [core-token.md](../core-token.md)).

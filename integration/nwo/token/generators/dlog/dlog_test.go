@@ -22,7 +22,7 @@ import (
 
 func TestDLogFabricCryptoMaterialGenerator_Setup(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	buildServer := common.NewBuildServer()
+	buildServer := common.NewBuildServer("-tags", "pkcs11")
 	buildServer.Serve()
 	defer buildServer.Shutdown(true)
 

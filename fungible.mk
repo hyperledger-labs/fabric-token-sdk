@@ -63,7 +63,7 @@ integration-tests-dloghsm-fabric: install-softhsm
 	@echo "Setup SoftHSM"
 	@./ci/scripts/setup_softhsm.sh
 	@echo "Start Integration Test"
-	cd ./integration/token/fungible/dloghsm; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --label-filter="$(TEST_FILTER)" .
+	cd ./integration/token/fungible/dloghsm; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --tags pkcs11 --label-filter="$(TEST_FILTER)" .
 
 .PHONY: integration-tests-fabtoken-fabric-t1
 integration-tests-fabtoken-fabric-t1:
@@ -87,7 +87,7 @@ integration-tests-fabtoken-fabric-t5:
 
 .PHONY: integration-tests-fabtoken-fabric
 integration-tests-fabtoken-fabric:
-	cd ./integration/token/fungible/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --label-filter="$(TEST_FILTER)" .
+	cd ./integration/token/fungible/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --tags pkcs11 --label-filter="$(TEST_FILTER)" .
 
 .PHONY: integration-tests-dlog-orion
 integration-tests-dlog-orion:

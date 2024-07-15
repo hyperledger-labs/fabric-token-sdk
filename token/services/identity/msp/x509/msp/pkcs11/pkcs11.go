@@ -1,3 +1,5 @@
+//go:build pkcs11
+
 /*
 Copyright IBM Corp. All Rights Reserved.
 
@@ -9,6 +11,7 @@ package pkcs11
 import (
 	"os"
 
+	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/pkcs11"
 	"github.com/pkg/errors"
 )
@@ -24,6 +27,15 @@ type (
 	PKCS11Opts   = pkcs11.PKCS11Opts
 	KeyIDMapping = pkcs11.KeyIDMapping
 )
+
+// NewProvider returns a pkcs11 provider
+func NewProvider(opts PKCS11Opts, ks bccsp.KeyStore, mapper func(ski []byte) []byte) (*pkcs11.Provider, error) {
+	csp, err := pkcs11.New(opts, ks, pkcs11.WithKeyMapper(mapper))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "Failed initializing PKCS11 library with config [%+v]", opts)
+	}
+	return csp, nil
+}
 
 // FindPKCS11Lib attempts to find the PKCS11 library based on the given configuration
 func FindPKCS11Lib() (lib, pin, label string, err error) {

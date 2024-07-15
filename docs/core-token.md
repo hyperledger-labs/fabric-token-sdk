@@ -102,18 +102,20 @@ token:
             path: /path/to/issuer-wallet
             # additional options that can be used to instantiated the wallet.
             # options are driver dependent. With `fabtoken` and `dlog` drivers,
-            # the following options apply
+            # the following options apply.
             opts:
               BCCSP:
                 Default: SW
+                SW:
+                  Hash: SHA2
+                  Security: 256
+                # The following only needs to be defined if the BCCSP Default is set to PKCS11.
+                # NOTE: in order to use pkcs11, you have to build the application with "go build -tags pkcs11"
                 PKCS11:
                   Hash: SHA2
                   Label: null
                   Library: null
                   Pin: null
-                  Security: 256
-                SW:
-                  Hash: SHA2
                   Security: 256
         # auditor wallets
         auditors:

@@ -20,7 +20,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     # softhsm2-util --delete-token --token "ForFSC" || true
 
     echo "Initializing tokens..."
-    softhsm2-util --init-token --slot 13 --label "ForFSC" --so-pin 1234 --pin 98765432
+    softhsm2-util --init-token --free --label "ForFSC" --so-pin 1234 --pin 98765432
 
 else
 

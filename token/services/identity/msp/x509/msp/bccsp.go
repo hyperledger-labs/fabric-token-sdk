@@ -10,8 +10,8 @@ import (
 	"encoding/hex"
 	"path/filepath"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp/pkcs11"
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/hyperledger/fabric/bccsp/pkcs11"
 	"github.com/hyperledger/fabric/bccsp/sw"
 	"github.com/pkg/errors"
 )
@@ -42,14 +42,12 @@ func GetPKCS11BCCSP(conf *BCCSP) (bccsp.BCCSP, bccsp.KeyStore, error) {
 		return nil, nil, errors.New("invalid BCCSP.PKCS11. missing configuration")
 	}
 
-	p11Opts := *conf.PKCS11
+	p11Opts := conf.PKCS11
 	ks := sw.NewDummyKeyStore()
-	mapper := skiMapper(p11Opts)
-	csp, err := pkcs11.New(*ToPKCS11OptsOpts(&p11Opts), ks, pkcs11.WithKeyMapper(mapper))
-	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "Failed initializing PKCS11 library with config [%+v]", p11Opts)
-	}
-	return csp, ks, nil
+	opts := ToPKCS11OptsOpts(p11Opts)
+	csp, err := pkcs11.NewProvider(*opts, ks, skiMapper(*p11Opts))
+
+	return csp, ks, err
 }
 
 func skiMapper(p11Opts PKCS11) func([]byte) []byte {
