@@ -150,11 +150,11 @@ func (r *TestCaseRunner) doWithdrawals(customer *customerState, amounts []api.Am
 				return err
 			}
 			customer.AddWithdrawn(amount)
-			balance, err := r.intermediary.GetBalance(customer.Name)
-			if err != nil {
-				return err
-			}
-			r.logger.Infof("Balance of %s is %d", customer.Name, balance)
+			//balance, err := r.intermediary.GetBalance(customer.Name)
+			//if err != nil {
+			//	return err
+			//}
+			//r.logger.Infof("Balance of %s is %d", customer.Name, balance)
 			return nil
 		})
 	}
@@ -177,17 +177,17 @@ func (r *TestCaseRunner) doPayments(payer *customerState, payees []*customerStat
 			payer.AddPaidMount(amount)
 			payee.AddReceivedMount(amount)
 
-			balance, err := r.intermediary.GetBalance(payer.Name)
-			if err != nil {
-				return err
-			}
-			r.logger.Infof("Balance of %s is %d", payer.Name, balance)
-
-			balance, err = r.intermediary.GetBalance(payee.Name)
-			if err != nil {
-				return err
-			}
-			r.logger.Infof("Balance of %s is %d", payee.Name, balance)
+			//balance, err := r.intermediary.GetBalance(payer.Name)
+			//if err != nil {
+			//	return err
+			//}
+			//r.logger.Infof("Balance of %s is %d", payer.Name, balance)
+			//
+			//balance, err = r.intermediary.GetBalance(payee.Name)
+			//if err != nil {
+			//	return err
+			//}
+			//r.logger.Infof("Balance of %s is %d", payee.Name, balance)
 			return nil
 		})
 	}
