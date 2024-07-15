@@ -31,11 +31,11 @@ type iterator[k any] interface {
 	Close()
 }
 
-func NewManager(tokenDB TokenDB, lockDB LockDB, m *Metrics, precision uint64, backoff time.Duration) *manager {
+func NewManager(tokenDB TokenDB, lockDB LockDB, m *Metrics, precision uint64, backoff time.Duration, maxRetriesAfterBackOff int) *manager {
 	fetcher := newMixedFetcher(tokenDB, m)
 	return &manager{
 		selectorCache: utils.NewLazyProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
-			return NewSherdSelector(txID, fetcher, lockDB, precision, backoff), nil
+			return NewSherdSelector(txID, fetcher, lockDB, precision, backoff, maxRetriesAfterBackOff), nil
 		}),
 	}
 }

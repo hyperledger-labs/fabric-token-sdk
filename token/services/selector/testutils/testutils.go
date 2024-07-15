@@ -26,7 +26,7 @@ const (
 	SelectQuantity             = "100"
 	TxID                       = "someTxID"
 	TokenType                  = "USD"
-	SelectorNumRetries         = 2
+	SelectorNumRetries         = 3
 	SelectorTimeout            = 5 * time.Second
 	LockSleepTimeout           = 2 * time.Second
 	LockValidTxEvictionTimeout = 5 * time.Minute
