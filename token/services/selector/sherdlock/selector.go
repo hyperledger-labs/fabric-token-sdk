@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"time"
@@ -158,16 +157,8 @@ func (s *selector) UnlockAll() error {
 	return s.locker.UnlockAll()
 }
 
-type fetcher struct {
-	TokenDB
-}
-
-func (f *fetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.UnspentToken], error) {
-	it, err := f.TokenDB.UnspentTokensIteratorBy(context.TODO(), walletID, currency)
-	if err != nil {
-		return nil, err
-	}
-	return collections.CopyIterator[token2.UnspentToken](it)
+func tokenKey(walletID, typ string) string {
+	return fmt.Sprintf("%s.%s", walletID, typ)
 }
 
 type locker struct {
@@ -183,11 +174,11 @@ func (l *locker) UnlockAll() error {
 	return l.LockDB.UnlockByTxID(l.txID)
 }
 
-func NewSherdSelector(txID transaction.ID, tokenDB TokenDB, lockDB LockDB, precision uint64, backoff time.Duration) tokenSelectorUnlocker {
+func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB LockDB, precision uint64, backoff time.Duration) tokenSelectorUnlocker {
 	logger := logger.Named(fmt.Sprintf("selector-%s", txID))
-	fetcher := &fetcher{TokenDB: tokenDB}
 	locker := &locker{txID: txID, LockDB: lockDB}
 	if backoff < 0 {
+
 		return NewSelector(logger, fetcher, locker, precision)
 	} else {
 		return NewStubbornSelector(logger, fetcher, locker, precision, backoff)
