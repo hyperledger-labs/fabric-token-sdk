@@ -542,7 +542,7 @@ type FinalityListener struct {
 	namespace string
 }
 
-func (t *FinalityListener) OnStatus(txID string, status int, message string) {
+func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string) {
 	defer func() {
 		if e := recover(); e != nil {
 			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
