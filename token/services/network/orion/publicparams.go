@@ -74,7 +74,7 @@ func (v *PublicParamsRequestView) Call(context view.Context) (interface{}, error
 			Network:   v.Network,
 			Namespace: v.Namespace,
 		}
-		if err := session.Send(request); err != nil {
+		if err := session.SendWithContext(context.Context(), request); err != nil {
 			if i == v.retries-1 {
 				return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 			}
@@ -109,7 +109,7 @@ func (v *PublicParamsRequestResponderView) Call(context view.Context) (interface
 		return nil, errors.Wrapf(err, "failed to get public parameters from orion network [%s]", request.Network)
 	}
 	logger.Debugf("reading public parameters, done: %d", len(ppRaw))
-	if err := session.Send(&PublicParamsResponse{Raw: ppRaw}); err != nil {
+	if err := session.SendWithContext(context.Context(), &PublicParamsResponse{Raw: ppRaw}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil
