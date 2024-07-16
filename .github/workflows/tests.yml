@@ -78,7 +78,7 @@ jobs:
         run: make ${{ matrix.tests }}
 
   itest:
-    needs: checks
+#    needs: checks
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
