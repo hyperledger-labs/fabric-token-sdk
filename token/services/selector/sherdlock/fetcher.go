@@ -57,11 +57,15 @@ func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
 }
 
 func (f *mixedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
+	logger.Infof("Call unspent tokens iterator")
 	it, err := f.eagerFetcher.UnspentTokensIteratorBy(walletID, currency)
+	logger.Infof("Fetched eager iterator")
 	if err == nil && it.(enhancedIterator[*token2.MinTokenInfo]).HasNext() {
+		logger.Infof("Eager iterator had tokens. Returning iterator")
 		f.m.UnspentTokensInvocations.With(fetcherTypeLabel, eager).Add(1)
 		return it, nil
 	}
+	logger.Infof("Eager iterator had no tokens. Returning lazy iterator")
 
 	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
 	return f.lazyFetcher.UnspentTokensIteratorBy(walletID, currency)
@@ -137,8 +141,9 @@ func (f *cachedFetcher) update() {
 
 func (f *cachedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
 	f.mu.RLock()
-	defer f.mu.RLock()
-	if it, ok := f.cache[tokenKey(walletID, currency)]; ok {
+	it, ok := f.cache[tokenKey(walletID, currency)]
+	f.mu.RUnlock()
+	if ok {
 		return it.NewPermutation(), nil
 	}
 	logger.Debugf("No tokens found in cache for [%s]. Only [%s] available. Returning empty iterator.", tokenKey(walletID, currency), collections.Keys(f.cache))
