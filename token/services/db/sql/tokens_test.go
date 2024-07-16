@@ -91,7 +91,7 @@ var TokensCases = []struct {
 }
 
 func TTransaction(t *testing.T, db *TokenDB) {
-	tx, err := db.NewTokenDBTransaction(nil)
+	tx, err := db.NewTokenDBTransaction(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	assert.NoError(t, err)
 	assert.NoError(t, tx.Commit())
 
-	tx, err = db.NewTokenDBTransaction(nil)
+	tx, err = db.NewTokenDBTransaction(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	assert.Equal(t, "0x02", tok.Quantity)
 	assert.NoError(t, tx.Rollback())
 
-	tx, err = db.NewTokenDBTransaction(nil)
+	tx, err = db.NewTokenDBTransaction(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +146,7 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	assert.NoError(t, tx.Delete(context.TODO(), "tx1", 0, "me"))
 	assert.NoError(t, tx.Commit())
 
-	tx, err = db.NewTokenDBTransaction(nil)
+	tx, err = db.NewTokenDBTransaction(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +261,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 }
 
 func getTokensBy(t *testing.T, db *TokenDB, ownerEID, typ string) []*token.UnspentToken {
-	it, err := db.UnspentTokensIteratorBy(nil, ownerEID, typ)
+	it, err := db.UnspentTokensIteratorBy(context.TODO(), ownerEID, typ)
 	assert.NoError(t, err)
 	defer it.Close()
 
@@ -764,7 +764,7 @@ func TCertification(t *testing.T, db *TokenDB) {
 }
 
 func TQueryTokenDetails(t *testing.T, db *TokenDB) {
-	tx, err := db.NewTokenDBTransaction(nil)
+	tx, err := db.NewTokenDBTransaction(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}
