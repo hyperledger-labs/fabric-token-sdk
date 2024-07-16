@@ -7,14 +7,18 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type OwnerTokenVault interface {
 	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
+	Balance(id, tokenType string) (uint64, error)
 }
 
 type AuditorWallet struct {
@@ -216,13 +220,16 @@ func (w *LongTermOwnerWallet) GetSigner(identity driver.Identity) (driver.Signer
 	return w.IdentityProvider.GetSigner(identity)
 }
 
-func (w *LongTermOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
+func (w *LongTermOwnerWallet) ListTokens(ctx context.Context, opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("get_unspent_tokens_iterator")
 	it, err := w.TokenVault.UnspentTokensIteratorBy(w.WalletID, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
 	defer it.Close()
 
+	span.AddEvent("start_iterate_tokens")
 	unspentTokens := &token.UnspentTokens{}
 	for {
 		t, err := it.Next()
@@ -234,7 +241,16 @@ func (w *LongTermOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token
 		}
 		unspentTokens.Tokens = append(unspentTokens.Tokens, t)
 	}
+	span.AddEvent("end_iterate_tokens")
 	return unspentTokens, nil
+}
+
+func (w *LongTermOwnerWallet) Balance(opts *driver.ListTokensOptions) (uint64, error) {
+	balance, err := w.TokenVault.Balance(w.WalletID, opts.TokenType)
+	if err != nil {
+		return 0, errors.Wrap(err, "token selection failed")
+	}
+	return balance, nil
 }
 
 func (w *LongTermOwnerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
