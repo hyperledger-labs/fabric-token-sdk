@@ -82,4 +82,6 @@ type QueryEngine interface {
 	// WhoDeletedTokens returns info about who deleted the passed tokens.
 	// The bool array is an indicator used to tell if the token at a given position has been deleted or not
 	WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
+	// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
+	Balance(id, tokenType string) (uint64, error)
 }

@@ -856,6 +856,27 @@ func TQueryTokenDetails(t *testing.T, db *TokenDB) {
 	assert.NoError(t, err)
 	assert.Len(t, res, 1)
 	assertEqual(t, tx1, res[0])
+	balance, err := db.Balance("alice", "TST1")
+	assert.NoError(t, err)
+	assert.Equal(t, res[0].Amount, balance)
+
+	// alice TST
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{OwnerEnrollmentID: "alice", TokenType: "TST"})
+	assert.NoError(t, err)
+	assert.Len(t, res, 1)
+	assertEqual(t, tx2, res[0])
+	balance, err = db.Balance("alice", "TST")
+	assert.NoError(t, err)
+	assert.Equal(t, res[0].Amount, balance)
+
+	// bob TST
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{OwnerEnrollmentID: "bob", TokenType: "TST"})
+	assert.NoError(t, err)
+	assert.Len(t, res, 1)
+	assertEqual(t, tx21, res[0])
+	balance, err = db.Balance("bob", "TST")
+	assert.NoError(t, err)
+	assert.Equal(t, res[0].Amount, balance)
 
 	// spent
 	assert.NoError(t, db.DeleteTokens("delby", &token.ID{TxId: "tx2", Index: 1}))

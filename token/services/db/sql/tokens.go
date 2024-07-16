@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 type tokenTables struct {
@@ -128,6 +128,26 @@ func (db *TokenDB) UnspentTokensIteratorBy(ownerEID, typ string) (tdriver.Unspen
 	rows, err := db.db.Query(query, args...)
 
 	return &UnspentTokensIterator{txs: rows}, err
+}
+
+// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
+func (db *TokenDB) Balance(ownerEID, typ string) (uint64, error) {
+	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
+		OwnerEnrollmentID: ownerEID,
+		TokenType:         typ,
+	}, db.table.Tokens, db.table.Ownership)
+	query := fmt.Sprintf("SELECT SUM(amount) FROM %s %s %s", db.table.Tokens, join, where)
+
+	logger.Debug(query, args)
+	row := db.db.QueryRow(query, args...)
+	var sum uint64
+	if err := row.Scan(&sum); err != nil {
+		if errors.HasCause(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, errors.Wrapf(err, "error querying db")
+	}
+	return sum, nil
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
@@ -616,7 +636,7 @@ func (db *TokenDB) PublicParams() ([]byte, error) {
 	row := db.db.QueryRow(query)
 	err := row.Scan(&params)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.HasCause(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, errors.Wrapf(err, "error querying db")
@@ -630,7 +650,7 @@ func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) (err
 
 	tx, err := db.db.Begin()
 	if err != nil {
-		return errors.New("failed starting a transaction")
+		return errors.Errorf("failed starting a transaction")
 	}
 	defer func() {
 		if err != nil && tx != nil {
@@ -668,7 +688,7 @@ func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {
 
 	var certification []byte
 	if err := row.Scan(&certification); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.HasCause(err, sql.ErrNoRows) {
 			return false
 		}
 		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenID, err)
@@ -789,7 +809,7 @@ func (db *TokenDB) Close() {
 func (db *TokenDB) NewTokenDBTransaction() (driver.TokenDBTransaction, error) {
 	tx, err := db.db.Begin()
 	if err != nil {
-		return nil, errors.New("failed starting a db transaction")
+		return nil, errors.Errorf("failed starting a db transaction")
 	}
 	return &TokenTransaction{db: db, tx: tx}, nil
 }
