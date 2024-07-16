@@ -24,7 +24,7 @@ func initIdentityDB(driverName, dataSourceName, tablePrefix string, maxOpenConns
 	if err != nil {
 		return nil, err
 	}
-	return NewIdentityDB(sqlDB, tablePrefix, true, secondcache.New(1000))
+	return NewIdentityDB(sqlDB, tablePrefix, true, secondcache.NewTyped[bool](1000), secondcache.NewTyped[[]byte](1000))
 }
 
 func TestIdentitySqlite(t *testing.T) {
