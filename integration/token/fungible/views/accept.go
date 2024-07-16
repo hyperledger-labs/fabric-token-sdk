@@ -43,7 +43,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 			continue
 		}
 		balance, err := ttx.MyWallet(context, token.WithTMSID(tx.TMSID())).Balance(ttx.WithType(output.Type))
-		assert.NoError(err, "failed retrieving the unspent tokens for type [%s]", output.Type)
+		assert.NoError(err, "failed retrieving balance for type [%s]", output.Type)
 		assert.True(balance <= 3000, "cannot have more than 3000 unspent quantity for type [%s]", output.Type)
 	}
 
