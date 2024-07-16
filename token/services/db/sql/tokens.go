@@ -130,6 +130,24 @@ func (db *TokenDB) UnspentTokensIteratorBy(ownerEID, typ string) (tdriver.Unspen
 	return &UnspentTokensIterator{txs: rows}, err
 }
 
+// MinTokenInfoIteratorBy returns the minimum information about the tokens needed for the selector
+func (db *TokenDB) MinTokenInfoIteratorBy(ownerEID string, typ string) (tdriver.MinTokenInfoIterator, error) {
+	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
+		OwnerEnrollmentID: ownerEID,
+		TokenType:         typ,
+	}, db.table.Tokens, db.table.Ownership)
+	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, token_type, quantity, enrollment_id FROM %s %s %s",
+		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
+
+	logger.Debug(query, args)
+
+	rows, err := db.db.Query(query, args...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	return &MinTokenInfoIterator{txs: rows}, nil
+}
+
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
 func (db *TokenDB) ListUnspentTokensBy(ownerEID, typ string) (*token.UnspentTokens, error) {
 	logger.Debugf("list unspent token by [%s,%s]", ownerEID, typ)
@@ -913,6 +931,31 @@ func (t *TokenTransaction) Commit() error {
 
 func (t *TokenTransaction) Rollback() error {
 	return t.tx.Rollback()
+}
+
+type MinTokenInfoIterator struct {
+	txs *sql.Rows
+}
+
+func (u *MinTokenInfoIterator) Close() {
+	u.txs.Close()
+}
+
+func (u *MinTokenInfoIterator) Next() (*token.MinTokenInfo, error) {
+	if !u.txs.Next() {
+		return nil, nil
+	}
+
+	tok := &token.MinTokenInfo{
+		Id:       &token.ID{},
+		Owner:    "",
+		Type:     "",
+		Quantity: "",
+	}
+	if err := u.txs.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Type, &tok.Quantity, &tok.Owner); err != nil {
+		return nil, err
+	}
+	return tok, nil
 }
 
 type UnspentTokensIterator struct {

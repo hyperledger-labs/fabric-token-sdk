@@ -177,7 +177,7 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity WalletIDB
 
 func NewSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
 	return &extendedSelector{
-		Selector: sherdlock.NewSherdSelector(testutils.TxID, qs, inmemory2.NewLocker(lock), testutils.TokenQuantityPrecision, sherdlock.NoBackoff),
+		Selector: sherdlock.NewSherdSelector(testutils.TxID, sherdlock.NewLazyFetcher(qs), inmemory2.NewLocker(lock), testutils.TokenQuantityPrecision, sherdlock.NoBackoff),
 		Lock:     nil,
 	}, nil
 }

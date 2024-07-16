@@ -12,6 +12,7 @@ import (
 	"time"
 
 	utils2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/testutils"
 	_ "github.com/lib/pq"
@@ -78,7 +79,7 @@ func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedM
 	if err != nil {
 		return nil, err
 	}
-	return testutils.NewEnhancedManager(NewManager(tokenDB, lockDB, testutils.TokenQuantityPrecision, backoff), tokenDB), nil
+	return testutils.NewEnhancedManager(NewManager(tokenDB, lockDB, newMetrics(&disabled.Provider{}), testutils.TokenQuantityPrecision, backoff), tokenDB), nil
 
 }
 

@@ -127,7 +127,9 @@ type TokenDB interface {
 	// UnspentTokensIterator returns an iterator over all owned tokens
 	UnspentTokensIterator() (driver.UnspentTokensIterator, error)
 	// UnspentTokensIteratorBy returns an iterator over all tokens owned by the passed identifier of a given type
-	UnspentTokensIteratorBy(ownerEID, typ string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
+	// MinTokenInfoIteratorBy returns the minimum information about the tokens needed for the selector
+	MinTokenInfoIteratorBy(ownerEID string, typ string) (driver.MinTokenInfoIterator, error)
 	// ListUnspentTokensBy returns the list of all tokens owned by the passed identifier of a given type
 	ListUnspentTokensBy(ownerEID, typ string) (*token.UnspentTokens, error)
 	// ListUnspentTokens returns the list of all owned tokens

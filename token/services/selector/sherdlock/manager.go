@@ -10,18 +10,12 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type LockDB = driver2.TokenLockDB
-
-type tokenFetcher interface {
-	UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.UnspentToken], error)
-}
 
 type tokenSelectorUnlocker interface {
 	token.Selector
@@ -32,18 +26,16 @@ type manager struct {
 	selectorCache utils.LazyProvider[transaction.ID, tokenSelectorUnlocker]
 }
 
-type TokenDB interface {
-	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
-}
-
 type iterator[k any] interface {
 	Next() (k, error)
+	Close()
 }
 
-func NewManager(tokenDB TokenDB, lockDB LockDB, precision uint64, backoff time.Duration) *manager {
+func NewManager(tokenDB TokenDB, lockDB LockDB, m *Metrics, precision uint64, backoff time.Duration) *manager {
+	fetcher := newMixedFetcher(tokenDB, m)
 	return &manager{
 		selectorCache: utils.NewLazyProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
-			return NewSherdSelector(txID, tokenDB, lockDB, precision, backoff), nil
+			return NewSherdSelector(txID, fetcher, lockDB, precision, backoff), nil
 		}),
 	}
 }
