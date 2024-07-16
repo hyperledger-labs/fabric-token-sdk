@@ -29,7 +29,6 @@ type TokenDB interface {
 }
 
 type enhancedIterator[T any] interface {
-	collections.Iterator[T]
 	HasNext() bool
 }
 
