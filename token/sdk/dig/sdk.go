@@ -149,7 +149,7 @@ func (p *SDK) Install() error {
 	// Overwrite dependencies
 	err = errors2.Join(
 		p.Container().Decorate(func(_ metrics.Provider, o *operations.Options, l operations.OperationsLogger) metrics.Provider {
-			return operations.NewDisabledHistogram(operations.NewMetricsProvider(o.Metrics, l, true))
+			return operations.NewMetricsProvider(o.Metrics, l, true)
 		}),
 		p.Container().Decorate(func(_ trace.TracerProvider, metricsProvider metrics.Provider, configService driver.ConfigService) (trace.TracerProvider, error) {
 			tp, err := tracing2.NewTracerProvider(configService)
