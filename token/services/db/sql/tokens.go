@@ -167,14 +167,17 @@ func (db *TokenDB) Balance(ownerEID, typ string) (uint64, error) {
 
 	logger.Debug(query, args)
 	row := db.db.QueryRow(query, args...)
-	var sum uint64
+	var sum *uint64
 	if err := row.Scan(&sum); err != nil {
 		if errors.HasCause(err, sql.ErrNoRows) {
 			return 0, nil
 		}
 		return 0, errors.Wrapf(err, "error querying db")
 	}
-	return sum, nil
+	if sum == nil {
+		return 0, nil
+	}
+	return *sum, nil
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
