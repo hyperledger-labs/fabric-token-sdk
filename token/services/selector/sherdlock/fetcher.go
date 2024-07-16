@@ -17,8 +17,7 @@ import (
 )
 
 const (
-	updateInterval    = 10 * time.Second
-	freshnessInterval = 2 * time.Second
+	freshnessInterval = 1 * time.Second
 )
 
 type tokenFetcher interface {
@@ -27,6 +26,11 @@ type tokenFetcher interface {
 
 type TokenDB interface {
 	MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (driver.MinTokenInfoIterator, error)
+}
+
+type enhancedIterator[T any] interface {
+	collections.Iterator[T]
+	HasNext() bool
 }
 
 type permutatableIterator[T any] interface {
@@ -40,23 +44,25 @@ type permutatableIterator[T any] interface {
 // or listen for insert events in the database
 type mixedFetcher struct {
 	lazyFetcher  *lazyFetcher
-	eagerFetcher *eagerFetcher
+	eagerFetcher *cachedFetcher
 	m            *Metrics
 }
 
 func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
 	return &mixedFetcher{
 		lazyFetcher:  NewLazyFetcher(tokenDB),
-		eagerFetcher: newEagerFetcher(tokenDB, updateInterval),
+		eagerFetcher: newCachedFetcher(tokenDB, freshnessInterval),
 		m:            m,
 	}
 }
 
 func (f *mixedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
-	if time.Since(f.eagerFetcher.lastFetched) < freshnessInterval {
+	it, err := f.eagerFetcher.UnspentTokensIteratorBy(walletID, currency)
+	if err == nil && it.(enhancedIterator[*token2.MinTokenInfo]).HasNext() {
 		f.m.UnspentTokensInvocations.With(fetcherTypeLabel, eager).Add(1)
-		return f.eagerFetcher.UnspentTokensIteratorBy(walletID, currency)
+		return it, nil
 	}
+
 	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
 	return f.lazyFetcher.UnspentTokensIteratorBy(walletID, currency)
 }
@@ -79,31 +85,32 @@ func (f *lazyFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterat
 	return collections.NewPermutatedIterator[token2.MinTokenInfo](it)
 }
 
-// eagerFetcher eagerly fetches all the tokens from the DB at regular intervals and returns the cached result
-type eagerFetcher struct {
-	tokenDB     TokenDB
-	ticker      *time.Ticker
-	cache       map[string]permutatableIterator[*token2.MinTokenInfo]
-	mu          sync.RWMutex
-	lastFetched time.Time
+// cachedFetcher eagerly fetches all the tokens from the DB at regular intervals and returns the cached result
+type cachedFetcher struct {
+	tokenDB           TokenDB
+	cache             map[string]permutatableIterator[*token2.MinTokenInfo]
+	mu                sync.RWMutex
+	freshnessInterval time.Duration
+	lastFetched       time.Time
 }
 
-func newEagerFetcher(tokenDB TokenDB, updateInterval time.Duration) *eagerFetcher {
-	f := &eagerFetcher{
-		tokenDB: tokenDB,
-		ticker:  time.NewTicker(updateInterval),
-		cache:   make(map[string]permutatableIterator[*token2.MinTokenInfo]),
+func newCachedFetcher(tokenDB TokenDB, freshnessInterval time.Duration) *cachedFetcher {
+	f := &cachedFetcher{
+		tokenDB:           tokenDB,
+		cache:             make(map[string]permutatableIterator[*token2.MinTokenInfo]),
+		freshnessInterval: freshnessInterval,
 	}
 	f.update()
+	ticker := time.NewTicker(freshnessInterval)
 	go func() {
-		for range f.ticker.C {
+		for range ticker.C {
 			f.update()
 		}
 	}()
 	return f
 }
 
-func (f *eagerFetcher) update() {
+func (f *cachedFetcher) update() {
 	logger.Debugf("Renew token cache")
 	it, err := f.tokenDB.MinTokenInfoIteratorBy(context.TODO(), "", "")
 	if err != nil {
@@ -128,7 +135,7 @@ func (f *eagerFetcher) update() {
 	f.mu.Unlock()
 }
 
-func (f *eagerFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
+func (f *cachedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
 	f.mu.RLock()
 	defer f.mu.RLock()
 	if it, ok := f.cache[tokenKey(walletID, currency)]; ok {
