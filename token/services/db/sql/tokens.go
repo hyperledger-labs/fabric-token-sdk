@@ -20,7 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
 
