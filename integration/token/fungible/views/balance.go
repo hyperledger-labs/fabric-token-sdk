@@ -9,10 +9,10 @@ package views
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -41,26 +41,14 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
 	}
 
-	span.AddEvent("list_unspent_tokens")
-	unspentTokens, err := wallet.ListUnspentTokens(token.WithType(b.Type))
+	span.AddEvent("start_sum_calculation")
+	balance, err := wallet.Balance(token.WithType(b.Type))
 	if err != nil {
 		return nil, err
 	}
-
-	span.AddEvent("start_sum_calculation")
-	precision := tms.PublicParametersManager().PublicParameters().Precision()
-	sum := token2.NewZeroQuantity(precision)
-	for _, tok := range unspentTokens.Tokens {
-		q, err := token2.ToQuantity(tok.Quantity, precision)
-		if err != nil {
-			return nil, err
-		}
-		sum = sum.Add(q)
-	}
-
 	span.AddEvent("end_sum_calculation")
 
-	return Balance{Quantity: sum.Decimal(), Type: b.Type}, nil
+	return Balance{Quantity: strconv.FormatUint(balance, 10), Type: b.Type}, nil
 }
 
 type BalanceViewFactory struct{}

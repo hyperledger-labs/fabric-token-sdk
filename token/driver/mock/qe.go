@@ -9,6 +9,20 @@ import (
 )
 
 type QueryEngine struct {
+	BalanceStub        func(string, string) (uint64, error)
+	balanceMutex       sync.RWMutex
+	balanceArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	balanceReturns struct {
+		result1 uint64
+		result2 error
+	}
+	balanceReturnsOnCall map[int]struct {
+		result1 uint64
+		result2 error
+	}
 	GetStatusStub        func(string) (int, string, error)
 	getStatusMutex       sync.RWMutex
 	getStatusArgsForCall []struct {
@@ -199,6 +213,71 @@ type QueryEngine struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *QueryEngine) Balance(arg1 string, arg2 string) (uint64, error) {
+	fake.balanceMutex.Lock()
+	ret, specificReturn := fake.balanceReturnsOnCall[len(fake.balanceArgsForCall)]
+	fake.balanceArgsForCall = append(fake.balanceArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.BalanceStub
+	fakeReturns := fake.balanceReturns
+	fake.recordInvocation("Balance", []interface{}{arg1, arg2})
+	fake.balanceMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *QueryEngine) BalanceCallCount() int {
+	fake.balanceMutex.RLock()
+	defer fake.balanceMutex.RUnlock()
+	return len(fake.balanceArgsForCall)
+}
+
+func (fake *QueryEngine) BalanceCalls(stub func(string, string) (uint64, error)) {
+	fake.balanceMutex.Lock()
+	defer fake.balanceMutex.Unlock()
+	fake.BalanceStub = stub
+}
+
+func (fake *QueryEngine) BalanceArgsForCall(i int) (string, string) {
+	fake.balanceMutex.RLock()
+	defer fake.balanceMutex.RUnlock()
+	argsForCall := fake.balanceArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *QueryEngine) BalanceReturns(result1 uint64, result2 error) {
+	fake.balanceMutex.Lock()
+	defer fake.balanceMutex.Unlock()
+	fake.BalanceStub = nil
+	fake.balanceReturns = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *QueryEngine) BalanceReturnsOnCall(i int, result1 uint64, result2 error) {
+	fake.balanceMutex.Lock()
+	defer fake.balanceMutex.Unlock()
+	fake.BalanceStub = nil
+	if fake.balanceReturnsOnCall == nil {
+		fake.balanceReturnsOnCall = make(map[int]struct {
+			result1 uint64
+			result2 error
+		})
+	}
+	fake.balanceReturnsOnCall[i] = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *QueryEngine) GetStatus(arg1 string) (int, string, error) {
@@ -1097,6 +1176,8 @@ func (fake *QueryEngine) WhoDeletedTokensReturnsOnCall(i int, result1 []string, 
 func (fake *QueryEngine) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.balanceMutex.RLock()
+	defer fake.balanceMutex.RUnlock()
 	fake.getStatusMutex.RLock()
 	defer fake.getStatusMutex.RUnlock()
 	fake.getTokenInfoAndOutputsMutex.RLock()

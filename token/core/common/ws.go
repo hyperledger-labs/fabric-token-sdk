@@ -28,6 +28,7 @@ type TokenVault interface {
 	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
 	PublicParams() ([]byte, error)
+	Balance(id, tokenType string) (uint64, error)
 }
 
 type WalletRegistry interface {
