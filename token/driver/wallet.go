@@ -72,6 +72,9 @@ type OwnerWallet interface {
 	// ListTokensIterator returns an iterator of unspent tokens owned by this wallet filtered using the passed options.
 	ListTokensIterator(ctx context.Context, opts *ListTokensOptions) (UnspentTokensIterator, error)
 
+	// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
+	Balance(opts *ListTokensOptions) (uint64, error)
+
 	// EnrollmentID returns the enrollment ID of the owner wallet
 	EnrollmentID() string
 

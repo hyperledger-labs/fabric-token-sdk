@@ -283,6 +283,19 @@ func (o *OwnerWallet) ListUnspentTokensIterator(ctx context.Context, opts ...Lis
 	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
 }
 
+// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
+func (o *OwnerWallet) Balance(opts ...ListTokensOption) (uint64, error) {
+	compiledOpts, err := CompileListTokensOption(opts...)
+	if err != nil {
+		return 0, err
+	}
+	sum, err := o.w.Balance(compiledOpts)
+	if err != nil {
+		return 0, err
+	}
+	return sum, nil
+}
+
 func (o *OwnerWallet) EnrollmentID() string {
 	return o.w.EnrollmentID()
 }

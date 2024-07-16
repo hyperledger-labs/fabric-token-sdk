@@ -8,6 +8,7 @@ package views
 
 import (
 	"encoding/json"
+	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -41,13 +42,11 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(b.TMSID))
 	wallet := tms.WalletManager().OwnerWallet(b.Wallet)
 	assert.NotNil(wallet, "failed to get wallet [%s]", b.Wallet)
+	precision := tms.PublicParametersManager().PublicParameters().Precision()
 
 	// owned
-	unspentTokens, err := wallet.ListUnspentTokensIterator(context.Context(), token.WithType(b.Type))
+	balance, err := wallet.Balance(token.WithType(b.Type))
 	assert.NoError(err, "failed to get unspent tokens")
-	precision := tms.PublicParametersManager().PublicParameters().Precision()
-	ownedSum, err := unspentTokens.Sum(precision)
-	assert.NoError(err, "failed to compute the sum of the unspent tokens")
 
 	htlcWallet := htlc.Wallet(context, wallet)
 	// locked
@@ -65,7 +64,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to compute the sum of the htlc expired tokens")
 
 	return BalanceResult{
-		Quantity: ownedSum.Decimal(),
+		Quantity: strconv.FormatUint(balance, 10),
 		Locked:   lockedSum.Decimal(),
 		Expired:  expiredSum.Decimal(),
 		Type:     b.Type,
