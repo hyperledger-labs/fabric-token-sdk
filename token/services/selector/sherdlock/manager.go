@@ -31,8 +31,8 @@ type iterator[k any] interface {
 	Close()
 }
 
-func NewManager(tokenDB TokenDB, lockDB LockDB, precision uint64, backoff time.Duration) *manager {
-	fetcher := newMixedFetcher(tokenDB)
+func NewManager(tokenDB TokenDB, lockDB LockDB, m *Metrics, precision uint64, backoff time.Duration) *manager {
+	fetcher := newMixedFetcher(tokenDB, m)
 	return &manager{
 		selectorCache: utils.NewLazyProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
 			return NewSherdSelector(txID, fetcher, lockDB, precision, backoff), nil

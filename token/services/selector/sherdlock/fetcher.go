@@ -16,6 +16,11 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+const (
+	updateInterval    = 10 * time.Second
+	freshnessInterval = 2 * time.Second
+)
+
 type tokenFetcher interface {
 	UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error)
 }
@@ -24,35 +29,36 @@ type TokenDB interface {
 	MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (driver.MinTokenInfoIterator, error)
 }
 
+type permutatableIterator[T any] interface {
+	collections.Iterator[T]
+	NewPermutation() collections.Iterator[T]
+}
+
 // mixedFetcher combines both eager and lazy strategies
 // In this example we return the eager result only the first time and all subsequent request are served by the lazy fetcher
 // Other implementations can make different combinations, e.g. fresh results under a threshold (e.g. 10ms) can be served by the eager fetcher
 // or listen for insert events in the database
 type mixedFetcher struct {
-	lazyFetcher *lazyFetcher
-
-	currentFetcher tokenFetcher
-	once           sync.Once
+	lazyFetcher  *lazyFetcher
+	eagerFetcher *eagerFetcher
+	m            *Metrics
 }
 
-func newMixedFetcher(tokenDB TokenDB) *mixedFetcher {
+func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
 	return &mixedFetcher{
-		lazyFetcher:    NewLazyFetcher(tokenDB),
-		currentFetcher: newEagerFetcher(tokenDB),
+		lazyFetcher:  NewLazyFetcher(tokenDB),
+		eagerFetcher: newEagerFetcher(tokenDB, updateInterval),
+		m:            m,
 	}
 }
 
 func (f *mixedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
-	defer func() {
-		f.once.Do(func() { f.currentFetcher = f.lazyFetcher })
-	}()
-
-	it, err := f.currentFetcher.UnspentTokensIteratorBy(walletID, currency)
-	if err != nil {
-		return nil, err
+	if time.Since(f.eagerFetcher.lastFetched) < freshnessInterval {
+		f.m.UnspentTokensInvocations.With(fetcherTypeLabel, eager).Add(1)
+		return f.eagerFetcher.UnspentTokensIteratorBy(walletID, currency)
 	}
-	// Permutations help avoid collisions when all selectors try to lock the tokens in the same order
-	return collections.NewPermutatedIterator(it)
+	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
+	return f.lazyFetcher.UnspentTokensIteratorBy(walletID, currency)
 }
 
 // lazyFetcher only looks up the results when requested
@@ -70,22 +76,23 @@ func (f *lazyFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterat
 	if err != nil {
 		return nil, err
 	}
-	return collections.CopyIterator[token2.MinTokenInfo](it)
+	return collections.NewPermutatedIterator[token2.MinTokenInfo](it)
 }
 
 // eagerFetcher eagerly fetches all the tokens from the DB at regular intervals and returns the cached result
 type eagerFetcher struct {
-	tokenDB TokenDB
-	ticker  *time.Ticker
-	cache   map[string][]*token2.MinTokenInfo
-	mu      sync.RWMutex
+	tokenDB     TokenDB
+	ticker      *time.Ticker
+	cache       map[string]permutatableIterator[*token2.MinTokenInfo]
+	mu          sync.RWMutex
+	lastFetched time.Time
 }
 
-func newEagerFetcher(tokenDB TokenDB) *eagerFetcher {
+func newEagerFetcher(tokenDB TokenDB, updateInterval time.Duration) *eagerFetcher {
 	f := &eagerFetcher{
 		tokenDB: tokenDB,
-		ticker:  time.NewTicker(time.Minute),
-		cache:   make(map[string][]*token2.MinTokenInfo),
+		ticker:  time.NewTicker(updateInterval),
+		cache:   make(map[string]permutatableIterator[*token2.MinTokenInfo]),
 	}
 	f.update()
 	go func() {
@@ -97,7 +104,6 @@ func newEagerFetcher(tokenDB TokenDB) *eagerFetcher {
 }
 
 func (f *eagerFetcher) update() {
-
 	logger.Debugf("Renew token cache")
 	it, err := f.tokenDB.MinTokenInfoIteratorBy(context.TODO(), "", "")
 	if err != nil {
@@ -112,18 +118,21 @@ func (f *eagerFetcher) update() {
 		logger.Debugf("Adding token with key [%s]", key)
 		m[key] = append(m[key], t)
 	}
+	its := map[string]permutatableIterator[*token2.MinTokenInfo]{}
+	for key, toks := range m {
+		its[key] = collections.NewSliceIterator(toks)
+	}
 	f.mu.Lock()
-	f.cache = m
+	f.cache = its
+	f.lastFetched = time.Now()
 	f.mu.Unlock()
 }
 
 func (f *eagerFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
 	f.mu.RLock()
 	defer f.mu.RLock()
-	if tokens, ok := f.cache[tokenKey(walletID, currency)]; ok {
-		logger.Debugf("Found tokens %d in cache", len(tokens))
-		var it collections.Iterator[*token2.MinTokenInfo] = collections.NewSliceIterator[*token2.MinTokenInfo](tokens)
-		return collections.CopyIterator(it)
+	if it, ok := f.cache[tokenKey(walletID, currency)]; ok {
+		return it.NewPermutation(), nil
 	}
 	logger.Debugf("No tokens found in cache for [%s]. Only [%s] available. Returning empty iterator.", tokenKey(walletID, currency), collections.Keys(f.cache))
 	return collections.NewEmptyIterator[*token2.MinTokenInfo](), nil
