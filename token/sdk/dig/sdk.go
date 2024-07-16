@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/operations"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/prometheus"
 	tracing3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -148,8 +149,11 @@ func (p *SDK) Install() error {
 
 	// Overwrite dependencies
 	err = errors2.Join(
-		p.Container().Decorate(func(p metrics.Provider, _ *operations.System, s operations.Server, o *operations.Options, l operations.OperationsLogger) (metrics.Provider, *operations.System) {
-			return operations.NewDisabledHistogram(p), operations.NewOperationSystem(s, l, p, o)
+		p.Container().Decorate(func(_ *operations.System, s operations.Server, o *operations.Options, l operations.OperationsLogger) *operations.System {
+			return operations.NewOperationSystem(s, l, &prometheus.Provider{}, o)
+		}),
+		p.Container().Decorate(func(p metrics.Provider) metrics.Provider {
+			return operations.NewDisabledHistogram(p)
 		}),
 		p.Container().Decorate(func(_ trace.TracerProvider, metricsProvider metrics.Provider, configService driver.ConfigService) (trace.TracerProvider, error) {
 			tp, err := tracing2.NewTracerProvider(configService)
