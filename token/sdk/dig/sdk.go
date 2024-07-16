@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/operations"
 	tracing3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -146,6 +147,10 @@ func (p *SDK) Install() error {
 	err = errors2.Join(
 		p.Container().Decorate(func(p metrics.Provider) metrics.Provider {
 			return &disabled.Provider{}
+		}),
+		p.Container().Decorate(func(o *operations.Options) *operations.Options {
+			o.Metrics.Provider = "disabled"
+			return o
 		}),
 		p.Container().Decorate(func(_ trace.TracerProvider, metricsProvider metrics.Provider, configService driver.ConfigService) (trace.TracerProvider, error) {
 			tp, err := tracing2.NewTracerProvider(configService)
