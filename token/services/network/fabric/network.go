@@ -553,8 +553,8 @@ type FinalityListener struct {
 	tracer    trace.Tracer
 }
 
-func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string) {
-	newCtx, span := t.tracer.Start(ctx, "on_status", tracing.WithAttributes(tracing.String(txIdLabel, txID)))
+func (t *FinalityListener) OnStatus(txID string, status int, message string) {
+	newCtx, span := t.tracer.Start(context.Background(), "on_status", tracing.WithAttributes(tracing.String(txIdLabel, txID)))
 	defer span.End()
 	defer func() {
 		if e := recover(); e != nil {
