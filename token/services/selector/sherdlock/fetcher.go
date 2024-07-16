@@ -18,7 +18,7 @@ import (
 
 const (
 	updateInterval    = 10 * time.Second
-	freshnessInterval = 1 * time.Second
+	freshnessInterval = 2 * time.Second
 )
 
 type tokenFetcher interface {
@@ -53,10 +53,12 @@ func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
 }
 
 func (f *mixedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
-	if time.Since(f.eagerFetcher.lastFetched) > freshnessInterval {
-		f.eagerFetcher.update()
+	if time.Since(f.eagerFetcher.lastFetched) < freshnessInterval {
+		f.m.UnspentTokensInvocations.With(fetcherTypeLabel, eager).Add(1)
+		return f.eagerFetcher.UnspentTokensIteratorBy(walletID, currency)
 	}
-	return f.eagerFetcher.UnspentTokensIteratorBy(walletID, currency)
+	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
+	return f.lazyFetcher.UnspentTokensIteratorBy(walletID, currency)
 }
 
 // lazyFetcher only looks up the results when requested
