@@ -143,10 +143,6 @@ func (p *SDK) Install() error {
 		return errors.WithMessagef(err, "failed setting up dig container")
 	}
 
-	if err := p.SDK.Install(); err != nil {
-		return errors.WithMessagef(err, "failed installing dig chain")
-	}
-
 	// Overwrite dependencies
 	err = errors2.Join(
 		p.Container().Decorate(func(_ *operations.System, s operations.Server, o *operations.Options, l operations.OperationsLogger) *operations.System {
@@ -165,6 +161,10 @@ func (p *SDK) Install() error {
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up decorator")
+	}
+
+	if err := p.SDK.Install(); err != nil {
+		return errors.WithMessagef(err, "failed installing dig chain")
 	}
 
 	// Backward compatibility with SP
