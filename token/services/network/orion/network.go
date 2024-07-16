@@ -363,7 +363,7 @@ type FinalityListener struct {
 	dbManager   *DBManager
 }
 
-func (t *FinalityListener) OnStatus(txID string, status int, message string) {
+func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string) {
 	if err := t.retryRunner.Run(func() error { return t.runOnStatus(txID, status, message) }); err != nil {
 		logger.Errorf("failed running finality listener: %v", err)
 	}
