@@ -106,12 +106,20 @@ type cachedFetcher struct {
 }
 
 func newCachedFetcher(tokenDB TokenDB, freshnessInterval time.Duration, maxQueriesBeforeRefresh int) *cachedFetcher {
-	return &cachedFetcher{
+	f := &cachedFetcher{
 		tokenDB:                 tokenDB,
 		cache:                   make(map[string]permutatableIterator[*token2.MinTokenInfo]),
 		freshnessInterval:       freshnessInterval,
 		maxQueriesBeforeRefresh: uint32(maxQueriesBeforeRefresh),
 	}
+	f.update()
+	ticker := time.NewTicker(freshnessInterval)
+	go func() {
+		for range ticker.C {
+			f.update()
+		}
+	}()
+	return f
 }
 
 func (f *cachedFetcher) update() {
@@ -139,10 +147,11 @@ func (f *cachedFetcher) update() {
 	for key, toks := range m {
 		its[key] = collections.NewSliceIterator(toks)
 	}
-
+	f.mu.Lock()
 	f.cache = its
 	f.lastFetched = time.Now()
 	atomic.StoreUint32(&f.queriesResponded, 0)
+	f.mu.Unlock()
 }
 
 func (f *cachedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
