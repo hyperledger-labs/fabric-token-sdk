@@ -107,7 +107,7 @@ func (f *eagerFetcher) update() {
 	defer it.Close()
 
 	m := map[string][]*token2.MinTokenInfo{}
-	for t, err := it.Next(); err == nil; t, err = it.Next() {
+	for t, err := it.Next(); err == nil && t != nil; t, err = it.Next() {
 		key := tokenKey(t.Owner, t.Type)
 		logger.Debugf("Adding token with key [%s]", key)
 		m[key] = append(m[key], t)
