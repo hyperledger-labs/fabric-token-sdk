@@ -20,9 +20,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type cache interface {
-	Get(key string) (interface{}, bool)
-	Add(key string, value interface{})
+type cache[T any] interface {
+	Get(key string) (T, bool)
+	Add(key string, value T)
 	Delete(key string)
 }
 
@@ -37,32 +37,47 @@ type IdentityDB struct {
 	table identityTables
 
 	singerInfoCacheMutex sync.RWMutex
-	singerInfoCache      cache
+	singerInfoCache      cache[bool]
+
+	auditInfoCacheMutex sync.RWMutex
+	auditInfoCache      cache[[]byte]
 }
 
-func newIdentityDB(db *sql.DB, tables identityTables, singerInfoCache cache) *IdentityDB {
+func newIdentityDB(db *sql.DB, tables identityTables, singerInfoCache cache[bool], auditInfoCache cache[[]byte]) *IdentityDB {
 	return &IdentityDB{
 		db:              db,
 		table:           tables,
 		singerInfoCache: singerInfoCache,
+		auditInfoCache:  auditInfoCache,
 	}
 }
 
 func NewCachedIdentityDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.IdentityDB, error) {
-	return NewIdentityDB(db, tablePrefix, createSchema, secondcache.New(1000))
+	return NewIdentityDB(
+		db,
+		tablePrefix,
+		createSchema,
+		secondcache.NewTyped[bool](1000),
+		secondcache.NewTyped[[]byte](1000),
+	)
 }
 
-func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfoCache cache) (*IdentityDB, error) {
+func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfoCache cache[bool], auditInfoCache cache[[]byte]) (*IdentityDB, error) {
 	tables, err := getTableNames(tablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
 
-	identityDB := newIdentityDB(db, identityTables{
-		IdentityConfigurations: tables.IdentityConfigurations,
-		IdentityInfo:           tables.IdentityInfo,
-		Signers:                tables.Signers,
-	}, signerInfoCache)
+	identityDB := newIdentityDB(
+		db,
+		identityTables{
+			IdentityConfigurations: tables.IdentityConfigurations,
+			IdentityInfo:           tables.IdentityInfo,
+			Signers:                tables.Signers,
+		},
+		signerInfoCache,
+		auditInfoCache,
+	)
 	if createSchema {
 		if err = initSchema(db, identityDB.GetSchema()); err != nil {
 			return nil, err
@@ -119,11 +134,39 @@ func (db *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMe
 		}
 		return nil
 	}
+
+	db.auditInfoCacheMutex.Lock()
+	db.auditInfoCache.Add(h, identityAudit)
+	db.auditInfoCacheMutex.Unlock()
+
 	return err
 }
 
 func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 	h := token.Identity(id).String()
+
+	// is in cache?
+	db.auditInfoCacheMutex.RLock()
+	v, ok := db.auditInfoCache.Get(h)
+	if ok {
+		db.auditInfoCacheMutex.RUnlock()
+		return v, nil
+	}
+	db.auditInfoCacheMutex.RUnlock()
+
+	// get from store
+	db.auditInfoCacheMutex.Lock()
+	defer db.auditInfoCacheMutex.Unlock()
+
+	// is in cache, first?
+	v, ok = db.auditInfoCache.Get(h)
+	if ok {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("hit the cache, len state [%v]", len(v))
+		}
+		return v, nil
+	}
+
 	//logger.Infof("get identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
 	query := fmt.Sprintf("SELECT identity_audit_info FROM %s WHERE identity_hash = $1", db.table.IdentityInfo)
 	logger.Debug(query)
@@ -136,6 +179,8 @@ func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 		}
 		return nil, errors.Wrapf(err, "error querying db")
 	}
+	db.auditInfoCache.Add(h, info)
+
 	return info, nil
 }
 
@@ -186,7 +231,7 @@ func (db *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
 	v, ok := db.singerInfoCache.Get(h)
 	if ok {
 		db.singerInfoCacheMutex.RUnlock()
-		return v != nil && v.(bool), nil
+		return v, nil
 	}
 	db.singerInfoCacheMutex.RUnlock()
 
@@ -198,9 +243,9 @@ func (db *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
 	v, ok = db.singerInfoCache.Get(h)
 	if ok {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("hit the cache, len state [%b]", v.(bool))
+			logger.Debugf("hit the cache, len state [%v]", v)
 		}
-		return v != nil && v.(bool), nil
+		return v, nil
 	}
 
 	// get from store and store in cache
