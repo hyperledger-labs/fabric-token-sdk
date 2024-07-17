@@ -201,6 +201,7 @@ func (p *NetworkHandler) GetTokensSQLDataSource(opts *sfcnode.Options, uniqueNam
 	case "sqlite":
 		return p.DBPath(p.TokensDBSQLDataSourceDir(uniqueName), tms)
 	case "postgres":
+	case "pgx":
 		return GetPostgresDataSource(opts)
 	}
 	panic("unknown driver type")
@@ -212,6 +213,7 @@ func (p *NetworkHandler) GetSQLDataSource(opts *sfcnode.Options, uniqueName stri
 	case "sqlite":
 		return p.DBPath(p.TTXDBSQLDataSourceDir(uniqueName), tms)
 	case "postgres":
+	case "pgx":
 		return GetPostgresDataSource(opts)
 	}
 	panic("unknown driver type")

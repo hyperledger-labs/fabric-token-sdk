@@ -58,7 +58,7 @@ func TestIdentityPostgres(t *testing.T) {
 	defer terminate()
 
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB("postgres", pgConnStr, c.Name, 10)
+		db, err := initIdentityDB("pgx", pgConnStr, c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}

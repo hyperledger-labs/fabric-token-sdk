@@ -62,7 +62,7 @@ func TestTokensPostgres(t *testing.T) {
 	defer terminate()
 
 	for _, c := range TokensCases {
-		db, err := initTokenDB("postgres", pgConnStr, c.Name, 10)
+		db, err := initTokenDB("pgx", pgConnStr, c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}

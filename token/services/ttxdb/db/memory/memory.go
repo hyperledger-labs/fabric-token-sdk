@@ -11,7 +11,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
-	_ "modernc.org/sqlite"
 )
 
 func NewDriver() db.NamedDriver[driver.TTXDBDriver] {

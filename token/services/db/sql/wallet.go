@@ -48,7 +48,7 @@ func NewWalletDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.Wall
 }
 
 func (db *WalletDB) GetWalletID(identity token.Identity, roleID int) (driver.WalletID, error) {
-	idHash := identity.Hash()
+	idHash := identity.UniqueID()
 	result, err := QueryUnique[driver.WalletID](db.db,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND role_id=$2", db.table.Wallets),
 		idHash, roleID,
@@ -91,7 +91,7 @@ func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID drive
 	query := fmt.Sprintf("INSERT INTO %s (identity_hash, meta, wallet_id, role_id, created_at, enrollment_id) VALUES ($1, $2, $3, $4, $5, $6)", db.table.Wallets)
 	logger.Debug(query)
 
-	idHash := identity.Hash()
+	idHash := identity.UniqueID()
 	_, err := db.db.Exec(query, idHash, meta, wID, roleID, time.Now().UTC(), eID)
 	if err != nil {
 		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%v]", wID, idHash)
@@ -101,7 +101,7 @@ func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID drive
 }
 
 func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
-	idHash := identity.Hash()
+	idHash := identity.UniqueID()
 	result, err := QueryUnique[[]byte](db.db,
 		fmt.Sprintf("SELECT meta FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
 		idHash, wID, roleID,
@@ -114,7 +114,7 @@ func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleI
 }
 
 func (db *WalletDB) IdentityExists(identity token.Identity, wID driver.WalletID, roleID int) bool {
-	idHash := identity.Hash()
+	idHash := identity.UniqueID()
 	result, err := QueryUnique[driver.WalletID](db.db,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
 		idHash, wID, roleID,
@@ -131,9 +131,9 @@ func (db *WalletDB) GetSchema() string {
 	return fmt.Sprintf(`
 		-- Wallets
 		CREATE TABLE IF NOT EXISTS %s (
-			identity_hash BYTEA NOT NULL,
+			identity_hash TEXT NOT NULL,
 			wallet_id TEXT NOT NULL,
-			meta TEXT DEFAULT '',
+			meta BYTEA,
             role_id INT NOT NULL,
 			enrollment_id TEXT NOT NULL,	
 			created_at TIMESTAMP,
