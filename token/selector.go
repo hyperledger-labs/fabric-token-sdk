@@ -41,4 +41,6 @@ type Selector interface {
 	// Notice that, the quantity selected might exceed the quantity requested due to the amounts
 	// stored in each token.
 	Select(ownerFilter OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error)
+	// Close closes the selector and releases its memory/cpu resources
+	Close() error
 }

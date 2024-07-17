@@ -197,9 +197,11 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 	for _, replica := range replicas {
 		for _, quantity := range quantities {
 			quantity, replica := quantity, replica
-			sel, err := replica.NewSelector(newTxID())
+			txID := newTxID()
+			sel, err := replica.NewSelector(txID)
 			assert.NoError(t, err)
 			go func() {
+				defer replica.Close(txID)
 				tokens, sum, err := sel.Select(defaultTokenFilter, quantity.Hex(), defaultCurrency)
 				if err != nil {
 					errCh <- err

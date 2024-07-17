@@ -57,3 +57,5 @@ func (m *Manager) Unlock(txID string) error {
 	m.locker.UnlockByTxID(txID)
 	return nil
 }
+
+func (m *Manager) Close(txID string) error { return nil }
