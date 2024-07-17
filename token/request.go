@@ -1151,6 +1151,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 				return nil, nil, errors.Wrapf(err, "failed to get selector manager")
 			}
 			selector, err = sm.NewSelector(r.Anchor)
+			defer sm.Close(r.Anchor)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting default selector")
 			}

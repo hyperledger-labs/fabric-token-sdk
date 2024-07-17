@@ -39,6 +39,7 @@ type extendedSelector struct {
 func (s *extendedSelector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error) {
 	return s.Selector.Select(ownerFilter, q, tokenType)
 }
+func (s *extendedSelector) Close() error { return s.Selector.Close() }
 
 func (s *extendedSelector) Unselect(id ...*token2.ID) {
 	if s.Lock != nil {
