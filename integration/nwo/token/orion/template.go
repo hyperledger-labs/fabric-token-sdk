@@ -35,7 +35,7 @@ token:
           opts:
             createSchema: true 
             driver: {{ SQLDriver }}    
-            maxOpenConns: 200
+            maxOpenConns: 50
             dataSource: {{ SQLDataSource }}
       {{ if not OnlyUnity }} 
       tokendb:
@@ -45,7 +45,7 @@ token:
             createSchema: true 
             tablePrefix: tokens  
             driver: {{ TokensSQLDriver }}    
-            maxOpenConns: 200
+            maxOpenConns: 50
             dataSource: {{ TokensSQLDataSource }}
       {{ end }}
       {{ if Wallets }}
