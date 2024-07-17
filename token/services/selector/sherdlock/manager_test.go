@@ -69,12 +69,12 @@ func startManagers(t *testing.T, number int, backoff time.Duration) ([]testutils
 }
 
 func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedManager, error) {
-	lockDB, err := initDB("postgres", pgConnStr, "test", 10, sql.NewTokenLockDB)
+	lockDB, err := initDB("pgx", pgConnStr, "test", 10, sql.NewTokenLockDB)
 	if err != nil {
 		return nil, err
 	}
 
-	tokenDB, err := initDB("postgres", pgConnStr, "test", 10, sql.NewTokenDB)
+	tokenDB, err := initDB("pgx", pgConnStr, "test", 10, sql.NewTokenDB)
 	if err != nil {
 		return nil, err
 	}

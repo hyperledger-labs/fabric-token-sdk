@@ -18,7 +18,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
+	_ "modernc.org/sqlite"
 )
 
 const sqlitePragmas = `

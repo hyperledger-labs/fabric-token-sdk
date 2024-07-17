@@ -15,6 +15,7 @@ require (
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20230228194215-b84622ba6a7a
 	github.com/hyperledger/fabric-protos-go v0.3.0
+	github.com/jackc/pgx/v5 v5.5.4
 	github.com/json-iterator/go v1.1.12
 	github.com/lib/pq v1.10.9
 	github.com/libp2p/go-libp2p v0.31.0
@@ -45,7 +46,12 @@ require (
 
 replace github.com/hyperledger-labs/fabric-token-sdk/txgen => ./cmd/txgen
 
-require github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20231023164747-f3f972769504 // indirect
+require (
+	github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20231023164747-f3f972769504 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
+	github.com/jackc/puddle/v2 v2.2.1 // indirect
+)
 
 require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
