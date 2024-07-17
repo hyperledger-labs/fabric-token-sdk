@@ -59,15 +59,29 @@ func (d *DBStorage) StorePublicParams(raw []byte) error {
 	return d.tokenDB.StorePublicParams(raw)
 }
 
+type TokenToAppend struct {
+	txID                  string
+	index                 uint64
+	tok                   *token2.Token
+	tokenOnLedger         []byte
+	tokenOnLedgerMetadata []byte
+	owners                []string
+	issuer                token.Identity
+	precision             uint64
+	deleted               bool
+	deleteBy              string
+	flags                 Flags
+}
+
+type OwnerTypeExtractor interface {
+	OwnerType(raw []byte) (string, []byte, error)
+}
+
 type transaction struct {
 	notifier events.Publisher
 	tx       *tokendb.Transaction
 	tmsID    token.TMSID
 	ote      OwnerTypeExtractor
-}
-
-type OwnerTypeExtractor interface {
-	OwnerType(raw []byte) (string, []byte, error)
 }
 
 func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
@@ -79,25 +93,29 @@ func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID to
 }
 
 func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) error {
-	tok, owners, err := t.tx.GetToken(txID, index, true)
+	tokenType, owners, err := t.tx.GetTokenTypeAndOwners(txID, index, true)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token [%s:%d]", txID, index)
 	}
 	err = t.tx.Delete(txID, index, deletedBy)
-	if err != nil {
-		if tok == nil {
-			logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
-			return nil
-		}
+	if err != nil && len(owners) != 0 {
 		return errors.WithMessagef(err, "failed to delete token [%s:%d]", txID, index)
 	}
-	if tok == nil {
-		logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
+	if len(owners) != 0 {
+		logger.Debugf("token [%s:%d] not found, adding an entry in case it is added later", txID, index)
+		if err := t.AppendToken(TokenToAppend{
+			txID:     txID,
+			index:    index,
+			deleted:  true,
+			deleteBy: deletedBy,
+		}); err != nil {
+			return errors.WithMessagef(err, "failed to add token [%s:%d] as delete placeholder", txID, index)
+		}
 		return nil
 	}
 	for _, owner := range owners {
 		logger.Debugf("post new delete-token event [%s:%s:%s]", txID, index, owner)
-		t.Notify(DeleteToken, t.tmsID, owner, tok.Type, txID, index)
+		t.Notify(DeleteToken, t.tmsID, owner, tokenType, txID, index)
 	}
 	return nil
 }
@@ -109,18 +127,6 @@ func (t *transaction) DeleteTokens(deletedBy string, ids []*token2.ID) error {
 		}
 	}
 	return nil
-}
-
-type TokenToAppend struct {
-	txID                  string
-	index                 uint64
-	tok                   *token2.Token
-	tokenOnLedger         []byte
-	tokenOnLedgerMetadata []byte
-	owners                []string
-	issuer                token.Identity
-	precision             uint64
-	flags                 Flags
 }
 
 func (t *transaction) AppendToken(tta TokenToAppend) error {
@@ -135,26 +141,41 @@ func (t *transaction) AppendToken(tta TokenToAppend) error {
 		return errors.Wrap(err, "could not unmarshal identity when storing token")
 	}
 
-	err = t.tx.StoreToken(
-		tokendb.TokenRecord{
-			TxID:           tta.txID,
-			Index:          tta.index,
-			IssuerRaw:      tta.issuer,
-			OwnerRaw:       tta.tok.Owner.Raw,
-			OwnerType:      typ,
-			OwnerIdentity:  id,
-			Ledger:         tta.tokenOnLedger,
-			LedgerMetadata: tta.tokenOnLedgerMetadata,
-			Quantity:       tta.tok.Quantity,
-			Type:           tta.tok.Type,
-			Amount:         q.ToBigInt().Uint64(),
-			Owner:          tta.flags.Mine,
-			Auditor:        tta.flags.Auditor,
-			Issuer:         tta.flags.Issuer,
-		},
-		tta.owners,
-	)
-	if err != nil && !errors2.HasCause(err, driver.UniqueKeyViolation) {
+	tr := tokendb.TokenRecord{
+		TxID:           tta.txID,
+		Index:          tta.index,
+		IssuerRaw:      tta.issuer,
+		OwnerRaw:       tta.tok.Owner.Raw,
+		OwnerType:      typ,
+		OwnerIdentity:  id,
+		Ledger:         tta.tokenOnLedger,
+		LedgerMetadata: tta.tokenOnLedgerMetadata,
+		Quantity:       tta.tok.Quantity,
+		Type:           tta.tok.Type,
+		Amount:         q.ToBigInt().Uint64(),
+		Owner:          tta.flags.Mine,
+		Auditor:        tta.flags.Auditor,
+		Issuer:         tta.flags.Issuer,
+		IsDeleted:      tta.deleted,
+		DeletedBy:      tta.deleteBy,
+	}
+	err = t.tx.StoreToken(tr, tta.owners)
+	if err != nil {
+		if errors2.HasCause(err, driver.UniqueKeyViolation) {
+			// check if the token is already there and marked as deleted
+			tokenType, isDeleted, err2 := t.tx.ExistsToken(tta.txID, tta.index)
+			if err2 != nil {
+				return errors.WithMessagef(err2, "failed to check if token [%s:%d] exists", tta.txID, tta.index)
+			}
+			if isDeleted && len(tokenType) == 0 {
+				// update the entry
+				tr.IsDeleted = true
+				if err2 := t.tx.UpdateToken(tr, tta.owners); err2 != nil {
+					return errors.WithMessagef(err2, "failed to update token [%s:%d]", tta.txID, tta.index)
+				}
+				return nil
+			}
+		}
 		return errors.Wrapf(err, "cannot store token in db")
 	}
 
@@ -164,7 +185,6 @@ func (t *transaction) AppendToken(tta TokenToAppend) error {
 		}
 		t.Notify(AddToken, t.tmsID, id, tta.tok.Type, tta.txID, tta.index)
 	}
-
 	return nil
 }
 

@@ -47,6 +47,9 @@ type TokenRecord struct {
 	Auditor bool
 	// Issuer issued to mark this token as issued by this node
 	Issuer bool
+
+	IsDeleted bool
+	DeletedBy string
 }
 
 // TokenDetails provides details about an owned (spent or unspent) token
@@ -107,10 +110,15 @@ type CertificationDB interface {
 type TokenDBTransaction interface {
 	// GetToken returns the owned tokens and their identifier keys for the passed ids.
 	GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error)
+	// GetTokenTypeAndOwners returns the type and the owners of the passed tokens
+	GetTokenTypeAndOwners(txID string, index uint64, includeDeleted bool) (string, []string, error)
+	ExistsToken(txID string, index uint64) (string, bool, error)
 	// Delete marks the passed token as deleted by a given identifier (idempotent)
 	Delete(txID string, index uint64, deletedBy string) error
 	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
 	StoreToken(tr TokenRecord, owners []string) error
+
+	UpdateToken(tr TokenRecord, owners []string) error
 	// Commit commits this transaction
 	Commit() error
 	// Rollback rollbacks this transaction
