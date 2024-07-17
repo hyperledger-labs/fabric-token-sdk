@@ -53,7 +53,7 @@ func NewMetrics(p metrics.Provider) *Metrics {
 			Namespace:  "tx_gen",
 			Name:       "duration",
 			Help:       "Duration of transfer requests executed",
-			Buckets:    bucketRange(0, 15*time.Second, 100),
+			Buckets:    bucketRange(0, 50*time.Second, 200),
 			LabelNames: []string{OperationLabel, SuccessLabel},
 		}),
 	}

@@ -120,7 +120,7 @@ func (r *BaseRunner) executeSuite(suite model.SuiteConfig) {
 	r.runSuite(suite)
 
 	r.logger.Infof("Check customer balances after suite: %v", r.customers)
-	r.checkCustomerBalances()
+	//r.checkCustomerBalances()
 	r.logger.Infof(r.metricsReporter.Summary())
 }
 

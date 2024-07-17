@@ -43,7 +43,7 @@ token:
           opts:
             createSchema: true 
             driver: {{ SQLDriver }}    
-            maxOpenConns: 200
+            maxOpenConns: 50
             dataSource: {{ SQLDataSource }}
       {{ if not OnlyUnity }} 
       tokendb:
@@ -53,13 +53,13 @@ token:
             createSchema: true 
             tablePrefix: tokens  
             driver: {{ TokensSQLDriver }}    
-            maxOpenConns: 200
+            maxOpenConns: 50
             dataSource: {{ TokensSQLDataSource }}
       {{ end }}
       {{ if Wallets }}
       # Wallets associated with this TMS
       wallets:
-        defaultCacheSize: 3
+        defaultCacheSize: 50
         {{ if Wallets.Certifiers }}
         # Certifiers wallets are used to certify tokens
         certifiers: {{ range Wallets.Certifiers }}
