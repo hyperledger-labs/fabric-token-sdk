@@ -19,7 +19,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-type PostgresConfig = postgres2.PostgresConfig
+type PostgresConfig = postgres2.ContainerConfig
 
 func DefaultPostgresConfig(node string) *PostgresConfig {
 	return postgres2.DefaultConfig(node)
