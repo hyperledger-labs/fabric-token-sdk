@@ -239,6 +239,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	if len(t.TokenIDs) == 0 {
 		// The sender uses the default token selector each transaction comes equipped with
 		selector, err := tx.Selector()
+		defer tx.CloseSelector()
 		assert.NoError(err, "failed getting token selector")
 
 		// The sender tries to select the requested amount of tokens of the passed type.

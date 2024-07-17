@@ -34,6 +34,8 @@ type SelectorManager interface {
 	NewSelector(id string) (Selector, error)
 	// Unlock unlocks the tokens bound to the passed id, if any
 	Unlock(id string) error
+	// Close closes the selector and releases its memory/cpu resources
+	Close(id string) error
 }
 
 // SelectorManagerProvider provides instances of SelectorManager

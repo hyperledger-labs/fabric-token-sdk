@@ -90,15 +90,18 @@ func NewSelector(logger logging2.Logger, tokenDB tokenFetcher, lockDB tokenLocke
 	}
 }
 
-func (m *selector) Select(owner token.OwnerFilter, q, currency string) ([]*token2.ID, token2.Quantity, error) {
-	quantity, err := token2.ToQuantity(q, m.precision)
+func (s *selector) Select(owner token.OwnerFilter, q, currency string) ([]*token2.ID, token2.Quantity, error) {
+	if s.isClosed() {
+		return nil, nil, errors.Errorf("selector is already closed")
+	}
+	quantity, err := token2.ToQuantity(q, s.precision)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to create quantity")
 	}
-	sum, selected, tokensLockedByOthersExist, immediateRetries := token2.NewZeroQuantity(m.precision), collections.NewSet[*token2.ID](), true, 0
+	sum, selected, tokensLockedByOthersExist, immediateRetries := token2.NewZeroQuantity(s.precision), collections.NewSet[*token2.ID](), true, 0
 	for {
-		if t, err := m.cache.Next(); err != nil {
-			err2 := m.locker.UnlockAll()
+		if t, err := s.cache.Next(); err != nil {
+			err2 := s.locker.UnlockAll()
 			return nil, nil, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), currency, err2)
 		} else if t == nil {
 			if !tokensLockedByOthersExist {
@@ -112,8 +115,8 @@ func (m *selector) Select(owner token.OwnerFilter, q, currency string) ([]*token
 			}
 
 			if immediateRetries > maxImmediateRetries {
-				m.logger.Warnf("Exceeded max number of immediate retries. Unlock tokens and abort...")
-				if err := m.locker.UnlockAll(); err != nil {
+				s.logger.Warnf("Exceeded max number of immediate retries. Unlock tokens and abort...")
+				if err := s.locker.UnlockAll(); err != nil {
 					return nil, nil, errors.Wrapf(err, "exceeded number of retries: %d and unlock failed", maxImmediateRetries)
 				}
 
@@ -125,24 +128,24 @@ func (m *selector) Select(owner token.OwnerFilter, q, currency string) ([]*token
 				return nil, nil, token.SelectorSufficientButLockedFunds
 			}
 
-			m.logger.Debugf("Fetch all non-deleted tokens from the DB and refresh the token cache.")
-			if m.cache, err = m.fetcher.UnspentTokensIteratorBy(owner.ID(), currency); err != nil {
-				err2 := m.locker.UnlockAll()
+			s.logger.Debugf("Fetch all non-deleted tokens from the DB and refresh the token cache.")
+			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(owner.ID(), currency); err != nil {
+				err2 := s.locker.UnlockAll()
 				return nil, nil, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s] - unlock: %v", immediateRetries, owner.ID(), currency, err2)
 			}
 
 			immediateRetries++
 			tokensLockedByOthersExist = false
-		} else if locked := m.locker.TryLock(t.Id); !locked {
-			m.logger.Debugf("Tried to lock token [%v], but it was already locked by another process", t)
+		} else if locked := s.locker.TryLock(t.Id); !locked {
+			s.logger.Debugf("Tried to lock token [%v], but it was already locked by another process", t)
 			tokensLockedByOthersExist = true
 		} else {
-			m.logger.Debugf("Got the lock on token [%v]", t)
-			q, err := token2.ToQuantity(t.Quantity, m.precision)
+			s.logger.Debugf("Got the lock on token [%v]", t)
+			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "invalid token [%s] found", t.Id)
 			}
-			m.logger.Debugf("Found token [%s] to add: [%s:%s].", t.Id, q.Decimal(), t.Type)
+			s.logger.Debugf("Found token [%s] to add: [%s:%s].", t.Id, q.Decimal(), t.Type)
 			immediateRetries = 0
 			sum.Add(q)
 			selected.Add(t.Id)
@@ -151,6 +154,19 @@ func (m *selector) Select(owner token.OwnerFilter, q, currency string) ([]*token
 			}
 		}
 	}
+}
+
+func (s *selector) Close() error {
+	if s.isClosed() {
+		return errors.New("selector is already closed")
+	}
+	s.cache.Close()
+	s.cache = nil
+	return nil
+}
+
+func (s *selector) isClosed() bool {
+	return s.cache == nil
 }
 
 func (s *selector) UnlockAll() error {

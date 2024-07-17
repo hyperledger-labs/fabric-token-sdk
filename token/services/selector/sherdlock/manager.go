@@ -13,6 +13,7 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
+	"github.com/pkg/errors"
 )
 
 type LockDB = driver2.TokenLockDB
@@ -49,4 +50,11 @@ func (m *manager) Unlock(id transaction.ID) error {
 		return c.UnlockAll()
 	}
 	return nil
+}
+
+func (m *manager) Close(id transaction.ID) error {
+	if c, ok := m.selectorCache.Delete(id); ok {
+		return c.Close()
+	}
+	return errors.New("selector for " + id + " not found")
 }
