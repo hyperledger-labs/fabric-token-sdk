@@ -41,7 +41,7 @@ func NewTokenLockDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.T
 
 	identityDB := newTokenLockDB(db, tokenLockTables{TokenLocks: tables.TokenLocks})
 	if createSchema {
-		if err = initSchema(db, identityDB.GetSchema()); err != nil {
+		if err = initSchema(db, identityDB.GetSchema(tablePrefix)); err != nil {
 			return nil, err
 		}
 	}
@@ -64,7 +64,7 @@ func (db *TokenLockDB) UnlockByTxID(consumerTxID transaction.ID) error {
 	return err
 }
 
-func (db *TokenLockDB) GetSchema() string {
+func (db *TokenLockDB) GetSchema(string) string {
 	return fmt.Sprintf(`
 		-- TokenLocks
 		CREATE TABLE IF NOT EXISTS %s (

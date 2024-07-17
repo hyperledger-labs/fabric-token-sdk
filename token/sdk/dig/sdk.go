@@ -41,6 +41,7 @@ import (
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc/db/sql"
 	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -122,6 +123,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(digutils.Identity[*auditdb.Manager](), dig.As(new(auditor.AuditDBProvider))),
 		p.Container().Provide(NewIdentityDBManager),
 		p.Container().Provide(NewTokenLockDBManager),
+		p.Container().Provide(sql.NewHTLCTokenDBExtensionFactory, dig.Group("tokendb-extensions")),
 		p.Container().Provide(digutils.Identity[*kvs.KVS](), dig.As(new(kvs2.KVS))),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
