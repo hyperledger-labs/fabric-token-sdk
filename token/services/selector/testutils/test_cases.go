@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package testutils
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -139,13 +140,13 @@ func (m *enhancedManager) TokenSum() (token.Quantity, error) {
 }
 
 func (m *enhancedManager) UpdateTokens(deleted []*token.ID, added []token.UnspentToken) error {
-	tx, err := m.tokenDB.NewTokenDBTransaction()
+	tx, err := m.tokenDB.NewTokenDBTransaction(context.TODO())
 	if err != nil {
 		return err
 	}
 	if len(deleted) > 0 {
 		for _, t := range deleted {
-			if err := tx.Delete(t.TxId, t.Index, "me"); err != nil {
+			if err := tx.Delete(context.TODO(), t.TxId, t.Index, "me"); err != nil {
 				err2 := tx.Rollback()
 				return errors.Wrapf(err, "failed to delete - while rolling back: %v", err2)
 			}
@@ -153,7 +154,7 @@ func (m *enhancedManager) UpdateTokens(deleted []*token.ID, added []token.Unspen
 	}
 	if len(added) > 0 {
 		for _, t := range added {
-			if err := tx.StoreToken(driver.TokenRecord{
+			if err := tx.StoreToken(context.TODO(), driver.TokenRecord{
 				TxID:           t.Id.TxId,
 				Index:          t.Id.Index,
 				IssuerRaw:      []byte{},

@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -33,15 +34,17 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
 const (
-	QueryPublicParamsFunction = "queryPublicParams"
-	QueryTokensFunctions      = "queryTokens"
-	AreTokensSpent            = "areTokensSpent"
-	maxRetries                = 3
-	retryWaitDuration         = 1 * time.Second
+	QueryPublicParamsFunction                   = "queryPublicParams"
+	QueryTokensFunctions                        = "queryTokens"
+	AreTokensSpent                              = "areTokensSpent"
+	maxRetries                                  = 3
+	retryWaitDuration                           = 1 * time.Second
+	txIdLabel                 tracing.LabelName = "tx_id"
 )
 
 var logger = logging.MustGetLogger("token-sdk.network.fabric")
@@ -150,6 +153,7 @@ type Network struct {
 	configuration  common2.Configuration
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
 	tokensProvider *tokens2.Manager
+	finalityTracer trace.Tracer
 
 	vaultLazyCache      utils.LazyProvider[string, driver.Vault]
 	tokenVaultLazyCache utils.LazyProvider[string, driver.TokenVault]
@@ -168,6 +172,7 @@ func NewNetwork(
 	viewManager ViewManager,
 	tmsProvider *token2.ManagementServiceProvider,
 	endorsementServiceProvider *endorsement.ServiceProvider,
+	tracerProvider trace.TracerProvider,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -188,6 +193,10 @@ func NewNetwork(
 		tokenVaultLazyCache:        utils.NewLazyProvider(loader.loadTokenVault),
 		subscribers:                events.NewSubscribers(),
 		endorsementServiceProvider: endorsementServiceProvider,
+		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
+			Namespace:  "tokensdk_fabric",
+			LabelNames: []tracing.LabelName{txIdLabel},
+		})),
 	}
 }
 
@@ -437,6 +446,7 @@ func (n *Network) AddFinalityListener(namespace string, txID string, listener dr
 		root:      listener,
 		network:   n.n.Name(),
 		namespace: namespace,
+		tracer:    n.finalityTracer,
 	}
 	n.subscribers.Set(txID, listener, wrapper)
 	return n.ch.Committer().AddFinalityListener(txID, wrapper)
@@ -540,11 +550,15 @@ type FinalityListener struct {
 	root      driver.FinalityListener
 	network   string
 	namespace string
+	tracer    trace.Tracer
 }
 
 func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string) {
+	newCtx, span := t.tracer.Start(ctx, "on_status", tracing.WithAttributes(tracing.String(txIdLabel, txID)))
+	defer span.End()
 	defer func() {
 		if e := recover(); e != nil {
+			span.RecordError(fmt.Errorf("recovered from panic: %v", e))
 			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
 			if err := t.net.AddFinalityListener(txID, t.namespace, t.root); err != nil {
 				panic(err)
@@ -565,9 +579,11 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	}
 
 	// Fetch the token request hash. Retry in case some other replica committed it shortly before
+	span.AddEvent("fetch_request_hash")
 	var tokenRequestHash []byte
 	var retries int
 	for tokenRequestHash, err = qe.GetState(t.namespace, key); err == nil && len(tokenRequestHash) == 0 && retries < maxRetries; tokenRequestHash, err = qe.GetState(t.namespace, key) {
+		span.AddEvent("retry_fetch_request_hash")
 		logger.Debugf("did not find token request [%s]. retrying...", txID)
 		retries++
 		time.Sleep(retryWaitDuration)
@@ -576,7 +592,8 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	if err != nil {
 		panic(fmt.Sprintf("can't get state [%s][%s]", txID, key))
 	}
-	t.root.OnStatus(txID, status, message, tokenRequestHash)
+	span.AddEvent("call_root_listener")
+	t.root.OnStatus(newCtx, txID, status, message, tokenRequestHash)
 }
 
 type loader struct {

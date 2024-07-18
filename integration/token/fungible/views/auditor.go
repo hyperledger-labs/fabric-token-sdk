@@ -300,7 +300,7 @@ func (r *SetTransactionAuditStatusView) Call(context view.Context) (interface{},
 
 	auditor, err := ttx.NewAuditor(context, w)
 	assert.NoError(err, "failed to get auditor instance")
-	assert.NoError(auditor.SetStatus(r.TxID, r.Status, r.Message), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
+	assert.NoError(auditor.SetStatus(context.Context(), r.TxID, r.Status, r.Message), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
 
 	if r.Status == ttx.Deleted {
 		tms := token.GetManagementService(context)

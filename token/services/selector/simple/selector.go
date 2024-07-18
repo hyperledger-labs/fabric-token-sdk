@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package simple
 
 import (
+	"context"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -18,7 +19,7 @@ import (
 
 type QueryService interface {
 	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
-	UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
@@ -79,7 +80,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			unspentTokens.Close()
 		}
 		logger.Debugf("start token selection, iteration [%d/%d]", i, s.numRetry)
-		unspentTokens, err = s.queryService.UnspentTokensIteratorBy(id, tokenType)
+		unspentTokens, err = s.queryService.UnspentTokensIteratorBy(context.TODO(), id, tokenType)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "token selection failed")
 		}

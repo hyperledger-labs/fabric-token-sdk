@@ -493,7 +493,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	sender, err := transfer.NewSender(signers, tokens, ids, inputInf, pp)
 	Expect(err).NotTo(HaveOccurred())
 
-	transfer, inf, err := sender.GenerateZKTransfer(outvalues, owners)
+	transfer, inf, err := sender.GenerateZKTransfer(context.TODO(), outvalues, owners)
 	Expect(err).NotTo(HaveOccurred())
 
 	raw, err := transfer.Serialize()

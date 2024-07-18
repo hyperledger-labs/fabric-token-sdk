@@ -132,7 +132,7 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling recipient request")
 	}
-	err = session.Send(rrRaw)
+	err = session.SendWithContext(context.Context(), rrRaw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient request")
 	}
@@ -273,7 +273,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	}
 
 	// Step 3: send the public key back to the invoker
-	err = session.Send(recipientDataRaw)
+	err = session.SendWithContext(context.Context(), recipientDataRaw)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to send recipient data")
@@ -370,7 +370,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		if err != nil {
 			return nil, err
 		}
-		if err := session.Send(requestRaw); err != nil {
+		if err := session.SendWithContext(context.Context(), requestRaw); err != nil {
 			return nil, err
 		}
 
@@ -475,7 +475,7 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		return nil, err
 	}
 
-	if err := session.Send(recipientDataRaw); err != nil {
+	if err := session.SendWithContext(context.Context(), recipientDataRaw); err != nil {
 		return nil, err
 	}
 

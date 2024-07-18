@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"runtime/debug"
@@ -14,10 +15,12 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type tokenTables struct {
@@ -60,11 +63,11 @@ func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.Token
 }
 
 func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error) {
-	tx, err := db.NewTokenDBTransaction()
+	tx, err := db.NewTokenDBTransaction(context.TODO())
 	if err != nil {
 		return
 	}
-	if err = tx.StoreToken(tr, owners); err != nil {
+	if err = tx.StoreToken(context.TODO(), tr, owners); err != nil {
 		if err1 := tx.Rollback(); err1 != nil {
 			logger.Errorf("error rolling back: %s", err1.Error())
 		}
@@ -111,12 +114,13 @@ func (db *TokenDB) IsMine(txID string, index uint64) (bool, error) {
 
 // UnspentTokensIterator returns an iterator over all unspent tokens
 func (db *TokenDB) UnspentTokensIterator() (tdriver.UnspentTokensIterator, error) {
-	return db.UnspentTokensIteratorBy("", "")
+	return db.UnspentTokensIteratorBy(context.TODO(), "", "")
 }
 
 // UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 // The token type can be empty. In that case, tokens of any type are returned.
-func (db *TokenDB) UnspentTokensIteratorBy(id, tokenType string) (tdriver.UnspentTokensIterator, error) {
+func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (tdriver.UnspentTokensIterator, error) {
+	span := trace.SpanFromContext(ctx)
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		OwnerEnrollmentID: id,
 		TokenType:         tokenType,
@@ -125,13 +129,16 @@ func (db *TokenDB) UnspentTokensIteratorBy(id, tokenType string) (tdriver.Unspen
 		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
 
 	logger.Debug(query, args)
+	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	rows, err := db.db.Query(query, args...)
+	span.AddEvent("end_query")
 
 	return &UnspentTokensIterator{txs: rows}, err
 }
 
 // MinTokenInfoIteratorBy returns the minimum information about the tokens needed for the selector
-func (db *TokenDB) MinTokenInfoIteratorBy(ownerEID string, typ string) (tdriver.MinTokenInfoIterator, error) {
+func (db *TokenDB) MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (tdriver.MinTokenInfoIterator, error) {
+	span := trace.SpanFromContext(ctx)
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		OwnerEnrollmentID: ownerEID,
 		TokenType:         typ,
@@ -140,7 +147,9 @@ func (db *TokenDB) MinTokenInfoIteratorBy(ownerEID string, typ string) (tdriver.
 		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
 
 	logger.Debug(query, args)
+	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	rows, err := db.db.Query(query, args...)
+	span.AddEvent("end_query")
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
@@ -173,7 +182,7 @@ func (db *TokenDB) Balance(ownerEID, typ string) (uint64, error) {
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
 func (db *TokenDB) ListUnspentTokensBy(ownerEID, typ string) (*token.UnspentTokens, error) {
 	logger.Debugf("list unspent token by [%s,%s]", ownerEID, typ)
-	it, err := db.UnspentTokensIteratorBy(ownerEID, typ)
+	it, err := db.UnspentTokensIteratorBy(context.TODO(), ownerEID, typ)
 	if err != nil {
 		return nil, err
 	}
@@ -332,11 +341,14 @@ func (db *TokenDB) GetTokenInfos(ids []*token.ID) ([][]byte, error) {
 }
 
 // GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
-func (db *TokenDB) GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error) {
-	tokens, metas, err := db.getLedgerTokenAndMeta(ids)
+func (db *TokenDB) GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([]string, [][]byte, [][]byte, error) {
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("get_ledger_token_meta")
+	tokens, metas, err := db.getLedgerTokenAndMeta(ctx, ids)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	span.AddEvent("create_outputs")
 	outputIDs := make([]string, len(ids))
 	for i := 0; i < len(ids); i++ {
 		outputID, err := keys.CreateTokenKey(ids[i].TxId, ids[i].Index)
@@ -353,7 +365,7 @@ func (db *TokenDB) GetAllTokenInfos(ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
 		return [][]byte{}, nil
 	}
-	_, metas, err := db.getLedgerTokenAndMeta(ids)
+	_, metas, err := db.getLedgerTokenAndMeta(context.TODO(), ids)
 	return metas, err
 }
 
@@ -400,7 +412,8 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 	return tokens, nil
 }
 
-func (db *TokenDB) getLedgerTokenAndMeta(ids []*token.ID) ([][]byte, [][]byte, error) {
+func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error) {
+	span := trace.SpanFromContext(ctx)
 	if len(ids) == 0 {
 		return [][]byte{}, [][]byte{}, nil
 	}
@@ -408,6 +421,7 @@ func (db *TokenDB) getLedgerTokenAndMeta(ids []*token.ID) ([][]byte, [][]byte, e
 	where := whereTokenIDs(&args, ids)
 
 	query := fmt.Sprintf("SELECT tx_id, idx, ledger, ledger_metadata FROM %s WHERE %s", db.table.Tokens, where)
+	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -415,6 +429,7 @@ func (db *TokenDB) getLedgerTokenAndMeta(ids []*token.ID) ([][]byte, [][]byte, e
 	}
 	defer rows.Close()
 
+	span.AddEvent("start_scan_rows")
 	infoMap := make(map[string][2][]byte, len(ids))
 	for rows.Next() {
 		var tok []byte
@@ -428,7 +443,9 @@ func (db *TokenDB) getLedgerTokenAndMeta(ids []*token.ID) ([][]byte, [][]byte, e
 	if err = rows.Err(); err != nil {
 		return nil, nil, err
 	}
+	span.AddEvent("end_scan_rows", tracing.WithAttributes(tracing.Int(ResultRowsLabel, len(ids))))
 
+	span.AddEvent("combine_results")
 	tokens := make([][]byte, len(ids))
 	metas := make([][]byte, len(ids))
 	for i, id := range ids {
@@ -624,12 +641,15 @@ func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, erro
 	return spentBy, isSpent, nil
 }
 
-func (db *TokenDB) TransactionExists(id string) (bool, error) {
+func (db *TokenDB) TransactionExists(ctx context.Context, id string) (bool, error) {
+	span := trace.SpanFromContext(ctx)
 	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id=$1 LIMIT 1;", db.table.Tokens)
 	logger.Debug(query, id)
 
+	span.AddEvent("query", trace.WithAttributes(tracing.String(QueryLabel, query)))
 	row := db.db.QueryRow(query, id)
 	var found string
+	span.AddEvent("scan_rows")
 	if err := row.Scan(&found); err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -827,8 +847,11 @@ func (db *TokenDB) Close() {
 	db.db.Close()
 }
 
-func (db *TokenDB) NewTokenDBTransaction() (driver.TokenDBTransaction, error) {
+func (db *TokenDB) NewTokenDBTransaction(ctx context.Context) (driver.TokenDBTransaction, error) {
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("start_begin_tx")
 	tx, err := db.db.Begin()
+	span.AddEvent("end_begin_tx")
 	if err != nil {
 		return nil, errors.Errorf("failed starting a db transaction")
 	}
@@ -840,13 +863,15 @@ type TokenTransaction struct {
 	tx *sql.Tx
 }
 
-func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error) {
+func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint64, includeDeleted bool) (*token.Token, []string, error) {
+	span := trace.SpanFromContext(ctx)
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		IDs:            []*token.ID{{TxId: txID, Index: index}},
 		IncludeDeleted: includeDeleted,
 	}, t.db.table.Tokens, t.db.table.Ownership)
 
 	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, enrollment_id FROM %s %s %s", t.db.table.Tokens, join, where)
+	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := t.tx.Query(query, args...)
 	if err != nil {
@@ -854,6 +879,7 @@ func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bo
 	}
 	defer rows.Close()
 
+	span.AddEvent("start_scan_rows")
 	var raw []byte
 	var tokenType string
 	var quantity string
@@ -870,6 +896,7 @@ func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bo
 	if rows.Err() != nil {
 		return nil, nil, rows.Err()
 	}
+	span.AddEvent("end_scan_rows", tracing.WithAttributes(tracing.Int(ResultRowsLabel, len(owners))))
 	if len(raw) == 0 {
 		return nil, owners, nil
 	}
@@ -882,19 +909,24 @@ func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bo
 	}, owners, nil
 }
 
-func (t *TokenTransaction) Delete(txID string, index uint64, deletedBy string) error {
+func (t *TokenTransaction) Delete(ctx context.Context, txID string, index uint64, deletedBy string) error {
+	span := trace.SpanFromContext(ctx)
 	//logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
 	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE tx_id = $3 AND idx = $4;", t.db.table.Tokens)
 	logger.Debug(query, deletedBy, now, txID, index)
+	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	if _, err := t.tx.Exec(query, deletedBy, now, txID, index); err != nil {
+		span.RecordError(err)
 		return errors.Wrapf(err, "error setting token to deleted [%s]", txID)
 	}
+	span.AddEvent("end_query")
 	return nil
 }
 
-func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) error {
+func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord, owners []string) error {
+	span := trace.SpanFromContext(ctx)
 	//logger.Debugf("store record [%s:%d,%v] in table [%s]", tr.TxID, tr.Index, owners, t.db.table.Tokens)
 
 	// Store token
@@ -916,6 +948,7 @@ func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) er
 		tr.Owner,
 		tr.Auditor,
 		tr.Issuer)
+	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	if _, err := t.tx.Exec(query,
 		tr.TxID,
 		tr.Index,
@@ -937,9 +970,11 @@ func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) er
 	}
 
 	// Store ownership
+	span.AddEvent("store_ownerships")
 	for _, eid := range owners {
 		query = fmt.Sprintf("INSERT INTO %s (tx_id, idx, enrollment_id) VALUES ($1, $2, $3)", t.db.table.Ownership)
 		logger.Debug(query, tr.TxID, tr.Index, eid)
+		span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 		if _, err := t.tx.Exec(query, tr.TxID, tr.Index, eid); err != nil {
 			return errors.Wrapf(err, "error storing token ownership [%s]", tr.TxID)
 		}

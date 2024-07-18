@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -24,7 +25,7 @@ type tokenFetcher interface {
 }
 
 type TokenDB interface {
-	MinTokenInfoIteratorBy(ownerEID string, typ string) (driver.MinTokenInfoIterator, error)
+	MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (driver.MinTokenInfoIterator, error)
 }
 
 type enhancedIterator[T any] interface {
@@ -80,7 +81,7 @@ func NewLazyFetcher(tokenDB TokenDB) *lazyFetcher {
 
 func (f *lazyFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
 	logger.Debugf("Query the DB for new tokens")
-	it, err := f.tokenDB.MinTokenInfoIteratorBy(walletID, currency)
+	it, err := f.tokenDB.MinTokenInfoIteratorBy(context.TODO(), walletID, currency)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +115,7 @@ func newCachedFetcher(tokenDB TokenDB, freshnessInterval time.Duration) *cachedF
 
 func (f *cachedFetcher) update() {
 	logger.Debugf("Renew token cache")
-	it, err := f.tokenDB.MinTokenInfoIteratorBy("", "")
+	it, err := f.tokenDB.MinTokenInfoIteratorBy(context.TODO(), "", "")
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
 		return

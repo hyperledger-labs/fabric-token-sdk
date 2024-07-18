@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -38,10 +39,11 @@ type QueryEngine struct {
 		result2 string
 		result3 error
 	}
-	GetTokenInfoAndOutputsStub        func([]*token.ID) ([]string, [][]byte, [][]byte, error)
+	GetTokenInfoAndOutputsStub        func(context.Context, []*token.ID) ([]string, [][]byte, [][]byte, error)
 	getTokenInfoAndOutputsMutex       sync.RWMutex
 	getTokenInfoAndOutputsArgsForCall []struct {
-		arg1 []*token.ID
+		arg1 context.Context
+		arg2 []*token.ID
 	}
 	getTokenInfoAndOutputsReturns struct {
 		result1 []string
@@ -182,11 +184,12 @@ type QueryEngine struct {
 		result1 driver.UnspentTokensIterator
 		result2 error
 	}
-	UnspentTokensIteratorByStub        func(string, string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorByStub        func(context.Context, string, string) (driver.UnspentTokensIterator, error)
 	unspentTokensIteratorByMutex       sync.RWMutex
 	unspentTokensIteratorByArgsForCall []struct {
-		arg1 string
+		arg1 context.Context
 		arg2 string
+		arg3 string
 	}
 	unspentTokensIteratorByReturns struct {
 		result1 driver.UnspentTokensIterator
@@ -347,23 +350,24 @@ func (fake *QueryEngine) GetStatusReturnsOnCall(i int, result1 int, result2 stri
 	}{result1, result2, result3}
 }
 
-func (fake *QueryEngine) GetTokenInfoAndOutputs(arg1 []*token.ID) ([]string, [][]byte, [][]byte, error) {
-	var arg1Copy []*token.ID
-	if arg1 != nil {
-		arg1Copy = make([]*token.ID, len(arg1))
-		copy(arg1Copy, arg1)
+func (fake *QueryEngine) GetTokenInfoAndOutputs(arg1 context.Context, arg2 []*token.ID) ([]string, [][]byte, [][]byte, error) {
+	var arg2Copy []*token.ID
+	if arg2 != nil {
+		arg2Copy = make([]*token.ID, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.getTokenInfoAndOutputsMutex.Lock()
 	ret, specificReturn := fake.getTokenInfoAndOutputsReturnsOnCall[len(fake.getTokenInfoAndOutputsArgsForCall)]
 	fake.getTokenInfoAndOutputsArgsForCall = append(fake.getTokenInfoAndOutputsArgsForCall, struct {
-		arg1 []*token.ID
-	}{arg1Copy})
+		arg1 context.Context
+		arg2 []*token.ID
+	}{arg1, arg2Copy})
 	stub := fake.GetTokenInfoAndOutputsStub
 	fakeReturns := fake.getTokenInfoAndOutputsReturns
-	fake.recordInvocation("GetTokenInfoAndOutputs", []interface{}{arg1Copy})
+	fake.recordInvocation("GetTokenInfoAndOutputs", []interface{}{arg1, arg2Copy})
 	fake.getTokenInfoAndOutputsMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3, ret.result4
@@ -377,17 +381,17 @@ func (fake *QueryEngine) GetTokenInfoAndOutputsCallCount() int {
 	return len(fake.getTokenInfoAndOutputsArgsForCall)
 }
 
-func (fake *QueryEngine) GetTokenInfoAndOutputsCalls(stub func([]*token.ID) ([]string, [][]byte, [][]byte, error)) {
+func (fake *QueryEngine) GetTokenInfoAndOutputsCalls(stub func(context.Context, []*token.ID) ([]string, [][]byte, [][]byte, error)) {
 	fake.getTokenInfoAndOutputsMutex.Lock()
 	defer fake.getTokenInfoAndOutputsMutex.Unlock()
 	fake.GetTokenInfoAndOutputsStub = stub
 }
 
-func (fake *QueryEngine) GetTokenInfoAndOutputsArgsForCall(i int) []*token.ID {
+func (fake *QueryEngine) GetTokenInfoAndOutputsArgsForCall(i int) (context.Context, []*token.ID) {
 	fake.getTokenInfoAndOutputsMutex.RLock()
 	defer fake.getTokenInfoAndOutputsMutex.RUnlock()
 	argsForCall := fake.getTokenInfoAndOutputsArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *QueryEngine) GetTokenInfoAndOutputsReturns(result1 []string, result2 [][]byte, result3 [][]byte, result4 error) {
@@ -1041,19 +1045,20 @@ func (fake *QueryEngine) UnspentTokensIteratorReturnsOnCall(i int, result1 drive
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) UnspentTokensIteratorBy(arg1 string, arg2 string) (driver.UnspentTokensIterator, error) {
+func (fake *QueryEngine) UnspentTokensIteratorBy(arg1 context.Context, arg2 string, arg3 string) (driver.UnspentTokensIterator, error) {
 	fake.unspentTokensIteratorByMutex.Lock()
 	ret, specificReturn := fake.unspentTokensIteratorByReturnsOnCall[len(fake.unspentTokensIteratorByArgsForCall)]
 	fake.unspentTokensIteratorByArgsForCall = append(fake.unspentTokensIteratorByArgsForCall, struct {
-		arg1 string
+		arg1 context.Context
 		arg2 string
-	}{arg1, arg2})
+		arg3 string
+	}{arg1, arg2, arg3})
 	stub := fake.UnspentTokensIteratorByStub
 	fakeReturns := fake.unspentTokensIteratorByReturns
-	fake.recordInvocation("UnspentTokensIteratorBy", []interface{}{arg1, arg2})
+	fake.recordInvocation("UnspentTokensIteratorBy", []interface{}{arg1, arg2, arg3})
 	fake.unspentTokensIteratorByMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1067,17 +1072,17 @@ func (fake *QueryEngine) UnspentTokensIteratorByCallCount() int {
 	return len(fake.unspentTokensIteratorByArgsForCall)
 }
 
-func (fake *QueryEngine) UnspentTokensIteratorByCalls(stub func(string, string) (driver.UnspentTokensIterator, error)) {
+func (fake *QueryEngine) UnspentTokensIteratorByCalls(stub func(context.Context, string, string) (driver.UnspentTokensIterator, error)) {
 	fake.unspentTokensIteratorByMutex.Lock()
 	defer fake.unspentTokensIteratorByMutex.Unlock()
 	fake.UnspentTokensIteratorByStub = stub
 }
 
-func (fake *QueryEngine) UnspentTokensIteratorByArgsForCall(i int) (string, string) {
+func (fake *QueryEngine) UnspentTokensIteratorByArgsForCall(i int) (context.Context, string, string) {
 	fake.unspentTokensIteratorByMutex.RLock()
 	defer fake.unspentTokensIteratorByMutex.RUnlock()
 	argsForCall := fake.unspentTokensIteratorByArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *QueryEngine) UnspentTokensIteratorByReturns(result1 driver.UnspentTokensIterator, result2 error) {

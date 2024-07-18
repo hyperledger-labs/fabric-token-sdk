@@ -17,7 +17,7 @@ import (
 )
 
 type OwnerTokenVault interface {
-	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
 	Balance(id, tokenType string) (uint64, error)
 }
 
@@ -223,7 +223,7 @@ func (w *LongTermOwnerWallet) GetSigner(identity driver.Identity) (driver.Signer
 func (w *LongTermOwnerWallet) ListTokens(ctx context.Context, opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent("get_unspent_tokens_iterator")
-	it, err := w.TokenVault.UnspentTokensIteratorBy(w.WalletID, opts.TokenType)
+	it, err := w.TokenVault.UnspentTokensIteratorBy(ctx, w.WalletID, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -253,8 +253,8 @@ func (w *LongTermOwnerWallet) Balance(opts *driver.ListTokensOptions) (uint64, e
 	return balance, nil
 }
 
-func (w *LongTermOwnerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
-	it, err := w.TokenVault.UnspentTokensIteratorBy(w.WalletID, opts.TokenType)
+func (w *LongTermOwnerWallet) ListTokensIterator(ctx context.Context, opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
+	it, err := w.TokenVault.UnspentTokensIteratorBy(ctx, w.WalletID, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
