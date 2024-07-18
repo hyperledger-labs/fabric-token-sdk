@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type transactionTables struct {
@@ -236,7 +238,10 @@ func (db *TransactionDB) Close() error {
 	return nil
 }
 
-func (db *TransactionDB) SetStatus(txID string, status driver.TxStatus, message string) (err error) {
+func (db *TransactionDB) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) (err error) {
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("start_db_update")
+	defer span.AddEvent("end_db_update")
 	var query string
 	if len(message) != 0 {
 		query = fmt.Sprintf("UPDATE %s SET status = $1, status_message = $2 WHERE tx_id = $3;", db.table.Requests)

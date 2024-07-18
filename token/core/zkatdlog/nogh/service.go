@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
@@ -23,7 +25,7 @@ type TokenCommitmentLoader interface {
 }
 
 type TokenLoader interface {
-	LoadTokens(ids []*token2.ID) ([]string, []*token.Token, []*token.Metadata, []driver.Identity, error)
+	LoadTokens(ctx context.Context, ids []*token2.ID) ([]string, []*token.Token, []*token.Metadata, []driver.Identity, error)
 }
 
 type Service struct {

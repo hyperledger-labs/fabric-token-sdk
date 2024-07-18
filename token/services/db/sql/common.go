@@ -9,7 +9,13 @@ package sql
 import (
 	"database/sql"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/pkg/errors"
+)
+
+const (
+	QueryLabel      tracing.LabelName = "query"
+	ResultRowsLabel tracing.LabelName = "result_rows"
 )
 
 func QueryUnique[T any](db *sql.DB, query string, args ...any) (T, error) {

@@ -38,7 +38,7 @@ type UnspentTokensIterator = driver.UnspentTokensIterator
 // FinalityListener is the interface that must be implemented to receive transaction status change notifications
 type FinalityListener interface {
 	// OnStatus is called when the status of a transaction changes
-	OnStatus(txID string, status int, message string, tokenRequestHash []byte)
+	OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte)
 }
 
 type GetFunc func() (view.Identity, []byte, error)

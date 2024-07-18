@@ -222,7 +222,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 	}
 
 	// Write
-	tx, err := sm.Orion.TransactionManager().NewTransaction(request.TxID, sm.CustodianID)
+	tx, err := sm.Orion.TransactionManager().NewTransactionFromSession(oSession, request.TxID)
 	if err != nil {
 		return nil, true, errors.Wrapf(err, "failed to create transaction [%s]", request.TxID)
 	}

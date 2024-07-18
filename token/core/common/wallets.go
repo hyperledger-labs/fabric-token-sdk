@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -14,7 +16,7 @@ import (
 )
 
 type OwnerTokenVault interface {
-	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
 	Balance(id, tokenType string) (uint64, error)
 }
 
@@ -218,7 +220,7 @@ func (w *LongTermOwnerWallet) GetSigner(identity driver.Identity) (driver.Signer
 }
 
 func (w *LongTermOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
-	it, err := w.TokenVault.UnspentTokensIteratorBy(w.WalletID, opts.TokenType)
+	it, err := w.TokenVault.UnspentTokensIteratorBy(opts.Context, w.WalletID, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -247,7 +249,7 @@ func (w *LongTermOwnerWallet) Balance(opts *driver.ListTokensOptions) (uint64, e
 }
 
 func (w *LongTermOwnerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
-	it, err := w.TokenVault.UnspentTokensIteratorBy(w.WalletID, opts.TokenType)
+	it, err := w.TokenVault.UnspentTokensIteratorBy(opts.Context, w.WalletID, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}

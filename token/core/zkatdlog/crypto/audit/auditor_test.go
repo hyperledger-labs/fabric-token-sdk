@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package audit_test
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"time"
@@ -300,7 +301,7 @@ func prepareTransfer(pp *crypto.PublicParams, id driver.Identity) (*transfer2.Tr
 	fakeSigner := &mock.SigningIdentity{}
 	sender, err := transfer2.NewSender([]driver.Signer{fakeSigner, fakeSigner}, inputs, []string{"0", "1"}, tokenInfos, pp)
 	Expect(err).NotTo(HaveOccurred())
-	transfer, inf, err := sender.GenerateZKTransfer([]uint64{40, 20}, [][]byte{id, id})
+	transfer, inf, err := sender.GenerateZKTransfer(context.TODO(), []uint64{40, 20}, [][]byte{id, id})
 	Expect(err).NotTo(HaveOccurred())
 
 	return transfer, inf, inputs

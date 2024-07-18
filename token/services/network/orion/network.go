@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
@@ -24,6 +25,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
+)
+
+const (
+	txIdLabel tracing.LabelName = "tx_id"
 )
 
 type NewVaultFunc = func(network, channel, namespace string) (vault.Vault, error)
@@ -40,6 +46,7 @@ type Network struct {
 	ledger         *ledger
 	nsFinder       common2.Configuration
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
+	finalityTracer trace.Tracer
 
 	vaultLazyCache      utils.LazyProvider[string, driver.Vault]
 	tokenVaultLazyCache utils.LazyProvider[string, driver.TokenVault]
@@ -56,6 +63,7 @@ func NewNetwork(
 	nsFinder common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
 	dbManager *DBManager,
+	tracerProvider trace.TracerProvider,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -73,6 +81,10 @@ func NewNetwork(
 		vaultLazyCache:      utils.NewLazyProvider(loader.loadVault),
 		tokenVaultLazyCache: utils.NewLazyProvider(loader.loadTokenVault),
 		subscribers:         events.NewSubscribers(), ledger: &ledger{network: n.Name(), viewManager: viewManager, dbManager: dbManager},
+		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
+			Namespace:  "tokensdk_orion",
+			LabelNames: []tracing.LabelName{txIdLabel},
+		})),
 		dbManager: dbManager,
 	}
 }
@@ -261,6 +273,7 @@ func (n *Network) AddFinalityListener(namespace string, txID string, listener dr
 		retryRunner: db.NewRetryRunner(3, 100*time.Millisecond, true),
 		viewManager: n.viewManager,
 		dbManager:   n.dbManager,
+		tracer:      n.finalityTracer,
 	}
 	n.subscribers.Set(txID, listener, wrapper)
 	return n.n.Committer().AddFinalityListener(txID, wrapper)
@@ -358,6 +371,7 @@ type FinalityListener struct {
 	root        driver.FinalityListener
 	network     string
 	namespace   string
+	tracer      trace.Tracer
 	retryRunner db.RetryRunner
 	viewManager *view2.Manager
 	dbManager   *DBManager
@@ -370,15 +384,19 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 }
 
 func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status int, message string) (err error) {
+	newCtx, span := t.tracer.Start(ctx, "on_status", tracing.WithAttributes(tracing.String(txIdLabel, txID)))
+	defer span.End()
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Errorf("panic caught: %v", r)
 		}
 	}()
-	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID, t.dbManager), ctx)
+	span.AddEvent("request_tx_status_view")
+	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID, t.dbManager), newCtx)
 	if err != nil {
 		return errors.Wrapf(err, "failed retrieving token request [%s]", txID)
 	}
+	span.AddEvent("received_tx_status")
 	statusResponse, ok := boxed.(*TxStatusResponse)
 	if !ok {
 		return errors.Errorf("failed retrieving token request, expected TxStatusResponse [%s]", txID)
@@ -394,6 +412,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 	}
 
 	t.root.OnStatus(
+		newCtx,
 		txID,
 		status,
 		message,

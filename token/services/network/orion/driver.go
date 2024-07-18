@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewDriver(
@@ -30,7 +31,9 @@ func NewDriver(
 	configService *config.Service,
 	identityProvider view2.IdentityProvider,
 	filterProvider *common.AcceptTxInDBFilterProvider,
-	tmsProvider *token.ManagementServiceProvider) driver.NamedDriver {
+	tmsProvider *token.ManagementServiceProvider,
+	tracerProvider trace.TracerProvider,
+) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name: "orion",
 		Driver: &Driver{
@@ -43,6 +46,7 @@ func NewDriver(
 			identityProvider: identityProvider,
 			filterProvider:   filterProvider,
 			tmsProvider:      tmsProvider,
+			tracerProvider:   tracerProvider,
 		},
 	}
 }
@@ -57,6 +61,7 @@ type Driver struct {
 	identityProvider view2.IdentityProvider
 	filterProvider   *common.AcceptTxInDBFilterProvider
 	tmsProvider      *token.ManagementServiceProvider
+	tracerProvider   trace.TracerProvider
 }
 
 func (d *Driver) New(network, _ string) (driver.Network, error) {
@@ -87,5 +92,6 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		d.configService,
 		d.filterProvider,
 		dbManager,
+		d.tracerProvider,
 	), nil
 }

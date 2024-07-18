@@ -37,6 +37,8 @@ type WithdrawalInitiatorView struct {
 }
 
 func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("withdrawal_initiator_view")
+	defer span.End()
 	// First the initiator send a withdrawal request to the issuer.
 	// If the initiator has already some recipient data, it uses that directly
 	var id view.Identity
@@ -49,8 +51,10 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 		assert.NotNil(w, "cannot find wallet [%s:%s]", i.TMSID, i.Wallet)
 		assert.NoError(w.RegisterRecipient(i.RecipientData), "failed to register remote recipient")
 		// Then request withdrawal
+		span.AddEvent("request_withdrawal_for_recipient")
 		id, session, err = ttx.RequestWithdrawalForRecipient(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, i.RecipientData, token.WithTMSID(i.TMSID))
 	} else {
+		span.AddEvent("request_withdrawal")
 		id, session, err = ttx.RequestWithdrawal(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, token.WithTMSID(i.TMSID))
 	}
 	// Request withdrawal
@@ -61,6 +65,8 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 	// This is a trick to the reuse the same API independently of the role a party plays.
 	return context.RunView(nil, view.AsResponder(session), view.WithViewCall(
 		func(context view.Context) (interface{}, error) {
+			span := context.StartSpan("withdrawal_respond_view")
+			defer span.End()
 			// At some point, the recipient receives the token transaction that in the meantime has been assembled
 			tx, err := ttx.ReceiveTransaction(context)
 			assert.NoError(err, "failed to receive tokens")
@@ -78,10 +84,12 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 			// If everything is fine, the recipient accepts and sends back her signature.
 			// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
 			// This depends on the driver implementation.
+			span.AddEvent("accept_withdrawal")
 			_, err = context.RunView(ttx.NewAcceptView(tx))
 			assert.NoError(err, "failed to accept new tokens")
 
 			// Before completing, the recipient waits for finality of the transaction
+			span.AddEvent("ask_for_finality")
 			_, err = context.RunView(ttx.NewFinalityView(tx, ttx.WithTimeout(1*time.Minute)))
 			assert.NoError(err, "new tokens were not committed")
 
@@ -106,6 +114,8 @@ type WithdrawalResponderView struct {
 }
 
 func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("withdrawal_responder_view")
+	defer span.End()
 	// First the issuer receives the withdrawal request
 	issueRequest, err := ttx.ReceiveWithdrawalRequest(context)
 	assert.NoError(err, "failed to receive withdrawal request")

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -67,7 +68,7 @@ type finalityListener struct {
 	errs chan error
 }
 
-func (l *finalityListener) OnStatus(txID string, status int, message string, tokenRequestHash []byte) {
+func (l *finalityListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
 	//fmt.Printf("Received finality from network for TX [%s][%d]", txID, status)
 	l.errs <- nil
 }
