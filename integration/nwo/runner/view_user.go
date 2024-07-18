@@ -29,6 +29,10 @@ import (
 
 const currency = "MAX"
 
+const (
+	successLabel tracing.LabelName = "success"
+)
+
 var operationTypeMap = map[string]metrics.OperationType{
 	"transfer":   metrics.Transfer,
 	"balance":    metrics.Balance,
@@ -64,7 +68,7 @@ func NewViewUser(username model.Username, auditor model.Username, client api2.Vi
 		logger:     logger,
 		tracer: tracerProvider.Tracer("user", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "token_sdk",
-			LabelNames: []metrics2.MetricLabel{},
+			LabelNames: []metrics2.MetricLabel{successLabel},
 		})),
 	}
 }
@@ -158,6 +162,7 @@ func (u *viewUser) callView(fid string, input interface{}) (interface{}, error) 
 	start := time.Now()
 	result, err := u.client.CallViewWithContext(ctx, fid, marshaled)
 
+	span.SetAttributes(tracing.Bool(successLabel, err == nil))
 	successType := metrics.SuccessValues[err == nil]
 	u.metrics.RequestsReceived.
 		With(metrics.OperationLabel, operationType, metrics.SuccessLabel, successType).

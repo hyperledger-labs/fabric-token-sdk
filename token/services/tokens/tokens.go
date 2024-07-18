@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package tokens
 
 import (
+	"context"
 	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -14,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -74,7 +76,8 @@ type Tokens struct {
 	RequestsCache Cache
 }
 
-func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) (err error) {
+func (t *Tokens) Append(ctx context.Context, tmsID token.TMSID, txID string, request *token.Request) (err error) {
+	span := trace.SpanFromContext(ctx)
 	if request == nil {
 		logger.Debugf("transaction [%s], no request found, skip it", txID)
 		return nil
@@ -84,7 +87,8 @@ func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) 
 		return nil
 	}
 
-	exists, err := t.Storage.TransactionExists(txID)
+	span.AddEvent("check_tx_exists")
+	exists, err := t.Storage.TransactionExists(ctx, txID)
 	if err != nil {
 		logger.Errorf("transaction [%s], failed to check existence in db [%s]", txID, err)
 		return errors.WithMessagef(err, "transaction [%s], failed to check existence in db", txID)
@@ -94,13 +98,15 @@ func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) 
 		return nil
 	}
 
+	span.AddEvent("get_actions")
 	toSpend, toAppend, err := t.getActions(tmsID, txID, request)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to extract actions", txID)
 	}
 
 	logger.Debugf("transaction [%s] start db transaction", txID)
-	ts, err := t.Storage.NewTransaction()
+	span.AddEvent("create_new_tx")
+	ts, err := t.Storage.NewTransaction(ctx)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to start db transaction", txID)
 	}
@@ -108,22 +114,26 @@ func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) 
 		if err == nil {
 			return
 		}
+		span.RecordError(err)
 		if err1 := ts.Rollback(); err1 != nil {
 			logger.Errorf("error rolling back [%s][%s]", err1, debug.Stack())
 		} else {
 			logger.Infof("transaction [%s] rolled back", txID)
 		}
 	}()
+	span.AddEvent("append_tokens")
 	for _, tta := range toAppend {
-		err = ts.AppendToken(tta)
+		err = ts.AppendToken(ctx, tta)
 		if err != nil {
 			return errors.WithMessagef(err, "transaction [%s], failed to append token", txID)
 		}
 	}
-	err = ts.DeleteTokens(txID, toSpend)
+	span.AddEvent("delete_tokens")
+	err = ts.DeleteTokens(ctx, txID, toSpend)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 	}
+	span.AddEvent("commit")
 	if err = ts.Commit(); err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to commit tokens to database", txID)
 	}
@@ -132,7 +142,7 @@ func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) 
 	return nil
 }
 
-func (t *Tokens) AppendRaw(tmsID token.TMSID, txID string, requestRaw []byte) (err error) {
+func (t *Tokens) AppendRaw(ctx context.Context, tmsID token.TMSID, txID string, requestRaw []byte) (err error) {
 	logger.Debugf("get tms for [%s]", txID)
 	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
 	if err != nil {
@@ -144,7 +154,7 @@ func (t *Tokens) AppendRaw(tmsID token.TMSID, txID string, requestRaw []byte) (e
 		return errors.WithMessagef(err, "failed unmarshal token request [%s]", txID)
 	}
 	logger.Debugf("append token request for [%s]", txID)
-	return t.Append(tmsID, txID, tr)
+	return t.Append(ctx, tmsID, txID, tr)
 }
 
 func (t *Tokens) CacheRequest(tmsID token.TMSID, request *token.Request) error {
@@ -173,16 +183,12 @@ func (t *Tokens) GetCachedTokenRequest(txID string) *token.Request {
 // AppendTransaction appends the content of the passed transaction to the token db.
 // If the transaction is already in there, nothing more happens.
 // The operation is atomic.
-func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
-	return t.Append(
-		token.TMSID{
-			Network:   tx.Network(),
-			Channel:   tx.Channel(),
-			Namespace: tx.Namespace(),
-		},
-		tx.ID(),
-		tx.Request(),
-	)
+func (t *Tokens) AppendTransaction(ctx context.Context, tx Transaction) (err error) {
+	return t.Append(ctx, token.TMSID{
+		Network:   tx.Network(),
+		Channel:   tx.Channel(),
+		Namespace: tx.Namespace(),
+	}, tx.ID(), tx.Request())
 }
 
 // StorePublicParams stores the passed public parameters in the token db

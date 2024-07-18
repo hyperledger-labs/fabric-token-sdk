@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
 	err "errors"
 	"sync"
 
@@ -23,9 +24,9 @@ var (
 
 type TokenVault interface {
 	IsPending(id *token.ID) (bool, error)
-	GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error)
+	GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([]string, [][]byte, [][]byte, error)
 	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
-	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
 	PublicParams() ([]byte, error)
 	Balance(id, tokenType string) (uint64, error)

@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -66,6 +67,8 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 }
 
 func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, timeout time.Duration) (interface{}, error) {
+	span := ctx.StartSpan("finality")
+	defer span.End()
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Listen to finality of [%s]", txID)
 	}
@@ -86,10 +89,12 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 		return nil, err
 	}
 	counter := 0
+	span.AddEvent("get_ttxdb_status")
 	statusTTXDB, _, err := transactionDB.GetStatus(txID)
 	if err == nil && statusTTXDB != ttxdb.Unknown {
 		counter++
 	}
+	span.AddEvent("get_auditdb_status")
 	statusAuditDB, _, err := auditDB.GetStatus(txID)
 	if err == nil && statusAuditDB != ttxdb.Unknown {
 		counter++
@@ -98,18 +103,21 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 		return nil, errors.Errorf("transaction [%s] is unknown for [%s]", txID, tmsID)
 	}
 
+	span.AddEvent("listen_db_finality")
 	iterations := int(timeout.Milliseconds() / f.pollingTimeout.Milliseconds())
 	if iterations == 0 {
 		iterations = 1
 	}
 	index := 0
 	if statusTTXDB != ttxdb.Unknown {
+		span.AddEvent("request_ttxdb_finality")
 		index, err = f.dbFinality(c, txID, transactionDB, index, iterations)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if statusAuditDB != ttxdb.Unknown {
+		span.AddEvent("request_auditdb_finality")
 		_, err = f.dbFinality(c, txID, auditDB, index, iterations)
 		if err != nil {
 			return nil, err
@@ -119,23 +127,34 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 }
 
 func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB finalityDB, startCounter, iterations int) (int, error) {
+	span := trace.SpanFromContext(c)
 	// notice that adding the listener can happen after the event we are looking for has already happened
 	// therefore we need to check more often before the timeout happens
 	dbChannel := make(chan db.StatusEvent, 200)
+	span.AddEvent("start_add_status_listener")
 	finalityDB.AddStatusListener(txID, dbChannel)
-	defer finalityDB.DeleteStatusListener(txID, dbChannel)
+	span.AddEvent("end_add_status_listener")
+	defer func() {
+		span.AddEvent("start_delete_status_listener")
+		finalityDB.DeleteStatusListener(txID, dbChannel)
+		span.AddEvent("end_delete_status_listener")
+	}()
 
+	span.AddEvent("get_status")
 	status, _, err := finalityDB.GetStatus(txID)
 	if err == nil {
 		if status == ttxdb.Confirmed {
 			return startCounter, nil
 		}
 		if status == ttxdb.Deleted {
+			span.RecordError(errors.New("deleted transaction"))
 			return startCounter, errors.Errorf("transaction [%s] is not valid", txID)
 		}
 	}
 
+	span.AddEvent("listen_db_channels")
 	for i := startCounter; i < iterations; i++ {
+		span.AddEvent("start_new_iteration")
 		timeout := time.NewTimer(f.pollingTimeout)
 
 		select {
@@ -143,6 +162,8 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 			timeout.Stop()
 			return i, errors.Errorf("failed to listen to transaction [%s], timeout due to context done received [%s]", txID, c.Err())
 		case event := <-dbChannel:
+			span.AddEvent("receive_db_event")
+			span.AddLink(trace.LinkFromContext(event.Ctx))
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Got an answer to finality of [%s]: [%s]", txID, event)
 			}
@@ -150,6 +171,7 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 			if event.ValidationCode == ttxdb.Confirmed {
 				return i, nil
 			}
+			span.RecordError(errors.New("not confirmed transaction"))
 			return i, errors.Errorf("transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
 		case <-timeout.C:
 			timeout.Stop()
@@ -171,10 +193,12 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					logger.Debugf("Listen to finality of [%s]. NOT VALID", txID)
 				}
+				span.RecordError(errors.New("deleted transactino"))
 				return i, errors.Errorf("transaction [%s] is not valid", txID)
 			}
 		}
 	}
+	span.RecordError(errors.Errorf("timeout reached"))
 	logger.Debugf("Is [%s] final? Failed to listen to transaction for timeout", txID)
 	return iterations, errors.Errorf("failed to listen to transaction [%s] for timeout", txID)
 }

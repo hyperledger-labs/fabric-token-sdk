@@ -274,11 +274,10 @@ func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token.Unspen
 		return nil, err
 	}
 
-	if compiledOpts.Context != nil {
-		span := trace.SpanFromContext(compiledOpts.Context)
-		span.AddEvent("get_unspent_tokens_iterator")
-		defer span.AddEvent("end_iterate_tokens")
-	}
+	span := trace.SpanFromContext(compiledOpts.Context)
+	span.AddEvent("get_unspent_tokens_iterator")
+	defer span.AddEvent("end_iterate_tokens")
+
 	return o.w.ListTokens(compiledOpts)
 }
 
@@ -357,6 +356,9 @@ func CompileListTokensOption(opts ...ListTokensOption) (*driver.ListTokensOption
 		if err := opt(txOptions); err != nil {
 			return nil, err
 		}
+	}
+	if txOptions.Context == nil {
+		txOptions.Context = context.Background()
 	}
 	return &driver.ListTokensOptions{
 		TokenType: txOptions.TokenType,

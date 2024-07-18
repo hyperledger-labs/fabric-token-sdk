@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -16,7 +18,7 @@ import (
 
 type TokenVault interface {
 	PublicParams() ([]byte, error)
-	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
 	Balance(id, tokenType string) (uint64, error)
 }

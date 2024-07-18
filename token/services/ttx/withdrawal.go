@@ -74,6 +74,8 @@ func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, w
 }
 
 func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("withdrawal_request_view")
+	defer span.End()
 	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
 
 	tmsID, recipientIdentity, auditInfo, tokenMetadata, err := r.getRecipientIdentity(context)
@@ -91,13 +93,15 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 		Amount:    r.Amount,
 	}
 
+	span.AddEvent("start_session")
 	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)
 	if err != nil {
 		logger.Errorf("failed to get session to [%s]: [%s]", r.Issuer, err)
 		return nil, errors.Wrapf(err, "failed to get session to [%s]", r.Issuer)
 	}
 
-	err = session.Send(wr)
+	span.AddEvent("send_withdrawal_request")
+	err = session.SendWithContext(context.Context(), wr)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to send recipient data")
@@ -176,10 +180,13 @@ func ReceiveWithdrawalRequest(context view.Context) (*WithdrawalRequest, error) 
 }
 
 func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("receive_withdrawal_request_view")
+	defer span.End()
 	session := session.JSON(context)
 	request := &WithdrawalRequest{}
 	assert.NoError(session.ReceiveWithTimeout(request, 1*time.Minute), "failed to receive the withdrawal request")
 
+	span.AddEvent("received_withdrawal_request")
 	tms := token.GetManagementService(context, token.WithTMSID(request.TMSID))
 	assert.NotNil(tms, "tms not found for [%s]", request.TMSID)
 
