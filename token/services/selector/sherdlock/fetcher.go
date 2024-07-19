@@ -8,6 +8,7 @@ package sherdlock
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
@@ -17,6 +18,7 @@ import (
 
 const (
 	freshnessInterval = 1 * time.Second
+	maxQueries        = maxImmediateRetries
 )
 
 type tokenFetcher interface {
@@ -49,7 +51,7 @@ type mixedFetcher struct {
 func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
 	return &mixedFetcher{
 		lazyFetcher:  NewLazyFetcher(tokenDB),
-		eagerFetcher: newCachedFetcher(tokenDB, freshnessInterval),
+		eagerFetcher: newCachedFetcher(tokenDB, freshnessInterval, maxQueries),
 		m:            m,
 	}
 }
@@ -89,30 +91,35 @@ func (f *lazyFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterat
 
 // cachedFetcher eagerly fetches all the tokens from the DB at regular intervals and returns the cached result
 type cachedFetcher struct {
-	tokenDB           TokenDB
-	cache             map[string]permutatableIterator[*token2.MinTokenInfo]
-	mu                sync.RWMutex
+	tokenDB TokenDB
+	cache   map[string]permutatableIterator[*token2.MinTokenInfo]
+	// freshnessInterval is the time between periodical updates
 	freshnessInterval time.Duration
-	lastFetched       time.Time
+	// maxQueriesBeforeRefresh is the number of times the fetcher will respond with the cached result before refreshing.
+	maxQueriesBeforeRefresh uint32
+
+	// TODO: A better strategy is to keep following variables per cache key (type/owner combination) and lock/fetch only the 'expired' entry
+	lastFetched      time.Time
+	queriesResponded uint32
+	mu               sync.RWMutex
 }
 
-func newCachedFetcher(tokenDB TokenDB, freshnessInterval time.Duration) *cachedFetcher {
-	f := &cachedFetcher{
-		tokenDB:           tokenDB,
-		cache:             make(map[string]permutatableIterator[*token2.MinTokenInfo]),
-		freshnessInterval: freshnessInterval,
+func newCachedFetcher(tokenDB TokenDB, freshnessInterval time.Duration, maxQueriesBeforeRefresh int) *cachedFetcher {
+	return &cachedFetcher{
+		tokenDB:                 tokenDB,
+		cache:                   make(map[string]permutatableIterator[*token2.MinTokenInfo]),
+		freshnessInterval:       freshnessInterval,
+		maxQueriesBeforeRefresh: uint32(maxQueriesBeforeRefresh),
 	}
-	f.update()
-	ticker := time.NewTicker(freshnessInterval)
-	go func() {
-		for range ticker.C {
-			f.update()
-		}
-	}()
-	return f
 }
 
 func (f *cachedFetcher) update() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if !f.isCacheStale() && !f.isCacheOverused() {
+		logger.Debugf("Cache renewed in the meantime by another process")
+		return
+	}
 	logger.Debugf("Renew token cache")
 	it, err := f.tokenDB.MinTokenInfoIteratorBy("", "")
 	if err != nil {
@@ -131,14 +138,26 @@ func (f *cachedFetcher) update() {
 	for key, toks := range m {
 		its[key] = collections.NewSliceIterator(toks)
 	}
-	f.mu.Lock()
+
 	f.cache = its
 	f.lastFetched = time.Now()
-	f.mu.Unlock()
+	atomic.StoreUint32(&f.queriesResponded, 0)
 }
 
 func (f *cachedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
+	defer atomic.AddUint32(&f.queriesResponded, 1)
+	if f.isCacheOverused() {
+		logger.Debugf("Overused data. Soft refresh (in the background)...")
+		go f.update()
+	}
 	f.mu.RLock()
+	if f.isCacheStale() {
+		f.mu.RUnlock()
+		logger.Debugf("Stale data. Hard refresh (now)...")
+		f.update()
+		f.mu.RLock()
+	}
+
 	it, ok := f.cache[tokenKey(walletID, currency)]
 	f.mu.RUnlock()
 	if ok {
@@ -146,4 +165,12 @@ func (f *cachedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iter
 	}
 	logger.Debugf("No tokens found in cache for [%s]. Only [%s] available. Returning empty iterator.", tokenKey(walletID, currency), collections.Keys(f.cache))
 	return collections.NewEmptyIterator[*token2.MinTokenInfo](), nil
+}
+
+func (f *cachedFetcher) isCacheOverused() bool {
+	return atomic.LoadUint32(&f.queriesResponded) >= f.maxQueriesBeforeRefresh
+}
+
+func (f *cachedFetcher) isCacheStale() bool {
+	return time.Since(f.lastFetched) > f.freshnessInterval
 }
