@@ -19,7 +19,7 @@ import (
 )
 
 var _ = Describe("Orion EndToEnd", func() {
-	for _, t := range integration.WebSocketNoReplicationOnly {
+	for _, t := range integration.AllTestTypes {
 		Describe("Orion ZKAT-DLog", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
@@ -39,7 +39,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 			Aries:          true,
 			SDKs:           []api.SDK{&odlog.SDK{}},
 			//FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:info",
-			FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:view-sdk.services.comm=debug:info",
+			//FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:view-sdk.services.comm=debug:info",
 			ReplicationOpts: opts,
 		},
 	))
