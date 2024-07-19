@@ -346,11 +346,16 @@ type ledger struct {
 }
 
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
-	boxed, err := l.viewManager.InitiateView(NewRequestTxStatusView(l.network, "", id, l.dbManager), context.TODO())
-	if err != nil {
-		return driver.Unknown, err
+	for i := 0; i < 3; i++ {
+		boxed, err := l.viewManager.InitiateView(NewRequestTxStatusView(l.network, "", id, l.dbManager), context.TODO())
+		if err != nil {
+			logger.Errorf("failed to get status for [%s]: [%s], retry [%d]", id, err, i)
+			time.Sleep(time.Second)
+			continue
+		}
+		return boxed.(*TxStatusResponse).Status, nil
 	}
-	return boxed.(*TxStatusResponse).Status, nil
+	return driver.Unknown, errors.Errorf("failed to get status for [%s]", id)
 }
 
 type FinalityListener struct {
