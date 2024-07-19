@@ -275,7 +275,7 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, err
 	}
-	err = session.Send(signatureRequestRaw)
+	err = session.SendWithContext(context.Context(), signatureRequestRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction content")
 	}
@@ -564,7 +564,7 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		// Wait to receive a content back
 		ch := session.Receive()
 		// Send the content
-		err = session.Send(txRaw)
+		err = session.SendWithContext(context.Context(), txRaw)
 		if err != nil {
 			return errors.Wrap(err, "failed sending transaction content")
 		}
@@ -631,6 +631,8 @@ func NewReceiveTransactionView(network string) *ReceiveTransactionView {
 }
 
 func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("receive_tx_view")
+	defer span.End()
 	// Wait to receive a transaction back
 	ch := context.Session().Receive()
 
@@ -639,6 +641,7 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 
 	select {
 	case msg := <-ch:
+		span.AddEvent("receive_tx")
 		if msg.Status == view.ERROR {
 			return nil, errors.New(string(msg.Payload))
 		}
@@ -655,7 +658,9 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 		}
 		return tx, nil
 	case <-timeout.C:
-		return nil, errors.New("timeout reached")
+		err := errors.New("timeout reached")
+		span.RecordError(err)
+		return nil, err
 	}
 }
 
@@ -760,7 +765,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("Send back signature [%s][%s]", signatureRequest.Signer, hash.Hashable(sigma))
 		}
-		err = session.Send(sigma)
+		err = session.SendWithContext(context.Context(), sigma)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed sending signature back")
 		}
@@ -792,7 +797,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
 	}
-	if err := session.Send(sigma); err != nil {
+	if err := session.SendWithContext(context.Context(), sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
 

@@ -44,6 +44,8 @@ func NewRequestTxStatusView(network string, namespace string, txID string, dbMan
 }
 
 func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("request_tx_status_view")
+	defer span.End()
 	sm, err := r.dbManager.GetSessionManager(r.Network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting session manager for network [%s]", r.Network)
@@ -59,10 +61,12 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 		Namespace: r.Namespace,
 		TxID:      r.TxID,
 	}
-	if err := session.Send(request); err != nil {
+	span.AddEvent("send_tx_status_request")
+	if err := session.SendWithContext(context.Context(), request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
 	response := &TxStatusResponse{}
+	span.AddEvent("receive_tx_status_response")
 	if err := session.Receive(response); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
@@ -74,19 +78,24 @@ type RequestTxStatusResponderView struct {
 }
 
 func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("request_tx_status_responder_view")
+	defer span.End()
 	// receive request
 	session := session2.JSON(context)
 	request := &TxStatusRequest{}
+	span.AddEvent("receive_tx_status_request")
 	if err := session.Receive(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive request")
 	}
 	logger.Debugf("request: %+v", request)
 
+	span.AddEvent("process_tx_status_request")
 	response, err := r.process(context, request)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to process request")
 	}
-	if err := session.Send(response); err != nil {
+	span.AddEvent("send_tx_status_response")
+	if err := session.SendWithContext(context.Context(), response); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil

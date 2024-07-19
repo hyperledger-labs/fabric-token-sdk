@@ -102,6 +102,8 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 }
 
 func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("request_recipient_identity_view")
+	defer span.End()
 	w := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager().OwnerWallet(f.Other)
 
 	if isSameNode := w != nil; !isSameNode {
@@ -114,6 +116,8 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 }
 
 func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Context) (interface{}, error) {
+	span := context.StartSpan("other_recipient_identity_request")
+	defer span.End()
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("request recipient [%s] is not registered", f.Other)
 	}
@@ -132,11 +136,13 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling recipient request")
 	}
-	err = session.Send(rrRaw)
+	span.AddEvent("send_identity_request")
+	err = session.SendWithContext(context.Context(), rrRaw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient request")
 	}
 
+	span.AddEvent("receive_identity_response")
 	// Wait to receive a view identity
 	ch := session.Receive()
 	var payload []byte
@@ -146,12 +152,15 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 
 	select {
 	case msg := <-ch:
+		span.AddEvent("receive_message")
 		if msg.Status == view.ERROR {
 			return nil, errors.New(string(msg.Payload))
 		}
 		payload = msg.Payload
 	case <-timeout.C:
-		return nil, errors.New("timeout reached")
+		err := errors.New("timeout reached")
+		span.RecordError(err)
+		return nil, err
 	}
 
 	recipientData, err := RecipientDataFromBytes(payload)
@@ -160,6 +169,7 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 		return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
 	}
 	wm := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager()
+	span.AddEvent("register_recipient_identity")
 	if err := wm.RegisterRecipientIdentity(recipientData); err != nil {
 		logger.Errorf("failed to register recipient identity: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
@@ -169,6 +179,7 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("update endpoint resolver for [%s], bind to [%s]", recipientData.Identity, f.Other)
 	}
+	span.AddEvent("bind_identity")
 	if err := view2.GetEndpointService(context).Bind(f.Other, recipientData.Identity); err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("failed binding [%s] to [%s]", recipientData.Identity, f.Other)
@@ -205,12 +216,15 @@ func RespondRequestRecipientIdentityUsingWallet(context view.Context, wallet str
 }
 
 func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("request_recipient_identity_respond_view")
+	defer span.End()
 	session, payload, err := session2.ReadFirstMessage(context)
 	if err != nil {
 		logger.Errorf("failed to read first message: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to read first message")
 	}
 
+	span.AddEvent("received_first_message")
 	recipientRequest := &RecipientRequest{}
 	if err := recipientRequest.FromBytes(payload); err != nil {
 		logger.Errorf("failed to unmarshal recipient request: [%s][%s]", payload, err)
@@ -244,6 +258,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		}
 		// TODO: check the other values too
 	} else {
+		span.AddEvent("generate_identity")
 		// otherwise generate one fresh
 		recipientIdentity, err = w.GetRecipientIdentity()
 		if err != nil {
@@ -273,7 +288,8 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	}
 
 	// Step 3: send the public key back to the invoker
-	err = session.Send(recipientDataRaw)
+	span.AddEvent("send_recipient_identity_response")
+	err = session.SendWithContext(context.Context(), recipientDataRaw)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to send recipient data")
@@ -284,6 +300,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("bind me [%s] to [%s]", context.Me(), recipientData)
 	}
+	span.AddEvent("bind_identity")
 	err = resolver.Bind(context.Me(), recipientIdentity)
 	if err != nil {
 		logger.Errorf("failed binding [%s] to [%s]", context.Me(), recipientData)
@@ -370,7 +387,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		if err != nil {
 			return nil, err
 		}
-		if err := session.Send(requestRaw); err != nil {
+		if err := session.SendWithContext(context.Context(), requestRaw); err != nil {
 			return nil, err
 		}
 
@@ -475,7 +492,7 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		return nil, err
 	}
 
-	if err := session.Send(recipientDataRaw); err != nil {
+	if err := session.SendWithContext(context.Context(), recipientDataRaw); err != nil {
 		return nil, err
 	}
 
