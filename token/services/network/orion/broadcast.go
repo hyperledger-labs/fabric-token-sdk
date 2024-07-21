@@ -40,6 +40,8 @@ func NewBroadcastView(dbManager *DBManager, network string, blob interface{}) *B
 }
 
 func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("broadcast_view")
+	defer span.End()
 	sm, err := r.DBManager.GetSessionManager(r.Network)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting session manager for network [%s]", r.Network)
@@ -67,10 +69,12 @@ func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
 		Network: r.Network,
 		Blob:    blob,
 	}
-	if err := session.Send(request); err != nil {
+	span.AddEvent("send_broadcast_request")
+	if err := session.SendWithContext(context.Context(), request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
 	response := &BroadcastResponse{}
+	span.AddEvent("receive_broadcast_response")
 	if err := session.ReceiveWithTimeout(response, 30*time.Second); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
@@ -85,9 +89,12 @@ type BroadcastResponderView struct {
 }
 
 func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("broadcast_responder_view")
+	defer span.End()
 	// receive request
 	session := session2.JSON(context)
 	request := &BroadcastRequest{}
+	span.AddEvent("receive_request")
 	if err := session.Receive(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive request")
 	}
@@ -105,7 +112,9 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 	numRetries := 5
 	sleepDuration := 1 * time.Second
 	for i := 0; i < numRetries; i++ {
+		span.AddEvent("try_broadcast")
 		if _, txID, err2 := r.broadcast(context, sm, request); err2 != nil {
+			span.RecordError(err2)
 			logger.Errorf("failed to broadcast to [%s], txID [%s] with err [%s], retry [%d]", sm.CustodianID, txID, err2, i)
 			if strings.Contains(err2.Error(), "is not valid") {
 				err = err2
@@ -114,6 +123,7 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 			if len(txID) != 0 {
 				// was the transaction committed, by any chance?
 				logger.Errorf("check transaction [%s] status on [%s], retry [%d]", txID, sm.CustodianID, i)
+				span.AddEvent("fetch_tx_status")
 				status, err := txStatusFetcher.process(context, &TxStatusRequest{
 					Network: request.Network,
 					TxID:    txID,
@@ -145,7 +155,7 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 	if !done {
 		broadcastError = fmt.Sprintf("failed to broadcast to [%s] with err [%s]", sm.CustodianID, err)
 	}
-	if err := session.Send(&BroadcastResponse{Err: broadcastError}); err != nil {
+	if err := session.SendWithContext(context.Context(), &BroadcastResponse{Err: broadcastError}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil
