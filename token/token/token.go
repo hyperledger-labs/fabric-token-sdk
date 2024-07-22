@@ -87,6 +87,13 @@ func (it *IssuedTokens) Count() int {
 	return len(it.Tokens)
 }
 
+type MinTokenInfo struct {
+	Id       *ID
+	Owner    string
+	Type     string
+	Quantity string
+}
+
 // UnspentToken is used to specify a token returned by ListRequest
 type UnspentToken struct {
 	// Id is used to uniquely identify the token in the ledger
