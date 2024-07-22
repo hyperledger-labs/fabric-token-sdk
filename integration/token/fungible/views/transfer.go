@@ -515,7 +515,7 @@ func (r *FinalityWithTimeoutView) Call(ctx view.Context) (interface{}, error) {
 	_, err = ctx.RunView(ttx.NewFinalityView(tx, ttx.WithTimeout(r.Timeout)))
 	end := time.Now()
 	assert.Error(err)
-	assert.True(strings.Contains(err.Error(), "timeout"))
+	assert.True(strings.Contains(err.Error(), "timeout"), "error [%s] does not contain 'timeout'", err)
 
 	return end.Sub(start).Seconds(), nil
 }

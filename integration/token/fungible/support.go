@@ -786,9 +786,6 @@ func GetTXStatus(network *integration.Infrastructure, id *token3.NodeReference, 
 }
 
 func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token2.TMSID, ids ...*token3.NodeReference) {
-	for k := range network.Ctx.ViewClients {
-		fmt.Println("Found name: " + k)
-	}
 	for _, id := range ids {
 		for _, replicaName := range id.AllNames() {
 			if network.Client(replicaName) == nil {

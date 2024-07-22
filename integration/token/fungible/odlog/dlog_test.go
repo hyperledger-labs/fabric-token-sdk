@@ -39,6 +39,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 			Aries:          true,
 			SDKs:           []api.SDK{&odlog.SDK{}},
 			//FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:info",
+			//FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:view-sdk.services.comm=debug:info",
 			ReplicationOpts: opts,
 		},
 	))

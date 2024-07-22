@@ -55,6 +55,8 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
 	}
+	logger.Debugf("request tx status for [%s]", r.TxID)
+
 	// TODO: Should we sign the txStatus request?
 	request := &TxStatusRequest{
 		Network:   r.Network,
@@ -70,6 +72,7 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 	if err := session.Receive(response); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
+	logger.Debugf("got tx status response for [%s]: [%d]", r.TxID, response.Status)
 	return response, nil
 }
 
@@ -87,7 +90,7 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 	if err := session.Receive(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive request")
 	}
-	logger.Debugf("request: %+v", request)
+	logger.Debugf("got tx status request for [%s]: [%+v]", request.TxID, request)
 
 	span.AddEvent("process_tx_status_request")
 	response, err := r.process(context, request)
@@ -95,6 +98,7 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 		return nil, errors.Wrapf(err, "failed to process request")
 	}
 	span.AddEvent("send_tx_status_response")
+	logger.Debugf("send tx status response for [%s]: [%d]", request.TxID, response.Status)
 	if err := session.SendWithContext(context.Context(), response); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}

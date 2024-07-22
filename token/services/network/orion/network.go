@@ -348,7 +348,7 @@ type ledger struct {
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	boxed, err := l.viewManager.InitiateView(NewRequestTxStatusView(l.network, "", id, l.dbManager), context.TODO())
 	if err != nil {
-		return driver.Unknown, err
+		return driver.Unknown, errors.Errorf("failed to get status for [%s]", id)
 	}
 	return boxed.(*TxStatusResponse).Status, nil
 }
@@ -364,18 +364,18 @@ type FinalityListener struct {
 }
 
 func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string) {
-	if err := t.retryRunner.Run(func() error { return t.runOnStatus(txID, status, message) }); err != nil {
+	if err := t.retryRunner.Run(func() error { return t.runOnStatus(ctx, txID, status, message) }); err != nil {
 		logger.Errorf("failed running finality listener: %v", err)
 	}
 }
 
-func (t *FinalityListener) runOnStatus(txID string, status int, message string) (err error) {
+func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status int, message string) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Errorf("panic caught: %v", r)
 		}
 	}()
-	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID, t.dbManager), context.TODO())
+	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID, t.dbManager), ctx)
 	if err != nil {
 		return errors.Wrapf(err, "failed retrieving token request [%s]", txID)
 	}

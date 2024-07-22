@@ -141,7 +141,7 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 		select {
 		case <-c.Done():
 			timeout.Stop()
-			return i, errors.Errorf("failed to listen to transaction [%s] for timeout", txID)
+			return i, errors.Errorf("failed to listen to transaction [%s], timeout due to context done received [%s]", txID, c.Err())
 		case event := <-dbChannel:
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Got an answer to finality of [%s]: [%s]", txID, event)
