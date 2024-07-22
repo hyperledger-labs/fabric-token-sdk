@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -26,6 +28,8 @@ type RecipientData struct {
 type ListTokensOptions struct {
 	// TokenType is the type of token to list
 	TokenType string
+	// Context is used to track the operation
+	Context context.Context
 }
 
 // Wallet models a generic wallet

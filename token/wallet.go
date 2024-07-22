@@ -7,9 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // WalletLookupID defines the type of identifiers that can be used to retrieve a given wallet.
@@ -18,9 +21,7 @@ import (
 type WalletLookupID = driver.WalletLookupID
 
 // ListTokensOptions options for listing tokens
-type ListTokensOptions struct {
-	TokenType string
-}
+type ListTokensOptions = driver.ListTokensOptions
 
 // ListTokensOption is a function that configures a ListTokensOptions
 type ListTokensOption func(*ListTokensOptions) error
@@ -30,6 +31,14 @@ type ListTokensOption func(*ListTokensOptions) error
 func WithType(tokenType string) ListTokensOption {
 	return func(o *ListTokensOptions) error {
 		o.TokenType = tokenType
+		return nil
+	}
+}
+
+// WithContext return a list tokens option that contains the passed context
+func WithContext(ctx context.Context) ListTokensOption {
+	return func(o *ListTokensOptions) error {
+		o.Context = ctx
 		return nil
 	}
 }
@@ -263,6 +272,12 @@ func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token.Unspen
 	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
+	}
+
+	if compiledOpts.Context != nil {
+		span := trace.SpanFromContext(compiledOpts.Context)
+		span.AddEvent("get_unspent_tokens_iterator")
+		defer span.AddEvent("end_iterate_tokens")
 	}
 	return o.w.ListTokens(compiledOpts)
 }
