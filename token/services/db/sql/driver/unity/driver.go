@@ -60,7 +60,7 @@ func openDB[D any](dbOpener *sqldb.DBOpener, cp dbdriver.ConfigProvider, tmsID t
 	if err != nil {
 		return utils.Zero[D](), errors.Wrapf(err, "failed to open db at [%s:%s]", optsKey, envVarKey)
 	}
-	return newDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
+	return newDB(sqlDB, opts.Driver, opts.TablePrefix, !opts.SkipCreateTable)
 }
 
 type TtxDBDriver struct {

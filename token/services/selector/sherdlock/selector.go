@@ -178,23 +178,22 @@ func tokenKey(walletID, typ string) string {
 }
 
 type locker struct {
-	LockDB
+	Locker
 	txID transaction.ID
 }
 
 func (l *locker) TryLock(tokenID *token2.ID) bool {
-	return l.LockDB.Lock(tokenID, l.txID) == nil
+	return l.Locker.Lock(tokenID, l.txID) == nil
 }
 
 func (l *locker) UnlockAll() error {
-	return l.LockDB.UnlockByTxID(l.txID)
+	return l.Locker.UnlockByTxID(l.txID)
 }
 
-func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB LockDB, precision uint64, backoff time.Duration) tokenSelectorUnlocker {
+func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB Locker, precision uint64, backoff time.Duration) tokenSelectorUnlocker {
 	logger := logger.Named(fmt.Sprintf("selector-%s", txID))
-	locker := &locker{txID: txID, LockDB: lockDB}
+	locker := &locker{txID: txID, Locker: lockDB}
 	if backoff < 0 {
-
 		return NewSelector(logger, fetcher, locker, precision)
 	} else {
 		return NewStubbornSelector(logger, fetcher, locker, precision, backoff)

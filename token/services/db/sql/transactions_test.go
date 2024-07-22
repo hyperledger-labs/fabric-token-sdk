@@ -20,7 +20,7 @@ func initTransactionsDB(driverName, dataSourceName, tablePrefix string, maxOpenC
 	if err != nil {
 		return nil, err
 	}
-	transactionDB, err := NewTransactionDB(sqlDB, tablePrefix, true)
+	transactionDB, err := NewTransactionDB(sqlDB, driverName, tablePrefix, true)
 	if err != nil {
 		return nil, err
 	}

@@ -32,7 +32,7 @@ func newWalletDB(db *sql.DB, tables walletTables) *WalletDB {
 	}
 }
 
-func NewWalletDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.WalletDB, error) {
+func NewWalletDB(db *sql.DB, driver string, tablePrefix string, createSchema bool) (driver.WalletDB, error) {
 	tables, err := getTableNames(tablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names [%s]", tablePrefix)

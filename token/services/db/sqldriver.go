@@ -32,5 +32,5 @@ func (d *SQLDriver[D]) Open(cp ConfigProvider, tmsID token.TMSID) (D, error) {
 	if err != nil {
 		return utils.Zero[D](), err
 	}
-	return d.newDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
+	return d.newDB(sqlDB, opts.Driver, opts.TablePrefix, !opts.SkipCreateTable)
 }

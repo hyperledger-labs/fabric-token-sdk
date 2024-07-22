@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package inmemory
 
 import (
+	"time"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -35,5 +37,9 @@ func (l *locker) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
 
 func (l *locker) UnlockByTxID(txID transaction.ID) error {
 	l.Locker.UnlockByTxID(txID)
+	return nil
+}
+
+func (l *locker) Cleanup(evictionDelay time.Duration) error {
 	return nil
 }

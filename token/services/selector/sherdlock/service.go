@@ -17,7 +17,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-const retrySelectionBackoff = 5 * time.Second
+const (
+	retrySelectionBackoff = 5 * time.Second
+	cleanupTickPeriod     = 5 * time.Second
+	cleanupPeriod         = 30 * time.Second
+)
 
 type SelectorService struct {
 	managerLazyCache utils.LazyProvider[*token.ManagementService, token.SelectorManager]
@@ -61,7 +65,14 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	if err != nil {
 		return nil, errors.Errorf("failed to create tokenLockDB: %v", err)
 	}
-	return NewManager(tokenDB, tokenLockDB, s.m, pp.Precision(), retrySelectionBackoff), nil
+	return NewManager(
+		tokenDB,
+		tokenLockDB,
+		s.m,
+		pp.Precision(),
+		retrySelectionBackoff,
+		cleanupTickPeriod,
+	), nil
 }
 
 func key(tms *token.ManagementService) string {
