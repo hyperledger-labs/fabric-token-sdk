@@ -18,11 +18,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
-	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/operations"
-	tracing3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
@@ -142,25 +140,21 @@ func (p *SDK) Install() error {
 		return errors.WithMessagef(err, "failed setting up dig container")
 	}
 
-	if err := p.SDK.Install(); err != nil {
-		return errors.WithMessagef(err, "failed installing dig chain")
-	}
-
 	// Overwrite dependencies
 	err = errors2.Join(
-		p.Container().Decorate(func(_ metrics.Provider, o *operations.Options, l operations.OperationsLogger) metrics.Provider {
-			return operations.NewMetricsProvider(o.Metrics, l, true)
+		p.Container().Decorate(func(metricsProvider metrics.Provider) metrics.Provider {
+			return operations.NewDisabledHistogram(metricsProvider)
 		}),
-		p.Container().Decorate(func(_ trace.TracerProvider, metricsProvider metrics.Provider, configService driver.ConfigService) (trace.TracerProvider, error) {
-			tp, err := tracing2.NewTracerProvider(configService)
-			if err != nil {
-				return nil, err
-			}
-			return tracing.NewTracerProvider(tracing3.NewTracerProviderWithBackingProvider(tp, metricsProvider)), nil
+		p.Container().Decorate(func(tracerProvider trace.TracerProvider) trace.TracerProvider {
+			return tracing.NewTracerProvider(tracerProvider)
 		}),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up decorator")
+	}
+
+	if err := p.SDK.Install(); err != nil {
+		return errors.WithMessagef(err, "failed installing dig chain")
 	}
 
 	// Backward compatibility with SP
