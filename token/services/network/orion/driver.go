@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
@@ -70,8 +71,9 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 	}
 	logger.Infof("Orion Custodian enabled: %t", enabled)
 	dbManager := NewDBManager(d.onsProvider, d.configProvider, enabled)
+	statusCache := secondcache.NewTyped[*TxStatusResponse](1000)
 	if enabled {
-		if err := InstallViews(d.viewRegistry, dbManager); err != nil {
+		if err := InstallViews(d.viewRegistry, dbManager, statusCache); err != nil {
 			return nil, errors.WithMessagef(err, "failed installing views")
 		}
 	}

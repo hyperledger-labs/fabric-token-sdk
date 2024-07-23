@@ -85,7 +85,8 @@ func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
 }
 
 type BroadcastResponderView struct {
-	dbManager *DBManager
+	dbManager   *DBManager
+	statusCache TxStatusResponseCache
 }
 
 func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error) {
@@ -108,12 +109,14 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 
 	done := false
 	err = nil
-	txStatusFetcher := &RequestTxStatusResponderView{r.dbManager}
+	txStatusFetcher := &RequestTxStatusResponderView{dbManager: r.dbManager, statusCache: r.statusCache}
 	numRetries := 5
 	sleepDuration := 1 * time.Second
+	var txID string
 	for i := 0; i < numRetries; i++ {
 		span.AddEvent("try_broadcast")
-		if _, txID, err2 := r.broadcast(context, sm, request); err2 != nil {
+		var err2 error
+		if _, txID, err2 = r.broadcast(context, sm, request); err2 != nil {
 			span.RecordError(err2)
 			logger.Errorf("failed to broadcast to [%s], txID [%s] with err [%s], retry [%d]", sm.CustodianID, txID, err2, i)
 			if strings.Contains(err2.Error(), "is not valid") {
@@ -155,6 +158,21 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 	if !done {
 		broadcastError = fmt.Sprintf("failed to broadcast to [%s] with err [%s]", sm.CustodianID, err)
 	}
+
+	// update cache
+	if len(txID) != 0 {
+		response, ok := r.statusCache.Get(txID)
+		if ok {
+			if len(broadcastError) == 0 {
+				response.Status = driver.Valid
+			} else {
+				response.Status = driver.Invalid
+			}
+		}
+		r.statusCache.Add(txID, response)
+	}
+
+	// send back answer
 	if err := session.SendWithContext(context.Context(), &BroadcastResponse{Err: broadcastError}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
