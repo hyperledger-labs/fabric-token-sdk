@@ -19,10 +19,10 @@ func InstallViews(viewRegistry ResponderRegistry, dbManager *DBManager, statusCa
 	if err := viewRegistry.RegisterResponder(&PublicParamsRequestResponderView{}, &PublicParamsRequestView{}); err != nil {
 		return err
 	}
-	if err := viewRegistry.RegisterResponder(&RequestApprovalResponderView{dbManager: dbManager}, &RequestApprovalView{}); err != nil {
+	if err := viewRegistry.RegisterResponder(&RequestApprovalResponderView{dbManager: dbManager, statusCache: statusCache}, &RequestApprovalView{}); err != nil {
 		return err
 	}
-	if err := viewRegistry.RegisterResponder(&BroadcastResponderView{dbManager: dbManager}, &BroadcastView{}); err != nil {
+	if err := viewRegistry.RegisterResponder(&BroadcastResponderView{dbManager: dbManager, statusCache: statusCache}, &BroadcastView{}); err != nil {
 		return err
 	}
 	if err := viewRegistry.RegisterResponder(&LookupKeyRequestRespondView{}, &LookupKeyRequestView{}); err != nil {
