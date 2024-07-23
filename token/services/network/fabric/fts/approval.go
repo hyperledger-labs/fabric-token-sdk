@@ -188,7 +188,7 @@ func (r *RequestApprovalResponderView) translate(
 	if err != nil {
 		return errors.Wrapf(err, "failed to add public params dependency")
 	}
-	err = w.CommitTokenRequest(validationMetadata[common.TokenRequestToSign], true)
+	_, err = w.CommitTokenRequest(validationMetadata[common.TokenRequestToSign], true)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write token request")
 	}

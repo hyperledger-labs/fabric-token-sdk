@@ -77,7 +77,8 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 }
 
 type RequestTxStatusResponderView struct {
-	dbManager *DBManager
+	dbManager   *DBManager
+	statusCache TxStatusResponseCache
 }
 
 func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, error) {
@@ -106,6 +107,11 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 }
 
 func (r *RequestTxStatusResponderView) process(context view.Context, request *TxStatusRequest) (*TxStatusResponse, error) {
+	response, ok := r.statusCache.Get(request.TxID)
+	if ok && response.Status != driver.Busy {
+		return response, nil
+	}
+
 	sm, err := r.dbManager.GetSessionManager(request.Network)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session manager for network [%s]", request.Network)
@@ -146,10 +152,17 @@ func (r *RequestTxStatusResponderView) process(context view.Context, request *Tx
 		}
 	}
 
+	if response == nil {
+		response = &TxStatusResponse{
+			TokenRequestReference: trRef,
+		}
+	}
 	switch tx.ValidationCode() {
 	case orion.VALID:
-		return &TxStatusResponse{Status: driver.Valid, TokenRequestReference: trRef}, nil
+		response.Status = driver.Valid
 	default:
-		return &TxStatusResponse{Status: driver.Invalid, TokenRequestReference: trRef}, nil
+		response.Status = driver.Invalid
 	}
+	r.statusCache.Add(request.TxID, response)
+	return response, nil
 }

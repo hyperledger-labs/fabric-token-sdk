@@ -61,34 +61,36 @@ func (w *Translator) Write(action interface{}) error {
 	return nil
 }
 
-func (w *Translator) CommitTokenRequest(raw []byte, storeHash bool) error {
+func (w *Translator) CommitTokenRequest(raw []byte, storeHash bool) ([]byte, error) {
 	key, err := keys.CreateTokenRequestKey(w.TxID)
 	if err != nil {
-		return errors.Errorf("can't create for token request '%s'", w.TxID)
+		return nil, errors.Errorf("can't create for token request '%s'", w.TxID)
 	}
 	tr, err := w.RWSet.GetState(w.namespace, key)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read token request'%s'", w.TxID)
+		return nil, errors.Wrapf(err, "failed to read token request'%s'", w.TxID)
 	}
 	if len(tr) != 0 {
-		return errors.Wrapf(errors.New("token request with same ID already exists"), "failed to write token request'%s'", w.TxID)
+		return nil, errors.Wrapf(errors.New("token request with same ID already exists"), "failed to write token request'%s'", w.TxID)
 	}
+	var h []byte
 	if storeHash {
 		hash := sha256.New()
 		n, err := hash.Write(raw)
 		if n != len(raw) {
-			return errors.Errorf("failed to write token request, hash failure '%s'", w.TxID)
+			return nil, errors.Errorf("failed to write token request, hash failure '%s'", w.TxID)
 		}
 		if err != nil {
-			return errors.Wrapf(err, "failed to write token request, hash failure '%s'", w.TxID)
+			return nil, errors.Wrapf(err, "failed to write token request, hash failure '%s'", w.TxID)
 		}
 		raw = hash.Sum(nil)
+		h = raw
 	}
 	err = w.RWSet.SetState(w.namespace, key, raw)
 	if err != nil {
-		return errors.Wrapf(err, "failed to write token request'%s'", w.TxID)
+		return nil, errors.Wrapf(err, "failed to write token request'%s'", w.TxID)
 	}
-	return nil
+	return h, nil
 }
 
 func (w *Translator) ReadTokenRequest() ([]byte, error) {

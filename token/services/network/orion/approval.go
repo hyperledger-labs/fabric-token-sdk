@@ -18,8 +18,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
 )
+
+type TxStatusResponseCache interface {
+	Get(key string) (*TxStatusResponse, bool)
+	Add(key string, value *TxStatusResponse)
+}
 
 type ApprovalRequest struct {
 	Network   string
@@ -97,7 +103,8 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 }
 
 type RequestApprovalResponderView struct {
-	dbManager *DBManager
+	dbManager   *DBManager
+	statusCache TxStatusResponseCache
 }
 
 func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
@@ -145,7 +152,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	}
 
 	// commit
-	txStatusFetcher := &RequestTxStatusResponderView{r.dbManager}
+	txStatusFetcher := &RequestTxStatusResponderView{dbManager: r.dbManager, statusCache: r.statusCache}
 	numRetries := 5
 	sleepDuration := 1 * time.Second
 	for i := 0; i < numRetries; i++ {
@@ -232,7 +239,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 		}
 	}
 	span.AddEvent("commit_token_request")
-	err = t.CommitTokenRequest(attributes[common.TokenRequestToSign], true)
+	h, err := t.CommitTokenRequest(attributes[common.TokenRequestToSign], true)
 	if err != nil {
 		return nil, false, errors.Wrapf(err, "failed to commit token request")
 	}
@@ -242,6 +249,11 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 	if err != nil {
 		return nil, true, errors.Wrapf(err, "failed to sign and close transaction [%s]", request.TxID)
 	}
+	// update the cache
+	r.statusCache.Add(request.TxID, &TxStatusResponse{
+		Status:                driver2.Busy,
+		TokenRequestReference: h,
+	})
 	return envelopeRaw, false, nil
 }
 
