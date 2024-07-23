@@ -15,6 +15,7 @@ import (
 
 type OwnerTokenVault interface {
 	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
+	Balance(id, tokenType string) (uint64, error)
 }
 
 type AuditorWallet struct {
@@ -235,6 +236,14 @@ func (w *LongTermOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token
 		unspentTokens.Tokens = append(unspentTokens.Tokens, t)
 	}
 	return unspentTokens, nil
+}
+
+func (w *LongTermOwnerWallet) Balance(opts *driver.ListTokensOptions) (uint64, error) {
+	balance, err := w.TokenVault.Balance(w.WalletID, opts.TokenType)
+	if err != nil {
+		return 0, errors.Wrap(err, "token selection failed")
+	}
+	return balance, nil
 }
 
 func (w *LongTermOwnerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {

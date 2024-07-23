@@ -18,6 +18,7 @@ type TokenVault interface {
 	PublicParams() ([]byte, error)
 	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
+	Balance(id, tokenType string) (uint64, error)
 }
 
 type WalletFactory struct {

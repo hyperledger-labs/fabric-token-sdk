@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -26,6 +28,8 @@ type RecipientData struct {
 type ListTokensOptions struct {
 	// TokenType is the type of token to list
 	TokenType string
+	// Context is used to track the operation
+	Context context.Context
 }
 
 // Wallet models a generic wallet
@@ -69,6 +73,9 @@ type OwnerWallet interface {
 
 	// ListTokensIterator returns an iterator of unspent tokens owned by this wallet filtered using the passed options.
 	ListTokensIterator(opts *ListTokensOptions) (UnspentTokensIterator, error)
+
+	// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
+	Balance(opts *ListTokensOptions) (uint64, error)
 
 	// EnrollmentID returns the enrollment ID of the owner wallet
 	EnrollmentID() string
