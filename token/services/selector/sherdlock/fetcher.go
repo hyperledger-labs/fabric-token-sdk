@@ -143,7 +143,6 @@ func (f *cachedFetcher) update() {
 	f.cache = its
 	f.lastFetched = time.Now()
 	atomic.StoreUint32(&f.queriesResponded, 0)
-	f.mu.Unlock()
 }
 
 func (f *cachedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
