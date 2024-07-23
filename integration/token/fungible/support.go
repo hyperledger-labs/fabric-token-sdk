@@ -1018,7 +1018,7 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*toke
 	time.Sleep(10 * time.Second)
 	if deleteVault {
 		// Add extra time to wait for the vault to be reconstructed
-		time.Sleep(30 * time.Second)
+		time.Sleep(40 * time.Second)
 	}
 }
 
