@@ -52,6 +52,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 
 	span.AddEvent("start_sum_calculation_unspent")
 	unspentTokens, err := wallet.ListUnspentTokens(token.WithType(b.Type))
+	assert.NoError(err, "failed listing unspent tokens")
 	precision := tms.PublicParametersManager().PublicParameters().Precision()
 	sum := token2.NewZeroQuantity(precision)
 	for _, tok := range unspentTokens.Tokens {
