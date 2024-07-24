@@ -27,5 +27,5 @@ type parallelListenerManager[V comparable] struct {
 }
 
 func (m *parallelListenerManager[V]) InvokeListeners(event driver.FinalityEvent[V]) {
-	go m.ListenerManager.InvokeListeners(event)
+	m.ListenerManager.InvokeListeners(event)
 }
