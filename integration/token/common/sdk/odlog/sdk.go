@@ -10,11 +10,13 @@ import (
 	"errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/orion/driver"
 	orionsdk "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk/dig"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	auditdb "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
 	identitydb "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	tokendb "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
 	tokenlockdb "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb/db/sql"
@@ -40,6 +42,15 @@ func (p *SDK) Install() error {
 		p.Container().Provide(identitydb.NewDriver, dig.Group("identitydb-drivers")),
 		p.Container().Provide(tokensdk.NewDBDrivers),
 		p.Container().Provide(dlog.NewDriver, dig.Group("token-drivers")),
+	)
+	if err != nil {
+		return err
+	}
+
+	err = errors.Join(
+		p.Container().Decorate(func(p driver.ListenerManagerProvider) driver.ListenerManagerProvider {
+			return common.NewParallelListenerManagerProvider(p)
+		}),
 	)
 	if err != nil {
 		return err
