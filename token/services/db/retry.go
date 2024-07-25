@@ -9,6 +9,8 @@ package db
 import (
 	"errors"
 	"time"
+
+	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 // RetryRunner receives a function that potentially fails and retries according to the specified strategy
@@ -25,6 +27,7 @@ func NewRetryRunner(maxTimes int, delay time.Duration, expBackoff bool) *retryRu
 		delay:      delay,
 		expBackoff: expBackoff,
 		maxTimes:   maxTimes,
+		logger:     logging2.MustGetLogger("retry-runner"),
 	}
 }
 
@@ -32,6 +35,7 @@ type retryRunner struct {
 	delay      time.Duration
 	expBackoff bool
 	maxTimes   int
+	logger     logging2.Logger
 }
 
 func (f *retryRunner) nextDelay() time.Duration {
@@ -61,6 +65,7 @@ func (f *retryRunner) RunWithErrors(runner func() (bool, error)) error {
 		if err != nil {
 			errs = append(errs, err)
 		}
+		f.logger.Debugf("Will retry iteration [%d] after delay. %d errors returned so far", i+1, len(errs))
 		time.Sleep(f.nextDelay())
 	}
 	if len(errs) == 0 {

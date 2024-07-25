@@ -100,14 +100,8 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 }
 
 func (r *RequestTxStatusResponderView) process(context view.Context, request *TxStatusRequest) (*TxStatusResponse, error) {
-	if response, ok := r.statusCache.Get(request.TxID); ok {
-		return response, nil
-	}
-
-	response, err := NewStatusFetcher(r.dbManager).FetchStatus(request.Network, request.Namespace, request.TxID)
-	if err != nil {
-		return nil, err
-	}
-	r.statusCache.Add(request.TxID, response)
-	return response, nil
+	response, _, err := r.statusCache.GetOrLoad(request.TxID, func() (*TxStatusResponse, error) {
+		return NewStatusFetcher(r.dbManager).FetchStatus(request.Network, request.Namespace, request.TxID)
+	})
+	return response, err
 }

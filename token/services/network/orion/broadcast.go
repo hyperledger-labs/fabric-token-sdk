@@ -90,8 +90,6 @@ type BroadcastResponderView struct {
 	statusCache TxStatusResponseCache
 }
 
-var runner = db.NewRetryRunner(5, 1*time.Second, true)
-
 func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error) {
 	span := context.StartSpan("broadcast_responder_view")
 	defer span.End()
@@ -111,6 +109,8 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 	}
 
 	txStatusFetcher := NewStatusFetcher(r.dbManager)
+
+	runner := db.NewRetryRunner(5, 1*time.Second, true)
 
 	var txID string
 	broadcastErr := runner.RunWithErrors(func() (bool, error) {
