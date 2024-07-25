@@ -568,24 +568,12 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if err != nil {
 			return errors.Wrap(err, "failed sending transaction content")
 		}
-
-		timeout := time.NewTimer(time.Minute * 4)
-
-		var msg *view.Message
-		select {
-		case msg = <-ch:
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("collect ack on distributed env: reply received from [%s]", entry.ID)
-			}
-			timeout.Stop()
-		case <-timeout.C:
-			timeout.Stop()
+		sigma, err := readChannel(ch)
+		if err != nil {
 			return errors.Errorf("Timeout from party %s", entry.ID)
 		}
-		if msg.Status == view.ERROR {
-			return errors.New(string(msg.Payload))
-		}
-		sigma := msg.Payload
+		logger.Debugf("collect ack on distributed env: reply received from [%s]", entry.ID)
+
 		logger.Debugf("received ack from [%s] [%s], checking signature on [%s]", entry.LongTerm, hash.Hashable(sigma).String(),
 			hash.Hashable(txRaw).String())
 
@@ -607,6 +595,27 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	}
 
 	return nil
+}
+
+func readChannel(ch <-chan *view.Message) ([]byte, error) {
+	timeout := time.NewTimer(time.Minute * 4)
+	defer timeout.Stop()
+
+	for {
+		select {
+		case msg := <-ch:
+			if msg == nil {
+				logger.Infof("Received nil message from channel. Retrying")
+				continue
+			}
+			if msg.Status == view.ERROR {
+				return nil, errors.New(string(msg.Payload))
+			}
+			return msg.Payload, nil
+		case <-timeout.C:
+			return nil, errors.Errorf("timeout")
+		}
+	}
 }
 
 func (c *CollectEndorsementsView) requestBytes() ([]byte, error) {
@@ -636,32 +645,23 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	// Wait to receive a transaction back
 	ch := context.Session().Receive()
 
-	timeout := time.NewTimer(time.Minute * 4)
-	defer timeout.Stop()
-
-	select {
-	case msg := <-ch:
-		span.AddEvent("receive_tx")
-		if msg.Status == view.ERROR {
-			return nil, errors.New(string(msg.Payload))
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("ReceiveTransactionView: received transaction, len [%d][%s]", len(msg.Payload), hash.Hashable(msg.Payload))
-		}
-		tx, err := NewTransactionFromBytes(context, msg.Payload)
-		if err != nil {
-			// try to unmarshal pay
-			tx, err = f.unmarshalAsSignatureRequest(context, msg.Payload)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to receive transaction")
-			}
-		}
-		return tx, nil
-	case <-timeout.C:
-		err := errors.New("timeout reached")
+	payload, err := readChannel(ch)
+	if err != nil {
 		span.RecordError(err)
 		return nil, err
 	}
+	span.AddEvent("receive_tx")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("ReceiveTransactionView: received transaction, len [%d][%s]", len(payload), hash.Hashable(payload))
+	}
+	tx, err := NewTransactionFromBytes(context, payload)
+	if err == nil {
+		return tx, nil
+	}
+
+	// try to unmarshal pay
+	return f.unmarshalAsSignatureRequest(context, payload)
+
 }
 
 func (f *ReceiveTransactionView) unmarshalAsSignatureRequest(context view.Context, raw []byte) (*Transaction, error) {
