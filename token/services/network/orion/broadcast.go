@@ -14,6 +14,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
@@ -89,6 +90,8 @@ type BroadcastResponderView struct {
 	statusCache TxStatusResponseCache
 }
 
+var runner = db.NewRetryRunner(5, 1*time.Second, true)
+
 func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error) {
 	span := context.StartSpan("broadcast_responder_view")
 	defer span.End()
@@ -107,73 +110,64 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 		return nil, errors.Wrapf(err, "failed to get session manager for [%s]", request.Network)
 	}
 
-	done := false
-	err = nil
-	txStatusFetcher := &RequestTxStatusResponderView{dbManager: r.dbManager, statusCache: r.statusCache}
-	numRetries := 5
-	sleepDuration := 1 * time.Second
+	txStatusFetcher := NewStatusFetcher(r.dbManager)
+
 	var txID string
-	for i := 0; i < numRetries; i++ {
+	broadcastErr := runner.RunWithErrors(func() (bool, error) {
 		span.AddEvent("try_broadcast")
-		var err2 error
-		if _, txID, err2 = r.broadcast(context, sm, request); err2 != nil {
-			span.RecordError(err2)
-			logger.Errorf("failed to broadcast to [%s], txID [%s] with err [%s], retry [%d]", sm.CustodianID, txID, err2, i)
-			if strings.Contains(err2.Error(), "is not valid") {
-				err = err2
-				break
-			}
-			if len(txID) != 0 {
-				// was the transaction committed, by any chance?
-				logger.Errorf("check transaction [%s] status on [%s], retry [%d]", txID, sm.CustodianID, i)
-				span.AddEvent("fetch_tx_status")
-				status, err := txStatusFetcher.process(context, &TxStatusRequest{
-					Network: request.Network,
-					TxID:    txID,
-				})
-				if err != nil {
-					logger.Errorf("failed to ask transaction status [%s][%s], retry [%d]", txID, err, i)
-				}
-				if status != nil {
-					if status.Status == network.Valid {
-						done = true
-						break
-					}
-					if status.Status == network.Invalid {
-						break
-					}
-					logger.Debugf("transaction [%s] status [%d], retry [%d], wait a bit and resubmit", txID, status, i)
-				} else {
-					logger.Errorf("failed to ask transaction status [%s], got a nil answert, retry [%d]", txID, i)
-				}
-			}
-			time.Sleep(sleepDuration)
-			sleepDuration = sleepDuration * 2
-			continue
+		var err error
+		_, txID, err = r.broadcast(context, sm, request)
+		if err == nil {
+			return true, nil
 		}
-		done = true
-		break
-	}
-	var broadcastError string
-	if !done {
-		broadcastError = fmt.Sprintf("failed to broadcast to [%s] with err [%s]", sm.CustodianID, err)
-	}
+
+		span.RecordError(err)
+		logger.Errorf("failed to broadcast to [%s], txID [%s] with err [%s], retry", sm.CustodianID, txID, err)
+		if strings.Contains(err.Error(), "is not valid") {
+			return true, err
+		}
+		if len(txID) == 0 {
+			return false, nil
+		}
+
+		// was the transaction committed, by any chance?
+		logger.Errorf("check transaction [%s] status on [%s], retry", txID, sm.CustodianID)
+		span.AddEvent("fetch_tx_status")
+
+		_, status, err := txStatusFetcher.FetchCode(request.Network, txID)
+		if err != nil {
+			logger.Errorf("failed to ask transaction status [%s][%s]", txID, err)
+			return false, nil
+		}
+		if status == network.Valid {
+			return true, nil
+		}
+		if status == network.Invalid {
+			return true, errors.New("invalid transaction status")
+		}
+		logger.Debugf("transaction [%s] status [%d], retry, wait a bit and resubmit", txID, status)
+		return false, nil
+	})
 
 	// update cache
 	if len(txID) != 0 {
 		response, ok := r.statusCache.Get(txID)
 		if ok {
-			if len(broadcastError) == 0 {
+			if broadcastErr == nil {
 				response.Status = driver.Valid
 			} else {
 				response.Status = driver.Invalid
 			}
+			r.statusCache.Add(txID, response)
 		}
-		r.statusCache.Add(txID, response)
 	}
 
 	// send back answer
-	if err := session.SendWithContext(context.Context(), &BroadcastResponse{Err: broadcastError}); err != nil {
+	broadcastResponse := &BroadcastResponse{}
+	if broadcastErr != nil {
+		broadcastResponse.Err = fmt.Sprintf("failed to broadcast to [%s] with err [%s]", sm.CustodianID, broadcastErr.Error())
+	}
+	if err := session.SendWithContext(context.Context(), broadcastResponse); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil
