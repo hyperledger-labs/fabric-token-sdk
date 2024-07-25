@@ -1130,7 +1130,7 @@ func CheckLocalMetrics(ii *integration.Infrastructure, user string, viewName str
 	Expect(metrics).NotTo(BeEmpty())
 
 	var sum float64
-	for _, m := range metrics["fsc_view_operations"].GetMetric() {
+	for _, m := range metrics[user+"_fsc_view_operations"].GetMetric() {
 		for _, labelPair := range m.Label {
 			if labelPair.GetName() == "view" && labelPair.GetValue() == viewName {
 				sum += m.Counter.GetValue()
@@ -1142,11 +1142,11 @@ func CheckLocalMetrics(ii *integration.Infrastructure, user string, viewName str
 	Expect(sum).NotTo(BeZero())
 }
 
-func CheckPrometheusMetrics(ii *integration.Infrastructure, viewName string, expectedLength int) {
+func CheckPrometheusMetrics(ii *integration.Infrastructure, user, viewName string) {
 	cli, err := ii.NWO.PrometheusAPI()
 	Expect(err).To(BeNil())
 	metric := model.Metric{
-		"__name__": "fsc_view_operations",
+		"__name__": model.LabelValue(user + "_fsc_view_operations"),
 		"view":     model.LabelValue(viewName),
 	}
 	val, warnings, err := cli.Query(context.Background(), metric.String(), time.Now())
@@ -1158,8 +1158,8 @@ func CheckPrometheusMetrics(ii *integration.Infrastructure, viewName string, exp
 
 	vector, ok := val.(model.Vector)
 	Expect(ok).To(BeTrue())
-	Expect(vector).To(HaveLen(expectedLength))
-	for i := 0; i < expectedLength; i++ {
-		Expect(vector[i].Value).NotTo(Equal(model.SampleValue(0)))
+	Expect(vector).NotTo(BeEmpty())
+	for _, v := range vector {
+		Expect(v.Value).NotTo(Equal(model.SampleValue(0)))
 	}
 }

@@ -1087,7 +1087,7 @@ func TestStressSuite(network *integration.Infrastructure, auditorId string, sele
 	}}))
 
 	CheckLocalMetrics(network, "alice", "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView")
-	CheckPrometheusMetrics(network, "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView", 3)
+	CheckPrometheusMetrics(network, "alice", "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView")
 }
 
 func TestStress(network *integration.Infrastructure, auditorId string, selector *token3.ReplicaSelector) {
