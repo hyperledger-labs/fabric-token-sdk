@@ -134,7 +134,7 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 		logger.Errorf("check transaction [%s] status on [%s], retry", txID, sm.CustodianID)
 		span.AddEvent("fetch_tx_status")
 
-		_, status, err := txStatusFetcher.FetchCode(request.Network, txID)
+		status, err := txStatusFetcher.FetchCode(request.Network, txID)
 		if err != nil {
 			logger.Errorf("failed to ask transaction status [%s][%s]", txID, err)
 			return false, nil

@@ -7,17 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
-	"encoding/base64"
-
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type TxStatusRequest struct {
@@ -110,36 +104,10 @@ func (r *RequestTxStatusResponderView) process(context view.Context, request *Tx
 		return response, nil
 	}
 
-	oSession, code, err := r.fetchValidationCode(request.Network, request.TxID)
+	response, err := NewStatusFetcher(r.dbManager).FetchStatus(request.Network, request.Namespace, request.TxID)
 	if err != nil {
 		return nil, err
 	}
-
-	// fetch token request reference
-	qe, err := oSession.QueryExecutor(request.Namespace)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get query executor [%s] for orion network [%s]", request.TxID, request.Network)
-	}
-	key, err := keys.CreateTokenRequestKey(request.TxID)
-	if err != nil {
-		return nil, errors.Errorf("can't create for token request '%s'", request.TxID)
-	}
-	trRef, err := qe.Get(orionKey(key))
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get token request reference [%s] for orion network [%s]", request.TxID, request.Network)
-	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("retrieved token request hash for [%s][%s]:[%s]", key, request.TxID, base64.StdEncoding.EncodeToString(trRef))
-	}
-
-	response := &TxStatusResponse{
-		TokenRequestReference: trRef,
-		Status:                code,
-	}
 	r.statusCache.Add(request.TxID, response)
 	return response, nil
-}
-
-func (r *RequestTxStatusResponderView) fetchValidationCode(network string, txID driver2.TxID) (*orion.Session, driver.ValidationCode, error) {
-	return NewStatusFetcher(r.dbManager).FetchCode(network, txID)
 }
