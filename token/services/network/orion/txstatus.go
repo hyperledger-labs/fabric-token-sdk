@@ -91,6 +91,9 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to process request")
 	}
+	if response.Status == driver.Valid && len(response.TokenRequestReference) == 0 {
+		panic("invalid result for [" + request.TxID + "]")
+	}
 	span.AddEvent("send_tx_status_response")
 	logger.Debugf("send tx status response for [%s]: [%d]", request.TxID, response.Status)
 	if err := session.SendWithContext(context.Context(), response); err != nil {
