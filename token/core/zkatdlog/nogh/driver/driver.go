@@ -142,6 +142,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 				common.NewLedgerTokenLoader[*token3.Token](logger, qe, tokDeserializer),
 				deserializer,
 				driverMetrics,
+				d.tracerProvider,
 			),
 			observables.NewAudit(tracerProvider),
 		),

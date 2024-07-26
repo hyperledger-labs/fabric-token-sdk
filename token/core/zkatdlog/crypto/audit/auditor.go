@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package audit
 
 import (
+	"context"
 	"encoding/asn1"
 	"encoding/json"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
@@ -84,6 +86,7 @@ type OwnerOpening struct {
 // Auditor inspects zkat tokens and their owners.
 type Auditor struct {
 	Logger logging.Logger
+	tracer trace.Tracer
 	// Owner Identity Deserializer
 	Des Deserializer
 	// Auditor's signing identity
@@ -101,9 +104,10 @@ type Auditor struct {
 	GetAuditInfoForTransfersFunc GetAuditInfoForTransfersFunc
 }
 
-func NewAuditor(logger logging.Logger, des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
+func NewAuditor(logger logging.Logger, tracer trace.Tracer, des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
 	a := &Auditor{
 		Logger:         logger,
+		tracer:         tracer,
 		Des:            des,
 		PedersenParams: pp,
 		NYMParams:      nymparams,
@@ -136,23 +140,29 @@ func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byt
 }
 
 // Check validates TokenRequest against TokenRequestMetadata
-func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, inputTokens [][]*token.Token, txID string) error {
+func (a *Auditor) Check(ctx context.Context, tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, inputTokens [][]*token.Token, txID string) error {
+	_, span := a.tracer.Start(ctx, "auditor_check")
+	defer span.End()
 	// De-obfuscate issue requests
+	span.AddEvent("get_issue_audit_info")
 	outputsFromIssue, err := a.GetAuditInfoForIssuesFunc(tokenRequest.Issues, tokenRequestMetadata.Issues)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for issues for [%s]", txID)
 	}
 	// check validity of issue requests
+	span.AddEvent("check_issue_requests")
 	err = a.CheckIssueRequests(outputsFromIssue, txID)
 	if err != nil {
 		return errors.Wrapf(err, "failed checking issues for [%s]", txID)
 	}
-	// De-odfuscate transfer requests
+	// De-obfuscate transfer requests
+	span.AddEvent("get_transfer_audit_info")
 	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfersFunc(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for transfers for [%s]", txID)
 	}
 	// check validity of transfer requests
+	span.AddEvent("check_transfer_requests")
 	if err := a.CheckTransferRequests(auditableInputs, outputsFromTransfer, txID); err != nil {
 		return errors.Wrapf(err, "failed checking transfers [%s]", txID)
 	}
