@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -53,16 +54,28 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	newCtx, span := s.tracer.Start(ctx, "auditor_check")
 	defer span.End()
 	s.Logger.Debugf("[%s] check token request validity, number of transfer actions [%d]...", txID, len(metadata.Transfers))
-	var inputTokens [][]*token.Token
-	span.AddEvent("check_token_validity")
+
+	tokenIDs := make([]*token2.ID, 0)
 	for i, transfer := range metadata.Transfers {
 		s.Logger.Debugf("[%s] transfer action [%d] contains [%d] inputs", txID, i, len(transfer.TokenIDs))
-		inputs, err := s.TokenCommitmentLoader.GetTokenOutputs(transfer.TokenIDs)
-		if err != nil {
-			return errors.Wrapf(err, "failed getting token outputs to perform auditor check")
+		tokenIDs = append(tokenIDs, transfer.TokenIDs...)
+	}
+
+	span.AddEvent("load_token_outputs")
+	tokenMap, err := s.TokenCommitmentLoader.GetTokenOutputs(newCtx, tokenIDs)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting token outputs to perform auditor check")
+	}
+	s.Logger.Debugf("loaded [%d] corresponding inputs for TX [%s]", len(tokenIDs), txID)
+
+	inputTokens := make([][]*token.Token, len(metadata.Transfers))
+	for i, transfer := range metadata.Transfers {
+		inputTokens[i] = make([]*token.Token, len(transfer.TokenIDs))
+		for j, tokenID := range transfer.TokenIDs {
+			if tok, ok := tokenMap[tokenID.TxId]; ok {
+				inputTokens[i][j] = tok
+			}
 		}
-		s.Logger.Debugf("[%s] transfer action [%d] contains [%d] inputs, loaded corresponding inputs [%d]", txID, i, len(transfer.TokenIDs), len(inputs))
-		inputTokens = append(inputTokens, inputs)
 	}
 
 	span.AddEvent("load_public_params")
@@ -78,7 +91,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 		math.Curves[pp.Curve],
 	)
 	span.AddEvent("start_auditor_check")
-	err := auditor.Check(
+	err = auditor.Check(
 		newCtx,
 		request,
 		metadata,
