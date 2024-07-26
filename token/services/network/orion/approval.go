@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -24,6 +25,7 @@ import (
 
 type TxStatusResponseCache interface {
 	Get(key string) (*TxStatusResponse, bool)
+	GetOrLoad(key string, loader func() (*TxStatusResponse, error)) (*TxStatusResponse, bool, error)
 	Add(key string, value *TxStatusResponse)
 }
 
@@ -153,46 +155,49 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 
 	// commit
 	txStatusFetcher := &RequestTxStatusResponderView{dbManager: r.dbManager, statusCache: r.statusCache}
-	numRetries := 5
-	sleepDuration := 1 * time.Second
-	for i := 0; i < numRetries; i++ {
-		span.AddEvent("try_validate")
-		envelopeRaw, retry, err := r.validate(context, request, validator)
-		if err != nil {
-			if !retry {
-				logger.Errorf("failed to commit transaction [%s], no more retry after this [%d]", err, i)
-				return nil, errors.Wrapf(err, "failed to commit transaction [%s]", request.TxID)
-			}
-			logger.Errorf("failed to commit transaction [%s], retry [%d]", err, i)
-			// was the transaction committed, by any chance?
-			span.AddEvent("fetch_tx_status")
-			status, err := txStatusFetcher.process(context, &TxStatusRequest{
-				Network:   request.Network,
-				Namespace: request.Namespace,
-				TxID:      request.TxID,
-			})
-			if err != nil {
-				logger.Errorf("failed to ask transaction status [%s], retry [%d]", err, i)
-			}
-			if status != nil {
-				if status.Status == network.Valid {
-					return nil, nil
-				}
-				if status.Status == network.Invalid {
-					break
-				}
-				logger.Debugf("transaction [%s] status [%s], retry [%d], wait a bit and resubmit", request.TxID, status, i)
-			} else {
-				logger.Errorf("failed to ask transaction status [%s], got a nil answert, retry [%d]", request.TxID, i)
-			}
-			time.Sleep(sleepDuration)
-			sleepDuration = sleepDuration * 2
-			continue
-		}
-		return envelopeRaw, nil
-	}
 
-	return nil, errors.Wrapf(err, "failed to commit transaction [%s]", request.TxID)
+	runner := db.NewRetryRunner(5, time.Second, true)
+
+	var envelopeRaw []byte
+	validateErr := runner.RunWithErrors(func() (bool, error) {
+		span.AddEvent("try_validate")
+		var retry bool
+		envelopeRaw, retry, err = r.validate(context, request, validator)
+		if err == nil {
+			return true, nil
+		}
+
+		if !retry {
+			logger.Errorf("failed to commit transaction [%s], no more retry after this", err)
+			return true, errors.Wrapf(err, "failed to commit transaction [%s]", request.TxID)
+		}
+		logger.Errorf("failed to commit transaction [%s], retry", err)
+		// was the transaction committed, by any chance?
+		span.AddEvent("fetch_tx_status")
+		status, err := txStatusFetcher.process(context, &TxStatusRequest{
+			Network:   request.Network,
+			Namespace: request.Namespace,
+			TxID:      request.TxID,
+		})
+		if err != nil {
+			logger.Errorf("failed to ask transaction status [%s], retry", err)
+			return false, nil
+		}
+
+		if status.Status == network.Valid {
+			return true, nil
+		}
+		if status.Status == network.Invalid {
+			return true, errors.New("invalid transaction status")
+		}
+		logger.Debugf("transaction [%s] status [%s], retry, wait a bit and resubmit", request.TxID, status)
+		return false, nil
+	})
+
+	if validateErr != nil {
+		return nil, errors.Wrapf(err, "failed to commit transaction [%s]", request.TxID)
+	}
+	return envelopeRaw, nil
 }
 
 func (r *RequestApprovalResponderView) validate(context view.Context, request *ApprovalRequest, validator driver.Validator) ([]byte, bool, error) {

@@ -9,12 +9,16 @@ package db
 import (
 	"errors"
 	"time"
+
+	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 // RetryRunner receives a function that potentially fails and retries according to the specified strategy
 type RetryRunner interface {
 	Run(func() error) error
 }
+
+var ErrMaxRetriesExceeded = errors.New("maximum number of retries exceeded")
 
 const Infinitely = -1
 
@@ -23,6 +27,7 @@ func NewRetryRunner(maxTimes int, delay time.Duration, expBackoff bool) *retryRu
 		delay:      delay,
 		expBackoff: expBackoff,
 		maxTimes:   maxTimes,
+		logger:     logging2.MustGetLogger("retry-runner"),
 	}
 }
 
@@ -30,6 +35,7 @@ type retryRunner struct {
 	delay      time.Duration
 	expBackoff bool
 	maxTimes   int
+	logger     logging2.Logger
 }
 
 func (f *retryRunner) nextDelay() time.Duration {
@@ -40,14 +46,30 @@ func (f *retryRunner) nextDelay() time.Duration {
 }
 
 func (f *retryRunner) Run(runner func() error) error {
+	return f.RunWithErrors(func() (bool, error) {
+		err := runner()
+		return err == nil, err
+	})
+}
+
+// RunWithErrors will retry until runner() returns true or until it returns maxTimes false.
+// If it returns true, then the error or nil will be returned.
+// If it returns maxTimes false, then it will always return an error: either a join of all errors it encountered or a ErrMaxRetriesExceeded.
+func (f *retryRunner) RunWithErrors(runner func() (bool, error)) error {
 	errs := make([]error, 0)
 	for i := 0; f.maxTimes < 0 || i < f.maxTimes; i++ {
-		if err := runner(); err != nil {
-			errs = append(errs, err)
-			time.Sleep(f.nextDelay())
-		} else {
-			return nil
+		terminate, err := runner()
+		if terminate {
+			return err
 		}
+		if err != nil {
+			errs = append(errs, err)
+		}
+		f.logger.Debugf("Will retry iteration [%d] after delay. %d errors returned so far", i+1, len(errs))
+		time.Sleep(f.nextDelay())
+	}
+	if len(errs) == 0 {
+		return ErrMaxRetriesExceeded
 	}
 	return errors.Join(errs...)
 }
