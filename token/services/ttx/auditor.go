@@ -217,7 +217,7 @@ func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session,
 	if err != nil {
 		return nil, err
 	}
-	err = session.Send(txRaw)
+	err = session.SendWithContext(context.Context(), txRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}
@@ -254,7 +254,7 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 	if err != nil {
 		return nil, err
 	}
-	err = left.Send(txRaw)
+	err = left.SendWithContext(context.Context(), txRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}
