@@ -39,6 +39,7 @@ import (
 	msp2 "github.com/hyperledger/fabric/msp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 var fakeLedger *mock.Ledger
@@ -74,7 +75,7 @@ var _ = Describe("validator", func() {
 		asigner, _ := prepareECDSASigner()
 		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), des, pp.PedersenGenerators, pp.IdemixIssuerPK, asigner, c)
+		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), &noop.Tracer{}, des, pp.PedersenGenerators, pp.IdemixIssuerPK, asigner, c)
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
@@ -115,7 +116,7 @@ var _ = Describe("validator", func() {
 		for i := 0; i < 2; i++ {
 			tokns[0] = append(tokns[0], inputsForTransfer[i])
 		}
-		err = auditor.Check(ar, metadata, tokns, "2")
+		err = auditor.Check(context.Background(), ar, metadata, tokns, "2")
 		Expect(err).NotTo(HaveOccurred())
 		sigma, err := auditor.Endorse(ar, "2")
 		Expect(err).NotTo(HaveOccurred())
@@ -448,7 +449,7 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer) (*driver.TokenR
 	ir.Signatures = append(ir.Signatures, sig)
 
 	issueMetadata := &driver.TokenRequestMetadata{Issues: []driver.IssueMetadata{metadata}}
-	err = auditor.Check(ir, issueMetadata, nil, "1")
+	err = auditor.Check(context.Background(), ir, issueMetadata, nil, "1")
 	Expect(err).NotTo(HaveOccurred())
 	sigma, err := auditor.Endorse(ir, "1")
 	Expect(err).NotTo(HaveOccurred())
@@ -532,7 +533,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 		tokns[0] = append(tokns[0], tokens[i])
 	}
 	transferMetadata := &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}
-	err = auditor.Check(tr, transferMetadata, tokns, "1")
+	err = auditor.Check(context.Background(), tr, transferMetadata, tokns, "1")
 	Expect(err).NotTo(HaveOccurred())
 
 	sigma, err := auditor.Endorse(tr, "1")
