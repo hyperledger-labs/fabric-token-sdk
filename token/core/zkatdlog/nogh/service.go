@@ -21,7 +21,7 @@ import (
 )
 
 type TokenCommitmentLoader interface {
-	GetTokenOutputs(ids []*token2.ID) ([]*token.Token, error)
+	GetTokenOutputs(ctx context.Context, ids []*token2.ID) (map[string]*token.Token, error)
 }
 
 type TokenLoader interface {
