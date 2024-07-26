@@ -10,6 +10,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"go.opentelemetry.io/otel/trace"
 
@@ -37,6 +38,7 @@ type TokenAndMetadataDeserializer[T LedgerToken, M any] interface {
 
 type VaultLedgerTokenLoader[T any] struct {
 	Logger       logging.Logger
+	tracer       trace.Tracer
 	TokenVault   TokenVault
 	Deserializer TokenDeserializer[T]
 
@@ -45,21 +47,25 @@ type VaultLedgerTokenLoader[T any] struct {
 	RetryDelay time.Duration
 }
 
-func NewLedgerTokenLoader[T any](logger logging.Logger, tokenVault TokenVault, deserializer TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
+func NewLedgerTokenLoader[T any](logger logging.Logger, tracerProvider trace.TracerProvider, tokenVault TokenVault, deserializer TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
 	return &VaultLedgerTokenLoader[T]{
 		Logger:       logger,
+		tracer:       tracerProvider.Tracer("token_loader", tracing.WithMetricsOpts(tracing.MetricsOpts{Namespace: "tokensdk"})),
 		TokenVault:   tokenVault,
 		Deserializer: deserializer,
-		NumRetries:   3,
-		RetryDelay:   3 * time.Second,
+		NumRetries:   6,
+		RetryDelay:   1 * time.Second,
 	}
 }
 
 // GetTokenOutputs takes an array of token identifiers (txID, index) and returns the corresponding token outputs
-func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error) {
+func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*token.ID) (map[string]T, error) {
+	_, span := s.tracer.Start(ctx, "token_outputs_fetch")
+	defer span.End()
 	var err error
 	for i := 0; i < s.NumRetries; i++ {
-		tokens := make([]T, len(ids))
+		span.AddEvent("try_fetch")
+		tokens := make(map[string]T, len(ids))
 		counter := 0
 		err = s.TokenVault.GetTokenOutputs(ids, func(id *token.ID, bytes []byte) error {
 			if len(bytes) == 0 {
@@ -69,7 +75,7 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error
 			if err != nil {
 				return errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(bytes))
 			}
-			tokens[counter] = ti
+			tokens[id.TxId] = ti
 			counter++
 			return nil
 		})
@@ -81,6 +87,7 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error
 
 		// check if there is any token id whose corresponding transaction is pending
 		// if there is, then wait a bit and retry to load the outputs
+		span.AddEvent("check_any_pending")
 		anyPending, anyError := s.isAnyPending(ids...)
 		if anyError != nil {
 			err = anyError

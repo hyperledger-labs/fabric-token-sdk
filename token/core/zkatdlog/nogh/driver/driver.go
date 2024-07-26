@@ -139,7 +139,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 			zkatdlog.NewAuditorService(
 				logger,
 				ppm,
-				common.NewLedgerTokenLoader[*token3.Token](logger, qe, tokDeserializer),
+				common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, tokDeserializer),
 				deserializer,
 				driverMetrics,
 				d.tracerProvider,
