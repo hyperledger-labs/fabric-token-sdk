@@ -44,10 +44,10 @@ func NewObservableAuditorService(auditService driver.AuditorService, metrics *au
 }
 
 func (o *ObservableAuditorService) AuditorCheck(ctx context.Context, request *driver.TokenRequest, metadata *driver.TokenRequestMetadata, anchor string) error {
-	newContext, span := o.Metrics.auditTracer.Start(ctx, "check")
+	newCtx, span := o.Metrics.auditTracer.Start(ctx, "check")
 	defer span.End()
 
-	err := o.AuditService.AuditorCheck(newContext, request, metadata, anchor)
+	err := o.AuditService.AuditorCheck(newCtx, request, metadata, anchor)
 	span.SetAttributes(attribute.Bool(SuccessfulLabel, err == nil))
 	return err
 }
