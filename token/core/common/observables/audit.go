@@ -9,6 +9,8 @@ package observables
 import (
 	"context"
 
+	metrics2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/metrics"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -17,8 +19,8 @@ import (
 )
 
 const (
-	TokenTypeLabel  metrics.MetricLabel = "token_type"
-	SuccessfulLabel metrics.MetricLabel = "successful"
+	TokenTypeLabel  metrics2.MetricLabel = "token_type"
+	SuccessfulLabel metrics2.MetricLabel = "successful"
 )
 
 type auditMetrics struct {

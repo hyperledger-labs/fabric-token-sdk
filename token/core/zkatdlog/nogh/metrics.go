@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/metrics"
 )
 
 var (

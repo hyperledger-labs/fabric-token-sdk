@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	metrics2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/metrics"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -18,17 +19,17 @@ import (
 var logger = logging.MustGetLogger("token-sdk.metrics")
 
 const (
-	NetworkLabel   MetricLabel = "network"
-	ChannelLabel   MetricLabel = "channel"
-	NamespaceLabel MetricLabel = "namespace"
+	NetworkLabel   metrics2.MetricLabel = "network"
+	ChannelLabel   metrics2.MetricLabel = "channel"
+	NamespaceLabel metrics2.MetricLabel = "namespace"
 )
 
 type tmsProvider struct {
 	tmsLabels []string
-	provider  Provider
+	provider  metrics2.Provider
 }
 
-func NewTMSProvider(tmsID token.TMSID, provider Provider) *tmsProvider {
+func NewTMSProvider(tmsID token.TMSID, provider metrics2.Provider) *tmsProvider {
 	return &tmsProvider{
 		tmsLabels: []string{
 			NetworkLabel, tmsID.Network,
@@ -39,17 +40,17 @@ func NewTMSProvider(tmsID token.TMSID, provider Provider) *tmsProvider {
 	}
 }
 
-func (p *tmsProvider) NewCounter(o CounterOpts) Counter {
+func (p *tmsProvider) NewCounter(o metrics2.CounterOpts) metrics2.Counter {
 	defer func() { recoverFromDuplicate(recover()) }()
 	return p.provider.NewCounter(o).With(p.tmsLabels...)
 }
 
-func (p *tmsProvider) NewGauge(o GaugeOpts) Gauge {
+func (p *tmsProvider) NewGauge(o metrics2.GaugeOpts) metrics2.Gauge {
 	defer func() { recoverFromDuplicate(recover()) }()
 	return p.provider.NewGauge(o).With(p.tmsLabels...)
 }
 
-func (p *tmsProvider) NewHistogram(o HistogramOpts) Histogram {
+func (p *tmsProvider) NewHistogram(o metrics2.HistogramOpts) metrics2.Histogram {
 	defer func() { recoverFromDuplicate(recover()) }()
 	return p.provider.NewHistogram(o).With(p.tmsLabels...)
 }
@@ -68,9 +69,9 @@ func recoverFromDuplicate(recovered any) {
 
 }
 
-func AllLabelNames(extraLabels ...MetricLabel) []MetricLabel {
+func AllLabelNames(extraLabels ...metrics2.MetricLabel) []metrics2.MetricLabel {
 	return append([]string{NetworkLabel, ChannelLabel, NamespaceLabel}, extraLabels...)
 }
-func StatsdFormat(extraLabels ...MetricLabel) string {
+func StatsdFormat(extraLabels ...metrics2.MetricLabel) string {
 	return "%{#fqname}.%{" + strings.Join(AllLabelNames(extraLabels...), "}.%{") + "}"
 }

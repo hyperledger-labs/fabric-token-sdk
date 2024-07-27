@@ -9,6 +9,8 @@ package common
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/vault"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -17,7 +19,7 @@ import (
 type MetadataCounterID = string
 
 const (
-	TokenRequestToSign driver.ValidationAttributeID = "trs"
+	TokenRequestToSign = vault.TokenRequestToSign
 )
 
 type Context[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction] struct {

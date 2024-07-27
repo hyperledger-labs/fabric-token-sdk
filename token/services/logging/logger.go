@@ -31,30 +31,35 @@ type Logger interface {
 	Warn(args ...interface{})
 	Warnf(format string, args ...interface{})
 	IsEnabledFor(level zapcore.Level) bool
+	Named(string) Logger
 }
 
 func MustGetLogger(loggerName string) Logger {
-	return flogging.MustGetLogger(loggerName)
+	return &logger{FabricLogger: flogging.MustGetLogger(loggerName)}
 }
 
 func DriverLogger(prefix string, networkID string, channel string, namespace string) Logger {
-	return flogging.MustGetLogger(loggerName(prefix, networkID, channel, namespace))
+	return &logger{FabricLogger: flogging.MustGetLogger(loggerName(prefix, networkID, channel, namespace))}
 }
 
 func DeriveDriverLogger(logger Logger, prefix string, networkID string, channel string, namespace string) Logger {
-	l, ok := logger.(*flogging.FabricLogger)
-	if !ok {
-		panic("invalid logger")
-	}
-	return l.Named(loggerName(prefix, networkID, channel, namespace))
+	return logger.Named(loggerName(prefix, networkID, channel, namespace))
 }
 
 func DriverLoggerFromPP(prefix string, ppIdentifier string) Logger {
-	return flogging.MustGetLogger(loggerName(prefix, ppIdentifier))
+	return &logger{FabricLogger: flogging.MustGetLogger(loggerName(prefix, ppIdentifier))}
 }
 
 func isEmptyString(s string) bool { return len(s) == 0 }
 
 func loggerName(parts ...string) string {
 	return strings.Join(slices.DeleteFunc(parts, isEmptyString), loggerNameSeparator)
+}
+
+type logger struct {
+	*flogging.FabricLogger
+}
+
+func (l *logger) Named(n string) Logger {
+	return &logger{FabricLogger: l.FabricLogger.Named(n)}
 }

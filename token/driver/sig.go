@@ -35,3 +35,9 @@ type Signer interface {
 	// Sign signs message bytes and returns the signature or an error on failure.
 	Sign(message []byte) ([]byte, error)
 }
+
+// VerifierDeserializer is the interface for verifiers' deserializer.
+// A verifier checks the validity of a signature against the identity associated with the verifier
+type VerifierDeserializer interface {
+	DeserializeVerifier(id Identity) (Verifier, error)
+}

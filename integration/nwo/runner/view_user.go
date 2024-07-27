@@ -12,12 +12,13 @@ import (
 	"strings"
 	"time"
 
+	metrics2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/metrics"
+
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	metrics2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
 	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/api"

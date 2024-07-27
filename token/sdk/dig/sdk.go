@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/metrics"
+
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
@@ -24,7 +26,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
@@ -97,7 +98,7 @@ func (p *SDK) Install() error {
 			return &vault.PublicParamsProvider{Provider: networkProvider}
 		}, dig.As(new(core2.Vault))),
 		p.Container().Provide(digutils.Identity[driver.ConfigService](), dig.As(new(core.ConfigProvider))),
-		p.Container().Provide(func() logging2.Logger { return flogging.MustGetLogger("token-sdk.core") }),
+		p.Container().Provide(func() logging2.Logger { return logging2.MustGetLogger("token-sdk.core") }),
 		p.Container().Provide(digutils.Identity[logging2.Logger](), dig.As(new(logging.Logger))),
 		p.Container().Provide(core2.NewTMSProvider),
 		p.Container().Provide(digutils.Identity[*core2.TMSProvider](), dig.As(new(driver2.TokenManagerServiceProvider))),

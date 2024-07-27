@@ -8,7 +8,7 @@ package sherdlock
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/metrics"
 )
 
 const (

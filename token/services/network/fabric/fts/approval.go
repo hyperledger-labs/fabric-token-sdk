@@ -9,12 +9,13 @@ package fts
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/vault"
+
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
@@ -188,7 +189,7 @@ func (r *RequestApprovalResponderView) translate(
 	if err != nil {
 		return errors.Wrapf(err, "failed to add public params dependency")
 	}
-	_, err = w.CommitTokenRequest(validationMetadata[common.TokenRequestToSign], true)
+	_, err = w.CommitTokenRequest(validationMetadata[vault.TokenRequestToSign], true)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write token request")
 	}

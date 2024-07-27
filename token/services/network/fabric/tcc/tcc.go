@@ -15,8 +15,9 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/vault"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -234,7 +235,7 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	if err != nil {
 		return shim.Error("failed to add public params dependency: " + err.Error())
 	}
-	_, err = w.CommitTokenRequest(attributes[common.TokenRequestToSign], true)
+	_, err = w.CommitTokenRequest(attributes[vault.TokenRequestToSign], true)
 	if err != nil {
 		return shim.Error("failed to write token request: " + err.Error())
 	}

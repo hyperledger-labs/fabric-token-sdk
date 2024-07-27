@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	metrics2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -27,7 +28,7 @@ import (
 
 type Driver struct {
 	*base
-	metricsProvider  metrics.Provider
+	metricsProvider  metrics2.Provider
 	tracerProvider   trace.TracerProvider
 	configService    *config.Service
 	storageProvider  identity.StorageProvider
@@ -37,7 +38,7 @@ type Driver struct {
 }
 
 func NewDriver(
-	metricsProvider metrics.Provider,
+	metricsProvider metrics2.Provider,
 	tracerProvider trace.TracerProvider,
 	configService *config.Service,
 	storageProvider identity.StorageProvider,

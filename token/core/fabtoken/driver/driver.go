@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	metrics2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -26,7 +27,7 @@ import (
 // Driver contains the non-static logic of the driver (including services)
 type Driver struct {
 	*base
-	metricsProvider  metrics.Provider
+	metricsProvider  metrics2.Provider
 	tracerProvider   trace.TracerProvider
 	configService    *config.Service
 	storageProvider  identity.StorageProvider
@@ -36,7 +37,7 @@ type Driver struct {
 }
 
 func NewDriver(
-	metricsProvider metrics.Provider,
+	metricsProvider metrics2.Provider,
 	tracerProvider trace.TracerProvider,
 	configService *config.Service,
 	storageProvider identity.StorageProvider,
@@ -93,7 +94,17 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
 
-	ws, err := d.newWalletService(tmsConfig, d.endpointService, d.storageProvider, qe, logger, d.identityProvider.DefaultIdentity(), networkLocalMembership.DefaultIdentity(), nil, false)
+	ws, err := d.newWalletService(
+		tmsConfig,
+		d.endpointService,
+		d.storageProvider,
+		qe,
+		logger,
+		d.identityProvider.DefaultIdentity(),
+		networkLocalMembership.DefaultIdentity(),
+		nil,
+		false,
+	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze wallet service for [%s:%s]", networkID, namespace)
 	}

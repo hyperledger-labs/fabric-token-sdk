@@ -8,7 +8,6 @@ package deserializer
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -115,10 +114,10 @@ func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(id driver.Identit
 }
 
 type TypedIdentityVerifierDeserializer struct {
-	common.VerifierDeserializer
+	driver.VerifierDeserializer
 }
 
-func NewTypedIdentityVerifierDeserializer(verifierDeserializer common.VerifierDeserializer) *TypedIdentityVerifierDeserializer {
+func NewTypedIdentityVerifierDeserializer(verifierDeserializer driver.VerifierDeserializer) *TypedIdentityVerifierDeserializer {
 	return &TypedIdentityVerifierDeserializer{VerifierDeserializer: verifierDeserializer}
 }
 

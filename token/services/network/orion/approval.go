@@ -9,12 +9,13 @@ package orion
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/vault"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -244,7 +245,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 		}
 	}
 	span.AddEvent("commit_token_request")
-	h, err := t.CommitTokenRequest(attributes[common.TokenRequestToSign], true)
+	h, err := t.CommitTokenRequest(attributes[vault.TokenRequestToSign], true)
 	if err != nil {
 		return nil, false, errors.Wrapf(err, "failed to commit token request")
 	}
