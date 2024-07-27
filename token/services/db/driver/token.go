@@ -17,6 +17,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// Aliases
+type (
+	UnspentTokensIterator = driver.UnspentTokensIterator
+	MinTokenInfoIterator  = driver.MinTokenInfoIterator
+	QueryCallbackFunc     = driver.QueryCallbackFunc
+)
+
 type TokenRecord struct {
 	// TxID is the ID of the transaction that created the token
 	TxID string
@@ -126,11 +133,11 @@ type TokenDB interface {
 	// IsMine return true if the passed token was stored before
 	IsMine(txID string, index uint64) (bool, error)
 	// UnspentTokensIterator returns an iterator over all owned tokens
-	UnspentTokensIterator() (driver.UnspentTokensIterator, error)
+	UnspentTokensIterator() (UnspentTokensIterator, error)
 	// UnspentTokensIteratorBy returns an iterator over all tokens owned by the passed identifier of a given type
-	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (UnspentTokensIterator, error)
 	// MinTokenInfoIteratorBy returns the minimum information about the tokens needed for the selector
-	MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (driver.MinTokenInfoIterator, error)
+	MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (MinTokenInfoIterator, error)
 	// ListUnspentTokensBy returns the list of all tokens owned by the passed identifier of a given type
 	ListUnspentTokensBy(ownerEID, typ string) (*token.UnspentTokens, error)
 	// ListUnspentTokens returns the list of all owned tokens

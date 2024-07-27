@@ -16,7 +16,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -113,13 +112,13 @@ func (db *TokenDB) IsMine(txID string, index uint64) (bool, error) {
 }
 
 // UnspentTokensIterator returns an iterator over all unspent tokens
-func (db *TokenDB) UnspentTokensIterator() (tdriver.UnspentTokensIterator, error) {
+func (db *TokenDB) UnspentTokensIterator() (driver.UnspentTokensIterator, error) {
 	return db.UnspentTokensIteratorBy(context.TODO(), "", "")
 }
 
 // UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 // The token type can be empty. In that case, tokens of any type are returned.
-func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (tdriver.UnspentTokensIterator, error) {
+func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		OwnerEnrollmentID: id,
@@ -137,7 +136,7 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, id, tokenType st
 }
 
 // MinTokenInfoIteratorBy returns the minimum information about the tokens needed for the selector
-func (db *TokenDB) MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (tdriver.MinTokenInfoIterator, error) {
+func (db *TokenDB) MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (driver.MinTokenInfoIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		OwnerEnrollmentID: ownerEID,
@@ -321,7 +320,7 @@ func (db *TokenDB) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
 }
 
-func (db *TokenDB) GetTokenOutputs(ids []*token.ID, callback tdriver.QueryCallbackFunc) error {
+func (db *TokenDB) GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error {
 	tokens, err := db.getLedgerToken(ids)
 	if err != nil {
 		return err
