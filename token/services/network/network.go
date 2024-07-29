@@ -479,13 +479,8 @@ func (np *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions,
 }
 
 // GetInstance returns a network instance for the given network and channel
-func GetInstance(sp token.ServiceProvider, network, channel string) *Network {
-	n, err := GetProvider(sp).GetNetwork(network, channel)
-	if err != nil {
-		logger.Errorf("Failed to get network [%s:%s]: %s", network, channel, err)
-		return nil
-	}
-	return n
+func GetInstance(sp token.ServiceProvider, network, channel string) (*Network, error) {
+	return GetProvider(sp).GetNetwork(network, channel)
 }
 
 func GetProvider(sp token.ServiceProvider) *Provider {

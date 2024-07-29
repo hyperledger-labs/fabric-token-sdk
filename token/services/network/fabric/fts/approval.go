@@ -143,7 +143,11 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	}
 
 	// validate token request
-	v, err := network.GetInstance(context, tx.Network(), tx.Channel()).Vault(tms.Namespace())
+	net, err := network.GetInstance(context, tx.Network(), tx.Channel())
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting network [%s:%s]", tx.Network(), tx.Channel())
+	}
+	v, err := net.Vault(tms.Namespace())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get vault")
 	}

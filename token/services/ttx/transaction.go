@@ -48,9 +48,13 @@ func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transacti
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed compiling tx options")
 	}
+	net, err := network.GetInstance(context, txOpts.TMSID.Network, txOpts.TMSID.Channel)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed getting network")
+	}
 	return NewTransaction(
 		context,
-		network.GetInstance(context, txOpts.TMSID.Network, txOpts.TMSID.Channel).AnonymousIdentity(),
+		net.AnonymousIdentity(),
 		opts...,
 	)
 }
@@ -68,7 +72,10 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 		context,
 		token.WithTMSID(txOpts.TMSID),
 	)
-	networkService := network.GetInstance(context, tms.Network(), tms.Channel())
+	networkService, err := network.GetInstance(context, tms.Network(), tms.Channel())
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed getting network service")
+	}
 	networkProvider := network.GetProvider(context).GetNetwork
 
 	var txID network.TxID

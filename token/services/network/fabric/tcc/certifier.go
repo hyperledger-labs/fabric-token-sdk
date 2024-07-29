@@ -37,7 +37,11 @@ func (r *GetTokenView) Call(context view.Context) (interface{}, error) {
 		token.WithChannel(r.Channel),
 		token.WithNamespace(r.Namespace),
 	)
-	tokens, err := network.GetInstance(context, tms.Network(), tms.Channel()).QueryTokens(context, tms.Namespace(), r.IDs)
+	net, err := network.GetInstance(context, tms.Network(), tms.Channel())
+	if err != nil {
+		return nil, err
+	}
+	tokens, err := net.QueryTokens(context, tms.Namespace(), r.IDs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying tokens")
 	}

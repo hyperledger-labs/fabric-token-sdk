@@ -37,8 +37,8 @@ func (r *TxFinalityView) Call(context view.Context) (interface{}, error) {
 	// Listen for finality from vault
 	tms := token.GetManagementService(context, token.WithTMSID(tmsID))
 	assert.NotNil(tms)
-	nw := network.GetInstance(context, tms.Network(), tms.Channel())
-	assert.NotNil(nw)
+	nw, err := network.GetInstance(context, tms.Network(), tms.Channel())
+	assert.NoError(err, "failed getting network [%s:%s]", tms.Network(), tms.Channel())
 	assert.NoError(nw.AddFinalityListener(tms.Namespace(), r.TxID, &finalityListener{errs: errs}))
 
 	// Listen for finality from DBs

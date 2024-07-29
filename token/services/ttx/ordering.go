@@ -60,9 +60,9 @@ func (o *orderingView) broadcast(context view.Context, transaction *Transaction)
 	if transaction == nil {
 		return errors.Errorf("transaction is nil")
 	}
-	nw := network.GetInstance(context, transaction.Network(), transaction.Channel())
-	if nw == nil {
-		return errors.Errorf("network [%s] not found", transaction.Network())
+	nw, err := network.GetInstance(context, transaction.Network(), transaction.Channel())
+	if err != nil {
+		return errors.WithMessagef(err, "network [%s] not found", transaction.Network())
 	}
 	if err := nw.Broadcast(context.Context(), transaction.Payload.Envelope); err != nil {
 		return errors.WithMessagef(err, "failed to broadcast token transaction [%s]", transaction.ID())

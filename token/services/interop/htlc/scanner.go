@@ -64,9 +64,9 @@ func ScanForPreImage(sp token.ServiceProvider, image []byte, hashFunc crypto.Has
 	}
 	tms := token.GetManagementService(sp, opts...)
 
-	network := network.GetInstance(sp, tms.Network(), tms.Channel())
-	if network == nil {
-		return nil, errors.Errorf("cannot find network [%s:%s]", tms.Namespace(), tms.Channel())
+	network, err := network.GetInstance(sp, tms.Network(), tms.Channel())
+	if err != nil {
+		return nil, errors.WithMessagef(err, "cannot find network [%s:%s]", tms.Namespace(), tms.Channel())
 	}
 
 	startingTxID, err := tokenOptions.ParamAsString(ScanForPreImageStartingTransaction)

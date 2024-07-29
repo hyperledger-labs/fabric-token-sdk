@@ -338,7 +338,11 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 		logger.Debugf("call chaincode for endorsement [nonce=%s]", base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
 	}
 
-	env, err := network.GetInstance(context, c.tx.Network(), c.tx.Channel()).RequestApproval(
+	net, err := network.GetInstance(context, c.tx.Network(), c.tx.Channel())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting network")
+	}
+	env, err := net.RequestApproval(
 		context,
 		c.tx.TokenRequest.TokenService,
 		requestRaw,

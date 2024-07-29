@@ -70,7 +70,9 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	assert.NotNil(tms.PublicParametersManager().PublicParameters(), "failed to validate local public parameters")
 	ppRaw := GetTMSPublicParams(tms)
 
-	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
+	net, err := network.GetInstance(context, tms.Network(), tms.Channel())
+	assert.NoError(err, "failed getting network [%s:%s]", tms.Network(), tms.Channel())
+	fetchedPPRaw, err := net.FetchPublicParameters(tms.Namespace())
 	assert.NoError(err, "failed to fetch public params")
 	is := driver.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
 	pp, err := is.PublicParametersFromBytes(fetchedPPRaw)
@@ -107,8 +109,8 @@ type WhoDeletedTokenView struct {
 }
 
 func (w *WhoDeletedTokenView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, w.TMSID.Network, w.TMSID.Channel)
-	assert.NotNil(net, "cannot find network [%s:%s]", w.TMSID.Network, w.TMSID.Channel)
+	net, err := network.GetInstance(context, w.TMSID.Network, w.TMSID.Channel)
+	assert.NoError(err, "cannot find network [%s:%s]", w.TMSID.Network, w.TMSID.Channel)
 	vault, err := net.TokenVault(w.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", w.TMSID.Network, w.TMSID.Channel, w.TMSID.Namespace)
 

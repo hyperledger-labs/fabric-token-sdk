@@ -47,8 +47,8 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 
 	tms := token.GetManagementService(context, token.WithTMSID(m.TMSID))
 	assert.NotNil(tms, "failed to get default tms")
-	net := network.GetInstance(context, tms.Network(), tms.Channel())
-	assert.NotNil(net, "failed to get network [%s:%s]", tms.Network(), tms.Channel())
+	net, err := network.GetInstance(context, tms.Network(), tms.Channel())
+	assert.NoError(err, "failed to get network [%s:%s]", tms.Network(), tms.Channel())
 	v, err := net.Vault(tms.Namespace())
 	assert.NoError(err, "failed to get vault [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 	tv, err := net.TokenVault(tms.Namespace())
@@ -206,8 +206,8 @@ type PruneInvalidUnspentTokensView struct {
 }
 
 func (p *PruneInvalidUnspentTokensView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, p.TMSID.Network, p.TMSID.Channel)
-	assert.NotNil(net, "cannot find network [%s:%s]", p.TMSID.Network, p.TMSID.Channel)
+	net, err := network.GetInstance(context, p.TMSID.Network, p.TMSID.Channel)
+	assert.NoError(err, "cannot find network [%s:%s]", p.TMSID.Network, p.TMSID.Channel)
 	vault, err := net.TokenVault(p.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", p.TMSID.Network, p.TMSID.Channel, p.TMSID.Namespace)
 
@@ -233,8 +233,8 @@ type ListVaultUnspentTokensView struct {
 }
 
 func (l *ListVaultUnspentTokensView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, l.TMSID.Network, l.TMSID.Channel)
-	assert.NotNil(net, "cannot find network [%s:%s]", l.TMSID.Network, l.TMSID.Channel)
+	net, err := network.GetInstance(context, l.TMSID.Network, l.TMSID.Channel)
+	assert.NoError(err, "cannot find network [%s:%s]", l.TMSID.Network, l.TMSID.Channel)
 	vault, err := net.TokenVault(l.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", l.TMSID.Network, l.TMSID.Channel, l.TMSID.Namespace)
 
@@ -261,8 +261,8 @@ type CheckIfExistsInVaultView struct {
 }
 
 func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, c.TMSID.Network, c.TMSID.Channel)
-	assert.NotNil(net, "cannot find network [%s:%s]", c.TMSID.Network, c.TMSID.Channel)
+	net, err := network.GetInstance(context, c.TMSID.Network, c.TMSID.Channel)
+	assert.NoError(err, "cannot find network [%s:%s]", c.TMSID.Network, c.TMSID.Channel)
 	vault, err := net.TokenVault(c.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", c.TMSID.Network, c.TMSID.Channel, c.TMSID.Namespace)
 	qe := vault.QueryEngine()

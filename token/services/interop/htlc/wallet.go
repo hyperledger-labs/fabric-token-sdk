@@ -243,9 +243,9 @@ func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.Unspen
 	if err != nil {
 		return errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
 	}
-	net := network.GetInstance(context, tms.Network(), tms.Channel())
-	if net == nil {
-		return errors.Errorf("cannot load network [%s:%s]", tms.Network(), tms.Channel())
+	net, err := network.GetInstance(context, tms.Network(), tms.Channel())
+	if err != nil {
+		return errors.WithMessagef(err, "cannot load network [%s:%s]", tms.Network(), tms.Channel())
 	}
 	spent, err := net.AreTokensSpent(context, tms.Namespace(), ids, meta)
 	if err != nil {
@@ -320,8 +320,8 @@ func Wallet(sp token.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
 	}
 
 	tms := wallet.TMS()
-	nw := network.GetInstance(sp, tms.Network(), tms.Channel())
-	if nw == nil {
+	nw, err := network.GetInstance(sp, tms.Network(), tms.Channel())
+	if err != nil {
 		return nil
 	}
 	vault, err := nw.TokenVault(tms.Namespace())
