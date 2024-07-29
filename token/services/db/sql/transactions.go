@@ -16,9 +16,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -74,7 +74,7 @@ func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
 	row := db.db.QueryRow(query, txID)
 	err := row.Scan(&tokenrequest)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, errors.Wrapf(err, "error querying db")
@@ -146,7 +146,7 @@ func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error)
 
 	row := db.db.QueryRow(query, txID)
 	if err := row.Scan(&status, &statusMessage); err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			logger.Debugf("tried to get status for non-existent tx [%s], returning unknown", txID)
 			return driver.Unknown, "", nil
 		}
@@ -484,7 +484,7 @@ func (w *AtomicWrite) Rollback() {
 		logger.Debug("nothing to roll back")
 		return
 	}
-	if err := w.txn.Rollback(); err != nil && err != sql.ErrTxDone {
+	if err := w.txn.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
 		logger.Errorf("error rolling back (ignoring...): %s", err.Error())
 	}
 	w.txn = nil

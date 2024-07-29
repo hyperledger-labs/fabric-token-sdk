@@ -114,7 +114,7 @@ func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Errorf("cannot find tms for [%s]", r.TMSID)
 	}
 	net := network.GetInstance(context, tms.Network(), tms.Channel())
-	if tms == nil {
+	if net == nil {
 		return nil, errors.Errorf("cannot find network for [%s]", tms.ID())
 	}
 	if err := net.ProcessNamespace(tms.Namespace()); err != nil {

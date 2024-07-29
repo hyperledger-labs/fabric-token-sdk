@@ -86,7 +86,7 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error
 			err = anyError
 			break
 		}
-		if anyError == nil && !anyPending {
+		if !anyPending {
 			s.Logger.Debugf("failed to retrieve tokens: no transaction is pending")
 			break
 		}

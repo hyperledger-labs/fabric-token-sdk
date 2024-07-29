@@ -103,7 +103,7 @@ func (db *TokenDB) IsMine(txID string, index uint64) (bool, error) {
 
 	row := db.db.QueryRow(query, txID, index)
 	if err := row.Scan(&id); err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
 		return false, errors.Wrapf(err, "error querying db")
@@ -650,7 +650,7 @@ func (db *TokenDB) TransactionExists(ctx context.Context, id string) (bool, erro
 	var found string
 	span.AddEvent("scan_rows")
 	if err := row.Scan(&found); err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
 		logger.Warnf("tried to check transaction existence for id %s, err %s", id, err)

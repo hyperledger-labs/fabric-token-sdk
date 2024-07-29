@@ -319,22 +319,6 @@ func (n *Network) NewEnvelope() driver.Envelope {
 	return n.n.TransactionManager().NewEnvelope()
 }
 
-func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
-	return n.ch.Vault().StoreTransient(id, transient)
-}
-
-func (n *Network) TransientExists(id string) bool {
-	return n.ch.MetadataService().Exists(id)
-}
-
-func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
-	tm, err := n.ch.MetadataService().LoadTransient(id)
-	if err != nil {
-		return nil, err
-	}
-	return tm, nil
-}
-
 func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
 	endorsement, err := n.endorsementServiceProvider.Get(tms.ID())
 	if err != nil {
