@@ -10,11 +10,11 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 )
@@ -52,7 +52,7 @@ func main() {
 		config.LogFormat = "%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}"
 	}
 
-	flogging.Init(flogging.Config{
+	logging.Init(logging.Config{
 		Format:  config.LogFormat,
 		LogSpec: config.LogLevel,
 		Writer:  os.Stderr,

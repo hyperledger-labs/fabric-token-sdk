@@ -34,6 +34,12 @@ type Logger interface {
 	Named(string) Logger
 }
 
+type Config = flogging.Config
+
+func Init(config Config) {
+	flogging.Init(config)
+}
+
 func MustGetLogger(loggerName string) Logger {
 	return &logger{FabricLogger: flogging.MustGetLogger(loggerName)}
 }

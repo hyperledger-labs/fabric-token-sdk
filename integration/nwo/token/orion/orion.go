@@ -19,13 +19,13 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	orion2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
@@ -35,7 +35,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.integration.token.orion")
+var logger = logging.MustGetLogger("token-sdk.integration.token.orion")
 
 type Entry struct {
 	TMS     *topology2.TMS

@@ -14,9 +14,9 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ import (
 const defaultCurrency = "CHF"
 
 var (
-	logger                    = flogging.MustGetLogger("token-sdk.selector.tests")
+	logger                    = logging.MustGetLogger("token-sdk.selector.tests")
 	defaultWalletOwner        = &token.Owner{Raw: []byte{1, 2, 3}}
 	defaultTokenFilter        = &TokenFilter{Wallet: defaultWalletOwner}
 	txId               uint32 = 0

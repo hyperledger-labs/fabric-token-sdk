@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
@@ -24,10 +23,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	. "github.com/onsi/gomega"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.fungible")
+var logger = logging.MustGetLogger("token-sdk.fungible")
 
 // WalletManagerProvider is used to simulate external wallets.
 // It can generate recipient data and signatures for given users and wallets
