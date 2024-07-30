@@ -12,6 +12,8 @@ import (
 	"time"
 
 	utils2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	sql3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/testutils"
@@ -70,12 +72,12 @@ func startManagers(t *testing.T, number int, backoff time.Duration) ([]testutils
 }
 
 func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedManager, error) {
-	lockDB, err := initDB("pgx", pgConnStr, "test", 10, sql.NewTokenLockDB)
+	lockDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, sql.NewTokenLockDB)
 	if err != nil {
 		return nil, err
 	}
 
-	tokenDB, err := initDB("pgx", pgConnStr, "test", 10, sql.NewTokenDB)
+	tokenDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, sql.NewTokenDB)
 	if err != nil {
 		return nil, err
 	}
@@ -83,11 +85,15 @@ func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedM
 
 }
 
-func initDB[T any](driverName, dataSourceName, tablePrefix string, maxOpenConns int, constructor func(*sql2.DB, string, bool) (T, error)) (T, error) {
+func initDB[T any](driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int, constructor func(*sql2.DB, sql.NewDBOpts) (T, error)) (T, error) {
 	d := sql.NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return utils2.Zero[T](), err
 	}
-	return constructor(sqlDB, tablePrefix, true)
+	return constructor(sqlDB, sql.NewDBOpts{
+		DataSource:   dataSourceName,
+		TablePrefix:  tablePrefix,
+		CreateSchema: true,
+	})
 }

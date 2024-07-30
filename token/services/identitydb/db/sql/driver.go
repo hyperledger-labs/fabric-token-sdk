@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -39,7 +40,7 @@ func (d *Driver) OpenWalletDB(cp driver.ConfigProvider, tmsID token.TMSID) (driv
 func NewDriver() db.NamedDriver[driver.IdentityDBDriver] {
 	sqlDBOpener := NewSQLDBOpener()
 	return db.NamedDriver[driver.IdentityDBDriver]{
-		Name: "sql",
+		Name: sql.SQLPersistence,
 		Driver: &Driver{
 			identityDriver: db.NewSQLDriver(sqlDBOpener, sqldb.NewCachedIdentityDB),
 			walletDriver:   db.NewSQLDriver(sqlDBOpener, sqldb.NewWalletDB),

@@ -33,14 +33,14 @@ func newTokenLockDB(db *sql.DB, tables tokenLockTables) *TokenLockDB {
 	}
 }
 
-func NewTokenLockDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.TokenLockDB, error) {
-	tables, err := getTableNames(tablePrefix)
+func NewTokenLockDB(db *sql.DB, opts NewDBOpts) (driver.TokenLockDB, error) {
+	tables, err := getTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
 
 	identityDB := newTokenLockDB(db, tokenLockTables{TokenLocks: tables.TokenLocks})
-	if createSchema {
+	if opts.CreateSchema {
 		if err = initSchema(db, identityDB.GetSchema()); err != nil {
 			return nil, err
 		}

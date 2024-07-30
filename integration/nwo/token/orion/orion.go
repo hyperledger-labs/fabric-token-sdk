@@ -19,6 +19,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	orion2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
@@ -192,9 +194,9 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 		"TMSID":               func() string { return tms.ID() },
 		"TMS":                 func() *topology2.TMS { return tms },
 		"Wallets":             func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
-		"SQLDriver":           func() string { return GetTokenPersistenceDriver(node.Options) },
+		"SQLDriver":           func() string { return string(GetTokenPersistenceDriver(node.Options)) },
 		"SQLDataSource":       func() string { return p.GetSQLDataSource(node.Options, uniqueName, tms) },
-		"TokensSQLDriver":     func() string { return GetTokenPersistenceDriver(node.Options) },
+		"TokensSQLDriver":     func() string { return string(GetTokenPersistenceDriver(node.Options)) },
 		"TokensSQLDataSource": func() string { return p.GetTokensSQLDataSource(node.Options, uniqueName, tms) },
 		"OnlyUnity":           func() bool { return common2.IsOnlyUnity(tms) },
 	}).Parse(Extension)
@@ -209,10 +211,9 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 
 func (p *NetworkHandler) GetTokensSQLDataSource(opts *sfcnode.Options, uniqueName string, tms *topology2.TMS) string {
 	switch GetTokenPersistenceDriver(opts) {
-	case "sqlite":
+	case sql2.SQLite:
 		return p.DBPath(p.TokensDBSQLDataSourceDir(uniqueName), tms)
-	case "postgres":
-	case "pgx":
+	case sql2.Postgres:
 		return GetPostgresDataSource(opts)
 	}
 	panic("unknown driver type")
@@ -221,10 +222,9 @@ func (p *NetworkHandler) GetTokensSQLDataSource(opts *sfcnode.Options, uniqueNam
 
 func (p *NetworkHandler) GetSQLDataSource(opts *sfcnode.Options, uniqueName string, tms *topology2.TMS) string {
 	switch GetTokenPersistenceDriver(opts) {
-	case "sqlite":
+	case sql2.SQLite:
 		return p.DBPath(p.TTXDBSQLDataSourceDir(uniqueName), tms)
-	case "postgres":
-	case "pgx":
+	case sql2.Postgres:
 		return GetPostgresDataSource(opts)
 	}
 	panic("unknown driver type")
@@ -237,11 +237,11 @@ func GetPostgresDataSource(opts *sfcnode.Options) string {
 	panic("unknown data source")
 }
 
-func GetTokenPersistenceDriver(opts *sfcnode.Options) string {
+func GetTokenPersistenceDriver(opts *sfcnode.Options) common.SQLDriverType {
 	if v := opts.Get("token.persistence.driver"); v != nil {
-		return v.(string)
+		return common.SQLDriverType(v.(string))
 	}
-	return "sqlite"
+	return sql2.SQLite
 }
 
 type PPInitConfig struct {

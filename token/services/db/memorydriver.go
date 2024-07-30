@@ -12,13 +12,14 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/pkg/errors"
 )
 
-type NewDBFunc[D any] func(db *sql.DB, tablePrefix string, createSchema bool) (D, error)
+type NewDBFunc[D any] func(db *sql.DB, newDBOpts sqldb.NewDBOpts) (D, error)
 
 type MemoryDriver[D any] struct {
 	dbOpener *sqldb.DBOpener
@@ -36,9 +37,10 @@ func (d *MemoryDriver[D]) Open(_ driver.ConfigProvider, tmsID token.TMSID) (D, e
 		return utils.Zero[D](), err
 	}
 
+	datasource := fmt.Sprintf("file:%x?mode=memory&cache=shared", h.Sum(nil))
 	sqlDB, err := d.dbOpener.OpenSQLDB(
-		"sqlite",
-		fmt.Sprintf("file:%x?mode=memory&cache=shared", h.Sum(nil)),
+		sql2.SQLite,
+		datasource,
 		10,
 		false,
 	)
@@ -46,5 +48,9 @@ func (d *MemoryDriver[D]) Open(_ driver.ConfigProvider, tmsID token.TMSID) (D, e
 		return utils.Zero[D](), errors.Wrapf(err, "failed to open memory db for [%s]", tmsID)
 	}
 
-	return d.newDB(sqlDB, "memory", true)
+	return d.newDB(sqlDB, sqldb.NewDBOpts{
+		DataSource:   datasource,
+		TablePrefix:  "memory",
+		CreateSchema: true,
+	})
 }

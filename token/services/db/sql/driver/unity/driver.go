@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package unity
 
 import (
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
@@ -19,6 +20,8 @@ const (
 	// optsKey is the key for the opts in the config
 	optsKey   = "db.persistence.opts"
 	envVarKey = "UNITYDB_DATASOURCE"
+
+	UnityPersistence driver2.PersistenceType = "unity"
 )
 
 type Driver struct {
@@ -35,8 +38,8 @@ func (d *Driver) OpenTokenTransactionDB(cp dbdriver.ConfigProvider, tmsID token.
 	return openDB(d.DBOpener, cp, tmsID, sqldb.NewTransactionDB)
 }
 
-func (d *Driver) OpenTokenDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, sqldb.NewTokenDB)
+func (d *Driver) OpenTokenDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNDB, error) {
+	return openDB(d.DBOpener, cp, tmsID, sqldb.NewTokenNDB)
 }
 
 func (d *Driver) OpenTokenLockDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenLockDB, error) {
@@ -60,7 +63,11 @@ func openDB[D any](dbOpener *sqldb.DBOpener, cp dbdriver.ConfigProvider, tmsID t
 	if err != nil {
 		return utils.Zero[D](), errors.Wrapf(err, "failed to open db at [%s:%s]", optsKey, envVarKey)
 	}
-	return newDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
+	return newDB(sqlDB, sqldb.NewDBOpts{
+		DataSource:   opts.DataSource,
+		TablePrefix:  opts.TablePrefix,
+		CreateSchema: !opts.SkipCreateTable,
+	})
 }
 
 type TtxDBDriver struct {
@@ -109,9 +116,9 @@ func (t *IdentityDBDriver) OpenIdentityDB(cp dbdriver.ConfigProvider, tmsID toke
 
 func NewDBDrivers() (db.NamedDriver[dbdriver.TTXDBDriver], db.NamedDriver[dbdriver.TokenDBDriver], db.NamedDriver[dbdriver.TokenLockDBDriver], db.NamedDriver[dbdriver.AuditDBDriver], db.NamedDriver[dbdriver.IdentityDBDriver]) {
 	root := NewDriver()
-	return db.NamedDriver[dbdriver.TTXDBDriver]{Name: "unity", Driver: &TtxDBDriver{Driver: root}},
-		db.NamedDriver[dbdriver.TokenDBDriver]{Name: "unity", Driver: &TokenDBDriver{Driver: root}},
-		db.NamedDriver[dbdriver.TokenLockDBDriver]{Name: "unity", Driver: &TokenLockDBDriver{Driver: root}},
-		db.NamedDriver[dbdriver.AuditDBDriver]{Name: "unity", Driver: &AuditDBDriver{Driver: root}},
-		db.NamedDriver[dbdriver.IdentityDBDriver]{Name: "unity", Driver: &IdentityDBDriver{Driver: root}}
+	return db.NamedDriver[dbdriver.TTXDBDriver]{Name: UnityPersistence, Driver: &TtxDBDriver{Driver: root}},
+		db.NamedDriver[dbdriver.TokenDBDriver]{Name: UnityPersistence, Driver: &TokenDBDriver{Driver: root}},
+		db.NamedDriver[dbdriver.TokenLockDBDriver]{Name: UnityPersistence, Driver: &TokenLockDBDriver{Driver: root}},
+		db.NamedDriver[dbdriver.AuditDBDriver]{Name: UnityPersistence, Driver: &AuditDBDriver{Driver: root}},
+		db.NamedDriver[dbdriver.IdentityDBDriver]{Name: UnityPersistence, Driver: &IdentityDBDriver{Driver: root}}
 }

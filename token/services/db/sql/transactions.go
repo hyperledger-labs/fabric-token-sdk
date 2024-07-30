@@ -42,12 +42,16 @@ func newTransactionDB(db *sql.DB, tables transactionTables) *TransactionDB {
 	}
 }
 
-func NewAuditTransactionDB(sqlDB *sql.DB, tablePrefix string, createSchema bool) (driver.AuditTransactionDB, error) {
-	return NewTransactionDB(sqlDB, tablePrefix+"_aud", createSchema)
+func NewAuditTransactionDB(sqlDB *sql.DB, opts NewDBOpts) (driver.AuditTransactionDB, error) {
+	return NewTransactionDB(sqlDB, NewDBOpts{
+		DataSource:   opts.DataSource,
+		TablePrefix:  opts.TablePrefix + "_aud",
+		CreateSchema: opts.CreateSchema,
+	})
 }
 
-func NewTransactionDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.TokenTransactionDB, error) {
-	tables, err := getTableNames(tablePrefix)
+func NewTransactionDB(db *sql.DB, opts NewDBOpts) (driver.TokenTransactionDB, error) {
+	tables, err := getTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
@@ -58,7 +62,7 @@ func NewTransactionDB(db *sql.DB, tablePrefix string, createSchema bool) (driver
 		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
 	})
-	if createSchema {
+	if opts.CreateSchema {
 		if err = initSchema(db, transactionsDB.GetSchema()); err != nil {
 			return nil, err
 		}

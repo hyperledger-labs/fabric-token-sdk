@@ -32,14 +32,14 @@ func newWalletDB(db *sql.DB, tables walletTables) *WalletDB {
 	}
 }
 
-func NewWalletDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.WalletDB, error) {
-	tables, err := getTableNames(tablePrefix)
+func NewWalletDB(db *sql.DB, opts NewDBOpts) (driver.WalletDB, error) {
+	tables, err := getTableNames(opts.TablePrefix)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names [%s]", tablePrefix)
+		return nil, errors.Wrapf(err, "failed to get table names [%s]", opts.TablePrefix)
 	}
 
 	walletDB := newWalletDB(db, walletTables{Wallets: tables.Wallets})
-	if createSchema {
+	if opts.CreateSchema {
 		if err = initSchema(db, walletDB.GetSchema()); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema")
 		}
