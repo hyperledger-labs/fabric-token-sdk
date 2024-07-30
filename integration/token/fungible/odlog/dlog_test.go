@@ -19,7 +19,7 @@ import (
 )
 
 var _ = Describe("Orion EndToEnd", func() {
-	for _, t := range integration.WebSocketNoReplicationOnly {
+	for _, t := range integration.AllTestTypes {
 		Describe("Orion ZKAT-DLog", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
