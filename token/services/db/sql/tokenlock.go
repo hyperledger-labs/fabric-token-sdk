@@ -148,7 +148,7 @@ func (db *SQLiteTokenLockDB) Cleanup(evictionDelay time.Duration) error {
 	//);
 	query := fmt.Sprintf(
 		"DELETE FROM %s WHERE tx_id IN ("+
-			"SELECT %s.tx_id FROM %s JOIN %s ON %s.tx_id = %s.tx_id WHERE %s.status IN (2, 3) OR %s.created_at < datetime('now', '%d seconds')"+
+			"SELECT %s.tx_id FROM %s JOIN %s ON %s.tx_id = %s.tx_id WHERE %s.status IN (3) OR %s.created_at < datetime('now', '%d seconds')"+
 			");",
 		db.table.TokenLocks,
 		db.table.TokenLocks, db.table.TokenLocks, db.table.Requests, db.table.TokenLocks, db.table.Requests, db.table.Requests, db.table.TokenLocks,
@@ -175,7 +175,7 @@ func (db *PostgresTokenLockDB) Cleanup(evictionDelay time.Duration) error {
 	//OR default__testchannel__token_dchaincode_token_locks.created_at < NOW() - INTERVAL '5 seconds');
 	query := fmt.Sprintf(
 		"DELETE FROM %s "+
-			"USING %s WHERE %s.tx_id = %s.tx_id AND (%s.status IN (2, 3) OR %s.created_at < NOW() - INTERVAL '%d seconds');",
+			"USING %s WHERE %s.tx_id = %s.tx_id AND (%s.status IN (3) OR %s.created_at < NOW() - INTERVAL '%d seconds');",
 		db.table.TokenLocks,
 		db.table.Requests, db.table.TokenLocks, db.table.Requests, db.table.Requests, db.table.TokenLocks,
 		int(evictionDelay.Seconds()),
