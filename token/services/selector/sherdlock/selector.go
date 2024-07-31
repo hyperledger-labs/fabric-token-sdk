@@ -12,9 +12,8 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -29,7 +28,7 @@ const (
 	NoBackoff           = -1
 )
 
-var logger = flogging.MustGetLogger("token-sdk.selector.shared")
+var logger = logging.MustGetLogger("token-sdk.selector.shared")
 
 type Iterator[V any] interface {
 	Next() V
@@ -41,7 +40,7 @@ type tokenLocker interface {
 }
 
 type selector struct {
-	logger    logging2.Logger
+	logger    logging.Logger
 	cache     iterator[*token2.MinTokenInfo]
 	fetcher   tokenFetcher
 	locker    tokenLocker
@@ -72,7 +71,7 @@ func (m *stubbornSelector) Select(owner token.OwnerFilter, q, currency string) (
 	return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "aborted too many times and no other process unlocked or added tokens")
 }
 
-func NewStubbornSelector(logger logging2.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, backoff time.Duration) *stubbornSelector {
+func NewStubbornSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, backoff time.Duration) *stubbornSelector {
 	return &stubbornSelector{
 		selector:               NewSelector(logger, tokenDB, lockDB, precision),
 		backoffInterval:        backoff,
@@ -80,7 +79,7 @@ func NewStubbornSelector(logger logging2.Logger, tokenDB tokenFetcher, lockDB to
 	}
 }
 
-func NewSelector(logger logging2.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64) *selector {
+func NewSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64) *selector {
 	return &selector{
 		logger:    logger,
 		cache:     collections.NewEmptyIterator[*token2.MinTokenInfo](),
@@ -183,7 +182,11 @@ type locker struct {
 }
 
 func (l *locker) TryLock(tokenID *token2.ID) bool {
-	return l.Locker.Lock(tokenID, l.txID) == nil
+	err := l.Locker.Lock(tokenID, l.txID)
+	if err != nil {
+		logger.Errorf("failed to lock [%v] for [%s]: [%s]", tokenID, l.txID, err)
+	}
+	return err == nil
 }
 
 func (l *locker) UnlockAll() error {

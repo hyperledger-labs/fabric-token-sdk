@@ -18,12 +18,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/operations"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -40,7 +38,7 @@ import (
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
-	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	logging "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -55,7 +53,7 @@ import (
 	"go.uber.org/dig"
 )
 
-var logger = flogging.MustGetLogger("token-sdk")
+var logger = logging.MustGetLogger("token-sdk")
 
 var selectorProviders = map[string]any{
 	"simple":    selector.NewService,
@@ -97,8 +95,7 @@ func (p *SDK) Install() error {
 			return &vault.PublicParamsProvider{Provider: networkProvider}
 		}, dig.As(new(core2.Vault))),
 		p.Container().Provide(digutils.Identity[driver.ConfigService](), dig.As(new(core.ConfigProvider))),
-		p.Container().Provide(func() logging2.Logger { return flogging.MustGetLogger("token-sdk.core") }),
-		p.Container().Provide(digutils.Identity[logging2.Logger](), dig.As(new(logging.Logger))),
+		p.Container().Provide(func() logging.Logger { return logging.MustGetLogger("token-sdk.core") }),
 		p.Container().Provide(core2.NewTMSProvider),
 		p.Container().Provide(digutils.Identity[*core2.TMSProvider](), dig.As(new(driver2.TokenManagerServiceProvider))),
 		p.Container().Provide(func(service driver.ConfigService) *config2.Service { return config2.NewService(service) }),
