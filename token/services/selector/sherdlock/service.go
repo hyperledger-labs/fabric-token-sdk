@@ -19,7 +19,7 @@ import (
 
 const (
 	retrySelectionBackoff = 5 * time.Second
-	cleanupTickPeriod     = 5 * time.Second
+	cleanupTickPeriod     = 1 * time.Minute
 	cleanupPeriod         = 30 * time.Second
 )
 

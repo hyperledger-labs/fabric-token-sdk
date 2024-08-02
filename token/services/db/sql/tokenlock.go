@@ -47,7 +47,9 @@ func NewTokenLockDB(db *sql.DB, sqlDriver string, tablePrefix string, createSche
 		schemaProvider = db
 		tokenLockDB = db
 	default:
-		return nil, errors.Errorf("unknown driver [%s]", sqlDriver)
+		logger.Warn("sql driver [%s] not recognized, use default implementation", sqlDriver)
+		schemaProvider = baseTokenLockDB
+		tokenLockDB = baseTokenLockDB
 	}
 
 	if createSchema {
@@ -79,7 +81,7 @@ func (db *TokenLockDB) Lock(tokenID *token.ID, consumerTxID transaction.ID) erro
 	query := fmt.Sprintf("INSERT INTO %s (consumer_tx_id, tx_id, idx, created_at) VALUES ($1, $2, $3, $4)", db.table.TokenLocks)
 	logger.Debug(query, tokenID, consumerTxID)
 
-	_, err := db.db.Exec(query, consumerTxID, tokenID.TxId, tokenID.Index, time.Now())
+	_, err := db.db.Exec(query, consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC())
 	return err
 }
 
@@ -95,19 +97,11 @@ func (db *TokenLockDB) UnlockByTxID(consumerTxID transaction.ID) error {
 // 1. The transaction that locked that token is valid or invalid;
 // 2. The lock is too old.
 func (db *TokenLockDB) Cleanup(evictionDelay time.Duration) error {
-	//select consumer_tx_id
-	//	from default__testchannel__token_dchaincode_token_locks
-	//	join main.default__testchannel__token_dchaincode_requests dttdat
-	//	on default__testchannel__token_dchaincode_token_locks.tx_id = dttdat.tx_id
-	//	where
-	//	dttdat.status == 2 OR
-	//	dttdat.status == 3 OR
-	//	default__testchannel__token_dchaincode_token_locks.created_at < datetime('now', '-5 seconds')
 	query := fmt.Sprintf(
-		"DELETE FROM %s JOIN %s ON %s.tx_id = %s.tx_id WHERE %s.status == 2 OR %s.status == 3",
+		"DELETE FROM %s JOIN %s ON %s.consumer_tx_id = %s.tx_id WHERE %s.status == 3",
 		db.table.TokenLocks,
 		db.table.Requests, db.table.TokenLocks, db.table.Requests,
-		db.table.Requests, db.table.Requests,
+		db.table.Requests,
 	)
 	logger.Debug(query)
 	_, err := db.db.Exec(query)
@@ -137,22 +131,14 @@ func NewSQLiteTokenLockDB(tokenLockDB *TokenLockDB) *SQLiteTokenLockDB {
 }
 
 func (db *SQLiteTokenLockDB) Cleanup(evictionDelay time.Duration) error {
-	//DELETE FROM default__testchannel__token_dchaincode_token_locks
-	//WHERE tx_id IN (
-	//	SELECT default__testchannel__token_dchaincode_token_locks.tx_id
-	//FROM default__testchannel__token_dchaincode_token_locks
-	//JOIN main.default__testchannel__token_dchaincode_requests
-	//ON default__testchannel__token_dchaincode_token_locks.tx_id = default__testchannel__token_dchaincode_requests.tx_id
-	//WHERE default__testchannel__token_dchaincode_requests.status IN (2, 3)
-	//OR default__testchannel__token_dchaincode_token_locks.created_at < datetime('now', '-5 seconds')
-	//);
 	query := fmt.Sprintf(
 		"DELETE FROM %s WHERE tx_id IN ("+
-			"SELECT %s.tx_id FROM %s JOIN %s ON %s.tx_id = %s.tx_id WHERE %s.status IN (3) OR %s.created_at < datetime('now', '%d seconds')"+
+			"SELECT %s.tx_id FROM %s JOIN %s ON %s.tx_id = %s.tx_id WHERE %s.status IN (3) "+
+			"OR %s.created_at < datetime('now', '-%d seconds')"+
 			");",
 		db.table.TokenLocks,
-		db.table.TokenLocks, db.table.TokenLocks, db.table.Requests, db.table.TokenLocks, db.table.Requests, db.table.Requests, db.table.TokenLocks,
-		int(evictionDelay.Seconds()),
+		db.table.TokenLocks, db.table.TokenLocks, db.table.Requests, db.table.TokenLocks, db.table.Requests, db.table.Requests,
+		db.table.TokenLocks, int(evictionDelay.Seconds()),
 	)
 	logger.Debug(query)
 	_, err := db.db.Exec(query)
@@ -168,17 +154,14 @@ func NewPostgresTokenLockDB(tokenLockDB *TokenLockDB) *PostgresTokenLockDB {
 }
 
 func (db *PostgresTokenLockDB) Cleanup(evictionDelay time.Duration) error {
-	//DELETE FROM default__testchannel__token_dchaincode_token_locks
-	//USING default__testchannel__token_dchaincode_requests
-	//WHERE default__testchannel__token_dchaincode_token_locks.tx_id = default__testchannel__token_dchaincode_requests.tx_id
-	//AND (default__testchannel__token_dchaincode_requests.status IN (2, 3)
-	//OR default__testchannel__token_dchaincode_token_locks.created_at < NOW() - INTERVAL '5 seconds');
 	query := fmt.Sprintf(
 		"DELETE FROM %s "+
-			"USING %s WHERE %s.tx_id = %s.tx_id AND (%s.status IN (3) OR %s.created_at < NOW() - INTERVAL '%d seconds');",
+			"USING %s WHERE %s.consumer_tx_id = %s.tx_id AND (%s.status IN (3) "+
+			"OR %s.created_at < NOW() - INTERVAL '%d seconds'"+
+			");",
 		db.table.TokenLocks,
-		db.table.Requests, db.table.TokenLocks, db.table.Requests, db.table.Requests, db.table.TokenLocks,
-		int(evictionDelay.Seconds()),
+		db.table.Requests, db.table.TokenLocks, db.table.Requests, db.table.Requests,
+		db.table.TokenLocks, int(evictionDelay.Seconds()),
 	)
 	logger.Debug(query)
 	_, err := db.db.Exec(query)
