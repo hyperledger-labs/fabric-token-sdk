@@ -9,7 +9,6 @@ package sdk
 import (
 	"context"
 	errors2 "errors"
-	"fmt"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
@@ -85,7 +84,6 @@ func (p *SDK) Install() error {
 
 	logger.Infof("Token platform enabled, installing...")
 
-	fmt.Printf("token selector [%s]\n", p.ConfigService().GetString("token.selector.driver"))
 	err := errors2.Join(
 		p.Container().Provide(common.NewAcceptTxInDBFilterProvider),
 		p.Container().Provide(network.NewProvider),
