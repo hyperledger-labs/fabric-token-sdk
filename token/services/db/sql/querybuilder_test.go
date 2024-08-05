@@ -290,7 +290,7 @@ func TestTokenSql(t *testing.T) {
 				OwnerEnrollmentID: "me",
 				IDs:               []*token.ID{{TxId: "a", Index: 1}},
 			},
-			expectedSql:  "WHERE owner = true AND enrollment_id = $1 AND token_type = $2 AND (tx_id, idx) IN ( ($3, $4) ) AND is_deleted = false",
+			expectedSql:  "WHERE owner = true AND enrollment_id = $1 AND token_type = $2 AND (tokens.tx_id, tokens.idx) IN ( ($3, $4) ) AND is_deleted = false",
 			expectedArgs: []interface{}{"me", "tok", "a", 1},
 		},
 		{
@@ -300,13 +300,13 @@ func TestTokenSql(t *testing.T) {
 				IDs:            []*token.ID{{TxId: "a", Index: 1}, {TxId: "b", Index: 2}},
 				IncludeDeleted: true,
 			},
-			expectedSql:  "WHERE owner = true AND token_type = $1 AND (tx_id, idx) IN ( ($2, $3), ($4, $5) )",
+			expectedSql:  "WHERE owner = true AND token_type = $1 AND (tokens.tx_id, tokens.idx) IN ( ($2, $3), ($4, $5) )",
 			expectedArgs: []interface{}{"tok", "a", uint64(1), "b", uint64(2)},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, _, actualArgs := tokenQuerySql(tc.params, "", "")
+			actualSql, _, actualArgs := tokenQuerySql(tc.params)
 			assert.Equal(t, tc.expectedSql, actualSql, tc.name)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -315,9 +315,9 @@ func TestTokenSql(t *testing.T) {
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		IDs:               []*token.ID{{TxId: "a", Index: 1}},
 		OwnerEnrollmentID: "me",
-	}, "A", "B")
-	assert.Equal(t, "WHERE owner = true AND enrollment_id = $1 AND (A.tx_id, A.idx) IN ( ($2, $3) ) AND is_deleted = false", where, "join")
-	assert.Equal(t, "LEFT JOIN B ON A.tx_id = B.tx_id AND A.idx = B.idx", join, "join")
+	})
+	assert.Equal(t, "WHERE owner = true AND enrollment_id = $1 AND (tokens.tx_id, tokens.idx) IN ( ($2, $3) ) AND is_deleted = false", where, "join")
+	assert.Equal(t, "LEFT JOIN token_ownership ON tokens.tx_id = token_ownership.tx_id AND tokens.idx = token_ownership.idx", join, "join")
 	assert.Len(t, args, 3)
 }
 

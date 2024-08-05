@@ -146,7 +146,7 @@ func movementConditionsSql(params driver.QueryMovementsParams) (where string, ar
 }
 
 // tokenQuerySql requires a join with the token ownership table if OwnerEnrollmentID is not empty
-func tokenQuerySql(params driver.QueryTokenDetailsParams, tokenTable, ownerTable string) (where, join string, args []any) {
+func tokenQuerySql(params driver.QueryTokenDetailsParams) (where, join string, args []any) {
 	and := []string{"owner = true"}
 	if params.OwnerType != "" {
 		args = append(args, params.OwnerType)
@@ -163,13 +163,9 @@ func tokenQuerySql(params driver.QueryTokenDetailsParams, tokenTable, ownerTable
 	}
 
 	if len(params.TransactionIDs) > 0 {
-		colTxID := "tx_id"
-		if len(tokenTable) > 0 {
-			colTxID = fmt.Sprintf("%s.%s", tokenTable, colTxID)
-		}
-		and = append(and, in(&args, colTxID, params.TransactionIDs))
+		and = append(and, in(&args, "tokens.tx_id", params.TransactionIDs))
 	}
-	if ids := whereTokenIDsForJoin(tokenTable, &args, params.IDs); ids != "" {
+	if ids := whereTokenIDsForJoin("tokens", &args, params.IDs); ids != "" {
 		and = append(and, ids)
 	}
 
@@ -177,7 +173,7 @@ func tokenQuerySql(params driver.QueryTokenDetailsParams, tokenTable, ownerTable
 		and = append(and, "is_deleted = false")
 	}
 
-	join = joinOnTokenID(tokenTable, ownerTable)
+	join = joinOnTokenID("tokens", "token_ownership")
 	where = fmt.Sprintf("WHERE %s", strings.Join(and, " AND "))
 
 	return

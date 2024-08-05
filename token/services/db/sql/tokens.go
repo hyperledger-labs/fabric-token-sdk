@@ -31,14 +31,14 @@ type tokenTables struct {
 }
 
 type TokenDB struct {
-	db    *sql.DB
-	table tokenTables
+	db *sql.DB
+	// table tokenTables
 }
 
 func newTokenDB(db *sql.DB, tables tokenTables) *TokenDB {
 	return &TokenDB{
-		db:    db,
-		table: tables,
+		db: db,
+		// table: tables,
 	}
 }
 
@@ -88,7 +88,7 @@ func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 	args := []interface{}{deletedBy, time.Now().UTC()}
 	where := whereTokenIDs(&args, ids)
 
-	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE %s", db.table.Tokens, where)
+	query := fmt.Sprintf("UPDATE tokens SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE %s", where)
 	logger.Debug(query, args)
 	if _, err := db.db.Exec(query, args...); err != nil {
 		return errors.Wrapf(err, "error setting tokens to deleted [%v]", ids)
@@ -99,7 +99,7 @@ func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 // IsMine just checks if the token is in the local storage and not deleted
 func (db *TokenDB) IsMine(txID string, index uint64) (bool, error) {
 	id := ""
-	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id = $1 AND idx = $2 AND is_deleted = false AND owner = true LIMIT 1;", db.table.Tokens)
+	query := "SELECT tx_id FROM tokens WHERE tx_id = $1 AND idx = $2 AND is_deleted = false AND owner = true LIMIT 1;"
 	logger.Debug(query, txID, index)
 
 	row := db.db.QueryRow(query, txID, index)
@@ -124,9 +124,8 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, id, tokenType st
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		OwnerEnrollmentID: id,
 		TokenType:         tokenType,
-	}, db.table.Tokens, db.table.Ownership)
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_raw, token_type, quantity FROM %s %s %s",
-		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
+	})
+	query := fmt.Sprintf("SELECT tokens.tx_id, tokens.idx, owner_raw, token_type, quantity FROM tokens %s %s", join, where)
 
 	logger.Debug(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
@@ -142,9 +141,8 @@ func (db *TokenDB) MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, 
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		OwnerEnrollmentID: ownerEID,
 		TokenType:         typ,
-	}, db.table.Tokens, db.table.Ownership)
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, token_type, quantity, enrollment_id FROM %s %s %s",
-		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
+	})
+	query := fmt.Sprintf("SELECT tokens.tx_id, tokens.idx, token_type, quantity, enrollment_id FROM tokens %s %s", join, where)
 
 	logger.Debug(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
@@ -161,8 +159,8 @@ func (db *TokenDB) Balance(ownerEID, typ string) (uint64, error) {
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		OwnerEnrollmentID: ownerEID,
 		TokenType:         typ,
-	}, db.table.Tokens, db.table.Ownership)
-	query := fmt.Sprintf("SELECT SUM(amount) FROM %s %s %s", db.table.Tokens, join, where)
+	})
+	query := fmt.Sprintf("SELECT SUM(amount) FROM tokens %s %s", join, where)
 
 	logger.Debug(query, args)
 	row := db.db.QueryRow(query, args...)
@@ -233,7 +231,7 @@ func (db *TokenDB) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, ids)
 
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s WHERE %s AND auditor = true", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM tokens WHERE %s AND auditor = true", where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -289,7 +287,7 @@ func (db *TokenDB) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
 
 // ListHistoryIssuedTokens returns the list of issued tokens
 func (db *TokenDB) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity, issuer_raw FROM %s WHERE issuer = true", db.table.Tokens)
+	query := "SELECT tx_id, idx, owner_raw, token_type, quantity, issuer_raw FROM tokens WHERE issuer = true"
 	logger.Debug(query)
 	rows, err := db.db.Query(query)
 	if err != nil {
@@ -377,7 +375,7 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, ids)
 
-	query := fmt.Sprintf("SELECT tx_id, idx, ledger FROM %s WHERE %s", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, ledger FROM tokens WHERE %s", where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -420,7 +418,7 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, ids)
 
-	query := fmt.Sprintf("SELECT tx_id, idx, ledger, ledger_metadata FROM %s WHERE %s", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, ledger, ledger_metadata FROM tokens WHERE %s", where)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
@@ -467,7 +465,7 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, err
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, inputs)
 
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s WHERE %s AND is_deleted = false AND owner = true", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM tokens WHERE %s AND is_deleted = false AND owner = true", where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -545,10 +543,9 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, err
 // Filters work cumulatively and may be left empty. If a token is owned by two enrollmentIDs and there
 // is no filter on enrollmentID, the token will be returned twice (once for each owner).
 func (db *TokenDB) QueryTokenDetails(params driver.QueryTokenDetailsParams) ([]driver.TokenDetails, error) {
-	where, join, args := tokenQuerySql(params, db.table.Tokens, db.table.Ownership)
+	where, join, args := tokenQuerySql(params)
 
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_identity, owner_type, enrollment_id, token_type, amount, is_deleted, spent_by, stored_at FROM %s %s %s",
-		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
+	query := fmt.Sprintf("SELECT tokens.tx_id, tokens.idx, owner_identity, owner_type, enrollment_id, token_type, amount, is_deleted, spent_by, stored_at FROM tokens %s %s", join, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -591,7 +588,7 @@ func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, erro
 	args := []any{}
 	where := whereTokenIDs(&args, inputs)
 
-	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_deleted FROM %s WHERE %s", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_deleted FROM tokens WHERE %s", where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -643,7 +640,7 @@ func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, erro
 
 func (db *TokenDB) TransactionExists(ctx context.Context, id string) (bool, error) {
 	span := trace.SpanFromContext(ctx)
-	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id=$1 LIMIT 1;", db.table.Tokens)
+	query := "SELECT tx_id FROM tokens WHERE tx_id=$1 LIMIT 1;"
 	logger.Debug(query, id)
 
 	span.AddEvent("query", trace.WithAttributes(tracing.String(QueryLabel, query)))
@@ -662,7 +659,7 @@ func (db *TokenDB) TransactionExists(ctx context.Context, id string) (bool, erro
 
 func (db *TokenDB) StorePublicParams(raw []byte) error {
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (raw, stored_at) VALUES ($1, $2)", db.table.PublicParams)
+	query := "INSERT INTO public_params (raw, stored_at) VALUES ($1, $2)"
 	logger.Debug(query, fmt.Sprintf("store public parameters (%d bytes), %v", len(raw), now))
 
 	_, err := db.db.Exec(query, raw, now)
@@ -671,7 +668,7 @@ func (db *TokenDB) StorePublicParams(raw []byte) error {
 
 func (db *TokenDB) PublicParams() ([]byte, error) {
 	var params []byte
-	query := fmt.Sprintf("SELECT raw FROM %s ORDER BY stored_at DESC LIMIT 1;", db.table.PublicParams)
+	query := "SELECT raw FROM public_params ORDER BY stored_at DESC LIMIT 1;"
 	logger.Debug(query)
 
 	row := db.db.QueryRow(query)
@@ -687,7 +684,7 @@ func (db *TokenDB) PublicParams() ([]byte, error) {
 
 func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) (err error) {
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, certification, stored_at) VALUES ($1, $2, $3, $4)", db.table.Certifications)
+	query := "INSERT INTO token_certifications (tx_id, idx, certification, stored_at) VALUES ($1, $2, $3, $4)"
 
 	tx, err := db.db.Begin()
 	if err != nil {
@@ -723,7 +720,7 @@ func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {
 	args := []any{}
 	where := whereTokenIDs(&args, []*token.ID{tokenID})
 
-	query := fmt.Sprintf("SELECT certification FROM %s WHERE %s", db.table.Certifications, where)
+	query := fmt.Sprintf("SELECT certification FROM token_certifications WHERE %s", where)
 	logger.Debug(query, args)
 	row := db.db.QueryRow(query, args...)
 
@@ -748,7 +745,8 @@ func (db *TokenDB) GetCertifications(ids []*token.ID) ([][]byte, error) {
 	}
 	args := []any{}
 	where := whereTokenIDs(&args, ids)
-	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s WHERE %s ", db.table.Certifications, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM token_certifications WHERE %s", where)
+	logger.Debug(query, args)
 
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -783,64 +781,57 @@ func (db *TokenDB) GetCertifications(ids []*token.ID) ([][]byte, error) {
 }
 
 func (db *TokenDB) GetSchema() string {
-	return fmt.Sprintf(`
-		-- Tokens
-		CREATE TABLE IF NOT EXISTS %s (
-			tx_id TEXT NOT NULL,
-			idx INT NOT NULL,
-			amount BIGINT NOT NULL,
-			token_type TEXT NOT NULL,
-			quantity TEXT NOT NULL,
-			issuer_raw BYTEA,
-			owner_raw BYTEA NOT NULL,
-			owner_type TEXT NOT NULL,
-			owner_identity BYTEA NOT NULL,
-			ledger BYTEA NOT NULL,
-			ledger_metadata BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL,
-			is_deleted BOOL NOT NULL DEFAULT false,
-			spent_by TEXT NOT NULL DEFAULT '',
-			spent_at TIMESTAMP,
-			owner BOOL NOT NULL DEFAULT false,
-			auditor BOOL NOT NULL DEFAULT false,
-			issuer BOOL NOT NULL DEFAULT false,
-			PRIMARY KEY (tx_id, idx)
-		);
-		CREATE INDEX IF NOT EXISTS idx_spent_%s ON %s ( is_deleted, owner );
-		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
+	return `
+	-- Tokens
+	CREATE TABLE IF NOT EXISTS tokens (
+		tx_id TEXT NOT NULL,
+		idx INT NOT NULL,
+		amount BIGINT NOT NULL,
+		token_type TEXT NOT NULL,
+		quantity TEXT NOT NULL,
+		issuer_raw BYTEA,
+		owner_raw BYTEA NOT NULL,
+		owner_type TEXT NOT NULL,
+		owner_identity BYTEA NOT NULL,
+		ledger BYTEA NOT NULL,
+		ledger_metadata BYTEA NOT NULL,
+		stored_at TIMESTAMP NOT NULL,
+		is_deleted BOOL NOT NULL DEFAULT false,
+		spent_by TEXT NOT NULL DEFAULT '',
+		spent_at TIMESTAMP,
+		owner BOOL NOT NULL DEFAULT false,
+		auditor BOOL NOT NULL DEFAULT false,
+		issuer BOOL NOT NULL DEFAULT false,
+		PRIMARY KEY (tx_id, idx)
+	);
+	CREATE INDEX IF NOT EXISTS idx_spent_tokens ON tokens ( is_deleted, owner );
+	CREATE INDEX IF NOT EXISTS idx_tx_id_tokes ON tokens ( tx_id );
 
-		-- Ownership
-		CREATE TABLE IF NOT EXISTS %s (
-			tx_id TEXT NOT NULL,
-			idx INT NOT NULL,
-			enrollment_id TEXT NOT NULL,
-			PRIMARY KEY (tx_id, idx, enrollment_id),
-			FOREIGN KEY (tx_id, idx) REFERENCES %s
-		);
+	-- Ownership
+	CREATE TABLE IF NOT EXISTS token_ownership (
+		tx_id TEXT NOT NULL,
+		idx INT NOT NULL,
+		enrollment_id TEXT NOT NULL,
+		PRIMARY KEY (tx_id, idx, enrollment_id),
+		FOREIGN KEY (tx_id, idx) REFERENCES tokens
+	);
 
-		-- Public Parameters
-		CREATE TABLE IF NOT EXISTS %s (
-			raw BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL PRIMARY KEY
-		);
+	-- Public Parameters
+	CREATE TABLE IF NOT EXISTS public_params (
+		raw BYTEA NOT NULL,
+		stored_at TIMESTAMP NOT NULL PRIMARY KEY
+	);
 
-		-- Certifications
-		CREATE TABLE IF NOT EXISTS %s (
-			tx_id TEXT NOT NULL,
-			idx INT NOT NULL,
-			certification BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL,
-			PRIMARY KEY (tx_id, idx),
-			FOREIGN KEY (tx_id, idx) REFERENCES %s
-		);
-		`,
-		db.table.Tokens,
-		db.table.Tokens, db.table.Tokens,
-		db.table.Tokens, db.table.Tokens,
-		db.table.Ownership, db.table.Tokens,
-		db.table.PublicParams,
-		db.table.Certifications, db.table.Tokens,
-	)
+	-- Certifications
+	CREATE TABLE IF NOT EXISTS token_certifications (
+		tx_id TEXT NOT NULL,
+		idx INT NOT NULL,
+		certification BYTEA NOT NULL,
+		stored_at TIMESTAMP NOT NULL,
+		PRIMARY KEY (tx_id, idx),
+		FOREIGN KEY (tx_id, idx) REFERENCES tokens
+	);
+	`
 }
 
 func (db *TokenDB) Close() {
@@ -868,9 +859,9 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		IDs:            []*token.ID{{TxId: txID, Index: index}},
 		IncludeDeleted: includeDeleted,
-	}, t.db.table.Tokens, t.db.table.Ownership)
+	})
 
-	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, enrollment_id FROM %s %s %s", t.db.table.Tokens, join, where)
+	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, enrollment_id FROM tokens %s %s", join, where)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := t.tx.Query(query, args...)
@@ -914,7 +905,7 @@ func (t *TokenTransaction) Delete(ctx context.Context, txID string, index uint64
 	//logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
-	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE tx_id = $3 AND idx = $4;", t.db.table.Tokens)
+	query := "UPDATE tokens SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE tx_id = $3 AND idx = $4;"
 	logger.Debug(query, deletedBy, now, txID, index)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	if _, err := t.tx.Exec(query, deletedBy, now, txID, index); err != nil {
@@ -931,7 +922,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 	// Store token
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", t.db.table.Tokens)
+	query := "INSERT INTO tokens (tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"
 	logger.Debug(query,
 		tr.TxID,
 		tr.Index,
@@ -965,14 +956,14 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		tr.Owner,
 		tr.Auditor,
 		tr.Issuer); err != nil {
-		logger.Errorf("error storing token [%s] in table [%s]: [%s][%s]", tr.TxID, t.db.table.Tokens, err, string(debug.Stack()))
-		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, t.db.table.Tokens)
+		logger.Errorf("error storing token [%s] in table [tokens]: [%s][%s]", tr.TxID, err, string(debug.Stack()))
+		return errors.Wrapf(err, "error storing token [%s] in table [tokens]", tr.TxID)
 	}
 
 	// Store ownership
 	span.AddEvent("store_ownerships")
 	for _, eid := range owners {
-		query = fmt.Sprintf("INSERT INTO %s (tx_id, idx, enrollment_id) VALUES ($1, $2, $3)", t.db.table.Ownership)
+		query = "INSERT INTO token_ownership (tx_id, idx, enrollment_id) VALUES ($1, $2, $3)"
 		logger.Debug(query, tr.TxID, tr.Index, eid)
 		span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 		if _, err := t.tx.Exec(query, tr.TxID, tr.Index, eid); err != nil {
