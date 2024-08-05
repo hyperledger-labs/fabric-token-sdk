@@ -23,39 +23,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type tokenTables struct {
-	Tokens         string
-	Ownership      string
-	PublicParams   string
-	Certifications string
-}
-
 type TokenDB struct {
 	db *sql.DB
-	// table tokenTables
 }
 
-func newTokenDB(db *sql.DB, tables tokenTables) *TokenDB {
-	return &TokenDB{
+func NewTokenDB(db *sql.DB, createSchema bool) (driver.TokenDB, error) {
+	tokenDB := &TokenDB{
 		db: db,
-		// table: tables,
 	}
-}
-
-func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.TokenDB, error) {
-	tables, err := getTableNames(tablePrefix)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names")
-	}
-
-	tokenDB := newTokenDB(db, tokenTables{
-		Tokens:         tables.Tokens,
-		Ownership:      tables.Ownership,
-		PublicParams:   tables.PublicParams,
-		Certifications: tables.Certifications,
-	})
 	if createSchema {
-		if err = initSchema(db, tokenDB.GetSchema()); err != nil {
+		if err := initSchema(db, tokenDB.GetSchema()); err != nil {
 			return nil, err
 		}
 	}

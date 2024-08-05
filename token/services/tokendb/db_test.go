@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	tokendb2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
 	"github.com/stretchr/testify/assert"
-	_ "modernc.org/sqlite"
 )
 
 func TestDB(t *testing.T) {

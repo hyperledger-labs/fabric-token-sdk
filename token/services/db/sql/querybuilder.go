@@ -213,16 +213,16 @@ func in[T string | driver.TxStatus | driver.ActionType](args *[]any, field strin
 	return fmt.Sprintf("(%s)", strings.Join(argnum, " OR "))
 }
 
-func whereTokenIDsForJoin(tableName string, args *[]any, ids []*token.ID) (where string) {
+func whereTokenIDsForJoin(table string, args *[]any, ids []*token.ID) (where string) {
 	if len(ids) == 0 {
 		return ""
 	}
 
 	colTxID := "tx_id"
 	colIdx := "idx"
-	if len(tableName) > 0 {
-		colTxID = fmt.Sprintf("%s.%s", tableName, colTxID)
-		colIdx = fmt.Sprintf("%s.%s", tableName, colIdx)
+	if len(table) > 0 {
+		colTxID = fmt.Sprintf("%s.%s", table, colTxID)
+		colIdx = fmt.Sprintf("%s.%s", table, colIdx)
 	}
 
 	in := make([]string, len(ids))

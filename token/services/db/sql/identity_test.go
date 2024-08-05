@@ -18,20 +18,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func initIdentityDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*IdentityDB, error) {
+func initIdentityDB(driverName, dataSourceName string, maxOpenConns int) (*IdentityDB, error) {
 	d := NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return nil, err
 	}
-	return NewIdentityDB(sqlDB, tablePrefix, true, secondcache.NewTyped[bool](1000), secondcache.NewTyped[[]byte](1000))
+	return NewIdentityDB(sqlDB, true, secondcache.NewTyped[bool](1000), secondcache.NewTyped[[]byte](1000))
 }
 
 func TestIdentitySqlite(t *testing.T) {
 	tempDir := t.TempDir()
 
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initIdentityDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, fmt.Sprintf(c.Name, "db.sqlite"))), 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -43,7 +43,7 @@ func TestIdentitySqlite(t *testing.T) {
 
 func TestIdentitySqliteMemory(t *testing.T) {
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB("sqlite", "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initIdentityDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name), 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -54,17 +54,17 @@ func TestIdentitySqliteMemory(t *testing.T) {
 }
 
 func TestIdentityPostgres(t *testing.T) {
-	terminate, pgConnStr := StartPostgresContainer(t)
-	defer terminate()
-
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB("pgx", pgConnStr, c.Name, 10)
+		terminate, pgConnStr := StartPostgresContainer(t)
+		db, err := initIdentityDB("pgx", pgConnStr, 10)
 		if err != nil {
+			terminate()
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
 			c.Fn(xt, db)
 		})
+		terminate()
 	}
 }
 

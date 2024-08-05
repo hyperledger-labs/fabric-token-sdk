@@ -18,7 +18,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type NewDBFunc[D any] func(db *sql.DB, tablePrefix string, createSchema bool) (D, error)
+type NewDBFunc[D any] func(db *sql.DB, createSchema bool) (D, error)
 
 type MemoryDriver[D any] struct {
 	dbOpener *sqldb.DBOpener
@@ -46,5 +46,5 @@ func (d *MemoryDriver[D]) Open(_ driver.ConfigProvider, tmsID token.TMSID) (D, e
 		return utils.Zero[D](), errors.Wrapf(err, "failed to open memory db for [%s]", tmsID)
 	}
 
-	return d.newDB(sqlDB, "memory", true)
+	return d.newDB(sqlDB, true)
 }

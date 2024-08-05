@@ -18,13 +18,13 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
-func initTokenDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenDB, error) {
+func initTokenDB(driverName, dataSourceName string, maxOpenConns int) (*TokenDB, error) {
 	d := NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return nil, err
 	}
-	tokenDB, err := NewTokenDB(sqlDB, tablePrefix, true)
+	tokenDB, err := NewTokenDB(sqlDB, true)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func initTokenDB(driverName, dataSourceName, tablePrefix string, maxOpenConns in
 func TestTokensSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 	for _, c := range TokensCases {
-		db, err := initTokenDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)&_pragma=foreign_keys(1)", path.Join(tempDir, c.Name, ".sqlite")), "", 10)
+		db, err := initTokenDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)&_pragma=foreign_keys(1)", path.Join(tempDir, c.Name, ".sqlite")), 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -47,7 +47,7 @@ func TestTokensSqlite(t *testing.T) {
 
 func TestTokensSqliteMemory(t *testing.T) {
 	for _, c := range TokensCases {
-		db, err := initTokenDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)&_pragma=foreign_keys(1)&mode=memory&cache=shared", c.Name), c.Name, 10)
+		db, err := initTokenDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)&_pragma=foreign_keys(1)&mode=memory&cache=shared", c.Name), 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -65,7 +65,7 @@ func TestTokensPostgres(t *testing.T) {
 	for _, c := range TokensCases {
 		terminate, pgConnStr := StartPostgresContainer(t)
 		// defer terminate()
-		db, err := initTokenDB("pgx", pgConnStr, c.Name, 10)
+		db, err := initTokenDB("pgx", pgConnStr, 10)
 		if err != nil {
 			terminate()
 			t.Fatal(err)

@@ -15,13 +15,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func initWalletDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*WalletDB, error) {
+func initWalletDB(driverName, dataSourceName string, maxOpenConns int) (*WalletDB, error) {
 	d := NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return nil, err
 	}
-	walletDB, err := NewWalletDB(sqlDB, tablePrefix, true)
+	walletDB, err := NewWalletDB(sqlDB, true)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func TestWalletSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 
 	for _, c := range WalletCases {
-		db, err := initWalletDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initWalletDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, fmt.Sprintf(c.Name, ".sqlite"))), 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -44,7 +44,7 @@ func TestWalletSqlite(t *testing.T) {
 
 func TestWalletSqliteMemory(t *testing.T) {
 	for _, c := range WalletCases {
-		db, err := initWalletDB("sqlite", "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initWalletDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name), 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -55,17 +55,17 @@ func TestWalletSqliteMemory(t *testing.T) {
 }
 
 func TestWalletPostgres(t *testing.T) {
-	terminate, pgConnStr := StartPostgresContainer(t)
-	defer terminate()
-
 	for _, c := range WalletCases {
-		db, err := initWalletDB("pgx", pgConnStr, c.Name, 10)
+		terminate, pgConnStr := StartPostgresContainer(t)
+		db, err := initWalletDB("pgx", pgConnStr, 10)
 		if err != nil {
+			terminate()
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
 			c.Fn(xt, db)
 		})
+		terminate()
 	}
 }
 

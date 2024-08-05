@@ -42,24 +42,32 @@ func newTransactionDB(db *sql.DB, tables transactionTables) *TransactionDB {
 	}
 }
 
-func NewAuditTransactionDB(sqlDB *sql.DB, tablePrefix string, createSchema bool) (driver.AuditTransactionDB, error) {
-	return NewTransactionDB(sqlDB, tablePrefix+"_aud", createSchema)
-}
-
-func NewTransactionDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.TokenTransactionDB, error) {
-	tables, err := getTableNames(tablePrefix)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names")
-	}
+func NewAuditTransactionDB(db *sql.DB, createSchema bool) (driver.AuditTransactionDB, error) {
 	transactionsDB := newTransactionDB(db, transactionTables{
-		Movements:             tables.Movements,
-		Transactions:          tables.Transactions,
-		Requests:              tables.Requests,
-		Validations:           tables.Validations,
-		TransactionEndorseAck: tables.TransactionEndorseAck,
+		Movements:             "aud_movements",
+		Transactions:          "aud_transactions",
+		Requests:              "aud_requests",
+		Validations:           "aud_request_validations",
+		TransactionEndorseAck: "aud_transaction_endorsements",
 	})
 	if createSchema {
-		if err = initSchema(db, transactionsDB.GetSchema()); err != nil {
+		if err := initSchema(db, transactionsDB.GetSchema()); err != nil {
+			return nil, err
+		}
+	}
+	return transactionsDB, nil
+}
+
+func NewTransactionDB(db *sql.DB, createSchema bool) (driver.TokenTransactionDB, error) {
+	transactionsDB := newTransactionDB(db, transactionTables{
+		Movements:             "movements",
+		Transactions:          "transactions",
+		Requests:              "requests",
+		Validations:           "request_validations",
+		TransactionEndorseAck: "transaction_endorsements",
+	})
+	if createSchema {
+		if err := initSchema(db, transactionsDB.GetSchema()); err != nil {
 			return nil, err
 		}
 	}

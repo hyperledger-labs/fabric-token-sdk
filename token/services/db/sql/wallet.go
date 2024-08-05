@@ -8,7 +8,6 @@ package sql
 
 import (
 	"database/sql"
-	"fmt"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -16,31 +15,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-type walletTables struct {
-	Wallets string
-}
-
 type WalletDB struct {
-	db    *sql.DB
-	table walletTables
+	db *sql.DB
 }
 
-func newWalletDB(db *sql.DB, tables walletTables) *WalletDB {
-	return &WalletDB{
-		db:    db,
-		table: tables,
+func NewWalletDB(db *sql.DB, createSchema bool) (driver.WalletDB, error) {
+	walletDB := &WalletDB{
+		db: db,
 	}
-}
-
-func NewWalletDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.WalletDB, error) {
-	tables, err := getTableNames(tablePrefix)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names [%s]", tablePrefix)
-	}
-
-	walletDB := newWalletDB(db, walletTables{Wallets: tables.Wallets})
 	if createSchema {
-		if err = initSchema(db, walletDB.GetSchema()); err != nil {
+		if err := initSchema(db, walletDB.GetSchema()); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema")
 		}
 	}
@@ -50,7 +34,7 @@ func NewWalletDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.Wall
 func (db *WalletDB) GetWalletID(identity token.Identity, roleID int) (driver.WalletID, error) {
 	idHash := identity.UniqueID()
 	result, err := QueryUnique[driver.WalletID](db.db,
-		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND role_id=$2", db.table.Wallets),
+		"SELECT wallet_id FROM wallets WHERE identity_hash=$1 AND role_id=$2",
 		idHash, roleID,
 	)
 	if err != nil {
@@ -61,7 +45,7 @@ func (db *WalletDB) GetWalletID(identity token.Identity, roleID int) (driver.Wal
 }
 
 func (db *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
-	query := fmt.Sprintf("SELECT DISTINCT wallet_id FROM %s WHERE role_id = $1", db.table.Wallets)
+	query := "SELECT DISTINCT wallet_id FROM wallets WHERE role_id = $1"
 	logger.Debug(query)
 	rows, err := db.db.Query(query, roleID)
 	if err != nil {
@@ -88,7 +72,7 @@ func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID drive
 		return nil
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (identity_hash, meta, wallet_id, role_id, created_at, enrollment_id) VALUES ($1, $2, $3, $4, $5, $6)", db.table.Wallets)
+	query := "INSERT INTO wallets (identity_hash, meta, wallet_id, role_id, created_at, enrollment_id) VALUES ($1, $2, $3, $4, $5, $6)"
 	logger.Debug(query)
 
 	idHash := identity.UniqueID()
@@ -103,7 +87,7 @@ func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID drive
 func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.UniqueID()
 	result, err := QueryUnique[[]byte](db.db,
-		fmt.Sprintf("SELECT meta FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
+		"SELECT meta FROM wallets WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3",
 		idHash, wID, roleID,
 	)
 	if err != nil {
@@ -116,7 +100,7 @@ func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleI
 func (db *WalletDB) IdentityExists(identity token.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.UniqueID()
 	result, err := QueryUnique[driver.WalletID](db.db,
-		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
+		"SELECT wallet_id FROM wallets WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3",
 		idHash, wID, roleID,
 	)
 	if err != nil {
@@ -128,26 +112,20 @@ func (db *WalletDB) IdentityExists(identity token.Identity, wID driver.WalletID,
 }
 
 func (db *WalletDB) GetSchema() string {
-	return fmt.Sprintf(`
-		-- Wallets
-		CREATE TABLE IF NOT EXISTS %s (
-			identity_hash TEXT NOT NULL,
-			wallet_id TEXT NOT NULL,
-			meta BYTEA,
-            role_id INT NOT NULL,
-			enrollment_id TEXT NOT NULL,	
-			created_at TIMESTAMP,
-			PRIMARY KEY(identity_hash, wallet_id, role_id)
-		);
-		CREATE INDEX IF NOT EXISTS idx_identity_hash_%s ON %s ( identity_hash );
-		CREATE INDEX IF NOT EXISTS idx_identity_hash_and_wallet_and_role%s ON %s ( identity_hash, wallet_id, role_id );
-		CREATE INDEX IF NOT EXISTS idx_identity_hash_and_role%s ON %s ( identity_hash, role_id );
-		CREATE INDEX IF NOT EXISTS idx_role_id_%s ON %s ( role_id )
-		`,
-		db.table.Wallets,
-		db.table.Wallets, db.table.Wallets,
-		db.table.Wallets, db.table.Wallets,
-		db.table.Wallets, db.table.Wallets,
-		db.table.Wallets, db.table.Wallets,
-	)
+	return `
+	-- Wallets
+	CREATE TABLE IF NOT EXISTS wallets (
+		identity_hash TEXT NOT NULL,
+		wallet_id TEXT NOT NULL,
+		meta BYTEA,
+		role_id INT NOT NULL,
+		enrollment_id TEXT NOT NULL,	
+		created_at TIMESTAMP,
+		PRIMARY KEY(identity_hash, wallet_id, role_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_identity_hash_wallets ON wallets ( identity_hash );
+	CREATE INDEX IF NOT EXISTS idx_identity_hash_and_wallet_and_role ON wallets ( identity_hash, wallet_id, role_id );
+	CREATE INDEX IF NOT EXISTS idx_identity_hash_and_role ON wallets ( identity_hash, role_id );
+	CREATE INDEX IF NOT EXISTS idx_role_id_wallets ON wallets ( role_id )
+	`
 }

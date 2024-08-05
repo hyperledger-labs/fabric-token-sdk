@@ -17,7 +17,6 @@ require (
 	github.com/hyperledger/fabric-protos-go v0.3.0
 	github.com/jackc/pgx/v5 v5.5.4
 	github.com/json-iterator/go v1.1.12
-	github.com/lib/pq v1.10.9
 	github.com/libp2p/go-libp2p v0.31.0
 	github.com/libp2p/go-libp2p-kad-dht v0.22.0
 	github.com/onsi/ginkgo/v2 v2.13.2
@@ -51,6 +50,7 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/lib/pq v1.10.9 // indirect
 )
 
 require (
