@@ -135,20 +135,18 @@ func (p *SDK) Install() error {
 		p.Container().Provide(vault.NewVaultProvider),
 		p.Container().Provide(tms.NewPostInitializer),
 		p.Container().Provide(ttx.NewMetrics),
+		p.Container().Provide(func(tracerProvider trace.TracerProvider) *tracing.TracerProvider {
+			return tracing.NewTracerProvider(tracerProvider)
+		}),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")
 	}
 
 	// Overwrite dependencies
-	err = errors2.Join(
-		p.Container().Decorate(func(metricsProvider metrics.Provider) metrics.Provider {
-			return operations.NewDisabledHistogram(metricsProvider)
-		}),
-		p.Container().Decorate(func(tracerProvider trace.TracerProvider) trace.TracerProvider {
-			return tracing.NewTracerProvider(tracerProvider)
-		}),
-	)
+	err = p.Container().Decorate(func(metricsProvider metrics.Provider) metrics.Provider {
+		return operations.NewDisabledHistogram(metricsProvider)
+	})
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up decorator")
 	}
