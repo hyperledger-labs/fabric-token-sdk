@@ -13,6 +13,7 @@ import (
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -271,9 +272,12 @@ func (l *LocalMembership) registerProvider(identityConfig driver.IdentityConfigu
 			},
 		).Identity
 	}
+	logger.Debugf("append resolver for [%s]", identityConfig.ID)
 	l.addResolver(identityConfig.ID, provider.EnrollmentID(), provider.IsRemote(), defaultIdentity, getIdentityFunc)
 
+	logger.Debugf("does the configuration already exists for [%s]?", identityConfig.ID)
 	if exists, _ := l.identityDB.ConfigurationExists(identityConfig.ID, msp2.IdentityConfigurationType); !exists {
+		logger.Debugf("does the configuration already exists for [%s]? no, add it", identityConfig.ID)
 		if err := l.identityDB.AddConfiguration(driver3.IdentityConfiguration{
 			ID:     identityConfig.ID,
 			Type:   msp2.IdentityConfigurationType,
@@ -284,7 +288,6 @@ func (l *LocalMembership) registerProvider(identityConfig driver.IdentityConfigu
 			return err
 		}
 	}
-
 	logger.Debugf("added idemix resolver for id [%s] with cache of size [%d], remote [%v]", identityConfig.ID+"@"+provider.EnrollmentID(), cacheSize, provider.IsRemote())
 	return nil
 }
@@ -361,8 +364,12 @@ func (l *LocalMembership) loadFromStorage() error {
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
-	defer it.Close()
-	for it.HasNext() {
+	configurations, err := collections.CopyIterator[driver3.IdentityConfiguration](&wrappedIterator{Iterator: it})
+	if err != nil {
+		return errors.WithMessagef(err, "failed to copy iterator")
+	}
+	configurations.Close()
+	for configurations.HasNext() {
 		entry, err := it.Next()
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get next registered identities from kvs")
@@ -381,4 +388,23 @@ func (l *LocalMembership) loadFromStorage() error {
 		}
 	}
 	return nil
+}
+
+type wrappedIterator struct {
+	driver3.Iterator[driver3.IdentityConfiguration]
+}
+
+func (w *wrappedIterator) Next() (*driver3.IdentityConfiguration, error) {
+	if w.Iterator.HasNext() {
+		return nil, nil
+	}
+	res, err := w.Iterator.Next()
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (w *wrappedIterator) Close() {
+	w.Iterator.Close()
 }
