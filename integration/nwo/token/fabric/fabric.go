@@ -175,6 +175,9 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(uniqueName))
 
 	persistence := node.Options.GetPersistence("token").SQL
+	if len(persistence.DriverType) == 0 {
+		persistence = sfcnode.SQLOpts{DriverType: sql2.SQLite}
+	}
 
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"TMSID":               func() string { return tms.ID() },
