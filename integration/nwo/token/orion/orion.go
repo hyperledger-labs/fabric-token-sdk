@@ -231,17 +231,11 @@ func (p *NetworkHandler) GetSQLDataSource(opts *sfcnode.Options, uniqueName stri
 }
 
 func GetPostgresDataSource(opts *sfcnode.Options) string {
-	if v := opts.Get("token.persistence.sql"); v != nil {
-		return v.(string)
-	}
-	panic("unknown data source")
+	return opts.GetPersistence("token").SQL.DataSource
 }
 
 func GetTokenPersistenceDriver(opts *sfcnode.Options) common.SQLDriverType {
-	if v := opts.Get("token.persistence.driver"); v != nil {
-		return common.SQLDriverType(v.(string))
-	}
-	return sql2.SQLite
+	return opts.GetPersistence("token").SQL.DriverType
 }
 
 type PPInitConfig struct {
