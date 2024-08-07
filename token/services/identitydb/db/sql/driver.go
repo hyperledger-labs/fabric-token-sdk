@@ -8,10 +8,13 @@ package sql
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 )
 
 const (
@@ -20,13 +23,9 @@ const (
 	EnvVarKey = "IDENTITYDB_DATASOURCE"
 )
 
-func NewSQLDBOpener() *sqldb.DBOpener {
-	return sqldb.NewSQLDBOpener(OptsKey, EnvVarKey)
-}
-
 type Driver struct {
-	identityDriver *db.SQLDriver[driver.IdentityDB]
-	walletDriver   *db.SQLDriver[driver.WalletDB]
+	identityDriver *common.Opener[driver.IdentityDB]
+	walletDriver   *common.Opener[driver.WalletDB]
 }
 
 func (d *Driver) OpenIdentityDB(cp driver.ConfigProvider, tmsID token.TMSID) (driver.IdentityDB, error) {
@@ -38,12 +37,17 @@ func (d *Driver) OpenWalletDB(cp driver.ConfigProvider, tmsID token.TMSID) (driv
 }
 
 func NewDriver() db.NamedDriver[driver.IdentityDBDriver] {
-	sqlDBOpener := NewSQLDBOpener()
 	return db.NamedDriver[driver.IdentityDBDriver]{
 		Name: sql.SQLPersistence,
 		Driver: &Driver{
-			identityDriver: db.NewSQLDriver(sqlDBOpener, sqldb.NewCachedIdentityDB),
-			walletDriver:   db.NewSQLDriver(sqlDBOpener, sqldb.NewWalletDB),
+			identityDriver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenFunc[driver.IdentityDB]{
+				sql.SQLite:   sqlite.NewCachedIdentityDB,
+				sql.Postgres: postgres.NewCachedIdentityDB,
+			}),
+			walletDriver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenFunc[driver.WalletDB]{
+				sql.SQLite:   sqlite.NewWalletDB,
+				sql.Postgres: postgres.NewWalletDB,
+			}),
 		},
 	}
 }
