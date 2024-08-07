@@ -26,19 +26,17 @@ type SelectorService struct {
 }
 
 func NewService(fetcherProvider FetcherProvider, tokenLockDBManager *tokenlockdb.Manager, cfg driver.ConfigService) *SelectorService {
-	retryInterval := 5 * time.Second
-	if cfg.IsSet("token.selector.retryInterval") {
-		retryInterval = cfg.GetDuration("token.selector.retryInterval")
+	c := SelectorConfig{}
+	err := cfg.UnmarshalKey("token.selector", &c)
+	if err != nil {
+		panic("invalid config for key [token.selector]: expect retryInterval (duration) and numRetries (integer))")
 	}
-	numRetries := 3
-	if cfg.IsSet("token.selector.numRetries") {
-		numRetries = cfg.GetInt("token.selector.numRetries")
-	}
+
 	loader := &loader{
 		tokenLockDBManager: tokenLockDBManager,
 		fetcherProvider:    fetcherProvider,
-		retryInterval:      retryInterval,
-		numRetries:         numRetries,
+		retryInterval:      c.GetRetryInterval(),
+		numRetries:         c.GetNumRetries(),
 	}
 	return &SelectorService{
 		managerLazyCache: lazy2.NewProviderWithKeyMapper(key, loader.load),
@@ -85,4 +83,24 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 
 func key(tms *token.ManagementService) string {
 	return tms.ID().String()
+}
+
+type SelectorConfig struct {
+	RetryInterval time.Duration
+	NumRetries    int
+}
+
+func (c *SelectorConfig) GetNumRetries() int {
+	if c.NumRetries > 0 {
+		return c.NumRetries
+	} else {
+		return 3
+	}
+}
+func (c *SelectorConfig) GetRetryInterval() time.Duration {
+	if c.RetryInterval > 0 {
+		return c.RetryInterval
+	} else {
+		return 5 * time.Second
+	}
 }
