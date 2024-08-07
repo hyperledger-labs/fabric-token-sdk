@@ -13,7 +13,6 @@ import (
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -364,20 +363,23 @@ func (l *LocalMembership) loadFromStorage() error {
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
-	configurations, err := collections.CopyIterator[driver3.IdentityConfiguration](&wrappedIterator{Iterator: it})
-	if err != nil {
-		return errors.WithMessagef(err, "failed to copy iterator")
-	}
-	configurations.Close()
-	for configurations.HasNext() {
-		entry, err := it.Next()
+	// copy the iterator
+	items := make([]driver3.IdentityConfiguration, 0)
+	for it.HasNext() {
+		item, err := it.Next()
 		if err != nil {
-			return errors.WithMessagef(err, "failed to get next registered identities from kvs")
+			return err
 		}
+		items = append(items, item)
+	}
+	it.Close()
+	for _, entry := range items {
 		id := entry.ID
 		if l.getResolver(id) != nil {
+			logger.Debugf("from storage: id [%s] already exists", id)
 			continue
 		}
+		logger.Debugf("from storage: id [%s] does no exist, register it", id)
 		if err := l.registerIdentityConfiguration(driver.IdentityConfiguration{
 			ID:     entry.ID,
 			URL:    entry.URL,
@@ -388,23 +390,4 @@ func (l *LocalMembership) loadFromStorage() error {
 		}
 	}
 	return nil
-}
-
-type wrappedIterator struct {
-	driver3.Iterator[driver3.IdentityConfiguration]
-}
-
-func (w *wrappedIterator) Next() (*driver3.IdentityConfiguration, error) {
-	if w.Iterator.HasNext() {
-		return nil, nil
-	}
-	res, err := w.Iterator.Next()
-	if err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (w *wrappedIterator) Close() {
-	w.Iterator.Close()
 }
