@@ -34,11 +34,14 @@ type DBStorage struct {
 	notifier events.Publisher
 	tokenDB  *tokendb.DB
 	tmsID    token.TMSID
-	ote      OwnerTypeExtractor
 }
 
-func NewDBStorage(notifier events.Publisher, ote OwnerTypeExtractor, tokenDB *tokendb.DB, tmsID token.TMSID) (*DBStorage, error) {
-	return &DBStorage{notifier: notifier, ote: ote, tokenDB: tokenDB, tmsID: tmsID}, nil
+func NewDBStorage(notifier events.Publisher, tokenDB *tokendb.DB, tmsID token.TMSID) (*DBStorage, error) {
+	return &DBStorage{
+		notifier: notifier,
+		tokenDB:  tokenDB,
+		tmsID:    tmsID,
+	}, nil
 }
 
 func (d *DBStorage) NewTransaction(ctx context.Context) (*transaction, error) {
@@ -46,12 +49,7 @@ func (d *DBStorage) NewTransaction(ctx context.Context) (*transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &transaction{
-		notifier: d.notifier,
-		tx:       tx,
-		tmsID:    d.tmsID,
-		ote:      d.ote,
-	}, nil
+	return NewTransaction(d.notifier, tx, d.tmsID)
 }
 
 func (d *DBStorage) TransactionExists(ctx context.Context, id string) (bool, error) {
@@ -62,15 +60,24 @@ func (d *DBStorage) StorePublicParams(raw []byte) error {
 	return d.tokenDB.StorePublicParams(raw)
 }
 
+type TokenToAppend struct {
+	txID                  string
+	index                 uint64
+	tok                   *token2.Token
+	tokenOnLedger         []byte
+	tokenOnLedgerMetadata []byte
+	ownerType             string
+	ownerIdentity         token.Identity
+	owners                []string
+	issuer                token.Identity
+	precision             uint64
+	flags                 Flags
+}
+
 type transaction struct {
 	notifier events.Publisher
 	tx       *tokendb.Transaction
 	tmsID    token.TMSID
-	ote      OwnerTypeExtractor
-}
-
-type OwnerTypeExtractor interface {
-	OwnerType(raw []byte) (string, []byte, error)
 }
 
 func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
@@ -118,18 +125,6 @@ func (t *transaction) DeleteTokens(ctx context.Context, deletedBy string, ids []
 	return nil
 }
 
-type TokenToAppend struct {
-	txID                  string
-	index                 uint64
-	tok                   *token2.Token
-	tokenOnLedger         []byte
-	tokenOnLedgerMetadata []byte
-	owners                []string
-	issuer                token.Identity
-	precision             uint64
-	flags                 Flags
-}
-
 func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error {
 	span := trace.SpanFromContext(ctx)
 	q, err := token2.ToQuantity(tta.tok.Quantity, tta.precision)
@@ -137,29 +132,26 @@ func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error 
 		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tta.tok.Quantity, tta.precision)
 	}
 
-	typ, id, err := t.ote.OwnerType(tta.tok.Owner.Raw)
-	if err != nil {
-		logger.Errorf("could not unmarshal identity when storing token: %s", err.Error())
-		return errors.Wrap(err, "could not unmarshal identity when storing token")
-	}
-
 	span.AddEvent("store_token")
-	err = t.tx.StoreToken(ctx, tokendb.TokenRecord{
-		TxID:           tta.txID,
-		Index:          tta.index,
-		IssuerRaw:      tta.issuer,
-		OwnerRaw:       tta.tok.Owner.Raw,
-		OwnerType:      typ,
-		OwnerIdentity:  id,
-		Ledger:         tta.tokenOnLedger,
-		LedgerMetadata: tta.tokenOnLedgerMetadata,
-		Quantity:       tta.tok.Quantity,
-		Type:           tta.tok.Type,
-		Amount:         q.ToBigInt().Uint64(),
-		Owner:          tta.flags.Mine,
-		Auditor:        tta.flags.Auditor,
-		Issuer:         tta.flags.Issuer,
-	}, tta.owners)
+	err = t.tx.StoreToken(ctx,
+		tokendb.TokenRecord{
+			TxID:           tta.txID,
+			Index:          tta.index,
+			IssuerRaw:      tta.issuer,
+			OwnerRaw:       tta.tok.Owner.Raw,
+			OwnerType:      tta.ownerType,
+			OwnerIdentity:  tta.ownerIdentity,
+			Ledger:         tta.tokenOnLedger,
+			LedgerMetadata: tta.tokenOnLedgerMetadata,
+			Quantity:       tta.tok.Quantity,
+			Type:           tta.tok.Type,
+			Amount:         q.ToBigInt().Uint64(),
+			Owner:          tta.flags.Mine,
+			Auditor:        tta.flags.Auditor,
+			Issuer:         tta.flags.Issuer,
+		},
+		tta.owners,
+	)
 	if err != nil && !errors2.HasCause(err, driver.UniqueKeyViolation) {
 		return errors.Wrapf(err, "cannot store token in db")
 	}

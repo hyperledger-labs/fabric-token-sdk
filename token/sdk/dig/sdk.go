@@ -30,7 +30,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
-	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
@@ -39,7 +38,6 @@ import (
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	logging2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -126,10 +124,6 @@ func (p *SDK) Install() error {
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(auditor.NewManager),
 		p.Container().Provide(ttx.NewManager),
-		p.Container().Provide(func() *tokens2.AuthorizationMultiplexer {
-			return tokens2.NewAuthorizationMultiplexer(&tokens2.TMSAuthorization{}, &htlc.ScriptOwnership{})
-		}, dig.As(new(tokens.Authorization))),
-		p.Container().Provide(func() *tokens2.IssuedMultiplexer { return tokens2.NewIssuedMultiplexer(&tokens2.WalletIssued{}) }, dig.As(new(tokens.Issued))),
 		p.Container().Provide(tokens.NewManager),
 		p.Container().Provide(digutils.Identity[*tokens.Manager](), dig.As(new(ttx.TokensProvider), new(auditor.TokenDBProvider))),
 		p.Container().Provide(vault.NewVaultProvider),

@@ -12,6 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -20,23 +21,6 @@ import (
 )
 
 var logger = logging.MustGetLogger("token-sdk.tokens")
-
-// Authorization is an interface that defines method to check the relation between a token or TMS
-// and wallets (owner, auditor, etc.)
-type Authorization interface {
-	// IsMine returns true if the passed token is owned by an owner wallet in the passed TMS
-	IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool)
-	// AmIAnAuditor returns true if the passed TMS contains an auditor wallet for any of the auditor identities
-	// defined in the public parameters of the passed TMS.
-	AmIAnAuditor(tms *token.ManagementService) bool
-	// OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
-	OwnerType(raw []byte) (string, []byte, error)
-}
-
-type Issued interface {
-	// Issued returns true if the passed issuer issued the passed token
-	Issued(tms *token.ManagementService, issuer token.Identity, tok *token2.Token) bool
-}
 
 type MetaData interface {
 	SpentTokenID() []*token2.ID
@@ -69,8 +53,6 @@ type CacheEntry struct {
 // Tokens is the interface for the token service
 type Tokens struct {
 	TMSProvider TMSProvider
-	Ownership   Authorization
-	Issued      Issued
 	Storage     *DBStorage
 
 	RequestsCache Cache
@@ -221,7 +203,8 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 	logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	graphHiding := tms.PublicParametersManager().PublicParameters().GraphHiding()
 	precision := tms.PublicParametersManager().PublicParameters().Precision()
-	auditorFlag := t.Ownership.AmIAnAuditor(tms)
+	auth := tms.Authorization()
+	auditorFlag := auth.AmIAnAuditor()
 	if auditorFlag {
 		logger.Debugf("transaction [%s], I must be the auditor", txID)
 	}
@@ -235,12 +218,12 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get request's outputs")
 	}
-	toSpend, toAppend := t.parse(tms, txID, md, is, os, auditorFlag, precision, graphHiding)
+	toSpend, toAppend := t.parse(auth, txID, md, is, os, auditorFlag, precision, graphHiding)
 	return toSpend, toAppend, nil
 }
 
 // parse returns the tokens to store and spend as the result of a transaction
-func (t *Tokens) parse(tms *token.ManagementService, txID string, md MetaData, is *token.InputStream, os *token.OutputStream, auditorFlag bool, precision uint64, graphHiding bool) (toSpend []*token2.ID, toAppend []TokenToAppend) {
+func (t *Tokens) parse(auth driver.Authorization, txID string, md MetaData, is *token.InputStream, os *token.OutputStream, auditorFlag bool, precision uint64, graphHiding bool) (toSpend []*token2.ID, toAppend []TokenToAppend) {
 	if graphHiding {
 		ids := md.SpentTokenID()
 		logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
@@ -278,8 +261,8 @@ func (t *Tokens) parse(tms *token.ManagementService, txID string, md MetaData, i
 			continue
 		}
 
-		issuerFlag := !issuer.IsNone() && t.Issued.Issued(tms, issuer, tok)
-		ids, mine := t.Ownership.IsMine(tms, tok)
+		issuerFlag := !issuer.IsNone() && auth.Issued(issuer, tok)
+		ids, mine := auth.IsMine(tok)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			if mine {
 				logger.Debugf("transaction [%s], found a token and it is mine", txID)
@@ -296,12 +279,20 @@ func (t *Tokens) parse(tms *token.ManagementService, txID string, md MetaData, i
 			continue
 		}
 
+		ownerType, ownerIdentity, err := auth.OwnerType(tok.Owner.Raw)
+		if err != nil {
+			logger.Errorf("could not unmarshal identity when storing token: %s", err.Error())
+			continue
+		}
+
 		tta := TokenToAppend{
 			txID:                  txID,
 			index:                 output.Index,
 			tok:                   tok,
 			tokenOnLedger:         output.LedgerOutput,
 			tokenOnLedgerMetadata: tokenOnLedgerMetadata,
+			ownerType:             ownerType,
+			ownerIdentity:         ownerIdentity,
 			owners:                ids,
 			issuer:                issuer,
 			precision:             precision,
