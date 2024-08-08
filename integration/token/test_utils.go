@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	. "github.com/onsi/gomega"
 )
 
@@ -47,10 +47,10 @@ func NewReplicationOptions(factor int, names ...string) (*ReplicationOptions, *R
 		return NoReplication()
 	}
 	replicationFactors := make(ReplicaSelector, len(names))
-	sqlConfigs := make(map[string]*common.PostgresConfig, len(names))
+	sqlConfigs := make(map[string]*sql.PostgresConfig, len(names))
 	for _, name := range names {
 		replicationFactors[name] = factor
-		sqlConfigs[name] = common.DefaultPostgresConfig(fmt.Sprintf("%s-db", name))
+		sqlConfigs[name] = sql.DefaultPostgresConfig(fmt.Sprintf("%s-db", name))
 
 	}
 	return &ReplicationOptions{ReplicationOptions: &integration.ReplicationOptions{
@@ -112,7 +112,7 @@ func replicaName(name string, idx int) string {
 	return fmt.Sprintf("fsc.%s.%d", name, idx)
 }
 
-func NewTestSuite(sqlConfigs map[string]*common.PostgresConfig, startPort func() int, topologies []api.Topology) *TestSuite {
+func NewTestSuite(sqlConfigs map[string]*sql.PostgresConfig, startPort func() int, topologies []api.Topology) *TestSuite {
 	return &TestSuite{
 		sqlConfigs: sqlConfigs,
 		generator: func() (*integration.Infrastructure, error) {
@@ -125,7 +125,7 @@ func NewTestSuite(sqlConfigs map[string]*common.PostgresConfig, startPort func()
 
 // NewLocalTestSuite returns a new test suite that stores configuration data in `./testdata` and does not remove it when
 // the test is done.
-func NewLocalTestSuite(sqlConfigs map[string]*common.PostgresConfig, startPort func() int, topologies []api.Topology) *TestSuite {
+func NewLocalTestSuite(sqlConfigs map[string]*sql.PostgresConfig, startPort func() int, topologies []api.Topology) *TestSuite {
 	return &TestSuite{
 		sqlConfigs: sqlConfigs,
 		generator: func() (*integration.Infrastructure, error) {
@@ -138,7 +138,7 @@ func NewLocalTestSuite(sqlConfigs map[string]*common.PostgresConfig, startPort f
 }
 
 type TestSuite struct {
-	sqlConfigs map[string]*common.PostgresConfig
+	sqlConfigs map[string]*sql.PostgresConfig
 	generator  func() (*integration.Infrastructure, error)
 
 	closeFunc func()
@@ -152,7 +152,7 @@ func (s *TestSuite) TearDown() {
 
 func (s *TestSuite) Setup() {
 	if len(s.sqlConfigs) > 0 {
-		closeFunc, err := common.StartPostgresWithFmt(s.sqlConfigs)
+		closeFunc, err := sql.StartPostgresWithFmt(s.sqlConfigs)
 		Expect(err).NotTo(HaveOccurred())
 		s.closeFunc = closeFunc
 	}

@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package sql
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 )
 
 func TestGetTableNames(t *testing.T) {
-	names, err := GetTableNames("")
+	names, err := getTableNames("")
 	assert.NoError(t, err)
 	assert.Equal(t, tableNames{
 		Movements:              "movements",
@@ -36,15 +36,15 @@ func TestGetTableNames(t *testing.T) {
 		TokenLocks:             "token_locks",
 	}, names)
 
-	names, err = GetTableNames("valid_prefix")
+	names, err = getTableNames("valid_prefix")
 	assert.NoError(t, err)
 	assert.Equal(t, "valid_prefix_transactions", names.Transactions)
 
-	names, err = GetTableNames("Valid_Prefix")
+	names, err = getTableNames("Valid_Prefix")
 	assert.NoError(t, err)
 	assert.Equal(t, "valid_prefix_transactions", names.Transactions)
 
-	names, err = GetTableNames("valid")
+	names, err = getTableNames("valid")
 	assert.NoError(t, err)
 	assert.Equal(t, "valid_transactions", names.Transactions)
 
@@ -63,7 +63,7 @@ func TestGetTableNames(t *testing.T) {
 
 	for _, inv := range invalid {
 		t.Run(fmt.Sprintf("Prefix: %s", inv), func(t *testing.T) {
-			names, err := GetTableNames(inv)
+			names, err := getTableNames(inv)
 			assert.Error(t, err)
 			assert.Equal(t, tableNames{}, names)
 		})

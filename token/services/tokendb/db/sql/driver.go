@@ -8,12 +8,9 @@ package sql
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
-	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
+	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 )
 
 const (
@@ -22,22 +19,20 @@ const (
 	EnvVarKey = "TOKENDB_DATASOURCE"
 )
 
+func NewSQLDBOpener() *sqldb.DBOpener {
+	return sqldb.NewSQLDBOpener(OptsKey, EnvVarKey)
+}
+
 func NewDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
 	return db.NamedDriver[dbdriver.TokenDBDriver]{
-		Name: sql.SQLPersistence,
-		Driver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenFunc[dbdriver.TokenDB]{
-			sql.SQLite:   sqlite.NewTokenDB,
-			sql.Postgres: postgres.NewTokenDB,
-		}),
+		Name:   sql.SQLPersistence,
+		Driver: db.NewSQLDriver(NewSQLDBOpener(), sqldb.NewTokenDB),
 	}
 }
 
 func NewNDBDriver() db.NamedDriver[dbdriver.TokenNDBDriver] {
 	return db.NamedDriver[dbdriver.TokenNDBDriver]{
-		Name: sql.SQLPersistence,
-		Driver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenFunc[dbdriver.TokenNDB]{
-			sql.SQLite:   sqlite.NewTokenNDB,
-			sql.Postgres: postgres.NewTokenNDB,
-		}),
+		Name:   sql.SQLPersistence,
+		Driver: db.NewSQLDriver(NewSQLDBOpener(), sqldb.NewTokenNDB),
 	}
 }

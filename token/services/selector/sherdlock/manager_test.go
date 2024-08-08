@@ -15,7 +15,7 @@ import (
 	sql3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/testutils"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
@@ -60,7 +60,7 @@ func TestInsufficientTokensManyReplicas(t *testing.T) {
 // Set up
 
 func startManagers(t *testing.T, number int, backoff time.Duration) ([]testutils.EnhancedManager, func()) {
-	terminate, pgConnStr := common2.StartPostgresContainer(t)
+	terminate, pgConnStr := sql.StartPostgresContainer(t)
 	replicas := make([]testutils.EnhancedManager, number)
 
 	for i := 0; i < number; i++ {
@@ -72,12 +72,12 @@ func startManagers(t *testing.T, number int, backoff time.Duration) ([]testutils
 }
 
 func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedManager, error) {
-	lockDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, common2.NewTokenLockDB)
+	lockDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, sql.NewTokenLockDB)
 	if err != nil {
 		return nil, err
 	}
 
-	tokenDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, common2.NewTokenDB)
+	tokenDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, sql.NewTokenDB)
 	if err != nil {
 		return nil, err
 	}
@@ -85,13 +85,13 @@ func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedM
 
 }
 
-func initDB[T any](driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int, constructor func(*sql2.DB, common2.NewDBOpts) (T, error)) (T, error) {
-	d := common2.NewSQLDBOpener("", "")
+func initDB[T any](driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int, constructor func(*sql2.DB, sql.NewDBOpts) (T, error)) (T, error) {
+	d := sql.NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return utils2.Zero[T](), err
 	}
-	return constructor(sqlDB, common2.NewDBOpts{
+	return constructor(sqlDB, sql.NewDBOpts{
 		DataSource:   dataSourceName,
 		TablePrefix:  tablePrefix,
 		CreateSchema: true,

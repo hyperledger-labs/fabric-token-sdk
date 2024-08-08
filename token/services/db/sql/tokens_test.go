@@ -4,25 +4,154 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package sql
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"path"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
+	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	assert2 "github.com/stretchr/testify/assert"
 	"github.com/test-go/testify/assert"
 )
 
+func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenDB, error) {
+	d := NewSQLDBOpener("", "")
+	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
+	if err != nil {
+		return nil, err
+	}
+	tokenDB, err := NewTokenDB(sqlDB, NewDBOpts{
+		DataSource:   dataSourceName,
+		TablePrefix:  tablePrefix,
+		CreateSchema: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return tokenDB.(*TokenDB), err
+}
+
+func initTokenNDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenNDB, error) {
+	d := NewSQLDBOpener("", "")
+	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
+	if err != nil {
+		return nil, err
+	}
+	tokenDB, err := NewTokenNDB(sqlDB, NewDBOpts{
+		DataSource:   dataSourceName,
+		TablePrefix:  tablePrefix,
+		CreateSchema: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return tokenDB.(*TokenNDB), err
+}
+
+func initDB[T any](constructor func(db *sql.DB, opts NewDBOpts) (T, error), driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (T, error) {
+	d := NewSQLDBOpener("", "")
+	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
+	if err != nil {
+		return utils.Zero[T](), err
+	}
+	tokenDB, err := constructor(sqlDB, NewDBOpts{
+		DataSource:   dataSourceName,
+		TablePrefix:  tablePrefix,
+		CreateSchema: true,
+	})
+	if err != nil {
+		return utils.Zero[T](), err
+	}
+	return tokenDB, err
+}
+
+func TestTokensSqlite(t *testing.T) {
+	tempDir := t.TempDir()
+	for _, c := range TokensCases {
+		db, err := initTokenDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(c.Name, func(xt *testing.T) {
+			defer db.Close()
+			c.Fn(xt, db)
+		})
+	}
+	for _, c := range TokenNotifierCases {
+		db, err := initTokenNDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(c.Name, func(xt *testing.T) {
+			defer db.Close()
+			c.Fn(xt, db)
+		})
+	}
+}
+
+func TestTokensSqliteMemory(t *testing.T) {
+	for _, c := range TokensCases {
+		db, err := initTokenDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(20000)&_pragma=foreign_keys(1)&mode=memory&cache=shared", c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(c.Name, func(xt *testing.T) {
+			defer db.Close()
+			c.Fn(xt, db)
+		})
+	}
+	for _, c := range TokenNotifierCases {
+		db, err := initTokenNDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)&mode=memory&cache=shared", c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(c.Name, func(xt *testing.T) {
+			defer db.Close()
+			c.Fn(xt, db)
+		})
+	}
+}
+
+func TestTokensPostgres(t *testing.T) {
+	terminate, pgConnStr := StartPostgresContainer(t)
+	defer terminate()
+
+	for _, c := range TokensCases {
+		db, err := initTokenDB(sql2.Postgres, pgConnStr, c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(c.Name, func(xt *testing.T) {
+			defer db.Close()
+			c.Fn(xt, db)
+		})
+	}
+	for _, c := range TokenNotifierCases {
+		db, err := initTokenNDB(sql2.Postgres, pgConnStr, c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(c.Name, func(xt *testing.T) {
+			defer db.Close()
+			c.Fn(xt, db)
+		})
+	}
+}
+
 var TokenNotifierCases = []struct {
 	Name string
-	Fn   func(*testing.T, driver.TokenNDB)
+	Fn   func(*testing.T, *TokenNDB)
 }{
 	{"SubscribeStore", TSubscribeStore},
 	{"SubscribeStoreDelete", TSubscribeStoreDelete},
@@ -35,7 +164,7 @@ type dbEvent struct {
 	vals map[driver2.ColumnKey]string
 }
 
-func collectDBEvents(db driver.TokenNDB) (*[]dbEvent, error) {
+func collectDBEvents(db *TokenNDB) (*[]dbEvent, error) {
 	ch := make(chan dbEvent)
 	err := db.Subscribe(func(operation driver2.Operation, m map[driver2.ColumnKey]string) {
 		logger.Infof("Received event: [%v]: %v", operation, m)
@@ -53,7 +182,7 @@ func collectDBEvents(db driver.TokenNDB) (*[]dbEvent, error) {
 	return &result, nil
 }
 
-func TSubscribeStore(t *testing.T, db driver.TokenNDB) {
+func TSubscribeStore(t *testing.T, db *TokenNDB) {
 	result, err := collectDBEvents(db)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction(context.TODO())
@@ -65,7 +194,7 @@ func TSubscribeStore(t *testing.T, db driver.TokenNDB) {
 	assert2.Eventually(t, func() bool { return len(*result) == 2 }, time.Second, 20*time.Millisecond)
 }
 
-func TSubscribeStoreDelete(t *testing.T, db driver.TokenNDB) {
+func TSubscribeStoreDelete(t *testing.T, db *TokenNDB) {
 	result, err := collectDBEvents(db)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction(context.TODO())
@@ -78,7 +207,7 @@ func TSubscribeStoreDelete(t *testing.T, db driver.TokenNDB) {
 	assert2.Eventually(t, func() bool { return len(*result) == 3 }, time.Second, 20*time.Millisecond)
 }
 
-func TSubscribeStoreNoCommit(t *testing.T, db driver.TokenNDB) {
+func TSubscribeStoreNoCommit(t *testing.T, db *TokenNDB) {
 	result, err := collectDBEvents(db)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction(context.TODO())
@@ -89,7 +218,7 @@ func TSubscribeStoreNoCommit(t *testing.T, db driver.TokenNDB) {
 	assert2.Eventually(t, func() bool { return len(*result) == 0 }, time.Second, 20*time.Millisecond)
 }
 
-func TSubscribeRead(t *testing.T, db driver.TokenNDB) {
+func TSubscribeRead(t *testing.T, db *TokenNDB) {
 	result, err := collectDBEvents(db)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction(context.TODO())

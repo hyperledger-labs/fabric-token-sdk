@@ -8,21 +8,26 @@ package db
 
 import (
 	"crypto/sha256"
+	"database/sql"
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	"github.com/pkg/errors"
 )
 
+type NewDBFunc[D any] func(db *sql.DB, newDBOpts sqldb.NewDBOpts) (D, error)
+
 type MemoryDriver[D any] struct {
-	dbOpener func(opts common.Opts) (D, error)
+	dbOpener *sqldb.DBOpener
+	newDB    NewDBFunc[D]
 }
 
-func NewMemoryDriver[D any](dbOpener func(opts common.Opts) (D, error)) *MemoryDriver[D] {
-	return &MemoryDriver[D]{dbOpener: dbOpener}
+func NewMemoryDriver[D any](dbOpener *sqldb.DBOpener, newDB NewDBFunc[D]) *MemoryDriver[D] {
+	return &MemoryDriver[D]{dbOpener: dbOpener, newDB: newDB}
 }
 
 // Open returns a pure go sqlite implementation in memory for testing purposes.
@@ -32,13 +37,20 @@ func (d *MemoryDriver[D]) Open(_ driver.ConfigProvider, tmsID token.TMSID) (D, e
 		return utils.Zero[D](), err
 	}
 
-	opts := common.Opts{
-		Driver:          sql2.SQLite,
-		DataSource:      fmt.Sprintf("file:%x?mode=memory&cache=shared", h.Sum(nil)),
-		TablePrefix:     "memory",
-		SkipCreateTable: false,
-		SkipPragmas:     false,
-		MaxOpenConns:    10,
+	datasource := fmt.Sprintf("file:%x?mode=memory&cache=shared", h.Sum(nil))
+	sqlDB, err := d.dbOpener.OpenSQLDB(
+		sql2.SQLite,
+		datasource,
+		10,
+		false,
+	)
+	if err != nil {
+		return utils.Zero[D](), errors.Wrapf(err, "failed to open memory db for [%s]", tmsID)
 	}
-	return d.dbOpener(opts)
+
+	return d.newDB(sqlDB, sqldb.NewDBOpts{
+		DataSource:   datasource,
+		TablePrefix:  "memory",
+		CreateSchema: true,
+	})
 }

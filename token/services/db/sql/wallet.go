@@ -4,14 +4,13 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package sql
 
 import (
 	"database/sql"
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
@@ -34,14 +33,14 @@ func newWalletDB(db *sql.DB, tables walletTables) *WalletDB {
 }
 
 func NewWalletDB(db *sql.DB, opts NewDBOpts) (driver.WalletDB, error) {
-	tables, err := GetTableNames(opts.TablePrefix)
+	tables, err := getTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names [%s]", opts.TablePrefix)
 	}
 
 	walletDB := newWalletDB(db, walletTables{Wallets: tables.Wallets})
 	if opts.CreateSchema {
-		if err = common.InitSchema(db, []string{walletDB.GetSchema()}...); err != nil {
+		if err = initSchema(db, walletDB.GetSchema()); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema")
 		}
 	}
