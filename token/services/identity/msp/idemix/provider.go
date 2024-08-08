@@ -127,6 +127,7 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 		if err != nil || !valid {
 			return nil, errors.WithMessage(err, "credential is not cryptographically valid")
 		}
+		logger.Debugf("the signer contains key material, load it, done.")
 	} else {
 		logger.Debugf("the signer does not contain full key material [cred=%d,sk=%d]", len(conf.Signer.Cred), len(conf.Signer.Sk))
 	}

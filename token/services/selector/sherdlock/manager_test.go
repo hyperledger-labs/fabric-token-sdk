@@ -79,15 +79,25 @@ func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedM
 	if err != nil {
 		return nil, err
 	}
-	return testutils.NewEnhancedManager(NewManager(tokenDB, lockDB, newMetrics(&disabled.Provider{}), testutils.TokenQuantityPrecision, backoff), tokenDB), nil
+	return testutils.NewEnhancedManager(
+		NewManager(
+			tokenDB,
+			lockDB,
+			newMetrics(&disabled.Provider{}),
+			testutils.TokenQuantityPrecision,
+			backoff,
+			0,
+		),
+		tokenDB,
+	), nil
 
 }
 
-func initDB[T any](driverName, dataSourceName, tablePrefix string, maxOpenConns int, constructor func(*sql2.DB, string, bool) (T, error)) (T, error) {
+func initDB[T any](driverName, dataSourceName, tablePrefix string, maxOpenConns int, constructor func(*sql2.DB, string, string, bool) (T, error)) (T, error) {
 	d := sql.NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return utils2.Zero[T](), err
 	}
-	return constructor(sqlDB, tablePrefix, true)
+	return constructor(sqlDB, driverName, tablePrefix, true)
 }

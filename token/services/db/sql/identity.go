@@ -49,7 +49,7 @@ func newIdentityDB(db *sql.DB, tables identityTables, singerInfoCache cache[bool
 	}
 }
 
-func NewCachedIdentityDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.IdentityDB, error) {
+func NewCachedIdentityDB(db *sql.DB, driver string, tablePrefix string, createSchema bool) (driver.IdentityDB, error) {
 	return NewIdentityDB(
 		db,
 		tablePrefix,

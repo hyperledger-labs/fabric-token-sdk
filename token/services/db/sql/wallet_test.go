@@ -21,7 +21,7 @@ func initWalletDB(driverName, dataSourceName, tablePrefix string, maxOpenConns i
 	if err != nil {
 		return nil, err
 	}
-	walletDB, err := NewWalletDB(sqlDB, tablePrefix, true)
+	walletDB, err := NewWalletDB(sqlDB, driverName, tablePrefix, true)
 	if err != nil {
 		return nil, err
 	}

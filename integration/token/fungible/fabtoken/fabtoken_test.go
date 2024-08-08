@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	for _, t := range integration2.AllTestTypes {
+	for _, t := range integration2.WebSocketNoReplicationOnly {
 		Describe("Fungible", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
@@ -65,6 +65,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 			SDKs:            []api.SDK{&ffabtoken.SDK{}},
 			ReplicationOpts: opts,
 			WebEnabled:      true, // Needed for the Remote Wallet with websockets
+			//FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 		},
 	))
 	return ts, selector

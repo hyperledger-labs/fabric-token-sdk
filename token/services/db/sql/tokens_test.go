@@ -24,7 +24,7 @@ func initTokenDB(driverName, dataSourceName, tablePrefix string, maxOpenConns in
 	if err != nil {
 		return nil, err
 	}
-	tokenDB, err := NewTokenDB(sqlDB, tablePrefix, true)
+	tokenDB, err := NewTokenDB(sqlDB, driverName, tablePrefix, true)
 	if err != nil {
 		return nil, err
 	}

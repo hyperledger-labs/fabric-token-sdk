@@ -199,7 +199,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			}
 			ews := c.Opts.ExternalWalletSigner(w.ID())
 			if ews == nil {
-				return nil, errors.Errorf("no external wallet signer found for [%s]", w.ID())
+				return nil, errors.Errorf("no external wallet signer found for [%s][%s]", w.ID(), party)
 			}
 			externalWallets[w.ID()] = ews
 			sigma, err := c.signExternal(party, ews, signatureRequest)
