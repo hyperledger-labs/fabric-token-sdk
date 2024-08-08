@@ -14,7 +14,6 @@ import (
 	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/dbtest"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 )
 
 func initTransactionsDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TransactionDB, error) {
@@ -63,7 +62,7 @@ func TestTransactionsSqliteMemory(t *testing.T) {
 }
 
 func TestTransactionsPostgres(t *testing.T) {
-	terminate, pgConnStr := sql.StartPostgresContainer(t)
+	terminate, pgConnStr := StartPostgresContainer(t)
 	defer terminate()
 
 	for _, c := range dbtest.Cases {

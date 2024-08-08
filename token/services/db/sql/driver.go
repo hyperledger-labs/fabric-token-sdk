@@ -108,8 +108,6 @@ type dbKey struct {
 }
 
 func (d *DBOpener) OpenSQLDB(driverName common.SQLDriverType, dataSourceName string, maxOpenConns int, skipPragmas bool) (*sql.DB, error) {
-	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
-
 	return d.dbCache.Get(dbKey{driverName: driverName, dataSourceName: dataSourceName, maxOpenConns: maxOpenConns, skipPragmas: skipPragmas})
 }
 

@@ -145,40 +145,6 @@ func movementConditionsSql(params driver.QueryMovementsParams) (where string, ar
 	return
 }
 
-func tokenRequestConditionsSql(params driver.QueryTokenRequestsParams) (string, []any) {
-	args := make([]any, 0)
-	and := make([]string, 0)
-	if len(params.Statuses) == 0 {
-		return "", args
-	}
-
-	// Specific transaction status if requested, defaults to all but Deleted
-	if len(params.Statuses) > 0 {
-		and = append(and, in(&args, "status", params.Statuses))
-	}
-	where := fmt.Sprintf("WHERE %s", strings.Join(and, " AND "))
-
-	return where, args
-}
-
-func in[T string | driver.TxStatus | driver.ActionType](args *[]any, field string, searchFor []T) (where string) {
-	if len(searchFor) == 0 {
-		return ""
-	}
-
-	argnum := make([]string, len(searchFor))
-	start := len(*args)
-	for i, eid := range searchFor {
-		argnum[i] = fmt.Sprintf("%s = %s", field, fmt.Sprintf("$%d", start+i+1))
-		*args = append(*args, eid)
-	}
-	if len(argnum) == 1 {
-		return argnum[0]
-	}
-
-	return fmt.Sprintf("(%s)", strings.Join(argnum, " OR "))
-}
-
 // tokenQuerySql requires a join with the token ownership table if OwnerEnrollmentID is not empty
 func tokenQuerySql(params driver.QueryTokenDetailsParams, tokenTable, ownerTable string) (where, join string, args []any) {
 	and := []string{"owner = true"}
@@ -215,6 +181,40 @@ func tokenQuerySql(params driver.QueryTokenDetailsParams, tokenTable, ownerTable
 	where = fmt.Sprintf("WHERE %s", strings.Join(and, " AND "))
 
 	return
+}
+
+func tokenRequestConditionsSql(params driver.QueryTokenRequestsParams) (string, []any) {
+	args := make([]any, 0)
+	and := make([]string, 0)
+	if len(params.Statuses) == 0 {
+		return "", args
+	}
+
+	// Specific transaction status if requested, defaults to all but Deleted
+	if len(params.Statuses) > 0 {
+		and = append(and, in(&args, "status", params.Statuses))
+	}
+	where := fmt.Sprintf("WHERE %s", strings.Join(and, " AND "))
+
+	return where, args
+}
+
+func in[T string | driver.TxStatus | driver.ActionType](args *[]any, field string, searchFor []T) (where string) {
+	if len(searchFor) == 0 {
+		return ""
+	}
+
+	argnum := make([]string, len(searchFor))
+	start := len(*args)
+	for i, eid := range searchFor {
+		argnum[i] = fmt.Sprintf("%s = %s", field, fmt.Sprintf("$%d", start+i+1))
+		*args = append(*args, eid)
+	}
+	if len(argnum) == 1 {
+		return argnum[0]
+	}
+
+	return fmt.Sprintf("(%s)", strings.Join(argnum, " OR "))
 }
 
 func whereTokenIDsForJoin(tableName string, args *[]any, ids []*token.ID) (where string) {

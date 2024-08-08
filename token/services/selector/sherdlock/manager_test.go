@@ -15,7 +15,6 @@ import (
 	sql3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/testutils"
 	_ "github.com/lib/pq"
@@ -61,7 +60,7 @@ func TestInsufficientTokensManyReplicas(t *testing.T) {
 // Set up
 
 func startManagers(t *testing.T, number int, backoff time.Duration) ([]testutils.EnhancedManager, func()) {
-	terminate, pgConnStr := sql.StartPostgresContainer(t)
+	terminate, pgConnStr := common2.StartPostgresContainer(t)
 	replicas := make([]testutils.EnhancedManager, number)
 
 	for i := 0; i < number; i++ {
@@ -86,13 +85,13 @@ func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedM
 
 }
 
-func initDB[T any](driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int, constructor func(*sql2.DB, sql.NewDBOpts) (T, error)) (T, error) {
-	d := sql.NewSQLDBOpener("", "")
+func initDB[T any](driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int, constructor func(*sql2.DB, common2.NewDBOpts) (T, error)) (T, error) {
+	d := common2.NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return utils2.Zero[T](), err
 	}
-	return constructor(sqlDB, sql.NewDBOpts{
+	return constructor(sqlDB, common2.NewDBOpts{
 		DataSource:   dataSourceName,
 		TablePrefix:  tablePrefix,
 		CreateSchema: true,

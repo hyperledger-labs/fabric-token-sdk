@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/pkg/errors"
 )
 
@@ -51,7 +50,7 @@ func NewWalletDB(db *sql.DB, opts NewDBOpts) (driver.WalletDB, error) {
 
 func (db *WalletDB) GetWalletID(identity token.Identity, roleID int) (driver.WalletID, error) {
 	idHash := identity.UniqueID()
-	result, err := sql2.QueryUnique[driver.WalletID](db.db,
+	result, err := QueryUnique[driver.WalletID](db.db,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND role_id=$2", db.table.Wallets),
 		idHash, roleID,
 	)
@@ -104,7 +103,7 @@ func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID drive
 
 func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.UniqueID()
-	result, err := sql2.QueryUnique[[]byte](db.db,
+	result, err := QueryUnique[[]byte](db.db,
 		fmt.Sprintf("SELECT meta FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
 		idHash, wID, roleID,
 	)
@@ -117,7 +116,7 @@ func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleI
 
 func (db *WalletDB) IdentityExists(identity token.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.UniqueID()
-	result, err := sql2.QueryUnique[driver.WalletID](db.db,
+	result, err := QueryUnique[driver.WalletID](db.db,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
 		idHash, wID, roleID,
 	)

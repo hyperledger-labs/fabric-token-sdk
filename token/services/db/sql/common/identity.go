@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -104,7 +103,7 @@ func (db *IdentityDB) IteratorConfigurations(configurationType string) (driver.I
 }
 
 func (db *IdentityDB) ConfigurationExists(id, typ string) (bool, error) {
-	result, err := sql2.QueryUnique[string](db.db,
+	result, err := QueryUnique[string](db.db,
 		fmt.Sprintf("SELECT id FROM %s WHERE id=$1 AND type=$2", db.table.IdentityConfigurations),
 		id, typ,
 	)

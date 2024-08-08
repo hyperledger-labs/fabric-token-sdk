@@ -14,7 +14,6 @@ import (
 	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -62,7 +61,7 @@ func TestWalletSqliteMemory(t *testing.T) {
 }
 
 func TestWalletPostgres(t *testing.T) {
-	terminate, pgConnStr := sql.StartPostgresContainer(t)
+	terminate, pgConnStr := StartPostgresContainer(t)
 	defer terminate()
 
 	for _, c := range WalletCases {
