@@ -10,13 +10,16 @@ import (
 	"database/sql"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
 type sqlDBOpener interface {
-	Open(cp ConfigProvider, tmsID token.TMSID) (*sql.DB, *sqldb.Opts, error)
+	Open(cp ConfigProvider, tmsID token.TMSID) (*sql.DB, *common.Opts, error)
 }
+
+type NewDBFunc[D any] func(db *sql.DB, opts common2.NewDBOpts) (D, error)
 
 type SQLDriver[D any] struct {
 	sqlDBOpener sqlDBOpener
@@ -32,5 +35,9 @@ func (d *SQLDriver[D]) Open(cp ConfigProvider, tmsID token.TMSID) (D, error) {
 	if err != nil {
 		return utils.Zero[D](), err
 	}
-	return d.newDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
+	return d.newDB(sqlDB, common2.NewDBOpts{
+		DataSource:   opts.DataSource,
+		TablePrefix:  opts.TablePrefix,
+		CreateSchema: !opts.SkipCreateTable,
+	})
 }

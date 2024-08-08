@@ -11,6 +11,7 @@ import (
 	"errors"
 	"time"
 
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
@@ -172,6 +173,18 @@ type TokenDB interface {
 type TokenDBDriver interface {
 	// Open opens a token database
 	Open(cp ConfigProvider, tmsID token2.TMSID) (TokenDB, error)
+}
+
+// TokenNDB is the observable version of TokenDB
+type TokenNDB interface {
+	driver2.Notifier
+	TokenDB
+}
+
+// TokenNDBDriver is the interface for a token database driver
+type TokenNDBDriver interface {
+	// Open opens a token database with its listeners
+	Open(cp ConfigProvider, tmsID token2.TMSID) (TokenNDB, error)
 }
 
 // TokenLockDB enforces that a token be used only by one process

@@ -9,6 +9,7 @@ package db
 import (
 	"reflect"
 
+	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -46,12 +47,7 @@ func (o *dbOpener[S, D, O]) New(cp ConfigProvider, id token.TMSID) (S, error) {
 	return o.newDB(driverInstance), nil
 }
 
-type DriverName = string
-
-type NamedDriver[O any] struct {
-	Name   DriverName
-	Driver O
-}
+type NamedDriver[O any] driver3.NamedDriver[O]
 
 func NewDriverHolder[S any, D any, O dbDriver[D]](newDB dbInstantiator[S, D, O], ds ...NamedDriver[O]) *DriverHolder[S, D, O] {
 	h := &DriverHolder[S, D, O]{
@@ -61,7 +57,7 @@ func NewDriverHolder[S any, D any, O dbDriver[D]](newDB dbInstantiator[S, D, O],
 		newDB:       newDB,
 	}
 	for _, d := range ds {
-		h.Register(d.Name, d.Driver)
+		h.Register(string(d.Name), d.Driver)
 	}
 	return h
 }

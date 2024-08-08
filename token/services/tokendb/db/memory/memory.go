@@ -6,16 +6,16 @@ SPDX-License-Identifier: Apache-2.0
 
 package memory
 
-import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
-	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
-)
-
-func NewDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
-	return db.NamedDriver[dbdriver.TokenDBDriver]{
-		Name:   "memory",
-		Driver: db.NewMemoryDriver(sql.NewSQLDBOpener(), sqldb.NewTokenDB),
-	}
-}
+//func NewDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
+//	return db.NamedDriver[dbdriver.TokenDBDriver]{
+//		Name:   mem.MemoryPersistence,
+//		Driver: db.NewMemoryDriver(sqlite.NewTokenDB),
+//	}
+//}
+//
+//func NewNDBDriver() db.NamedDriver[dbdriver.TokenNDBDriver] {
+//	return db.NamedDriver[dbdriver.TokenNDBDriver]{
+//		Name:   mem.MemoryPersistence,
+//		Driver: db.NewMemoryDriver(sqlite.NewTokenNDB),
+//	}
+//}

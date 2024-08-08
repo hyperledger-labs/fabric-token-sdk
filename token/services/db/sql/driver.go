@@ -10,10 +10,12 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db"
+	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -23,21 +25,10 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const sqlitePragmas = `
-	PRAGMA journal_mode = WAL;
-	PRAGMA busy_timeout = 20000;
-	PRAGMA synchronous = NORMAL;
-	PRAGMA cache_size = 1000000000;
-	PRAGMA temp_store = memory;
-	PRAGMA foreign_keys = ON;`
-
-type Opts struct {
-	Driver          string
-	DataSource      string
-	TablePrefix     string
-	SkipCreateTable bool
-	SkipPragmas     bool
-	MaxOpenConns    int
+type NewDBOpts struct {
+	DataSource   string
+	TablePrefix  string
+	CreateSchema bool
 }
 
 type DBOpener struct {
@@ -46,7 +37,7 @@ type DBOpener struct {
 	envVarKey string
 }
 
-func (d *DBOpener) Open(cp driver.ConfigProvider, tmsID token.TMSID) (*sql.DB, *Opts, error) {
+func (d *DBOpener) Open(cp driver.ConfigProvider, tmsID token.TMSID) (*sql.DB, *common.Opts, error) {
 	opts, err := d.compileOpts(cp, tmsID)
 	if err != nil {
 		return nil, nil, err
@@ -61,47 +52,21 @@ func (d *DBOpener) Open(cp driver.ConfigProvider, tmsID token.TMSID) (*sql.DB, *
 func NewSQLDBOpener(optsKey, envVarKey string) *DBOpener {
 	return &DBOpener{
 		dbCache: utils.NewLazyProviderWithKeyMapper(key, func(k dbKey) (*sql.DB, error) {
-			if k.driverName == "sqlite" && strings.HasPrefix(k.dataSourceName, "file:") {
-				path := strings.TrimLeft(k.dataSourceName[:strings.IndexRune(k.dataSourceName, '?')], "file:")
-				if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
-					logger.Warnf("failed creating dir [%s]: %s", path, err)
-				}
-			}
-			p, err := sql.Open(k.driverName, k.dataSourceName)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to open db [%s]", k.driverName)
-			}
-			if err := p.Ping(); err != nil {
-				if strings.Contains(err.Error(), "out of memory (14)") {
-					logger.Warnf("does the directory for the configured datasource exist?")
-				}
-				return nil, errors.Wrapf(err, "failed to open db [%s]", k.driverName)
+			if k.driverName == sql2.SQLite {
+				return sqlite.OpenDB(k.dataSourceName, k.maxOpenConns, k.skipPragmas)
+			} else if k.driverName == sql2.Postgres {
+				return postgres.OpenDB(k.dataSourceName, k.maxOpenConns)
 			}
 
-			// set some good defaults if the driver is sqlite
-			if k.driverName == "sqlite" {
-				if k.skipPragmas {
-					if !strings.Contains(k.dataSourceName, "WAL") {
-						logger.Warn("skipping default pragmas. Set at least ?_pragma=journal_mode(WAL) or similar in the dataSource to prevent SQLITE_BUSY errors")
-					}
-				} else {
-					logger.Debug(sqlitePragmas)
-					if _, err = p.Exec(sqlitePragmas); err != nil {
-						return nil, fmt.Errorf("error setting pragmas: %w", err)
-					}
-				}
-			}
-			p.SetMaxOpenConns(k.maxOpenConns)
-
-			return p, nil
+			return nil, errors.Errorf("unknown driver [%s]", k.driverName)
 		}),
 		optsKey:   optsKey,
 		envVarKey: envVarKey,
 	}
 }
 
-func (d *DBOpener) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*Opts, error) {
-	opts := &Opts{}
+func (d *DBOpener) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*common.Opts, error) {
+	opts := &common.Opts{}
 	tmsConfig, err := config.NewService(cp).ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)
@@ -127,17 +92,16 @@ func (d *DBOpener) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*Op
 }
 
 type dbKey struct {
-	driverName, dataSourceName string
-	maxOpenConns               int
-	skipPragmas                bool
+	driverName     common.SQLDriverType
+	dataSourceName string
+	maxOpenConns   int
+	skipPragmas    bool
 }
 
-func (d *DBOpener) OpenSQLDB(driverName, dataSourceName string, maxOpenConns int, skipPragmas bool) (*sql.DB, error) {
-	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
-
+func (d *DBOpener) OpenSQLDB(driverName common.SQLDriverType, dataSourceName string, maxOpenConns int, skipPragmas bool) (*sql.DB, error) {
 	return d.dbCache.Get(dbKey{driverName: driverName, dataSourceName: dataSourceName, maxOpenConns: maxOpenConns, skipPragmas: skipPragmas})
 }
 
 func key(k dbKey) string {
-	return k.driverName + k.dataSourceName
+	return string(k.driverName) + k.dataSourceName
 }
