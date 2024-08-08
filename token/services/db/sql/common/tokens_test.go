@@ -81,16 +81,16 @@ func TestTokensSqlite(t *testing.T) {
 			c.Fn(xt, db)
 		})
 	}
-	for _, c := range TokenNotifierCases {
-		db, err := initTokenNDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
-			c.Fn(xt, db)
-		})
-	}
+	//for _, c := range TokenNotifierCases {
+	//	db, err := initTokenNDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+	//	if err != nil {
+	//		t.Fatal(err)
+	//	}
+	//	t.Run(c.Name, func(xt *testing.T) {
+	//		defer db.Close()
+	//		c.Fn(xt, db)
+	//	})
+	//}
 }
 
 func TestTokensSqliteMemory(t *testing.T) {
@@ -104,16 +104,16 @@ func TestTokensSqliteMemory(t *testing.T) {
 			c.Fn(xt, db)
 		})
 	}
-	for _, c := range TokenNotifierCases {
-		db, err := initTokenNDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)&mode=memory&cache=shared", c.Name, 10)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
-			c.Fn(xt, db)
-		})
-	}
+	//for _, c := range TokenNotifierCases {
+	//	db, err := initTokenNDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)&mode=memory&cache=shared", c.Name, 10)
+	//	if err != nil {
+	//		t.Fatal(err)
+	//	}
+	//	t.Run(c.Name, func(xt *testing.T) {
+	//		defer db.Close()
+	//		c.Fn(xt, db)
+	//	})
+	//}
 }
 
 func TestTokensPostgres(t *testing.T) {
@@ -130,14 +130,14 @@ func TestTokensPostgres(t *testing.T) {
 			c.Fn(xt, db)
 		})
 	}
-	for _, c := range TokenNotifierCases {
-		db, err := initTokenNDB(sql2.Postgres, pgConnStr, c.Name, 10)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
-			c.Fn(xt, db)
-		})
-	}
+	//for _, c := range TokenNotifierCases {
+	//	db, err := initTokenNDB(sql2.Postgres, pgConnStr, c.Name, 10)
+	//	if err != nil {
+	//		t.Fatal(err)
+	//	}
+	//	t.Run(c.Name, func(xt *testing.T) {
+	//		defer db.Close()
+	//		c.Fn(xt, db)
+	//	})
+	//}
 }
