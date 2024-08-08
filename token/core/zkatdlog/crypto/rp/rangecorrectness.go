@@ -74,15 +74,15 @@ type RangeCorrectnessVerifier struct {
 
 func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
 	rc := &RangeCorrectness{}
+	rc.Proofs = make([]*RangeProof, len(p.Commitments))
 	for i := 0; i < len(p.Commitments); i++ {
 		bp := NewRangeProver(p.Commitments[i], p.Values[i], p.PedersenParameters, p.BlindingFactors[i], p.LeftGenerators, p.RightGenerators, p.P, p.Q, p.NumberOfRounds, p.BitLength, p.Curve)
 		proof, err := bp.Prove()
 		if err != nil {
 			return nil, err
 		}
-		rc.Proofs = append(rc.Proofs, proof)
+		rc.Proofs[i] = proof
 	}
-
 	return rc, nil
 }
 
