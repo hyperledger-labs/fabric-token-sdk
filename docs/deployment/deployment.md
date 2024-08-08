@@ -36,9 +36,6 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/unity"
 	// - Network Drivers: Import all the network drivers your application must support
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	// The DB driver `unity` uses an SQL database, therefore we need to import the one we want to use.
-	// In this case, it is sqlite
-	_ "modernc.org/sqlite"
 )
 
 func main() {

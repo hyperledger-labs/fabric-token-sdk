@@ -9,8 +9,6 @@ token:
         persistence:
           type: sql
           opts:
-            createSchema: true
-            tablePrefix: tsdk
             driver: sqlite
             maxOpenConns: 10
             dataSource: file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(20000)&mode=memory&cache=shared
@@ -22,8 +20,6 @@ token:
         persistence:
           type: sql
           opts:
-            createSchema: true
-            tablePrefix: tsdk
             driver: sqlite
             maxOpenConns: 10
             dataSource: file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(20000)&mode=memory&cache=shared

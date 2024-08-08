@@ -14,13 +14,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/dbtest"
 )
 
-func initTransactionsDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*TransactionDB, error) {
+func initTransactionsDB(driverName, dataSourceName string, maxOpenConns int) (*TransactionDB, error) {
 	d := NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return nil, err
 	}
-	transactionDB, err := NewTransactionDB(sqlDB, tablePrefix, true)
+	transactionDB, err := NewTransactionDB(sqlDB, true)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func initTransactionsDB(driverName, dataSourceName, tablePrefix string, maxOpenC
 func TestTransactionsSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 	for _, c := range dbtest.Cases {
-		db, err := initTransactionsDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initTransactionsDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, fmt.Sprintf(c.Name, "db.sqlite"))), 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -44,7 +44,7 @@ func TestTransactionsSqlite(t *testing.T) {
 
 func TestTransactionsSqliteMemory(t *testing.T) {
 	for _, c := range dbtest.Cases {
-		db, err := initTransactionsDB("sqlite", "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initTransactionsDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name), 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -56,17 +56,17 @@ func TestTransactionsSqliteMemory(t *testing.T) {
 }
 
 func TestTransactionsPostgres(t *testing.T) {
-	terminate, pgConnStr := StartPostgresContainer(t)
-	defer terminate()
-
 	for _, c := range dbtest.Cases {
-		db, err := initTransactionsDB("pgx", pgConnStr, c.Name, 10)
+		terminate, pgConnStr := StartPostgresContainer(t)
+		db, err := initTransactionsDB("pgx", pgConnStr, 10)
 		if err != nil {
+			terminate()
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
 			defer db.Close()
 			c.Fn(xt, db)
 		})
+		terminate()
 	}
 }

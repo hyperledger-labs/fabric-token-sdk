@@ -24,7 +24,6 @@ import (
 	ttxdb2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
-	_ "modernc.org/sqlite"
 )
 
 func TestDB(t *testing.T) {

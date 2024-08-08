@@ -35,16 +35,16 @@ func (d *Driver) OpenTokenTransactionDB(cp dbdriver.ConfigProvider, tmsID token.
 	return openDB(d.DBOpener, cp, tmsID, sqldb.NewTransactionDB)
 }
 
+func (d *Driver) OpenAuditTransactionDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.AuditTransactionDB, error) {
+	return openDB(d.DBOpener, cp, tmsID, sqldb.NewAuditTransactionDB)
+}
+
 func (d *Driver) OpenTokenDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
 	return openDB(d.DBOpener, cp, tmsID, sqldb.NewTokenDB)
 }
 
 func (d *Driver) OpenTokenLockDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenLockDB, error) {
 	return openDB(d.DBOpener, cp, tmsID, sqldb.NewTokenLockDB)
-}
-
-func (d *Driver) OpenAuditTransactionDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.AuditTransactionDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, sqldb.NewAuditTransactionDB)
 }
 
 func (d *Driver) OpenWalletDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.WalletDB, error) {
@@ -60,7 +60,7 @@ func openDB[D any](dbOpener *sqldb.DBOpener, cp dbdriver.ConfigProvider, tmsID t
 	if err != nil {
 		return utils.Zero[D](), errors.Wrapf(err, "failed to open db at [%s:%s]", optsKey, envVarKey)
 	}
-	return newDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
+	return newDB(sqlDB, !opts.SkipCreateTable)
 }
 
 type TtxDBDriver struct {

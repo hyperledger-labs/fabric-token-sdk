@@ -39,7 +39,8 @@ token:
           # configuration for the unity db driver. It uses sql as backend
           type: unity
           opts:
-            createSchema: true
+            # don't create the schema (you can do this if it already exists in the database)
+            skipCreateTable: true
             driver: sqlite
             maxOpenConns: 10
             dataSource: /some/path/unitydb
@@ -47,7 +48,6 @@ token:
         persistence:
           type: sql
           opts:
-            createSchema: true 
             driver: sqlite    
             maxOpenConns: 10
             dataSource: /some/path/tokendb
