@@ -78,7 +78,7 @@ func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedM
 		return nil, err
 	}
 
-	tokenDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, sql.NewTokenDB)
+	tokenDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, common2.NewTokenDB)
 	if err != nil {
 		return nil, err
 	}

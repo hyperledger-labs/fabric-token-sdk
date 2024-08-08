@@ -40,7 +40,7 @@ func (d *Driver) OpenTokenTransactionDB(cp dbdriver.ConfigProvider, tmsID token.
 }
 
 func (d *Driver) OpenTokenDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, sqldb.NewTokenDB)
+	return openDB(d.DBOpener, cp, tmsID, common2.NewTokenDB)
 }
 
 func (d *Driver) OpenTokenLockDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenLockDB, error) {

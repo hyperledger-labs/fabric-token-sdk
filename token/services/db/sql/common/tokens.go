@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package common
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
@@ -29,7 +30,7 @@ type TokenNDB struct {
 	*postgres.Notifier
 }
 
-func NewTokenNDB(db *sql.DB, opts NewDBOpts) (driver.TokenNDB, error) {
+func NewTokenNDB(db *sql.DB, opts sql2.NewDBOpts) (driver.TokenNDB, error) {
 	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
@@ -75,7 +76,7 @@ func newTokenDB(db *sql.DB, tables tokenTables) *TokenDB {
 	}
 }
 
-func NewTokenDB(db *sql.DB, opts NewDBOpts) (driver.TokenDB, error) {
+func NewTokenDB(db *sql.DB, opts sql2.NewDBOpts) (driver.TokenDB, error) {
 	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
@@ -162,7 +163,7 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, id, tokenType st
 		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
 
 	logger.Debug(query, args)
-	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(sql2.QueryLabel, query)))
 	rows, err := db.db.Query(query, args...)
 	span.AddEvent("end_query")
 
@@ -180,7 +181,7 @@ func (db *TokenDB) MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, 
 		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
 
 	logger.Debug(query, args)
-	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(sql2.QueryLabel, query)))
 	rows, err := db.db.Query(query, args...)
 	span.AddEvent("end_query")
 	if err != nil {
@@ -454,7 +455,7 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 	where := whereTokenIDs(&args, ids)
 
 	query := fmt.Sprintf("SELECT tx_id, idx, ledger, ledger_metadata FROM %s WHERE %s", db.table.Tokens, where)
-	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	span.AddEvent("query", tracing.WithAttributes(tracing.String(sql2.QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -476,7 +477,7 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 	if err = rows.Err(); err != nil {
 		return nil, nil, err
 	}
-	span.AddEvent("end_scan_rows", tracing.WithAttributes(tracing.Int(ResultRowsLabel, len(ids))))
+	span.AddEvent("end_scan_rows", tracing.WithAttributes(tracing.Int(sql2.ResultRowsLabel, len(ids))))
 
 	span.AddEvent("combine_results")
 	tokens := make([][]byte, len(ids))
@@ -679,7 +680,7 @@ func (db *TokenDB) TransactionExists(ctx context.Context, id string) (bool, erro
 	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id=$1 LIMIT 1;", db.table.Tokens)
 	logger.Debug(query, id)
 
-	span.AddEvent("query", trace.WithAttributes(tracing.String(QueryLabel, query)))
+	span.AddEvent("query", trace.WithAttributes(tracing.String(sql2.QueryLabel, query)))
 	row := db.db.QueryRow(query, id)
 	var found string
 	span.AddEvent("scan_rows")
@@ -904,7 +905,7 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 	}, t.db.table.Tokens, t.db.table.Ownership)
 
 	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, enrollment_id FROM %s %s %s", t.db.table.Tokens, join, where)
-	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	span.AddEvent("query", tracing.WithAttributes(tracing.String(sql2.QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := t.tx.Query(query, args...)
 	if err != nil {
@@ -929,7 +930,7 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 	if rows.Err() != nil {
 		return nil, nil, rows.Err()
 	}
-	span.AddEvent("end_scan_rows", tracing.WithAttributes(tracing.Int(ResultRowsLabel, len(owners))))
+	span.AddEvent("end_scan_rows", tracing.WithAttributes(tracing.Int(sql2.ResultRowsLabel, len(owners))))
 	if len(raw) == 0 {
 		return nil, owners, nil
 	}
@@ -949,7 +950,7 @@ func (t *TokenTransaction) Delete(ctx context.Context, txID string, index uint64
 	now := time.Now().UTC()
 	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE tx_id = $3 AND idx = $4;", t.db.table.Tokens)
 	logger.Debug(query, deletedBy, now, txID, index)
-	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	span.AddEvent("query", tracing.WithAttributes(tracing.String(sql2.QueryLabel, query)))
 	if _, err := t.tx.Exec(query, deletedBy, now, txID, index); err != nil {
 		span.RecordError(err)
 		return errors.Wrapf(err, "error setting token to deleted [%s]", txID)
@@ -981,7 +982,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		tr.Owner,
 		tr.Auditor,
 		tr.Issuer)
-	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	span.AddEvent("query", tracing.WithAttributes(tracing.String(sql2.QueryLabel, query)))
 	if _, err := t.tx.Exec(query,
 		tr.TxID,
 		tr.Index,
@@ -1007,7 +1008,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 	for _, eid := range owners {
 		query = fmt.Sprintf("INSERT INTO %s (tx_id, idx, enrollment_id) VALUES ($1, $2, $3)", t.db.table.Ownership)
 		logger.Debug(query, tr.TxID, tr.Index, eid)
-		span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+		span.AddEvent("query", tracing.WithAttributes(tracing.String(sql2.QueryLabel, query)))
 		if _, err := t.tx.Exec(query, tr.TxID, tr.Index, eid); err != nil {
 			return errors.Wrapf(err, "error storing token ownership [%s]", tr.TxID)
 		}

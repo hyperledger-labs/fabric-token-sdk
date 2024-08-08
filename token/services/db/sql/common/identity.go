@@ -62,7 +62,7 @@ func NewCachedIdentityDB(db *sql.DB, opts NewDBOpts) (driver.IdentityDB, error) 
 }
 
 func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfoCache cache[bool], auditInfoCache cache[[]byte]) (*IdentityDB, error) {
-	tables, err := sql2.GetTableNames(tablePrefix)
+	tables, err := GetTableNames(tablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}

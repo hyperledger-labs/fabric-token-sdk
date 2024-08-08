@@ -19,14 +19,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sql3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
 	_ "modernc.org/sqlite"
 )
-
-var logger = logging.MustGetLogger("token-sdk.sql")
 
 type NewDBOpts = sql3.NewDBOpts
 

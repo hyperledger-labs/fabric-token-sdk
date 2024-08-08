@@ -13,7 +13,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -36,7 +35,7 @@ func newTokenLockDB(db *sql.DB, tables tokenLockTables) *TokenLockDB {
 }
 
 func NewTokenLockDB(db *sql.DB, opts NewDBOpts) (driver.TokenLockDB, error) {
-	tables, err := sql2.GetTableNames(opts.TablePrefix)
+	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}

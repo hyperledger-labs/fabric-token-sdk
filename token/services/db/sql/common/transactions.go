@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -53,7 +52,7 @@ func NewAuditTransactionDB(sqlDB *sql.DB, opts NewDBOpts) (driver.AuditTransacti
 }
 
 func NewTransactionDB(db *sql.DB, opts NewDBOpts) (driver.TokenTransactionDB, error) {
-	tables, err := sql2.GetTableNames(opts.TablePrefix)
+	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}

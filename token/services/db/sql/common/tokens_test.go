@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package common
 
 import (
 	"context"
@@ -20,18 +20,19 @@ import (
 	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	sql3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	assert2 "github.com/stretchr/testify/assert"
 	"github.com/test-go/testify/assert"
 )
 
 func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenDB, error) {
-	d := NewSQLDBOpener("", "")
+	d := sql3.NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return nil, err
 	}
-	tokenDB, err := NewTokenDB(sqlDB, NewDBOpts{
+	tokenDB, err := NewTokenDB(sqlDB, sql3.NewDBOpts{
 		DataSource:   dataSourceName,
 		TablePrefix:  tablePrefix,
 		CreateSchema: true,
@@ -43,12 +44,12 @@ func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix st
 }
 
 func initTokenNDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenNDB, error) {
-	d := NewSQLDBOpener("", "")
+	d := sql3.NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return nil, err
 	}
-	tokenDB, err := NewTokenNDB(sqlDB, NewDBOpts{
+	tokenDB, err := NewTokenNDB(sqlDB, sql3.NewDBOpts{
 		DataSource:   dataSourceName,
 		TablePrefix:  tablePrefix,
 		CreateSchema: true,
@@ -59,13 +60,13 @@ func initTokenNDB(driverName common.SQLDriverType, dataSourceName, tablePrefix s
 	return tokenDB.(*TokenNDB), err
 }
 
-func initDB[T any](constructor func(db *sql.DB, opts NewDBOpts) (T, error), driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (T, error) {
-	d := NewSQLDBOpener("", "")
+func initDB[T any](constructor func(db *sql.DB, opts sql3.NewDBOpts) (T, error), driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (T, error) {
+	d := sql3.NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return utils.Zero[T](), err
 	}
-	tokenDB, err := constructor(sqlDB, NewDBOpts{
+	tokenDB, err := constructor(sqlDB, sql3.NewDBOpts{
 		DataSource:   dataSourceName,
 		TablePrefix:  tablePrefix,
 		CreateSchema: true,
@@ -124,7 +125,7 @@ func TestTokensSqliteMemory(t *testing.T) {
 }
 
 func TestTokensPostgres(t *testing.T) {
-	terminate, pgConnStr := StartPostgresContainer(t)
+	terminate, pgConnStr := sql3.StartPostgresContainer(t)
 	defer terminate()
 
 	for _, c := range TokensCases {

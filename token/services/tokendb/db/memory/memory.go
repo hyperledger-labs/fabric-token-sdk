@@ -10,7 +10,7 @@ import (
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
 )
 

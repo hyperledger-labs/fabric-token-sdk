@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
 const (
@@ -26,13 +27,13 @@ func NewSQLDBOpener() *sqldb.DBOpener {
 func NewDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
 	return db.NamedDriver[dbdriver.TokenDBDriver]{
 		Name:   sql.SQLPersistence,
-		Driver: db.NewSQLDriver(NewSQLDBOpener(), sqldb.NewTokenDB),
+		Driver: db.NewSQLDriver(NewSQLDBOpener(), common.NewTokenDB),
 	}
 }
 
 func NewNDBDriver() db.NamedDriver[dbdriver.TokenNDBDriver] {
 	return db.NamedDriver[dbdriver.TokenNDBDriver]{
 		Name:   sql.SQLPersistence,
-		Driver: db.NewSQLDriver(NewSQLDBOpener(), sqldb.NewTokenNDB),
+		Driver: db.NewSQLDriver(NewSQLDBOpener(), common.NewTokenNDB),
 	}
 }
