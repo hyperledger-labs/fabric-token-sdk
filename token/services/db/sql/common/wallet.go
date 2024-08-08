@@ -4,15 +4,17 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package common
 
 import (
 	"database/sql"
 	"fmt"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/pkg/errors"
 )
 
@@ -33,14 +35,14 @@ func newWalletDB(db *sql.DB, tables walletTables) *WalletDB {
 }
 
 func NewWalletDB(db *sql.DB, opts NewDBOpts) (driver.WalletDB, error) {
-	tables, err := GetTableNames(opts.TablePrefix)
+	tables, err := sql2.GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names [%s]", opts.TablePrefix)
 	}
 
 	walletDB := newWalletDB(db, walletTables{Wallets: tables.Wallets})
 	if opts.CreateSchema {
-		if err = initSchema(db, walletDB.GetSchema()); err != nil {
+		if err = common.InitSchema(db, []string{walletDB.GetSchema()}...); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema")
 		}
 	}
@@ -49,7 +51,7 @@ func NewWalletDB(db *sql.DB, opts NewDBOpts) (driver.WalletDB, error) {
 
 func (db *WalletDB) GetWalletID(identity token.Identity, roleID int) (driver.WalletID, error) {
 	idHash := identity.UniqueID()
-	result, err := QueryUnique[driver.WalletID](db.db,
+	result, err := sql2.QueryUnique[driver.WalletID](db.db,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND role_id=$2", db.table.Wallets),
 		idHash, roleID,
 	)
@@ -102,7 +104,7 @@ func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID drive
 
 func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.UniqueID()
-	result, err := QueryUnique[[]byte](db.db,
+	result, err := sql2.QueryUnique[[]byte](db.db,
 		fmt.Sprintf("SELECT meta FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
 		idHash, wID, roleID,
 	)
@@ -115,7 +117,7 @@ func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleI
 
 func (db *WalletDB) IdentityExists(identity token.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.UniqueID()
-	result, err := QueryUnique[driver.WalletID](db.db,
+	result, err := sql2.QueryUnique[driver.WalletID](db.db,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
 		idHash, wID, roleID,
 	)

@@ -52,11 +52,11 @@ func (d *Driver) OpenAuditTransactionDB(cp dbdriver.ConfigProvider, tmsID token.
 }
 
 func (d *Driver) OpenWalletDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.WalletDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, sqldb.NewWalletDB)
+	return openDB(d.DBOpener, cp, tmsID, common2.NewWalletDB)
 }
 
 func (d *Driver) OpenIdentityDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.IdentityDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, sqldb.NewCachedIdentityDB)
+	return openDB(d.DBOpener, cp, tmsID, common2.NewCachedIdentityDB)
 }
 
 func openDB[D any](dbOpener *sqldb.DBOpener, cp dbdriver.ConfigProvider, tmsID token.TMSID, newDB db.NewDBFunc[D]) (D, error) {
