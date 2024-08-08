@@ -218,7 +218,7 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get request's outputs")
 	}
-	toSpend, toAppend := t.parse(tms, txID, md, is, os, auditorFlag, precision, graphHiding)
+	toSpend, toAppend := t.parse(auth, txID, md, is, os, auditorFlag, precision, graphHiding)
 	return toSpend, toAppend, nil
 }
 
