@@ -18,14 +18,17 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	sql3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
 	_ "modernc.org/sqlite"
 )
 
-type NewDBOpts = sql3.NewDBOpts
+type NewDBOpts struct {
+	DataSource   string
+	TablePrefix  string
+	CreateSchema bool
+}
 
 func NewDBOptsFromOpts(o common.Opts) NewDBOpts {
 	return NewDBOpts{

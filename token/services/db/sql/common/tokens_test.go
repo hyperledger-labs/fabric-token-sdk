@@ -7,24 +7,21 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"database/sql"
 	"fmt"
 	"path"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
-	sql3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 )
 
 func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenDB, error) {
-	d := sql3.NewSQLDBOpener("", "")
+	d := NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return nil, err
 	}
-	tokenDB, err := NewTokenDB(sqlDB, sql3.NewDBOpts{
+	tokenDB, err := NewTokenDB(sqlDB, NewDBOpts{
 		DataSource:   dataSourceName,
 		TablePrefix:  tablePrefix,
 		CreateSchema: true,
@@ -35,39 +32,40 @@ func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix st
 	return tokenDB.(*TokenDB), err
 }
 
-func initTokenNDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenNDB, error) {
-	d := sql3.NewSQLDBOpener("", "")
-	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
-	if err != nil {
-		return nil, err
-	}
-	tokenDB, err := NewTokenNDB(sqlDB, sql3.NewDBOpts{
-		DataSource:   dataSourceName,
-		TablePrefix:  tablePrefix,
-		CreateSchema: true,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return tokenDB.(*TokenNDB), err
-}
-
-func initDB[T any](constructor func(db *sql.DB, opts sql3.NewDBOpts) (T, error), driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (T, error) {
-	d := sql3.NewSQLDBOpener("", "")
-	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
-	if err != nil {
-		return utils.Zero[T](), err
-	}
-	tokenDB, err := constructor(sqlDB, sql3.NewDBOpts{
-		DataSource:   dataSourceName,
-		TablePrefix:  tablePrefix,
-		CreateSchema: true,
-	})
-	if err != nil {
-		return utils.Zero[T](), err
-	}
-	return tokenDB, err
-}
+//
+//func initTokenNDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenNDB, error) {
+//	d := NewSQLDBOpener("", "")
+//	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
+//	if err != nil {
+//		return nil, err
+//	}
+//	tokenDB, err := NewTokenNDB(sqlDB, NewDBOpts{
+//		DataSource:   dataSourceName,
+//		TablePrefix:  tablePrefix,
+//		CreateSchema: true,
+//	})
+//	if err != nil {
+//		return nil, err
+//	}
+//	return tokenDB.(*TokenNDB), err
+//}
+//
+//func initDB[T any](constructor func(db *sql.DB, opts NewDBOpts) (T, error), driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (T, error) {
+//	d := NewSQLDBOpener("", "")
+//	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
+//	if err != nil {
+//		return utils.Zero[T](), err
+//	}
+//	tokenDB, err := constructor(sqlDB, NewDBOpts{
+//		DataSource:   dataSourceName,
+//		TablePrefix:  tablePrefix,
+//		CreateSchema: true,
+//	})
+//	if err != nil {
+//		return utils.Zero[T](), err
+//	}
+//	return tokenDB, err
+//}
 
 func TestTokensSqlite(t *testing.T) {
 	tempDir := t.TempDir()
