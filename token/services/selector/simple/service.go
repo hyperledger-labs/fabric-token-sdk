@@ -13,17 +13,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 var logger = logging.MustGetLogger("token-sdk.selector.simple")
-
-const (
-	numRetry = 2
-	timeout  = 5 * time.Second
-)
 
 type LockerProvider interface {
 	New(network, channel, namespace string) (Locker, error)
@@ -33,11 +29,11 @@ type SelectorService struct {
 	managerLazyCache utils.LazyProvider[*token.ManagementService, token.SelectorManager]
 }
 
-func NewService(lockerProvider LockerProvider) *SelectorService {
+func NewService(tms *token.ManagementService, lockerProvider LockerProvider, cfg sdriver.SelectorConfig) *SelectorService {
 	loader := &loader{
 		lockerProvider:       lockerProvider,
-		numRetry:             numRetry,
-		timeout:              timeout,
+		numRetries:           cfg.GetNumRetries(),
+		retryInterval:        cfg.GetRetryInterval(),
 		requestCertification: true,
 	}
 	return &SelectorService{
@@ -76,8 +72,8 @@ func (q *queryService) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) 
 
 type loader struct {
 	lockerProvider       LockerProvider
-	numRetry             int
-	timeout              time.Duration
+	numRetries           int
+	retryInterval        time.Duration
 	requestCertification bool
 }
 
@@ -96,8 +92,8 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	return NewManager(
 		locker,
 		func() QueryService { return qe },
-		s.numRetry,
-		s.timeout,
+		s.numRetries,
+		s.retryInterval,
 		s.requestCertification,
 		tms.PublicParametersManager().PublicParameters().Precision(),
 	), nil

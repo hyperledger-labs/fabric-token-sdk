@@ -7,7 +7,7 @@ See more details in the [Token API documentation](../../../docs/apis/token-api.m
 ## Available Implementations
 
 - Simple
-- Mailman (Default)
+- Sherdlock (Default)
 
 ## Benchmarking
 ```go
