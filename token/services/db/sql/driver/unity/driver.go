@@ -36,7 +36,7 @@ func NewDriver() *Driver {
 }
 
 func (d *Driver) OpenTokenTransactionDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenTransactionDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, sqldb.NewTransactionDB)
+	return openDB(d.DBOpener, cp, tmsID, common2.NewTransactionDB)
 }
 
 func (d *Driver) OpenTokenDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
@@ -48,7 +48,7 @@ func (d *Driver) OpenTokenLockDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) 
 }
 
 func (d *Driver) OpenAuditTransactionDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.AuditTransactionDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, sqldb.NewAuditTransactionDB)
+	return openDB(d.DBOpener, cp, tmsID, common2.NewAuditTransactionDB)
 }
 
 func (d *Driver) OpenWalletDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.WalletDB, error) {

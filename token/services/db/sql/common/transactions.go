@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package common
 
 import (
 	"context"
@@ -16,8 +16,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -51,7 +53,7 @@ func NewAuditTransactionDB(sqlDB *sql.DB, opts NewDBOpts) (driver.AuditTransacti
 }
 
 func NewTransactionDB(db *sql.DB, opts NewDBOpts) (driver.TokenTransactionDB, error) {
-	tables, err := GetTableNames(opts.TablePrefix)
+	tables, err := sql2.GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
@@ -63,7 +65,7 @@ func NewTransactionDB(db *sql.DB, opts NewDBOpts) (driver.TokenTransactionDB, er
 		TransactionEndorseAck: tables.TransactionEndorseAck,
 	})
 	if opts.CreateSchema {
-		if err = initSchema(db, transactionsDB.GetSchema()); err != nil {
+		if err = common.InitSchema(db, []string{transactionsDB.GetSchema()}...); err != nil {
 			return nil, err
 		}
 	}
