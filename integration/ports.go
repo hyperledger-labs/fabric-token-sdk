@@ -57,8 +57,8 @@ var (
 	}
 
 	AllTestTypes = []*InfrastructureType{
-		//WebSocketNoReplication,
-		//LibP2PNoReplication,
+		WebSocketNoReplication,
+		LibP2PNoReplication,
 		{
 			Label:             ginkgo.Label("replicas"),
 			CommType:          fsc.WebSocket,
