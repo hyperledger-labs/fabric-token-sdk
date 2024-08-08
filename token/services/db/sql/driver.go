@@ -25,15 +25,6 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type Opts struct {
-	Driver          common.SQLDriverType
-	DataSource      string
-	TablePrefix     string
-	SkipCreateTable bool
-	SkipPragmas     bool
-	MaxOpenConns    int
-}
-
 type NewDBOpts struct {
 	DataSource   string
 	TablePrefix  string
@@ -46,7 +37,7 @@ type DBOpener struct {
 	envVarKey string
 }
 
-func (d *DBOpener) Open(cp driver.ConfigProvider, tmsID token.TMSID) (*sql.DB, *Opts, error) {
+func (d *DBOpener) Open(cp driver.ConfigProvider, tmsID token.TMSID) (*sql.DB, *common.Opts, error) {
 	opts, err := d.compileOpts(cp, tmsID)
 	if err != nil {
 		return nil, nil, err
@@ -74,8 +65,8 @@ func NewSQLDBOpener(optsKey, envVarKey string) *DBOpener {
 	}
 }
 
-func (d *DBOpener) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*Opts, error) {
-	opts := &Opts{}
+func (d *DBOpener) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*common.Opts, error) {
+	opts := &common.Opts{}
 	tmsConfig, err := config.NewService(cp).ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)

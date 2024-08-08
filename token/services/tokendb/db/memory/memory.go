@@ -6,9 +6,16 @@ SPDX-License-Identifier: Apache-2.0
 
 package memory
 
-//func NewDriver() db.NamedDriver[dbdriver.TokenNDBDriver] {
+//func NewDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
+//	return db.NamedDriver[dbdriver.TokenDBDriver]{
+//		Name:   mem.MemoryPersistence,
+//		Driver: db.NewMemoryDriver(sqlite.NewTokenDB),
+//	}
+//}
+//
+//func NewNDBDriver() db.NamedDriver[dbdriver.TokenNDBDriver] {
 //	return db.NamedDriver[dbdriver.TokenNDBDriver]{
 //		Name:   mem.MemoryPersistence,
-//		Driver: db.NewMemoryDriver(sql.NewSQLDBOpener(), sqldb.NewTokenNDB),
+//		Driver: db.NewMemoryDriver(sqlite.NewTokenNDB),
 //	}
 //}

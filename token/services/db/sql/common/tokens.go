@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -45,7 +46,7 @@ func NewTokenNDB(db *sql.DB, opts NewDBOpts) (driver.TokenNDB, error) {
 		Notifier: postgres.NewNotifier(db, tables.Tokens, opts.DataSource, postgres.AllOperations, "tx_id", "idx"),
 	}
 	if opts.CreateSchema {
-		if err = initSchema(db, tokenDB.GetSchema()); err != nil {
+		if err = common.InitSchema(db, tokenDB.GetSchema()); err != nil {
 			return nil, err
 		}
 	}
@@ -88,7 +89,7 @@ func NewTokenDB(db *sql.DB, opts NewDBOpts) (driver.TokenDB, error) {
 		Certifications: tables.Certifications,
 	})
 	if opts.CreateSchema {
-		if err = initSchema(db, tokenDB.GetSchema()); err != nil {
+		if err = common.InitSchema(db, tokenDB.GetSchema()); err != nil {
 			return nil, err
 		}
 	}
