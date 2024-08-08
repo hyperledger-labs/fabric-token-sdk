@@ -51,7 +51,7 @@ func NewAuditTransactionDB(sqlDB *sql.DB, opts NewDBOpts) (driver.AuditTransacti
 }
 
 func NewTransactionDB(db *sql.DB, opts NewDBOpts) (driver.TokenTransactionDB, error) {
-	tables, err := getTableNames(opts.TablePrefix)
+	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}

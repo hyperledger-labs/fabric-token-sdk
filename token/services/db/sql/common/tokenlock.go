@@ -4,14 +4,16 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package common
 
 import (
 	"database/sql"
 	"fmt"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -34,14 +36,14 @@ func newTokenLockDB(db *sql.DB, tables tokenLockTables) *TokenLockDB {
 }
 
 func NewTokenLockDB(db *sql.DB, opts NewDBOpts) (driver.TokenLockDB, error) {
-	tables, err := getTableNames(opts.TablePrefix)
+	tables, err := sql2.GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
 
 	identityDB := newTokenLockDB(db, tokenLockTables{TokenLocks: tables.TokenLocks})
 	if opts.CreateSchema {
-		if err = initSchema(db, identityDB.GetSchema()); err != nil {
+		if err = common.InitSchema(db, []string{identityDB.GetSchema()}...); err != nil {
 			return nil, err
 		}
 	}

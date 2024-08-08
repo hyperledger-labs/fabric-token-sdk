@@ -61,7 +61,7 @@ type tableNames struct {
 	TokenLocks             string
 }
 
-func getTableNames(prefix string) (tableNames, error) {
+func GetTableNames(prefix string) (tableNames, error) {
 	if prefix != "" {
 		if len(prefix) > 100 {
 			return tableNames{}, errors.New("table prefix must be shorter than 100 characters")

@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/pkg/errors"
 )
 
@@ -43,7 +44,7 @@ func (d *Driver) OpenTokenDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbd
 }
 
 func (d *Driver) OpenTokenLockDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenLockDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, sqldb.NewTokenLockDB)
+	return openDB(d.DBOpener, cp, tmsID, common2.NewTokenLockDB)
 }
 
 func (d *Driver) OpenAuditTransactionDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.AuditTransactionDB, error) {

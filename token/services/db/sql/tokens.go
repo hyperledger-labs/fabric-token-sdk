@@ -30,7 +30,7 @@ type TokenNDB struct {
 }
 
 func NewTokenNDB(db *sql.DB, opts NewDBOpts) (driver.TokenNDB, error) {
-	tables, err := getTableNames(opts.TablePrefix)
+	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
@@ -76,7 +76,7 @@ func newTokenDB(db *sql.DB, tables tokenTables) *TokenDB {
 }
 
 func NewTokenDB(db *sql.DB, opts NewDBOpts) (driver.TokenDB, error) {
-	tables, err := getTableNames(opts.TablePrefix)
+	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}

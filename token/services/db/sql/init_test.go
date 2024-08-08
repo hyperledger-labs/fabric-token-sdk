@@ -17,7 +17,7 @@ import (
 )
 
 func TestGetTableNames(t *testing.T) {
-	names, err := getTableNames("")
+	names, err := GetTableNames("")
 	assert.NoError(t, err)
 	assert.Equal(t, tableNames{
 		Movements:              "movements",
@@ -36,15 +36,15 @@ func TestGetTableNames(t *testing.T) {
 		TokenLocks:             "token_locks",
 	}, names)
 
-	names, err = getTableNames("valid_prefix")
+	names, err = GetTableNames("valid_prefix")
 	assert.NoError(t, err)
 	assert.Equal(t, "valid_prefix_transactions", names.Transactions)
 
-	names, err = getTableNames("Valid_Prefix")
+	names, err = GetTableNames("Valid_Prefix")
 	assert.NoError(t, err)
 	assert.Equal(t, "valid_prefix_transactions", names.Transactions)
 
-	names, err = getTableNames("valid")
+	names, err = GetTableNames("valid")
 	assert.NoError(t, err)
 	assert.Equal(t, "valid_transactions", names.Transactions)
 
@@ -63,7 +63,7 @@ func TestGetTableNames(t *testing.T) {
 
 	for _, inv := range invalid {
 		t.Run(fmt.Sprintf("Prefix: %s", inv), func(t *testing.T) {
-			names, err := getTableNames(inv)
+			names, err := GetTableNames(inv)
 			assert.Error(t, err)
 			assert.Equal(t, tableNames{}, names)
 		})
