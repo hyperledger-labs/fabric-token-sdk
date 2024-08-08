@@ -9,9 +9,9 @@ package sherdlock
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -22,19 +22,13 @@ type SelectorService struct {
 	managerLazyCache utils.LazyProvider[*token.ManagementService, token.SelectorManager]
 }
 
-func NewService(tokenDBManager *tokendb.Manager, tokenLockDBManager *tokenlockdb.Manager, cfg driver.ConfigService, metricsProvider metrics.Provider) *SelectorService {
-	c := SelectorConfig{}
-	err := cfg.UnmarshalKey("token.selector", &c)
-	if err != nil {
-		panic("invalid config for key [token.selector]: expect retryInterval (duration) and numRetries (integer))")
-	}
-
+func NewService(tokenDBManager *tokendb.Manager, tokenLockDBManager *tokenlockdb.Manager, cfg driver.SelectorConfig, metricsProvider metrics.Provider) *SelectorService {
 	loader := &loader{
 		tokenDBManager:     tokenDBManager,
 		tokenLockDBManager: tokenLockDBManager,
 		m:                  newMetrics(metricsProvider),
-		retryInterval:      c.GetRetryInterval(),
-		numRetries:         c.GetNumRetries(),
+		retryInterval:      cfg.GetRetryInterval(),
+		numRetries:         cfg.GetNumRetries(),
 	}
 	return &SelectorService{
 		managerLazyCache: utils.NewLazyProviderWithKeyMapper(key, loader.load),
@@ -76,24 +70,4 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 
 func key(tms *token.ManagementService) string {
 	return tms.ID().String()
-}
-
-type SelectorConfig struct {
-	RetryInterval time.Duration
-	NumRetries    int
-}
-
-func (c *SelectorConfig) GetNumRetries() int {
-	if c.NumRetries > 0 {
-		return c.NumRetries
-	} else {
-		return 3
-	}
-}
-func (c *SelectorConfig) GetRetryInterval() time.Duration {
-	if c.RetryInterval > 0 {
-		return c.RetryInterval
-	} else {
-		return 5 * time.Second
-	}
 }
