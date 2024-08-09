@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 
 	csp "github.com/IBM/idemix/bccsp/types"
+	im "github.com/IBM/idemix/idemixmsp"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
@@ -46,7 +47,7 @@ func (a *AuditInfo) Match(id []byte) error {
 		return errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
 
-	serialized := new(m.SerializedIdemixIdentity)
+	serialized := new(im.SerializedIdemixIdentity)
 	err = proto.Unmarshal(si.IdBytes, serialized)
 	if err != nil {
 		return errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
