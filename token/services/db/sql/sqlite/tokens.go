@@ -17,6 +17,6 @@ func NewTokenDB(db *sql.DB, opts common.NewDBOpts) (driver.TokenDB, error) {
 	return common.NewTokenDB(db, opts)
 }
 
-func NewTokenNDB(db *sql.DB, opts common.NewDBOpts) (driver.TokenNDB, error) {
-	return common.NewTokenNDB(db, opts)
+func NewTokenNotifier(db *sql.DB, opts common.NewDBOpts) (driver.TokenNotifier, error) {
+	panic("not implemented")
 }
