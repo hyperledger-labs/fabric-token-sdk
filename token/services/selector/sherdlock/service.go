@@ -9,18 +9,18 @@ package sherdlock
 import (
 	"time"
 
+	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/pkg/errors"
 )
 
 const retrySelectionBackoff = 5 * time.Second
 
 type SelectorService struct {
-	managerLazyCache utils.LazyProvider[*token.ManagementService, token.SelectorManager]
+	managerLazyCache lazy2.Provider[*token.ManagementService, token.SelectorManager]
 }
 
 func NewService(tokenDBManager *tokendb.Manager, tokenLockDBManager *tokenlockdb.Manager, metricsProvider metrics.Provider) *SelectorService {
@@ -30,7 +30,7 @@ func NewService(tokenDBManager *tokendb.Manager, tokenLockDBManager *tokenlockdb
 		m:                  newMetrics(metricsProvider),
 	}
 	return &SelectorService{
-		managerLazyCache: utils.NewLazyProviderWithKeyMapper(key, loader.load),
+		managerLazyCache: lazy2.NewProviderWithKeyMapper(key, loader.load),
 	}
 }
 

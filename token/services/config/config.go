@@ -9,8 +9,8 @@ package config
 import (
 	"reflect"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/pkg/errors"
 )
 
@@ -82,7 +82,7 @@ type Service struct {
 
 	version  string
 	enabled  bool
-	tmsCache utils.LazyGetter[map[string]Configuration]
+	tmsCache lazy.Getter[map[string]Configuration]
 }
 
 // NewService creates a new Service configuration.
@@ -97,7 +97,7 @@ func NewService(cp configProvider) *Service {
 		cp:       cp,
 		version:  version,
 		enabled:  enabled,
-		tmsCache: utils.NewLazyGetter(loader.load),
+		tmsCache: lazy.NewGetter(loader.load),
 	}
 }
 
