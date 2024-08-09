@@ -10,7 +10,7 @@ import (
 	"context"
 	"fmt"
 
-	idemix2 "github.com/IBM/idemix"
+	msp "github.com/IBM/idemix"
 	csp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -33,40 +33,37 @@ func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
 	}
-	return NewDeserializerWithProvider(ipk, csp.ExpectEidNymRhNym, nil, cryptoProvider)
+	return NewDeserializer(sm, schema, ipk, csp.ExpectEidNymRhNym, nil, cryptoProvider)
 }
 
-// NewDeserializerWithProvider returns a new serialized for the passed arguments
-func NewDeserializerWithProvider(
+// NewDeserializer returns a new deserializer for the passed arguments.
+// The returned deserializer checks the validly of the deserialized identities.
+func NewDeserializer(
+	sm SchemaManager,
+	schema string,
 	ipk []byte,
 	verType csp.VerificationType,
 	nymEID []byte,
 	cryptoProvider csp.BCCSP,
 ) (*Deserializer, error) {
-	return NewDeserializerWithBCCSP(ipk, verType, nymEID, cryptoProvider)
-}
-
-func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID []byte, cryptoProvider csp.BCCSP) (*Deserializer, error) {
 	logger.Debugf("Setting up Idemix-based deserailizer instance")
 
 	// Import Issuer Public Key
+	if len(ipk) == 0 {
+		return nil, errors.Errorf("no issuer public key provided")
+	}
 	var issuerPublicKey csp.Key
-	var err error
-	if len(ipk) != 0 {
-		issuerPublicKey, err = cryptoProvider.KeyImport(
-			ipk,
-			&csp.IdemixIssuerPublicKeyImportOpts{
-				Temporary: true,
-				AttributeNames: []string{
-					idemix2.AttributeNameOU,
-					idemix2.AttributeNameRole,
-					idemix2.AttributeNameEnrollmentId,
-					idemix2.AttributeNameRevocationHandle,
-				},
-			})
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to import idemix issuer public key")
-		}
+	// get the opts from the schema manager
+	opts, err := sm.PublicKeyImportOpts(schema)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not obtain PublicKeyImportOpts for schema '%s'", schema)
+	}
+	issuerPublicKey, err = cryptoProvider.KeyImport(
+		ipk,
+		opts,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Deserializer{
@@ -76,33 +73,47 @@ func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID [
 			IssuerPublicKey: issuerPublicKey,
 			VerType:         verType,
 			NymEID:          nymEID,
+			SchemaManager:   sm,
+			Schema:          schema,
 		},
 	}, nil
 }
 
-func (i *Deserializer) DeserializeVerifier(raw driver.Identity) (driver.Verifier, error) {
-	identity, err := i.Deserialize(raw, true)
+func (d *Deserializer) DeserializeVerifier(raw driver.Identity) (driver.Verifier, error) {
+	identity, err := d.Deserialize(raw)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to deserialize identity")
 	}
 
 	return &crypto2.NymSignatureVerifier{
-		CSP:   i.Csp,
-		IPK:   i.IssuerPublicKey,
-		NymPK: identity.NymPublicKey,
+		CSP:           d.Csp,
+		IPK:           d.IssuerPublicKey,
+		NymPK:         identity.NymPublicKey,
+		SchemaManager: d.SchemaManager,
+		Schema:        d.Schema,
 	}, nil
 }
 
-func (i *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byte) (driver.Verifier, error) {
-	identity, err := i.DeserializeAgainstNymEID(raw, true, nymEID)
+func (d *Deserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
+	return d.Deserializer.DeserializeAuditInfo(raw)
+}
+
+func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+	return d.Deserializer.DeserializeAuditInfo(raw)
+}
+
+func (d *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byte) (driver.Verifier, error) {
+	identity, err := d.DeserializeAgainstNymEID(raw, nymEID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to deserialize identity")
 	}
 
 	return &crypto2.NymSignatureVerifier{
-		CSP:   i.Csp,
-		IPK:   i.IssuerPublicKey,
-		NymPK: identity.NymPublicKey,
+		CSP:           d.Csp,
+		IPK:           d.IssuerPublicKey,
+		NymPK:         identity.NymPublicKey,
+		SchemaManager: d.SchemaManager,
+		Schema:        d.Schema,
 	}, nil
 }
 

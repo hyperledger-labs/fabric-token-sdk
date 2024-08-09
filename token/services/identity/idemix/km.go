@@ -9,8 +9,9 @@ package idemix
 import (
 	"fmt"
 
-	"github.com/IBM/idemix"
 	bccsp "github.com/IBM/idemix/bccsp/types"
+	im "github.com/IBM/idemix/idemixmsp"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -28,6 +29,22 @@ type (
 	SKI = []byte
 )
 
+// SchemaManager handles the various credential schemas. A credential schema
+// contains information about the number of attributes, which attributes
+// must be disclosed when creating proofs, the format of the attributes etc.
+type SchemaManager interface {
+	// PublicKeyImportOpts returns the options that `schema` uses to import its public keys
+	PublicKeyImportOpts(schema string) (*bccsp.IdemixIssuerPublicKeyImportOpts, error)
+	// SignerOpts returns the options for the passed arguments
+	SignerOpts(schema string, ou *m.OrganizationUnit, role *m.MSPRole) (*bccsp.IdemixSignerOpts, error)
+	// NymSignerOpts returns the options that `schema` uses to verify a nym signature
+	NymSignerOpts(schema string) (*bccsp.IdemixNymSignerOpts, error)
+	// EidNymAuditOpts returns the options that `sid` must use to audit an EIDNym
+	EidNymAuditOpts(schema string, attrs [][]byte) (*bccsp.EidNymAuditOpts, error)
+	// RhNymAuditOpts returns the options that `sid` must use to audit an RhNym
+	RhNymAuditOpts(schema string, attrs [][]byte) (*bccsp.RhNymAuditOpts, error)
+}
+
 type SignerService interface {
 	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
 }
@@ -40,9 +57,20 @@ type KeyManager struct {
 
 	sigType bccsp.SignatureType
 	verType bccsp.VerificationType
+
+	SchemaManager SchemaManager
+	Schema        string
 }
 
-func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bccsp.SignatureType, csp bccsp.BCCSP) (*KeyManager, error) {
+func NewKeyManager(
+	conf *crypto2.Config,
+	signerService SignerService,
+	sigType bccsp.SignatureType,
+	csp bccsp.BCCSP,
+	sm SchemaManager,
+	schema string,
+) (*KeyManager, error) {
+
 	if conf == nil {
 		return nil, errors.New("no idemix config provided")
 	}
@@ -52,18 +80,16 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 
 	logger.Debugf("setting up Idemix key manager instance %s", conf.Name)
 
+	// get the opts from the schema manager
+	opts, err := sm.PublicKeyImportOpts(schema)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not obtain PublicKeyImportOpts for schema '%s'", schema)
+	}
 	// Import Issuer Public Key
 	issuerPublicKey, err := csp.KeyImport(
 		conf.Ipk,
-		&bccsp.IdemixIssuerPublicKeyImportOpts{
-			Temporary: true,
-			AttributeNames: []string{
-				idemix.AttributeNameOU,
-				idemix.AttributeNameRole,
-				idemix.AttributeNameEnrollmentId,
-				idemix.AttributeNameRevocationHandle,
-			},
-		})
+		opts,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -160,12 +186,16 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 			RevocationPK:    RevocationPublicKey,
 			Epoch:           0,
 			VerType:         verType,
+			SchemaManager:   sm,
+			Schema:          schema,
 		},
 		userKeySKI:    userKeySKI,
 		conf:          conf,
 		SignerService: signerService,
 		sigType:       sigType,
 		verType:       verType,
+		SchemaManager: sm,
+		Schema:        schema,
 	}, nil
 }
 
@@ -208,22 +238,16 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	// Create the cryptographic evidence that this identity is valid
-	sigOpts := &bccsp.IdemixSignerOpts{
-		Credential: p.conf.Signer.Cred,
-		Nym:        nymKey,
-		IssuerPK:   p.IssuerPublicKey,
-		Attributes: []bccsp.IdemixAttribute{
-			{Type: bccsp.IdemixHiddenAttribute},
-			{Type: bccsp.IdemixHiddenAttribute},
-			{Type: bccsp.IdemixHiddenAttribute},
-			{Type: bccsp.IdemixHiddenAttribute},
-		},
-		RhIndex:  crypto2.RHIndex,
-		EidIndex: crypto2.EIDIndex,
-		CRI:      p.conf.Signer.CredentialRevocationInformation,
-		SigType:  sigType,
-		Metadata: signerMetadata,
+	sigOpts, err := p.SchemaManager.SignerOpts(p.Schema, ou, role)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "could obtain signer sigOpts for schema %s", p.Schema)
 	}
+	sigOpts.Credential = p.conf.Signer.Cred
+	sigOpts.Nym = nymKey
+	sigOpts.IssuerPK = p.IssuerPublicKey
+	sigOpts.CRI = p.conf.Signer.CredentialRevocationInformation
+	sigOpts.SigType = sigType
+	sigOpts.Metadata = signerMetadata
 	proof, err := p.Csp.Sign(
 		userKey,
 		nil,
@@ -234,7 +258,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	// Set up default signer
-	id, err := crypto2.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType)
+	id, err := crypto2.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType, p.SchemaManager, p.Schema)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to create identity")
 	}
@@ -262,8 +286,6 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 		infoRaw = nil
 	case bccsp.EidNymRhNym:
 		auditInfo := &crypto2.AuditInfo{
-			Csp:             p.Csp,
-			IssuerPublicKey: p.IssuerPublicKey,
 			EidNymAuditData: sigOpts.Metadata.EidNymAuditData,
 			RhNymAuditData:  sigOpts.Metadata.RhNymAuditData,
 			Attributes: [][]byte{
@@ -272,6 +294,10 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 				[]byte(enrollmentID),
 				[]byte(rh),
 			},
+			Csp:             p.Csp,
+			IssuerPublicKey: p.IssuerPublicKey,
+			SchemaManager:   p.SchemaManager,
+			Schema:          p.Schema,
 		}
 		logger.Debugf("new idemix identity generated with [%s:%s]", enrollmentID, hash.Hashable(rh))
 		infoRaw, err = auditInfo.Bytes()
@@ -289,7 +315,7 @@ func (p *KeyManager) IsRemote() bool {
 }
 
 func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	r, err := p.Deserialize(raw, true)
+	r, err := p.Deserialize(raw)
 	if err != nil {
 		return nil, err
 	}
@@ -307,6 +333,8 @@ func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
 		ai := &crypto2.AuditInfo{
 			Csp:             p.Csp,
 			IssuerPublicKey: p.IssuerPublicKey,
+			SchemaManager:   p.SchemaManager,
+			Schema:          p.Schema,
 		}
 		if err := ai.FromBytes(auditInfo); err != nil {
 			return "", err

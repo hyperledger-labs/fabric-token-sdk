@@ -8,6 +8,7 @@ package crypto
 
 import (
 	csp "github.com/IBM/idemix/bccsp/types"
+	im "github.com/IBM/idemix/idemixmsp"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/pkg/errors"
@@ -17,8 +18,11 @@ type AuditInfo struct {
 	EidNymAuditData *csp.AttrNymAuditData
 	RhNymAuditData  *csp.AttrNymAuditData
 	Attributes      [][]byte
-	Csp             csp.BCCSP `json:"-"`
-	IssuerPublicKey csp.Key   `json:"-"`
+
+	Csp             csp.BCCSP     `json:"-"`
+	IssuerPublicKey csp.Key       `json:"-"`
+	SchemaManager   SchemaManager `json:"-"`
+	Schema          string
 }
 
 func (a *AuditInfo) Bytes() ([]byte, error) {
@@ -44,16 +48,18 @@ func (a *AuditInfo) Match(id []byte) error {
 		return errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
 	}
 
+	eidAuditOpts, err := a.SchemaManager.EidNymAuditOpts(a.Schema, a.Attributes)
+	if err != nil {
+		return errors.Wrap(err, "error while getting a RhNymAuditOpts")
+	}
+	eidAuditOpts.RNymEid = a.EidNymAuditData.Rand
+
 	// Audit EID
 	valid, err := a.Csp.Verify(
 		a.IssuerPublicKey,
 		serialized.Proof,
 		nil,
-		&csp.EidNymAuditOpts{
-			EidIndex:     EIDIndex,
-			EnrollmentID: string(a.Attributes[EIDIndex]),
-			RNymEid:      a.EidNymAuditData.Rand,
-		},
+		eidAuditOpts,
 	)
 	if err != nil {
 		return errors.Wrap(err, "error while verifying the nym eid")
@@ -62,16 +68,18 @@ func (a *AuditInfo) Match(id []byte) error {
 		return errors.New("invalid nym rh")
 	}
 
+	rhAuditOpts, err := a.SchemaManager.RhNymAuditOpts(a.Schema, a.Attributes)
+	if err != nil {
+		return errors.Wrap(err, "error while getting a RhNymAuditOpts")
+	}
+	rhAuditOpts.RNymRh = a.RhNymAuditData.Rand
+
 	// Audit RH
 	valid, err = a.Csp.Verify(
 		a.IssuerPublicKey,
 		serialized.Proof,
 		nil,
-		&csp.RhNymAuditOpts{
-			RhIndex:          RHIndex,
-			RevocationHandle: string(a.Attributes[RHIndex]),
-			RNymRh:           a.RhNymAuditData.Rand,
-		},
+		rhAuditOpts,
 	)
 	if err != nil {
 		return errors.Wrap(err, "error while verifying the nym rh")
