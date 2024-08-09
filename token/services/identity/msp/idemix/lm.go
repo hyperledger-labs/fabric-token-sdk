@@ -271,9 +271,12 @@ func (l *LocalMembership) registerProvider(identityConfig driver.IdentityConfigu
 			},
 		).Identity
 	}
+	logger.Debugf("append resolver for [%s]", identityConfig.ID)
 	l.addResolver(identityConfig.ID, provider.EnrollmentID(), provider.IsRemote(), defaultIdentity, getIdentityFunc)
 
+	logger.Debugf("does the configuration already exists for [%s]?", identityConfig.ID)
 	if exists, _ := l.identityDB.ConfigurationExists(identityConfig.ID, msp2.IdentityConfigurationType); !exists {
+		logger.Debugf("does the configuration already exists for [%s]? no, add it", identityConfig.ID)
 		if err := l.identityDB.AddConfiguration(driver3.IdentityConfiguration{
 			ID:     identityConfig.ID,
 			Type:   msp2.IdentityConfigurationType,
@@ -284,7 +287,6 @@ func (l *LocalMembership) registerProvider(identityConfig driver.IdentityConfigu
 			return err
 		}
 	}
-
 	logger.Debugf("added idemix resolver for id [%s] with cache of size [%d], remote [%v]", identityConfig.ID+"@"+provider.EnrollmentID(), cacheSize, provider.IsRemote())
 	return nil
 }
@@ -361,16 +363,23 @@ func (l *LocalMembership) loadFromStorage() error {
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
-	defer it.Close()
+	// copy the iterator
+	items := make([]driver3.IdentityConfiguration, 0)
 	for it.HasNext() {
-		entry, err := it.Next()
+		item, err := it.Next()
 		if err != nil {
-			return errors.WithMessagef(err, "failed to get next registered identities from kvs")
+			return err
 		}
+		items = append(items, item)
+	}
+	it.Close()
+	for _, entry := range items {
 		id := entry.ID
 		if l.getResolver(id) != nil {
+			logger.Debugf("from storage: id [%s] already exists", id)
 			continue
 		}
+		logger.Debugf("from storage: id [%s] does no exist, register it", id)
 		if err := l.registerIdentityConfiguration(driver.IdentityConfiguration{
 			ID:     entry.ID,
 			URL:    entry.URL,

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	view4 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
@@ -18,7 +19,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 // TransferAction defines a transfer action
@@ -239,6 +239,11 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	if len(t.TokenIDs) == 0 {
 		// The sender uses the default token selector each transaction comes equipped with
 		selector, err := tx.Selector()
+		defer func() {
+			if err := tx.CloseSelector(); err != nil {
+				logger.Errorf("failed closing selector [%s]", err)
+			}
+		}()
 		assert.NoError(err, "failed getting token selector")
 
 		// The sender tries to select the requested amount of tokens of the passed type.
@@ -263,18 +268,17 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 		}
 		if err != nil {
 			// If finally not enough tokens were available, the sender can check what was the cause of the error:
-			cause := errors.Cause(err)
-			switch cause {
-			case nil:
-				assert.NoError(err, "system failure")
-			case token2.SelectorInsufficientFunds:
+			switch {
+			case errors.HasCause(err, token2.SelectorInsufficientFunds):
 				assert.NoError(err, "pineapple")
-			case token2.SelectorSufficientButLockedFunds:
+			case errors.HasCause(err, token2.SelectorSufficientButLockedFunds):
 				assert.NoError(err, "lemonade")
-			case token2.SelectorSufficientButNotCertifiedFunds:
+			case errors.HasCause(err, token2.SelectorSufficientButNotCertifiedFunds):
 				assert.NoError(err, "mandarin")
-			case token2.SelectorSufficientFundsButConcurrencyIssue:
+			case errors.HasCause(err, token2.SelectorSufficientFundsButConcurrencyIssue):
 				assert.NoError(err, "peach")
+			default:
+				assert.NoError(err, "system failure")
 			}
 		}
 

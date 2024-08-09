@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -20,48 +20,51 @@ import (
 
 type tokenLockTables struct {
 	TokenLocks string
+	Requests   string
 }
 
 type TokenLockDB struct {
-	db    *sql.DB
-	table tokenLockTables
+	DB     *sql.DB
+	Table  tokenLockTables
+	Logger logging.Logger
 }
 
 func newTokenLockDB(db *sql.DB, tables tokenLockTables) *TokenLockDB {
 	return &TokenLockDB{
-		db:    db,
-		table: tables,
+		DB:     db,
+		Table:  tables,
+		Logger: logger,
 	}
 }
 
-func NewTokenLockDB(db *sql.DB, opts NewDBOpts) (driver.TokenLockDB, error) {
+func NewTokenLockDB(db *sql.DB, opts NewDBOpts) (*TokenLockDB, error) {
 	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
 
-	identityDB := newTokenLockDB(db, tokenLockTables{TokenLocks: tables.TokenLocks})
+	tokenLockDB := newTokenLockDB(db, tokenLockTables{TokenLocks: tables.TokenLocks})
 	if opts.CreateSchema {
-		if err = common.InitSchema(db, []string{identityDB.GetSchema()}...); err != nil {
+		if err = common.InitSchema(db, []string{tokenLockDB.GetSchema()}...); err != nil {
 			return nil, err
 		}
 	}
-	return identityDB, nil
+	return tokenLockDB, nil
 }
 
 func (db *TokenLockDB) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
-	query := fmt.Sprintf("INSERT INTO %s (consumer_tx_id, tx_id, idx, created_at) VALUES ($1, $2, $3, $4)", db.table.TokenLocks)
+	query := fmt.Sprintf("INSERT INTO %s (consumer_tx_id, tx_id, idx, created_at) VALUES ($1, $2, $3, $4)", db.Table.TokenLocks)
 	logger.Debug(query, tokenID, consumerTxID)
 
-	_, err := db.db.Exec(query, consumerTxID, tokenID.TxId, tokenID.Index, time.Now())
+	_, err := db.DB.Exec(query, consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC())
 	return err
 }
 
 func (db *TokenLockDB) UnlockByTxID(consumerTxID transaction.ID) error {
-	query := fmt.Sprintf("DELETE FROM %s WHERE consumer_tx_id = $1", db.table.TokenLocks)
+	query := fmt.Sprintf("DELETE FROM %s WHERE consumer_tx_id = $1", db.Table.TokenLocks)
 	logger.Debug(query, consumerTxID)
 
-	_, err := db.db.Exec(query, consumerTxID)
+	_, err := db.DB.Exec(query, consumerTxID)
 	return err
 }
 
@@ -75,6 +78,6 @@ func (db *TokenLockDB) GetSchema() string {
 			created_at TIMESTAMP NOT NULL,
 			PRIMARY KEY(tx_id, idx)
 		);`,
-		db.table.TokenLocks,
+		db.Table.TokenLocks,
 	)
 }

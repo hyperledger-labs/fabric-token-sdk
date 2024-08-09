@@ -7,14 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package unity
 
 import (
-	"database/sql"
-
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	sql3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	"github.com/pkg/errors"
 )
 
@@ -25,6 +27,8 @@ const (
 
 	UnityPersistence driver2.PersistenceType = "unity"
 )
+
+type constructors[D any] map[common2.SQLDriverType]common.NewDBFunc[D]
 
 type Driver struct {
 	DBOpener *common.DBOpener
@@ -37,35 +41,57 @@ func NewDriver() *Driver {
 }
 
 func (d *Driver) OpenTokenTransactionDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenTransactionDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, common.NewTransactionDB)
+	return openDB(d.DBOpener, cp, tmsID, constructors[dbdriver.TokenTransactionDB]{
+		sql3.SQLite:   sqlite.NewTransactionDB,
+		sql3.Postgres: postgres.NewTransactionDB,
+	})
 }
 
 func (d *Driver) OpenTokenDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, common.NewTokenDB)
+	return openDB(d.DBOpener, cp, tmsID, constructors[dbdriver.TokenDB]{
+		sql3.SQLite:   sqlite.NewTokenDB,
+		sql3.Postgres: postgres.NewTokenDB,
+	})
 }
 
 func (d *Driver) OpenTokenLockDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenLockDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, common.NewTokenLockDB)
+	return openDB(d.DBOpener, cp, tmsID, constructors[dbdriver.TokenLockDB]{
+		sql3.SQLite:   sqlite.NewTokenLockDB,
+		sql3.Postgres: postgres.NewTokenLockDB,
+	})
 }
 
 func (d *Driver) OpenAuditTransactionDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.AuditTransactionDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, common.NewAuditTransactionDB)
+	return openDB(d.DBOpener, cp, tmsID, constructors[dbdriver.AuditTransactionDB]{
+		sql3.SQLite:   sqlite.NewAuditTransactionDB,
+		sql3.Postgres: postgres.NewAuditTransactionDB,
+	})
 }
 
 func (d *Driver) OpenWalletDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.WalletDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, common.NewWalletDB)
+	return openDB(d.DBOpener, cp, tmsID, constructors[dbdriver.WalletDB]{
+		sql3.SQLite:   sqlite.NewWalletDB,
+		sql3.Postgres: postgres.NewWalletDB,
+	})
 }
 
 func (d *Driver) OpenIdentityDB(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.IdentityDB, error) {
-	return openDB(d.DBOpener, cp, tmsID, common.NewCachedIdentityDB)
+	return openDB(d.DBOpener, cp, tmsID, constructors[dbdriver.IdentityDB]{
+		sql3.SQLite:   sqlite.NewIdentityDB,
+		sql3.Postgres: postgres.NewIdentityDB,
+	})
 }
 
-func openDB[D any](dbOpener *common.DBOpener, cp dbdriver.ConfigProvider, tmsID token.TMSID, newDB func(db *sql.DB, opts common.NewDBOpts) (D, error)) (D, error) {
+func openDB[D any](dbOpener *common.DBOpener, cp dbdriver.ConfigProvider, tmsID token.TMSID, constructors constructors[D]) (D, error) {
 	sqlDB, opts, err := dbOpener.OpenWithOpts(cp, tmsID)
 	if err != nil {
 		return utils.Zero[D](), errors.Wrapf(err, "failed to open db at [%s:%s]", optsKey, envVarKey)
 	}
-	return newDB(sqlDB, common.NewDBOptsFromOpts(*opts))
+	constructor, ok := constructors[opts.Driver]
+	if !ok {
+		return utils.Zero[D](), errors.New("constructor not found")
+	}
+	return constructor(sqlDB, common.NewDBOptsFromOpts(*opts))
 }
 
 type TtxDBDriver struct {
