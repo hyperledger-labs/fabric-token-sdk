@@ -16,6 +16,6 @@ import (
 func NewDriver() db.NamedDriver[driver.TTXDBDriver] {
 	return db.NamedDriver[driver.TTXDBDriver]{
 		Name:   mem.MemoryPersistence,
-		Driver: db.NewMemoryDriver(sqlite.NewTransactionDB),
+		Driver: db.NewMemoryDriver(sqlite.OpenTransactionDB),
 	}
 }

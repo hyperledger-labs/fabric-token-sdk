@@ -58,15 +58,15 @@ func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
 }
 
 func (f *mixedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
-	logger.Infof("Call unspent tokens iterator")
+	logger.Debugf("call unspent tokens iterator")
 	it, err := f.eagerFetcher.UnspentTokensIteratorBy(walletID, currency)
-	logger.Infof("Fetched eager iterator")
+	logger.Debugf("fetched eager iterator")
 	if err == nil && it.(enhancedIterator[*token2.MinTokenInfo]).HasNext() {
-		logger.Infof("Eager iterator had tokens. Returning iterator")
+		logger.Debugf("eager iterator had tokens. Returning iterator")
 		f.m.UnspentTokensInvocations.With(fetcherTypeLabel, eager).Add(1)
 		return it, nil
 	}
-	logger.Infof("Eager iterator had no tokens. Returning lazy iterator")
+	logger.Debugf("eager iterator had no tokens. Returning lazy iterator")
 
 	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
 	return f.lazyFetcher.UnspentTokensIteratorBy(walletID, currency)

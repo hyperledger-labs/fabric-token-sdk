@@ -7,24 +7,33 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	"database/sql"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-func NewAuditTransactionDB(k common.Opts) (driver.AuditTransactionDB, error) {
+func OpenAuditTransactionDB(k common.Opts) (driver.AuditTransactionDB, error) {
 	db, err := postgres.OpenDB(k.DataSource, k.MaxOpenConns)
 	if err != nil {
 		return nil, err
 	}
-	return common2.NewAuditTransactionDB(db, common2.NewDBOptsFromOpts(k))
+	return NewAuditTransactionDB(db, common.NewDBOptsFromOpts(k))
 }
 
-func NewTransactionDB(k common.Opts) (driver.TokenTransactionDB, error) {
+func NewAuditTransactionDB(db *sql.DB, opts common.NewDBOpts) (driver.AuditTransactionDB, error) {
+	return common.NewAuditTransactionDB(db, opts)
+}
+
+func OpenTransactionDB(k common.Opts) (driver.TokenTransactionDB, error) {
 	db, err := postgres.OpenDB(k.DataSource, k.MaxOpenConns)
 	if err != nil {
 		return nil, err
 	}
-	return common2.NewTransactionDB(db, common2.NewDBOptsFromOpts(k))
+	return NewTransactionDB(db, common.NewDBOptsFromOpts(k))
+}
+
+func NewTransactionDB(db *sql.DB, opts common.NewDBOpts) (driver.TokenTransactionDB, error) {
+	return common.NewTransactionDB(db, opts)
 }

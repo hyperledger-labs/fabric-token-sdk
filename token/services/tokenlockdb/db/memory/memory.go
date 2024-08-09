@@ -16,6 +16,6 @@ import (
 func NewDriver() db.NamedDriver[dbdriver.TokenLockDBDriver] {
 	return db.NamedDriver[dbdriver.TokenLockDBDriver]{
 		Name:   mem.MemoryPersistence,
-		Driver: db.NewMemoryDriver[dbdriver.TokenLockDB](sqlite2.NewTokenLockDB),
+		Driver: db.NewMemoryDriver[dbdriver.TokenLockDB](sqlite2.OpenTokenLockDB),
 	}
 }

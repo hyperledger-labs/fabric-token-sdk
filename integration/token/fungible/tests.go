@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -710,6 +711,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 			}
 			// The transaction didn't fail, let's wait for it to be confirmed, and return no error
 			common2.CheckFinality(network, charlie, common.JSONUnmarshalString(txid), nil, false)
+			common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), nil, false)
 			transferError <- nil
 		}()
 	}
@@ -725,21 +727,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	} else {
 		errStr = errs[0].Error()
 	}
-	// TODO: Temporarily disabled.
-	// The token selectors update their tokens based on the finality notifications. These come from the commit pipeline.
-	// Currently, if a replica is the receiver of a token, the DB will be updated, but only the commit pipeline of that
-	// replica will process the token. The other replicas (and hence their token selectors) will not register this new token.
-	// Hence, we introduced a temporary extra check in the DB when we find no token, to make sure that in the meantime
-	// no other replica has added a token that this replica could use.
-	// The same we did when we are looking for a token in a currency that we haven't seen before.
-	// However, in this test where two processes of the token selector try to use the same token, the first one will lock it.
-	// The second process will not see the token, hence it will look it up in the DB. It will find it there and create another
-	// transaction to spend the same token. The first transaction will go through, but the second one will fail, as we
-	// are trying to write the same RWSet (MVCC_READ_CONFLICT) and this token will appear as deleted.
-	// The result will be the same (the quickest transfer will go through and the slowest will fail), but the error
-	// will be different. Hence, we take out the error check until the concurrent token selection is solved.
-	//v := strings.Contains(errStr, "pineapple") || strings.Contains(errStr, "lemonade")
-	//Expect(v).To(BeEquivalentTo(true))
+	v := strings.Contains(errStr, "pineapple") || strings.Contains(errStr, "lemonade")
+	Expect(v).To(BeEquivalentTo(true), "error [%s] does not contain either 'pineapple' or 'lemonade'", errStr)
 	Expect(errStr).NotTo(BeEmpty())
 
 	CheckBalanceAndHolding(network, bob, "", "YUAN", 3, auditor)

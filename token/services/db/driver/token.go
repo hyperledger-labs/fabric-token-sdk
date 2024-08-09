@@ -196,6 +196,10 @@ type TokenLockDB interface {
 	Lock(tokenID *token.ID, consumerTxID transaction.ID) error
 	// UnlockByTxID unlocks all tokens locked by the consumer TX
 	UnlockByTxID(consumerTxID transaction.ID) error
+	// Cleanup removes the locks such that either:
+	// 1. The transaction that locked that token is valid or invalid;
+	// 2. The lock is too old.
+	Cleanup(evictionDelay time.Duration) error
 }
 
 // TokenLockDBDriver is the interface for a token database driver

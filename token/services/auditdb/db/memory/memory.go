@@ -16,6 +16,6 @@ import (
 func NewDriver() db.NamedDriver[dbdriver.AuditDBDriver] {
 	return db.NamedDriver[dbdriver.AuditDBDriver]{
 		Name:   mem.MemoryPersistence,
-		Driver: db.NewMemoryDriver(sqlite.NewAuditTransactionDB), // TODO: NewTransactionDB
+		Driver: db.NewMemoryDriver(sqlite.OpenAuditTransactionDB), // TODO: NewTransactionDB
 	}
 }

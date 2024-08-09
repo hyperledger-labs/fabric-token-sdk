@@ -7,16 +7,46 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	"database/sql"
+	"fmt"
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-func NewTokenLockDB(k common.Opts) (driver.TokenLockDB, error) {
+type TokenLockDB struct {
+	*common.TokenLockDB
+}
+
+func OpenTokenLockDB(k common.Opts) (driver.TokenLockDB, error) {
 	db, err := postgres.OpenDB(k.DataSource, k.MaxOpenConns)
 	if err != nil {
 		return nil, err
 	}
-	return common2.NewTokenLockDB(db, common2.NewDBOptsFromOpts(k))
+	return NewTokenLockDB(db, common.NewDBOptsFromOpts(k))
+}
+
+func NewTokenLockDB(db *sql.DB, k common.NewDBOpts) (driver.TokenLockDB, error) {
+	tldb, err := common.NewTokenLockDB(db, k)
+	if err != nil {
+		return nil, err
+	}
+	return &TokenLockDB{TokenLockDB: tldb}, nil
+}
+
+func (db *TokenLockDB) Cleanup(evictionDelay time.Duration) error {
+	query := fmt.Sprintf(
+		"DELETE FROM %s "+
+			"USING %s WHERE %s.consumer_tx_id = %s.tx_id AND (%s.status IN (3) "+
+			"OR %s.created_at < NOW() - INTERVAL '%d seconds'"+
+			");",
+		db.Table.TokenLocks,
+		db.Table.Requests, db.Table.TokenLocks, db.Table.Requests, db.Table.Requests,
+		db.Table.TokenLocks, int(evictionDelay.Seconds()),
+	)
+	db.Logger.Debug(query)
+	_, err := db.DB.Exec(query)
+	return err
 }

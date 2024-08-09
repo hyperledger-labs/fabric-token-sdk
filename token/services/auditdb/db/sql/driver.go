@@ -29,9 +29,9 @@ type Driver struct {
 func NewDriver() db.NamedDriver[dbdriver.AuditDBDriver] {
 	return db.NamedDriver[dbdriver.AuditDBDriver]{
 		Name: sql.SQLPersistence,
-		Driver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenFunc[dbdriver.AuditTransactionDB]{
-			sql.SQLite:   sqlite.NewAuditTransactionDB,
-			sql.Postgres: postgres.NewAuditTransactionDB,
+		Driver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenDBFunc[dbdriver.AuditTransactionDB]{
+			sql.SQLite:   sqlite.OpenAuditTransactionDB,
+			sql.Postgres: postgres.OpenAuditTransactionDB,
 		}),
 	}
 }

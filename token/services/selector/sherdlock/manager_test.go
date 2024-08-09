@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/testutils"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
@@ -72,16 +73,16 @@ func startManagers(t *testing.T, number int, backoff time.Duration) ([]testutils
 }
 
 func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedManager, error) {
-	lockDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, common2.NewTokenLockDB)
+	lockDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, postgres.NewTokenLockDB)
 	if err != nil {
 		return nil, err
 	}
 
-	tokenDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, common2.NewTokenDB)
+	tokenDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, postgres.NewTokenDB)
 	if err != nil {
 		return nil, err
 	}
-	return testutils.NewEnhancedManager(NewManager(tokenDB, lockDB, newMetrics(&disabled.Provider{}), testutils.TokenQuantityPrecision, backoff), tokenDB), nil
+	return testutils.NewEnhancedManager(NewManager(tokenDB, lockDB, newMetrics(&disabled.Provider{}), testutils.TokenQuantityPrecision, backoff, 0), tokenDB), nil
 
 }
 
