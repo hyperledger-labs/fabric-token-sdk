@@ -65,6 +65,10 @@ type NodeReference struct {
 	totalReplicas int
 }
 
+func (r *NodeReference) String() string {
+	return fmt.Sprintf("node [%s:%d:%d]", r.name, r.replicaIdx, r.totalReplicas)
+}
+
 func (r *NodeReference) ReplicaName() string {
 	if r.totalReplicas <= 1 {
 		return r.name

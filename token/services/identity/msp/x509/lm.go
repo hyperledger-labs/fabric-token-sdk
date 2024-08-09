@@ -355,12 +355,17 @@ func (lm *LocalMembership) loadFromStorage() error {
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
-	defer it.Close()
+	// copy the iterator
+	items := make([]driver2.IdentityConfiguration, 0)
 	for it.HasNext() {
-		entry, err := it.Next()
+		item, err := it.Next()
 		if err != nil {
-			return errors.WithMessagef(err, "failed to get next registered identities from kvs")
+			return err
 		}
+		items = append(items, item)
+	}
+	it.Close()
+	for _, entry := range items {
 		id := entry.ID
 		if lm.getResolver(id) != nil {
 			continue

@@ -51,6 +51,8 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 	return s.selectByID(ownerFilter, q, tokenType)
 }
 
+func (s *selector) Close() error { return nil }
+
 func (s *selector) concurrencyCheck(ids []*token2.ID) error {
 	_, err := s.queryService.GetTokens(ids...)
 	return err

@@ -101,7 +101,9 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 
 func (r *RequestTxStatusResponderView) process(context view.Context, request *TxStatusRequest) (*TxStatusResponse, error) {
 	if status, ok := r.statusCache.Get(request.TxID); ok && status.Status != driver.Busy {
-		return status, nil
+		if status.Status != driver.Valid || len(status.TokenRequestReference) != 0 {
+			return status, nil
+		}
 	}
 	if status, err := NewStatusFetcher(r.dbManager).FetchStatus(request.Network, request.Namespace, request.TxID); err == nil {
 		r.statusCache.Add(request.TxID, status)

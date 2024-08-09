@@ -40,13 +40,13 @@ func NewDriver() db.NamedDriver[driver.IdentityDBDriver] {
 	return db.NamedDriver[driver.IdentityDBDriver]{
 		Name: sql.SQLPersistence,
 		Driver: &Driver{
-			identityDriver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenFunc[driver.IdentityDB]{
+			identityDriver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenDBFunc[driver.IdentityDB]{
 				sql.SQLite:   sqlite.NewCachedIdentityDB,
-				sql.Postgres: postgres.NewCachedIdentityDB,
+				sql.Postgres: postgres.OpenIdentityDB,
 			}),
-			walletDriver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenFunc[driver.WalletDB]{
-				sql.SQLite:   sqlite.NewWalletDB,
-				sql.Postgres: postgres.NewWalletDB,
+			walletDriver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenDBFunc[driver.WalletDB]{
+				sql.SQLite:   sqlite.OpenWalletDB,
+				sql.Postgres: postgres.OpenWalletDB,
 			}),
 		},
 	}

@@ -250,6 +250,14 @@ func (t *Transaction) Selector() (token.Selector, error) {
 	return sm.NewSelector(t.ID())
 }
 
+func (t *Transaction) CloseSelector() error {
+	sm, err := t.TokenService().SelectorManager()
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get selector manager")
+	}
+	return sm.Close(t.ID())
+}
+
 func (t *Transaction) Release() {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("releasing resources for tx [%s]", t.ID())

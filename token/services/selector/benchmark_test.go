@@ -39,6 +39,7 @@ type extendedSelector struct {
 func (s *extendedSelector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error) {
 	return s.Selector.Select(ownerFilter, q, tokenType)
 }
+func (s *extendedSelector) Close() error { return s.Selector.Close() }
 
 func (s *extendedSelector) Unselect(id ...*token2.ID) {
 	if s.Lock != nil {
@@ -177,8 +178,14 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity WalletIDB
 
 func NewSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
 	return &extendedSelector{
-		Selector: sherdlock.NewSherdSelector(testutils.TxID, sherdlock.NewLazyFetcher(qs), inmemory2.NewLocker(lock), testutils.TokenQuantityPrecision, sherdlock.NoBackoff),
-		Lock:     nil,
+		Selector: sherdlock.NewSherdSelector(
+			testutils.TxID,
+			sherdlock.NewLazyFetcher(qs),
+			inmemory2.NewLocker(lock),
+			testutils.TokenQuantityPrecision,
+			sherdlock.NoBackoff,
+		),
+		Lock: nil,
 	}, nil
 }
 

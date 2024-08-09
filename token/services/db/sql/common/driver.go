@@ -24,13 +24,27 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+type Opts = common.Opts
+
+type OpenDBFunc[V any] func(k Opts) (V, error)
+
+type NewDBFunc[V any] func(db *sql.DB, opts NewDBOpts) (V, error)
+
 type NewDBOpts struct {
 	DataSource   string
 	TablePrefix  string
 	CreateSchema bool
 }
 
-func NewDBOptsFromOpts(o common.Opts) NewDBOpts {
+type Opener[V any] struct {
+	dbCache   utils.LazyProvider[Opts, V]
+	optsKey   string
+	envVarKey string
+}
+
+type DBOpener = Opener[*sql.DB]
+
+func NewDBOptsFromOpts(o Opts) NewDBOpts {
 	return NewDBOpts{
 		DataSource:   o.DataSource,
 		TablePrefix:  o.TablePrefix,
@@ -38,18 +52,8 @@ func NewDBOptsFromOpts(o common.Opts) NewDBOpts {
 	}
 }
 
-type OpenFunc[V any] func(k common.Opts) (V, error)
-
-type Opener[V any] struct {
-	dbCache   utils.LazyProvider[common.Opts, V]
-	optsKey   string
-	envVarKey string
-}
-
-type DBOpener = Opener[*sql.DB]
-
-func NewOpenerFromMap[V any](optsKey, envVarKey string, constructors map[common.SQLDriverType]OpenFunc[V]) *Opener[V] {
-	return NewOpener[V](optsKey, envVarKey, func(opts common.Opts) (V, error) {
+func NewOpenerFromMap[V any](optsKey, envVarKey string, constructors map[common.SQLDriverType]OpenDBFunc[V]) *Opener[V] {
+	return NewOpener[V](optsKey, envVarKey, func(opts Opts) (V, error) {
 		if c, ok := constructors[opts.Driver]; ok {
 			return c(opts)
 		}
@@ -57,7 +61,7 @@ func NewOpenerFromMap[V any](optsKey, envVarKey string, constructors map[common.
 	})
 }
 
-func NewOpener[V any](optsKey, envVarKey string, constructors OpenFunc[V]) *Opener[V] {
+func NewOpener[V any](optsKey, envVarKey string, constructors OpenDBFunc[V]) *Opener[V] {
 	return &Opener[V]{
 		dbCache:   utils.NewLazyProviderWithKeyMapper(key, constructors),
 		optsKey:   optsKey,
@@ -66,11 +70,11 @@ func NewOpener[V any](optsKey, envVarKey string, constructors OpenFunc[V]) *Open
 }
 
 func NewSQLDBOpener(optsKey, envVarKey string) *DBOpener {
-	return NewOpenerFromMap[*sql.DB](optsKey, envVarKey, map[common.SQLDriverType]OpenFunc[*sql.DB]{
-		sql2.SQLite: func(k common.Opts) (*sql.DB, error) {
+	return NewOpenerFromMap[*sql.DB](optsKey, envVarKey, map[common.SQLDriverType]OpenDBFunc[*sql.DB]{
+		sql2.SQLite: func(k Opts) (*sql.DB, error) {
 			return sqlite.OpenDB(k.DataSource, k.MaxOpenConns, k.SkipPragmas)
 		},
-		sql2.Postgres: func(k common.Opts) (*sql.DB, error) { return postgres.OpenDB(k.DataSource, k.MaxOpenConns) },
+		sql2.Postgres: func(k Opts) (*sql.DB, error) { return postgres.OpenDB(k.DataSource, k.MaxOpenConns) },
 	})
 }
 
@@ -79,7 +83,7 @@ func (d *Opener[V]) Open(cp driver.ConfigProvider, tmsID token.TMSID) (V, error)
 	return v, err
 }
 
-func (d *Opener[V]) OpenWithOpts(cp driver.ConfigProvider, tmsID token.TMSID) (V, *common.Opts, error) {
+func (d *Opener[V]) OpenWithOpts(cp driver.ConfigProvider, tmsID token.TMSID) (V, *Opts, error) {
 	opts, err := d.compileOpts(cp, tmsID)
 	if err != nil {
 		return utils2.Zero[V](), nil, err
@@ -91,7 +95,7 @@ func (d *Opener[V]) OpenWithOpts(cp driver.ConfigProvider, tmsID token.TMSID) (V
 	return sqlDB, opts, nil
 }
 
-func (d *Opener[V]) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*common.Opts, error) {
+func (d *Opener[V]) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*Opts, error) {
 	tmsConfig, err := config.NewService(cp).ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)
@@ -107,9 +111,9 @@ func (d *Opener[V]) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*c
 func (d *Opener[V]) OpenSQLDB(driverName common.SQLDriverType, dataSourceName string, maxOpenConns int, skipPragmas bool) (V, error) {
 	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
 
-	return d.dbCache.Get(common.Opts{Driver: driverName, DataSource: dataSourceName, MaxOpenConns: maxOpenConns, SkipPragmas: skipPragmas})
+	return d.dbCache.Get(Opts{Driver: driverName, DataSource: dataSourceName, MaxOpenConns: maxOpenConns, SkipPragmas: skipPragmas})
 }
 
-func key(k common.Opts) string {
+func key(k Opts) string {
 	return string(k.Driver) + k.DataSource
 }

@@ -16,7 +16,6 @@ import (
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -36,6 +35,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	msp3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	msp2 "github.com/hyperledger/fabric/msp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -74,7 +74,7 @@ var _ = Describe("validator", func() {
 		asigner, _ := prepareECDSASigner()
 		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(flogging.MustGetLogger("auditor"), des, pp.PedersenGenerators, pp.IdemixIssuerPK, asigner, c)
+		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), des, pp.PedersenGenerators, pp.IdemixIssuerPK, asigner, c)
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
@@ -82,7 +82,7 @@ var _ = Describe("validator", func() {
 		// initialize enginw with pp
 		deserializer, err := zkatdlog.NewDeserializer(pp)
 		Expect(err).NotTo(HaveOccurred())
-		engine = enginedlog.New(flogging.MustGetLogger("validator"), pp, deserializer)
+		engine = enginedlog.New(logging.MustGetLogger("validator"), pp, deserializer)
 
 		// non-anonymous issue
 		_, ir, _ = prepareNonAnonymousIssueRequest(pp, auditor)

@@ -9,36 +9,21 @@ package logging
 import (
 	"strings"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"go.uber.org/zap/zapcore"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"golang.org/x/exp/slices"
 )
 
 const loggerNameSeparator = "."
 
 // Logger provides logging API
-type Logger interface {
-	Debug(args ...interface{})
-	Debugf(format string, args ...interface{})
-	Error(args ...interface{})
-	Errorf(format string, args ...interface{})
-	Fatal(args ...interface{})
-	Fatalf(format string, args ...interface{})
-	Info(args ...interface{})
-	Infof(format string, args ...interface{})
-	Panic(args ...interface{})
-	Panicf(format string, args ...interface{})
-	Warn(args ...interface{})
-	Warnf(format string, args ...interface{})
-	IsEnabledFor(level zapcore.Level) bool
-}
+type Logger = logging.Logger
 
 func DriverLogger(prefix string, networkID string, channel string, namespace string) Logger {
-	return flogging.MustGetLogger(loggerName(prefix, networkID, channel, namespace))
+	return logging.MustGetLogger(loggerName(prefix, networkID, channel, namespace))
 }
 
 func DriverLoggerFromPP(prefix string, ppIdentifier string) Logger {
-	return flogging.MustGetLogger(loggerName(prefix, ppIdentifier))
+	return logging.MustGetLogger(loggerName(prefix, ppIdentifier))
 }
 
 func isEmptyString(s string) bool { return len(s) == 0 }

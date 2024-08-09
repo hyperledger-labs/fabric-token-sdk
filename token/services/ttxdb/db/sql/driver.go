@@ -25,9 +25,9 @@ const (
 func NewDriver() db.NamedDriver[driver.TTXDBDriver] {
 	return db.NamedDriver[driver.TTXDBDriver]{
 		Name: sql.SQLPersistence,
-		Driver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenFunc[driver.TokenTransactionDB]{
-			sql.SQLite:   sqlite.NewTransactionDB,
-			sql.Postgres: postgres.NewTransactionDB,
+		Driver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenDBFunc[driver.TokenTransactionDB]{
+			sql.SQLite:   sqlite.OpenTransactionDB,
+			sql.Postgres: postgres.OpenTransactionDB,
 		}),
 	}
 }
