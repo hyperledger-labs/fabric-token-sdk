@@ -95,7 +95,7 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	logger.Debugf("load identities from storage...done")
 
 	// if no default identity, use the first one
-	defaultIdentifier := lm.GetDefaultIdentifier()
+	defaultIdentifier := lm.getDefaultIdentifier()
 	if len(defaultIdentifier) == 0 {
 		logger.Warnf("no default identity, use the first one available")
 		if len(lm.resolvers) > 0 {
@@ -134,6 +134,12 @@ func (lm *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
 }
 
 func (lm *LocalMembership) GetDefaultIdentifier() string {
+	lm.resolversMutex.RLock()
+	defer lm.resolversMutex.RUnlock()
+	return lm.getDefaultIdentifier()
+}
+
+func (lm *LocalMembership) getDefaultIdentifier() string {
 	for _, resolver := range lm.resolvers {
 		if resolver.Default {
 			return resolver.Name
@@ -180,7 +186,7 @@ func (lm *LocalMembership) RegisterIdentity(idConfig driver.IdentityConfiguratio
 			return errors.Wrapf(err, "failed to load msp config [%s]", idConfig.ID)
 		}
 	}
-	return lm.registerIdentity(mspConfig, identityConfig, lm.GetDefaultIdentifier() == "")
+	return lm.registerIdentity(mspConfig, identityConfig, lm.getDefaultIdentifier() == "")
 }
 
 func (lm *LocalMembership) IDs() ([]string, error) {
