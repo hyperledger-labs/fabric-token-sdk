@@ -10,10 +10,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -30,7 +30,7 @@ type LockerProvider interface {
 }
 
 type SelectorService struct {
-	managerLazyCache utils.LazyProvider[*token.ManagementService, token.SelectorManager]
+	managerLazyCache lazy.Provider[*token.ManagementService, token.SelectorManager]
 }
 
 func NewService(lockerProvider LockerProvider) *SelectorService {
@@ -41,7 +41,7 @@ func NewService(lockerProvider LockerProvider) *SelectorService {
 		requestCertification: true,
 	}
 	return &SelectorService{
-		managerLazyCache: utils.NewLazyProviderWithKeyMapper(key, loader.load),
+		managerLazyCache: lazy.NewProviderWithKeyMapper(key, loader.load),
 	}
 }
 
