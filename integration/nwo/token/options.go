@@ -8,8 +8,9 @@ package token
 
 import (
 	fsc "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
 func WithIssuerIdentity(label string, hsm bool) fsc.Option {
@@ -40,11 +41,16 @@ func WithIssuerIdentityWithHSM(label string) fsc.Option {
 	}
 }
 
-func WithPostgresPersistence(config sql.DataSourceProvider) fsc.Option {
+func WithPostgresPersistence(config common.DataSourceProvider) fsc.Option {
 	return func(o *fsc.Options) error {
 		if config != nil {
-			o.Put("token.persistence.sql", config.DataSource())
-			o.Put("token.persistence.driver", "pgx")
+			o.PutPersistence("token", fsc.PersistenceOpts{
+				Type: sql2.SQLPersistence,
+				SQL: fsc.SQLOpts{
+					DataSource: config.DataSource(),
+					DriverType: sql2.Postgres,
+				},
+			})
 		}
 		return nil
 	}

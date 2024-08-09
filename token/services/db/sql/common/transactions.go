@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package common
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
@@ -42,12 +43,16 @@ func newTransactionDB(db *sql.DB, tables transactionTables) *TransactionDB {
 	}
 }
 
-func NewAuditTransactionDB(sqlDB *sql.DB, tablePrefix string, createSchema bool) (driver.AuditTransactionDB, error) {
-	return NewTransactionDB(sqlDB, tablePrefix+"_aud", createSchema)
+func NewAuditTransactionDB(sqlDB *sql.DB, opts NewDBOpts) (driver.AuditTransactionDB, error) {
+	return NewTransactionDB(sqlDB, NewDBOpts{
+		DataSource:   opts.DataSource,
+		TablePrefix:  opts.TablePrefix + "_aud",
+		CreateSchema: opts.CreateSchema,
+	})
 }
 
-func NewTransactionDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.TokenTransactionDB, error) {
-	tables, err := getTableNames(tablePrefix)
+func NewTransactionDB(db *sql.DB, opts NewDBOpts) (driver.TokenTransactionDB, error) {
+	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
@@ -58,8 +63,8 @@ func NewTransactionDB(db *sql.DB, tablePrefix string, createSchema bool) (driver
 		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
 	})
-	if createSchema {
-		if err = initSchema(db, transactionsDB.GetSchema()); err != nil {
+	if opts.CreateSchema {
+		if err = common.InitSchema(db, []string{transactionsDB.GetSchema()}...); err != nil {
 			return nil, err
 		}
 	}

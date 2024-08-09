@@ -4,24 +4,30 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package common
 
 import (
 	"fmt"
 	"path"
 	"testing"
 
+	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/stretchr/testify/assert"
 )
 
-func initWalletDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*WalletDB, error) {
+func initWalletDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*WalletDB, error) {
 	d := NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return nil, err
 	}
-	walletDB, err := NewWalletDB(sqlDB, tablePrefix, true)
+	walletDB, err := NewWalletDB(sqlDB, NewDBOpts{
+		DataSource:   dataSourceName,
+		TablePrefix:  tablePrefix,
+		CreateSchema: true,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +38,7 @@ func TestWalletSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 
 	for _, c := range WalletCases {
-		db, err := initWalletDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initWalletDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -44,7 +50,7 @@ func TestWalletSqlite(t *testing.T) {
 
 func TestWalletSqliteMemory(t *testing.T) {
 	for _, c := range WalletCases {
-		db, err := initWalletDB("sqlite", "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initWalletDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -59,7 +65,7 @@ func TestWalletPostgres(t *testing.T) {
 	defer terminate()
 
 	for _, c := range WalletCases {
-		db, err := initWalletDB("pgx", pgConnStr, c.Name, 10)
+		db, err := initWalletDB(sql2.Postgres, pgConnStr, c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}

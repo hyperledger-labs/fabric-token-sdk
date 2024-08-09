@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package common
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -49,18 +50,18 @@ func newIdentityDB(db *sql.DB, tables identityTables, singerInfoCache cache[bool
 	}
 }
 
-func NewCachedIdentityDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.IdentityDB, error) {
+func NewCachedIdentityDB(db *sql.DB, opts NewDBOpts) (driver.IdentityDB, error) {
 	return NewIdentityDB(
 		db,
-		tablePrefix,
-		createSchema,
+		opts.TablePrefix,
+		opts.CreateSchema,
 		secondcache.NewTyped[bool](1000),
 		secondcache.NewTyped[[]byte](1000),
 	)
 }
 
 func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfoCache cache[bool], auditInfoCache cache[[]byte]) (*IdentityDB, error) {
-	tables, err := getTableNames(tablePrefix)
+	tables, err := GetTableNames(tablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
@@ -76,7 +77,7 @@ func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfo
 		auditInfoCache,
 	)
 	if createSchema {
-		if err = initSchema(db, identityDB.GetSchema()); err != nil {
+		if err = common.InitSchema(db, []string{identityDB.GetSchema()}...); err != nil {
 			return nil, err
 		}
 	}

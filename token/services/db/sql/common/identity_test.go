@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package common
 
 import (
 	"fmt"
@@ -14,11 +14,13 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
+	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/stretchr/testify/assert"
 )
 
-func initIdentityDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*IdentityDB, error) {
+func initIdentityDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*IdentityDB, error) {
 	d := NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
@@ -31,7 +33,7 @@ func TestIdentitySqlite(t *testing.T) {
 	tempDir := t.TempDir()
 
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initIdentityDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -43,7 +45,7 @@ func TestIdentitySqlite(t *testing.T) {
 
 func TestIdentitySqliteMemory(t *testing.T) {
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB("sqlite", "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initIdentityDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -58,7 +60,7 @@ func TestIdentityPostgres(t *testing.T) {
 	defer terminate()
 
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB("pgx", pgConnStr, c.Name, 10)
+		db, err := initIdentityDB(sql2.Postgres, pgConnStr, c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}

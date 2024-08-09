@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package common
 
 import (
 	"context"
@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -22,6 +24,38 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type TokenNDB struct {
+	*TokenDB
+	*postgres.Notifier
+}
+
+func NewTokenNDB(db *sql.DB, opts NewDBOpts) (driver.TokenNDB, error) {
+	tables, err := GetTableNames(opts.TablePrefix)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get table names")
+	}
+
+	tokenDB := &TokenNDB{
+		TokenDB: newTokenDB(db, tokenTables{
+			Tokens:         tables.Tokens,
+			Ownership:      tables.Ownership,
+			PublicParams:   tables.PublicParams,
+			Certifications: tables.Certifications,
+		}),
+		Notifier: postgres.NewNotifier(db, tables.Tokens, opts.DataSource, postgres.AllOperations, "tx_id", "idx"),
+	}
+	if opts.CreateSchema {
+		if err = common.InitSchema(db, tokenDB.GetSchema()); err != nil {
+			return nil, err
+		}
+	}
+	return tokenDB, nil
+}
+
+func (db *TokenNDB) GetSchema() string {
+	return db.TokenDB.GetSchema() + "\n" + db.Notifier.GetSchema()
+}
 
 type tokenTables struct {
 	Tokens         string
@@ -42,8 +76,8 @@ func newTokenDB(db *sql.DB, tables tokenTables) *TokenDB {
 	}
 }
 
-func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.TokenDB, error) {
-	tables, err := getTableNames(tablePrefix)
+func NewTokenDB(db *sql.DB, opts NewDBOpts) (driver.TokenDB, error) {
+	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
@@ -54,8 +88,8 @@ func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (driver.Token
 		PublicParams:   tables.PublicParams,
 		Certifications: tables.Certifications,
 	})
-	if createSchema {
-		if err = initSchema(db, tokenDB.GetSchema()); err != nil {
+	if opts.CreateSchema {
+		if err = common.InitSchema(db, tokenDB.GetSchema()); err != nil {
 			return nil, err
 		}
 	}
