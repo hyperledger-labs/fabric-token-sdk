@@ -376,7 +376,7 @@ func (p *Provider) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentit
 		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
 
-	serialized := new(m.SerializedIdemixIdentity)
+	serialized := new(idemixmsp.SerializedIdemixIdentity)
 	err = proto.Unmarshal(si.IdBytes, serialized)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
