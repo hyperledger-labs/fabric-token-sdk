@@ -29,15 +29,15 @@ func NewDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
 	}
 }
 
-func NewNDBDriver() db.NamedDriver[dbdriver.TokenNDBDriver] {
-	return db.NamedDriver[dbdriver.TokenNDBDriver]{
+func NewNDBDriver() db.NamedDriver[dbdriver.TokenNotifierDriver] {
+	return db.NamedDriver[dbdriver.TokenNotifierDriver]{
 		Name: mem.MemoryPersistence,
-		Driver: db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNDB, error) {
+		Driver: db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNotifier, error) {
 			sqlDB, opts, err := common.NewSQLDBOpener(sql.OptsKey, sql.EnvVarKey).OpenWithOpts(cp, tmsID)
 			if err != nil {
 				return nil, err
 			}
-			return sqlite.NewTokenNDB(sqlDB, common.NewDBOptsFromOpts(*opts))
+			return sqlite.NewTokenNotifier(sqlDB, common.NewDBOptsFromOpts(*opts))
 		}),
 	}
 }

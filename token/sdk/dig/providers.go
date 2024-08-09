@@ -8,6 +8,7 @@ package sdk
 
 import (
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
@@ -17,10 +18,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/unity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
+	tokensql "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"go.uber.org/dig"
 )
+
+// Token Lock DB
 
 func NewTokenLockDBManager(in struct {
 	dig.In
@@ -31,6 +35,8 @@ func NewTokenLockDBManager(in struct {
 	return tokenlockdb.NewHolder(in.Drivers).NewManager(in.ConfigService, dbconfig.NewConfig(in.ConfigProvider, "tokenlockdb.persistence.type", "db.persistence.type"))
 }
 
+// Audit DB
+
 func NewAuditDBManager(in struct {
 	dig.In
 	ConfigService  driver2.ConfigService
@@ -40,14 +46,7 @@ func NewAuditDBManager(in struct {
 	return auditdb.NewHolder(in.Drivers).NewManager(in.ConfigService, dbconfig.NewConfig(in.ConfigProvider, "ttxdb.persistence.type", "db.persistence.type"))
 }
 
-func NewTokenDBManager(in struct {
-	dig.In
-	ConfigService  driver2.ConfigService
-	ConfigProvider *config2.Service
-	Drivers        []db.NamedDriver[dbdriver.TokenDBDriver] `group:"tokendb-drivers"`
-}) *tokendb.Manager {
-	return tokendb.NewHolder(in.Drivers).NewManager(in.ConfigService, dbconfig.NewConfig(in.ConfigProvider, "tokendb.persistence.type", "db.persistence.type"))
-}
+// Transaction DB
 
 func NewTTXDBManager(in struct {
 	dig.In
@@ -58,6 +57,8 @@ func NewTTXDBManager(in struct {
 	return ttxdb.NewHolder(in.Drivers).NewManager(in.ConfigService, dbconfig.NewConfig(in.ConfigProvider, "ttxdb.persistence.type", "db.persistence.type"))
 }
 
+// Identity DB
+
 func NewIdentityDBManager(in struct {
 	dig.In
 	ConfigService  driver2.ConfigService
@@ -66,6 +67,37 @@ func NewIdentityDBManager(in struct {
 }) *identitydb.Manager {
 	return identitydb.NewManager(in.Drivers, in.ConfigService, dbconfig.NewConfig(in.ConfigProvider, "identitydb.persistence.type", "db.persistence.type"))
 }
+
+// Token DB
+
+type TokenDriverResult struct {
+	dig.Out
+	DBDriver       db.NamedDriver[dbdriver.TokenDBDriver]       `group:"tokendb-drivers"`
+	NotifierDriver db.NamedDriver[dbdriver.TokenNotifierDriver] `group:"tokennotifier-drivers"`
+}
+
+func NewTokenDrivers() TokenDriverResult {
+	dbDriver := tokensql.NewDBDriver()
+	notifierDriver := tokensql.NewNotifierDriver(dbDriver)
+	return TokenDriverResult{
+		DBDriver:       db.NamedDriver[dbdriver.TokenDBDriver]{Name: sql2.SQLPersistence, Driver: dbDriver},
+		NotifierDriver: db.NamedDriver[dbdriver.TokenNotifierDriver]{Name: sql2.SQLPersistence, Driver: notifierDriver},
+	}
+}
+
+func NewTokenManagers(in struct {
+	dig.In
+	ConfigService   driver2.ConfigService
+	ConfigProvider  *config2.Service
+	DBDrivers       []db.NamedDriver[dbdriver.TokenDBDriver]       `group:"tokendb-drivers"`
+	NotifierDrivers []db.NamedDriver[dbdriver.TokenNotifierDriver] `group:"tokennotifier-drivers"`
+}) (*tokendb.Manager, *tokendb.NotifierManager) {
+	dbConfig := dbconfig.NewConfig(in.ConfigProvider, "tokendb.persistence.type", "db.persistence.type")
+	return tokendb.NewHolder(in.DBDrivers).NewManager(in.ConfigService, dbConfig),
+		tokendb.NewNotifierHolder(in.NotifierDrivers).NewManager(in.ConfigService, dbConfig)
+}
+
+// Unity
 
 type DBDriverResult struct {
 	dig.Out
@@ -86,6 +118,8 @@ func NewDBDrivers() DBDriverResult {
 		IdentityDBDriver:  identityDBDriver,
 	}
 }
+
+// Token SDK
 
 func newTokenDriverService(in struct {
 	dig.In

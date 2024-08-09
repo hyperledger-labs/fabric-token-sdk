@@ -13,7 +13,11 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -39,6 +43,61 @@ type permutatableIterator[T any] interface {
 	NewPermutation() collections.Iterator[T]
 }
 
+type FetcherStrategy string
+
+const (
+	Lazy     = "lazy"
+	Eager    = "eager"
+	Mixed    = "mixed"
+	Listener = "listener"
+	Cached   = "cached"
+)
+
+type FetcherProvider interface {
+	GetFetcher(tmsID token.TMSID) (tokenFetcher, error)
+}
+
+type fetchFunc func(db *tokendb.DB, notifier *tokendb.Notifier, m *Metrics) tokenFetcher
+
+type fetcherProvider struct {
+	dbManager       *tokendb.Manager
+	notifierManager *tokendb.NotifierManager
+	metrics         *Metrics
+	fetch           fetchFunc
+}
+
+var fetchers = map[FetcherStrategy]fetchFunc{
+	Mixed: func(db *tokendb.DB, notifier *tokendb.Notifier, m *Metrics) tokenFetcher {
+		return newMixedFetcher(db, notifier, m)
+	},
+}
+
+func NewFetcherProvider(dbManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider, strategy FetcherStrategy) *fetcherProvider {
+	fetcher, ok := fetchers[strategy]
+	if !ok {
+		panic("undefined fetcher strategy: " + strategy)
+	}
+	return &fetcherProvider{
+		dbManager:       dbManager,
+		notifierManager: notifierManager,
+		metrics:         newMetrics(metricsProvider),
+		fetch:           fetcher,
+	}
+}
+
+func (p *fetcherProvider) GetFetcher(tmsID token.TMSID) (tokenFetcher, error) {
+	tokenDB, err := p.dbManager.DBByTMSId(tmsID)
+	if err != nil {
+		return nil, err
+	}
+	tokenNotifier, err := p.notifierManager.DBByTMSId(tmsID)
+	if err != nil {
+		return nil, err
+	}
+
+	return p.fetch(tokenDB, tokenNotifier, p.metrics), nil
+}
+
 // mixedFetcher combines both eager and lazy strategies
 // In this example we return the eager result only the first time and all subsequent request are served by the lazy fetcher
 // Other implementations can make different combinations, e.g. fresh results under a threshold (e.g. 10ms) can be served by the eager fetcher
@@ -49,7 +108,13 @@ type mixedFetcher struct {
 	m            *Metrics
 }
 
-func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
+func newMixedFetcher(tokenDB TokenDB, tokenNotifier driver2.Notifier, m *Metrics) *mixedFetcher {
+	if err := tokenNotifier.Subscribe(func(operation driver2.Operation, m map[driver2.ColumnKey]string) {
+		logger.Warnf("new operation: %v with values [%v]", operation, m)
+	}); err != nil {
+		panic(err)
+	}
+
 	return &mixedFetcher{
 		lazyFetcher:  NewLazyFetcher(tokenDB),
 		eagerFetcher: newCachedFetcher(tokenDB, freshnessInterval, maxQueries),

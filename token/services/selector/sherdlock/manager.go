@@ -9,9 +9,9 @@ package sherdlock
 import (
 	"time"
 
+	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 )
 
@@ -23,7 +23,7 @@ type tokenSelectorUnlocker interface {
 }
 
 type manager struct {
-	selectorCache utils.LazyProvider[transaction.ID, tokenSelectorUnlocker]
+	selectorCache lazy2.Provider[transaction.ID, tokenSelectorUnlocker]
 }
 
 type iterator[k any] interface {
@@ -31,10 +31,9 @@ type iterator[k any] interface {
 	Close()
 }
 
-func NewManager(tokenDB TokenDB, lockDB LockDB, m *Metrics, precision uint64, backoff time.Duration) *manager {
-	fetcher := newMixedFetcher(tokenDB, m)
+func NewManager(fetcher tokenFetcher, lockDB LockDB, precision uint64, backoff time.Duration) *manager {
 	return &manager{
-		selectorCache: utils.NewLazyProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
+		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
 			return NewSherdSelector(txID, fetcher, lockDB, precision, backoff), nil
 		}),
 	}
