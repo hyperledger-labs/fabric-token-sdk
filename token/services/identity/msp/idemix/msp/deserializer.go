@@ -8,6 +8,7 @@ package msp
 
 import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
+	im "github.com/IBM/idemix/idemixmsp"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
@@ -44,7 +45,7 @@ func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
 
-	serialized := new(m.SerializedIdemixIdentity)
+	serialized := new(im.SerializedIdemixIdentity)
 	err = proto.Unmarshal(si.IdBytes, serialized)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
