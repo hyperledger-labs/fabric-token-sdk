@@ -32,13 +32,15 @@ type Deserializer struct {
 	VerType         bccsp.VerificationType
 	NymEID          []byte
 	RhNym           []byte
+	SchemaManager   SchemaManager
+	Schema          string
 }
 
-func (c *Deserializer) Deserialize(raw []byte, checkValidity bool) (*DeserializedIdentity, error) {
-	return c.DeserializeAgainstNymEID(raw, checkValidity, nil)
+func (d *Deserializer) Deserialize(raw []byte, checkValidity bool) (*DeserializedIdentity, error) {
+	return d.DeserializeAgainstNymEID(raw, checkValidity, nil)
 }
 
-func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID []byte) (*DeserializedIdentity, error) {
+func (d *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID []byte) (*DeserializedIdentity, error) {
 	si := &m.SerializedIdentity{}
 	err := proto.Unmarshal(raw, si)
 	if err != nil {
@@ -58,7 +60,7 @@ func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 	var rawNymPublicKey []byte
 	rawNymPublicKey = append(rawNymPublicKey, serialized.NymX...)
 	rawNymPublicKey = append(rawNymPublicKey, serialized.NymY...)
-	NymPublicKey, err := c.Csp.KeyImport(
+	NymPublicKey, err := d.Csp.KeyImport(
 		rawNymPublicKey,
 		&bccsp.IdemixNymPublicKeyImportOpts{Temporary: true},
 	)
@@ -80,17 +82,18 @@ func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 		return nil, errors.Wrap(err, "cannot deserialize the role of the identity")
 	}
 
-	idemix := c
+	idemix := d
 	if len(nymEID) != 0 {
 		idemix = &Deserializer{
-			Name:            c.Name,
-			Ipk:             c.Ipk,
-			Csp:             c.Csp,
-			IssuerPublicKey: c.IssuerPublicKey,
-			RevocationPK:    c.RevocationPK,
-			Epoch:           c.Epoch,
-			VerType:         c.VerType,
+			Name:            d.Name,
+			Ipk:             d.Ipk,
+			Csp:             d.Csp,
+			IssuerPublicKey: d.IssuerPublicKey,
+			RevocationPK:    d.RevocationPK,
+			Epoch:           d.Epoch,
+			VerType:         d.VerType,
 			NymEID:          nymEID,
+			SchemaManager:   d.SchemaManager,
 		}
 	}
 
@@ -100,7 +103,9 @@ func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 		role,
 		ou,
 		serialized.Proof,
-		c.VerType,
+		d.VerType,
+		d.SchemaManager,
+		d.Schema,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot deserialize")
@@ -120,12 +125,14 @@ func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 	}, nil
 }
 
-func (c *Deserializer) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
+func (d *Deserializer) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
 	ai, err := DeserializeAuditInfo(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))
 	}
-	ai.Csp = c.Csp
-	ai.IssuerPublicKey = c.IssuerPublicKey
+	ai.Csp = d.Csp
+	ai.IssuerPublicKey = d.IssuerPublicKey
+	ai.SchemaManager = d.SchemaManager
+	ai.Schema = d.Schema
 	return ai, nil
 }
