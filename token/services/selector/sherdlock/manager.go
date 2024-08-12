@@ -9,8 +9,8 @@ package sherdlock
 import (
 	"time"
 
+	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -33,7 +33,7 @@ type tokenSelectorUnlocker interface {
 }
 
 type manager struct {
-	selectorCache utils.LazyProvider[transaction.ID, tokenSelectorUnlocker]
+	selectorCache lazy2.Provider[transaction.ID, tokenSelectorUnlocker]
 	locker        Locker
 	evictionDelay time.Duration
 	cleanupPeriod time.Duration
@@ -56,7 +56,7 @@ func NewManager(
 	m := &manager{
 		locker:        locker,
 		evictionDelay: evictionDelay,
-		selectorCache: utils.NewLazyProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
+		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
 			return NewSherdSelector(txID, fetcher, locker, precision, backoff), nil
 		}),
 		cleanupPeriod: cleanupPeriod,

@@ -9,6 +9,7 @@ package endorsement
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
@@ -17,7 +18,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/pkg/errors"
 )
 
@@ -40,7 +40,7 @@ type ViewManager interface {
 type ViewRegistry = driver2.Registry
 
 type ServiceProvider struct {
-	utils.LazyProvider[token2.TMSID, Service]
+	lazy.Provider[token2.TMSID, Service]
 }
 
 func NewServiceProvider(
@@ -59,7 +59,7 @@ func NewServiceProvider(
 		identityProvider: identityProvider,
 		tmsProvider:      tmsProvider,
 	}
-	return &ServiceProvider{LazyProvider: utils.NewLazyProviderWithKeyMapper(key, l.load)}
+	return &ServiceProvider{Provider: lazy.NewProviderWithKeyMapper(key, l.load)}
 }
 
 type Service interface {

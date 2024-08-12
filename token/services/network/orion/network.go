@@ -10,6 +10,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
@@ -21,7 +22,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -48,8 +48,8 @@ type Network struct {
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
 	finalityTracer trace.Tracer
 
-	vaultLazyCache      utils.LazyProvider[string, driver.Vault]
-	tokenVaultLazyCache utils.LazyProvider[string, driver.TokenVault]
+	vaultLazyCache      lazy.Provider[string, driver.Vault]
+	tokenVaultLazyCache lazy.Provider[string, driver.TokenVault]
 	subscribers         *events.Subscribers
 	dbManager           *DBManager
 }
@@ -78,8 +78,8 @@ func NewNetwork(
 		n:                   n,
 		viewManager:         viewManager,
 		tmsProvider:         tmsProvider,
-		vaultLazyCache:      utils.NewLazyProvider(loader.loadVault),
-		tokenVaultLazyCache: utils.NewLazyProvider(loader.loadTokenVault),
+		vaultLazyCache:      lazy.NewProvider(loader.loadVault),
+		tokenVaultLazyCache: lazy.NewProvider(loader.loadTokenVault),
 		subscribers:         events.NewSubscribers(), ledger: &ledger{network: n.Name(), viewManager: viewManager, dbManager: dbManager},
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "tokensdk_orion",

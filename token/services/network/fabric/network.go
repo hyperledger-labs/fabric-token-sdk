@@ -15,6 +15,7 @@ import (
 	"time"
 
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -29,7 +30,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-protos-go/peer"
@@ -155,8 +155,8 @@ type Network struct {
 	tokensProvider *tokens2.Manager
 	finalityTracer trace.Tracer
 
-	vaultLazyCache      utils.LazyProvider[string, driver.Vault]
-	tokenVaultLazyCache utils.LazyProvider[string, driver.TokenVault]
+	vaultLazyCache      lazy.Provider[string, driver.Vault]
+	tokenVaultLazyCache lazy.Provider[string, driver.TokenVault]
 	subscribers         *events.Subscribers
 
 	endorsementServiceProvider *endorsement.ServiceProvider
@@ -189,8 +189,8 @@ func NewNetwork(
 		configuration:              configuration,
 		filterProvider:             filterProvider,
 		tokensProvider:             tokensProvider,
-		vaultLazyCache:             utils.NewLazyProvider(loader.loadVault),
-		tokenVaultLazyCache:        utils.NewLazyProvider(loader.loadTokenVault),
+		vaultLazyCache:             lazy.NewProvider(loader.loadVault),
+		tokenVaultLazyCache:        lazy.NewProvider(loader.loadTokenVault),
 		subscribers:                events.NewSubscribers(),
 		endorsementServiceProvider: endorsementServiceProvider,
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
@@ -250,7 +250,7 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 		NewTokenRWSetProcessor(
 			n.Name(),
 			ns,
-			utils.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
+			lazy.NewGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
 				return n.tokensProvider.Tokens(tmsID)
 			}).Get,
 			func() *token2.ManagementServiceProvider {

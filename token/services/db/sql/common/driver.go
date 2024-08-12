@@ -10,6 +10,7 @@ import (
 	"database/sql"
 
 	utils2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db"
 	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
@@ -18,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
 	_ "modernc.org/sqlite"
@@ -37,7 +37,7 @@ type NewDBOpts struct {
 }
 
 type Opener[V any] struct {
-	dbCache   utils.LazyProvider[Opts, V]
+	dbCache   lazy.Provider[Opts, V]
 	optsKey   string
 	envVarKey string
 }
@@ -63,7 +63,7 @@ func NewOpenerFromMap[V any](optsKey, envVarKey string, constructors map[common.
 
 func NewOpener[V any](optsKey, envVarKey string, constructors OpenDBFunc[V]) *Opener[V] {
 	return &Opener[V]{
-		dbCache:   utils.NewLazyProviderWithKeyMapper(key, constructors),
+		dbCache:   lazy.NewProviderWithKeyMapper(key, constructors),
 		optsKey:   optsKey,
 		envVarKey: envVarKey,
 	}
