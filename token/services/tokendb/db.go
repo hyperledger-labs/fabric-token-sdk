@@ -19,7 +19,18 @@ import (
 type (
 	Holder  = db.DriverHolder[*DB, driver.TokenDB, driver.TokenDBDriver]
 	Manager = db.Manager[*DB, driver.TokenDB, driver.TokenDBDriver]
+
+	NotifierHolder  = db.DriverHolder[*Notifier, driver.TokenNotifier, driver.TokenNotifierDriver]
+	NotifierManager = db.Manager[*Notifier, driver.TokenNotifier, driver.TokenNotifierDriver]
 )
+
+type Notifier struct {
+	driver.TokenNotifier
+}
+
+func NewNotifierHolder(drivers []db.NamedDriver[driver.TokenNotifierDriver]) *NotifierHolder {
+	return db.NewDriverHolder(func(p driver.TokenNotifier) *Notifier { return &Notifier{p} }, drivers...)
+}
 
 var managerType = reflect.TypeOf((*Manager)(nil))
 

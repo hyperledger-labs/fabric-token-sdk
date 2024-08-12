@@ -15,7 +15,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Manager[S any, D any, O dbDriver[D]] struct {
+type Manager[S any, D any, O DBDriver[D]] struct {
 	logger  logging.Logger
 	drivers map[drivers.DriverName]*dbOpener[S, D, O]
 	cp      ConfigProvider

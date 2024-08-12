@@ -28,13 +28,13 @@ type serviceProvider interface {
 	GetService(v interface{}) (interface{}, error)
 }
 
-type dbDriver[D any] interface {
+type DBDriver[D any] interface {
 	Open(cp ConfigProvider, tmsid token.TMSID) (D, error)
 }
 
-type dbInstantiator[S any, D any, O dbDriver[D]] func(D) S
+type dbInstantiator[S any, D any, O DBDriver[D]] func(D) S
 
-type dbOpener[S any, D any, O dbDriver[D]] struct {
+type dbOpener[S any, D any, O DBDriver[D]] struct {
 	driver O
 	newDB  dbInstantiator[S, D, O]
 }
@@ -49,7 +49,7 @@ func (o *dbOpener[S, D, O]) New(cp ConfigProvider, id token.TMSID) (S, error) {
 
 type NamedDriver[O any] driver3.NamedDriver[O]
 
-func NewDriverHolder[S any, D any, O dbDriver[D]](newDB dbInstantiator[S, D, O], ds ...NamedDriver[O]) *DriverHolder[S, D, O] {
+func NewDriverHolder[S any, D any, O DBDriver[D]](newDB dbInstantiator[S, D, O], ds ...NamedDriver[O]) *DriverHolder[S, D, O] {
 	h := &DriverHolder[S, D, O]{
 		Holder:      drivers.NewHolder[*dbOpener[S, D, O]](),
 		managerType: reflect.TypeOf((*Manager[S, D, O])(nil)),
@@ -62,7 +62,7 @@ func NewDriverHolder[S any, D any, O dbDriver[D]](newDB dbInstantiator[S, D, O],
 	return h
 }
 
-type DriverHolder[S any, D any, O dbDriver[D]] struct {
+type DriverHolder[S any, D any, O DBDriver[D]] struct {
 	*drivers.Holder[*dbOpener[S, D, O]]
 
 	managerType reflect.Type

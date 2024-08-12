@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
 )
 
-func NewDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
+func NewDBDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
 	return db.NamedDriver[dbdriver.TokenDBDriver]{
 		Name: mem.MemoryPersistence,
 		Driver: db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
@@ -29,15 +29,15 @@ func NewDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
 	}
 }
 
-func NewNDBDriver() db.NamedDriver[dbdriver.TokenNDBDriver] {
-	return db.NamedDriver[dbdriver.TokenNDBDriver]{
+func NewNotifierDriver() db.NamedDriver[dbdriver.TokenNotifierDriver] {
+	return db.NamedDriver[dbdriver.TokenNotifierDriver]{
 		Name: mem.MemoryPersistence,
-		Driver: db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNDB, error) {
+		Driver: db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNotifier, error) {
 			sqlDB, opts, err := common.NewSQLDBOpener(sql.OptsKey, sql.EnvVarKey).OpenWithOpts(cp, tmsID)
 			if err != nil {
 				return nil, err
 			}
-			return sqlite.NewTokenNDB(sqlDB, common.NewDBOptsFromOpts(*opts))
+			return sqlite.NewTokenNotifier(sqlDB, common.NewDBOptsFromOpts(*opts))
 		}),
 	}
 }
