@@ -7,13 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock
 
 import (
-	sql2 "database/sql"
 	"testing"
 	"time"
 
-	utils2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
-	sql3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
@@ -73,28 +70,23 @@ func startManagers(t *testing.T, number int, backoff time.Duration) ([]testutils
 }
 
 func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedManager, error) {
-	lockDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, postgres.NewTokenLockDB)
+	db, err := postgres2.OpenDB(pgConnStr, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	tokenDB, err := initDB(sql3.Postgres, pgConnStr, "test", 10, postgres.NewTokenDB)
-	if err != nil {
-		return nil, err
-	}
-	return testutils.NewEnhancedManager(NewManager(tokenDB, lockDB, newMetrics(&disabled.Provider{}), testutils.TokenQuantityPrecision, backoff, 0), tokenDB), nil
-
-}
-
-func initDB[T any](driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int, constructor func(*sql2.DB, common2.NewDBOpts) (T, error)) (T, error) {
-	d := common2.NewSQLDBOpener("", "")
-	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
-	if err != nil {
-		return utils2.Zero[T](), err
-	}
-	return constructor(sqlDB, common2.NewDBOpts{
-		DataSource:   dataSourceName,
-		TablePrefix:  tablePrefix,
+	opts := common2.NewDBOpts{
+		DataSource:   pgConnStr,
+		TablePrefix:  "test",
 		CreateSchema: true,
-	})
+	}
+
+	lockDB, err := postgres.NewTokenLockDB(db, opts)
+	if err != nil {
+		return nil, err
+	}
+	tokenDB, err := postgres.NewTokenDB(db, opts)
+	if err != nil {
+		return nil, err
+	}
+	return testutils.NewEnhancedManager(NewManager(newMixedFetcher(tokenDB, newMetrics(&disabled.Provider{})), lockDB, testutils.TokenQuantityPrecision, backoff, 0), tokenDB), nil
 }

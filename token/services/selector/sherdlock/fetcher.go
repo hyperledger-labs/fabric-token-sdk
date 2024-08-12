@@ -13,7 +13,10 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -37,6 +40,61 @@ type enhancedIterator[T any] interface {
 type permutatableIterator[T any] interface {
 	collections.Iterator[T]
 	NewPermutation() collections.Iterator[T]
+}
+
+type FetcherStrategy string
+
+const (
+	Lazy     = "lazy"
+	Eager    = "eager"
+	Mixed    = "mixed"
+	Listener = "listener"
+	Cached   = "cached"
+)
+
+type FetcherProvider interface {
+	GetFetcher(tmsID token.TMSID) (tokenFetcher, error)
+}
+
+type fetchFunc func(db *tokendb.DB, notifier *tokendb.Notifier, m *Metrics) tokenFetcher
+
+type fetcherProvider struct {
+	dbManager       *tokendb.Manager
+	notifierManager *tokendb.NotifierManager
+	metrics         *Metrics
+	fetch           fetchFunc
+}
+
+var fetchers = map[FetcherStrategy]fetchFunc{
+	Mixed: func(db *tokendb.DB, notifier *tokendb.Notifier, m *Metrics) tokenFetcher {
+		return newMixedFetcher(db, m)
+	},
+}
+
+func NewFetcherProvider(dbManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider, strategy FetcherStrategy) *fetcherProvider {
+	fetcher, ok := fetchers[strategy]
+	if !ok {
+		panic("undefined fetcher strategy: " + strategy)
+	}
+	return &fetcherProvider{
+		dbManager:       dbManager,
+		notifierManager: notifierManager,
+		metrics:         newMetrics(metricsProvider),
+		fetch:           fetcher,
+	}
+}
+
+func (p *fetcherProvider) GetFetcher(tmsID token.TMSID) (tokenFetcher, error) {
+	tokenDB, err := p.dbManager.DBByTMSId(tmsID)
+	if err != nil {
+		return nil, err
+	}
+	tokenNotifier, err := p.notifierManager.DBByTMSId(tmsID)
+	if err != nil {
+		return nil, err
+	}
+
+	return p.fetch(tokenDB, tokenNotifier, p.metrics), nil
 }
 
 // mixedFetcher combines both eager and lazy strategies

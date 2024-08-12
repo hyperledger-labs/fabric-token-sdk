@@ -137,6 +137,9 @@ func (p *SDK) Install() error {
 		p.Container().Provide(ttxdriver.NewDriver, dig.Group("ttxdb-drivers")),
 		p.Container().Provide(identitydriver.NewDriver, dig.Group("identitydb-drivers")),
 		p.Container().Provide(NewDBDrivers),
+		p.Container().Provide(func(dbManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
+			return sherdlock.NewFetcherProvider(dbManager, notifierManager, metricsProvider, sherdlock.Mixed)
+		}),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")
