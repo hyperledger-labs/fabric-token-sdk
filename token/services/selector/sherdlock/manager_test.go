@@ -88,5 +88,9 @@ func createManager(pgConnStr string, backoff time.Duration) (testutils.EnhancedM
 	if err != nil {
 		return nil, err
 	}
-	return testutils.NewEnhancedManager(NewManager(newMixedFetcher(tokenDB, newMetrics(&disabled.Provider{})), lockDB, testutils.TokenQuantityPrecision, backoff, 0), tokenDB), nil
+	tokenNotifier, err := postgres.NewTokenNotifier(db, opts)
+	if err != nil {
+		return nil, err
+	}
+	return testutils.NewEnhancedManager(NewManager(newMixedFetcher(tokenDB, tokenNotifier, newMetrics(&disabled.Provider{})), lockDB, testutils.TokenQuantityPrecision, backoff, 0), tokenDB), nil
 }

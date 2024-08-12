@@ -13,9 +13,11 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -67,7 +69,7 @@ type fetcherProvider struct {
 
 var fetchers = map[FetcherStrategy]fetchFunc{
 	Mixed: func(db *tokendb.DB, notifier *tokendb.Notifier, m *Metrics) tokenFetcher {
-		return newMixedFetcher(db, m)
+		return newMixedFetcher(db, notifier, m)
 	},
 }
 
@@ -107,7 +109,12 @@ type mixedFetcher struct {
 	m            *Metrics
 }
 
-func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
+func newMixedFetcher(tokenDB TokenDB, tokenNotifier driver2.TokenNotifier, m *Metrics) *mixedFetcher {
+	if err := tokenNotifier.Subscribe(func(operation driver3.Operation, m map[driver3.ColumnKey]string) {
+		logger.Warnf("New operation %v: [%v]", operation, m)
+	}); err != nil {
+		panic(err)
+	}
 	return &mixedFetcher{
 		lazyFetcher:  NewLazyFetcher(tokenDB),
 		eagerFetcher: newCachedFetcher(tokenDB, freshnessInterval, maxQueries),
