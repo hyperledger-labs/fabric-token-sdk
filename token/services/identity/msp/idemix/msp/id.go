@@ -28,6 +28,20 @@ const (
 
 var logger = logging.MustGetLogger("token-sdk.services.identity.msp.idemix")
 
+// SchemaManager handles the various credential schemas. A credential schema
+// contains information about the number of attributes, which attributes
+// must be disclosed when creating proofs, the format of the attributes etc.
+type SchemaManager interface {
+	// SignerOpts returns the options for the passed arguments
+	SignerOpts(schema string, ou *m.OrganizationUnit, role *m.MSPRole) (*bccsp.IdemixSignerOpts, error)
+	// NymSignerOpts returns the options that `schema` uses to verify a nym signature
+	NymSignerOpts(schema string) (*bccsp.IdemixNymSignerOpts, error)
+	// EidNymAuditOpts returns the options that `sid` must use to audit an EIDNym
+	EidNymAuditOpts(schema string, attrs [][]byte) (*bccsp.EidNymAuditOpts, error)
+	// RhNymAuditOpts returns the options that `sid` must use to audit an RhNym
+	RhNymAuditOpts(schema string, attrs [][]byte) (*bccsp.RhNymAuditOpts, error)
+}
+
 type Identity struct {
 	NymPublicKey bccsp.Key
 	Idemix       *Deserializer
@@ -39,9 +53,21 @@ type Identity struct {
 	// is constructed from a secret key on which the CA issued a credential.
 	AssociationProof []byte
 	VerificationType bccsp.VerificationType
+
+	SchemaManager SchemaManager
+	Schema        string
 }
 
-func NewIdentity(idemix *Deserializer, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte, verificationType bccsp.VerificationType) (*Identity, error) {
+func NewIdentity(
+	idemix *Deserializer,
+	NymPublicKey bccsp.Key,
+	role *m.MSPRole,
+	ou *m.OrganizationUnit,
+	proof []byte,
+	verificationType bccsp.VerificationType,
+	SchemaManager SchemaManager,
+	Schema string,
+) (*Identity, error) {
 	id := &Identity{}
 	id.Idemix = idemix
 	id.NymPublicKey = NymPublicKey
@@ -49,6 +75,8 @@ func NewIdentity(idemix *Deserializer, NymPublicKey bccsp.Key, role *m.MSPRole, 
 	id.OU = ou
 	id.AssociationProof = proof
 	id.VerificationType = verificationType
+	id.SchemaManager = SchemaManager
+	id.Schema = Schema
 
 	raw, err := NymPublicKey.Bytes()
 	if err != nil {
@@ -100,13 +128,17 @@ func (id *Identity) Validate() error {
 }
 
 func (id *Identity) Verify(msg []byte, sig []byte) error {
-	_, err := id.Idemix.Csp.Verify(
+	opts, err := id.SchemaManager.NymSignerOpts(id.Schema)
+	if err != nil {
+		return err
+	}
+	opts.IssuerPK = id.Idemix.IssuerPublicKey
+
+	_, err = id.Idemix.Csp.Verify(
 		id.NymPublicKey,
 		sig,
 		msg,
-		&bccsp.IdemixNymSignerOpts{
-			IssuerPK: id.Idemix.IssuerPublicKey,
-		},
+		opts,
 	)
 	return err
 }
@@ -164,24 +196,20 @@ func (id *Identity) verifyProof() error {
 		}
 	}
 
+	opts, err := id.SchemaManager.SignerOpts(id.Schema, id.OU, id.Role)
+	if err != nil {
+		return errors.Wrapf(err, "could obtain signer opts for schema '%s'", id.Schema)
+	}
+	opts.Epoch = id.Idemix.Epoch
+	opts.VerificationType = id.VerificationType
+	opts.Metadata = metadata
+	opts.RevocationPublicKey = id.Idemix.RevocationPK
+
 	valid, err := id.Idemix.Csp.Verify(
 		id.Idemix.IssuerPublicKey,
 		id.AssociationProof,
 		nil,
-		&bccsp.IdemixSignerOpts{
-			RevocationPublicKey: id.Idemix.RevocationPK,
-			Attributes: []bccsp.IdemixAttribute{
-				{Type: bccsp.IdemixBytesAttribute, Value: []byte(id.OU.OrganizationalUnitIdentifier)},
-				{Type: bccsp.IdemixIntAttribute, Value: GetIdemixRoleFromMSPRole(id.Role)},
-				{Type: bccsp.IdemixHiddenAttribute},
-				{Type: bccsp.IdemixHiddenAttribute},
-			},
-			RhIndex:          RHIndex,
-			EidIndex:         EIDIndex,
-			Epoch:            id.Idemix.Epoch,
-			VerificationType: id.VerificationType,
-			Metadata:         metadata,
-		},
+		opts,
 	)
 	if err == nil && !valid {
 		return errors.Errorf("unexpected condition, an error should be returned for an invalid signature")
@@ -200,14 +228,17 @@ type SigningIdentity struct {
 
 func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
 	// logger.Debugf("Idemix identity %s is signing", id.GetIdentifier())
+	opts, err := id.SchemaManager.NymSignerOpts(id.Schema)
+	if err != nil {
+		return nil, err
+	}
+	opts.Nym = id.NymKey
+	opts.IssuerPK = id.Idemix.IssuerPublicKey
 
 	sig, err := id.Idemix.Csp.Sign(
 		id.UserKey,
 		msg,
-		&bccsp.IdemixNymSignerOpts{
-			Nym:      id.NymKey,
-			IssuerPK: id.Idemix.IssuerPublicKey,
-		},
+		opts,
 	)
 	if err != nil {
 		return nil, err
@@ -216,19 +247,25 @@ func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
 }
 
 type NymSignatureVerifier struct {
-	CSP   bccsp.BCCSP
-	IPK   bccsp.Key
-	NymPK bccsp.Key
+	CSP           bccsp.BCCSP
+	IPK           bccsp.Key
+	NymPK         bccsp.Key
+	SchemaManager SchemaManager
+	Schema        string
 }
 
 func (v *NymSignatureVerifier) Verify(message, sigma []byte) error {
-	_, err := v.CSP.Verify(
+	opts, err := v.SchemaManager.NymSignerOpts(v.Schema)
+	if err != nil {
+		return err
+	}
+	opts.IssuerPK = v.IPK
+
+	_, err = v.CSP.Verify(
 		v.NymPK,
 		sigma,
 		message,
-		&bccsp.IdemixNymSignerOpts{
-			IssuerPK: v.IPK,
-		},
+		opts,
 	)
 	return err
 }

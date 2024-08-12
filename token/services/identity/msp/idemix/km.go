@@ -10,9 +10,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/IBM/idemix"
 	bccsp "github.com/IBM/idemix/bccsp/types"
-	"github.com/IBM/idemix/idemixmsp"
+	im "github.com/IBM/idemix/idemixmsp"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -26,6 +25,22 @@ const (
 	Any bccsp.SignatureType = 100
 )
 
+// SchemaManager handles the various credential schemas. A credential schema
+// contains information about the number of attributes, which attributes
+// must be disclosed when creating proofs, the format of the attributes etc.
+type SchemaManager interface {
+	// PublicKeyImportOpts returns the options that `schema` uses to import its public keys
+	PublicKeyImportOpts(schema string) (*bccsp.IdemixIssuerPublicKeyImportOpts, error)
+	// SignerOpts returns the options for the passed arguments
+	SignerOpts(schema string, ou *m.OrganizationUnit, role *m.MSPRole) (*bccsp.IdemixSignerOpts, error)
+	// NymSignerOpts returns the options that `schema` uses to verify a nym signature
+	NymSignerOpts(schema string) (*bccsp.IdemixNymSignerOpts, error)
+	// EidNymAuditOpts returns the options that `sid` must use to audit an EIDNym
+	EidNymAuditOpts(schema string, attrs [][]byte) (*bccsp.EidNymAuditOpts, error)
+	// RhNymAuditOpts returns the options that `sid` must use to audit an RhNym
+	RhNymAuditOpts(schema string, attrs [][]byte) (*bccsp.RhNymAuditOpts, error)
+}
+
 type SignerService interface {
 	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
 }
@@ -33,21 +48,31 @@ type SignerService interface {
 type KeyManager struct {
 	*msp.Deserializer
 	userKey       bccsp.Key
-	conf          idemixmsp.IdemixMSPConfig
+	conf          im.IdemixMSPConfig
 	SignerService SignerService
 
 	sigType bccsp.SignatureType
 	verType bccsp.VerificationType
+
+	SchemaManager SchemaManager
+	Schema        string
 }
 
-func NewKeyManager(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*KeyManager, error) {
+func NewKeyManager(
+	conf1 *m.MSPConfig,
+	signerService SignerService,
+	sigType bccsp.SignatureType,
+	cryptoProvider bccsp.BCCSP,
+	sm SchemaManager,
+	schema string,
+) (*KeyManager, error) {
 	logger.Debugf("Setting up Idemix-based MSP instance")
 
 	if conf1 == nil {
 		return nil, errors.Errorf("setup error: nil conf reference")
 	}
 
-	var conf idemixmsp.IdemixMSPConfig
+	var conf im.IdemixMSPConfig
 	err := proto.Unmarshal(conf1.Config, &conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling idemix provider config")
@@ -55,18 +80,16 @@ func NewKeyManager(conf1 *m.MSPConfig, signerService SignerService, sigType bccs
 
 	logger.Debugf("Setting up Idemix MSP instance %s", conf.Name)
 
+	// get the opts from the schema manager
+	opts, err := sm.PublicKeyImportOpts(schema)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not obtain PublicKeyImportOpts for schema '%s'", schema)
+	}
 	// Import Issuer Public Key
 	issuerPublicKey, err := cryptoProvider.KeyImport(
 		conf.Ipk,
-		&bccsp.IdemixIssuerPublicKeyImportOpts{
-			Temporary: true,
-			AttributeNames: []string{
-				idemix.AttributeNameOU,
-				idemix.AttributeNameRole,
-				idemix.AttributeNameEnrollmentId,
-				idemix.AttributeNameRevocationHandle,
-			},
-		})
+		opts,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -154,12 +177,16 @@ func NewKeyManager(conf1 *m.MSPConfig, signerService SignerService, sigType bccs
 			RevocationPK:    RevocationPublicKey,
 			Epoch:           0,
 			VerType:         verType,
+			SchemaManager:   sm,
+			Schema:          schema,
 		},
 		userKey:       userKey,
 		conf:          conf,
 		SignerService: signerService,
 		sigType:       sigType,
 		verType:       verType,
+		SchemaManager: sm,
+		Schema:        schema,
 	}, nil
 }
 
@@ -211,22 +238,16 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	// Create the cryptographic evidence that this identity is valid
-	sigOpts := &bccsp.IdemixSignerOpts{
-		Credential: p.conf.Signer.Cred,
-		Nym:        nymKey,
-		IssuerPK:   p.IssuerPublicKey,
-		Attributes: []bccsp.IdemixAttribute{
-			{Type: bccsp.IdemixBytesAttribute},
-			{Type: bccsp.IdemixIntAttribute},
-			{Type: bccsp.IdemixHiddenAttribute},
-			{Type: bccsp.IdemixHiddenAttribute},
-		},
-		RhIndex:  msp.RHIndex,
-		EidIndex: msp.EIDIndex,
-		CRI:      p.conf.Signer.CredentialRevocationInformation,
-		SigType:  sigType,
-		Metadata: signerMetadata,
+	sigOpts, err := p.SchemaManager.SignerOpts(p.Schema, ou, role)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "could obtain signer sigOpts for schema %s", p.Schema)
 	}
+	sigOpts.Credential = p.conf.Signer.Cred
+	sigOpts.Nym = nymKey
+	sigOpts.IssuerPK = p.IssuerPublicKey
+	sigOpts.CRI = p.conf.Signer.CredentialRevocationInformation
+	sigOpts.SigType = sigType
+	sigOpts.Metadata = signerMetadata
 	proof, err := p.Csp.Sign(
 		p.userKey,
 		nil,
@@ -237,7 +258,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	// Set up default signer
-	id, err := msp.NewIdentity(p.Deserializer, NymPublicKey, role, ou, proof, p.verType)
+	id, err := msp.NewIdentity(p.Deserializer, NymPublicKey, role, ou, proof, p.verType, p.SchemaManager, p.Schema)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -265,8 +286,6 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 		infoRaw = nil
 	case bccsp.EidNymRhNym:
 		auditInfo := &msp.AuditInfo{
-			Csp:             p.Csp,
-			IssuerPublicKey: p.IssuerPublicKey,
 			EidNymAuditData: sigOpts.Metadata.EidNymAuditData,
 			RhNymAuditData:  sigOpts.Metadata.RhNymAuditData,
 			Attributes: [][]byte{
@@ -275,6 +294,10 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 				[]byte(enrollmentID),
 				[]byte(rh),
 			},
+			Csp:             p.Csp,
+			IssuerPublicKey: p.IssuerPublicKey,
+			SchemaManager:   p.SchemaManager,
+			Schema:          p.Schema,
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("new idemix identity generated with [%s:%s]", enrollmentID, hash.Hashable(auditInfo.Attributes[3]).String())
@@ -342,6 +365,8 @@ func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
 		ai := &msp.AuditInfo{
 			Csp:             p.Csp,
 			IssuerPublicKey: p.IssuerPublicKey,
+			SchemaManager:   p.SchemaManager,
+			Schema:          p.Schema,
 		}
 		if err := ai.FromBytes(auditInfo); err != nil {
 			return "", err
@@ -374,7 +399,7 @@ func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdent
 		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
 
-	serialized := new(idemixmsp.SerializedIdemixIdentity)
+	serialized := new(im.SerializedIdemixIdentity)
 	err = proto.Unmarshal(si.IdBytes, serialized)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
@@ -409,7 +434,7 @@ func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdent
 		return nil, errors.Wrap(err, "cannot deserialize the role of the identity")
 	}
 
-	id, _ := msp.NewIdentity(p.Deserializer, NymPublicKey, role, ou, serialized.Proof, p.verType)
+	id, _ := msp.NewIdentity(p.Deserializer, NymPublicKey, role, ou, serialized.Proof, p.verType, p.SchemaManager, p.Schema)
 	if err := id.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cannot deserialize, invalid identity")
 	}
