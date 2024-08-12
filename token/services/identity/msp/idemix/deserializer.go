@@ -22,41 +22,24 @@ type Deserializer struct {
 	*msp2.Deserializer
 }
 
-// NewDeserializer returns a new deserializer for the idemix ExpectEidNymRhNym verification strategy
-func NewDeserializer(
+// NewEidNymRhNymDeserializer returns a new deserializer that expects EID and RH Nyms identities.
+// The returned deserializer checks the validly of the deserialized identities.
+func NewEidNymRhNymDeserializer(
 	sm SchemaManager,
 	schema string,
 	ipk []byte,
 	curveID math.CurveID,
 ) (*Deserializer, error) {
-	logger.Debugf("new deserialized for dlog idemix")
 	cryptoProvider, err := msp2.NewBCCSPWithDummyKeyStore(curveID, curveID == math.BLS12_381_BBS)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
 	}
-	return NewDeserializerWithProvider(sm, schema, ipk, csp.ExpectEidNymRhNym, nil, cryptoProvider)
+	return NewDeserializer(sm, schema, ipk, csp.ExpectEidNymRhNym, nil, cryptoProvider)
 }
 
-// NewDeserializerWithProvider returns a new serialized for the passed arguments
-func NewDeserializerWithProvider(
-	sm SchemaManager,
-	schema string,
-	ipk []byte,
-	verType csp.VerificationType,
-	nymEID []byte,
-	cryptoProvider csp.BCCSP,
-) (*Deserializer, error) {
-	return NewDeserializerWithBCCSP(
-		sm,
-		schema,
-		ipk,
-		verType,
-		nymEID,
-		cryptoProvider,
-	)
-}
-
-func NewDeserializerWithBCCSP(
+// NewDeserializer returns a new deserializer for the passed arguments.
+// The returned deserializer checks the validly of the deserialized identities.
+func NewDeserializer(
 	sm SchemaManager,
 	schema string,
 	ipk []byte,
@@ -67,20 +50,21 @@ func NewDeserializerWithBCCSP(
 	logger.Debugf("Setting up Idemix-based MSP instance")
 
 	// Import Issuer Public Key
+	if len(ipk) == 0 {
+		return nil, errors.Errorf("no issuer public key provided")
+	}
 	var issuerPublicKey csp.Key
-	if len(ipk) != 0 {
-		// get the opts from the schema manager
-		opts, err := sm.PublicKeyImportOpts(schema)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not obtain PublicKeyImportOpts for schema '%s'", schema)
-		}
-		issuerPublicKey, err = cryptoProvider.KeyImport(
-			ipk,
-			opts,
-		)
-		if err != nil {
-			return nil, err
-		}
+	// get the opts from the schema manager
+	opts, err := sm.PublicKeyImportOpts(schema)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not obtain PublicKeyImportOpts for schema '%s'", schema)
+	}
+	issuerPublicKey, err = cryptoProvider.KeyImport(
+		ipk,
+		opts,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Deserializer{
@@ -97,7 +81,7 @@ func NewDeserializerWithBCCSP(
 }
 
 func (d *Deserializer) DeserializeVerifier(raw driver.Identity) (driver.Verifier, error) {
-	identity, err := d.Deserialize(raw, true)
+	identity, err := d.Deserialize(raw)
 	if err != nil {
 		return nil, err
 	}
@@ -109,25 +93,6 @@ func (d *Deserializer) DeserializeVerifier(raw driver.Identity) (driver.Verifier
 		SchemaManager: d.SchemaManager,
 		Schema:        d.Schema,
 	}, nil
-}
-
-func (d *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byte) (driver.Verifier, error) {
-	identity, err := d.Deserializer.DeserializeAgainstNymEID(raw, true, nymEID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &msp2.NymSignatureVerifier{
-		CSP:           d.Deserializer.Csp,
-		IPK:           d.Deserializer.IssuerPublicKey,
-		NymPK:         identity.NymPublicKey,
-		SchemaManager: d.SchemaManager,
-		Schema:        d.Schema,
-	}, nil
-}
-
-func (d *Deserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
-	return nil, errors.New("not supported")
 }
 
 func (d *Deserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
@@ -138,35 +103,19 @@ func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	return d.Deserializer.DeserializeAuditInfo(raw)
 }
 
-func (d *Deserializer) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
-	auditInfo, err := p.GetAuditInfo(raw)
+func (d *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byte) (driver.Verifier, error) {
+	identity, err := d.Deserializer.DeserializeAgainstNymEID(raw, nymEID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", driver.Identity(raw).String())
-	}
-	return [][]byte{auditInfo}, nil
-}
-
-func (d *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
-	r, err := d.Deserialize(raw, false)
-	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	eid := ""
-	if len(auditInfo) != 0 {
-		ai, err := msp2.DeserializeAuditInfo(auditInfo)
-		if err != nil {
-			return "", err
-		}
-		ai.SchemaManager = d.Deserializer.SchemaManager
-		ai.Schema = d.Deserializer.Schema
-		if err := ai.Match(raw); err != nil {
-			return "", err
-		}
-		eid = ai.EnrollmentID()
-	}
-
-	return fmt.Sprintf("MSP.Idemix: [%s][%s][%s][%s][%s]", eid, driver.Identity(raw).UniqueID(), r.SerializedIdentity.Mspid, r.OU.OrganizationalUnitIdentifier, r.Role.Role.String()), nil
+	return &msp2.NymSignatureVerifier{
+		CSP:           d.Deserializer.Csp,
+		IPK:           d.Deserializer.IssuerPublicKey,
+		NymPK:         identity.NymPublicKey,
+		SchemaManager: d.SchemaManager,
+		Schema:        d.Schema,
+	}, nil
 }
 
 func (d *Deserializer) String() string {

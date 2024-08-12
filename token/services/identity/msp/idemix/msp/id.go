@@ -44,7 +44,7 @@ type SchemaManager interface {
 
 type Identity struct {
 	NymPublicKey bccsp.Key
-	Idemix       *Deserializer
+	Deserializer *Deserializer
 	ID           *msp.IdentityIdentifier
 	Role         *m.MSPRole
 	OU           *m.OrganizationUnit
@@ -59,7 +59,7 @@ type Identity struct {
 }
 
 func NewIdentity(
-	idemix *Deserializer,
+	deserializer *Deserializer,
 	NymPublicKey bccsp.Key,
 	role *m.MSPRole,
 	ou *m.OrganizationUnit,
@@ -69,7 +69,7 @@ func NewIdentity(
 	Schema string,
 ) (*Identity, error) {
 	id := &Identity{}
-	id.Idemix = idemix
+	id.Deserializer = deserializer
 	id.NymPublicKey = NymPublicKey
 	id.Role = role
 	id.OU = ou
@@ -83,7 +83,7 @@ func NewIdentity(
 		return nil, errors.Wrapf(err, "failed to marshal nym public key")
 	}
 	id.ID = &msp.IdentityIdentifier{
-		Mspid: idemix.Name,
+		Mspid: deserializer.Name,
 		Id:    bytes.NewBuffer(raw).String(),
 	}
 
@@ -105,12 +105,12 @@ func (id *Identity) GetIdentifier() *msp.IdentityIdentifier {
 }
 
 func (id *Identity) GetMSPIdentifier() string {
-	return id.Idemix.Name
+	return id.Deserializer.Name
 }
 
 func (id *Identity) GetOrganizationalUnits() []*msp.OUIdentifier {
 	// we use the (serialized) public key of this MSP as the CertifiersIdentifier
-	certifiersIdentifier, err := id.Idemix.IssuerPublicKey.Bytes()
+	certifiersIdentifier, err := id.Deserializer.IssuerPublicKey.Bytes()
 	if err != nil {
 		logger.Errorf("Failed to marshal ipk in GetOrganizationalUnits: %s", err)
 		return nil
@@ -121,7 +121,7 @@ func (id *Identity) GetOrganizationalUnits() []*msp.OUIdentifier {
 
 func (id *Identity) Validate() error {
 	// logger.Debugf("Validating identity %+v", id)
-	if id.GetMSPIdentifier() != id.Idemix.Name {
+	if id.GetMSPIdentifier() != id.Deserializer.Name {
 		return errors.Errorf("the supplied identity does not belong to this msp")
 	}
 	return id.verifyProof()
@@ -132,9 +132,9 @@ func (id *Identity) Verify(msg []byte, sig []byte) error {
 	if err != nil {
 		return err
 	}
-	opts.IssuerPK = id.Idemix.IssuerPublicKey
+	opts.IssuerPK = id.Deserializer.IssuerPublicKey
 
-	_, err = id.Idemix.Csp.Verify(
+	_, err = id.Deserializer.Csp.Verify(
 		id.NymPublicKey,
 		sig,
 		msg,
@@ -189,10 +189,10 @@ func (id *Identity) Serialize() ([]byte, error) {
 func (id *Identity) verifyProof() error {
 	// Verify signature
 	var metadata *bccsp.IdemixSignerMetadata
-	if len(id.Idemix.NymEID) != 0 {
+	if len(id.Deserializer.NymEID) != 0 {
 		metadata = &bccsp.IdemixSignerMetadata{
-			EidNym: id.Idemix.NymEID,
-			RhNym:  id.Idemix.RhNym,
+			EidNym: id.Deserializer.NymEID,
+			RhNym:  id.Deserializer.RhNym,
 		}
 	}
 
@@ -200,13 +200,13 @@ func (id *Identity) verifyProof() error {
 	if err != nil {
 		return errors.Wrapf(err, "could obtain signer opts for schema '%s'", id.Schema)
 	}
-	opts.Epoch = id.Idemix.Epoch
+	opts.Epoch = id.Deserializer.Epoch
 	opts.VerificationType = id.VerificationType
 	opts.Metadata = metadata
-	opts.RevocationPublicKey = id.Idemix.RevocationPK
+	opts.RevocationPublicKey = id.Deserializer.RevocationPK
 
-	valid, err := id.Idemix.Csp.Verify(
-		id.Idemix.IssuerPublicKey,
+	valid, err := id.Deserializer.Csp.Verify(
+		id.Deserializer.IssuerPublicKey,
 		id.AssociationProof,
 		nil,
 		opts,
@@ -233,9 +233,9 @@ func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
 		return nil, err
 	}
 	opts.Nym = id.NymKey
-	opts.IssuerPK = id.Idemix.IssuerPublicKey
+	opts.IssuerPK = id.Deserializer.IssuerPublicKey
 
-	sig, err := id.Idemix.Csp.Sign(
+	sig, err := id.Deserializer.Csp.Sign(
 		id.UserKey,
 		msg,
 		opts,

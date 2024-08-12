@@ -323,7 +323,7 @@ func (p *Provider) IsRemote() bool {
 }
 
 func (p *Provider) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	r, err := p.Deserialize(raw, true)
+	r, err := p.Deserialize(raw)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +332,7 @@ func (p *Provider) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
 }
 
 func (p *Provider) DeserializeSigner(raw []byte) (driver.Signer, error) {
-	r, err := p.Deserialize(raw, true)
+	r, err := p.Deserialize(raw)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +361,7 @@ func (p *Provider) DeserializeSigner(raw []byte) (driver.Signer, error) {
 }
 
 func (p *Provider) Info(raw []byte, auditInfo []byte) (string, error) {
-	r, err := p.Deserialize(raw, true)
+	r, err := p.Deserialize(raw)
 	if err != nil {
 		return "", err
 	}

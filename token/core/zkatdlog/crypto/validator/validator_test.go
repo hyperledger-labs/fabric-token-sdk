@@ -76,7 +76,7 @@ var _ = Describe("validator", func() {
 		c := math.Curves[pp.Curve]
 
 		asigner, _ := prepareECDSASigner()
-		des, err := idemix.NewDeserializer(&schema.DefaultManager{}, "", pp.IdemixIssuerPK, math.FP256BN_AMCL)
+		des, err := idemix.NewEidNymRhNymDeserializer(&schema.DefaultManager{}, "", pp.IdemixIssuerPK, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), &noop.Tracer{}, des, pp.PedersenGenerators, pp.IdemixIssuerPK, asigner, c)
 		araw, err := asigner.Serialize()
