@@ -58,9 +58,9 @@ import (
 var logger = logging.MustGetLogger("token-sdk")
 
 var selectorProviders = map[sdriver.Driver]any{
-	"simple":    selector.NewService,
-	"sherdlock": sherdlock.NewService,
-	"":          sherdlock.NewService,
+	sdriver.Simple:    selector.NewService,
+	sdriver.Sherdlock: sherdlock.NewService,
+	"":                sherdlock.NewService,
 }
 
 type SDK struct {
@@ -248,5 +248,4 @@ func registerNetworkDrivers(in struct {
 	for _, d := range in.Drivers {
 		in.NetworkProvider.RegisterDriver(d)
 	}
-
 }

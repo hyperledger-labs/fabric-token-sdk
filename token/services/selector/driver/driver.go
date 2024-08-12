@@ -12,6 +12,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	Sherdlock Driver = "sherdlock"
+	Simple    Driver = "simple"
+)
+
 type SelectorConfig interface {
 	GetDriver() Driver
 	GetNumRetries() int
@@ -21,14 +26,14 @@ type SelectorConfig interface {
 type Driver string
 
 type Config struct {
-	Driver        Driver
-	RetryInterval time.Duration
-	NumRetries    int
+	Driver        Driver        `json:"driver,omitempty"`
+	RetryInterval time.Duration `json:"retryInterval,omitempty"`
+	NumRetries    int           `json:"numRetries,omitempty"`
 }
 
 func (c Config) GetDriver() Driver {
 	if c.Driver == "" {
-		return "sherdlock"
+		return Sherdlock
 	}
 	return c.Driver
 }
