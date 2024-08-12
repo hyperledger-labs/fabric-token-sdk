@@ -47,20 +47,15 @@ var (
 		CommType:          fsc.LibP2P,
 		ReplicationFactor: token.None,
 	}
-	WebSocketWithReplication = &InfrastructureType{
-		Label:             ginkgo.Label("replicas"),
-		CommType:          fsc.WebSocket,
-		ReplicationFactor: 3,
-	}
 
 	WebSocketNoReplicationOnly = []*InfrastructureType{
 		WebSocketNoReplication,
 	}
-	LibP2PNoReplicationOnly = []*InfrastructureType{
-		LibP2PNoReplication,
-	}
 	WebSocketWithReplicationOnly = []*InfrastructureType{
 		WebSocketWithReplication,
+	}
+	LibP2PNoReplicationOnly = []*InfrastructureType{
+		LibP2PNoReplication,
 	}
 
 	AllTestTypes = []*InfrastructureType{
