@@ -36,11 +36,11 @@ type Deserializer struct {
 	Schema          string
 }
 
-func (d *Deserializer) Deserialize(raw []byte, checkValidity bool) (*DeserializedIdentity, error) {
-	return d.DeserializeAgainstNymEID(raw, checkValidity, nil)
+func (d *Deserializer) Deserialize(raw []byte) (*DeserializedIdentity, error) {
+	return d.DeserializeAgainstNymEID(raw, nil)
 }
 
-func (d *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID []byte) (*DeserializedIdentity, error) {
+func (d *Deserializer) DeserializeAgainstNymEID(raw []byte, nymEID []byte) (*DeserializedIdentity, error) {
 	si := &m.SerializedIdentity{}
 	err := proto.Unmarshal(raw, si)
 	if err != nil {
@@ -54,6 +54,11 @@ func (d *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 	}
 	if serialized.NymX == nil || serialized.NymY == nil {
 		return nil, errors.Errorf("unable to deserialize idemix identity: pseudonym is invalid")
+	}
+
+	// match schema
+	if serialized.Schema != d.Schema {
+		return nil, errors.Errorf("unable to deserialize idemix identity: schema does not match [%s]!=[%s]", serialized.Schema, d.Schema)
 	}
 
 	// Import NymPublicKey
@@ -110,10 +115,8 @@ func (d *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot deserialize")
 	}
-	if checkValidity {
-		if err := id.Validate(); err != nil {
-			return nil, errors.Wrap(err, "cannot deserialize, invalid identity")
-		}
+	if err := id.Validate(); err != nil {
+		return nil, errors.Wrap(err, "cannot deserialize, invalid identity")
 	}
 
 	return &DeserializedIdentity{

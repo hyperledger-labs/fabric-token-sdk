@@ -317,7 +317,7 @@ func (p *KeyManager) IsRemote() bool {
 }
 
 func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	r, err := p.Deserialize(raw, true)
+	r, err := p.Deserialize(raw)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +326,7 @@ func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
 }
 
 func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
-	r, err := p.Deserialize(raw, true)
+	r, err := p.Deserialize(raw)
 	if err != nil {
 		return nil, err
 	}
@@ -355,7 +355,7 @@ func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
 }
 
 func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
-	r, err := p.Deserialize(raw, true)
+	r, err := p.Deserialize(raw)
 	if err != nil {
 		return "", err
 	}

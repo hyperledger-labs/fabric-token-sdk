@@ -37,6 +37,11 @@ var (
 		CommType:          fsc.WebSocket,
 		ReplicationFactor: token.None,
 	}
+	WebSocketWithReplication = &InfrastructureType{
+		Label:             ginkgo.Label("replicas"),
+		CommType:          fsc.WebSocket,
+		ReplicationFactor: 3,
+	}
 	LibP2PNoReplication = &InfrastructureType{
 		Label:             ginkgo.Label("libp2p"),
 		CommType:          fsc.LibP2P,
