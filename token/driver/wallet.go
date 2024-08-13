@@ -132,8 +132,10 @@ type WalletLookupID = any
 // Authorization defines method to check the relation between a token
 // and wallets (owner, auditor, etc.)
 type Authorization interface {
-	// IsMine returns true if the passed token is owned by an owner wallet in the passed TMS
-	IsMine(tok *token.Token) ([]string, bool)
+	// IsMine returns true if the passed token is owned by an owner wallet.
+	// It returns the ID of the owner wallet and any additional owner identifier, if supported.
+	// It is possible that the wallet ID is empty an the additional owner identifier list is not.
+	IsMine(tok *token.Token) (string, []string, bool)
 	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 	// defined in the public parameters of the passed TMS.
 	AmIAnAuditor() bool

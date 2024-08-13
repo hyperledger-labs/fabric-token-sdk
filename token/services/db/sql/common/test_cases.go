@@ -871,14 +871,14 @@ func TQueryTokenDetails(t *testing.T, db *TokenDB) {
 	assert.Equal(t, false, res[2].IsSpent, "tx2-1 is not spent")
 
 	// alice
-	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{OwnerEnrollmentID: "alice"})
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{WalletID: "alice"})
 	assert.NoError(t, err)
 	assert.Len(t, res, 2)
 	assertEqual(t, tx1, res[0])
 	assertEqual(t, tx2, res[1])
 
 	// alice TST1
-	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{OwnerEnrollmentID: "alice", TokenType: "TST1"})
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{WalletID: "alice", TokenType: "TST1"})
 	assert.NoError(t, err)
 	assert.Len(t, res, 1)
 	assertEqual(t, tx1, res[0])
@@ -887,7 +887,7 @@ func TQueryTokenDetails(t *testing.T, db *TokenDB) {
 	assert.Equal(t, res[0].Amount, balance)
 
 	// alice TST
-	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{OwnerEnrollmentID: "alice", TokenType: "TST"})
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{WalletID: "alice", TokenType: "TST"})
 	assert.NoError(t, err)
 	assert.Len(t, res, 1)
 	assertEqual(t, tx2, res[0])
@@ -896,7 +896,7 @@ func TQueryTokenDetails(t *testing.T, db *TokenDB) {
 	assert.Equal(t, res[0].Amount, balance)
 
 	// bob TST
-	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{OwnerEnrollmentID: "bob", TokenType: "TST"})
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{WalletID: "bob", TokenType: "TST"})
 	assert.NoError(t, err)
 	assert.Len(t, res, 1)
 	assertEqual(t, tx21, res[0])

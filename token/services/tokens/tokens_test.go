@@ -27,8 +27,8 @@ type authMock struct{}
 func (a authMock) Issued(issuer driver.Identity, tok *token2.Token) bool {
 	return false
 }
-func (a authMock) IsMine(tok *token2.Token) ([]string, bool) {
-	return []string{string(tok.Owner.Raw)}, true
+func (a authMock) IsMine(tok *token2.Token) (string, []string, bool) {
+	return "", []string{string(tok.Owner.Raw)}, true
 }
 func (a authMock) AmIAnAuditor() bool {
 	return false

@@ -68,6 +68,7 @@ type TokenToAppend struct {
 	tokenOnLedgerMetadata []byte
 	ownerType             string
 	ownerIdentity         token.Identity
+	ownerWalletID         string
 	owners                []string
 	issuer                token.Identity
 	precision             uint64
@@ -141,6 +142,7 @@ func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error 
 			OwnerRaw:       tta.tok.Owner.Raw,
 			OwnerType:      tta.ownerType,
 			OwnerIdentity:  tta.ownerIdentity,
+			OwnerWalletID:  tta.ownerWalletID,
 			Ledger:         tta.tokenOnLedger,
 			LedgerMetadata: tta.tokenOnLedgerMetadata,
 			Quantity:       tta.tok.Quantity,

@@ -119,11 +119,11 @@ func (db *TokenDB) UnspentTokensIterator() (tdriver.UnspentTokensIterator, error
 
 // UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 // The token type can be empty. In that case, tokens of any type are returned.
-func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (tdriver.UnspentTokensIterator, error) {
+func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenType string) (tdriver.UnspentTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
-		OwnerEnrollmentID: id,
-		TokenType:         tokenType,
+		WalletID:  walletID,
+		TokenType: tokenType,
 	}, db.table.Tokens, db.table.Ownership)
 	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_raw, token_type, quantity FROM %s %s %s",
 		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
@@ -137,14 +137,16 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, id, tokenType st
 }
 
 // MinTokenInfoIteratorBy returns the minimum information about the tokens needed for the selector
-func (db *TokenDB) MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (tdriver.MinTokenInfoIterator, error) {
+func (db *TokenDB) MinTokenInfoIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.MinTokenInfoIterator, error) {
 	span := trace.SpanFromContext(ctx)
-	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
-		OwnerEnrollmentID: ownerEID,
-		TokenType:         typ,
-	}, db.table.Tokens, db.table.Ownership)
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, token_type, quantity, enrollment_id FROM %s %s %s",
-		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
+	where, args := tokenQuerySqlNoJoin(driver.QueryTokenDetailsParams{
+		WalletID:  walletID,
+		TokenType: typ,
+	})
+	query := fmt.Sprintf(
+		"SELECT tx_id, idx, token_type, quantity, owner_wallet_id FROM %s %s",
+		db.table.Tokens, where,
+	)
 
 	logger.Debug(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
@@ -157,10 +159,10 @@ func (db *TokenDB) MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, 
 }
 
 // Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-func (db *TokenDB) Balance(ownerEID, typ string) (uint64, error) {
+func (db *TokenDB) Balance(walletID, typ string) (uint64, error) {
 	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
-		OwnerEnrollmentID: ownerEID,
-		TokenType:         typ,
+		WalletID:  walletID,
+		TokenType: typ,
 	}, db.table.Tokens, db.table.Ownership)
 	query := fmt.Sprintf("SELECT SUM(amount) FROM %s %s %s", db.table.Tokens, join, where)
 
@@ -529,7 +531,7 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 func (db *TokenDB) QueryTokenDetails(params driver.QueryTokenDetailsParams) ([]driver.TokenDetails, error) {
 	where, join, args := tokenQuerySql(params, db.table.Tokens, db.table.Ownership)
 
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_identity, owner_type, enrollment_id, token_type, amount, is_deleted, spent_by, stored_at FROM %s %s %s",
+	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_identity, owner_type, wallet_id, token_type, amount, is_deleted, spent_by, stored_at FROM %s %s %s",
 		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
@@ -777,6 +779,7 @@ func (db *TokenDB) GetSchema() string {
 			owner_raw BYTEA NOT NULL,
 			owner_type TEXT NOT NULL,
 			owner_identity BYTEA NOT NULL,
+			owner_wallet_id TEXT, 
 			ledger BYTEA NOT NULL,
 			ledger_metadata BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
@@ -795,8 +798,8 @@ func (db *TokenDB) GetSchema() string {
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL,
 			idx INT NOT NULL,
-			enrollment_id TEXT NOT NULL,
-			PRIMARY KEY (tx_id, idx, enrollment_id),
+			wallet_id TEXT NOT NULL,
+			PRIMARY KEY (tx_id, idx, wallet_id),
 			FOREIGN KEY (tx_id, idx) REFERENCES %s
 		);
 
@@ -852,7 +855,7 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 		IncludeDeleted: includeDeleted,
 	}, t.db.table.Tokens, t.db.table.Ownership)
 
-	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, enrollment_id FROM %s %s %s", t.db.table.Tokens, join, where)
+	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, wallet_id FROM %s %s %s", t.db.table.Tokens, join, where)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := t.tx.Query(query, args...)
@@ -913,7 +916,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 	// Store token
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", t.db.table.Tokens)
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)", t.db.table.Tokens)
 	logger.Debug(query,
 		tr.TxID,
 		tr.Index,
@@ -921,6 +924,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		len(tr.OwnerRaw),
 		tr.OwnerType,
 		len(tr.OwnerIdentity),
+		tr.OwnerWalletID,
 		len(tr.Ledger),
 		len(tr.LedgerMetadata),
 		tr.Type,
@@ -938,6 +942,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		tr.OwnerRaw,
 		tr.OwnerType,
 		tr.OwnerIdentity,
+		tr.OwnerWalletID,
 		tr.Ledger,
 		tr.LedgerMetadata,
 		tr.Type,
@@ -953,8 +958,11 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 	// Store ownership
 	span.AddEvent("store_ownerships")
+	if len(tr.OwnerWalletID) != 0 {
+		owners = append(owners, tr.OwnerWalletID)
+	}
 	for _, eid := range owners {
-		query = fmt.Sprintf("INSERT INTO %s (tx_id, idx, enrollment_id) VALUES ($1, $2, $3)", t.db.table.Ownership)
+		query = fmt.Sprintf("INSERT INTO %s (tx_id, idx, wallet_id) VALUES ($1, $2, $3)", t.db.table.Ownership)
 		logger.Debug(query, tr.TxID, tr.Index, eid)
 		span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 		if _, err := t.tx.Exec(query, tr.TxID, tr.Index, eid); err != nil {
