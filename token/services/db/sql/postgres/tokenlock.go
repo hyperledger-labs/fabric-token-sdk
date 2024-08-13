@@ -39,14 +39,17 @@ func NewTokenLockDB(db *sql.DB, k common.NewDBOpts) (driver.TokenLockDB, error) 
 func (db *TokenLockDB) Cleanup(evictionDelay time.Duration) error {
 	query := fmt.Sprintf(
 		"DELETE FROM %s "+
-			"USING %s WHERE %s.consumer_tx_id = %s.tx_id AND (%s.status IN (3) "+
+			"USING %s WHERE %s.consumer_tx_id = %s.tx_id AND (%s.status IN (%d) "+
 			"OR %s.created_at < NOW() - INTERVAL '%d seconds'"+
 			");",
 		db.Table.TokenLocks,
-		db.Table.Requests, db.Table.TokenLocks, db.Table.Requests, db.Table.Requests,
+		db.Table.Requests, db.Table.TokenLocks, db.Table.Requests, db.Table.Requests, driver.Deleted,
 		db.Table.TokenLocks, int(evictionDelay.Seconds()),
 	)
 	db.Logger.Debug(query)
 	_, err := db.DB.Exec(query)
+	if err != nil {
+		db.Logger.Errorf("query failed: %s", query)
+	}
 	return err
 }
