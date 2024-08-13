@@ -103,25 +103,26 @@ func (s *ScriptAuth) AmIAnAuditor() bool {
 	return false
 }
 
-// IsMine returns true if one is either a sender or a recipient of an htlc script
-func (s *ScriptAuth) IsMine(tok *token3.Token) ([]string, bool) {
+// IsMine returns true if either the sender or the recipient is in one of the owner wallets.
+// It returns an empty wallet id.
+func (s *ScriptAuth) IsMine(tok *token3.Token) (string, []string, bool) {
 	owner, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
 	if err != nil {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
-		return nil, false
+		return "", nil, false
 	}
 	if owner.Type != ScriptType {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, owner.Type, ScriptType)
-		return nil, false
+		return "", nil, false
 	}
 	script := &Script{}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
-		return nil, false
+		return "", nil, false
 	}
 	if script.Sender.IsNone() || script.Recipient.IsNone() {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, invalid content [%v]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, script)
-		return nil, false
+		return "", nil, false
 	}
 
 	var ids []string
@@ -140,7 +141,7 @@ func (s *ScriptAuth) IsMine(tok *token3.Token) ([]string, bool) {
 	}
 
 	logger.Debugf("Is Mine [%s,%s,%s]? %b", len(ids) != 0, view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-	return ids, len(ids) != 0
+	return "", ids, len(ids) != 0
 }
 
 func (s *ScriptAuth) Issued(issuer driver.Identity, tok *token3.Token) bool {

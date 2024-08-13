@@ -32,6 +32,8 @@ type TokenRecord struct {
 	OwnerType string
 	// OwnerIdentity is the deserialized Identity inside OwnerRaw
 	OwnerIdentity []byte
+	// OwnerWalletID is the identifier of the wallet that owns this token, it might be empty
+	OwnerWalletID string
 	// Ledger is the raw token as stored on the ledger
 	Ledger []byte
 	// LedgerMetadata is the metadata associated to the content of Ledger
@@ -77,8 +79,8 @@ type TokenDetails struct {
 
 // QueryTokenDetailsParams defines the parameters for querying token details
 type QueryTokenDetailsParams struct {
-	// OwnerEnrollmentID is the optional owner of the token
-	OwnerEnrollmentID string
+	// WalletID is the optional identifier of the wallet owning the token
+	WalletID string
 	// OwnerType is the type of owner, for instance 'idemix' or 'htlc'
 	OwnerType string
 	// TokenType (optional) is the type of token

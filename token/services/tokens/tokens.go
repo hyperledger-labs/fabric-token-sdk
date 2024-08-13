@@ -262,7 +262,7 @@ func (t *Tokens) parse(auth driver.Authorization, txID string, md MetaData, is *
 		}
 
 		issuerFlag := !issuer.IsNone() && auth.Issued(issuer, tok)
-		ids, mine := auth.IsMine(tok)
+		ownerWalletID, ids, mine := auth.IsMine(tok)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			if mine {
 				logger.Debugf("transaction [%s], found a token and it is mine", txID)
@@ -293,6 +293,7 @@ func (t *Tokens) parse(auth driver.Authorization, txID string, md MetaData, is *
 			tokenOnLedgerMetadata: tokenOnLedgerMetadata,
 			ownerType:             ownerType,
 			ownerIdentity:         ownerIdentity,
+			ownerWalletID:         ownerWalletID,
 			owners:                ids,
 			issuer:                issuer,
 			precision:             precision,

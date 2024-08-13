@@ -145,16 +145,16 @@ func movementConditionsSql(params driver.QueryMovementsParams) (where string, ar
 	return
 }
 
-// tokenQuerySql requires a join with the token ownership table if OwnerEnrollmentID is not empty
+// tokenQuerySql requires a join with the token ownership table if WalletID is not empty
 func tokenQuerySql(params driver.QueryTokenDetailsParams, tokenTable, ownerTable string) (where, join string, args []any) {
 	and := []string{"owner = true"}
 	if params.OwnerType != "" {
 		args = append(args, params.OwnerType)
 		and = append(and, fmt.Sprintf("owner_type = $%d", len(args)))
 	}
-	if params.OwnerEnrollmentID != "" {
-		args = append(args, params.OwnerEnrollmentID)
-		and = append(and, fmt.Sprintf("enrollment_id = $%d", len(args)))
+	if params.WalletID != "" {
+		args = append(args, params.WalletID)
+		and = append(and, fmt.Sprintf("wallet_id = $%d", len(args)))
 	}
 
 	if params.TokenType != "" {
@@ -178,6 +178,39 @@ func tokenQuerySql(params driver.QueryTokenDetailsParams, tokenTable, ownerTable
 	}
 
 	join = joinOnTokenID(tokenTable, ownerTable)
+	where = fmt.Sprintf("WHERE %s", strings.Join(and, " AND "))
+
+	return
+}
+
+func tokenQuerySqlNoJoin(params driver.QueryTokenDetailsParams) (where string, args []any) {
+	and := []string{"owner = true"}
+	if params.OwnerType != "" {
+		args = append(args, params.OwnerType)
+		and = append(and, fmt.Sprintf("owner_type = $%d", len(args)))
+	}
+	if params.WalletID != "" {
+		args = append(args, params.WalletID)
+		and = append(and, fmt.Sprintf("owner_wallet_id = $%d", len(args)))
+	}
+
+	if params.TokenType != "" {
+		args = append(args, params.TokenType)
+		and = append(and, fmt.Sprintf("token_type = $%d", len(args)))
+	}
+
+	if len(params.TransactionIDs) > 0 {
+		colTxID := "tx_id"
+		and = append(and, in(&args, colTxID, params.TransactionIDs))
+	}
+	if ids := whereTokenIDs(&args, params.IDs); ids != "" {
+		and = append(and, ids)
+	}
+
+	if !params.IncludeDeleted {
+		and = append(and, "is_deleted = false")
+	}
+
 	where = fmt.Sprintf("WHERE %s", strings.Join(and, " AND "))
 
 	return
