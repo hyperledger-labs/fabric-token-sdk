@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	errors2 "errors"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -48,7 +50,7 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
 	}
-	logger.Debugf("request tx status for [%s]", r.TxID)
+	logger.Infof("request tx status for [%s]", r.TxID)
 
 	// TODO: Should we sign the txStatus request?
 	request := &TxStatusRequest{
@@ -65,7 +67,7 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 	if err := session.Receive(response); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
-	logger.Debugf("got tx status response for [%s]: [%d]", r.TxID, response.Status)
+	logger.Infof("got tx status response for [%s]: [%d]", r.TxID, response.Status)
 	return response, nil
 }
 
@@ -89,6 +91,9 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 	span.AddEvent("process_tx_status_request")
 	response, err := r.process(context, request)
 	if err != nil {
+		if err2 := session.SendError(err.Error()); err2 != nil {
+			return nil, errors.Wrapf(errors2.Join(err, err2), "failed to process request")
+		}
 		return nil, errors.Wrapf(err, "failed to process request")
 	}
 	span.AddEvent("send_tx_status_response")
