@@ -147,6 +147,7 @@ func (p *Provider) GetSigner(identity driver.Identity) (driver.Signer, error) {
 	}()
 	signer, err := p.SigService.GetSigner(identity)
 	if err != nil {
+		logger.Warn(err)
 		return nil, errors.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 	}
 	found = true

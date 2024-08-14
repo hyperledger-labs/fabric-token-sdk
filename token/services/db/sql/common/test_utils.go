@@ -31,7 +31,7 @@ func StartPostgresWithFmt(configs map[string]*PostgresConfig) (func(), error) {
 }
 
 // https://testcontainers.com/guides/getting-started-with-testcontainers-for-go/
-// Note: Before running tests: docker pull postgres:16.0-alpine
+// Note: Before running tests: docker pull postgres:16.2-alpine
 // Test may time out if image is not present on machine.
 func StartPostgresContainer(t *testing.T) (func(), string) {
 	if os.Getenv("TESTCONTAINERS") != "true" {
@@ -42,8 +42,7 @@ func StartPostgresContainer(t *testing.T) (func(), string) {
 	}
 
 	ctx := context.Background()
-	pg, err := postgres.RunContainer(ctx,
-		testcontainers.WithImage("postgres:16.0-alpine"),
+	pg, err := postgres.Run(ctx, "postgres:16.2-alpine",
 		testcontainers.WithWaitStrategy(
 			wait.ForExposedPort().WithStartupTimeout(30*time.Second)),
 		postgres.WithDatabase("testdb"),
