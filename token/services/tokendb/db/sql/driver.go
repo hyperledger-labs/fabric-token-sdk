@@ -22,40 +22,38 @@ const (
 	EnvVarKey = "TOKENDB_DATASOURCE"
 )
 
-func NewDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
-	return db.NamedDriver[dbdriver.TokenDBDriver]{
-		Name: sql.SQLPersistence,
-		Driver: db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
-			sqlDB, opts, err := common.NewSQLDBOpener(OptsKey, EnvVarKey).OpenWithOpts(cp, tmsID)
-			if err != nil {
-				return nil, err
-			}
-			switch opts.Driver {
-			case sql.SQLite:
-				return sqlite.NewTokenDB(sqlDB, common.NewDBOptsFromOpts(*opts))
-			case sql.Postgres:
-				return postgres.NewTokenDB(sqlDB, common.NewDBOptsFromOpts(*opts))
-			}
-			panic("undefined")
-		}),
-	}
+func NewDBDriver() *db.SQLDriver[dbdriver.TokenDB] {
+	return db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
+		sqlDB, opts, err := common.NewSQLDBOpener(OptsKey, EnvVarKey).OpenWithOpts(cp, tmsID)
+		if err != nil {
+			return nil, err
+		}
+		switch opts.Driver {
+		case sql.SQLite:
+			return sqlite.NewTokenDB(sqlDB, common.NewDBOptsFromOpts(*opts))
+		case sql.Postgres:
+			return postgres.NewTokenDB(sqlDB, common.NewDBOptsFromOpts(*opts))
+		}
+		panic("undefined")
+	})
 }
 
-func NewNDBDriver() db.NamedDriver[dbdriver.TokenNDBDriver] {
-	return db.NamedDriver[dbdriver.TokenNDBDriver]{
-		Name: sql.SQLPersistence,
-		Driver: db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNDB, error) {
-			sqlDB, opts, err := common.NewSQLDBOpener(OptsKey, EnvVarKey).OpenWithOpts(cp, tmsID)
-			if err != nil {
-				return nil, err
+func NewNotifierDriver() dbdriver.TokenNotifierDriver {
+	return db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNotifier, error) {
+		sqlDB, opts, err := common.NewSQLDBOpener(OptsKey, EnvVarKey).OpenWithOpts(cp, tmsID)
+		if err != nil {
+			return nil, err
+		}
+		switch opts.Driver {
+		case sql.SQLite:
+			return sqlite.NewTokenNotifier(sqlDB, common.NewDBOptsFromOpts(*opts))
+		case sql.Postgres:
+			// Make sure the schema for the table is created
+			if _, err := postgres.NewTokenDB(sqlDB, common.NewDBOptsFromOpts(*opts)); err != nil {
+				panic(err)
 			}
-			switch opts.Driver {
-			case sql.SQLite:
-				return sqlite.NewTokenNDB(sqlDB, common.NewDBOptsFromOpts(*opts))
-			case sql.Postgres:
-				return postgres.NewTokenNDB(sqlDB, common.NewDBOptsFromOpts(*opts))
-			}
-			panic("undefined")
-		}),
-	}
+			return postgres.NewTokenNotifier(sqlDB, common.NewDBOptsFromOpts(*opts))
+		}
+		panic("undefined")
+	})
 }

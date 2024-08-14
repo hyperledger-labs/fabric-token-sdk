@@ -45,14 +45,12 @@ type iterator[k any] interface {
 }
 
 func NewManager(
-	tokenDB TokenDB,
+	fetcher tokenFetcher,
 	locker Locker,
-	metrics *Metrics,
 	precision uint64,
 	backoff time.Duration,
 	evictionDelay time.Duration,
 ) *manager {
-	fetcher := newMixedFetcher(tokenDB, metrics)
 	m := &manager{
 		locker:        locker,
 		evictionDelay: evictionDelay,

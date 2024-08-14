@@ -175,16 +175,13 @@ type TokenDBDriver interface {
 	Open(cp ConfigProvider, tmsID token2.TMSID) (TokenDB, error)
 }
 
-// TokenNDB is the observable version of TokenDB
-type TokenNDB interface {
-	driver2.Notifier
-	TokenDB
-}
+// TokenNotifier is the observable version of TokenDB
+type TokenNotifier driver2.Notifier
 
-// TokenNDBDriver is the interface for a token database driver
-type TokenNDBDriver interface {
+// TokenNotifierDriver is the interface for a token database driver
+type TokenNotifierDriver interface {
 	// Open opens a token database with its listeners
-	Open(cp ConfigProvider, tmsID token2.TMSID) (TokenNDB, error)
+	Open(cp ConfigProvider, tmsID token2.TMSID) (TokenNotifier, error)
 }
 
 // TokenLockDB enforces that a token be used only by one process

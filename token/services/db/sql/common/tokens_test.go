@@ -33,13 +33,13 @@ func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix st
 }
 
 //
-//func initTokenNDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenNDB, error) {
+//func initTokenNDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenNotifier, error) {
 //	d := NewSQLDBOpener("", "")
 //	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 //	if err != nil {
 //		return nil, err
 //	}
-//	tokenDB, err := NewTokenNDB(sqlDB, NewDBOpts{
+//	tokenDB, err := NewTokenNotifier(sqlDB, NewDBOpts{
 //		DataSource:   dataSourceName,
 //		TablePrefix:  tablePrefix,
 //		CreateSchema: true,
@@ -47,7 +47,7 @@ func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix st
 //	if err != nil {
 //		return nil, err
 //	}
-//	return tokenDB.(*TokenNDB), err
+//	return tokenDB.(*TokenNotifier), err
 //}
 //
 //func initDB[T any](constructor func(db *sql.DB, opts NewDBOpts) (T, error), driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (T, error) {

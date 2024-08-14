@@ -11,8 +11,6 @@ import (
 
 	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/pkg/errors"
 )
@@ -27,11 +25,10 @@ type SelectorService struct {
 	managerLazyCache lazy2.Provider[*token.ManagementService, token.SelectorManager]
 }
 
-func NewService(tokenDBManager *tokendb.Manager, tokenLockDBManager *tokenlockdb.Manager, metricsProvider metrics.Provider) *SelectorService {
+func NewService(fetcherProvider FetcherProvider, tokenLockDBManager *tokenlockdb.Manager) *SelectorService {
 	loader := &loader{
-		tokenDBManager:     tokenDBManager,
 		tokenLockDBManager: tokenLockDBManager,
-		m:                  newMetrics(metricsProvider),
+		fetcherProvider:    fetcherProvider,
 	}
 	return &SelectorService{
 		managerLazyCache: lazy2.NewProviderWithKeyMapper(key, loader.load),
@@ -47,9 +44,8 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 }
 
 type loader struct {
-	tokenDBManager     *tokendb.Manager
 	tokenLockDBManager *tokenlockdb.Manager
-	m                  *Metrics
+	fetcherProvider    FetcherProvider
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -57,18 +53,17 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
 	}
-	tokenDB, err := s.tokenDBManager.DBByTMSId(tms.ID())
-	if err != nil {
-		return nil, errors.Errorf("failed to create tokenDB: %v", err)
-	}
 	tokenLockDB, err := s.tokenLockDBManager.DBByTMSId(tms.ID())
 	if err != nil {
 		return nil, errors.Errorf("failed to create tokenLockDB: %v", err)
 	}
+	fetcher, err := s.fetcherProvider.GetFetcher(tms.ID())
+	if err != nil {
+		return nil, errors.Errorf("failed to create token fetcher: %v", err)
+	}
 	return NewManager(
-		tokenDB,
+		fetcher,
 		tokenLockDB,
-		s.m,
 		pp.Precision(),
 		retrySelectionBackoff,
 		cleanupTickPeriod,
