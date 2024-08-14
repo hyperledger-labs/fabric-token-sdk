@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
-	viewdriver "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -29,17 +29,11 @@ type SelectorService struct {
 	managerLazyCache lazy.Provider[*token.ManagementService, token.SelectorManager]
 }
 
-func NewService(tms *token.ManagementService, lockerProvider LockerProvider, cfg viewdriver.ConfigService) *SelectorService {
-	c := SelectorConfig{}
-	err := cfg.UnmarshalKey("token.selector", &c)
-	if err != nil {
-		panic("invalid config for key [token.selector]: expect retryInterval (duration) and numRetries (integer))")
-	}
-
+func NewService(tms *token.ManagementService, lockerProvider LockerProvider, cfg sdriver.SelectorConfig) *SelectorService {
 	loader := &loader{
 		lockerProvider:       lockerProvider,
-		numRetries:           c.GetNumRetries(),
-		retryInterval:        c.GetRetryInterval(),
+		numRetries:           cfg.GetNumRetries(),
+		retryInterval:        cfg.GetRetryInterval(),
 		requestCertification: true,
 	}
 	return &SelectorService{
@@ -107,24 +101,4 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 
 func key(tms *token.ManagementService) string {
 	return tms.Network() + tms.Channel() + tms.Namespace()
-}
-
-type SelectorConfig struct {
-	RetryInterval time.Duration
-	NumRetries    int
-}
-
-func (c *SelectorConfig) GetNumRetries() int {
-	if c.NumRetries > 0 {
-		return c.NumRetries
-	} else {
-		return 3
-	}
-}
-func (c *SelectorConfig) GetRetryInterval() time.Duration {
-	if c.RetryInterval != 0 {
-		return c.RetryInterval
-	} else {
-		return 5 * time.Second
-	}
 }
