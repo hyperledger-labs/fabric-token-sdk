@@ -133,9 +133,11 @@ type WalletLookupID = any
 // and wallets (owner, auditor, etc.)
 type Authorization interface {
 	// IsMine returns true if the passed token is owned by an owner wallet.
-	// It returns the ID of the owner wallet and any additional owner identifier, if supported.
-	// It is possible that the wallet ID is empty an the additional owner identifier list is not.
-	IsMine(tok *token.Token) (string, []string, bool)
+	// It returns the ID of the owner wallet (walletID) and any additional owner identifier (additionalOwners), if supported.
+	// It is possible that walletID is empty additionalOwners is not.
+	// If walletID is not empty, this means that the corresponding wallet can spend the token directly.
+	// If walletID is empty, then additionalOwners must cooperate in some way in order to spend the token.
+	IsMine(tok *token.Token) (walletID string, additionalOwners []string, mine bool)
 	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 	// defined in the public parameters of the passed TMS.
 	AmIAnAuditor() bool

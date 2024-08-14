@@ -136,8 +136,8 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenT
 	return &UnspentTokensIterator{txs: rows}, err
 }
 
-// MinTokenInfoIteratorBy returns the minimum information about the tokens needed for the selector
-func (db *TokenDB) MinTokenInfoIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.MinTokenInfoIterator, error) {
+// UnspentTokensInWalletIterator returns the minimum information about the tokens needed for the selector
+func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.SpendableTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := tokenQuerySqlNoJoin(driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
@@ -155,7 +155,7 @@ func (db *TokenDB) MinTokenInfoIteratorBy(ctx context.Context, walletID string, 
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
-	return &MinTokenInfoIterator{txs: rows}, nil
+	return &UnspentTokensInWalletIterator{txs: rows}, nil
 }
 
 // Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
@@ -182,9 +182,9 @@ func (db *TokenDB) Balance(walletID, typ string) (uint64, error) {
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
-func (db *TokenDB) ListUnspentTokensBy(ownerEID, typ string) (*token.UnspentTokens, error) {
-	logger.Debugf("list unspent token by [%s,%s]", ownerEID, typ)
-	it, err := db.UnspentTokensIteratorBy(context.TODO(), ownerEID, typ)
+func (db *TokenDB) ListUnspentTokensBy(walletID, typ string) (*token.UnspentTokens, error) {
+	logger.Debugf("list unspent token by [%s,%s]", walletID, typ)
+	it, err := db.UnspentTokensIteratorBy(context.TODO(), walletID, typ)
 	if err != nil {
 		return nil, err
 	}
@@ -855,7 +855,7 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 		IncludeDeleted: includeDeleted,
 	}, t.db.table.Tokens, t.db.table.Ownership)
 
-	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, wallet_id FROM %s %s %s", t.db.table.Tokens, join, where)
+	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, %s.wallet_id, owner_wallet_id FROM %s %s %s", t.db.table.Ownership, t.db.table.Tokens, join, where)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := t.tx.Query(query, args...)
@@ -869,10 +869,15 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 	var tokenType string
 	var quantity string
 	owners := []string{}
+	var walletID *string
 	for rows.Next() {
-		var owner string
-		if err := rows.Scan(&raw, &tokenType, &quantity, &owner); err != nil {
+		var tempOwner *string
+		if err := rows.Scan(&raw, &tokenType, &quantity, &tempOwner, &walletID); err != nil {
 			return nil, owners, err
+		}
+		var owner string
+		if tempOwner != nil {
+			owner = *tempOwner
 		}
 		if len(owner) > 0 {
 			owners = append(owners, owner)
@@ -880,6 +885,9 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 	}
 	if rows.Err() != nil {
 		return nil, nil, rows.Err()
+	}
+	if walletID != nil && len(*walletID) != 0 {
+		owners = append(owners, *walletID)
 	}
 	span.AddEvent("end_scan_rows", tracing.WithAttributes(tracing.Int(ResultRowsLabel, len(owners))))
 	if len(raw) == 0 {
@@ -911,6 +919,10 @@ func (t *TokenTransaction) Delete(ctx context.Context, txID string, index uint64
 }
 
 func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord, owners []string) error {
+	if len(tr.OwnerWalletID) == 0 && len(owners) == 0 && tr.Owner {
+		return errors.Errorf("no owners specified [%s]", string(debug.Stack()))
+	}
+
 	span := trace.SpanFromContext(ctx)
 	//logger.Debugf("store record [%s:%d,%v] in table [%s]", tr.TxID, tr.Index, owners, t.db.table.Tokens)
 
@@ -958,9 +970,6 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 	// Store ownership
 	span.AddEvent("store_ownerships")
-	if len(tr.OwnerWalletID) != 0 {
-		owners = append(owners, tr.OwnerWalletID)
-	}
 	for _, eid := range owners {
 		query = fmt.Sprintf("INSERT INTO %s (tx_id, idx, wallet_id) VALUES ($1, $2, $3)", t.db.table.Ownership)
 		logger.Debug(query, tr.TxID, tr.Index, eid)
@@ -981,26 +990,26 @@ func (t *TokenTransaction) Rollback() error {
 	return t.tx.Rollback()
 }
 
-type MinTokenInfoIterator struct {
+type UnspentTokensInWalletIterator struct {
 	txs *sql.Rows
 }
 
-func (u *MinTokenInfoIterator) Close() {
+func (u *UnspentTokensInWalletIterator) Close() {
 	u.txs.Close()
 }
 
-func (u *MinTokenInfoIterator) Next() (*token.MinTokenInfo, error) {
+func (u *UnspentTokensInWalletIterator) Next() (*token.UnspentTokenInWallet, error) {
 	if !u.txs.Next() {
 		return nil, nil
 	}
 
-	tok := &token.MinTokenInfo{
+	tok := &token.UnspentTokenInWallet{
 		Id:       &token.ID{},
-		Owner:    "",
+		WalletID: "",
 		Type:     "",
 		Quantity: "",
 	}
-	if err := u.txs.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Type, &tok.Quantity, &tok.Owner); err != nil {
+	if err := u.txs.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Type, &tok.Quantity, &tok.WalletID); err != nil {
 		return nil, err
 	}
 	return tok, nil

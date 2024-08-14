@@ -154,7 +154,8 @@ func tokenQuerySql(params driver.QueryTokenDetailsParams, tokenTable, ownerTable
 	}
 	if params.WalletID != "" {
 		args = append(args, params.WalletID)
-		and = append(and, fmt.Sprintf("wallet_id = $%d", len(args)))
+		and = append(and, fmt.Sprintf("(wallet_id = $%d OR owner_wallet_id = $%d)", len(args), len(args)+1))
+		args = append(args, params.WalletID)
 	}
 
 	if params.TokenType != "" {
@@ -200,8 +201,7 @@ func tokenQuerySqlNoJoin(params driver.QueryTokenDetailsParams) (where string, a
 	}
 
 	if len(params.TransactionIDs) > 0 {
-		colTxID := "tx_id"
-		and = append(and, in(&args, colTxID, params.TransactionIDs))
+		and = append(and, in(&args, "tx_id", params.TransactionIDs))
 	}
 	if ids := whereTokenIDs(&args, params.IDs); ids != "" {
 		and = append(and, ids)

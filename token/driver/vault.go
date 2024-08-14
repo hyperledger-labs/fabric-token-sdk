@@ -37,9 +37,9 @@ type UnspentTokensIterator interface {
 	Next() (*token.UnspentToken, error)
 }
 
-type MinTokenInfoIterator interface {
+type SpendableTokensIterator interface {
 	Close()
-	Next() (*token.MinTokenInfo, error)
+	Next() (*token.UnspentTokenInWallet, error)
 }
 
 type Vault interface {
@@ -67,7 +67,7 @@ type QueryEngine interface {
 	UnspentTokensIterator() (UnspentTokensIterator, error)
 	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 	// The token type can be empty. In that case, tokens of any type are returned.
-	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, walletID, tokenType string) (UnspentTokensIterator, error)
 	// ListUnspentTokens returns the list of unspent tokens
 	ListUnspentTokens() (*token.UnspentTokens, error)
 	// ListAuditTokens returns the audited tokens associated to the passed ids
