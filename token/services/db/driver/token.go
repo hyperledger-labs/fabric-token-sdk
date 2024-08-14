@@ -130,12 +130,12 @@ type TokenDB interface {
 	IsMine(txID string, index uint64) (bool, error)
 	// UnspentTokensIterator returns an iterator over all owned tokens
 	UnspentTokensIterator() (driver.UnspentTokensIterator, error)
-	// UnspentTokensIteratorBy returns an iterator over all tokens owned by the passed identifier of a given type
-	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
-	// MinTokenInfoIteratorBy returns the minimum information about the tokens needed for the selector
-	MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (driver.MinTokenInfoIterator, error)
+	// UnspentTokensIteratorBy returns an iterator over all tokens owned by the passed wallet identifier and of a given type
+	UnspentTokensIteratorBy(ctx context.Context, walletID, tokenType string) (driver.UnspentTokensIterator, error)
+	// SpendableTokensIteratorBy returns an iterator over all tokens owned solely by the passed wallet identifier and of a given type
+	SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (driver.SpendableTokensIterator, error)
 	// ListUnspentTokensBy returns the list of all tokens owned by the passed identifier of a given type
-	ListUnspentTokensBy(ownerEID, typ string) (*token.UnspentTokens, error)
+	ListUnspentTokensBy(walletID, typ string) (*token.UnspentTokens, error)
 	// ListUnspentTokens returns the list of all owned tokens
 	ListUnspentTokens() (*token.UnspentTokens, error)
 	// ListAuditTokens returns the audited tokens for the passed ids

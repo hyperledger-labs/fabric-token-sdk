@@ -26,11 +26,11 @@ const (
 )
 
 type tokenFetcher interface {
-	UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error)
+	UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.UnspentTokenInWallet], error)
 }
 
 type TokenDB interface {
-	MinTokenInfoIteratorBy(ctx context.Context, ownerEID string, typ string) (driver.MinTokenInfoIterator, error)
+	SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (driver.SpendableTokensIterator, error)
 }
 
 type enhancedIterator[T any] interface {
@@ -115,11 +115,11 @@ func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
 	}
 }
 
-func (f *mixedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
+func (f *mixedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.UnspentTokenInWallet], error) {
 	logger.Debugf("call unspent tokens iterator")
 	it, err := f.eagerFetcher.UnspentTokensIteratorBy(walletID, currency)
 	logger.Debugf("fetched eager iterator")
-	if err == nil && it.(enhancedIterator[*token2.MinTokenInfo]).HasNext() {
+	if err == nil && it.(enhancedIterator[*token2.UnspentTokenInWallet]).HasNext() {
 		logger.Debugf("eager iterator had tokens. Returning iterator")
 		f.m.UnspentTokensInvocations.With(fetcherTypeLabel, eager).Add(1)
 		return it, nil
@@ -139,19 +139,19 @@ func NewLazyFetcher(tokenDB TokenDB) *lazyFetcher {
 	return &lazyFetcher{tokenDB: tokenDB}
 }
 
-func (f *lazyFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
+func (f *lazyFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.UnspentTokenInWallet], error) {
 	logger.Debugf("Query the DB for new tokens")
-	it, err := f.tokenDB.MinTokenInfoIteratorBy(context.TODO(), walletID, currency)
+	it, err := f.tokenDB.SpendableTokensIteratorBy(context.TODO(), walletID, currency)
 	if err != nil {
 		return nil, err
 	}
-	return collections.NewPermutatedIterator[token2.MinTokenInfo](it)
+	return collections.NewPermutatedIterator[token2.UnspentTokenInWallet](it)
 }
 
 // cachedFetcher eagerly fetches all the tokens from the DB at regular intervals and returns the cached result
 type cachedFetcher struct {
 	tokenDB TokenDB
-	cache   map[string]permutatableIterator[*token2.MinTokenInfo]
+	cache   map[string]permutatableIterator[*token2.UnspentTokenInWallet]
 	// freshnessInterval is the time between periodical updates
 	freshnessInterval time.Duration
 	// maxQueriesBeforeRefresh is the number of times the fetcher will respond with the cached result before refreshing.
@@ -166,7 +166,7 @@ type cachedFetcher struct {
 func newCachedFetcher(tokenDB TokenDB, freshnessInterval time.Duration, maxQueriesBeforeRefresh int) *cachedFetcher {
 	return &cachedFetcher{
 		tokenDB:                 tokenDB,
-		cache:                   make(map[string]permutatableIterator[*token2.MinTokenInfo]),
+		cache:                   make(map[string]permutatableIterator[*token2.UnspentTokenInWallet]),
 		freshnessInterval:       freshnessInterval,
 		maxQueriesBeforeRefresh: uint32(maxQueriesBeforeRefresh),
 	}
@@ -180,20 +180,20 @@ func (f *cachedFetcher) update() {
 		return
 	}
 	logger.Debugf("Renew token cache")
-	it, err := f.tokenDB.MinTokenInfoIteratorBy(context.TODO(), "", "")
+	it, err := f.tokenDB.SpendableTokensIteratorBy(context.TODO(), "", "")
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
 		return
 	}
 	defer it.Close()
 
-	m := map[string][]*token2.MinTokenInfo{}
+	m := map[string][]*token2.UnspentTokenInWallet{}
 	for t, err := it.Next(); err == nil && t != nil; t, err = it.Next() {
-		key := tokenKey(t.Owner, t.Type)
+		key := tokenKey(t.WalletID, t.Type)
 		logger.Debugf("Adding token with key [%s]", key)
 		m[key] = append(m[key], t)
 	}
-	its := map[string]permutatableIterator[*token2.MinTokenInfo]{}
+	its := map[string]permutatableIterator[*token2.UnspentTokenInWallet]{}
 	for key, toks := range m {
 		its[key] = collections.NewSliceIterator(toks)
 	}
@@ -203,7 +203,7 @@ func (f *cachedFetcher) update() {
 	atomic.StoreUint32(&f.queriesResponded, 0)
 }
 
-func (f *cachedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.MinTokenInfo], error) {
+func (f *cachedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iterator[*token2.UnspentTokenInWallet], error) {
 	defer atomic.AddUint32(&f.queriesResponded, 1)
 	if f.isCacheOverused() {
 		logger.Debugf("Overused data. Soft refresh (in the background)...")
@@ -223,7 +223,7 @@ func (f *cachedFetcher) UnspentTokensIteratorBy(walletID, currency string) (iter
 		return it.NewPermutation(), nil
 	}
 	logger.Debugf("No tokens found in cache for [%s]. Only [%s] available. Returning empty iterator.", tokenKey(walletID, currency), collections.Keys(f.cache))
-	return collections.NewEmptyIterator[*token2.MinTokenInfo](), nil
+	return collections.NewEmptyIterator[*token2.UnspentTokenInWallet](), nil
 }
 
 func (f *cachedFetcher) isCacheOverused() bool {

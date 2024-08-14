@@ -87,14 +87,19 @@ func (it *IssuedTokens) Count() int {
 	return len(it.Tokens)
 }
 
-type MinTokenInfo struct {
-	Id       *ID
-	Owner    string
-	Type     string
+// UnspentTokenInWallet models an unspent token owner solely by a given wallet
+type UnspentTokenInWallet struct {
+	// Id is used to uniquely identify the token in the ledger
+	Id *ID
+	// WalletID is the ID of the wallet owning this token
+	WalletID string
+	// Type is the type of the token
+	Type string
+	// Quantity represents the number of units of Type that this unspent token holds.
 	Quantity string
 }
 
-// UnspentToken is used to specify a token returned by ListRequest
+// UnspentToken models an unspent token
 type UnspentToken struct {
 	// Id is used to uniquely identify the token in the ledger
 	Id *ID

@@ -284,6 +284,34 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 	assert.Len(t, unsp, 1)
 	assert.Equal(t, "0x02", unsp[0].Quantity)
 	assert.Equal(t, "ABC", unsp[0].Type)
+
+	tr = driver.TokenRecord{
+		TxID:           fmt.Sprintf("tx%d", 2000),
+		Index:          0,
+		IssuerRaw:      []byte{},
+		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
+		OwnerWalletID:  "pineapple",
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x02",
+		Type:           "ABC",
+		Amount:         2,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
+	}
+	assert.NoError(t, db.StoreToken(tr, nil))
+	_, err = db.GetTokens(&token.ID{TxId: fmt.Sprintf("tx%d", 2000), Index: 0})
+	assert.NoError(t, err)
+
+	tx, err := db.NewTokenDBTransaction(context.TODO())
+	assert.NoError(t, err)
+	_, owners, err := tx.GetToken(context.TODO(), fmt.Sprintf("tx%d", 2000), 0, true)
+	assert.NoError(t, err)
+	assert.Len(t, owners, 1)
+	assert.NoError(t, tx.Rollback())
 }
 
 func getTokensBy(t *testing.T, db *TokenDB, ownerEID, typ string) []*token.UnspentToken {
@@ -391,6 +419,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		OwnerRaw:       []byte{1, 2},
 		OwnerType:      "idemix",
 		OwnerIdentity:  []byte{},
+		OwnerWalletID:  "idemix",
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
@@ -407,6 +436,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		OwnerRaw:       []byte{3, 4},
 		OwnerType:      "idemix",
 		OwnerIdentity:  []byte{},
+		OwnerWalletID:  "idemix",
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
@@ -423,6 +453,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		OwnerRaw:       []byte{5, 6},
 		OwnerType:      "idemix",
 		OwnerIdentity:  []byte{},
+		OwnerWalletID:  "idemix",
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x03",
@@ -460,6 +491,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		OwnerRaw:       []byte{1, 2},
 		OwnerType:      "idemix",
 		OwnerIdentity:  []byte{},
+		OwnerWalletID:  "idemix",
 		IssuerRaw:      []byte{11, 12},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -477,6 +509,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		OwnerRaw:       []byte{3, 4},
 		OwnerType:      "idemix",
 		OwnerIdentity:  []byte{},
+		OwnerWalletID:  "idemix",
 		IssuerRaw:      []byte{13, 14},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -494,6 +527,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		OwnerRaw:       []byte{5, 6},
 		OwnerType:      "idemix",
 		OwnerIdentity:  []byte{},
+		OwnerWalletID:  "idemix",
 		IssuerRaw:      []byte{15, 16},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
