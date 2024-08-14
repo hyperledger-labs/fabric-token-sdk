@@ -10,25 +10,35 @@ import (
 	"time"
 
 	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/pkg/errors"
 )
 
 const (
-	retrySelectionBackoff = 5 * time.Second
-	cleanupTickPeriod     = 1 * time.Minute
-	cleanupPeriod         = 30 * time.Second
+	cleanupTickPeriod = 1 * time.Minute
+	cleanupPeriod     = 30 * time.Second
 )
 
 type SelectorService struct {
 	managerLazyCache lazy2.Provider[*token.ManagementService, token.SelectorManager]
 }
 
-func NewService(fetcherProvider FetcherProvider, tokenLockDBManager *tokenlockdb.Manager) *SelectorService {
+func NewService(fetcherProvider FetcherProvider, tokenLockDBManager *tokenlockdb.Manager, cfg driver.ConfigService) *SelectorService {
+	retryInterval := 5 * time.Second
+	if cfg.IsSet("token.selector.retryInterval") {
+		retryInterval = cfg.GetDuration("token.selector.retryInterval")
+	}
+	numRetries := 3
+	if cfg.IsSet("token.selector.numRetries") {
+		numRetries = cfg.GetInt("token.selector.numRetries")
+	}
 	loader := &loader{
 		tokenLockDBManager: tokenLockDBManager,
 		fetcherProvider:    fetcherProvider,
+		retryInterval:      retryInterval,
+		numRetries:         numRetries,
 	}
 	return &SelectorService{
 		managerLazyCache: lazy2.NewProviderWithKeyMapper(key, loader.load),
@@ -46,6 +56,8 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 type loader struct {
 	tokenLockDBManager *tokenlockdb.Manager
 	fetcherProvider    FetcherProvider
+	numRetries         int
+	retryInterval      time.Duration
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -65,7 +77,8 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 		fetcher,
 		tokenLockDB,
 		pp.Precision(),
-		retrySelectionBackoff,
+		s.retryInterval,
+		s.numRetries,
 		cleanupTickPeriod,
 	), nil
 }

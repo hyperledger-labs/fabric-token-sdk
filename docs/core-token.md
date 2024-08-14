@@ -16,6 +16,8 @@ token:
   # if empty, the default selector is used
   selector:
     driver: sherdlock
+    retryInterval: 5s
+    numRetries: 5
 
   tms:
     mytms: # unique name of this token management system

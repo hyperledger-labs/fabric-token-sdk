@@ -158,7 +158,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 				logger.Debugf("concurrency issue, some of the tokens might not exist anymore")
 				return nil, nil, errors.WithMessagef(
 					token.SelectorSufficientFundsButConcurrencyIssue,
-					"token selection failed: sufficient funs but concurrency issue, potential [%s] tokens of type [%s] were available", potentialSumWithLocked, tokenType,
+					"token selection failed: sufficient funds but concurrency issue, potential [%s] tokens of type [%s] were available", potentialSumWithLocked, tokenType,
 				)
 			}
 

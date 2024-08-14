@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
+	viewdriver "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -20,11 +21,6 @@ import (
 
 var logger = logging.MustGetLogger("token-sdk.selector.simple")
 
-const (
-	numRetry = 2
-	timeout  = 5 * time.Second
-)
-
 type LockerProvider interface {
 	New(network, channel, namespace string) (Locker, error)
 }
@@ -33,11 +29,19 @@ type SelectorService struct {
 	managerLazyCache lazy.Provider[*token.ManagementService, token.SelectorManager]
 }
 
-func NewService(lockerProvider LockerProvider) *SelectorService {
+func NewService(tms *token.ManagementService, lockerProvider LockerProvider, cfg viewdriver.ConfigService) *SelectorService {
+	retryInterval := 5 * time.Second
+	if cfg.IsSet("token.selector.retryInterval") {
+		retryInterval = cfg.GetDuration("token.selector.retryInterval")
+	}
+	numRetries := 3
+	if cfg.IsSet("token.selector.numRetries") {
+		numRetries = cfg.GetInt("token.selector.numRetries")
+	}
 	loader := &loader{
 		lockerProvider:       lockerProvider,
-		numRetry:             numRetry,
-		timeout:              timeout,
+		numRetries:           numRetries,
+		retryInterval:        retryInterval,
 		requestCertification: true,
 	}
 	return &SelectorService{
@@ -76,8 +80,8 @@ func (q *queryService) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) 
 
 type loader struct {
 	lockerProvider       LockerProvider
-	numRetry             int
-	timeout              time.Duration
+	numRetries           int
+	retryInterval        time.Duration
 	requestCertification bool
 }
 
@@ -96,8 +100,8 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	return NewManager(
 		locker,
 		func() QueryService { return qe },
-		s.numRetry,
-		s.timeout,
+		s.numRetries,
+		s.retryInterval,
 		s.requestCertification,
 		tms.PublicParametersManager().PublicParameters().Precision(),
 	), nil
