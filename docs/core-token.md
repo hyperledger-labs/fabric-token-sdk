@@ -16,8 +16,12 @@ token:
   # if empty, the default selector is used
   selector:
     driver: sherdlock
+    # tokens might be locked because of an ongoing transaction from the same wallet. Instead of failing immediately, the selector can retry.
+    # The interval is the exact amount of seconds (for simple selector) or the max amount of seconds (sherdlock) the selector waits before retrying.
+    # default: 5s
     retryInterval: 5s
-    numRetries: 5
+    # retry to gain a lock on tokens this amount of times before failing the transaction
+    numRetries: 3
 
   tms:
     mytms: # unique name of this token management system

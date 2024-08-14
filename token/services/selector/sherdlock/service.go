@@ -10,8 +10,8 @@ import (
 	"time"
 
 	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/pkg/errors"
 )
@@ -25,18 +25,12 @@ type SelectorService struct {
 	managerLazyCache lazy2.Provider[*token.ManagementService, token.SelectorManager]
 }
 
-func NewService(fetcherProvider FetcherProvider, tokenLockDBManager *tokenlockdb.Manager, cfg driver.ConfigService) *SelectorService {
-	c := SelectorConfig{}
-	err := cfg.UnmarshalKey("token.selector", &c)
-	if err != nil {
-		panic("invalid config for key [token.selector]: expect retryInterval (duration) and numRetries (integer))")
-	}
-
+func NewService(fetcherProvider FetcherProvider, tokenLockDBManager *tokenlockdb.Manager, cfg driver.SelectorConfig) *SelectorService {
 	loader := &loader{
 		tokenLockDBManager: tokenLockDBManager,
 		fetcherProvider:    fetcherProvider,
-		retryInterval:      c.GetRetryInterval(),
-		numRetries:         c.GetNumRetries(),
+		retryInterval:      cfg.GetRetryInterval(),
+		numRetries:         cfg.GetNumRetries(),
 	}
 	return &SelectorService{
 		managerLazyCache: lazy2.NewProviderWithKeyMapper(key, loader.load),
@@ -83,24 +77,4 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 
 func key(tms *token.ManagementService) string {
 	return tms.ID().String()
-}
-
-type SelectorConfig struct {
-	RetryInterval time.Duration
-	NumRetries    int
-}
-
-func (c *SelectorConfig) GetNumRetries() int {
-	if c.NumRetries > 0 {
-		return c.NumRetries
-	} else {
-		return 3
-	}
-}
-func (c *SelectorConfig) GetRetryInterval() time.Duration {
-	if c.RetryInterval > 0 {
-		return c.RetryInterval
-	} else {
-		return 5 * time.Second
-	}
 }
