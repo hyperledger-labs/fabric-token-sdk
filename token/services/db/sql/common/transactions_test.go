@@ -35,7 +35,7 @@ func initTransactionsDB(driverName common.SQLDriverType, dataSourceName, tablePr
 
 func TestTransactionsSqlite(t *testing.T) {
 	tempDir := t.TempDir()
-	for _, c := range dbtest.Cases {
+	for _, c := range dbtest.TokenTransactionDBCases {
 		db, err := initTransactionsDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
@@ -49,7 +49,7 @@ func TestTransactionsSqlite(t *testing.T) {
 }
 
 func TestTransactionsSqliteMemory(t *testing.T) {
-	for _, c := range dbtest.Cases {
+	for _, c := range dbtest.TokenTransactionDBCases {
 		db, err := initTransactionsDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
@@ -65,7 +65,7 @@ func TestTransactionsPostgres(t *testing.T) {
 	terminate, pgConnStr := StartPostgresContainer(t)
 	defer terminate()
 
-	for _, c := range dbtest.Cases {
+	for _, c := range dbtest.TokenTransactionDBCases {
 		db, err := initTransactionsDB(sql2.Postgres, pgConnStr, c.Name, 10)
 		if err != nil {
 			t.Fatal(err)

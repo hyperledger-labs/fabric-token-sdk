@@ -43,7 +43,13 @@ func NewTokenLockDB(db *sql.DB, opts NewDBOpts) (*TokenLockDB, error) {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
 
-	tokenLockDB := newTokenLockDB(db, tokenLockTables{TokenLocks: tables.TokenLocks, Requests: tables.Requests})
+	tokenLockDB := newTokenLockDB(
+		db,
+		tokenLockTables{
+			TokenLocks: tables.TokenLocks,
+			Requests:   tables.Requests,
+		},
+	)
 	if opts.CreateSchema {
 		if err = common.InitSchema(db, []string{tokenLockDB.GetSchema()}...); err != nil {
 			return nil, err
@@ -80,4 +86,14 @@ func (db *TokenLockDB) GetSchema() string {
 		);`,
 		db.Table.TokenLocks,
 	)
+}
+
+func (db *TokenLockDB) Close() error {
+	logger.Info("closing database")
+	err := db.DB.Close()
+	if err != nil {
+		return errors.Wrap(err, "could not close DB")
+	}
+
+	return nil
 }

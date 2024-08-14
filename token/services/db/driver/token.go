@@ -199,6 +199,8 @@ type TokenLockDB interface {
 	// 1. The transaction that locked that token is valid or invalid;
 	// 2. The lock is too old.
 	Cleanup(evictionDelay time.Duration) error
+	// Close closes the database
+	Close() error
 }
 
 // TokenLockDBDriver is the interface for a token database driver
