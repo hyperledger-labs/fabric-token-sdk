@@ -321,6 +321,88 @@ func TestTokenSql(t *testing.T) {
 	assert.Len(t, args, 3)
 }
 
+func TestTokenSqlNoJoin(t *testing.T) {
+	testCases := []struct {
+		name         string
+		params       driver.QueryTokenDetailsParams
+		expectedArgs []interface{}
+		expectedSql  string
+	}{
+		{
+			name:         "no filter",
+			params:       driver.QueryTokenDetailsParams{},
+			expectedSql:  "WHERE owner = true AND is_deleted = false",
+			expectedArgs: []interface{}{},
+		},
+		{
+			name: "no filter with deleted",
+			params: driver.QueryTokenDetailsParams{
+				IncludeDeleted: true,
+			},
+			expectedSql:  "WHERE owner = true",
+			expectedArgs: []interface{}{},
+		},
+		{
+			name:         "owner unspent",
+			params:       driver.QueryTokenDetailsParams{WalletID: "me"},
+			expectedSql:  "WHERE owner = true AND owner_wallet_id = $1 AND is_deleted = false",
+			expectedArgs: []interface{}{"me"},
+		},
+		{
+			name: "owner with deleted",
+			params: driver.QueryTokenDetailsParams{
+				WalletID:       "me",
+				IncludeDeleted: true,
+			},
+			expectedSql:  "WHERE owner = true AND owner_wallet_id = $1",
+			expectedArgs: []interface{}{"me"},
+		},
+		{
+			name: "owner and htlc with deleted",
+			params: driver.QueryTokenDetailsParams{
+				WalletID:       "me",
+				OwnerType:      "htlc",
+				IncludeDeleted: true,
+			},
+			expectedSql:  "WHERE owner = true AND owner_type = $1 AND owner_wallet_id = $2",
+			expectedArgs: []interface{}{"htlc", "me"},
+		},
+		{
+			name:         "owner and type",
+			params:       driver.QueryTokenDetailsParams{TokenType: "tok", WalletID: "me"},
+			expectedSql:  "WHERE owner = true AND owner_wallet_id = $1 AND token_type = $2 AND is_deleted = false",
+			expectedArgs: []interface{}{"me", "tok"},
+		},
+		{
+			name: "owner and type and id",
+			params: driver.QueryTokenDetailsParams{
+				TokenType: "tok",
+				WalletID:  "me",
+				IDs:       []*token.ID{{TxId: "a", Index: 1}},
+			},
+			expectedSql:  "WHERE owner = true AND owner_wallet_id = $1 AND token_type = $2 AND (tx_id, idx) IN ( ($3, $4) ) AND is_deleted = false",
+			expectedArgs: []interface{}{"me", "tok", "a", 1},
+		},
+		{
+			name: "type and ids",
+			params: driver.QueryTokenDetailsParams{
+				TokenType:      "tok",
+				IDs:            []*token.ID{{TxId: "a", Index: 1}, {TxId: "b", Index: 2}},
+				IncludeDeleted: true,
+			},
+			expectedSql:  "WHERE owner = true AND token_type = $1 AND (tx_id, idx) IN ( ($2, $3), ($4, $5) )",
+			expectedArgs: []interface{}{"tok", "a", uint64(1), "b", uint64(2)},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actualSql, actualArgs := tokenQuerySqlNoJoin(tc.params)
+			assert.Equal(t, tc.expectedSql, actualSql, tc.name)
+			compareArgs(t, tc.expectedArgs, actualArgs)
+		})
+	}
+}
+
 func TestIn(t *testing.T) {
 	// 0
 	args := make([]any, 0)

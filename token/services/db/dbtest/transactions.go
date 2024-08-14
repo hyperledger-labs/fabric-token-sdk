@@ -20,8 +20,8 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
-// This file exposes functions that db driver implementations can use for integration tests
-var Cases = []struct {
+// TokenTransactionDBCases collects test functions that db driver implementations can use for integration tests
+var TokenTransactionDBCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.TokenTransactionDB)
 }{
