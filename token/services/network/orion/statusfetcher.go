@@ -8,16 +8,20 @@ package orion
 
 import (
 	"encoding/base64"
+	"time"
 
 	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
+
+var runner = db.NewRetryRunner(3, 2*time.Second, true)
 
 type StatusFetcher struct {
 	dbManager *DBManager
@@ -34,18 +38,32 @@ func (r *StatusFetcher) FetchStatus(network, namespace string, txID driver.TxID)
 	}
 
 	// fetch token request reference
-	qe, err := oSession.QueryExecutor(namespace)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get query executor [%s] for orion network [%s]", txID, network)
-	}
 	key, err := keys.CreateTokenRequestKey(txID)
 	if err != nil {
 		return nil, errors.Errorf("can't create for token request '%s'", txID)
 	}
-	trRef, err := qe.Get(orionKey(key))
+
+	var trRef []byte
+	err = runner.Run(func() error {
+		tx, err := oSession.DataTx(txID)
+		if err != nil {
+			return errors.Wrapf(err, "data tx does not exist for [%s]", txID)
+		}
+		reqKey := orionKey(key)
+		h, err := tx.Get(namespace, reqKey)
+		if err != nil {
+			return errors.Wrapf(err, "data doesn't exist for [%s]", txID)
+		}
+		if code == driver2.Valid && len(h) == 0 {
+			return errors.Errorf("hash not found for valid transaction [%s:%s,%s,%s]", reqKey, network, namespace, txID)
+		}
+		trRef = h
+		return nil
+	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get token request reference [%s] for orion network [%s]", txID, network)
+		return nil, err
 	}
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("retrieved token request hash for [%s][%s]:[%s]", key, txID, base64.StdEncoding.EncodeToString(trRef))
 	}
