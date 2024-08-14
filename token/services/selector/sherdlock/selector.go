@@ -71,11 +71,11 @@ func (m *stubbornSelector) Select(owner token.OwnerFilter, q, currency string) (
 	return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "aborted too many times and no other process unlocked or added tokens")
 }
 
-func NewStubbornSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, backoff time.Duration) *stubbornSelector {
+func NewStubbornSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, backoff time.Duration, retries int) *stubbornSelector {
 	return &stubbornSelector{
 		selector:               NewSelector(logger, tokenDB, lockDB, precision),
 		backoffInterval:        backoff,
-		maxRetriesAfterBackoff: 3,
+		maxRetriesAfterBackoff: retries,
 	}
 }
 
@@ -193,12 +193,12 @@ func (l *locker) UnlockAll() error {
 	return l.Locker.UnlockByTxID(l.txID)
 }
 
-func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB Locker, precision uint64, backoff time.Duration) tokenSelectorUnlocker {
+func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB Locker, precision uint64, backoff time.Duration, maxRetriesAfterBackoff int) tokenSelectorUnlocker {
 	logger := logger.Named(fmt.Sprintf("selector-%s", txID))
 	locker := &locker{txID: txID, Locker: lockDB}
 	if backoff < 0 {
 		return NewSelector(logger, fetcher, locker, precision)
 	} else {
-		return NewStubbornSelector(logger, fetcher, locker, precision, backoff)
+		return NewStubbornSelector(logger, fetcher, locker, precision, backoff, maxRetriesAfterBackoff)
 	}
 }

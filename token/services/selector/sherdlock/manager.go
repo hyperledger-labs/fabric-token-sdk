@@ -49,13 +49,14 @@ func NewManager(
 	locker Locker,
 	precision uint64,
 	backoff time.Duration,
+	maxRetriesAfterBackOff int,
 	evictionDelay time.Duration,
 ) *manager {
 	m := &manager{
 		locker:        locker,
 		evictionDelay: evictionDelay,
 		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
-			return NewSherdSelector(txID, fetcher, locker, precision, backoff), nil
+			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff), nil
 		}),
 		cleanupPeriod: cleanupPeriod,
 	}

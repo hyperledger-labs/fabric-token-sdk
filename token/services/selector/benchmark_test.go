@@ -163,7 +163,6 @@ func cleanup(s *Setting) {
 }
 
 func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
-
 	qf := func() selector.QueryService {
 		return qs
 	}
@@ -178,14 +177,8 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity WalletIDB
 
 func NewSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
 	return &extendedSelector{
-		Selector: sherdlock.NewSherdSelector(
-			testutils.TxID,
-			sherdlock.NewLazyFetcher(qs),
-			inmemory2.NewLocker(lock),
-			testutils.TokenQuantityPrecision,
-			sherdlock.NoBackoff,
-		),
-		Lock: nil,
+		Selector: sherdlock.NewSherdSelector(testutils.TxID, sherdlock.NewLazyFetcher(qs), inmemory2.NewLocker(lock), testutils.TokenQuantityPrecision, sherdlock.NoBackoff, testutils.SelectorNumRetries),
+		Lock:     nil,
 	}, nil
 }
 
