@@ -627,7 +627,7 @@ func (f *ReceiveTransactionView) unmarshalAsSignatureRequest(context view.Contex
 	signatureRequest := &SignatureRequest{}
 	err := Unmarshal(raw, signatureRequest)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed unmarshalling signature request")
+		return nil, errors.Wrapf(err, "failed unmarshalling signature request, got [%s]", string(raw))
 	}
 	if len(signatureRequest.TX) == 0 {
 		return nil, errors.Wrap(err, "no transaction received")
@@ -694,7 +694,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		// TODO: check what is signed...
 		signatureRequest := &SignatureRequest{}
 		if err := Unmarshal(msg, signatureRequest); err != nil {
-			return nil, errors.Wrap(err, "failed unmarshalling signature request")
+			return nil, errors.Wrapf(err, "failed unmarshalling signature request, got [%s]", string(msg))
 		}
 
 		sigService := s.tx.TokenService().SigService()
