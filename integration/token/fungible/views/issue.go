@@ -115,7 +115,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
-	assert.NoError(err, "failed to sign issue transaction")
+	assert.NoError(err, "failed to sign issue transaction for "+tx.ID())
 
 	// Sanity checks:
 	// - the transaction is in pending state
