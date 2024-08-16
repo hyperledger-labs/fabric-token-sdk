@@ -167,7 +167,7 @@ func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error
 		// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 		// the token transaction valid.
 		_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
-		assert.NoError(err, "failed to sign issue transaction")
+		assert.NoError(err, "failed to sign issue transaction for "+tx.ID())
 
 		// Last but not least, the issuer sends the transaction for ordering and waits for transaction finality.
 		_, err = context.RunView(ttx.NewOrderingAndFinalityWithTimeoutView(tx, 1*time.Minute))
