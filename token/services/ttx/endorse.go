@@ -612,9 +612,13 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("ReceiveTransactionView: received transaction, len [%d][%s]", len(msg), hash.Hashable(msg))
 	}
+	if len(msg) == 0 {
+		info := context.Session().Info()
+		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
+	}
 	tx, err := NewTransactionFromBytes(context, msg)
 	if err != nil {
-		// try to unmarshal pay
+		// try to unmarshal as SignatureRequest
 		tx, err = f.unmarshalAsSignatureRequest(context, msg)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to receive transaction")
