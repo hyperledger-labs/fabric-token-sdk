@@ -8,11 +8,11 @@ replace github.com/hyperledger-labs/fabric-token-sdk/txgen => ./cmd/txgen
 // replace github.com/IBM/idemix/bccsp/types => github.com/arner/idemix/bccsp/types v0.0.0-20240815085205-d35c4bd09ec1
 
 require (
-	github.com/IBM/idemix v0.0.2-0.20231107110441-534ea4193b8f
-	github.com/IBM/idemix/bccsp/types v0.0.0-20240612072411-114d281b442d
+	github.com/IBM/idemix v0.0.2-0.20240816143710-3dce4618d760
+	github.com/IBM/idemix/bccsp/types v0.0.0-20240816143710-3dce4618d760
 	github.com/IBM/mathlib v0.0.3-0.20231011094432-44ee0eb539da
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240815143824-e9da4132112d
+	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240816144427-792c0e4e29d9
 	github.com/hyperledger-labs/fabric-token-sdk/txgen v0.0.0-00010101000000-000000000000
 	github.com/hyperledger-labs/orion-sdk-go v0.2.10
 	github.com/hyperledger-labs/orion-server v0.2.10
@@ -47,11 +47,11 @@ require (
 )
 
 require (
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
-	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
+	github.com/alecthomas/kingpin/v2 v2.4.0 // indirect
+	github.com/alecthomas/units v0.0.0-20240626203959-61d1e3462e30 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
+	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 )
 
 require (
