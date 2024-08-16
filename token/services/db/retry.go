@@ -24,25 +24,25 @@ const Infinitely = -1
 
 func NewRetryRunner(maxTimes int, delay time.Duration, expBackoff bool) *retryRunner {
 	return &retryRunner{
-		delay:      delay,
-		expBackoff: expBackoff,
-		maxTimes:   maxTimes,
-		logger:     logging2.MustGetLogger("retry-runner"),
+		initialDelay: delay,
+		expBackoff:   expBackoff,
+		maxTimes:     maxTimes,
+		logger:       logging2.MustGetLogger("retry-runner"),
 	}
 }
 
 type retryRunner struct {
-	delay      time.Duration
-	expBackoff bool
-	maxTimes   int
-	logger     logging2.Logger
+	initialDelay time.Duration
+	expBackoff   bool
+	maxTimes     int
+	logger       logging2.Logger
 }
 
-func (f *retryRunner) nextDelay() time.Duration {
-	if f.expBackoff {
-		f.delay = 2 * f.delay
+func (f *retryRunner) nextDelay(delay time.Duration) time.Duration {
+	if delay == 0 || !f.expBackoff {
+		return f.initialDelay
 	}
-	return f.delay
+	return 2 * delay
 }
 
 func (f *retryRunner) Run(runner func() error) error {
@@ -57,6 +57,7 @@ func (f *retryRunner) Run(runner func() error) error {
 // If it returns maxTimes false, then it will always return an error: either a join of all errors it encountered or a ErrMaxRetriesExceeded.
 func (f *retryRunner) RunWithErrors(runner func() (bool, error)) error {
 	errs := make([]error, 0)
+	var delay time.Duration
 	for i := 0; f.maxTimes < 0 || i < f.maxTimes; i++ {
 		terminate, err := runner()
 		if terminate {
@@ -65,8 +66,9 @@ func (f *retryRunner) RunWithErrors(runner func() (bool, error)) error {
 		if err != nil {
 			errs = append(errs, err)
 		}
-		f.logger.Debugf("Will retry iteration [%d] after delay. %d errors returned so far", i+1, len(errs))
-		time.Sleep(f.nextDelay())
+		delay = f.nextDelay(delay)
+		f.logger.Warnf("Will retry iteration [%d] after a delay of [%v]. %d errors returned so far", i+1, delay, len(errs))
+		time.Sleep(delay)
 	}
 	if len(errs) == 0 {
 		return ErrMaxRetriesExceeded
