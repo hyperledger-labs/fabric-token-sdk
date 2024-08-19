@@ -148,24 +148,16 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, errors.WithMessage(err, "failed starting auditing session")
 	}
 
-	timeout := time.NewTimer(time.Minute)
-	defer timeout.Stop()
-
 	// Receive signature
 	logger.Debugf("Receiving signature for [%s]", a.tx.ID())
 	span.AddEvent("start_receiving")
-	ch := session.Receive()
-	var msg *view.Message
-	select {
-	case msg = <-ch:
-		span.AddEvent("received_message")
-		logger.Debugf("reply received from %s", a.tx.Opts.Auditor)
-	case <-timeout.C:
-		return nil, errors.Errorf("Timeout from party %s", a.tx.Opts.Auditor)
+	msg, err := ReadMessage(session, time.Minute)
+	if err != nil {
+		span.RecordError(err)
+		return nil, errors.WithMessage(err, "failed to read audit event")
 	}
-	if msg.Status == view.ERROR {
-		return nil, errors.New(string(msg.Payload))
-	}
+	span.AddEvent("received_message")
+	logger.Debugf("reply received from %s", a.tx.Opts.Auditor)
 
 	// Check signature
 	signed, err := a.tx.MarshallToAudit()
@@ -185,11 +177,11 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 			continue
 		}
 		span.AddEvent("verify_auditor_signature")
-		if err := v.Verify(signed, msg.Payload); err != nil {
+		if err := v.Verify(signed, msg); err != nil {
 			logger.Debugf("Failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("Auditor signature verified [%s][%s]", auditorID, base64.StdEncoding.EncodeToString(msg.Payload))
+				logger.Debugf("Auditor signature verified [%s][%s]", auditorID, base64.StdEncoding.EncodeToString(msg))
 			}
 			validAuditing = true
 			break
@@ -199,7 +191,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 	}
 	span.AddEvent("append_auditor_signature")
-	a.tx.TokenRequest.AddAuditorSignature(msg.Payload)
+	a.tx.TokenRequest.AddAuditorSignature(msg)
 
 	logger.Debug("Auditor signature verified")
 	return session, nil

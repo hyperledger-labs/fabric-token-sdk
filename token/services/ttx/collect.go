@@ -115,29 +115,16 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	assert.NoError(session.Send(marshalOrPanic(c.actions)), "failed sending actions")
 	assert.NoError(session.Send(marshalOrPanic(actionTransfer)), "failed sending transfer action")
 
-	timeout := time.NewTimer(time.Minute)
-	defer timeout.Stop()
-
 	// Wait to receive a content back
-	ch := session.Receive()
-	var msg *view.Message
-	select {
-	case msg = <-ch:
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("collect actions: reply received from [%s]", party)
-		}
-	case <-timeout.C:
-		return errors.Errorf("Timeout from party %s", party)
+	msg, err := ReadMessage(session, time.Minute)
+	if err != nil {
+		return errors.Wrap(err, "failed reading message")
 	}
-	if msg.Status == view.ERROR {
-		return errors.New(string(msg.Payload))
-	}
-
 	txPayload := &Payload{
 		Transient:    map[string][]byte{},
 		TokenRequest: token.NewRequest(nil, ""),
 	}
-	err = unmarshal(c.tx.NetworkProvider, txPayload, msg.Payload)
+	err = unmarshal(c.tx.NetworkProvider, txPayload, msg)
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling reply")
 	}

@@ -143,29 +143,17 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	}
 
 	span.AddEvent("receive_identity_response")
-	// Wait to receive a view identity
-	ch := session.Receive()
-	var payload []byte
 
-	timeout := time.NewTimer(time.Minute)
-	defer timeout.Stop()
-
-	select {
-	case msg := <-ch:
-		span.AddEvent("receive_message")
-		if msg.Status == view.ERROR {
-			return nil, errors.New(string(msg.Payload))
-		}
-		payload = msg.Payload
-	case <-timeout.C:
-		err := errors.New("timeout reached")
-		span.RecordError(err)
-		return nil, err
-	}
-
-	recipientData, err := RecipientDataFromBytes(payload)
+	msg, err := ReadMessage(session, time.Minute)
 	if err != nil {
-		logger.Errorf("failed to unmarshal recipient data: [%s][%s]", payload, err)
+		span.RecordError(err)
+		return nil, errors.Wrapf(err, "failed reading recipient request")
+	}
+	span.AddEvent("receive_message")
+
+	recipientData, err := RecipientDataFromBytes(msg)
+	if err != nil {
+		logger.Errorf("failed to unmarshal recipient data: [%s][%s]", msg, err)
 		return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
 	}
 	wm := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager()

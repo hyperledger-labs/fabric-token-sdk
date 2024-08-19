@@ -43,7 +43,7 @@ func NewTokenLockDB(db *sql.DB, opts NewDBOpts) (*TokenLockDB, error) {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
 
-	tokenLockDB := newTokenLockDB(db, tokenLockTables{TokenLocks: tables.TokenLocks})
+	tokenLockDB := newTokenLockDB(db, tokenLockTables{TokenLocks: tables.TokenLocks, Requests: tables.Requests})
 	if opts.CreateSchema {
 		if err = common.InitSchema(db, []string{tokenLockDB.GetSchema()}...); err != nil {
 			return nil, err

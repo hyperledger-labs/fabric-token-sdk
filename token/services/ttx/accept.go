@@ -119,24 +119,12 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 				logger.Debugf("Receiving signature request...")
 			}
 
-			timeout := time.NewTimer(time.Minute)
-
-			sessionChannel := session.Receive()
-			var msg *view.Message
-			select {
-			case msg = <-sessionChannel:
-				logger.Debug("message received from %s", session.Info().Caller)
-				timeout.Stop()
-			case <-timeout.C:
-				timeout.Stop()
-				return errors.Errorf("Timeout from party %s", session.Info().Caller)
+			msg, err := ReadMessage(session, time.Minute)
+			if err != nil {
+				return errors.Wrap(err, "failed reading signature request")
 			}
-			if msg.Status == view.ERROR {
-				return errors.New(string(msg.Payload))
-			}
-
 			// TODO: check what is signed...
-			err := Unmarshal(msg.Payload, signatureRequest)
+			err = Unmarshal(msg, signatureRequest)
 			if err != nil {
 				return errors.Wrap(err, "failed unmarshalling signature request")
 			}

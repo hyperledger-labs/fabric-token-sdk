@@ -268,9 +268,6 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting session")
 	}
-	// Wait to receive a content back
-	ch := session.Receive()
-
 	signatureRequestRaw, err := Marshal(signatureRequest)
 	if err != nil {
 		return nil, err
@@ -280,24 +277,10 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 		return nil, errors.Wrap(err, "failed sending transaction content")
 	}
 
-	timeout := time.NewTimer(time.Minute)
-
-	var msg *view.Message
-	select {
-	case msg = <-ch:
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("collect signatures: reply received from [%s]", party)
-		}
-		timeout.Stop()
-	case <-timeout.C:
-		timeout.Stop()
-		return nil, errors.Errorf("Timeout from party %s", party)
+	sigma, err := ReadMessage(session, time.Minute)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed reading message")
 	}
-	if msg.Status == view.ERROR {
-		return nil, errors.New(string(msg.Payload))
-	}
-
-	sigma := msg.Payload
 
 	verifier, err := verifierGetter(party)
 	if err != nil {
@@ -561,32 +544,18 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if err != nil {
 			return errors.Wrap(err, "failed getting session")
 		}
-		// Wait to receive a content back
-		ch := session.Receive()
 		// Send the content
 		err = session.SendWithContext(context.Context(), txRaw)
 		if err != nil {
 			return errors.Wrap(err, "failed sending transaction content")
 		}
 
-		timeout := time.NewTimer(time.Minute * 4)
-
-		var msg *view.Message
-		select {
-		case msg = <-ch:
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("collect ack on distributed env: reply received from [%s]", entry.ID)
-			}
-			timeout.Stop()
-		case <-timeout.C:
-			timeout.Stop()
-			return errors.Errorf("Timeout from party %s", entry.ID)
+		sigma, err := ReadMessage(session, time.Minute*4)
+		if err != nil {
+			return errors.Wrap(err, "failed reading message")
 		}
-		if msg.Status == view.ERROR {
-			return errors.New(string(msg.Payload))
-		}
-		sigma := msg.Payload
-		logger.Debugf("received ack from [%s] [%s], checking signature on [%s]", entry.LongTerm, hash.Hashable(sigma).String(),
+		logger.Debugf("received ack from [%s] [%s], checking signature on [%s]",
+			entry.LongTerm, hash.Hashable(sigma).String(),
 			hash.Hashable(txRaw).String())
 
 		verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
@@ -633,42 +602,36 @@ func NewReceiveTransactionView(network string) *ReceiveTransactionView {
 func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error) {
 	span := context.StartSpan("receive_tx_view")
 	defer span.End()
-	// Wait to receive a transaction back
-	ch := context.Session().Receive()
 
-	timeout := time.NewTimer(time.Minute * 4)
-	defer timeout.Stop()
-
-	select {
-	case msg := <-ch:
-		span.AddEvent("receive_tx")
-		if msg.Status == view.ERROR {
-			return nil, errors.New(string(msg.Payload))
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("ReceiveTransactionView: received transaction, len [%d][%s]", len(msg.Payload), hash.Hashable(msg.Payload))
-		}
-		tx, err := NewTransactionFromBytes(context, msg.Payload)
-		if err != nil {
-			// try to unmarshal pay
-			tx, err = f.unmarshalAsSignatureRequest(context, msg.Payload)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to receive transaction")
-			}
-		}
-		return tx, nil
-	case <-timeout.C:
-		err := errors.New("timeout reached")
+	msg, err := ReadMessage(context.Session(), time.Minute*4)
+	if err != nil {
 		span.RecordError(err)
-		return nil, err
 	}
+	span.AddEvent("receive_tx")
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("ReceiveTransactionView: received transaction, len [%d][%s]", len(msg), hash.Hashable(msg))
+	}
+	if len(msg) == 0 {
+		info := context.Session().Info()
+		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
+	}
+	tx, err := NewTransactionFromBytes(context, msg)
+	if err != nil {
+		// try to unmarshal as SignatureRequest
+		tx, err = f.unmarshalAsSignatureRequest(context, msg)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to receive transaction")
+		}
+	}
+	return tx, nil
 }
 
 func (f *ReceiveTransactionView) unmarshalAsSignatureRequest(context view.Context, raw []byte) (*Transaction, error) {
 	signatureRequest := &SignatureRequest{}
 	err := Unmarshal(raw, signatureRequest)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed unmarshalling signature request")
+		return nil, errors.Wrapf(err, "failed unmarshalling signature request, got [%s]", string(raw))
 	}
 	if len(signatureRequest.TX) == 0 {
 		return nil, errors.Wrap(err, "no transaction received")
@@ -727,27 +690,15 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			logger.Debugf("Receiving signature request...")
 		}
 
-		timeout := time.NewTimer(time.Minute)
-
-		sessionChannel := session.Receive()
-		var msg *view.Message
-		select {
-		case msg = <-sessionChannel:
-			logger.Debug("message received from %s", session.Info().Caller)
-			timeout.Stop()
-		case <-timeout.C:
-			timeout.Stop()
-			return nil, errors.Errorf("Timeout from party %s", session.Info().Caller)
-		}
-		if msg.Status == view.ERROR {
-			return nil, errors.New(string(msg.Payload))
+		msg, err := ReadMessage(session, time.Minute)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed receiving signature response")
 		}
 
 		// TODO: check what is signed...
 		signatureRequest := &SignatureRequest{}
-		err := Unmarshal(msg.Payload, signatureRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed unmarshalling signature request")
+		if err := Unmarshal(msg, signatureRequest); err != nil {
+			return nil, errors.Wrapf(err, "failed unmarshalling signature request, got [%s]", string(msg))
 		}
 
 		sigService := s.tx.TokenService().SigService()
