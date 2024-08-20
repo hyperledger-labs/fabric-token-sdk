@@ -30,6 +30,8 @@ type Withdrawal struct {
 	Issuer string
 	// Recipient information
 	RecipientData *token.RecipientData
+	// NotAnonymous true if the transaction must be anonymous, false otherwise
+	NotAnonymous bool
 }
 
 type WithdrawalInitiatorView struct {
@@ -52,10 +54,10 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 		assert.NoError(w.RegisterRecipient(i.RecipientData), "failed to register remote recipient")
 		// Then request withdrawal
 		span.AddEvent("request_withdrawal_for_recipient")
-		id, session, err = ttx.RequestWithdrawalForRecipient(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, i.RecipientData, token.WithTMSID(i.TMSID))
+		id, session, err = ttx.RequestWithdrawalForRecipient(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, i.NotAnonymous, i.RecipientData, token.WithTMSID(i.TMSID))
 	} else {
 		span.AddEvent("request_withdrawal")
-		id, session, err = ttx.RequestWithdrawal(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, token.WithTMSID(i.TMSID))
+		id, session, err = ttx.RequestWithdrawal(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, i.NotAnonymous, token.WithTMSID(i.TMSID))
 	}
 	// Request withdrawal
 	assert.NoError(err, "failed to send withdrawal request")
@@ -109,8 +111,7 @@ func (p *WithdrawalInitiatorViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type WithdrawalResponderView struct {
-	Auditor      string
-	NotAnonymous bool
+	Auditor string
 }
 
 func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error) {
@@ -140,7 +141,7 @@ func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error
 			auditorID = p.Auditor
 		}
 		auditor := view2.GetIdentityProvider(context).Identity(auditorID)
-		if !p.NotAnonymous {
+		if !issueRequest.NotAnonymous {
 			// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 			tx, err = ttx.NewAnonymousTransaction(context, ttx.WithAuditor(auditor), ttx.WithTMSID(issueRequest.TMSID))
 		} else {

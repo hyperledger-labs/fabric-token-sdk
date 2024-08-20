@@ -62,6 +62,7 @@ type idResolver interface {
 func NewViewUser(username model.Username, auditor model.Username, client api2.ViewClient, idResolver idResolver, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.ILogger) *viewUser {
 	return &viewUser{
 		username:   username,
+		anonymous:  false,
 		auditor:    auditor,
 		client:     client,
 		idResolver: idResolver,
@@ -76,6 +77,7 @@ func NewViewUser(username model.Username, auditor model.Username, client api2.Vi
 
 type viewUser struct {
 	username   model.Username
+	anonymous  bool
 	auditor    model.Username
 	client     api2.ViewClient
 	idResolver idResolver
@@ -100,6 +102,7 @@ func (u *viewUser) Transfer(value api3.Amount, recipient model.Username, _ api3.
 		Amount:       uint64(value),
 		Recipient:    u.idResolver.Identity(recipient),
 		RecipientEID: recipient,
+		NotAnonymous: !u.anonymous,
 	})
 	if err != nil {
 		return api3.NewInternalServerError(err, err.Error())
@@ -111,10 +114,11 @@ func (u *viewUser) Withdraw(value api3.Amount) api3.Error {
 	u.logger.Infof("Call view to withdraw %d\n", value)
 
 	_, err := u.callView("withdrawal", &views.Withdrawal{
-		Wallet:    u.username,
-		TokenType: currency,
-		Amount:    uint64(value),
-		Issuer:    "issuer",
+		Wallet:       u.username,
+		TokenType:    currency,
+		Amount:       uint64(value),
+		Issuer:       "issuer",
+		NotAnonymous: !u.anonymous,
 	})
 	if err != nil {
 		return api3.NewInternalServerError(err, err.Error())
