@@ -77,6 +77,28 @@ func (r *TestCaseRunner) Run(scenario *model.TestCase, customers map[string]*cus
 	}
 	r.logger.Infof("%d withdrawal amounts: %v", len(withdrawAmnts), withdrawAmnts)
 
+	start := time.Now()
+	r.logger.Infof("============= Start test case %s, iter %d =============", scenario.Name, settings.Iteration)
+
+	if scenario.Issue.Execute && !settings.UseExistingFunds {
+		r.logger.Infof("Starting withdrawals")
+		execErr := r.doWithdrawals(payer, withdrawAmnts, settings)
+
+		if execErr != nil {
+			r.logger.Warnf("Some withdrawals failed: %v", execErr)
+			funds, err = r.intermediary.GetBalance(payer.Name)
+			if err != nil {
+				return &TestCaseResult{
+					Success:   false,
+					Name:      scenario.Name,
+					Iteration: settings.Iteration,
+					Error:     err,
+				}
+			}
+			r.logger.Warnf("Will proceed with transfers of successfully withdrawn amount [%v]", funds)
+		}
+	}
+
 	transferAmnts, err := scenario.Transfer.Distribution.GetAmounts(funds)
 	if err != nil {
 		r.logger.Errorf("Can't generate transfer amounts: %s", err.GetMessage())
@@ -88,24 +110,6 @@ func (r *TestCaseRunner) Run(scenario *model.TestCase, customers map[string]*cus
 		}
 	}
 	r.logger.Infof("%d transfer amounts: %v", len(transferAmnts), transferAmnts)
-
-	start := time.Now()
-	r.logger.Infof("============= Start test case %s, iter %d =============", scenario.Name, settings.Iteration)
-
-	if scenario.Issue.Execute && !settings.UseExistingFunds {
-		r.logger.Infof("Starting withdrawals")
-		execErr := r.doWithdrawals(payer, withdrawAmnts, settings)
-
-		if execErr != nil {
-			return &TestCaseResult{
-				Name:      scenario.Name,
-				Success:   false,
-				Duration:  time.Since(start),
-				Iteration: settings.Iteration,
-				Error:     execErr,
-			}
-		}
-	}
 
 	if scenario.Transfer.Execute {
 		payees := make([]*customerState, 0, len(scenario.Payees))
