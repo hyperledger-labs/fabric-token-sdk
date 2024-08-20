@@ -23,48 +23,40 @@ type WithdrawalRequest struct {
 	RecipientData RecipientData
 	TokenType     string
 	Amount        uint64
+	NotAnonymous  bool
 }
 
 // RequestWithdrawalView is the initiator view to request an issuer the issuance of tokens.
 // The view prepares an instance of WithdrawalRequest and send it to the issuer.
 type RequestWithdrawalView struct {
-	Issuer    view.Identity
-	TokenType string
-	Amount    uint64
-	TMSID     token.TMSID
-	Wallet    string
+	Issuer       view.Identity
+	TokenType    string
+	Amount       uint64
+	TMSID        token.TMSID
+	Wallet       string
+	NotAnonymous bool
 
 	RecipientData *RecipientData
 }
 
-func NewRequestWithdrawalView(issuer view.Identity, tokenType string, amount uint64) *RequestWithdrawalView {
-	return &RequestWithdrawalView{Issuer: issuer, TokenType: tokenType, Amount: amount}
+func NewRequestWithdrawalView(issuer view.Identity, tokenType string, amount uint64, notAnonymous bool) *RequestWithdrawalView {
+	return &RequestWithdrawalView{Issuer: issuer, TokenType: tokenType, Amount: amount, NotAnonymous: notAnonymous}
 }
 
 // RequestWithdrawal runs RequestWithdrawalView with the passed arguments.
 // The view will generate a recipient identity and pass it to the issuer.
-func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
-	options, err := CompileServiceOptions(opts...)
-	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to compile options")
-	}
-	resultBoxed, err := context.RunView(NewRequestWithdrawalView(issuer, tokenType, amount).WithWallet(wallet).WithTMSID(options.TMSID()))
-	if err != nil {
-		return nil, nil, err
-	}
-	result := resultBoxed.([]interface{})
-	ir := result[0].(*WithdrawalRequest)
-	return ir.RecipientData.Identity, result[1].(view.Session), nil
+func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, notAnonymous bool, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+	return RequestWithdrawalForRecipient(context, issuer, wallet, tokenType, amount, notAnonymous, nil, opts...)
 }
 
 // RequestWithdrawalForRecipient runs RequestWithdrawalView with the passed arguments.
 // The view will send the passed recipient data to the issuer.
-func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, recipientData *RecipientData, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, notAnonymous bool, recipientData *RecipientData, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
 	options, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to compile options")
 	}
-	resultBoxed, err := context.RunView(NewRequestWithdrawalView(issuer, tokenType, amount).WithWallet(wallet).WithTMSID(options.TMSID()).WithRecipientData(recipientData))
+	resultBoxed, err := context.RunView(NewRequestWithdrawalView(issuer, tokenType, amount, notAnonymous).WithWallet(wallet).WithTMSID(options.TMSID()).WithRecipientData(recipientData))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -89,8 +81,9 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 			AuditInfo:     auditInfo,
 			TokenMetadata: tokenMetadata,
 		},
-		TokenType: r.TokenType,
-		Amount:    r.Amount,
+		TokenType:    r.TokenType,
+		Amount:       r.Amount,
+		NotAnonymous: r.NotAnonymous,
 	}
 
 	span.AddEvent("start_session")
