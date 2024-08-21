@@ -39,12 +39,11 @@ import (
 )
 
 const (
-	QueryPublicParamsFunction                   = "queryPublicParams"
-	QueryTokensFunctions                        = "queryTokens"
-	AreTokensSpent                              = "areTokensSpent"
-	maxRetries                                  = 3
-	retryWaitDuration                           = 1 * time.Second
-	txIdLabel                 tracing.LabelName = "tx_id"
+	QueryPublicParamsFunction = "queryPublicParams"
+	QueryTokensFunctions      = "queryTokens"
+	AreTokensSpent            = "areTokensSpent"
+	maxRetries                = 3
+	retryWaitDuration         = 1 * time.Second
 )
 
 var logger = logging.MustGetLogger("token-sdk.network.fabric")
@@ -195,7 +194,7 @@ func NewNetwork(
 		endorsementServiceProvider: endorsementServiceProvider,
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "tokensdk_fabric",
-			LabelNames: []tracing.LabelName{txIdLabel},
+			LabelNames: []tracing.LabelName{},
 		})),
 	}
 }
@@ -554,7 +553,7 @@ type FinalityListener struct {
 }
 
 func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string) {
-	newCtx, span := t.tracer.Start(ctx, "on_status", tracing.WithAttributes(tracing.String(txIdLabel, txID)))
+	newCtx, span := t.tracer.Start(ctx, "on_status")
 	defer span.End()
 	defer func() {
 		if e := recover(); e != nil {
