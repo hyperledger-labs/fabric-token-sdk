@@ -28,10 +28,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const (
-	txIdLabel tracing.LabelName = "tx_id"
-)
-
 type NewVaultFunc = func(network, channel, namespace string) (vault.Vault, error)
 
 type IdentityProvider interface {
@@ -83,7 +79,7 @@ func NewNetwork(
 		subscribers:         events.NewSubscribers(), ledger: &ledger{network: n.Name(), viewManager: viewManager, dbManager: dbManager},
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "tokensdk_orion",
-			LabelNames: []tracing.LabelName{txIdLabel},
+			LabelNames: []tracing.LabelName{},
 		})),
 		dbManager: dbManager,
 	}
@@ -384,7 +380,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 }
 
 func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status int, message string) (err error) {
-	newCtx, span := t.tracer.Start(ctx, "on_status", tracing.WithAttributes(tracing.String(txIdLabel, txID)))
+	newCtx, span := t.tracer.Start(ctx, "on_status")
 	defer span.End()
 	defer func() {
 		if r := recover(); r != nil {
