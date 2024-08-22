@@ -15,8 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -100,16 +100,19 @@ type RequestApprovalResponderView struct{}
 func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
 	// When the borrower runs the CollectEndorsementsView, at some point, the borrower sends the assembled transaction
 	// to the approver. Therefore, the approver waits to receive the transaction.
+	logger.Debugf("Waiting for transaction on context [%s]", context.ID())
 	tx, err := endorser.ReceiveTransaction(context)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to received transaction for approval")
 	}
+	logger.Debugf("Received transaction [%s] for endorsement on context [%s]", tx.ID(), context.ID())
+	defer logger.Debugf("Return endorsement result for TX [%s]", tx.ID())
 	raw, err := tx.Bytes()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to marshal transaction [%s]", tx.ID())
 	}
 
-	logger.Debugf("Respond to request of approval for tx [%s][%s]", tx.ID(), hash.Hashable(raw).String())
+	logger.Debugf("Respond to request of approval for tx [%s][%s]", tx.ID(), hash.Hashable(raw))
 
 	var tmsID token2.TMSID
 	if err := tx.GetTransientState("tmsID", &tmsID); err != nil {
@@ -142,31 +145,35 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	}
 
 	// validate token request
-	v, err := network.GetInstance(context, tx.Network(), tx.Channel()).Vault(tms.Namespace())
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get vault")
-	}
-	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, v)
+	logger.Debugf("Validate TX [%s]", tx.ID())
+	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(key string) ([]byte, error) {
+		return rws.GetDirectState(tms.Namespace(), key)
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
 	// endorse
+	logger.Debugf("Endorse TX [%s]", tx.ID())
 	endorserID, err := r.endorserID(tms, fns)
 	if err != nil {
 		return nil, err
 	}
 
 	// write actions into the transaction
+	logger.Debugf("Translate TX [%s]", tx.ID())
 	err = r.translate(tms, tx, validationMetadata, rws, actions...)
 	if err != nil {
 		return nil, err
 	}
 
+	logger.Debugf("Endorse proposal for TX [%s]", tx.ID())
 	endorsementResult, err := context.RunView(endorser.NewEndorsementOnProposalResponderView(tx, endorserID))
 	if err != nil {
 		logger.Errorf("failed to respond to endorsement [%s]", err)
 	}
+	logger.Debugf("Finished endorsement on TX [%s]", tx.ID())
 	return endorsementResult, err
 }
 
@@ -201,18 +208,16 @@ func (r *RequestApprovalResponderView) validate(
 	tx *endorser.Transaction,
 	anchor string,
 	requestRaw []byte,
-	vault *network.Vault,
+	getState driver2.GetStateFnc,
 ) ([]any, map[string][]byte, error) {
+	defer logger.Debugf("Finished validation of TX [%s]", tx.ID())
+	logger.Debugf("Get validator for TX [%s]", tx.ID())
 	validator, err := tms.Validator()
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get validator [%s:%s]", tms.Network(), tms.Channel())
 	}
-	qe, err := vault.NewQueryExecutor()
-	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to get query executor")
-	}
-	defer qe.Done()
-	actions, meta, err := validator.UnmarshallAndVerifyWithMetadata(context.Context(), qe, anchor, requestRaw)
+	logger.Debugf("Unmarshal and verify with metadata for TX [%s]", tx.ID())
+	actions, meta, err := validator.UnmarshallAndVerifyWithMetadata(context.Context(), token2.NewLedgerFromGetter(getState), anchor, requestRaw)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to verify token request for [%s]", tx.ID())
 	}
@@ -220,6 +225,7 @@ func (r *RequestApprovalResponderView) validate(
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to retrieve db [%s]", tms.ID())
 	}
+	logger.Debugf("Append validation record for TX [%s]", tx.ID())
 	if err := db.AppendValidationRecord(tx.ID(), requestRaw, meta); err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to append metadata for [%s]", tx.ID())
 	}
