@@ -18,7 +18,6 @@ import (
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/operations"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
@@ -146,12 +145,12 @@ func (p *SDK) Install() error {
 	}
 
 	// Overwrite dependencies
-	err = p.Container().Decorate(func(metricsProvider metrics.Provider) metrics.Provider {
-		return operations.NewDisabledHistogram(metricsProvider)
-	})
-	if err != nil {
-		return errors.WithMessagef(err, "failed setting up decorator")
-	}
+	//err = p.Container().Decorate(func(metricsProvider metrics.Provider) metrics.Provider {
+	//	return operations.NewDisabledHistogram(metricsProvider)
+	//})
+	//if err != nil {
+	//	return errors.WithMessagef(err, "failed setting up decorator")
+	//}
 
 	if err := p.SDK.Install(); err != nil {
 		return errors.WithMessagef(err, "failed installing dig chain")
