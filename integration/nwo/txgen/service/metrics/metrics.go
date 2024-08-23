@@ -9,6 +9,7 @@ package metrics
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger/fabric-lib-go/common/metrics"
 )
 
@@ -53,7 +54,7 @@ func NewMetrics(p metrics.Provider) *Metrics {
 			Namespace:  "tx_gen",
 			Name:       "duration",
 			Help:       "Duration of transfer requests executed",
-			Buckets:    bucketRange(0, 15*time.Second, 100),
+			Buckets:    utils.ExponentialBucketTimeRange(0, 50*time.Second, 15),
 			LabelNames: []string{OperationLabel, SuccessLabel},
 		}),
 	}
@@ -65,13 +66,4 @@ type Metrics struct {
 	RequestsSent     metrics.Counter
 	RequestsReceived metrics.Counter
 	RequestDuration  metrics.Histogram
-}
-
-func bucketRange(start, end time.Duration, buckets int) []float64 {
-	bs := make([]float64, 0, buckets+1)
-	step := (end.Seconds() - start.Seconds()) / float64(buckets)
-	for v := start.Seconds(); v <= end.Seconds(); v += step {
-		bs = append(bs, v)
-	}
-	return bs
 }
