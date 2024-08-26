@@ -2,18 +2,12 @@ module github.com/hyperledger-labs/fabric-token-sdk
 
 go 1.22.6
 
-replace github.com/hyperledger-labs/fabric-token-sdk/txgen => ./cmd/txgen
-
-// replace github.com/IBM/idemix => github.com/arner/idemix v0.0.0-20240815085205-d35c4bd09ec1
-// replace github.com/IBM/idemix/bccsp/types => github.com/arner/idemix/bccsp/types v0.0.0-20240815085205-d35c4bd09ec1
-
 require (
 	github.com/IBM/idemix v0.0.2-0.20240816143710-3dce4618d760
 	github.com/IBM/idemix/bccsp/types v0.0.0-20240816143710-3dce4618d760
 	github.com/IBM/mathlib v0.0.3-0.20231011094432-44ee0eb539da
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240816144427-792c0e4e29d9
-	github.com/hyperledger-labs/fabric-token-sdk/txgen v0.0.0-00010101000000-000000000000
 	github.com/hyperledger-labs/orion-sdk-go v0.2.10
 	github.com/hyperledger-labs/orion-server v0.2.10
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
@@ -108,7 +102,7 @@ require (
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/cors v1.7.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/gin-gonic/gin v1.10.0 // indirect
+	github.com/gin-gonic/gin v1.10.0
 	github.com/go-kit/kit v0.13.0 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
