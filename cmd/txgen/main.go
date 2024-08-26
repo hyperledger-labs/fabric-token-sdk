@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
 )
 
 func main() {

@@ -9,7 +9,7 @@ package metrics
 import (
 	"time"
 
-	c "github.com/hyperledger-labs/fabric-token-sdk/txgen/model/constants"
+	c "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/constants"
 )
 
 type Reporter interface {

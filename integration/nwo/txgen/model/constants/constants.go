@@ -9,7 +9,7 @@ package constants
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
 )
 
 // intermediary specific configuration

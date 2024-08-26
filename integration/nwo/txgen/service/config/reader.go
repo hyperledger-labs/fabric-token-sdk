@@ -12,9 +12,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/api"
-	c "github.com/hyperledger-labs/fabric-token-sdk/txgen/model/constants"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/api"
+	c "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/constants"
 	"github.com/spf13/viper"
 )
 
@@ -50,7 +50,7 @@ func Load() (*model.Configuration, api.Error) {
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		appErr := api.NewInternalServerError(
-			fmt.Errorf("Cannot unmarshal the configuration file: %s", err),
+			fmt.Errorf("cannot unmarshal the configuration file: %s", err),
 			"Internal Server Error",
 		)
 		return nil, appErr

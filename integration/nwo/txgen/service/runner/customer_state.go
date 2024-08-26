@@ -9,8 +9,8 @@ package runner
 import (
 	"sync/atomic"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/api"
 )
 
 type customerState struct {

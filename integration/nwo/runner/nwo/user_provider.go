@@ -15,11 +15,11 @@ import (
 	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	runner2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/user"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
 	"go.opentelemetry.io/otel/trace"
 )
 

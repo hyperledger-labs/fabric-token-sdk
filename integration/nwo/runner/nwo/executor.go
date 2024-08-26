@@ -15,12 +15,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring/optl"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	runner2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/runner"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/runner"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/user"
 	"go.opentelemetry.io/otel/trace"
 )
 

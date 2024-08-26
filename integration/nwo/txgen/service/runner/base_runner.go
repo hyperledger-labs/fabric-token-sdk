@@ -11,11 +11,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/api"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
+	api2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/user"
+
 	"github.com/pkg/errors"
 	"github.com/sourcegraph/conc"
 )
@@ -124,7 +125,7 @@ func (r *BaseRunner) executeSuite(suite model.SuiteConfig) {
 	r.logger.Infof(r.metricsReporter.Summary())
 }
 
-func (r *BaseRunner) initCustomerState(suiteConfig model.SuiteConfig) api.Error {
+func (r *BaseRunner) initCustomerState(suiteConfig model.SuiteConfig) api2.Error {
 	for _, u := range collectUsers(suiteConfig) {
 		balance, err := r.intermediary.GetBalance(u)
 		if err != nil {
@@ -198,9 +199,9 @@ func (r *BaseRunner) printTPS() {
 }
 
 func (r *BaseRunner) checkCustomerBalances() {
-	totalWithdrawn := api.Amount(0)
-	totalPaid := api.Amount(0)
-	totalReceived := api.Amount(0)
+	totalWithdrawn := api2.Amount(0)
+	totalPaid := api2.Amount(0)
+	totalReceived := api2.Amount(0)
 	for _, c := range r.customers {
 		r.logger.Infof(
 			"Customer: '%s', starting amount: %d, withdrawn amount %d, paid amount %d, received amount %d",

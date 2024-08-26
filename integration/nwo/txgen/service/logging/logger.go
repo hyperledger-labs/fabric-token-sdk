@@ -11,8 +11,9 @@ import (
 	"os"
 	"slices"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
-	c "github.com/hyperledger-labs/fabric-token-sdk/txgen/model/constants"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
+	c "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/constants"
+
 	"github.com/hyperledger/fabric-lib-go/common/flogging"
 )
 

@@ -145,3 +145,7 @@ clean-fabric-peer-images:
 .PHONY: tokengen
 tokengen:
 	@go install ./cmd/tokengen
+
+.PHONY: txgen
+txgen:
+	@go install ./cmd/txgen

@@ -9,7 +9,7 @@ package model
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/api"
 )
 
 type Configuration struct {
@@ -52,7 +52,7 @@ type SuiteConfig struct {
 	Iterations       int           `yaml:"iterations" json:"iterations"`
 	Delay            time.Duration `yaml:"delay" json:"delay"`
 	Cases            []TestCase    `yaml:"cases" json:"cases"`
-	UseExistingFunds bool          `yaml:"useExistingFunds" yaml:"useExistingFunds"`
+	UseExistingFunds bool          `yaml:"useExistingFunds"`
 }
 
 type IntermediaryConfig struct {

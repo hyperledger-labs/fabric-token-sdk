@@ -9,7 +9,8 @@ package metrics
 import (
 	"time"
 
-	cons "github.com/hyperledger-labs/fabric-token-sdk/txgen/model/constants"
+	cons "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/constants"
+
 	"github.com/hyperledger/fabric-lib-go/common/metrics"
 )
 

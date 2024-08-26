@@ -19,11 +19,11 @@ import (
 	web2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/web"
 	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	runner2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/runner"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
+	runner3 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/runner"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/user"
 	metrics2 "github.com/hyperledger/fabric-lib-go/common/metrics"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/dig"
@@ -82,7 +82,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 
 	err = errors.Join(
 		s.C.Decorate(func(_ user.Provider, p *runner2.ViewUserProvider) user.Provider { return p }),
-		s.C.Decorate(func(_ runner.SuiteRunner, runner *runner.RestRunner, userProvider *runner2.ViewUserProvider, logger logging.ILogger) runner.SuiteRunner {
+		s.C.Decorate(func(_ runner3.SuiteRunner, runner *runner3.RestRunner, userProvider *runner2.ViewUserProvider, logger logging.ILogger) runner3.SuiteRunner {
 			return runner2.NewViewRunner(runner, userProvider, logger, config.Auditors[0].Name, config.Issuers[0].Name)
 		}),
 		s.C.Decorate(func(_ metrics2.Provider, mp metrics.Provider) metrics2.Provider {
@@ -105,7 +105,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 }
 
 func (e *SuiteExecutor) Execute(suites []model.SuiteConfig) error {
-	return e.C.Invoke(func(s runner.SuiteRunner) error {
+	return e.C.Invoke(func(s runner3.SuiteRunner) error {
 		if err := s.Start(context.TODO()); err != nil {
 			return err
 		}

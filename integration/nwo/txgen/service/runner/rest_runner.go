@@ -12,9 +12,10 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
+
 	"github.com/gin-gonic/gin"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
 	"gopkg.in/yaml.v2"
 )
 
