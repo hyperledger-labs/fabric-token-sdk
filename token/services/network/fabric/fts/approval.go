@@ -9,6 +9,7 @@ package fts
 import (
 	"time"
 
+	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -147,7 +148,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	// validate token request
 	logger.Debugf("Validate TX [%s]", tx.ID())
 	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(key string) ([]byte, error) {
-		return rws.GetDirectState(tms.Namespace(), key)
+		return rws.GetState(tms.Namespace(), key, driver3.FromBoth)
 	})
 
 	if err != nil {
