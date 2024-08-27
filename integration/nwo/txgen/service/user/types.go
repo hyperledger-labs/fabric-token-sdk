@@ -8,7 +8,7 @@ package user
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/api"
+	txgen "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/api"
 )
 
 type Provider interface {
@@ -17,8 +17,8 @@ type Provider interface {
 
 type User interface {
 	Username() model.Username
-	InitiateTransfer(value api2.Amount, nonce api2.UUID) api2.Error
-	Transfer(value api2.Amount, recipient model.Username, nonce api2.UUID) api2.Error
-	Withdraw(value api2.Amount) api2.Error
-	GetBalance() (api2.Amount, api2.Error)
+	InitiateTransfer(value txgen.Amount, nonce txgen.UUID) txgen.Error
+	Transfer(value txgen.Amount, recipient model.Username, nonce txgen.UUID) txgen.Error
+	Withdraw(value txgen.Amount) txgen.Error
+	GetBalance() (txgen.Amount, txgen.Error)
 }

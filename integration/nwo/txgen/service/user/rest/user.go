@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/api"
+	txgen "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/api"
 	c "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/constants"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/metrics"
@@ -62,7 +62,7 @@ func (u *restUser) updateToken(token string) {
 	u.accessTokenExp = time.Now().Add(c.PayerAccessTokenExpMin)
 }
 
-func (u *restUser) refreshAuthToken() api2.Error {
+func (u *restUser) refreshAuthToken() txgen.Error {
 	// TODO introduce concurrency check
 	if u.hasTokenExpired() {
 		u.logger.Infof("Refresh authentication token for %s", u.username)
@@ -76,7 +76,7 @@ func (u *restUser) refreshAuthToken() api2.Error {
 	return nil
 }
 
-func (u *restUser) Withdraw(value api2.Amount) api2.Error {
+func (u *restUser) Withdraw(value txgen.Amount) txgen.Error {
 	u.logger.Debug("Withdraw")
 	if err := u.refreshAuthToken(); err != nil {
 		return err
@@ -95,7 +95,7 @@ func (u *restUser) Withdraw(value api2.Amount) api2.Error {
 	return err
 }
 
-func (u *restUser) GetBalance() (api2.Amount, api2.Error) {
+func (u *restUser) GetBalance() (txgen.Amount, txgen.Error) {
 	if err := u.refreshAuthToken(); err != nil {
 		return 0, err
 	}
@@ -113,7 +113,7 @@ func (u *restUser) GetBalance() (api2.Amount, api2.Error) {
 
 	if err != nil {
 		u.logger.Errorf("Can't unmarshal body from get balance request: %s", err.Error())
-		return 0, api2.NewInternalServerError(err, "Can't unmarshal body")
+		return 0, txgen.NewInternalServerError(err, "Can't unmarshal body")
 	}
 
 	u.logger.Debugf("User %s has balance %v", u.username, balanceResponse)
@@ -122,13 +122,13 @@ func (u *restUser) GetBalance() (api2.Amount, api2.Error) {
 
 	if err != nil {
 		u.logger.Errorf("Can't convert balance api.Amount to int: %s, balance: %s", err.Error(), balanceResponse.Balance.Quantity)
-		return 0, api2.NewInternalServerError(err, "Can't convert balance api.Amount to int")
+		return 0, txgen.NewInternalServerError(err, "Can't convert balance api.Amount to int")
 	}
 
-	return api2.Amount(amount), nil
+	return txgen.Amount(amount), nil
 }
 
-func (u *restUser) Transfer(value api2.Amount, recipient model.Username, nonce api2.UUID) api2.Error {
+func (u *restUser) Transfer(value txgen.Amount, recipient model.Username, nonce txgen.UUID) txgen.Error {
 	u.logger.Debugf("Execute payment with nonce %s from %s to %s of %d", nonce.String(), u.username, recipient, value)
 	if err := u.refreshAuthToken(); err != nil {
 		return err
@@ -143,7 +143,7 @@ func (u *restUser) Transfer(value api2.Amount, recipient model.Username, nonce a
 	return err
 }
 
-func (u *restUser) InitiateTransfer(value api2.Amount, nonce api2.UUID) api2.Error {
+func (u *restUser) InitiateTransfer(value txgen.Amount, nonce txgen.UUID) txgen.Error {
 	u.logger.Debugf("Initiate payment with nonce %s to %s ", nonce, u.username)
 	if err := u.refreshAuthToken(); err != nil {
 		return err
@@ -159,7 +159,7 @@ func (u *restUser) InitiateTransfer(value api2.Amount, nonce api2.UUID) api2.Err
 	return err
 }
 
-func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType) ([]byte, api2.Error) {
+func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType) ([]byte, txgen.Error) {
 	request.Header.Set(c.HeaderAuthorization, fmt.Sprintf("Bearer %s", u.accessToken))
 
 	operationType := operationTypeMap[requestType]
@@ -180,7 +180,7 @@ func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType
 
 	if err != nil {
 		u.logger.Errorf("Can't make request %s for %s. Path: %s\n", err, u.username, request.URL.RequestURI())
-		return nil, api2.NewBadRequestError(err, "Can't make request")
+		return nil, txgen.NewBadRequestError(err, "Can't make request")
 	}
 
 	defer response.Body.Close()
@@ -188,7 +188,7 @@ func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType
 
 	if response.StatusCode >= http.StatusBadRequest {
 		u.logger.Errorf("Request failed: %s for %s. Path: %s\n", string(respBody), u.username, request.URL.RequestURI())
-		return nil, &api2.AppError{
+		return nil, &txgen.AppError{
 			Code:    response.StatusCode,
 			Message: string(respBody),
 		}
@@ -201,7 +201,7 @@ func (u *restUser) Username() model.Username {
 	return u.username
 }
 
-func newTransferForm(value api2.Amount, nonce api2.UUID, username model.Username) url.Values {
+func newTransferForm(value txgen.Amount, nonce txgen.UUID, username model.Username) url.Values {
 	form := url.Values{}
 	form.Add("value", strconv.Itoa(int(value)))
 	form.Add("recipient", username)
@@ -209,7 +209,7 @@ func newTransferForm(value api2.Amount, nonce api2.UUID, username model.Username
 	return form
 }
 
-func (u *restUser) authenticateUser() (string, api2.Error) {
+func (u *restUser) authenticateUser() (string, txgen.Error) {
 	u.logger.Infof("Authenticate user %s", u.username)
 	url := fmt.Sprintf("%s/login", u.endpoint)
 
@@ -224,7 +224,7 @@ func (u *restUser) authenticateUser() (string, api2.Error) {
 
 	if err != nil {
 		u.logger.Errorf("Can't make authentication request %s", err.Error())
-		return "", api2.NewBadRequestError(err, "Can't make authentication request")
+		return "", txgen.NewBadRequestError(err, "Can't make authentication request")
 	}
 
 	defer response.Body.Close()
@@ -232,7 +232,7 @@ func (u *restUser) authenticateUser() (string, api2.Error) {
 
 	if response.StatusCode >= http.StatusBadRequest {
 		u.logger.Errorf("Failed authentication request: %s for %s\n", string(respBody), u.username)
-		return "", &api2.AppError{
+		return "", &txgen.AppError{
 			Code:    response.StatusCode,
 			Message: string(respBody),
 		}
@@ -243,7 +243,7 @@ func (u *restUser) authenticateUser() (string, api2.Error) {
 
 	if err != nil {
 		u.logger.Errorf("Can't unmarshal body from authentication request: %s", err.Error())
-		return "", api2.NewInternalServerError(err, "Can't unmarshal body")
+		return "", txgen.NewInternalServerError(err, "Can't unmarshal body")
 	}
 
 	return loginResponse.Token, nil

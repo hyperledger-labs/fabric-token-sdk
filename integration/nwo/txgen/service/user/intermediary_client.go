@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/api"
+	txgen "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
 )
 
@@ -36,7 +36,7 @@ payment has two phases:
  2. Payer should use this random nonce to execute the transfer
 */
 
-func (ic *IntermediaryClient) ExecutePayment(payerName, payeeName model.UserAlias, amount api2.Amount) (api2.Amount, api2.Error) {
+func (ic *IntermediaryClient) ExecutePayment(payerName, payeeName model.UserAlias, amount txgen.Amount) (txgen.Amount, txgen.Error) {
 	ic.logger.Infof("User [%s] executes a transfer to [%s] of [%d]", payerName, payeeName, amount)
 	nonce := newUUID()
 
@@ -58,8 +58,8 @@ func (ic *IntermediaryClient) ExecutePayment(payerName, payeeName model.UserAlia
 	return amount, nil
 }
 
-func newUUID() api2.UUID {
-	var uuid api2.UUID
+func newUUID() txgen.UUID {
+	var uuid txgen.UUID
 	_, err := io.ReadFull(rand.Reader, uuid[:])
 	if err != nil {
 		panic(err)
@@ -67,7 +67,7 @@ func newUUID() api2.UUID {
 	return uuid
 }
 
-func (ic *IntermediaryClient) Withdraw(customer model.UserAlias, amount api2.Amount) (api2.Amount, api2.Error) {
+func (ic *IntermediaryClient) Withdraw(customer model.UserAlias, amount txgen.Amount) (txgen.Amount, txgen.Error) {
 	ic.logger.Infof("User [%s] executes a withdrawal of [%d]", customer, amount)
 	if err := ic.userProvider.Get(customer).Withdraw(amount); err != nil {
 		return 0, err
@@ -76,7 +76,7 @@ func (ic *IntermediaryClient) Withdraw(customer model.UserAlias, amount api2.Amo
 	return amount, nil
 }
 
-func (ic *IntermediaryClient) GetBalance(customer model.UserAlias) (api2.Amount, api2.Error) {
+func (ic *IntermediaryClient) GetBalance(customer model.UserAlias) (txgen.Amount, txgen.Error) {
 	ic.logger.Infof("User [%s] fetches balance", customer)
 	return ic.userProvider.Get(customer).GetBalance()
 }
