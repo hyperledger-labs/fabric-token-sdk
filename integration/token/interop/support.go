@@ -403,7 +403,7 @@ func scan(network *integration.Infrastructure, id *token3.NodeReference, hash []
 
 	_, err = network.Client(id.ReplicaName()).CallView("htlc.scan", common.JSONMarshall(&htlc.Scan{
 		TMSID:                 options.TMSID(),
-		Timeout:               120 * time.Second,
+		Timeout:               3 * time.Minute,
 		Hash:                  hash,
 		HashFunc:              hashFunc,
 		StartingTransactionID: startingTransactionID,
