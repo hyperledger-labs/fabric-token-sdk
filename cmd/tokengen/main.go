@@ -11,10 +11,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/artifactgen/gen"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/certfier"
-	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/version"
+	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/artifactgen/gen"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/certfier"
+	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp"
+	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -44,9 +45,9 @@ func main() {
 		panic(err)
 	}
 
-	mainCmd.AddCommand(pp2.GenCmd())
-	mainCmd.AddCommand(pp2.UpdateCmd())
-	mainCmd.AddCommand(pp2.UtilsCmd())
+	mainCmd.AddCommand(pp.GenCmd())
+	mainCmd.AddCommand(pp.UpdateCmd())
+	mainCmd.AddCommand(pp.UtilsCmd())
 	mainCmd.AddCommand(certfier.KeyPairGenCmd())
 	mainCmd.AddCommand(gen.Cmd())
 	mainCmd.AddCommand(version.Cmd())

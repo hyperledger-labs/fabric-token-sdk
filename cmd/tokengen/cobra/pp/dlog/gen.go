@@ -11,10 +11,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
+	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/idemix"
+
 	math3 "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/cc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

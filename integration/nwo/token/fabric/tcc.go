@@ -17,11 +17,12 @@ import (
 	"strings"
 	"text/template"
 
+	pp2 "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	topology3 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/cc"
 	. "github.com/onsi/gomega"
 )
 
