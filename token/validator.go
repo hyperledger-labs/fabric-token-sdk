@@ -53,3 +53,15 @@ func (c *Validator) UnmarshallAndVerifyWithMetadata(ctx context.Context, ledger 
 	copy(res, actions)
 	return res, meta, nil
 }
+
+func NewLedgerFromGetter(f driver.GetStateFnc) *stateGetter {
+	return &stateGetter{f: f}
+}
+
+type stateGetter struct {
+	f driver.GetStateFnc
+}
+
+func (g *stateGetter) GetState(key string) ([]byte, error) {
+	return g.f(key)
+}
