@@ -117,6 +117,7 @@ integration-tests-dlogstress:
 .PHONY: tidy
 tidy:
 	@go mod tidy
+	cd tools; go mod tidy
 
 .PHONY: clean
 clean:
@@ -145,3 +146,7 @@ clean-fabric-peer-images:
 .PHONY: tokengen
 tokengen:
 	@go install ./cmd/tokengen
+
+.PHONY: txgen
+txgen:
+	@go install ./cmd/txgen

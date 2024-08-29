@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
@@ -96,6 +98,16 @@ func CheckBalance(network *integration.Infrastructure, id *token3.NodeReference,
 	Expect(err).NotTo(HaveOccurred())
 	expectedQ := token2.NewQuantityFromUInt64(expected)
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+}
+
+func CheckBalanceReturnError(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ string, expected uint64, opts ...token.ServiceOption) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.Errorf("check balance panicked with err [%v]", r)
+		}
+	}()
+	CheckBalance(network, id, wallet, typ, expected, opts...)
+	return nil
 }
 
 func CheckHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ string, expected int64, opts ...token.ServiceOption) {
@@ -403,7 +415,7 @@ func scan(network *integration.Infrastructure, id *token3.NodeReference, hash []
 
 	_, err = network.Client(id.ReplicaName()).CallView("htlc.scan", common.JSONMarshall(&htlc.Scan{
 		TMSID:                 options.TMSID(),
-		Timeout:               120 * time.Second,
+		Timeout:               3 * time.Minute,
 		Hash:                  hash,
 		HashFunc:              hashFunc,
 		StartingTransactionID: startingTransactionID,

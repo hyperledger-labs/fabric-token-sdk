@@ -12,6 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
+	api3 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/user"
+
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
@@ -19,11 +25,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	metrics2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/model/api"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/txgen/service/user"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -89,9 +90,9 @@ func (u *viewUser) CallView(fid string, in []byte) (interface{}, error) {
 
 func (u *viewUser) Username() model.Username { return u.username }
 
-func (u *viewUser) InitiateTransfer(_ api.Amount, _ api.UUID) api.Error { return nil }
+func (u *viewUser) InitiateTransfer(_ api3.Amount, _ api3.UUID) api3.Error { return nil }
 
-func (u *viewUser) Transfer(value api.Amount, recipient model.Username, _ api.UUID) api.Error {
+func (u *viewUser) Transfer(value api3.Amount, recipient model.Username, _ api3.UUID) api3.Error {
 	u.logger.Infof("Call view for transfer of %d to %s\n", value, recipient)
 	_, err := u.callView("transfer", &views.Transfer{
 		Auditor:      u.auditor,
@@ -101,12 +102,12 @@ func (u *viewUser) Transfer(value api.Amount, recipient model.Username, _ api.UU
 		RecipientEID: recipient,
 	})
 	if err != nil {
-		return api.NewInternalServerError(err, err.Error())
+		return api3.NewInternalServerError(err, err.Error())
 	}
 	return nil
 }
 
-func (u *viewUser) Withdraw(value api.Amount) api.Error {
+func (u *viewUser) Withdraw(value api3.Amount) api3.Error {
 	u.logger.Infof("Call view to withdraw %d\n", value)
 
 	_, err := u.callView("withdrawal", &views.Withdrawal{
@@ -116,12 +117,12 @@ func (u *viewUser) Withdraw(value api.Amount) api.Error {
 		Issuer:    "issuer",
 	})
 	if err != nil {
-		return api.NewInternalServerError(err, err.Error())
+		return api3.NewInternalServerError(err, err.Error())
 	}
 	return nil
 }
 
-func (u *viewUser) GetBalance() (api.Amount, api.Error) {
+func (u *viewUser) GetBalance() (api3.Amount, api3.Error) {
 	u.logger.Infof("Call view to get balance of %s\n", u.username)
 
 	res, err := u.callView("balance", &views.BalanceQuery{
@@ -129,17 +130,17 @@ func (u *viewUser) GetBalance() (api.Amount, api.Error) {
 		Type:   currency,
 	})
 	if err != nil {
-		return 0, api.NewInternalServerError(err, err.Error())
+		return 0, api3.NewInternalServerError(err, err.Error())
 	}
 
 	b := &views.Balance{}
 	if err := json.Unmarshal(res.([]byte), b); err != nil {
-		return 0, api.NewInternalServerError(err, err.Error())
+		return 0, api3.NewInternalServerError(err, err.Error())
 	}
 	u.logger.Infof("Received balance result: [%s]", b.Quantity)
 	q, err := token.ToQuantity(b.Quantity, 64)
 	if err != nil {
-		return 0, api.NewInternalServerError(err, err.Error())
+		return 0, api3.NewInternalServerError(err, err.Error())
 	}
 	return q.ToBigInt().Int64(), nil
 }
