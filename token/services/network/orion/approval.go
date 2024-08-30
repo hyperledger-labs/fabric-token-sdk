@@ -9,6 +9,8 @@ package orion
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
@@ -20,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -266,6 +269,10 @@ type LedgerWrapper struct {
 	qe *orion.SessionQueryExecutor
 }
 
-func (l *LedgerWrapper) GetState(key string) ([]byte, error) {
+func (l *LedgerWrapper) GetState(id token2.ID) ([]byte, error) {
+	key, err := keys.CreateTokenKey(id.TxId, id.Index)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting token key for [%v]", id)
+	}
 	return l.qe.Get(orionKey(key))
 }

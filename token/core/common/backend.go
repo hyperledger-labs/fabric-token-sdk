@@ -8,6 +8,7 @@ package common
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -38,8 +39,8 @@ func (b *Backend) HasBeenSignedBy(id driver.Identity, verifier driver.Verifier) 
 	return sigma, verifier.Verify(b.Message, sigma)
 }
 
-func (b *Backend) GetState(key string) ([]byte, error) {
-	return b.Ledger(key)
+func (b *Backend) GetState(id token.ID) ([]byte, error) {
+	return b.Ledger(id)
 }
 
 func (b *Backend) Signatures() [][]byte {

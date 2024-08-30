@@ -8,6 +8,8 @@ package transfer_test
 import (
 	"context"
 
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -25,7 +27,7 @@ var _ = Describe("Sender", func() {
 		signers             []driver.Signer
 		pp                  *crypto.PublicParams
 
-		transfer *transfer2.TransferAction
+		transfer *transfer2.Action
 		sender   *transfer2.Sender
 
 		invalues  []*math.Zr
@@ -34,7 +36,7 @@ var _ = Describe("Sender", func() {
 		tokens    []*token.Token
 
 		owners [][]byte
-		ids    []string
+		ids    []*token2.ID
 	)
 	BeforeEach(func() {
 		var err error
@@ -69,10 +71,10 @@ var _ = Describe("Sender", func() {
 		outvalues[0] = 65
 		outvalues[1] = 35
 
-		ids = make([]string, 3)
-		ids[0] = "0"
-		ids[1] = "1"
-		ids[2] = "3"
+		ids = make([]*token2.ID, 3)
+		ids[0] = &token2.ID{TxId: "0"}
+		ids[1] = &token2.ID{TxId: "1"}
+		ids[2] = &token2.ID{TxId: "3"}
 
 		inputs := PrepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
 		tokens = make([]*token.Token, 3)

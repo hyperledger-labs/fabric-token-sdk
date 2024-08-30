@@ -200,7 +200,7 @@ func TestQueryEngine_GetTokens(t *testing.T) {
 		Type:     "some_type",
 		Quantity: "some_quantity",
 	}}
-	mockQE.GetTokensReturns(nil, expectedTokens, nil)
+	mockQE.GetTokensReturns(expectedTokens, nil)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	tokens, err := queryEngine.GetTokens(nil)
@@ -212,7 +212,7 @@ func TestQueryEngine_GetTokens_Error(t *testing.T) {
 	mockQE := &mock.QueryEngine{}
 
 	expectedErr := errors.New("mock error")
-	mockQE.GetTokensReturns(nil, nil, expectedErr)
+	mockQE.GetTokensReturns(nil, expectedErr)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger("test"), mockQE, 3, time.Second)
 	tokens, err := queryEngine.GetTokens(nil)

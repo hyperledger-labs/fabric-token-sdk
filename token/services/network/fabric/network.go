@@ -68,7 +68,11 @@ type qe struct {
 	ns string
 }
 
-func (q *qe) GetState(key string) ([]byte, error) {
+func (q *qe) GetState(id token.ID) ([]byte, error) {
+	key, err := keys.CreateTokenKey(id.TxId, id.Index)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting token key for [%v]", id)
+	}
 	return q.QueryExecutor.GetState(q.ns, key)
 }
 

@@ -15,6 +15,8 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -217,7 +219,7 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	}
 
 	// Verify
-	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(context.Background(), stub, stub.GetTxID(), raw)
+	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(context.Background(), &ledger{stub: stub}, stub.GetTxID(), raw)
 	if err != nil {
 		return shim.Error("failed to verify token request: " + err.Error())
 	}
@@ -306,4 +308,16 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 		return shim.Error(fmt.Sprintf("failed marshalling spent flags: [%s]", err))
 	}
 	return shim.Success(raw)
+}
+
+type ledger struct {
+	stub shim.ChaincodeStubInterface
+}
+
+func (l *ledger) GetState(id token2.ID) ([]byte, error) {
+	key, err := keys.CreateTokenKey(id.TxId, id.Index)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting token key for [%v]", id)
+	}
+	return l.stub.GetState(key)
 }

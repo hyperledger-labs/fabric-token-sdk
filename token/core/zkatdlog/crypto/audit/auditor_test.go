@@ -12,6 +12,8 @@ import (
 	"os"
 	"time"
 
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -117,7 +119,7 @@ var _ = Describe("Auditor", func() {
 	})
 })
 
-func createTransfer(pp *crypto.PublicParams) (*transfer2.TransferAction, driver.TransferMetadata, [][]*token.Token) {
+func createTransfer(pp *crypto.PublicParams) (*transfer2.Action, driver.TransferMetadata, [][]*token.Token) {
 	id, auditInfo := getIdemixInfo("./testdata/idemix")
 	transfer, inf, inputs := prepareTransfer(pp, id)
 
@@ -152,7 +154,7 @@ func createTransfer(pp *crypto.PublicParams) (*transfer2.TransferAction, driver.
 	return transfer, metadata, tokns
 }
 
-func createTransferWithBogusOutput(pp *crypto.PublicParams) (*transfer2.TransferAction, driver.TransferMetadata, [][]*token.Token) {
+func createTransferWithBogusOutput(pp *crypto.PublicParams) (*transfer2.Action, driver.TransferMetadata, [][]*token.Token) {
 	id, auditInfo := getIdemixInfo("./testdata/idemix")
 	transfer, inf, inputs := prepareTransfer(pp, id)
 
@@ -296,11 +298,12 @@ func createInputs(pp *crypto.PublicParams, id driver.Identity) ([]*token.Token, 
 	return inputs, infos
 }
 
-func prepareTransfer(pp *crypto.PublicParams, id driver.Identity) (*transfer2.TransferAction, []*token.Metadata, []*token.Token) {
+func prepareTransfer(pp *crypto.PublicParams, id driver.Identity) (*transfer2.Action, []*token.Metadata, []*token.Token) {
 	inputs, tokenInfos := createInputs(pp, id)
 
 	fakeSigner := &mock.SigningIdentity{}
-	sender, err := transfer2.NewSender([]driver.Signer{fakeSigner, fakeSigner}, inputs, []string{"0", "1"}, tokenInfos, pp)
+
+	sender, err := transfer2.NewSender([]driver.Signer{fakeSigner, fakeSigner}, inputs, []*token3.ID{{TxId: "0"}, {TxId: "1"}}, tokenInfos, pp)
 	Expect(err).NotTo(HaveOccurred())
 	transfer, inf, err := sender.GenerateZKTransfer(context.TODO(), []uint64{40, 20}, [][]byte{id, id})
 	Expect(err).NotTo(HaveOccurred())

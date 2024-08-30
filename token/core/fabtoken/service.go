@@ -14,7 +14,7 @@ import (
 )
 
 type TokenLoader interface {
-	GetTokens(ids []*token.ID) ([]string, []*token.Token, error)
+	GetTokens(ids []*token.ID) ([]*token.Token, error)
 }
 
 type Service struct {

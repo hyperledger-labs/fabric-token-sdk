@@ -16,15 +16,15 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-type ValidateTransferFunc = common.ValidateTransferFunc[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction]
+type ValidateTransferFunc = common.ValidateTransferFunc[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction]
 
-type ValidateIssueFunc = common.ValidateIssueFunc[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction]
+type ValidateIssueFunc = common.ValidateIssueFunc[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction]
 
-type Context = common.Context[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction]
+type Context = common.Context[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction]
 
 type ActionDeserializer struct{}
 
-func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*issue.IssueAction, []*transfer.TransferAction, error) {
+func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*issue.IssueAction, []*transfer.Action, error) {
 	issueActions := make([]*issue.IssueAction, len(tr.Issues))
 	for i := 0; i < len(tr.Issues); i++ {
 		ia := &issue.IssueAction{}
@@ -34,9 +34,9 @@ func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*iss
 		issueActions[i] = ia
 	}
 
-	transferActions := make([]*transfer.TransferAction, len(tr.Transfers))
+	transferActions := make([]*transfer.Action, len(tr.Transfers))
 	for i := 0; i < len(tr.Transfers); i++ {
-		ta := &transfer.TransferAction{}
+		ta := &transfer.Action{}
 		if err := ta.Deserialize(tr.Transfers[i]); err != nil {
 			return nil, nil, err
 		}
@@ -46,7 +46,7 @@ func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*iss
 	return issueActions, transferActions, nil
 }
 
-type Validator = common.Validator[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction]
+type Validator = common.Validator[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction]
 
 func New(logger logging.Logger, pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
 	transferValidators := []ValidateTransferFunc{
@@ -60,7 +60,7 @@ func New(logger logging.Logger, pp *crypto.PublicParams, deserializer driver.Des
 		IssueValidate,
 	}
 
-	return common.NewValidator[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction](
+	return common.NewValidator[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction](
 		logger,
 		pp,
 		deserializer,

@@ -10,6 +10,8 @@ import (
 	"context"
 	"encoding/json"
 
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -33,7 +35,7 @@ type Sender struct {
 	// Inputs to be spent in the transfer
 	Inputs []*token.Token
 	// InputIDs is the identifiers of the Inputs to be spent
-	InputIDs []string
+	InputIDs []*token2.ID
 	// contains the opening of the inputs to be spent
 	InputInformation []*token.Metadata
 	// PublicParams refers to the public cryptographic parameters to be used
@@ -42,16 +44,16 @@ type Sender struct {
 }
 
 // NewSender returns a Sender
-func NewSender(signers []driver.Signer, tokens []*token.Token, ids []string, inf []*token.Metadata, pp *crypto.PublicParams) (*Sender, error) {
+func NewSender(signers []driver.Signer, tokens []*token.Token, ids []*token2.ID, inf []*token.Metadata, pp *crypto.PublicParams) (*Sender, error) {
 	if (signers != nil && len(signers) != len(tokens)) || len(tokens) != len(inf) || len(ids) != len(inf) {
 		return nil, errors.Errorf("number of tokens to be spent does not match number of opening")
 	}
 	return &Sender{Signers: signers, Inputs: tokens, InputIDs: ids, InputInformation: inf, PublicParams: pp}, nil
 }
 
-// GenerateZKTransfer produces a TransferAction and an array of ValidationRecords
+// GenerateZKTransfer produces a Action and an array of ValidationRecords
 // that corresponds to the openings of the newly created outputs
-func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners [][]byte) (*TransferAction, []*token.Metadata, error) {
+func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners [][]byte) (*Action, []*token.Metadata, error) {
 	span := trace.SpanFromContext(ctx)
 	if len(values) != len(owners) {
 		return nil, nil, errors.Errorf("cannot generate transfer: number of values [%d] does not match number of recipients [%d]", len(values), len(owners))
@@ -116,10 +118,10 @@ func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
 	return signatures, nil
 }
 
-// TransferAction specifies a transfer of one or more tokens
-type TransferAction struct {
+// Action specifies a transfer of one or more tokens
+type Action struct {
 	// Inputs specify the identifiers in of the tokens to be spent
-	Inputs []string
+	Inputs []*token2.ID
 	// InputCommitments are the PedersenCommitments in the inputs
 	InputCommitments []*math.G1
 	// OutputTokens are the new tokens resulting from the transfer
@@ -130,8 +132,8 @@ type TransferAction struct {
 	Metadata map[string][]byte
 }
 
-// NewTransfer returns the TransferAction that matches the passed arguments
-func NewTransfer(inputs []string, inputCommitments []*math.G1, outputs []*math.G1, owners [][]byte, proof []byte) (*TransferAction, error) {
+// NewTransfer returns the Action that matches the passed arguments
+func NewTransfer(inputs []*token2.ID, inputCommitments []*math.G1, outputs []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
 	if len(outputs) != len(owners) {
 		return nil, errors.Errorf("number of recipients [%d] does not match number of outputs [%d]", len(outputs), len(owners))
 	}
@@ -142,7 +144,7 @@ func NewTransfer(inputs []string, inputCommitments []*math.G1, outputs []*math.G
 	for i, o := range outputs {
 		tokens[i] = &token.Token{Data: o, Owner: owners[i]}
 	}
-	return &TransferAction{
+	return &Action{
 		Inputs:           inputs,
 		InputCommitments: inputCommitments,
 		OutputTokens:     tokens,
@@ -151,18 +153,22 @@ func NewTransfer(inputs []string, inputCommitments []*math.G1, outputs []*math.G
 	}, nil
 }
 
-// GetInputs returns the inputs in the TransferAction
-func (t *TransferAction) GetInputs() ([]string, error) {
+// GetInputs returns the inputs in the Action
+func (t *Action) GetInputs() ([]*token2.ID, error) {
 	return t.Inputs, nil
 }
 
-// NumOutputs returns the number of outputs in the TransferAction
-func (t *TransferAction) NumOutputs() int {
+func (t *Action) GetSerialNumbers() []string {
+	return nil
+}
+
+// NumOutputs returns the number of outputs in the Action
+func (t *Action) NumOutputs() int {
 	return len(t.OutputTokens)
 }
 
-// GetOutputs returns the outputs in the TransferAction
-func (t *TransferAction) GetOutputs() []driver.Output {
+// GetOutputs returns the outputs in the Action
+func (t *Action) GetOutputs() []driver.Output {
 	var res []driver.Output
 	for _, outputToken := range t.OutputTokens {
 		res = append(res, outputToken)
@@ -170,33 +176,33 @@ func (t *TransferAction) GetOutputs() []driver.Output {
 	return res
 }
 
-// IsRedeemAt checks if output in the TransferAction at the passed index is redeemed
-func (t *TransferAction) IsRedeemAt(index int) bool {
+// IsRedeemAt checks if output in the Action at the passed index is redeemed
+func (t *Action) IsRedeemAt(index int) bool {
 	return t.OutputTokens[index].IsRedeem()
 }
 
-// SerializeOutputAt marshals the output in the TransferAction at the passed index
-func (t *TransferAction) SerializeOutputAt(index int) ([]byte, error) {
+// SerializeOutputAt marshals the output in the Action at the passed index
+func (t *Action) SerializeOutputAt(index int) ([]byte, error) {
 	return t.OutputTokens[index].Serialize()
 }
 
-// Serialize marshals the TransferAction
-func (t *TransferAction) Serialize() ([]byte, error) {
+// Serialize marshals the Action
+func (t *Action) Serialize() ([]byte, error) {
 	return json.Marshal(t)
 }
 
-// GetProof returns the proof in the TransferAction
-func (t *TransferAction) GetProof() []byte {
+// GetProof returns the proof in the Action
+func (t *Action) GetProof() []byte {
 	return t.Proof
 }
 
-// Deserialize unmarshals the TransferAction
-func (t *TransferAction) Deserialize(raw []byte) error {
+// Deserialize unmarshals the Action
+func (t *Action) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, t)
 }
 
-// GetSerializedOutputs returns the outputs in the TransferAction serialized
-func (t *TransferAction) GetSerializedOutputs() ([][]byte, error) {
+// GetSerializedOutputs returns the outputs in the Action serialized
+func (t *Action) GetSerializedOutputs() ([][]byte, error) {
 	var res [][]byte
 	for _, token := range t.OutputTokens {
 		r, err := token.Serialize()
@@ -208,8 +214,8 @@ func (t *TransferAction) GetSerializedOutputs() ([][]byte, error) {
 	return res, nil
 }
 
-// GetOutputCommitments returns the Pedersen commitments in the TransferAction
-func (t *TransferAction) GetOutputCommitments() []*math.G1 {
+// GetOutputCommitments returns the Pedersen commitments in the Action
+func (t *Action) GetOutputCommitments() []*math.G1 {
 	com := make([]*math.G1, len(t.OutputTokens))
 	for i := 0; i < len(com); i++ {
 		com[i] = t.OutputTokens[i].Data
@@ -219,12 +225,12 @@ func (t *TransferAction) GetOutputCommitments() []*math.G1 {
 
 // IsGraphHiding returns false
 // zkatdlog is not graph hiding
-func (t *TransferAction) IsGraphHiding() bool {
+func (t *Action) IsGraphHiding() bool {
 	return false
 }
 
-// GetMetadata returns metadata of the TransferAction
-func (t *TransferAction) GetMetadata() map[string][]byte {
+// GetMetadata returns metadata of the Action
+func (t *Action) GetMetadata() map[string][]byte {
 	return t.Metadata
 }
 

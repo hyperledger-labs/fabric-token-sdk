@@ -279,13 +279,11 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 	tokens = getTokensBy(t, db, "alice", "ABC")
 	assert.Len(t, tokens, 1, "unspentTokensIteratorBy: expected only Alice ABC tokens to be returned")
 
-	keys, unsp, err := db.GetTokens(&token.ID{TxId: "tx101", Index: 0})
+	unsp, err := db.GetTokens(&token.ID{TxId: "tx101", Index: 0})
 	assert.NoError(t, err)
-	assert.Len(t, keys, 1)
 	assert.Len(t, unsp, 1)
 	assert.Equal(t, "0x02", unsp[0].Quantity)
 	assert.Equal(t, "ABC", unsp[0].Type)
-	assert.Equal(t, keys[0], "\x00ztoken\x00tx101\x000\x00")
 }
 
 func getTokensBy(t *testing.T, db *TokenDB, ownerEID, typ string) []*token.UnspentToken {
@@ -627,7 +625,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 	assert.Equal(t, "tx101", string(infos[2]))
 
 	// infos and outputs
-	keys, toks, infos, err := db.GetTokenInfoAndOutputs(context.TODO(), ids)
+	toks, infos, err := db.GetTokenInfoAndOutputs(context.TODO(), ids)
 	assert.NoError(t, err)
 	assert.Len(t, infos, 3)
 	assert.Equal(t, "tx102", string(infos[0]))
@@ -637,7 +635,6 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 	assert.Equal(t, "tx102l", string(toks[0]))
 	assert.Equal(t, "tx102l", string(toks[1]))
 	assert.Equal(t, "tx101l", string(toks[2]))
-	assert.Equal(t, "\x00ztoken\x00tx101\x000\x00", string(keys[2]))
 }
 
 func TDeleteMultiple(t *testing.T, db *TokenDB) {

@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -342,23 +341,15 @@ func (db *TokenDB) GetTokenInfos(ids []*token.ID) ([][]byte, error) {
 }
 
 // GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
-func (db *TokenDB) GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([]string, [][]byte, [][]byte, error) {
+func (db *TokenDB) GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent("get_ledger_token_meta")
 	tokens, metas, err := db.getLedgerTokenAndMeta(ctx, ids)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	span.AddEvent("create_outputs")
-	outputIDs := make([]string, len(ids))
-	for i := 0; i < len(ids); i++ {
-		outputID, err := keys.CreateTokenKey(ids[i].TxId, ids[i].Index)
-		if err != nil {
-			return nil, nil, nil, errors.Wrapf(err, "error creating output ID: %v", ids[i])
-		}
-		outputIDs[i] = outputID
-	}
-	return outputIDs, tokens, metas, nil
+	return tokens, metas, nil
 }
 
 // GetAllTokenInfos retrieves the token information for the passed ids.
@@ -461,9 +452,9 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 }
 
 // GetTokens returns the owned tokens and their identifier keys for the passed ids.
-func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error) {
+func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 	if len(inputs) == 0 {
-		return []string{}, []*token.Token{}, nil
+		return []*token.Token{}, nil
 	}
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, inputs)
@@ -472,12 +463,11 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, err
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer rows.Close()
 
 	tokens := make([]*token.Token, len(inputs))
-	ids := make([]string, len(inputs))
 	counter := 0
 	for rows.Next() {
 		tokID := token.ID{}
@@ -491,7 +481,7 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, err
 			&quantity,
 		)
 		if err != nil {
-			return nil, tokens, err
+			return tokens, err
 		}
 		tok := &token.Token{
 			Owner:    &token.Owner{Raw: ownerRaw},
@@ -499,19 +489,10 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, err
 			Quantity: quantity,
 		}
 
-		// The token keys are used to refer to tokens as stored in the world state by the tokenchaincode
-		// so that they can be validated as inputs for the transaction
-		id, err := keys.CreateTokenKey(tokID.TxId, tokID.Index)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed generating id key [%v]", tokID)
-		}
-		logger.Debugf("input [%s]-[%s]-[%s:%s]", inputs[counter], tokID, tok.Type, tok.Quantity)
-
 		// put in the right position
 		found := false
 		for j := 0; j < len(inputs); j++ {
 			if inputs[j].Equal(tokID) {
-				ids[j] = id
 				tokens[j] = tok
 				logger.Debugf("set token at location [%s:%s]-[%d]", tok.Type, tok.Quantity, j)
 				found = true
@@ -519,27 +500,27 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, err
 			}
 		}
 		if !found {
-			return nil, nil, errors.Errorf("retrieved wrong token [%s]", id)
+			return nil, errors.Errorf("retrieved wrong token [%v]", tokID)
 		}
 
 		counter++
 	}
 	logger.Debugf("found [%d] tokens, expected [%d]", counter, len(inputs))
 	if err = rows.Err(); err != nil {
-		return nil, tokens, err
+		return tokens, err
 	}
 	if counter == 0 {
-		return nil, nil, errors.Errorf("token not found for key [%s:%d]", inputs[0].TxId, inputs[0].Index)
+		return nil, errors.Errorf("token not found for key [%s:%d]", inputs[0].TxId, inputs[0].Index)
 	}
 	if counter != len(inputs) {
 		for j, t := range tokens {
 			if t == nil {
-				return nil, nil, errors.Errorf("token not found for key [%s:%d]", inputs[j].TxId, inputs[j].Index)
+				return nil, errors.Errorf("token not found for key [%s:%d]", inputs[j].TxId, inputs[j].Index)
 			}
 		}
 		panic("programming error: should not reach this point")
 	}
-	return ids, tokens, nil
+	return tokens, nil
 }
 
 // QueryTokenDetails returns details about owned tokens, regardless if they have been spent or not.

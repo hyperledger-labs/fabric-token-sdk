@@ -115,7 +115,7 @@ func (i *IssueAction) GetMetadata() map[string][]byte {
 // TransferAction encodes a fabtoken transfer
 type TransferAction struct {
 	// identifier of token to be transferred
-	Inputs []string
+	Inputs []*token.ID
 	// outputs to be created as a result of the transfer
 	Outputs []*Output
 	// Metadata contains the transfer action's metadata
@@ -180,8 +180,12 @@ func (t *TransferAction) SerializeOutputAt(index int) ([]byte, error) {
 }
 
 // GetInputs returns inputs of the TransferAction
-func (t *TransferAction) GetInputs() ([]string, error) {
+func (t *TransferAction) GetInputs() ([]*token.ID, error) {
 	return t.Inputs, nil
+}
+
+func (t *TransferAction) GetSerialNumbers() []string {
+	return nil
 }
 
 // Deserialize un-marshals TransferAction

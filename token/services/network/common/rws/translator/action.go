@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package translator
 
+import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 type SetupAction interface {
 	GetSetupParameters() ([]byte, error)
 }
@@ -36,7 +38,9 @@ type TransferAction interface {
 	// SerializeOutputAt returns the serialized output at the passed index
 	SerializeOutputAt(index int) ([]byte, error)
 	// GetInputs returns the identifiers of the inputs in the action.
-	GetInputs() ([]string, error)
+	GetInputs() ([]*token.ID, error)
+	// GetSerialNumbers returns the serial numbers of the inputs if this action supports graph hiding
+	GetSerialNumbers() []string
 	// IsGraphHiding returns true if the action is graph hiding
 	IsGraphHiding() bool
 	// GetMetadata returns the action's metadata

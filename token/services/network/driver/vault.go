@@ -42,7 +42,7 @@ type TokenVault interface {
 }
 
 type QueryExecutor interface {
-	GetState(key string) ([]byte, error)
+	GetState(id token.ID) ([]byte, error)
 	Done()
 }
 

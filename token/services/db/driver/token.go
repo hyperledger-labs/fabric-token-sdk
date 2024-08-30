@@ -148,11 +148,11 @@ type TokenDB interface {
 	GetTokenInfos(ids []*token.ID) ([][]byte, error)
 	// GetTokenInfoAndOutputs returns both value and metadata of the tokens for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
-	GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([]string, [][]byte, [][]byte, error)
+	GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error)
 	// GetAllTokenInfos returns the token metadata for the passed ids
 	GetAllTokenInfos(ids []*token.ID) ([][]byte, error)
 	// GetTokens returns the owned tokens and their identifier keys for the passed ids.
-	GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error)
+	GetTokens(inputs ...*token.ID) ([]*token.Token, error)
 	// WhoDeletedTokens for each id, the function return if it was deleted and by who as per the Delete function
 	WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
 	// TransactionExists returns true if a token with that transaction id exists in the db
