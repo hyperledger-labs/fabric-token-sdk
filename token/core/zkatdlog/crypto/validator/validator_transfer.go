@@ -21,28 +21,14 @@ import (
 )
 
 func TransferSignatureValidate(ctx *Context) error {
-	var tokens []*token.Token
 	var signatures [][]byte
 
-	inputs, err := ctx.TransferAction.GetInputs()
-	if err != nil {
-		return errors.Wrapf(err, "failed to retrieve inputs to spend")
+	if len(ctx.TransferAction.Inputs) != len(ctx.TransferAction.InputTokens) {
+		return errors.Errorf("invalid number of token inputs")
 	}
-	for i, in := range inputs {
-		ctx.Logger.Debugf("load token [%d][%s]", i, in)
-		bytes, err := ctx.Ledger.GetState(*in)
-		if err != nil {
-			return errors.Wrapf(err, "failed to retrieve input to spend [%s]", in)
-		}
-		if len(bytes) == 0 {
-			return errors.Errorf("input to spend [%s] does not exists", in)
-		}
 
-		tok := &token.Token{}
-		if err := tok.Deserialize(bytes); err != nil {
-			return errors.Wrapf(err, "failed to deserialize input to spend [%s]", in)
-		}
-		tokens = append(tokens, tok)
+	for i, in := range ctx.TransferAction.Inputs {
+		tok := ctx.TransferAction.InputTokens[i]
 		ctx.Logger.Debugf("check sender [%d][%s]", i, driver.Identity(tok.Owner).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner)
 		if err != nil {
@@ -56,7 +42,7 @@ func TransferSignatureValidate(ctx *Context) error {
 		signatures = append(signatures, sigma)
 	}
 
-	ctx.InputTokens = tokens
+	ctx.InputTokens = ctx.TransferAction.InputTokens
 	ctx.Signatures = signatures
 
 	return nil
