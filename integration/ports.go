@@ -20,7 +20,7 @@ type TestPortRange int
 
 const (
 	basePort      = 20000
-	portsPerNode  = 80
+	portsPerNode  = 150
 	portsPerSuite = 10 * portsPerNode
 
 	SimpleTokenSelector    = "simple"
