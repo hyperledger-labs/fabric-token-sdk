@@ -116,6 +116,8 @@ func (i *IssueAction) GetMetadata() map[string][]byte {
 type TransferAction struct {
 	// identifier of token to be transferred
 	Inputs []*token.ID
+	// InputTokens are the inputs transferred by this action
+	InputTokens []*token.Token
 	// outputs to be created as a result of the transfer
 	Outputs []*Output
 	// Metadata contains the transfer action's metadata
@@ -180,8 +182,20 @@ func (t *TransferAction) SerializeOutputAt(index int) ([]byte, error) {
 }
 
 // GetInputs returns inputs of the TransferAction
-func (t *TransferAction) GetInputs() ([]*token.ID, error) {
-	return t.Inputs, nil
+func (t *TransferAction) GetInputs() []*token.ID {
+	return t.Inputs
+}
+
+func (t *TransferAction) GetSerializedInputs() ([][]byte, error) {
+	var res [][]byte
+	for _, token := range t.InputTokens {
+		r, err := json.Marshal(token)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+	return res, nil
 }
 
 func (t *TransferAction) GetSerialNumbers() []string {

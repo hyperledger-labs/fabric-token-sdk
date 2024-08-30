@@ -89,7 +89,7 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 	}
 
 	span.AddEvent("create_new_transfer")
-	transfer, err := NewTransfer(s.InputIDs, in, out, owners, proof)
+	transfer, err := NewTransfer(s.InputIDs, s.Inputs, out, owners, proof)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to produce transfer action")
 	}
@@ -123,7 +123,7 @@ type Action struct {
 	// Inputs specify the identifiers in of the tokens to be spent
 	Inputs []*token2.ID
 	// InputCommitments are the PedersenCommitments in the inputs
-	InputCommitments []*math.G1
+	InputTokens []*token.Token
 	// OutputTokens are the new tokens resulting from the transfer
 	OutputTokens []*token.Token
 	// ZK Proof that shows that the transfer is correct
@@ -133,29 +133,41 @@ type Action struct {
 }
 
 // NewTransfer returns the Action that matches the passed arguments
-func NewTransfer(inputs []*token2.ID, inputCommitments []*math.G1, outputs []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
+func NewTransfer(inputs []*token2.ID, inputToken []*token.Token, outputs []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
 	if len(outputs) != len(owners) {
 		return nil, errors.Errorf("number of recipients [%d] does not match number of outputs [%d]", len(outputs), len(owners))
 	}
-	if len(inputs) != len(inputCommitments) {
-		return nil, errors.Errorf("number of inputs [%d] does not match number of inputCommitments [%d]", len(inputs), len(inputCommitments))
+	if len(inputs) != len(inputToken) {
+		return nil, errors.Errorf("number of inputs [%d] does not match number of input tokens [%d]", len(inputs), len(inputToken))
 	}
 	tokens := make([]*token.Token, len(owners))
 	for i, o := range outputs {
 		tokens[i] = &token.Token{Data: o, Owner: owners[i]}
 	}
 	return &Action{
-		Inputs:           inputs,
-		InputCommitments: inputCommitments,
-		OutputTokens:     tokens,
-		Proof:            proof,
-		Metadata:         map[string][]byte{},
+		Inputs:       inputs,
+		InputTokens:  inputToken,
+		OutputTokens: tokens,
+		Proof:        proof,
+		Metadata:     map[string][]byte{},
 	}, nil
 }
 
 // GetInputs returns the inputs in the Action
-func (t *Action) GetInputs() ([]*token2.ID, error) {
-	return t.Inputs, nil
+func (t *Action) GetInputs() []*token2.ID {
+	return t.Inputs
+}
+
+func (t *Action) GetSerializedInputs() ([][]byte, error) {
+	var res [][]byte
+	for _, token := range t.InputTokens {
+		r, err := token.Serialize()
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+	return res, nil
 }
 
 func (t *Action) GetSerialNumbers() []string {

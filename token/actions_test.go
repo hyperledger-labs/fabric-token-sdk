@@ -116,10 +116,9 @@ func TestTransferAction_SerializeOutputAt(t *testing.T) {
 func TestTransferAction_GetInputs(t *testing.T) {
 	mockTransferAction := &mock.TransferAction{}
 	mockInputs := []*token.ID{{TxId: "input1"}, {TxId: "input2"}}
-	mockTransferAction.GetInputsReturns(mockInputs, nil)
+	mockTransferAction.GetInputsReturns(mockInputs)
 	transferAction := &TransferAction{a: mockTransferAction}
-	inputs, err := transferAction.GetInputs()
-	assert.NoError(t, err)
+	inputs := transferAction.GetInputs()
 	assert.Equal(t, mockInputs, inputs)
 }
 
