@@ -16,16 +16,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 )
 
-const (
-	// OptsKey is the key for the opts in the config
-	OptsKey   = "ttxdb.persistence.opts"
-	EnvVarKey = "TTXDB_DATASOURCE"
-)
+const optsKey = "ttxdb.persistence.opts"
 
 func NewDriver() db.NamedDriver[driver.TTXDBDriver] {
 	return db.NamedDriver[driver.TTXDBDriver]{
 		Name: sql.SQLPersistence,
-		Driver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenDBFunc[driver.TokenTransactionDB]{
+		Driver: common.NewOpenerFromMap(optsKey, map[common2.SQLDriverType]common.OpenDBFunc[driver.TokenTransactionDB]{
 			sql.SQLite:   sqlite.OpenTransactionDB,
 			sql.Postgres: postgres.OpenTransactionDB,
 		}),

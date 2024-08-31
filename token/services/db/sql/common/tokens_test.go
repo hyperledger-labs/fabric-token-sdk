@@ -16,7 +16,7 @@ import (
 )
 
 func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenDB, error) {
-	d := NewSQLDBOpener("", "")
+	d := NewSQLDBOpener("")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return nil, err

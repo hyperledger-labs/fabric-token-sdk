@@ -17,11 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 )
 
-const (
-	// OptsKey is the key for the opts in the config
-	OptsKey   = "identitydb.persistence.opts"
-	EnvVarKey = "IDENTITYDB_DATASOURCE"
-)
+const optsKey = "identitydb.persistence.opts"
 
 type Driver struct {
 	identityDriver *common.Opener[driver.IdentityDB]
@@ -40,11 +36,11 @@ func NewDriver() db.NamedDriver[driver.IdentityDBDriver] {
 	return db.NamedDriver[driver.IdentityDBDriver]{
 		Name: sql.SQLPersistence,
 		Driver: &Driver{
-			identityDriver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenDBFunc[driver.IdentityDB]{
+			identityDriver: common.NewOpenerFromMap(optsKey, map[common2.SQLDriverType]common.OpenDBFunc[driver.IdentityDB]{
 				sql.SQLite:   sqlite.NewCachedIdentityDB,
 				sql.Postgres: postgres.OpenIdentityDB,
 			}),
-			walletDriver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenDBFunc[driver.WalletDB]{
+			walletDriver: common.NewOpenerFromMap(optsKey, map[common2.SQLDriverType]common.OpenDBFunc[driver.WalletDB]{
 				sql.SQLite:   sqlite.OpenWalletDB,
 				sql.Postgres: postgres.OpenWalletDB,
 			}),

@@ -21,10 +21,7 @@ import (
 )
 
 const (
-	// optsKey is the key for the opts in the config
-	optsKey   = "db.persistence.opts"
-	envVarKey = "UNITYDB_DATASOURCE"
-
+	OptsKey                                  = "db.persistence.opts"
 	UnityPersistence driver2.PersistenceType = "unity"
 )
 
@@ -49,7 +46,7 @@ type unityDriver[V any] struct {
 func (d *unityDriver[V]) Open(cp dbdriver.ConfigProvider, tmsID token.TMSID) (V, error) {
 	sqlDB, opts, err := d.dbOpener.OpenWithOpts(cp, tmsID)
 	if err != nil {
-		return utils.Zero[V](), errors.Wrapf(err, "failed to open db at [%s:%s]", optsKey, envVarKey)
+		return utils.Zero[V](), errors.Wrapf(err, "failed to open db at %s", OptsKey)
 	}
 	constructor, ok := d.constructors[opts.Driver]
 	if !ok {
@@ -72,7 +69,7 @@ func (t *IdentityDBDriver) OpenIdentityDB(cp dbdriver.ConfigProvider, tmsID toke
 }
 
 func NewDBDrivers() (db.NamedDriver[dbdriver.TTXDBDriver], db.NamedDriver[dbdriver.TokenDBDriver], db.NamedDriver[dbdriver.TokenNotifierDriver], db.NamedDriver[dbdriver.TokenLockDBDriver], db.NamedDriver[dbdriver.AuditDBDriver], db.NamedDriver[dbdriver.IdentityDBDriver]) {
-	root := common.NewSQLDBOpener(optsKey, envVarKey)
+	root := common.NewSQLDBOpener(OptsKey)
 
 	return newUnityDriver[dbdriver.TokenTransactionDB, dbdriver.TTXDBDriver](root, constructors[dbdriver.TokenTransactionDB]{
 			sql3.SQLite:   sqlite.NewTransactionDB,

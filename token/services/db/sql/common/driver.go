@@ -37,9 +37,8 @@ type NewDBOpts struct {
 }
 
 type Opener[V any] struct {
-	dbCache   lazy.Provider[Opts, V]
-	optsKey   string
-	envVarKey string
+	dbCache lazy.Provider[Opts, V]
+	optsKey string
 }
 
 type DBOpener = Opener[*sql.DB]
@@ -52,8 +51,8 @@ func NewDBOptsFromOpts(o Opts) NewDBOpts {
 	}
 }
 
-func NewOpenerFromMap[V any](optsKey, envVarKey string, constructors map[common.SQLDriverType]OpenDBFunc[V]) *Opener[V] {
-	return NewOpener[V](optsKey, envVarKey, func(opts Opts) (V, error) {
+func NewOpenerFromMap[V any](optsKey string, constructors map[common.SQLDriverType]OpenDBFunc[V]) *Opener[V] {
+	return NewOpener[V](optsKey, func(opts Opts) (V, error) {
 		if c, ok := constructors[opts.Driver]; ok {
 			return c(opts)
 		}
@@ -61,16 +60,15 @@ func NewOpenerFromMap[V any](optsKey, envVarKey string, constructors map[common.
 	})
 }
 
-func NewOpener[V any](optsKey, envVarKey string, constructors OpenDBFunc[V]) *Opener[V] {
+func NewOpener[V any](optsKey string, constructors OpenDBFunc[V]) *Opener[V] {
 	return &Opener[V]{
-		dbCache:   lazy.NewProviderWithKeyMapper(key, constructors),
-		optsKey:   optsKey,
-		envVarKey: envVarKey,
+		dbCache: lazy.NewProviderWithKeyMapper(key, constructors),
+		optsKey: optsKey,
 	}
 }
 
-func NewSQLDBOpener(optsKey, envVarKey string) *DBOpener {
-	return NewOpenerFromMap[*sql.DB](optsKey, envVarKey, map[common.SQLDriverType]OpenDBFunc[*sql.DB]{
+func NewSQLDBOpener(optsKey string) *DBOpener {
+	return NewOpenerFromMap[*sql.DB](optsKey, map[common.SQLDriverType]OpenDBFunc[*sql.DB]{
 		sql2.SQLite: func(k Opts) (*sql.DB, error) {
 			return sqlite.OpenDB(k.DataSource, k.MaxOpenConns, k.SkipPragmas)
 		},
@@ -90,7 +88,7 @@ func (d *Opener[V]) OpenWithOpts(cp driver.ConfigProvider, tmsID token.TMSID) (V
 	}
 	sqlDB, err := d.dbCache.Get(*opts)
 	if err != nil {
-		return utils2.Zero[V](), nil, errors.Wrapf(err, "failed to open db at [%s:%s]", d.optsKey, d.envVarKey)
+		return utils2.Zero[V](), nil, errors.Wrapf(err, "failed to open db at %s", d.optsKey)
 	}
 	return sqlDB, opts, nil
 }
@@ -100,7 +98,7 @@ func (d *Opener[V]) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*O
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)
 	}
-	opts, err := common.GetOpts(tmsConfig, d.optsKey, d.envVarKey)
+	opts, err := common.GetOpts(tmsConfig, d.optsKey)
 	if err != nil {
 		return nil, err
 	}

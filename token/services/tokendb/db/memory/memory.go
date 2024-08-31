@@ -20,7 +20,7 @@ func NewDBDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
 	return db.NamedDriver[dbdriver.TokenDBDriver]{
 		Name: mem.MemoryPersistence,
 		Driver: db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
-			sqlDB, opts, err := common.NewSQLDBOpener(sql.OptsKey, sql.EnvVarKey).OpenWithOpts(cp, tmsID)
+			sqlDB, opts, err := common.NewSQLDBOpener(sql.OptsKey).OpenWithOpts(cp, tmsID)
 			if err != nil {
 				return nil, err
 			}
@@ -33,7 +33,7 @@ func NewNotifierDriver() db.NamedDriver[dbdriver.TokenNotifierDriver] {
 	return db.NamedDriver[dbdriver.TokenNotifierDriver]{
 		Name: mem.MemoryPersistence,
 		Driver: db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNotifier, error) {
-			sqlDB, opts, err := common.NewSQLDBOpener(sql.OptsKey, sql.EnvVarKey).OpenWithOpts(cp, tmsID)
+			sqlDB, opts, err := common.NewSQLDBOpener(sql.OptsKey).OpenWithOpts(cp, tmsID)
 			if err != nil {
 				return nil, err
 			}

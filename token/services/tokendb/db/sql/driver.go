@@ -16,15 +16,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 )
 
-const (
-	// OptsKey is the key for the opts in the config
-	OptsKey   = "tokendb.persistence.opts"
-	EnvVarKey = "TOKENDB_DATASOURCE"
-)
+const OptsKey = "tokendb.persistence.opts"
 
 func NewDBDriver() *db.SQLDriver[dbdriver.TokenDB] {
 	return db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
-		sqlDB, opts, err := common.NewSQLDBOpener(OptsKey, EnvVarKey).OpenWithOpts(cp, tmsID)
+		sqlDB, opts, err := common.NewSQLDBOpener(OptsKey).OpenWithOpts(cp, tmsID)
 		if err != nil {
 			return nil, err
 		}
@@ -40,7 +36,7 @@ func NewDBDriver() *db.SQLDriver[dbdriver.TokenDB] {
 
 func NewNotifierDriver() dbdriver.TokenNotifierDriver {
 	return db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNotifier, error) {
-		sqlDB, opts, err := common.NewSQLDBOpener(OptsKey, EnvVarKey).OpenWithOpts(cp, tmsID)
+		sqlDB, opts, err := common.NewSQLDBOpener(OptsKey).OpenWithOpts(cp, tmsID)
 		if err != nil {
 			return nil, err
 		}

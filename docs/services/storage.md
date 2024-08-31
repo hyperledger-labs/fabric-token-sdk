@@ -72,4 +72,5 @@ token:
 ```
 
 The specific driver used by the application will ultimately determine the available deployment options.
-Don't forget to import the driver that you are ultimately using with a blank import in your executable.  
+
+Note that you can override configuration via environment variables. For instance `CORE_TOKEN_TMS_MYTMS_DB_PERSISTENCE_OPTS_DATASOURCE` can be used to pass the connectionstring of the database.

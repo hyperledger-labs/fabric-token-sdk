@@ -17,9 +17,7 @@ import (
 )
 
 const (
-	// OptsKey is the key for the opts in the config
-	OptsKey   = "auditdb.persistence.opts"
-	EnvVarKey = "AUDITDB_DATASOURCE"
+	OptsKey = "auditdb.persistence.opts"
 )
 
 type Driver struct {
@@ -29,7 +27,7 @@ type Driver struct {
 func NewDriver() db.NamedDriver[dbdriver.AuditDBDriver] {
 	return db.NamedDriver[dbdriver.AuditDBDriver]{
 		Name: sql.SQLPersistence,
-		Driver: common.NewOpenerFromMap(OptsKey, EnvVarKey, map[common2.SQLDriverType]common.OpenDBFunc[dbdriver.AuditTransactionDB]{
+		Driver: common.NewOpenerFromMap(OptsKey, map[common2.SQLDriverType]common.OpenDBFunc[dbdriver.AuditTransactionDB]{
 			sql.SQLite:   sqlite.OpenAuditTransactionDB,
 			sql.Postgres: postgres.OpenAuditTransactionDB,
 		}),

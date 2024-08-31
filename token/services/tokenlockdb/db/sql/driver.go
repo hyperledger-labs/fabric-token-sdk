@@ -16,16 +16,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 )
 
-const (
-	// OptsKey is the key for the opts in the config
-	OptsKey   = "tokenlockdb.persistence.opts"
-	EnvVarKey = "TOKENLOCKDB_DATASOURCE"
-)
+const optsKey = "tokenlockdb.persistence.opts"
 
 func NewDriver() db.NamedDriver[dbdriver.TokenLockDBDriver] {
 	return db.NamedDriver[dbdriver.TokenLockDBDriver]{
 		Name: sql2.SQLPersistence,
-		Driver: common2.NewOpenerFromMap(OptsKey, EnvVarKey, map[common.SQLDriverType]common2.OpenDBFunc[dbdriver.TokenLockDB]{
+		Driver: common2.NewOpenerFromMap(optsKey, map[common.SQLDriverType]common2.OpenDBFunc[dbdriver.TokenLockDB]{
 			sql2.SQLite:   sqlite.OpenTokenLockDB,
 			sql2.Postgres: postgres.OpenTokenLockDB,
 		}),
