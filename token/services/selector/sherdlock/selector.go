@@ -184,7 +184,7 @@ type locker struct {
 func (l *locker) TryLock(tokenID *token2.ID) bool {
 	err := l.Locker.Lock(tokenID, l.txID)
 	if err != nil {
-		logger.Errorf("failed to lock [%v] for [%s]: [%s]", tokenID, l.txID, err)
+		logger.Debugf("failed to lock [%v] for [%s]: [%s]", tokenID, l.txID, err)
 	}
 	return err == nil
 }
