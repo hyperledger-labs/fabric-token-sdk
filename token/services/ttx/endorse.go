@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -21,6 +22,14 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
+
+type distributionListEntry struct {
+	IsMe     bool
+	LongTerm view.Identity
+	ID       view.Identity
+	EID      string
+	Auditor  bool
+}
 
 type ExternalWalletSigner interface {
 	Sign(party view.Identity, message []byte) ([]byte, error)
@@ -115,7 +124,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 
 	// Distribute Env to all parties
 	distributionList := append(IssueDistributionList(c.tx.TokenRequest), TransferDistributionList(c.tx.TokenRequest)...)
-	if err := c.distributeEnv(context, env, distributionList, auditors); err != nil {
+	if err := c.distributeEnvToParties(context, env, distributionList, auditors); err != nil {
 		return nil, errors.WithMessage(err, "failed distributing envelope")
 	}
 
@@ -363,7 +372,7 @@ func (c *CollectEndorsementsView) cleanupAudit(context view.Context) error {
 	return nil
 }
 
-func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
+func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
 	if c.Opts.SkipDistributeEnv {
 		return nil
 	}
@@ -383,123 +392,22 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	// 	return errors.Wrap(err, "failed verifying transaction content before distributing it")
 	// }
 
-	// Compress distributionList by removing duplicates
-	type distributionListEntry struct {
-		IsMe     bool
-		LongTerm view.Identity
-		ID       view.Identity
-		EID      string
-		Auditor  bool
-	}
-	var distributionListCompressed []distributionListEntry
-	for _, party := range distributionList {
-		// For each party in the distribution list:
-		// - check if it is me
-		// - check if it is an auditor
-		// - extract the corresponding long term identity
-		// If the long term identity has not been added yet, add it to the list.
-		// If the party is me or an auditor, no need to extract the enrollment ID.
-		if party.IsNone() {
-			// This is a redeem, nothing to do here.
-			continue
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("distribute env to [%s]?", party.UniqueID())
-		}
-		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(party)
-		if !isMe {
-			// check if there is a wallet that contains that identity
-			isMe = c.tx.TokenService().WalletManager().OwnerWallet(party) != nil
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("distribute env to [%s], it is me [%v].", party.UniqueID(), isMe)
-		}
-		var longTermIdentity view.Identity
-		var err error
-		// if it is me, no need to resolve, get directly the default identity
-		if isMe {
-			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
-		} else {
-			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
-			if err != nil {
-				return errors.Wrapf(err, "cannot resolve long term identity for [%s]", party.UniqueID())
-			}
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("searching for long term identity [%s]", longTermIdentity)
-		}
-		found := false
-		for _, entry := range distributionListCompressed {
-			if longTermIdentity.Equal(entry.LongTerm) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("adding [%s] to distribution list", party)
-			}
-			eID := ""
-			if !isMe {
-				eID, err = c.tx.TokenService().WalletManager().GetEnrollmentID(party)
-				if err != nil {
-					return errors.Wrapf(err, "failed getting enrollment ID for [%s]", party.UniqueID())
-				}
-			}
-			distributionListCompressed = append(distributionListCompressed, distributionListEntry{
-				IsMe:     isMe,
-				LongTerm: longTermIdentity,
-				ID:       party,
-				EID:      eID,
-				Auditor:  false,
-			})
-		} else {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("skip adding [%s] to distribution list, already added", party)
-			}
-		}
-	}
-
-	// check the auditors
-	for _, party := range auditors {
-		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(party)
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
-		}
-		var longTermIdentity view.Identity
-		var err error
-		// if it is me, no need to resolve, get directly the default identity
-		if isMe {
-			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
-		} else {
-			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
-			if err != nil {
-				return errors.Wrapf(err, "cannot resolve long term auitor identity for [%s]", party.UniqueID())
-			}
-		}
-		distributionListCompressed = append(distributionListCompressed, distributionListEntry{
-			IsMe:     isMe,
-			ID:       party,
-			Auditor:  true,
-			LongTerm: longTermIdentity,
-		})
-
-	}
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("distributed tx to num parties [%d]", len(distributionListCompressed))
-	}
-
 	// Distribute the transaction to all parties in the distribution list.
 	// Filter the metadata by Enrollment ID.
 	// The auditor will receive the full set of metadata
+	finalDistributionList, err := c.prepareDistributionList(context, auditors, distributionList)
+	if err != nil {
+		return errors.Wrap(err, "failed preparing distribution list")
+	}
+
 	owner := NewOwner(context, c.tx.TokenService())
 
 	// Store transaction in the token transaction database
 	if err := StoreTransactionRecords(context, c.tx); err != nil {
 		return errors.Wrapf(err, "failed adding transaction %s to the token transaction database", c.tx.ID())
 	}
-	for _, entry := range distributionListCompressed {
+
+	for _, entry := range finalDistributionList {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute transaction envelope to [%s]", entry.ID.UniqueID())
 		}
@@ -539,43 +447,158 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			}
 		}
 
-		// Open a session to the party. and send the transaction.
-		session, err := c.getSession(context, entry.ID)
-		if err != nil {
-			return errors.Wrap(err, "failed getting session")
-		}
-		// Send the content
-		err = session.SendWithContext(context.Context(), txRaw)
-		if err != nil {
-			return errors.Wrap(err, "failed sending transaction content")
-		}
-
-		sigma, err := ReadMessage(session, time.Minute*4)
-		if err != nil {
-			return errors.Wrap(err, "failed reading message")
-		}
-		logger.Debugf("received ack from [%s] [%s], checking signature on [%s]",
-			entry.LongTerm, hash.Hashable(sigma).String(),
-			hash.Hashable(txRaw).String())
-
-		verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
-		if err != nil {
-			return errors.Wrapf(err, "failed getting verifier for [%s]", entry.ID)
-		}
-		if err := verifier.Verify(txRaw, sigma); err != nil {
-			return errors.Wrapf(err, "failed verifying ack signature from [%s]", entry.ID)
-		}
-
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("CollectEndorsementsView: collected signature from %s", entry.ID)
-		}
-
-		if err := owner.appendTransactionEndorseAck(c.tx, entry.LongTerm, sigma); err != nil {
-			return errors.Wrapf(err, "failed appending transaction endorsement ack to transaction %s", c.tx.ID())
+		retryRunner := utils.NewRetryRunner(3, 100*time.Millisecond, true)
+		if err := retryRunner.RunWithErrors(func() (bool, error) {
+			err := c.distributeEvnToParty(context, &entry, txRaw, owner)
+			return err == nil, err
+		}); err != nil {
+			return errors.Wrapf(err, "failed distribute evn to party [%s]", entry.ID)
 		}
 	}
 
 	return nil
+}
+
+func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, entry *distributionListEntry, txRaw []byte, owner *TxOwner) error {
+	// Open a session to the party. and send the transaction.
+	session, err := c.getSession(context, entry.ID)
+	if err != nil {
+		return errors.Wrap(err, "failed getting session")
+	}
+	// Send the content
+	err = session.SendWithContext(context.Context(), txRaw)
+	if err != nil {
+		return errors.Wrap(err, "failed sending transaction content")
+	}
+
+	sigma, err := ReadMessage(session, time.Minute*4)
+	if err != nil {
+		return errors.Wrap(err, "failed reading message")
+	}
+	logger.Debugf("received ack from [%s] [%s], checking signature on [%s]",
+		entry.LongTerm, hash.Hashable(sigma).String(),
+		hash.Hashable(txRaw).String())
+
+	verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting verifier for [%s]", entry.ID)
+	}
+	if err := verifier.Verify(txRaw, sigma); err != nil {
+		return errors.Wrapf(err, "failed verifying ack signature from [%s]", entry.ID)
+	}
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("CollectEndorsementsView: collected signature from %s", entry.ID)
+	}
+
+	if err := owner.appendTransactionEndorseAck(c.tx, entry.LongTerm, sigma); err != nil {
+		return errors.Wrapf(err, "failed appending transaction endorsement ack to transaction %s", c.tx.ID())
+	}
+
+	return nil
+}
+
+func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, auditors []view.Identity, distributionList []view.Identity) ([]distributionListEntry, error) {
+	// Compress distributionList by removing duplicates
+	var distributionListCompressed []distributionListEntry
+	for _, party := range distributionList {
+		// For each party in the distribution list:
+		// - check if it is me
+		// - check if it is an auditor
+		// - extract the corresponding long term identity
+		// If the long term identity has not been added yet, add it to the list.
+		// If the party is me or an auditor, no need to extract the enrollment ID.
+		if party.IsNone() {
+			// This is a redeem, nothing to do here.
+			continue
+		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("distribute env to [%s]?", party.UniqueID())
+		}
+		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(party)
+		if !isMe {
+			// check if there is a wallet that contains that identity
+			isMe = c.tx.TokenService().WalletManager().OwnerWallet(party) != nil
+		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("distribute env to [%s], it is me [%v].", party.UniqueID(), isMe)
+		}
+		var longTermIdentity view.Identity
+		var err error
+		// if it is me, no need to resolve, get directly the default identity
+		if isMe {
+			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
+		} else {
+			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
+			if err != nil {
+				return nil, errors.Wrapf(err, "cannot resolve long term identity for [%s]", party.UniqueID())
+			}
+		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("searching for long term identity [%s]", longTermIdentity)
+		}
+		found := false
+		for _, entry := range distributionListCompressed {
+			if longTermIdentity.Equal(entry.LongTerm) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("adding [%s] to distribution list", party)
+			}
+			eID := ""
+			if !isMe {
+				eID, err = c.tx.TokenService().WalletManager().GetEnrollmentID(party)
+				if err != nil {
+					return nil, errors.Wrapf(err, "failed getting enrollment ID for [%s]", party.UniqueID())
+				}
+			}
+			distributionListCompressed = append(distributionListCompressed, distributionListEntry{
+				IsMe:     isMe,
+				LongTerm: longTermIdentity,
+				ID:       party,
+				EID:      eID,
+				Auditor:  false,
+			})
+		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("skip adding [%s] to distribution list, already added", party)
+			}
+		}
+	}
+
+	// check the auditors
+	for _, party := range auditors {
+		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(party)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
+		}
+		var longTermIdentity view.Identity
+		var err error
+		// if it is me, no need to resolve, get directly the default identity
+		if isMe {
+			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
+		} else {
+			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
+			if err != nil {
+				return nil, errors.Wrapf(err, "cannot resolve long term auitor identity for [%s]", party.UniqueID())
+			}
+		}
+		distributionListCompressed = append(distributionListCompressed, distributionListEntry{
+			IsMe:     isMe,
+			ID:       party,
+			Auditor:  true,
+			LongTerm: longTermIdentity,
+		})
+
+	}
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("distributed tx to num parties [%d]", len(distributionListCompressed))
+	}
+	return distributionListCompressed, nil
 }
 
 func (c *CollectEndorsementsView) requestBytes() ([]byte, error) {

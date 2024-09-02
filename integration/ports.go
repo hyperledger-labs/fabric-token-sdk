@@ -20,7 +20,7 @@ type TestPortRange int
 
 const (
 	basePort      = 20000
-	portsPerNode  = 50
+	portsPerNode  = 150
 	portsPerSuite = 10 * portsPerNode
 
 	SimpleTokenSelector    = "simple"
@@ -73,30 +73,37 @@ var (
 
 const (
 	BasePort TestPortRange = basePort + portsPerSuite*iota
+
 	ZKATDLogFungible
 	ZKATDLogFungibleStress
 	ZKATDLogFungibleHSM
+
 	FabTokenFungible
+
 	OrionZKATDLogBasics
 	OrionFabTokenBasics
+
 	ZKATDLogDVP
 	FabTokenDVP
+
 	ZKATDLogNFT
 	FabTokenNFT
+
 	OrionZKATDLogNFT
 	OrionFabTokenNFT
+
 	FabTokenInteropHTLC
-	FabTokenInteropHTLCTwoFabricNetworks
-	FabTokenInteropFastExchangeTwoFabricNetworks
-	FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks
 	FabTokenInteropHTLCOrion
+	FabTokenInteropHTLCTwoFabricNetworks
+	FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks
 	FabTokenInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
+
 	ZKATDLogInteropHTLC
 	ZKATDLogInteropHTLCTwoFabricNetworks
-	ZKATDLogInteropFastExchangeTwoFabricNetworks
 	ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks
 	ZKATDLogInteropHTLCOrion
 	ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
+
 	Mixed
 )
 
