@@ -146,12 +146,10 @@ func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 		bytes, err := w.RWSet.GetState(w.namespace, outputID)
 		if err != nil {
 			errs = append(errs, errors.Wrapf(err, "failed getting output for [%s]", outputID))
-			// return nil, errors.Wrapf(err, "failed getting output for [%s]", outputID)
 			continue
 		}
 		if len(bytes) == 0 {
 			errs = append(errs, errors.Errorf("output for key [%s] does not exist", outputID))
-			// return nil, errors.Errorf("output for key [%s] does not exist", outputID)
 			continue
 		}
 		res = append(res, bytes)
@@ -206,33 +204,26 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 	if err != nil {
 		return errors.Wrapf(err, "invalid transfer: failed getting input IDs")
 	}
-	if !t.IsGraphHiding() {
-		rwsetKeys := make([]string, len(inputs))
+
+	var rwsetKeys []string
+	if t.IsGraphHiding() {
+		rwsetKeys = t.GetSerialNumbers()
+	} else {
+		rwsetKeys = make([]string, len(inputs))
 		for i, input := range inputs {
 			rwsetKeys[i], err = keys.CreateTokenKey(input.TxId, input.Index)
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}
 		}
-
-		for _, key := range rwsetKeys {
-			bytes, err := w.RWSet.GetState(w.namespace, key)
-			if err != nil {
-				return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)
-			}
-			if len(bytes) == 0 {
-				return errors.Errorf("invalid transfer: input is already spent [%s]", key)
-			}
+	}
+	for _, key := range rwsetKeys {
+		bytes, err := w.RWSet.GetState(w.namespace, key)
+		if err != nil {
+			return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)
 		}
-	} else {
-		for _, key := range t.GetSerialNumbers() {
-			bytes, err := w.RWSet.GetState(w.namespace, key)
-			if err != nil {
-				return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)
-			}
-			if len(bytes) != 0 {
-				return errors.Errorf("invalid transfer: input is already spent [%s:%v]", key, bytes)
-			}
+		if len(bytes) != 0 {
+			return errors.Errorf("invalid transfer: input is already spent [%s:%v]", key, bytes)
 		}
 	}
 	// check if the keys of the new tokens aren't already used.
