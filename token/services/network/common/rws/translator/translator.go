@@ -205,27 +205,36 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 		return errors.Wrapf(err, "invalid transfer: failed getting input IDs")
 	}
 
-	var rwsetKeys []string
-	if t.IsGraphHiding() {
-		rwsetKeys = t.GetSerialNumbers()
-	} else {
-		rwsetKeys = make([]string, len(inputs))
-		for i, input := range inputs {
-			rwsetKeys[i], err = keys.CreateTokenKey(input.TxId, input.Index)
+	if !t.IsGraphHiding() {
+		// in this case, the state must exist
+		for _, input := range inputs {
+			key, err := keys.CreateTokenKey(input.TxId, input.Index)
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}
+			bytes, err := w.RWSet.GetState(w.namespace, key)
+			if err != nil {
+				return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)
+			}
+			// in this case, the state must exist
+			if len(bytes) == 0 {
+				return errors.Errorf("invalid transfer: input is already spent [%s]", key)
+			}
+		}
+	} else {
+		// in this case, the state must not exist
+		for _, key := range t.GetSerialNumbers() {
+			bytes, err := w.RWSet.GetState(w.namespace, key)
+			if err != nil {
+				return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)
+			}
+			// in this case, the state must not exist
+			if len(bytes) != 0 {
+				return errors.Errorf("invalid transfer: input is already spent [%s:%v]", key, bytes)
+			}
 		}
 	}
-	for _, key := range rwsetKeys {
-		bytes, err := w.RWSet.GetState(w.namespace, key)
-		if err != nil {
-			return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)
-		}
-		if len(bytes) != 0 {
-			return errors.Errorf("invalid transfer: input is already spent [%s:%v]", key, bytes)
-		}
-	}
+
 	// check if the keys of the new tokens aren't already used.
 	for i := 0; i < t.NumOutputs(); i++ {
 		if !t.IsRedeemAt(i) {
