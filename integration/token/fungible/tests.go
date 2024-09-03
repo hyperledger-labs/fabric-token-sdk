@@ -273,6 +273,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	bob := sel.Get("bob")
 	charlie := sel.Get("charlie")
 	manager := sel.Get("manager")
+	endorsers := GetEndorsers(network, sel)
 	RegisterAuditor(network, auditor, nil)
 
 	// give some time to the nodes to get the public parameters
@@ -286,7 +287,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
+	IssueSuccessfulCash(network, "", "USD", 110, alice, auditor, true, issuer, endorsers...)
 	t1 := time.Now()
 	CheckBalanceAndHolding(network, alice, "", "USD", 110, auditor)
 	CheckAuditedTransactions(network, auditor, AuditedTransactions[:1], nil, nil)
@@ -681,7 +682,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckBalanceAndHolding(network, bob, "", "EUR", 2820-sum, auditor)
 
 	// Transfer With TokenSelector
-	IssueCash(network, "", "YUAN", 17, alice, auditor, true, issuer)
+	IssueSuccessfulCash(network, "", "YUAN", 17, alice, auditor, true, issuer, endorsers...)
 	TransferCashWithSelector(network, alice, "", "YUAN", 10, bob, auditor)
 	CheckBalanceAndHolding(network, alice, "", "YUAN", 7, auditor)
 	CheckBalanceAndHolding(network, bob, "", "YUAN", 10, auditor)
