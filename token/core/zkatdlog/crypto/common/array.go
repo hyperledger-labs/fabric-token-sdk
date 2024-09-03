@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"bytes"
 	"encoding/hex"
 
 	math "github.com/IBM/mathlib"
@@ -22,18 +23,16 @@ type G1Array []*math.G1
 
 // Bytes serialize an array of G1 elements
 func (a *G1Array) Bytes() ([]byte, error) {
-
-	var raw []byte
-	for _, e := range []*math.G1(*a) {
+	raw := make([][]byte, len([]*math.G1(*a)))
+	for i, e := range []*math.G1(*a) {
 		if e == nil {
 			return nil, errors.Errorf("failed to marshal array of G1")
 		}
 		st := hex.EncodeToString(e.Bytes())
-		raw = append(raw, []byte(Separator)...)
-		raw = append(raw, []byte(st)...)
-
+		raw[i] = []byte(st)
 	}
-	return raw, nil
+	// join the serialization of the group elements with the predefined separator.
+	return bytes.Join(raw, []byte(Separator)), nil
 }
 
 // GetG1Array takes a series of G1 elements and returns the corresponding array

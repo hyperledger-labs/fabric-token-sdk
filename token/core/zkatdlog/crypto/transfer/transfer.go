@@ -51,8 +51,8 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 		}
 		inW[i] = inputWitness[i].Clone()
 	}
-	var values []uint64
-	var blindingFactors []*math.Zr
+	values := make([]uint64, len(outputWitness))
+	blindingFactors := make([]*math.Zr, len(outputWitness))
 	// commit to the type of inputs and outputs
 	commitmentToType := pp.PedersenGenerators[0].Mul(c.HashToZr([]byte(inputWitness[0].Type)))
 
@@ -66,8 +66,8 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 			return nil, errors.New("invalid token witness")
 		}
 		outW[i] = outputWitness[i].Clone()
-		values = append(values, outW[i].Value)
-		blindingFactors = append(blindingFactors, c.ModSub(outW[i].BlindingFactor, typeBF, c.GroupOrder))
+		values[i] = outW[i].Value
+		blindingFactors[i] = c.ModSub(outW[i].BlindingFactor, typeBF, c.GroupOrder)
 	}
 	commitmentToType.Add(pp.PedersenGenerators[2].Mul(typeBF))
 
@@ -75,12 +75,11 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 	// check if this is an ownership transfer
 	// if so, skip range proof, well-formedness proof is enough
 	if len(inputWitness) != 1 || len(outputWitness) != 1 {
-		var coms []*math.G1
+		coms := make([]*math.G1, len(outputs))
 		// The range prover takes as input commitments outputs[i]/commitmentToType
 		for i := 0; i < len(outputs); i++ {
-			out := outputs[i].Copy()
-			out.Sub(commitmentToType)
-			coms = append(coms, out)
+			coms[i] = outputs[i].Copy()
+			coms[i].Sub(commitmentToType)
 		}
 		p.RangeCorrectness = rp.NewRangeCorrectnessProver(coms, values, blindingFactors, pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
 
@@ -175,11 +174,10 @@ func (v *Verifier) Verify(proof []byte) error {
 				rangeErr = errors.New("invalid transfer proof")
 			} else {
 				commitmentToType := tp.TypeAndSum.CommitmentToType.Copy()
-				var coms []*math.G1
+				coms := make([]*math.G1, len(v.TypeAndSum.Outputs))
 				for i := 0; i < len(v.TypeAndSum.Outputs); i++ {
-					out := v.TypeAndSum.Outputs[i].Copy()
-					out.Sub(commitmentToType)
-					coms = append(coms, out)
+					coms[i] = v.TypeAndSum.Outputs[i].Copy()
+					coms[i].Sub(commitmentToType)
 				}
 				v.RangeCorrectness.Commitments = coms
 				rangeErr = v.RangeCorrectness.Verify(tp.RangeCorrectness)
