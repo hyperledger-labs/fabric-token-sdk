@@ -12,8 +12,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator/mock"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
@@ -115,7 +115,7 @@ var _ = Describe("Translator", func() {
 			faketransfer.IsRedeemAtReturnsOnCall(0, false)
 			faketransfer.SerializeOutputAtReturnsOnCall(1, []byte("output-2"), nil)
 			faketransfer.IsRedeemAtReturnsOnCall(1, false)
-			faketransfer.GetInputsReturns([]string{"key1", "key2", "key3"}, nil)
+			faketransfer.GetInputsReturns([]*token.ID{{TxId: "key1"}, {TxId: "key2"}, {TxId: "key3"}}, nil)
 			faketransfer.NumOutputsReturns(2)
 			fakeRWSet.GetStateReturnsOnCall(0, []byte("token-1"), nil)
 			fakeRWSet.GetStateReturnsOnCall(1, []byte("token-2"), nil)
@@ -189,7 +189,8 @@ var _ = Describe("Translator", func() {
 			fakeRWSet.GetStateReturnsOnCall(0, nil, nil)
 			fakeRWSet.GetStateReturnsOnCall(1, nil, nil)
 			fakeRWSet.GetStateReturnsOnCall(2, nil, nil)
-			faketransfer.GetInputsReturns(sn, nil)
+			faketransfer.GetInputsReturns([]*token.ID{{TxId: "key1"}, {TxId: "key2"}, {TxId: "key3"}}, nil)
+			faketransfer.GetSerialNumbersReturns(sn)
 			faketransfer.NumOutputsReturns(2)
 			faketransfer.IsGraphHidingReturns(true)
 		})

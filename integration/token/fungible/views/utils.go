@@ -28,14 +28,14 @@ func AssertTokens(sp token.ServiceProvider, tx *ttx.Transaction, outputs *token.
 		tokenID := output.ID(tx.ID())
 		if output.Owner.Equal(id) || tx.TokenService().SigService().IsMe(output.Owner) {
 			// check it exists
-			_, toks, err := db.GetTokens(tokenID)
+			toks, err := db.GetTokens(tokenID)
 			assert.NoError(err, "failed to retrieve token [%s]", tokenID)
 			assert.Equal(1, len(toks), "expected one token")
 			assert.Equal(output.Quantity.Hex(), toks[0].Quantity, "token quantity mismatch")
 			assert.Equal(output.Type, toks[0].Type, "token type mismatch")
 		} else {
 			// check it does not exist
-			_, _, err := db.GetTokens(tokenID)
+			_, err := db.GetTokens(tokenID)
 			assert.Error(err, "token [%s] should not exist", tokenID)
 			assert.True(strings.Contains(err.Error(), "token not found"))
 		}

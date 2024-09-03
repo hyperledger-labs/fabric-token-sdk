@@ -30,7 +30,7 @@ func TransferSignatureValidate(ctx *Context) error {
 	}
 	for i, in := range inputs {
 		ctx.Logger.Debugf("load token [%d][%s]", i, in)
-		bytes, err := ctx.Ledger.GetState(in)
+		bytes, err := ctx.Ledger.GetState(*in)
 		if err != nil {
 			return errors.Wrapf(err, "failed to retrieve input to spend [%s]", in)
 		}

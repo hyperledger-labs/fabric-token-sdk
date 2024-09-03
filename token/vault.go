@@ -123,7 +123,7 @@ func (q *QueryEngine) PublicParams() ([]byte, error) {
 
 // GetTokens returns the tokens stored in the vault matching the given ids
 func (q *QueryEngine) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
-	_, tokens, err := q.qe.GetTokens(inputs...)
+	tokens, err := q.qe.GetTokens(inputs...)
 	return tokens, err
 }
 

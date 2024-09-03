@@ -129,12 +129,12 @@ func NewVaultLedgerTokenAndMetadataLoader[T LedgerToken, M any](tokenVault Token
 // matching the token identifiers, the corresponding zkatdlog tokens, the information of the
 // tokens in clear text and the identities of their owners
 // LoadToken returns an error in case of failure
-func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context, ids []*token.ID) ([]string, []T, []M, []driver.Identity, error) {
+func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context, ids []*token.ID) ([]T, []M, []driver.Identity, error) {
 	span := trace.SpanFromContext(ctx)
 	// return token outputs and the corresponding opening
-	inputIDs, comms, infos, err := s.TokenVault.GetTokenInfoAndOutputs(ctx, ids)
+	comms, infos, err := s.TokenVault.GetTokenInfoAndOutputs(ctx, ids)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	span.AddEvent("iterate_tokens")
@@ -143,27 +143,27 @@ func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context
 	signerIds := make([]driver.Identity, len(ids))
 	for i, id := range ids {
 		if len(comms[i]) == 0 {
-			return nil, nil, nil, nil, errors.Errorf("failed getting state for id [%v], nil comm value", id)
+			return nil, nil, nil, errors.Errorf("failed getting state for id [%v], nil comm value", id)
 		}
 		if len(infos[i]) == 0 {
-			return nil, nil, nil, nil, errors.Errorf("failed getting state for id [%v], nil info value", id)
+			return nil, nil, nil, errors.Errorf("failed getting state for id [%v], nil info value", id)
 		}
 		span.AddEvent("deserialize_token")
 		tok, err := s.Deserializer.DeserializeToken(comms[i])
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(comms[i]))
+			return nil, nil, nil, errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(comms[i]))
 		}
 		span.AddEvent("deserialize_metadata")
 		ti, err := s.Deserializer.DeserializeMetadata(infos[i])
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
+			return nil, nil, nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
 		}
 		tokens[i] = tok
 		inputInf[i] = ti
 		signerIds[i] = tok.GetOwner()
 	}
 
-	return inputIDs, tokens, inputInf, signerIds, nil
+	return tokens, inputInf, signerIds, nil
 }
 
 type VaultTokenInfoLoader[M any] struct {
@@ -202,7 +202,7 @@ func NewVaultTokenLoader(tokenVault driver.QueryEngine) *VaultTokenLoader {
 
 // GetTokens takes an array of token identifiers (txID, index) and returns the keys of the identified tokens
 // in the vault and the content of the tokens
-func (s *VaultTokenLoader) GetTokens(ids []*token.ID) ([]string, []*token.Token, error) {
+func (s *VaultTokenLoader) GetTokens(ids []*token.ID) ([]*token.Token, error) {
 	return s.TokenVault.GetTokens(ids...)
 }
 

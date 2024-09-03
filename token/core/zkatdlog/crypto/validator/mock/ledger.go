@@ -5,13 +5,14 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type Ledger struct {
-	GetStateStub        func(key string) ([]byte, error)
+	GetStateStub        func(token.ID) ([]byte, error)
 	getStateMutex       sync.RWMutex
 	getStateArgsForCall []struct {
-		key string
+		arg1 token.ID
 	}
 	getStateReturns struct {
 		result1 []byte
@@ -25,21 +26,23 @@ type Ledger struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Ledger) GetState(key string) ([]byte, error) {
+func (fake *Ledger) GetState(arg1 token.ID) ([]byte, error) {
 	fake.getStateMutex.Lock()
 	ret, specificReturn := fake.getStateReturnsOnCall[len(fake.getStateArgsForCall)]
 	fake.getStateArgsForCall = append(fake.getStateArgsForCall, struct {
-		key string
-	}{key})
-	fake.recordInvocation("GetState", []interface{}{key})
+		arg1 token.ID
+	}{arg1})
+	stub := fake.GetStateStub
+	fakeReturns := fake.getStateReturns
+	fake.recordInvocation("GetState", []interface{}{arg1})
 	fake.getStateMutex.Unlock()
-	if fake.GetStateStub != nil {
-		return fake.GetStateStub(key)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.getStateReturns.result1, fake.getStateReturns.result2
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *Ledger) GetStateCallCount() int {
@@ -48,13 +51,22 @@ func (fake *Ledger) GetStateCallCount() int {
 	return len(fake.getStateArgsForCall)
 }
 
-func (fake *Ledger) GetStateArgsForCall(i int) string {
+func (fake *Ledger) GetStateCalls(stub func(token.ID) ([]byte, error)) {
+	fake.getStateMutex.Lock()
+	defer fake.getStateMutex.Unlock()
+	fake.GetStateStub = stub
+}
+
+func (fake *Ledger) GetStateArgsForCall(i int) token.ID {
 	fake.getStateMutex.RLock()
 	defer fake.getStateMutex.RUnlock()
-	return fake.getStateArgsForCall[i].key
+	argsForCall := fake.getStateArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *Ledger) GetStateReturns(result1 []byte, result2 error) {
+	fake.getStateMutex.Lock()
+	defer fake.getStateMutex.Unlock()
 	fake.GetStateStub = nil
 	fake.getStateReturns = struct {
 		result1 []byte
@@ -63,6 +75,8 @@ func (fake *Ledger) GetStateReturns(result1 []byte, result2 error) {
 }
 
 func (fake *Ledger) GetStateReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.getStateMutex.Lock()
+	defer fake.getStateMutex.Unlock()
 	fake.GetStateStub = nil
 	if fake.getStateReturnsOnCall == nil {
 		fake.getStateReturnsOnCall = make(map[int]struct {

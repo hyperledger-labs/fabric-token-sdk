@@ -39,23 +39,21 @@ type QueryEngine struct {
 		result2 string
 		result3 error
 	}
-	GetTokenInfoAndOutputsStub        func(context.Context, []*token.ID) ([]string, [][]byte, [][]byte, error)
+	GetTokenInfoAndOutputsStub        func(context.Context, []*token.ID) ([][]byte, [][]byte, error)
 	getTokenInfoAndOutputsMutex       sync.RWMutex
 	getTokenInfoAndOutputsArgsForCall []struct {
 		arg1 context.Context
 		arg2 []*token.ID
 	}
 	getTokenInfoAndOutputsReturns struct {
-		result1 []string
+		result1 [][]byte
 		result2 [][]byte
-		result3 [][]byte
-		result4 error
+		result3 error
 	}
 	getTokenInfoAndOutputsReturnsOnCall map[int]struct {
-		result1 []string
+		result1 [][]byte
 		result2 [][]byte
-		result3 [][]byte
-		result4 error
+		result3 error
 	}
 	GetTokenInfosStub        func([]*token.ID) ([][]byte, error)
 	getTokenInfosMutex       sync.RWMutex
@@ -82,20 +80,18 @@ type QueryEngine struct {
 	getTokenOutputsReturnsOnCall map[int]struct {
 		result1 error
 	}
-	GetTokensStub        func(...*token.ID) ([]string, []*token.Token, error)
+	GetTokensStub        func(...*token.ID) ([]*token.Token, error)
 	getTokensMutex       sync.RWMutex
 	getTokensArgsForCall []struct {
 		arg1 []*token.ID
 	}
 	getTokensReturns struct {
-		result1 []string
-		result2 []*token.Token
-		result3 error
+		result1 []*token.Token
+		result2 error
 	}
 	getTokensReturnsOnCall map[int]struct {
-		result1 []string
-		result2 []*token.Token
-		result3 error
+		result1 []*token.Token
+		result2 error
 	}
 	IsMineStub        func(*token.ID) (bool, error)
 	isMineMutex       sync.RWMutex
@@ -350,7 +346,7 @@ func (fake *QueryEngine) GetStatusReturnsOnCall(i int, result1 int, result2 stri
 	}{result1, result2, result3}
 }
 
-func (fake *QueryEngine) GetTokenInfoAndOutputs(arg1 context.Context, arg2 []*token.ID) ([]string, [][]byte, [][]byte, error) {
+func (fake *QueryEngine) GetTokenInfoAndOutputs(arg1 context.Context, arg2 []*token.ID) ([][]byte, [][]byte, error) {
 	var arg2Copy []*token.ID
 	if arg2 != nil {
 		arg2Copy = make([]*token.ID, len(arg2))
@@ -370,9 +366,9 @@ func (fake *QueryEngine) GetTokenInfoAndOutputs(arg1 context.Context, arg2 []*to
 		return stub(arg1, arg2)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3, ret.result4
+		return ret.result1, ret.result2, ret.result3
 	}
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3, fakeReturns.result4
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
 func (fake *QueryEngine) GetTokenInfoAndOutputsCallCount() int {
@@ -381,7 +377,7 @@ func (fake *QueryEngine) GetTokenInfoAndOutputsCallCount() int {
 	return len(fake.getTokenInfoAndOutputsArgsForCall)
 }
 
-func (fake *QueryEngine) GetTokenInfoAndOutputsCalls(stub func(context.Context, []*token.ID) ([]string, [][]byte, [][]byte, error)) {
+func (fake *QueryEngine) GetTokenInfoAndOutputsCalls(stub func(context.Context, []*token.ID) ([][]byte, [][]byte, error)) {
 	fake.getTokenInfoAndOutputsMutex.Lock()
 	defer fake.getTokenInfoAndOutputsMutex.Unlock()
 	fake.GetTokenInfoAndOutputsStub = stub
@@ -394,36 +390,33 @@ func (fake *QueryEngine) GetTokenInfoAndOutputsArgsForCall(i int) (context.Conte
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *QueryEngine) GetTokenInfoAndOutputsReturns(result1 []string, result2 [][]byte, result3 [][]byte, result4 error) {
+func (fake *QueryEngine) GetTokenInfoAndOutputsReturns(result1 [][]byte, result2 [][]byte, result3 error) {
 	fake.getTokenInfoAndOutputsMutex.Lock()
 	defer fake.getTokenInfoAndOutputsMutex.Unlock()
 	fake.GetTokenInfoAndOutputsStub = nil
 	fake.getTokenInfoAndOutputsReturns = struct {
-		result1 []string
+		result1 [][]byte
 		result2 [][]byte
-		result3 [][]byte
-		result4 error
-	}{result1, result2, result3, result4}
+		result3 error
+	}{result1, result2, result3}
 }
 
-func (fake *QueryEngine) GetTokenInfoAndOutputsReturnsOnCall(i int, result1 []string, result2 [][]byte, result3 [][]byte, result4 error) {
+func (fake *QueryEngine) GetTokenInfoAndOutputsReturnsOnCall(i int, result1 [][]byte, result2 [][]byte, result3 error) {
 	fake.getTokenInfoAndOutputsMutex.Lock()
 	defer fake.getTokenInfoAndOutputsMutex.Unlock()
 	fake.GetTokenInfoAndOutputsStub = nil
 	if fake.getTokenInfoAndOutputsReturnsOnCall == nil {
 		fake.getTokenInfoAndOutputsReturnsOnCall = make(map[int]struct {
-			result1 []string
+			result1 [][]byte
 			result2 [][]byte
-			result3 [][]byte
-			result4 error
+			result3 error
 		})
 	}
 	fake.getTokenInfoAndOutputsReturnsOnCall[i] = struct {
-		result1 []string
+		result1 [][]byte
 		result2 [][]byte
-		result3 [][]byte
-		result4 error
-	}{result1, result2, result3, result4}
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *QueryEngine) GetTokenInfos(arg1 []*token.ID) ([][]byte, error) {
@@ -562,7 +555,7 @@ func (fake *QueryEngine) GetTokenOutputsReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *QueryEngine) GetTokens(arg1 ...*token.ID) ([]string, []*token.Token, error) {
+func (fake *QueryEngine) GetTokens(arg1 ...*token.ID) ([]*token.Token, error) {
 	fake.getTokensMutex.Lock()
 	ret, specificReturn := fake.getTokensReturnsOnCall[len(fake.getTokensArgsForCall)]
 	fake.getTokensArgsForCall = append(fake.getTokensArgsForCall, struct {
@@ -576,9 +569,9 @@ func (fake *QueryEngine) GetTokens(arg1 ...*token.ID) ([]string, []*token.Token,
 		return stub(arg1...)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
+		return ret.result1, ret.result2
 	}
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *QueryEngine) GetTokensCallCount() int {
@@ -587,7 +580,7 @@ func (fake *QueryEngine) GetTokensCallCount() int {
 	return len(fake.getTokensArgsForCall)
 }
 
-func (fake *QueryEngine) GetTokensCalls(stub func(...*token.ID) ([]string, []*token.Token, error)) {
+func (fake *QueryEngine) GetTokensCalls(stub func(...*token.ID) ([]*token.Token, error)) {
 	fake.getTokensMutex.Lock()
 	defer fake.getTokensMutex.Unlock()
 	fake.GetTokensStub = stub
@@ -600,33 +593,30 @@ func (fake *QueryEngine) GetTokensArgsForCall(i int) []*token.ID {
 	return argsForCall.arg1
 }
 
-func (fake *QueryEngine) GetTokensReturns(result1 []string, result2 []*token.Token, result3 error) {
+func (fake *QueryEngine) GetTokensReturns(result1 []*token.Token, result2 error) {
 	fake.getTokensMutex.Lock()
 	defer fake.getTokensMutex.Unlock()
 	fake.GetTokensStub = nil
 	fake.getTokensReturns = struct {
-		result1 []string
-		result2 []*token.Token
-		result3 error
-	}{result1, result2, result3}
+		result1 []*token.Token
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *QueryEngine) GetTokensReturnsOnCall(i int, result1 []string, result2 []*token.Token, result3 error) {
+func (fake *QueryEngine) GetTokensReturnsOnCall(i int, result1 []*token.Token, result2 error) {
 	fake.getTokensMutex.Lock()
 	defer fake.getTokensMutex.Unlock()
 	fake.GetTokensStub = nil
 	if fake.getTokensReturnsOnCall == nil {
 		fake.getTokensReturnsOnCall = make(map[int]struct {
-			result1 []string
-			result2 []*token.Token
-			result3 error
+			result1 []*token.Token
+			result2 error
 		})
 	}
 	fake.getTokensReturnsOnCall[i] = struct {
-		result1 []string
-		result2 []*token.Token
-		result3 error
-	}{result1, result2, result3}
+		result1 []*token.Token
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *QueryEngine) IsMine(arg1 *token.ID) (bool, error) {

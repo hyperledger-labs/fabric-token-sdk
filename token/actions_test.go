@@ -9,6 +9,8 @@ package token
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"
 )
@@ -113,7 +115,7 @@ func TestTransferAction_SerializeOutputAt(t *testing.T) {
 
 func TestTransferAction_GetInputs(t *testing.T) {
 	mockTransferAction := &mock.TransferAction{}
-	mockInputs := []string{"input1", "input2"}
+	mockInputs := []*token.ID{{TxId: "input1"}, {TxId: "input2"}}
 	mockTransferAction.GetInputsReturns(mockInputs, nil)
 	transferAction := &TransferAction{a: mockTransferAction}
 	inputs, err := transferAction.GetInputs()

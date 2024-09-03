@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Proof is a zero-knowledge proof that shows that a TransferAction is valid
+// Proof is a zero-knowledge proof that shows that a Action is valid
 type Proof struct {
 	// proof that inputs and outputs in a Transfer Action are well-formed
 	// inputs and outputs have the same total value
@@ -27,19 +27,19 @@ type Proof struct {
 	RangeCorrectness *rp.RangeCorrectness
 }
 
-// Verifier verifies if a TransferAction is valid
+// Verifier verifies if a Action is valid
 type Verifier struct {
 	TypeAndSum       *TypeAndSumVerifier
 	RangeCorrectness *rp.RangeCorrectnessVerifier
 }
 
-// Prover produces a proof that a TransferAction is valid
+// Prover produces a proof that a Action is valid
 type Prover struct {
 	TypeAndSum       *TypeAndSumProver
 	RangeCorrectness *rp.RangeCorrectnessProver
 }
 
-// NewProver returns a TransferAction Prover that corresponds to the passed arguments
+// NewProver returns a Action Prover that corresponds to the passed arguments
 func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, outputs []*math.G1, pp *crypto.PublicParams) (*Prover, error) {
 	c := math.Curves[pp.Curve]
 	p := &Prover{}
@@ -88,7 +88,7 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 	return p, nil
 }
 
-// NewVerifier returns a TransferAction Verifier as a function of the passed parameters
+// NewVerifier returns a Action Verifier as a function of the passed parameters
 func NewVerifier(inputs, outputs []*math.G1, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
 	v.TypeAndSum = NewTypeAndSumVerifier(pp.PedersenGenerators, inputs, outputs, math.Curves[pp.Curve])

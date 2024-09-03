@@ -6,7 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package token
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+)
 
 // IssueAction represents an action that issues tokens.
 type IssueAction struct {
@@ -74,8 +77,12 @@ func (t *TransferAction) SerializeOutputAt(i int) ([]byte, error) {
 }
 
 // GetInputs returns the input ids used in the action.
-func (t *TransferAction) GetInputs() ([]string, error) {
+func (t *TransferAction) GetInputs() ([]*token.ID, error) {
 	return t.a.GetInputs()
+}
+
+func (t *TransferAction) GetSerialNumbers() []string {
+	return t.a.GetSerialNumbers()
 }
 
 // IsGraphHiding returns true if the action supports graph hiding.

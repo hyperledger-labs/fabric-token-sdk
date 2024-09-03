@@ -65,14 +65,14 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	s.Logger.Debugf("Prepare Transfer Action [%s,%v]", txID, tokenIDs)
 	// load tokens with the passed token identifiers
 	span.AddEvent("load_tokens")
-	inputIDs, tokens, inputInf, senders, err := s.TokenLoader.LoadTokens(newCtx, tokenIDs)
+	tokens, inputInf, senders, err := s.TokenLoader.LoadTokens(newCtx, tokenIDs)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
 	pp := s.PublicParametersManager.PublicParams()
 
 	// get sender
-	sender, err := transfer.NewSender(nil, tokens, inputIDs, inputInf, pp)
+	sender, err := transfer.NewSender(nil, tokens, tokenIDs, inputInf, pp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -195,7 +195,7 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMe
 	if action == nil {
 		return errors.New("failed to verify transfer: nil transfer action")
 	}
-	tr, ok := action.(*transfer.TransferAction)
+	tr, ok := action.(*transfer.Action)
 	if !ok {
 		return errors.New("failed to verify transfer: expected *zkatdlog.TransferActionMetadata")
 	}
@@ -230,7 +230,7 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMe
 // DeserializeTransferAction un-marshals a TransferActionMetadata from the passed array of bytes.
 // DeserializeTransferAction returns an error, if the un-marshalling fails.
 func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
-	transferAction := &transfer.TransferAction{}
+	transferAction := &transfer.Action{}
 	err := transferAction.Deserialize(raw)
 	if err != nil {
 		return nil, err

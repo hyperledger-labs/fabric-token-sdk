@@ -6,7 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-import "context"
+import (
+	"context"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+)
 
 // ValidationAttributeID is the type of validation attribute identifier
 type ValidationAttributeID = string
@@ -15,12 +19,12 @@ type ValidationAttributeID = string
 type ValidationAttributes = map[ValidationAttributeID][]byte
 
 // GetStateFnc models a function that returns the value for the given key from the ledger
-type GetStateFnc = func(key string) ([]byte, error)
+type GetStateFnc = func(id token.ID) ([]byte, error)
 
 // Ledger models a read-only ledger
 type Ledger interface {
 	// GetState returns the value for the given key
-	GetState(key string) ([]byte, error)
+	GetState(id token.ID) ([]byte, error)
 }
 
 type SignatureProvider interface {
@@ -34,7 +38,7 @@ type SignatureProvider interface {
 //go:generate counterfeiter -o mock/validator_ledger.go -fake-name ValidatorLedger . ValidatorLedger
 
 type ValidatorLedger interface {
-	GetState(key string) ([]byte, error)
+	GetState(id token.ID) ([]byte, error)
 }
 
 // Validator models a token request validator

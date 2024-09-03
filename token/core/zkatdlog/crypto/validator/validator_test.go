@@ -13,6 +13,8 @@ import (
 	"os"
 	"time"
 
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -479,9 +481,9 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	outvalues[0] = 65
 	outvalues[1] = 35
 
-	ids := make([]string, 2)
-	ids[0] = "0"
-	ids[1] = "1"
+	ids := make([]*token2.ID, 2)
+	ids[0] = &token2.ID{TxId: "0"}
+	ids[1] = &token2.ID{TxId: "1"}
 
 	inputs := prepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
 	tokens := make([]*tokn.Token, 2)
@@ -547,6 +549,6 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	return sender, tr, transferMetadata, tokens
 }
 
-func getState(key string) ([]byte, error) {
-	return fakeLedger.GetState(key)
+func getState(id token2.ID) ([]byte, error) {
+	return fakeLedger.GetState(id)
 }

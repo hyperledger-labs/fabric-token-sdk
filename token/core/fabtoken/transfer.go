@@ -45,7 +45,7 @@ func NewTransferService(
 // It also returns the corresponding TransferMetadata
 func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driver.OwnerWallet, tokenIDs []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	// select inputs
-	inputIDs, inputTokens, err := s.TokenLoader.GetTokens(tokenIDs)
+	inputTokens, err := s.TokenLoader.GetTokens(tokenIDs)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
@@ -73,7 +73,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 
 	// assemble transfer action
 	transfer := &TransferAction{
-		Inputs:   inputIDs,
+		Inputs:   tokenIDs,
 		Outputs:  outs,
 		Metadata: meta.TransferActionMetadata(opts.Attributes),
 	}

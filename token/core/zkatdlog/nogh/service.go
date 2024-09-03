@@ -25,7 +25,7 @@ type TokenCommitmentLoader interface {
 }
 
 type TokenLoader interface {
-	LoadTokens(ctx context.Context, ids []*token2.ID) ([]string, []*token.Token, []*token.Metadata, []driver.Identity, error)
+	LoadTokens(ctx context.Context, ids []*token2.ID) ([]*token.Token, []*token.Metadata, []driver.Identity, error)
 }
 
 type Service struct {

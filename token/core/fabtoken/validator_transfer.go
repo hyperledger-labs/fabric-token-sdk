@@ -179,7 +179,7 @@ func RetrieveInputsFromTransferAction(t *TransferAction, ledger driver.Ledger) (
 		return nil, errors.Wrap(err, "failed to retrieve input IDs")
 	}
 	for _, in := range inputs {
-		bytes, err := ledger.GetState(in)
+		bytes, err := ledger.GetState(*in)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to retrieve input to spend [%s]", in)
 		}

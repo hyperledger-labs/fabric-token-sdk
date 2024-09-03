@@ -392,7 +392,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 			}
 			auditableInputs[k] = append(auditableInputs[k], ai)
 		}
-		ta := &transfer.TransferAction{}
+		ta := &transfer.Action{}
 		err := json.Unmarshal(transfers[k], ta)
 		if err != nil {
 			return nil, nil, err

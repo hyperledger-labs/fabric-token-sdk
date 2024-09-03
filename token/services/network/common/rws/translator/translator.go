@@ -146,12 +146,10 @@ func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 		bytes, err := w.RWSet.GetState(w.namespace, outputID)
 		if err != nil {
 			errs = append(errs, errors.Wrapf(err, "failed getting output for [%s]", outputID))
-			// return nil, errors.Wrapf(err, "failed getting output for [%s]", outputID)
 			continue
 		}
 		if len(bytes) == 0 {
 			errs = append(errs, errors.Errorf("output for key [%s] does not exist", outputID))
-			// return nil, errors.Errorf("output for key [%s] does not exist", outputID)
 			continue
 		}
 		res = append(res, bytes)
@@ -202,31 +200,41 @@ func (w *Translator) checkIssue(issue IssueAction) error {
 }
 
 func (w *Translator) checkTransfer(t TransferAction) error {
-	keys, err := t.GetInputs()
+	inputs, err := t.GetInputs()
 	if err != nil {
 		return errors.Wrapf(err, "invalid transfer: failed getting input IDs")
 	}
+
 	if !t.IsGraphHiding() {
-		for _, key := range keys {
+		// in this case, the state must exist
+		for _, input := range inputs {
+			key, err := keys.CreateTokenKey(input.TxId, input.Index)
+			if err != nil {
+				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
+			}
 			bytes, err := w.RWSet.GetState(w.namespace, key)
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)
 			}
+			// in this case, the state must exist
 			if len(bytes) == 0 {
 				return errors.Errorf("invalid transfer: input is already spent [%s]", key)
 			}
 		}
 	} else {
-		for _, key := range keys {
+		// in this case, the state must not exist
+		for _, key := range t.GetSerialNumbers() {
 			bytes, err := w.RWSet.GetState(w.namespace, key)
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)
 			}
+			// in this case, the state must not exist
 			if len(bytes) != 0 {
 				return errors.Errorf("invalid transfer: input is already spent [%s:%v]", key, bytes)
 			}
 		}
 	}
+
 	// check if the keys of the new tokens aren't already used.
 	for i := 0; i < t.NumOutputs(); i++ {
 		if !t.IsRedeemAt(i) {
@@ -382,11 +390,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	}
 
 	// store inputs
-	ids, err := transferAction.GetInputs()
-	if err != nil {
-		return err
-	}
-	err = w.spendTokens(ids, transferAction.IsGraphHiding())
+	err := w.spendTokens(transferAction)
 	if err != nil {
 		return err
 	}
@@ -414,9 +418,21 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	return nil
 }
 
-func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
-	if !graphHiding {
-		for _, id := range ids {
+func (w *Translator) spendTokens(transferAction TransferAction) error {
+	if !transferAction.IsGraphHiding() {
+		ids, err := transferAction.GetInputs()
+		if err != nil {
+			return err
+		}
+		rwsetKeys := make([]string, len(ids))
+		for i, input := range ids {
+			rwsetKeys[i], err = keys.CreateTokenKey(input.TxId, input.Index)
+			if err != nil {
+				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
+			}
+		}
+
+		for _, id := range rwsetKeys {
 			logger.Debugf("Delete state %s\n", id)
 			err := w.RWSet.DeleteState(w.namespace, id)
 			if err != nil {
@@ -427,6 +443,7 @@ func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
 			}
 		}
 	} else {
+		ids := transferAction.GetSerialNumbers()
 		for _, id := range ids {
 			logger.Debugf("add serial number %s\n", id)
 			k, err := keys.CreateSNKey(id)
