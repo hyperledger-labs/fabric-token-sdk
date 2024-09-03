@@ -273,6 +273,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	bob := sel.Get("bob")
 	charlie := sel.Get("charlie")
 	manager := sel.Get("manager")
+	endorsers := GetEndorsers(network, sel)
 	RegisterAuditor(network, auditor, nil)
 
 	// give some time to the nodes to get the public parameters
@@ -681,7 +682,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckBalanceAndHolding(network, bob, "", "EUR", 2820-sum, auditor)
 
 	// Transfer With TokenSelector
-	IssueCash(network, "", "YUAN", 17, alice, auditor, true, issuer)
+	IssueSuccessfulCash(network, "", "YUAN", 17, alice, auditor, true, issuer, endorsers...)
 	TransferCashWithSelector(network, alice, "", "YUAN", 10, bob, auditor)
 	CheckBalanceAndHolding(network, alice, "", "YUAN", 7, auditor)
 	CheckBalanceAndHolding(network, bob, "", "YUAN", 10, auditor)
