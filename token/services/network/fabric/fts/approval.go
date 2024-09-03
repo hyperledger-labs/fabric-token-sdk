@@ -9,6 +9,10 @@ package fts
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -146,7 +150,11 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 
 	// validate token request
 	logger.Debugf("Validate TX [%s]", tx.ID())
-	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(key string) ([]byte, error) {
+	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(id token.ID) ([]byte, error) {
+		key, err := keys.CreateTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to create token key for id [%s]", id)
+		}
 		return rws.GetDirectState(tms.Namespace(), key)
 	})
 

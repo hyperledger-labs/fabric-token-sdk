@@ -9,6 +9,8 @@ package token
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -54,14 +56,14 @@ func (c *Validator) UnmarshallAndVerifyWithMetadata(ctx context.Context, ledger 
 	return res, meta, nil
 }
 
-func NewLedgerFromGetter(f driver.GetStateFnc) *stateGetter {
-	return &stateGetter{f: f}
-}
-
 type stateGetter struct {
 	f driver.GetStateFnc
 }
 
-func (g *stateGetter) GetState(key string) ([]byte, error) {
-	return g.f(key)
+func NewLedgerFromGetter(f driver.GetStateFnc) *stateGetter {
+	return &stateGetter{f: f}
+}
+
+func (g *stateGetter) GetState(id token.ID) ([]byte, error) {
+	return g.f(id)
 }
