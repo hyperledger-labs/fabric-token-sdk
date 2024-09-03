@@ -17,9 +17,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -146,7 +148,11 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 
 	// validate token request
 	logger.Debugf("Validate TX [%s]", tx.ID())
-	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(key string) ([]byte, error) {
+	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(id token.ID) ([]byte, error) {
+		key, err := keys.CreateTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to create token key for id [%s]", id)
+		}
 		return rws.GetDirectState(tms.Namespace(), key)
 	})
 
