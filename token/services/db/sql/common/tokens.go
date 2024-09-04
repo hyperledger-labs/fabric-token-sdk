@@ -85,8 +85,10 @@ func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	args := []interface{}{deletedBy, time.Now().UTC()}
-	where := whereTokenIDs(&args, ids)
+	cond := b.HasTokens("tx_id", "idx", ids...)
+	args := append([]any{deletedBy, time.Now().UTC()}, cond.Params()...)
+	offset := 3
+	where := cond.ToString(&offset)
 
 	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE %s", db.table.Tokens, where)
 	logger.Debug(query, args)
@@ -139,10 +141,10 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenT
 // UnspentTokensInWalletIterator returns the minimum information about the tokens needed for the selector
 func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.SpendableTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
-	where, args := tokenQuerySqlNoJoin(driver.QueryTokenDetailsParams{
+	where, args := common.Where(b.HasTokenDetails(driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
-	})
+	}, ""))
 	query := fmt.Sprintf(
 		"SELECT tx_id, idx, token_type, quantity, owner_wallet_id FROM %s %s",
 		db.table.Tokens, where,
@@ -232,10 +234,12 @@ func (db *TokenDB) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
 	if len(ids) == 0 {
 		return []*token.Token{}, nil
 	}
-	args := make([]interface{}, 0)
-	where := whereTokenIDs(&args, ids)
+	where, args := common.Where(b.And(
+		b.HasTokens("tx_id", "idx", ids...),
+		common.ConstCondition("auditor = true"),
+	))
 
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s WHERE %s AND auditor = true", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s %s", db.table.Tokens, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -368,10 +372,9 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
 		return [][]byte{}, nil
 	}
-	args := make([]interface{}, 0)
-	where := whereTokenIDs(&args, ids)
+	where, args := common.Where(b.HasTokens("tx_id", "idx", ids...))
 
-	query := fmt.Sprintf("SELECT tx_id, idx, ledger FROM %s WHERE %s", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, ledger FROM %s %s", db.table.Tokens, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -411,10 +414,9 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 	if len(ids) == 0 {
 		return [][]byte{}, [][]byte{}, nil
 	}
-	args := make([]interface{}, 0)
-	where := whereTokenIDs(&args, ids)
+	where, args := common.Where(b.HasTokens("tx_id", "idx", ids...))
 
-	query := fmt.Sprintf("SELECT tx_id, idx, ledger, ledger_metadata FROM %s WHERE %s", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, ledger, ledger_metadata FROM %s %s", db.table.Tokens, where)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
@@ -458,10 +460,13 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 	if len(inputs) == 0 {
 		return []*token.Token{}, nil
 	}
-	args := make([]interface{}, 0)
-	where := whereTokenIDs(&args, inputs)
+	where, args := common.Where(b.And(
+		b.HasTokens("tx_id", "idx", inputs...),
+		common.ConstCondition("is_deleted = false"),
+		common.ConstCondition("owner = true"),
+	))
 
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s WHERE %s AND is_deleted = false AND owner = true", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s %s", db.table.Tokens, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -572,10 +577,9 @@ func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, erro
 	if len(inputs) == 0 {
 		return []string{}, []bool{}, nil
 	}
-	args := []any{}
-	where := whereTokenIDs(&args, inputs)
+	where, args := common.Where(b.HasTokens("tx_id", "idx", inputs...))
 
-	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_deleted FROM %s WHERE %s", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_deleted FROM %s %s", db.table.Tokens, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -704,10 +708,9 @@ func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {
 	if tokenID == nil {
 		return false
 	}
-	args := []any{}
-	where := whereTokenIDs(&args, []*token.ID{tokenID})
+	where, args := common.Where(b.HasTokens("tx_id", "idx", tokenID))
 
-	query := fmt.Sprintf("SELECT certification FROM %s WHERE %s", db.table.Certifications, where)
+	query := fmt.Sprintf("SELECT certification FROM %s %s", db.table.Certifications, where)
 	logger.Debug(query, args)
 	row := db.db.QueryRow(query, args...)
 
@@ -730,9 +733,8 @@ func (db *TokenDB) GetCertifications(ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	args := []any{}
-	where := whereTokenIDs(&args, ids)
-	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s WHERE %s ", db.table.Certifications, where)
+	where, args := common.Where(b.HasTokens("tx_id", "idx", ids...))
+	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s %s ", db.table.Certifications, where)
 
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -908,7 +910,7 @@ func (t *TokenTransaction) Delete(ctx context.Context, txID string, index uint64
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
 	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE tx_id = $3 AND idx = $4;", t.db.table.Tokens)
-	logger.Debug(query, deletedBy, now, txID, index)
+	logger.Infof(query, deletedBy, now, txID, index)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	if _, err := t.tx.Exec(query, deletedBy, now, txID, index); err != nil {
 		span.RecordError(err)

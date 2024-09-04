@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
@@ -36,7 +37,7 @@ func TestTransactionSql(t *testing.T) {
 			params: driver.QueryTransactionsParams{
 				Statuses: []driver.TxStatus{driver.Confirmed},
 			},
-			expectedSql:  "WHERE status = $1",
+			expectedSql:  "WHERE (status = $1)",
 			expectedArgs: []interface{}{driver.Confirmed},
 		},
 		{
@@ -44,7 +45,7 @@ func TestTransactionSql(t *testing.T) {
 			params: driver.QueryTransactionsParams{
 				Statuses: []driver.TxStatus{driver.Pending, driver.Deleted},
 			},
-			expectedSql:  "WHERE (status = $1 OR status = $2)",
+			expectedSql:  "WHERE ((status) IN (($1), ($2)))",
 			expectedArgs: []interface{}{driver.Pending, driver.Deleted},
 		},
 		{
@@ -53,7 +54,7 @@ func TestTransactionSql(t *testing.T) {
 				SenderWallet: "alice",
 				Statuses:     []driver.TxStatus{driver.Confirmed},
 			},
-			expectedSql:  "WHERE status = $1",
+			expectedSql:  "WHERE (status = $1)",
 			expectedArgs: []interface{}{driver.Confirmed},
 		},
 		{
@@ -62,7 +63,7 @@ func TestTransactionSql(t *testing.T) {
 				SenderWallet:    "alice",
 				RecipientWallet: "bob",
 			},
-			expectedSql:  "WHERE (sender_eid = $1 OR recipient_eid = $2)",
+			expectedSql:  "WHERE ((sender_eid = $1 OR recipient_eid = $2))",
 			expectedArgs: []interface{}{"alice", "bob"},
 		},
 		{
@@ -72,7 +73,7 @@ func TestTransactionSql(t *testing.T) {
 				RecipientWallet: "alice",
 				From:            &lastYear,
 			},
-			expectedSql:  "WHERE stored_at >= $1 AND (sender_eid = $2 OR recipient_eid = $3)",
+			expectedSql:  "WHERE (stored_at >= $1 AND (sender_eid = $2 OR recipient_eid = $3))",
 			expectedArgs: []interface{}{&lastYear, "alice", "alice"},
 		},
 		{
@@ -81,7 +82,7 @@ func TestTransactionSql(t *testing.T) {
 				To:   &now,
 				From: &lastYear,
 			},
-			expectedSql:  "WHERE stored_at >= $1 AND stored_at <= $2",
+			expectedSql:  "WHERE (stored_at >= $1 AND stored_at <= $2)",
 			expectedArgs: []interface{}{&lastYear, &now},
 		},
 		{
@@ -91,7 +92,7 @@ func TestTransactionSql(t *testing.T) {
 				RecipientWallet: "bob",
 				IDs:             []string{"transactionID"},
 			},
-			expectedSql:  "WHERE tbl.tx_id = $1 AND (sender_eid = $2 OR recipient_eid = $3)",
+			expectedSql:  "WHERE (tbl.tx_id = $1 AND (sender_eid = $2 OR recipient_eid = $3))",
 			expectedArgs: []interface{}{"transactionID", "alice", "bob"},
 		},
 		{
@@ -101,14 +102,14 @@ func TestTransactionSql(t *testing.T) {
 				RecipientWallet: "bob",
 				IDs:             []string{"transactionID1", "transactionID2", "transactionID3"},
 			},
-			expectedSql:  "WHERE (tbl.tx_id = $1 OR tbl.tx_id = $2 OR tbl.tx_id = $3) AND (sender_eid = $4 OR recipient_eid = $5)",
+			expectedSql:  "WHERE ((tbl.tx_id) IN (($1), ($2), ($3)) AND (sender_eid = $4 OR recipient_eid = $5))",
 			expectedArgs: []interface{}{"transactionID1", "transactionID2", "transactionID3", "alice", "bob"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, actualArgs := transactionsConditionsSql(tc.params, "tbl")
+			actualSql, actualArgs := common.Where(b.HasTransactionParams(tc.params, "tbl"))
 			assert.Equal(t, tc.expectedSql, actualSql)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -127,7 +128,7 @@ func TestMovementConditions(t *testing.T) {
 			params: driver.QueryMovementsParams{
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE status != 3 ORDER BY stored_at DESC",
+			expectedSql:  "WHERE (status != 3) ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{},
 		},
 		{
@@ -136,7 +137,7 @@ func TestMovementConditions(t *testing.T) {
 				NumRecords:        5,
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE status != 3 ORDER BY stored_at DESC LIMIT 5",
+			expectedSql:  "WHERE (status != 3) ORDER BY stored_at DESC LIMIT 5",
 			expectedArgs: []interface{}{},
 		},
 		{
@@ -145,7 +146,7 @@ func TestMovementConditions(t *testing.T) {
 				EnrollmentIDs:     []string{"eid1", "eid2", "eid3"},
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE (enrollment_id = $1 OR enrollment_id = $2 OR enrollment_id = $3) AND status != 3 ORDER BY stored_at DESC",
+			expectedSql:  "WHERE ((enrollment_id) IN (($1), ($2), ($3)) AND status != 3) ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{"eid1", "eid2", "eid3"},
 		},
 		{
@@ -154,7 +155,7 @@ func TestMovementConditions(t *testing.T) {
 				TxStatuses:        []driver.TxStatus{driver.Confirmed},
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE status = $1 ORDER BY stored_at DESC",
+			expectedSql:  "WHERE (status = $1) ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{driver.Confirmed},
 		},
 		{
@@ -163,7 +164,7 @@ func TestMovementConditions(t *testing.T) {
 				TxStatuses:        []driver.TxStatus{driver.Pending, driver.Deleted},
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE (status = $1 OR status = $2) ORDER BY stored_at DESC",
+			expectedSql:  "WHERE ((status) IN (($1), ($2))) ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{driver.Pending, driver.Deleted},
 		},
 		{
@@ -173,7 +174,7 @@ func TestMovementConditions(t *testing.T) {
 				TxStatuses:        []driver.TxStatus{driver.Confirmed},
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE enrollment_id = $1 AND status = $2 ORDER BY stored_at DESC",
+			expectedSql:  "WHERE (enrollment_id = $1 AND status = $2) ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{"alice", driver.Confirmed},
 		},
 		{
@@ -184,7 +185,7 @@ func TestMovementConditions(t *testing.T) {
 				TokenTypes:        []string{"ABC", "XYZ"},
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE enrollment_id = $1 AND (token_type = $2 OR token_type = $3) AND status = $4 ORDER BY stored_at DESC",
+			expectedSql:  "WHERE (enrollment_id = $1 AND (token_type) IN (($2), ($3)) AND status = $4) ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{"alice", "ABC", "XYZ", driver.Confirmed},
 		},
 		{
@@ -196,7 +197,7 @@ func TestMovementConditions(t *testing.T) {
 				NumRecords:        5,
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE enrollment_id = $1 AND (token_type = $2 OR token_type = $3) AND status = $4 ORDER BY stored_at DESC LIMIT 5",
+			expectedSql:  "WHERE (enrollment_id = $1 AND (token_type) IN (($2), ($3)) AND status = $4) ORDER BY stored_at DESC LIMIT 5",
 			expectedArgs: []interface{}{"alice", "ABC", "XYZ", driver.Confirmed},
 		},
 		{
@@ -206,7 +207,7 @@ func TestMovementConditions(t *testing.T) {
 				TokenTypes:        []string{"XYZ"},
 				MovementDirection: driver.Sent,
 			},
-			expectedSql:  "WHERE enrollment_id = $1 AND token_type = $2 AND status != 3 AND amount < 0 ORDER BY stored_at DESC",
+			expectedSql:  "WHERE (enrollment_id = $1 AND token_type = $2 AND status != 3 AND amount < 0) ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{"alice", "XYZ"},
 		},
 		{
@@ -217,7 +218,7 @@ func TestMovementConditions(t *testing.T) {
 				MovementDirection: driver.Received,
 				NumRecords:        2,
 			},
-			expectedSql:  "WHERE status = $1 AND amount > 0 ORDER BY stored_at DESC LIMIT 2",
+			expectedSql:  "WHERE (status = $1 AND amount > 0) ORDER BY stored_at DESC LIMIT 2",
 			expectedArgs: []interface{}{driver.Pending},
 		},
 	}
@@ -241,7 +242,7 @@ func TestTokenSql(t *testing.T) {
 		{
 			name:         "no filter",
 			params:       driver.QueryTokenDetailsParams{},
-			expectedSql:  "WHERE owner = true AND is_deleted = false",
+			expectedSql:  "WHERE (owner = true AND is_deleted = false)",
 			expectedArgs: []interface{}{},
 		},
 		{
@@ -249,14 +250,14 @@ func TestTokenSql(t *testing.T) {
 			params: driver.QueryTokenDetailsParams{
 				IncludeDeleted: true,
 			},
-			expectedSql:  "WHERE owner = true",
+			expectedSql:  "WHERE (owner = true)",
 			expectedArgs: []interface{}{},
 		},
 		{
 			name:         "owner unspent",
 			params:       driver.QueryTokenDetailsParams{WalletID: "me"},
-			expectedSql:  "WHERE owner = true AND (wallet_id = $1 OR owner_wallet_id = $2) AND is_deleted = false",
-			expectedArgs: []interface{}{"me", "me"},
+			expectedSql:  "WHERE (owner = true AND owner_wallet_id = $1 AND is_deleted = false)",
+			expectedArgs: []interface{}{"me"},
 		},
 		{
 			name: "owner with deleted",
@@ -264,8 +265,8 @@ func TestTokenSql(t *testing.T) {
 				WalletID:       "me",
 				IncludeDeleted: true,
 			},
-			expectedSql:  "WHERE owner = true AND (wallet_id = $1 OR owner_wallet_id = $2)",
-			expectedArgs: []interface{}{"me", "me"},
+			expectedSql:  "WHERE (owner = true AND owner_wallet_id = $1)",
+			expectedArgs: []interface{}{"me"},
 		},
 		{
 			name: "owner and htlc with deleted",
@@ -274,14 +275,14 @@ func TestTokenSql(t *testing.T) {
 				OwnerType:      "htlc",
 				IncludeDeleted: true,
 			},
-			expectedSql:  "WHERE owner = true AND owner_type = $1 AND (wallet_id = $2 OR owner_wallet_id = $3)",
-			expectedArgs: []interface{}{"htlc", "me", "me"},
+			expectedSql:  "WHERE (owner = true AND owner_type = $1 AND owner_wallet_id = $2)",
+			expectedArgs: []interface{}{"htlc", "me"},
 		},
 		{
 			name:         "owner and type",
 			params:       driver.QueryTokenDetailsParams{TokenType: "tok", WalletID: "me"},
-			expectedSql:  "WHERE owner = true AND (wallet_id = $1 OR owner_wallet_id = $2) AND token_type = $3 AND is_deleted = false",
-			expectedArgs: []interface{}{"me", "me", "tok"},
+			expectedSql:  "WHERE (owner = true AND token_type = $1 AND owner_wallet_id = $2 AND is_deleted = false)",
+			expectedArgs: []interface{}{"tok", "me"},
 		},
 		{
 			name: "owner and type and id",
@@ -290,8 +291,8 @@ func TestTokenSql(t *testing.T) {
 				WalletID:  "me",
 				IDs:       []*token.ID{{TxId: "a", Index: 1}},
 			},
-			expectedSql:  "WHERE owner = true AND (wallet_id = $1 OR owner_wallet_id = $2) AND token_type = $3 AND (tx_id, idx) IN ( ($4, $5) ) AND is_deleted = false",
-			expectedArgs: []interface{}{"me", "me", "tok", "a", 1},
+			expectedSql:  "WHERE (owner = true AND token_type = $1 AND (tx_id, idx) IN (($2, $3)) AND owner_wallet_id = $4 AND is_deleted = false)",
+			expectedArgs: []interface{}{"tok", "a", 1, "me"},
 		},
 		{
 			name: "type and ids",
@@ -300,7 +301,7 @@ func TestTokenSql(t *testing.T) {
 				IDs:            []*token.ID{{TxId: "a", Index: 1}, {TxId: "b", Index: 2}},
 				IncludeDeleted: true,
 			},
-			expectedSql:  "WHERE owner = true AND token_type = $1 AND (tx_id, idx) IN ( ($2, $3), ($4, $5) )",
+			expectedSql:  "WHERE (owner = true AND token_type = $1 AND (tx_id, idx) IN (($2, $3), ($4, $5)))",
 			expectedArgs: []interface{}{"tok", "a", uint64(1), "b", uint64(2)},
 		},
 	}
@@ -316,7 +317,7 @@ func TestTokenSql(t *testing.T) {
 		IDs:      []*token.ID{{TxId: "a", Index: 1}},
 		WalletID: "me",
 	}, "A", "B")
-	assert.Equal(t, "WHERE owner = true AND (wallet_id = $1 OR owner_wallet_id = $2) AND (A.tx_id, A.idx) IN ( ($3, $4) ) AND is_deleted = false", where, "join")
+	assert.Equal(t, "WHERE (owner = true AND (A.tx_id, A.idx) IN (($1, $2)) AND (wallet_id = $3 OR owner_wallet_id = $4) AND is_deleted = false)", where, "join")
 	assert.Equal(t, "LEFT JOIN B ON A.tx_id = B.tx_id AND A.idx = B.idx", join, "join")
 	assert.Len(t, args, 4)
 }
@@ -331,7 +332,7 @@ func TestTokenSqlNoJoin(t *testing.T) {
 		{
 			name:         "no filter",
 			params:       driver.QueryTokenDetailsParams{},
-			expectedSql:  "WHERE owner = true AND is_deleted = false",
+			expectedSql:  "WHERE (owner = true AND is_deleted = false)",
 			expectedArgs: []interface{}{},
 		},
 		{
@@ -339,13 +340,13 @@ func TestTokenSqlNoJoin(t *testing.T) {
 			params: driver.QueryTokenDetailsParams{
 				IncludeDeleted: true,
 			},
-			expectedSql:  "WHERE owner = true",
+			expectedSql:  "WHERE (owner = true)",
 			expectedArgs: []interface{}{},
 		},
 		{
 			name:         "owner unspent",
 			params:       driver.QueryTokenDetailsParams{WalletID: "me"},
-			expectedSql:  "WHERE owner = true AND owner_wallet_id = $1 AND is_deleted = false",
+			expectedSql:  "WHERE (owner = true AND owner_wallet_id = $1 AND is_deleted = false)",
 			expectedArgs: []interface{}{"me"},
 		},
 		{
@@ -354,7 +355,7 @@ func TestTokenSqlNoJoin(t *testing.T) {
 				WalletID:       "me",
 				IncludeDeleted: true,
 			},
-			expectedSql:  "WHERE owner = true AND owner_wallet_id = $1",
+			expectedSql:  "WHERE (owner = true AND owner_wallet_id = $1)",
 			expectedArgs: []interface{}{"me"},
 		},
 		{
@@ -364,14 +365,14 @@ func TestTokenSqlNoJoin(t *testing.T) {
 				OwnerType:      "htlc",
 				IncludeDeleted: true,
 			},
-			expectedSql:  "WHERE owner = true AND owner_type = $1 AND owner_wallet_id = $2",
+			expectedSql:  "WHERE (owner = true AND owner_type = $1 AND owner_wallet_id = $2)",
 			expectedArgs: []interface{}{"htlc", "me"},
 		},
 		{
 			name:         "owner and type",
 			params:       driver.QueryTokenDetailsParams{TokenType: "tok", WalletID: "me"},
-			expectedSql:  "WHERE owner = true AND owner_wallet_id = $1 AND token_type = $2 AND is_deleted = false",
-			expectedArgs: []interface{}{"me", "tok"},
+			expectedSql:  "WHERE (owner = true AND token_type = $1 AND owner_wallet_id = $2 AND is_deleted = false)",
+			expectedArgs: []interface{}{"tok", "me"},
 		},
 		{
 			name: "owner and type and id",
@@ -380,8 +381,8 @@ func TestTokenSqlNoJoin(t *testing.T) {
 				WalletID:  "me",
 				IDs:       []*token.ID{{TxId: "a", Index: 1}},
 			},
-			expectedSql:  "WHERE owner = true AND owner_wallet_id = $1 AND token_type = $2 AND (tx_id, idx) IN ( ($3, $4) ) AND is_deleted = false",
-			expectedArgs: []interface{}{"me", "tok", "a", 1},
+			expectedSql:  "WHERE (owner = true AND token_type = $1 AND (tx_id, idx) IN (($2, $3)) AND owner_wallet_id = $4 AND is_deleted = false)",
+			expectedArgs: []interface{}{"tok", "a", 1, "me"},
 		},
 		{
 			name: "type and ids",
@@ -390,13 +391,13 @@ func TestTokenSqlNoJoin(t *testing.T) {
 				IDs:            []*token.ID{{TxId: "a", Index: 1}, {TxId: "b", Index: 2}},
 				IncludeDeleted: true,
 			},
-			expectedSql:  "WHERE owner = true AND token_type = $1 AND (tx_id, idx) IN ( ($2, $3), ($4, $5) )",
+			expectedSql:  "WHERE (owner = true AND token_type = $1 AND (tx_id, idx) IN (($2, $3), ($4, $5)))",
 			expectedArgs: []interface{}{"tok", "a", uint64(1), "b", uint64(2)},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, actualArgs := tokenQuerySqlNoJoin(tc.params)
+			actualSql, actualArgs := common.Where(b.HasTokenDetails(tc.params, ""))
 			assert.Equal(t, tc.expectedSql, actualSql, tc.name)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -405,21 +406,18 @@ func TestTokenSqlNoJoin(t *testing.T) {
 
 func TestIn(t *testing.T) {
 	// 0
-	args := make([]any, 0)
-	w := in(&args, "enrollment_id", []string{})
+	w, args := common.Where(b.InStrings("enrollment_id", []string{}))
 	assert.Equal(t, "", w)
 	assert.Equal(t, []any{}, args)
 
 	// 1
-	args = make([]any, 0)
-	w = in(&args, "enrollment_id", []string{"eid1"})
-	assert.Equal(t, "enrollment_id = $1", w)
+	w, args = common.Where(b.InStrings("enrollment_id", []string{"eid1"}))
+	assert.Equal(t, "WHERE enrollment_id = $1", w)
 	assert.Equal(t, []any{"eid1"}, args)
 
 	// 3
-	args = make([]any, 0)
-	w = in(&args, "enrollment_id", []string{"eid1", "eid2", "eid3"})
-	assert.Equal(t, "(enrollment_id = $1 OR enrollment_id = $2 OR enrollment_id = $3)", w)
+	w, args = common.Where(b.InStrings("enrollment_id", []string{"eid1", "eid2", "eid3"}))
+	assert.Equal(t, "WHERE (enrollment_id) IN (($1), ($2), ($3))", w)
 	assert.Equal(t, []any{"eid1", "eid2", "eid3"}, args)
 }
 

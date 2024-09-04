@@ -128,7 +128,7 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 }
 
 func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
-	conditions, args := transactionsConditionsSql(params, db.table.Transactions)
+	conditions, args := common.Where(b.HasTransactionParams(params, db.table.Transactions))
 	query := fmt.Sprintf(
 		"SELECT %s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, %s.application_metadata, stored_at FROM %s %s %s",
 		db.table.Transactions, db.table.Requests, db.table.Requests,
@@ -161,7 +161,7 @@ func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error)
 }
 
 func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
-	conditions, args := validationConditionsSql(params)
+	conditions, args := common.Where(b.HasValidationParams(params))
 	query := fmt.Sprintf("SELECT %s.tx_id, %s.request, metadata, %s.status, %s.stored_at FROM %s %s %s",
 		db.table.Validations, db.table.Requests, db.table.Requests, db.table.Validations,
 		db.table.Validations, joinOnTxID(db.table.Validations, db.table.Requests), conditions)
@@ -177,7 +177,7 @@ func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsPa
 
 // QueryTokenRequests returns an iterator over the token requests matching the passed params
 func (db *TransactionDB) QueryTokenRequests(params driver.QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
-	conditions, args := tokenRequestConditionsSql(params)
+	conditions, args := common.Where(b.InInts("status", params.Statuses))
 
 	query := fmt.Sprintf("SELECT tx_id, request, status FROM %s %s", db.table.Requests, conditions)
 	logger.Debug(query, args)
