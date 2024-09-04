@@ -63,7 +63,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) error {
 	newCtx, span := t.tracer.Start(ctx, "on_status")
 	defer span.End()
-	t.logger.Debugf("tx status changed for tx [%s]: [%s]", txID, status)
+	t.logger.Infof("tx status changed for tx [%s]: [%s]", txID, status)
 	var txStatus driver.TxStatus
 	switch status {
 	case network.Valid:
