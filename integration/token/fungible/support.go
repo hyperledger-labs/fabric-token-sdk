@@ -88,7 +88,7 @@ func IssueCashForTMSID(network *integration.Infrastructure, wallet string, typ s
 	return issueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, tmsId, []*token3.NodeReference{}, expectedErrorMsgs)
 }
 
-func issueCashForTMSID(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, tmsId *token2.TMSID, finalities []*token3.NodeReference, expectedErrorMsgs []string) string {
+func issueCashForTMSID(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, tmsId *token2.TMSID, endorsers []*token3.NodeReference, expectedErrorMsgs []string) string {
 	targetAuditor := auditor.Id()
 	if auditor.Id() == "issuer" || auditor.Id() == "newIssuer" {
 		// the issuer is the auditor, choose default identity
@@ -109,8 +109,11 @@ func issueCashForTMSID(network *integration.Infrastructure, wallet string, typ s
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
 		txID := common.JSONUnmarshalString(txIDBoxed)
-		for _, n := range append(finalities, receiver, auditor) {
+		for _, n := range []*token3.NodeReference{receiver, auditor} {
 			common2.CheckFinality(network, n, txID, tmsId, false)
+		}
+		for _, n := range endorsers {
+			common2.CheckEndorserFinality(network, n, txID, tmsId, false)
 		}
 		return common.JSONUnmarshalString(txIDBoxed)
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
@@ -310,7 +311,7 @@ func Topology(opts common.Opts) []api.Topology {
 	if opts.FSCBasedEndorsement {
 		endorserTemplate := fscTopology.NewTemplate("endorser")
 		endorserTemplate.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-		endorserTemplate.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
+		endorserTemplate.RegisterViewFactory("EndorserFinality", &endorser.FinalityViewFactory{})
 		endorserTemplate.AddOptions(
 			fabric.WithOrganization("Org1"),
 			fabric2.WithEndorserRole(),

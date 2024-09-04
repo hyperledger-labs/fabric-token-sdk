@@ -226,7 +226,7 @@ func (d *DB) NewHoldingsFilter() *HoldingsFilter {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (d *DB) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
-	logger.Infof("set status [%s][%s]...", txID, status)
+	logger.Debugf("set status [%s][%s]...", txID, status)
 	if err := d.db.SetStatus(ctx, txID, status, message); err != nil {
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TxStatusMessage[status])
 	}
