@@ -19,8 +19,8 @@ import (
 type TestPortRange int
 
 const (
-	basePort      = 20000
-	portsPerNode  = 150
+	basePort      = 5000
+	portsPerNode  = 100
 	portsPerSuite = 10 * portsPerNode
 
 	SimpleTokenSelector    = "simple"
