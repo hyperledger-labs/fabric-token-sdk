@@ -310,6 +310,7 @@ func Topology(opts common.Opts) []api.Topology {
 	if opts.FSCBasedEndorsement {
 		endorserTemplate := fscTopology.NewTemplate("endorser")
 		endorserTemplate.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+		endorserTemplate.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 		endorserTemplate.AddOptions(
 			fabric.WithOrganization("Org1"),
 			fabric2.WithEndorserRole(),

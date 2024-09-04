@@ -287,7 +287,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
+	IssueSuccessfulCash(network, "", "USD", 110, alice, auditor, true, issuer, endorsers...)
 	t1 := time.Now()
 	CheckBalanceAndHolding(network, alice, "", "USD", 110, auditor)
 	CheckAuditedTransactions(network, auditor, AuditedTransactions[:1], nil, nil)
