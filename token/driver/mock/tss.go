@@ -4,13 +4,12 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type TokensService struct {
-	DeserializeTokenStub        func([]byte, []byte) (*token.Token, view.Identity, error)
+	DeserializeTokenStub        func([]byte, []byte) (*token.Token, driver.Identity, error)
 	deserializeTokenMutex       sync.RWMutex
 	deserializeTokenArgsForCall []struct {
 		arg1 []byte
@@ -18,12 +17,12 @@ type TokensService struct {
 	}
 	deserializeTokenReturns struct {
 		result1 *token.Token
-		result2 view.Identity
+		result2 driver.Identity
 		result3 error
 	}
 	deserializeTokenReturnsOnCall map[int]struct {
 		result1 *token.Token
-		result2 view.Identity
+		result2 driver.Identity
 		result3 error
 	}
 	GetTokenInfoStub        func(*driver.TokenRequestMetadata, []byte) ([]byte, error)
@@ -44,7 +43,7 @@ type TokensService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokensService) DeserializeToken(arg1 []byte, arg2 []byte) (*token.Token, view.Identity, error) {
+func (fake *TokensService) DeserializeToken(arg1 []byte, arg2 []byte) (*token.Token, driver.Identity, error) {
 	var arg1Copy []byte
 	if arg1 != nil {
 		arg1Copy = make([]byte, len(arg1))
@@ -80,7 +79,7 @@ func (fake *TokensService) DeserializeTokenCallCount() int {
 	return len(fake.deserializeTokenArgsForCall)
 }
 
-func (fake *TokensService) DeserializeTokenCalls(stub func([]byte, []byte) (*token.Token, view.Identity, error)) {
+func (fake *TokensService) DeserializeTokenCalls(stub func([]byte, []byte) (*token.Token, driver.Identity, error)) {
 	fake.deserializeTokenMutex.Lock()
 	defer fake.deserializeTokenMutex.Unlock()
 	fake.DeserializeTokenStub = stub
@@ -93,31 +92,31 @@ func (fake *TokensService) DeserializeTokenArgsForCall(i int) ([]byte, []byte) {
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *TokensService) DeserializeTokenReturns(result1 *token.Token, result2 view.Identity, result3 error) {
+func (fake *TokensService) DeserializeTokenReturns(result1 *token.Token, result2 driver.Identity, result3 error) {
 	fake.deserializeTokenMutex.Lock()
 	defer fake.deserializeTokenMutex.Unlock()
 	fake.DeserializeTokenStub = nil
 	fake.deserializeTokenReturns = struct {
 		result1 *token.Token
-		result2 view.Identity
+		result2 driver.Identity
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *TokensService) DeserializeTokenReturnsOnCall(i int, result1 *token.Token, result2 view.Identity, result3 error) {
+func (fake *TokensService) DeserializeTokenReturnsOnCall(i int, result1 *token.Token, result2 driver.Identity, result3 error) {
 	fake.deserializeTokenMutex.Lock()
 	defer fake.deserializeTokenMutex.Unlock()
 	fake.DeserializeTokenStub = nil
 	if fake.deserializeTokenReturnsOnCall == nil {
 		fake.deserializeTokenReturnsOnCall = make(map[int]struct {
 			result1 *token.Token
-			result2 view.Identity
+			result2 driver.Identity
 			result3 error
 		})
 	}
 	fake.deserializeTokenReturnsOnCall[i] = struct {
 		result1 *token.Token
-		result2 view.Identity
+		result2 driver.Identity
 		result3 error
 	}{result1, result2, result3}
 }

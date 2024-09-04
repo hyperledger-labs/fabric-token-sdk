@@ -204,13 +204,13 @@ func (t *Transaction) Bytes(eIDs ...string) ([]byte, error) {
 }
 
 // Issue appends a new Issue operation to the TokenRequest inside this transaction
-func (t *Transaction) Issue(wallet *token.IssuerWallet, receiver view.Identity, typ string, q uint64, opts ...token.IssueOption) error {
+func (t *Transaction) Issue(wallet *token.IssuerWallet, receiver token.Identity, typ string, q uint64, opts ...token.IssueOption) error {
 	_, err := t.TokenRequest.Issue(t.Context, wallet, receiver, typ, q, opts...)
 	return err
 }
 
 // Transfer appends a new Transfer operation to the TokenRequest inside this transaction
-func (t *Transaction) Transfer(wallet *token.OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...token.TransferOption) error {
+func (t *Transaction) Transfer(wallet *token.OwnerWallet, typ string, values []uint64, owners []token.Identity, opts ...token.TransferOption) error {
 	_, err := t.TokenRequest.Transfer(t.Context, wallet, typ, values, owners, opts...)
 	return err
 }

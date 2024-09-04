@@ -9,7 +9,6 @@ package nfttx
 import (
 	"encoding/base64"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/marshaller"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -25,7 +24,7 @@ func (o *OutputStream) Filter(f func(t *token.Output) bool) *OutputStream {
 	return &OutputStream{OutputStream: o.OutputStream.Filter(f)}
 }
 
-func (o *OutputStream) ByRecipient(id view.Identity) *OutputStream {
+func (o *OutputStream) ByRecipient(id token.Identity) *OutputStream {
 	return &OutputStream{OutputStream: o.OutputStream.ByRecipient(id)}
 }
 

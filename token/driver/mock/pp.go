@@ -4,20 +4,19 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type PublicParameters struct {
-	AuditorsStub        func() []view.Identity
+	AuditorsStub        func() []driver.Identity
 	auditorsMutex       sync.RWMutex
 	auditorsArgsForCall []struct {
 	}
 	auditorsReturns struct {
-		result1 []view.Identity
+		result1 []driver.Identity
 	}
 	auditorsReturnsOnCall map[int]struct {
-		result1 []view.Identity
+		result1 []driver.Identity
 	}
 	BytesStub        func() ([]byte, error)
 	bytesMutex       sync.RWMutex
@@ -127,7 +126,7 @@ type PublicParameters struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *PublicParameters) Auditors() []view.Identity {
+func (fake *PublicParameters) Auditors() []driver.Identity {
 	fake.auditorsMutex.Lock()
 	ret, specificReturn := fake.auditorsReturnsOnCall[len(fake.auditorsArgsForCall)]
 	fake.auditorsArgsForCall = append(fake.auditorsArgsForCall, struct {
@@ -151,32 +150,32 @@ func (fake *PublicParameters) AuditorsCallCount() int {
 	return len(fake.auditorsArgsForCall)
 }
 
-func (fake *PublicParameters) AuditorsCalls(stub func() []view.Identity) {
+func (fake *PublicParameters) AuditorsCalls(stub func() []driver.Identity) {
 	fake.auditorsMutex.Lock()
 	defer fake.auditorsMutex.Unlock()
 	fake.AuditorsStub = stub
 }
 
-func (fake *PublicParameters) AuditorsReturns(result1 []view.Identity) {
+func (fake *PublicParameters) AuditorsReturns(result1 []driver.Identity) {
 	fake.auditorsMutex.Lock()
 	defer fake.auditorsMutex.Unlock()
 	fake.AuditorsStub = nil
 	fake.auditorsReturns = struct {
-		result1 []view.Identity
+		result1 []driver.Identity
 	}{result1}
 }
 
-func (fake *PublicParameters) AuditorsReturnsOnCall(i int, result1 []view.Identity) {
+func (fake *PublicParameters) AuditorsReturnsOnCall(i int, result1 []driver.Identity) {
 	fake.auditorsMutex.Lock()
 	defer fake.auditorsMutex.Unlock()
 	fake.AuditorsStub = nil
 	if fake.auditorsReturnsOnCall == nil {
 		fake.auditorsReturnsOnCall = make(map[int]struct {
-			result1 []view.Identity
+			result1 []driver.Identity
 		})
 	}
 	fake.auditorsReturnsOnCall[i] = struct {
-		result1 []view.Identity
+		result1 []driver.Identity
 	}{result1}
 }
 

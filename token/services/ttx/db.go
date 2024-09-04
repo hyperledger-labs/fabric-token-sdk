@@ -10,7 +10,6 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -80,7 +79,7 @@ func (a *DB) GetTokenRequest(txID string) ([]byte, error) {
 	return a.ttxDB.GetTokenRequest(txID)
 }
 
-func (a *DB) AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error {
+func (a *DB) AppendTransactionEndorseAck(txID string, id token.Identity, sigma []byte) error {
 	return a.ttxDB.AddTransactionEndorsementAck(txID, id, sigma)
 }
 

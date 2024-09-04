@@ -29,13 +29,13 @@ type Actions struct {
 // ActionTransfer describe a transfer operation
 type ActionTransfer struct {
 	// From is the sender
-	From view.Identity
+	From token.Identity
 	// Type of tokens to transfer
 	Type string
 	// Amount to transfer
 	Amount uint64
 	// Recipient is the recipient of the transfer
-	Recipient view.Identity
+	Recipient token.Identity
 }
 
 type collectActionsView struct {
@@ -79,18 +79,18 @@ func (c *collectActionsView) collectLocal(context view.Context, actionTransfer *
 		logger.Debugf("collect local from [%s]", party)
 	}
 
-	err := c.tx.Transfer(w, actionTransfer.Type, []uint64{actionTransfer.Amount}, []view.Identity{actionTransfer.Recipient})
+	err := c.tx.Transfer(w, actionTransfer.Type, []uint64{actionTransfer.Amount}, []token.Identity{actionTransfer.Recipient})
 	if err != nil {
 		return errors.Wrap(err, "failed creating transfer for action")
 	}
 
 	// Binds identities
 	es := view2.GetEndpointService(context)
-	longTermIdentity, _, _, err := es.Resolve(party)
+	longTermIdentity, _, _, err := es.Resolve(view.Identity(party))
 	if err != nil {
 		return errors.Wrapf(err, "cannot resolve long term network identity for [%s]", party)
 	}
-	if err := c.tx.TokenRequest.BindTo(es, longTermIdentity); err != nil {
+	if err := c.tx.TokenRequest.BindTo(&binder{EndpointService: es}, token.Identity(longTermIdentity)); err != nil {
 		return errors.Wrapf(err, "failed binding to [%s]", party.String())
 	}
 
@@ -103,7 +103,7 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 		logger.Debugf("collect remote from [%s]", party)
 	}
 
-	session, err := context.GetSession(context.Initiator(), party)
+	session, err := context.GetSession(context.Initiator(), view.Identity(party))
 	if err != nil {
 		return errors.Wrap(err, "failed getting session")
 	}
@@ -142,11 +142,11 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 
 	// Bind to party
 	es := view2.GetEndpointService(context)
-	longTermIdentity, _, _, err := es.Resolve(party)
+	longTermIdentity, _, _, err := es.Resolve(view.Identity(party))
 	if err != nil {
 		return errors.Wrapf(err, "cannot resolve long term network identity for [%s]", party)
 	}
-	if err := txPayload.TokenRequest.BindTo(es, longTermIdentity); err != nil {
+	if err := txPayload.TokenRequest.BindTo(&binder{EndpointService: es}, token.Identity(longTermIdentity)); err != nil {
 		return errors.Wrapf(err, "failed binding to [%s]", party.String())
 	}
 
@@ -236,4 +236,12 @@ func unmarshalOrPanic(raw []byte, state interface{}) {
 	if err != nil {
 		panic(fmt.Sprintf("failed unmarshalling state [%s]", err))
 	}
+}
+
+type binder struct {
+	*view2.EndpointService
+}
+
+func (b *binder) Bind(longTerm token.Identity, ephemeral token.Identity) error {
+	return b.EndpointService.Bind(view.Identity(longTerm), view.Identity(ephemeral))
 }

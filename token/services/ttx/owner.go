@@ -9,7 +9,6 @@ package ttx
 import (
 	"context"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
@@ -60,6 +59,6 @@ func (a *TxOwner) GetTokenRequest(txID string) ([]byte, error) {
 	return a.owner.GetTokenRequest(txID)
 }
 
-func (a *TxOwner) appendTransactionEndorseAck(tx *Transaction, id view.Identity, sigma []byte) error {
+func (a *TxOwner) appendTransactionEndorseAck(tx *Transaction, id token.Identity, sigma []byte) error {
 	return a.owner.AppendTransactionEndorseAck(tx.ID(), id, sigma)
 }

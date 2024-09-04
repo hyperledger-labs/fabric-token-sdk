@@ -45,13 +45,13 @@ func NewRequestWithdrawalView(issuer view.Identity, tokenType string, amount uin
 
 // RequestWithdrawal runs RequestWithdrawalView with the passed arguments.
 // The view will generate a recipient identity and pass it to the issuer.
-func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, notAnonymous bool, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, notAnonymous bool, opts ...token.ServiceOption) (token.Identity, view.Session, error) {
 	return RequestWithdrawalForRecipient(context, issuer, wallet, tokenType, amount, notAnonymous, nil, opts...)
 }
 
 // RequestWithdrawalForRecipient runs RequestWithdrawalView with the passed arguments.
 // The view will send the passed recipient data to the issuer.
-func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, notAnonymous bool, recipientData *RecipientData, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, notAnonymous bool, recipientData *RecipientData, opts ...token.ServiceOption) (token.Identity, view.Session, error) {
 	options, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to compile options")
@@ -121,7 +121,7 @@ func (r *RequestWithdrawalView) WithRecipientData(data *RecipientData) *RequestW
 	return r
 }
 
-func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*token.TMSID, view.Identity, []byte, []byte, error) {
+func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*token.TMSID, token.Identity, []byte, []byte, error) {
 	if r.RecipientData != nil {
 		tmsID := token.GetManagementService(context, token.WithTMSID(r.TMSID)).ID()
 		return &tmsID, r.RecipientData.Identity, r.RecipientData.AuditInfo, r.RecipientData.TokenMetadata, nil
@@ -193,7 +193,7 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
 	}
-	if err := view2.GetEndpointService(context).Bind(caller, request.RecipientData.Identity); err != nil {
+	if err := view2.GetEndpointService(context).Bind(caller, view.Identity(request.RecipientData.Identity)); err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 		}

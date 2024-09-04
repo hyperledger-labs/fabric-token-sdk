@@ -85,7 +85,7 @@ type RequestRecipientIdentityView struct {
 // RequestRecipientIdentity executes the RequestRecipientIdentityView.
 // The sender contacts the recipient's FSC node identified via the passed view identity.
 // The sender gets back the identity the recipient wants to use to assign ownership of tokens.
-func RequestRecipientIdentity(context view.Context, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, error) {
+func RequestRecipientIdentity(context view.Context, recipient view.Identity, opts ...token.ServiceOption) (token.Identity, error) {
 	options, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 	if err != nil {
 		return nil, err
 	}
-	return pseudonymBoxed.(view.Identity), nil
+	return pseudonymBoxed.(token.Identity), nil
 }
 
 func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
@@ -168,7 +168,7 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 		logger.Debugf("update endpoint resolver for [%s], bind to [%s]", recipientData.Identity, f.Other)
 	}
 	span.AddEvent("bind_identity")
-	if err := view2.GetEndpointService(context).Bind(f.Other, recipientData.Identity); err != nil {
+	if err := view2.GetEndpointService(context).Bind(f.Other, view.Identity(recipientData.Identity)); err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("failed binding [%s] to [%s]", recipientData.Identity, f.Other)
 		}
@@ -235,7 +235,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	}
 
 	var recipientData *RecipientData
-	var recipientIdentity view.Identity
+	var recipientIdentity token.Identity
 	// if the initiator send a recipient data, check that the identity has been already registered locally.
 	if recipientRequest.RecipientData != nil {
 		// check it exists and return it back
@@ -289,7 +289,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		logger.Debugf("bind me [%s] to [%s]", context.Me(), recipientData)
 	}
 	span.AddEvent("bind_identity")
-	err = resolver.Bind(context.Me(), recipientIdentity)
+	err = resolver.Bind(context.Me(), view.Identity(recipientIdentity))
 	if err != nil {
 		logger.Errorf("failed binding [%s] to [%s]", context.Me(), recipientData)
 		return nil, errors.Wrapf(err, "failed to bind me to recipient identity")
@@ -338,7 +338,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 			return nil, err
 		}
 
-		return []view.Identity{me, other}, nil
+		return []token.Identity{me, other}, nil
 	} else {
 		session, err := context.GetSession(context.Initiator(), f.Other)
 		if err != nil {
@@ -398,7 +398,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 			logger.Debugf("bind [%s] to other [%s]", recipientData.Identity, f.Other)
 		}
 		resolver := view2.GetEndpointService(context)
-		err = resolver.Bind(f.Other, recipientData.Identity)
+		err = resolver.Bind(f.Other, view.Identity(recipientData.Identity))
 		if err != nil {
 			return nil, err
 		}
@@ -406,12 +406,12 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("bind me [%s] to [%s]", me, context.Me())
 		}
-		err = resolver.Bind(context.Me(), me)
+		err = resolver.Bind(context.Me(), view.Identity(me))
 		if err != nil {
 			return nil, err
 		}
 
-		return []view.Identity{me, recipientData.Identity}, nil
+		return []token.Identity{me, recipientData.Identity}, nil
 	}
 }
 
@@ -486,14 +486,14 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 
 	// Update the Endpoint Resolver
 	resolver := view2.GetEndpointService(context)
-	err = resolver.Bind(context.Me(), me)
+	err = resolver.Bind(context.Me(), view.Identity(me))
 	if err != nil {
 		return nil, err
 	}
-	err = resolver.Bind(session.Info().Caller, other)
+	err = resolver.Bind(session.Info().Caller, view.Identity(other))
 	if err != nil {
 		return nil, err
 	}
 
-	return []view.Identity{me, other}, nil
+	return []token.Identity{me, other}, nil
 }

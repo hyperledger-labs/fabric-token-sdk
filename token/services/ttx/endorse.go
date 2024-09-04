@@ -32,17 +32,17 @@ type distributionListEntry struct {
 }
 
 type ExternalWalletSigner interface {
-	Sign(party view.Identity, message []byte) ([]byte, error)
+	Sign(party token.Identity, message []byte) ([]byte, error)
 	Done() error
 }
 
-type verifierGetterFunc func(identity view.Identity) (token.Verifier, error)
+type verifierGetterFunc func(identity token.Identity) (token.Verifier, error)
 
 type SignatureRequest struct {
 	TX      []byte
 	Request []byte
 	TxID    []byte
-	Signer  view.Identity
+	Signer  token.Identity
 }
 
 func (sr *SignatureRequest) MessageToSign() []byte {
@@ -161,7 +161,7 @@ func (c *CollectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 	return c.requestSignatures(c.tx.TokenRequest.TransferSigners(), c.tx.TokenService().SigService().OwnerVerifier, context, externalWallets)
 }
 
-func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, verifierGetter verifierGetterFunc, context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
+func (c *CollectEndorsementsView) requestSignatures(signers []token.Identity, verifierGetter verifierGetterFunc, context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
 	requestRaw, err := c.requestBytes()
 	if err != nil {
 		return nil, err
@@ -233,7 +233,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 	return sigmas, nil
 }
 
-func (c *CollectEndorsementsView) signLocal(party view.Identity, signer token.Signer, signatureRequest *SignatureRequest) ([]byte, error) {
+func (c *CollectEndorsementsView) signLocal(party token.Identity, signer token.Signer, signatureRequest *SignatureRequest) ([]byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("signing [%s][%s]", hash.Hashable(signatureRequest.Request).String(), c.tx.ID())
 		logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
@@ -253,7 +253,7 @@ func (c *CollectEndorsementsView) signLocal(party view.Identity, signer token.Si
 	return sigma, nil
 }
 
-func (c *CollectEndorsementsView) signExternal(party view.Identity, signer ExternalWalletSigner, signatureRequest *SignatureRequest) ([]byte, error) {
+func (c *CollectEndorsementsView) signExternal(party token.Identity, signer ExternalWalletSigner, signatureRequest *SignatureRequest) ([]byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("signing [%s][%s]", hash.Hashable(signatureRequest.Request).String(), c.tx.ID())
 		logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
@@ -272,8 +272,8 @@ func (c *CollectEndorsementsView) signExternal(party view.Identity, signer Exter
 	return sigma, nil
 }
 
-func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Identity, signatureRequest *SignatureRequest, verifierGetter verifierGetterFunc) ([]byte, error) {
-	session, err := context.GetSession(context.Initiator(), party)
+func (c *CollectEndorsementsView) signRemote(context view.Context, party token.Identity, signatureRequest *SignatureRequest, verifierGetter verifierGetterFunc) ([]byte, error) {
+	session, err := context.GetSession(context.Initiator(), view.Identity(party))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting session")
 	}
@@ -372,7 +372,7 @@ func (c *CollectEndorsementsView) cleanupAudit(context view.Context) error {
 	return nil
 }
 
-func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
+func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, env *network.Envelope, distributionList []token.Identity, auditors []view.Identity) error {
 	if c.Opts.SkipDistributeEnv {
 		return nil
 	}
@@ -491,14 +491,14 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 		logger.Debugf("CollectEndorsementsView: collected signature from %s", entry.ID)
 	}
 
-	if err := owner.appendTransactionEndorseAck(c.tx, entry.LongTerm, sigma); err != nil {
+	if err := owner.appendTransactionEndorseAck(c.tx, token.Identity(entry.LongTerm), sigma); err != nil {
 		return errors.Wrapf(err, "failed appending transaction endorsement ack to transaction %s", c.tx.ID())
 	}
 
 	return nil
 }
 
-func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, auditors []view.Identity, distributionList []view.Identity) ([]distributionListEntry, error) {
+func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, auditors []view.Identity, distributionList []token.Identity) ([]distributionListEntry, error) {
 	// Compress distributionList by removing duplicates
 	var distributionListCompressed []distributionListEntry
 	for _, party := range distributionList {
@@ -515,7 +515,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to [%s]?", party.UniqueID())
 		}
-		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(party)
+		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(view.Identity(party))
 		if !isMe {
 			// check if there is a wallet that contains that identity
 			isMe = c.tx.TokenService().WalletManager().OwnerWallet(party) != nil
@@ -529,7 +529,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		if isMe {
 			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
 		} else {
-			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
+			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(view.Identity(party))
 			if err != nil {
 				return nil, errors.Wrapf(err, "cannot resolve long term identity for [%s]", party.UniqueID())
 			}
@@ -558,7 +558,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 			distributionListCompressed = append(distributionListCompressed, distributionListEntry{
 				IsMe:     isMe,
 				LongTerm: longTermIdentity,
-				ID:       party,
+				ID:       view.Identity(party),
 				EID:      eID,
 				Auditor:  false,
 			})
@@ -571,7 +571,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 
 	// check the auditors
 	for _, party := range auditors {
-		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(party)
+		isMe := c.tx.TokenService().SigService().IsMe(token.Identity(party)) || view2.GetSigService(context).IsMe(party)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
 		}
@@ -850,8 +850,8 @@ func mergeSigmas(maps ...map[string][]byte) map[string][]byte {
 	return merged
 }
 
-func IssueDistributionList(r *token.Request) []view.Identity {
-	distributionList := make([]view.Identity, 0)
+func IssueDistributionList(r *token.Request) []token.Identity {
+	distributionList := make([]token.Identity, 0)
 	for _, issue := range r.Issues() {
 		distributionList = append(distributionList, issue.Issuer)
 		distributionList = append(distributionList, issue.Receivers...)
@@ -859,8 +859,8 @@ func IssueDistributionList(r *token.Request) []view.Identity {
 	return distributionList
 }
 
-func TransferDistributionList(r *token.Request) []view.Identity {
-	distributionList := make([]view.Identity, 0)
+func TransferDistributionList(r *token.Request) []token.Identity {
+	distributionList := make([]token.Identity, 0)
 	for _, transfer := range r.Transfers() {
 		distributionList = append(distributionList, transfer.Senders...)
 		distributionList = append(distributionList, transfer.Receivers...)

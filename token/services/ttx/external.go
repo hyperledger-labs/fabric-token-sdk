@@ -11,7 +11,6 @@ import (
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/pkg/errors"
 )
@@ -48,7 +47,7 @@ func NewStreamExternalWalletMsg(Type StreamExternalWalletMsgType, v interface{})
 
 // StreamExternalWalletSignRequest is a message to request a signature
 type StreamExternalWalletSignRequest struct {
-	Party   view.Identity
+	Party   token.Identity
 	Message []byte
 }
 
@@ -66,7 +65,7 @@ func NewStreamExternalWalletSignerServer(stream view2.Stream) *StreamExternalWal
 	return &StreamExternalWalletSignerServer{stream: stream}
 }
 
-func (s *StreamExternalWalletSignerServer) Sign(party view.Identity, message []byte) ([]byte, error) {
+func (s *StreamExternalWalletSignerServer) Sign(party token.Identity, message []byte) ([]byte, error) {
 	logger.Info("send sign request for party [%s]", party)
 	msg, err := NewStreamExternalWalletMsg(SigRequest, &StreamExternalWalletSignRequest{
 		Party:   party,
@@ -107,7 +106,7 @@ func (s *StreamExternalWalletSignerServer) Done() error {
 }
 
 type SignerProvider interface {
-	GetSigner(party view.Identity) (token.Signer, error)
+	GetSigner(party token.Identity) (token.Signer, error)
 }
 
 // StreamExternalWalletSignerClient is the signer client executed where the token-sdk is in execution
