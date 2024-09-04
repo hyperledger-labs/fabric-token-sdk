@@ -94,6 +94,7 @@ func issueCashForTMSID(network *integration.Infrastructure, wallet string, typ s
 		// the issuer is the auditor, choose default identity
 		targetAuditor = ""
 	}
+
 	txIDBoxed, err := network.Client(issuer.ReplicaName()).CallView("issue", common.JSONMarshall(&views.IssueCash{
 		Anonymous:    anonymous,
 		Auditor:      targetAuditor,
