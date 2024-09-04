@@ -126,7 +126,7 @@ func GetEndorsers(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	endorsers := make([]*token3.NodeReference, 0)
 	for _, p := range network.FscPlatform.Peers {
 		if topology.ToOptions(p.Options).Endorser() {
-			endorsers = append(endorsers, sel.Get(p.UniqueName))
+			endorsers = append(endorsers, sel.Get(p.Name))
 		}
 	}
 	return endorsers
