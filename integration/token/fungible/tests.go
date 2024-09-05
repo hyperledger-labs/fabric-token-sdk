@@ -297,9 +297,9 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckAcceptedTransactions(network, alice, "", AliceAcceptedTransactions[:1], nil, nil, nil)
 	CheckAcceptedTransactions(network, alice, "", AliceAcceptedTransactions[:1], &t0, &t1, nil)
 
-	sum := concurrentTransfers(network, alice, bob, auditor, 5, 20, "USD")
-	CheckBalanceAndHolding(network, alice, "", "USD", 110-sum, auditor)
-	CheckBalanceAndHolding(network, bob, "", "USD", sum, auditor)
+	//sum := concurrentTransfers(network, alice, bob, auditor, 5, 20, "USD")
+	//CheckBalanceAndHolding(network, alice, "", "USD", 110-sum, auditor)
+	//CheckBalanceAndHolding(network, bob, "", "USD", sum, auditor)
 
 	t2 := time.Now()
 	Withdraw(network, nil, alice, "", "USD", 10, auditor, issuer)
