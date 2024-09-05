@@ -651,7 +651,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckBalanceAndHolding(network, alice, "alice.id1", "EUR", 0, auditor)
 	CheckBalanceAndHolding(network, bob, "bob.id1", "EUR", 10, auditor)
 
-	sum = concurrentTransfers(network, bob, alice, auditor, 5, 200, "EUR")
+	sum := concurrentTransfers(network, bob, alice, auditor, 5, 200, "EUR")
 	CheckBalanceAndHolding(network, bob, "", "EUR", 2820-sum, auditor)
 
 	// Transfer With TokenSelector
