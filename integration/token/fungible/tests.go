@@ -297,6 +297,10 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckAcceptedTransactions(network, alice, "", AliceAcceptedTransactions[:1], nil, nil, nil)
 	CheckAcceptedTransactions(network, alice, "", AliceAcceptedTransactions[:1], &t0, &t1, nil)
 
+	sum := concurrentTransfers(network, alice, bob, auditor, 5, 20, "USD")
+	CheckBalanceAndHolding(network, alice, "", "USD", 110-sum, auditor)
+	CheckBalanceAndHolding(network, bob, "", "USD", sum, auditor)
+
 	t2 := time.Now()
 	Withdraw(network, nil, alice, "", "USD", 10, auditor, issuer)
 	t3 := time.Now()
@@ -647,38 +651,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckBalanceAndHolding(network, alice, "alice.id1", "EUR", 0, auditor)
 	CheckBalanceAndHolding(network, bob, "bob.id1", "EUR", 10, auditor)
 
-	// Concurrent transfers
-	transferErrors := make([]chan error, 5)
-	var sum uint64
-	for i := range transferErrors {
-		transferErrors[i] = make(chan error, 1)
-
-		transfer := transferErrors[i]
-		r, err := rand.Int(rand.Reader, big.NewInt(200))
-		Expect(err).ToNot(HaveOccurred())
-		v := r.Uint64() + 1
-		sum += v
-		go func() {
-			_, err := network.Client(bob.ReplicaName()).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
-				Auditor:      auditor.Id(),
-				Wallet:       "",
-				Type:         "EUR",
-				Amount:       v,
-				Recipient:    network.Identity(alice.Id()),
-				RecipientEID: alice.Id(),
-				Retry:        true,
-			}))
-			if err != nil {
-				transfer <- err
-				return
-			}
-			transfer <- nil
-		}()
-	}
-	for _, transfer := range transferErrors {
-		err := <-transfer
-		Expect(err).ToNot(HaveOccurred())
-	}
+	sum = concurrentTransfers(network, alice, bob, auditor, 5, 200, "EUR")
 	CheckBalanceAndHolding(network, bob, "", "EUR", 2820-sum, auditor)
 
 	// Transfer With TokenSelector
@@ -787,6 +760,43 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckBalanceAndHolding(network, bob, "", "Pineapples", 0, auditor)
 	CheckBalanceAndHolding(network, charlie, "", "Pineapples", 0, auditor)
 	CheckAuditorDB(network, auditor, "", nil)
+}
+
+func concurrentTransfers(network *integration.Infrastructure, alice, bob, auditor *token3.NodeReference, times, maxAmount int64, currency string) uint64 {
+	logger.Infof("Start concurrent transfers...")
+	defer logger.Infof("Finished concurrent transfers!")
+	transferErrors := make([]chan error, times)
+	var sum uint64
+	for i := range transferErrors {
+		transferErrors[i] = make(chan error, 1)
+
+		transfer := transferErrors[i]
+		r, err := rand.Int(rand.Reader, big.NewInt(maxAmount))
+		Expect(err).ToNot(HaveOccurred())
+		v := r.Uint64() + 1
+		sum += v
+		go func() {
+			_, err := network.Client(bob.ReplicaName()).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
+				Auditor:      auditor.Id(),
+				Wallet:       "",
+				Type:         currency,
+				Amount:       v,
+				Recipient:    network.Identity(alice.Id()),
+				RecipientEID: alice.Id(),
+				Retry:        true,
+			}))
+			if err != nil {
+				transfer <- err
+				return
+			}
+			transfer <- nil
+		}()
+	}
+	for _, transfer := range transferErrors {
+		err := <-transfer
+		Expect(err).ToNot(HaveOccurred())
+	}
+	return sum
 }
 
 func TestSelector(network *integration.Infrastructure, auditorId string, sel *token3.ReplicaSelector) {
