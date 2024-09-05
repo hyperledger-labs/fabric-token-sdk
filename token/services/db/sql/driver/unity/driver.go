@@ -84,7 +84,7 @@ func NewDBDrivers() (db.NamedDriver[dbdriver.TTXDBDriver], db.NamedDriver[dbdriv
 		}),
 		newUnityDriver[dbdriver.TokenNotifier, dbdriver.TokenNotifierDriver](root, constructors[dbdriver.TokenNotifier]{
 			sql3.SQLite:   sqlite.NewTokenNotifier,
-			sql3.Postgres: postgres.NewTokenNotifier,
+			sql3.Postgres: sqlite.NewTokenNotifier,
 		}),
 		newUnityDriver[dbdriver.TokenLockDB, dbdriver.TokenLockDBDriver](root, constructors[dbdriver.TokenLockDB]{
 			sql3.SQLite:   sqlite.NewTokenLockDB,
