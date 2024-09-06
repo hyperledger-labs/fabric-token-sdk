@@ -69,6 +69,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
 		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
+		FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }
@@ -80,6 +81,7 @@ func newTestSuiteSingleOrion(commType fsc.P2PCommunicationType, factor int, name
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
 		SDKs:            []api2.SDK{&ofabtoken.SDK{}},
+		FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }
@@ -91,6 +93,7 @@ func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names 
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
 		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
+		FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }
@@ -102,6 +105,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
 		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
+		FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }
@@ -113,6 +117,7 @@ func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
 		SDKs:            []api2.SDK{&fofabtoken.SDK{}},
+		FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }

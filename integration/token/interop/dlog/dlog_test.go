@@ -69,6 +69,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
 		SDKs:            []api2.SDK{&fdlog.SDK{}},
+		FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }
@@ -80,6 +81,7 @@ func newTestSuiteSingleOrion(commType fsc.P2PCommunicationType, factor int, name
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
 		SDKs:            []api2.SDK{&odlog.SDK{}},
+		FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }
@@ -91,6 +93,7 @@ func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names 
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
 		SDKs:            []api2.SDK{&fdlog.SDK{}},
+		FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }
@@ -102,6 +105,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
 		SDKs:            []api2.SDK{&fdlog.SDK{}},
+		FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }
@@ -113,7 +117,7 @@ func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
 		SDKs:            []api2.SDK{&fodlog.SDK{}},
-		FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:view-sdk=debug:info",
+		FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }
