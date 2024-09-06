@@ -7,22 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package integration
 
 import (
-	"fmt"
-	"os"
-
+	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/onsi/ginkgo/v2"
 )
 
 // TestPortRange represents a port range
-type TestPortRange int
+type TestPortRange integration.TestPortRange
 
 const (
-	basePort      = 20000
-	portsPerNode  = 150
-	portsPerSuite = 10 * portsPerNode
-
 	SimpleTokenSelector    = "simple"
 	SherdLockTokenSelector = "sherdlock"
 )
@@ -72,7 +66,7 @@ var (
 )
 
 const (
-	BasePort TestPortRange = basePort + portsPerSuite*iota
+	BasePort integration.TestPortRange = integration.BasePort + integration.PortsPerSuite*iota
 
 	ZKATDLogFungible
 	ZKATDLogFungibleStress
@@ -106,17 +100,3 @@ const (
 
 	Mixed
 )
-
-// StartPortForNode On linux, the default ephemeral port range is 32768-60999 and can be
-// allocated by the system for the client side of TCP connections or when
-// programs explicitly request one. Given linux is our default CI system,
-// we want to try avoid ports in that range.
-func (t TestPortRange) StartPortForNode() int {
-	const startEphemeral, endEphemeral = 32768, 60999
-
-	port := int(t) + portsPerNode*(ginkgo.GinkgoParallelProcess()-1)
-	if port >= startEphemeral-portsPerNode && port <= endEphemeral-portsPerNode {
-		fmt.Fprintf(os.Stderr, "WARNING: port %d is part of the default ephemeral port range on linux", port)
-	}
-	return port
-}
