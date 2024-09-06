@@ -394,7 +394,7 @@ func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id *token
 }
 
 func fastExchange(network *integration.Infrastructure, id *token3.NodeReference, recipient *token3.NodeReference, tmsID1 token.TMSID, typ1 string, amount1 uint64, tmsID2 token.TMSID, typ2 string, amount2 uint64, deadline time.Duration) {
-	_, err := network.Client(id.ReplicaName()).CallView("htlc.fastExchange", common.JSONMarshall(&htlc.FastExchange{
+	res, err := network.Client(id.ReplicaName()).CallView("htlc.fastExchange", common.JSONMarshall(&htlc.FastExchange{
 		Recipient:           network.Identity(recipient.Id()),
 		TMSID1:              tmsID1,
 		Type1:               typ1,
@@ -405,8 +405,9 @@ func fastExchange(network *integration.Infrastructure, id *token3.NodeReference,
 		ReclamationDeadline: deadline,
 	}))
 	Expect(err).NotTo(HaveOccurred())
+	txID := common.JSONUnmarshalString(res)
 	// give time to bob to commit the transaction
-	time.Sleep(10 * time.Second)
+	common2.CheckEndorserFinality(network, recipient, txID, &tmsID2, false)
 }
 
 func scan(network *integration.Infrastructure, id *token3.NodeReference, hash []byte, hashFunc crypto.Hash, startingTransactionID string, stopOnLastTx bool, opts ...token.ServiceOption) {

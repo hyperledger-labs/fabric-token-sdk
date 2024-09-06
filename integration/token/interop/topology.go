@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
@@ -31,7 +32,7 @@ func HTLCSingleFabricNetworkTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("token-sdk=debug:fabric-sdk=debug:info", "")
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -68,7 +69,7 @@ func HTLCSingleOrionNetworkTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("debug", "")
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -116,7 +117,7 @@ func HTLCTwoFabricNetworksTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("debug", "")
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -178,7 +179,7 @@ func HTLCNoCrossClaimTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("db.driver.badger=info:debug", "")
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -245,7 +246,7 @@ func HTLCNoCrossClaimWithOrionTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("db.driver.badger=info:debug", "")
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -353,7 +354,8 @@ func addAlice(fscTopology *fsc.Topology) *node.Node {
 		RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{}).
 		RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{}).
 		RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{}).
-		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
+		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{}).
+		RegisterViewFactory("EndorserFinality", &endorser.FinalityViewFactory{})
 }
 
 func addBob(fscTopology *fsc.Topology) *node.Node {
@@ -372,7 +374,8 @@ func addBob(fscTopology *fsc.Topology) *node.Node {
 		RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{}).
 		RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{}).
 		RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{}).
-		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
+		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{}).
+		RegisterViewFactory("EndorserFinality", &endorser.FinalityViewFactory{})
 }
 
 func addCustodian(fscTopology *fsc.Topology) *node.Node {
