@@ -410,7 +410,7 @@ func fastExchange(network *integration.Infrastructure, id *token3.NodeReference,
 	// give time to bob to commit the transaction
 	_, err = network.Client(recipient.ReplicaName()).CallView("TxFinality", common.JSONMarshall(&views3.TxFinality{
 		TxID:  txID,
-		TMSID: &tmsID2,
+		TMSID: &tmsID1,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 }
