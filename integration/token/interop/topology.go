@@ -374,7 +374,8 @@ func addBob(fscTopology *fsc.Topology) *node.Node {
 		RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{}).
 		RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{}).
 		RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{}).
-		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
+		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{}).
+		RegisterViewFactory("EndorserFinality", &endorser.FinalityViewFactory{})
 }
 
 func addCustodian(fscTopology *fsc.Topology) *node.Node {
