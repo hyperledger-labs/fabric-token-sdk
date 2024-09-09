@@ -132,7 +132,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 	assert.NoError(err, "failed to complete responder's leg (as responder)")
 
 	// The initiator claims the responder's script
-	_, err = view2.RunCall(context, func(context view.Context) (interface{}, error) {
+	txID, err := view2.RunCall(context, func(context view.Context) (interface{}, error) {
 		wallet := htlc.GetWallet(context, "", token.WithTMSID(v.TMSID2))
 		assert.NotNil(wallet, "wallet not found")
 
@@ -154,11 +154,11 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 		_, err = context.RunView(htlc.NewOrderingAndFinalityView(tx))
 		assert.NoError(err, "failed to commit htlc transaction")
 
-		return nil, nil
+		return tx.ID(), nil
 	})
 	assert.NoError(err, "failed to complete responder's leg (as initiator)")
 
-	return nil, nil
+	return txID, nil
 }
 
 type FastExchangeInitiatorViewFactory struct{}

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	views3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -394,7 +395,7 @@ func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id *token
 }
 
 func fastExchange(network *integration.Infrastructure, id *token3.NodeReference, recipient *token3.NodeReference, tmsID1 token.TMSID, typ1 string, amount1 uint64, tmsID2 token.TMSID, typ2 string, amount2 uint64, deadline time.Duration) {
-	_, err := network.Client(id.ReplicaName()).CallView("htlc.fastExchange", common.JSONMarshall(&htlc.FastExchange{
+	txID, err := network.Client(id.ReplicaName()).CallView("htlc.fastExchange", common.JSONMarshall(&htlc.FastExchange{
 		Recipient:           network.Identity(recipient.Id()),
 		TMSID1:              tmsID1,
 		Type1:               typ1,
@@ -406,7 +407,11 @@ func fastExchange(network *integration.Infrastructure, id *token3.NodeReference,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	// give time to bob to commit the transaction
-	time.Sleep(10 * time.Second)
+	_, err = network.Client(recipient.ReplicaName()).CallView("TxFinality", common.JSONMarshall(&views3.TxFinality{
+		TxID:  txID.(string),
+		TMSID: &tmsID2,
+	}))
+	Expect(err).NotTo(HaveOccurred())
 }
 
 func scan(network *integration.Infrastructure, id *token3.NodeReference, hash []byte, hashFunc crypto.Hash, startingTransactionID string, stopOnLastTx bool, opts ...token.ServiceOption) {
