@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
@@ -353,7 +354,8 @@ func addAlice(fscTopology *fsc.Topology) *node.Node {
 		RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{}).
 		RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{}).
 		RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{}).
-		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
+		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{}).
+		RegisterViewFactory("EndorserFinality", &endorser.FinalityViewFactory{})
 }
 
 func addBob(fscTopology *fsc.Topology) *node.Node {

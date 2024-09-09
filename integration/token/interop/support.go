@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	views3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -408,11 +407,7 @@ func fastExchange(network *integration.Infrastructure, id *token3.NodeReference,
 	Expect(err).NotTo(HaveOccurred())
 	txID := common.JSONUnmarshalString(res)
 	// give time to bob to commit the transaction
-	_, err = network.Client(recipient.ReplicaName()).CallView("TxFinality", common.JSONMarshall(&views3.TxFinality{
-		TxID:  txID,
-		TMSID: &tmsID1,
-	}))
-	Expect(err).NotTo(HaveOccurred())
+	common2.CheckEndorserFinality(network, recipient, txID, &tmsID2, false)
 }
 
 func scan(network *integration.Infrastructure, id *token3.NodeReference, hash []byte, hashFunc crypto.Hash, startingTransactionID string, stopOnLastTx bool, opts ...token.ServiceOption) {
