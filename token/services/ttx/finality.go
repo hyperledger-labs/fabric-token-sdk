@@ -99,9 +99,9 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 	if err == nil && statusAuditDB != ttxdb.Unknown {
 		counter++
 	}
-	if counter == 0 {
-		return nil, errors.Errorf("transaction [%s] is unknown for [%s]", txID, tmsID)
-	}
+	//if counter == 0 {
+	//	return nil, errors.Errorf("transaction [%s] is unknown for [%s]", txID, tmsID)
+	//}
 
 	span.AddEvent("listen_db_finality")
 	iterations := int(timeout.Milliseconds() / f.pollingTimeout.Milliseconds())
