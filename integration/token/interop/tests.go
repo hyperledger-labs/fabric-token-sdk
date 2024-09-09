@@ -342,5 +342,4 @@ func TestFastExchange(network *integration.Infrastructure, sel *token2.ReplicaSe
 
 	CheckBalance(network, sel.Get("alice"), "", "USD", 10, token.WithTMSID(beta))
 	Eventually(CheckBalanceReturnError).WithArguments(network, sel.Get("bob"), "", "USD", uint64(20), token.WithTMSID(beta)).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Succeed())
-	panic("done!")
 }
