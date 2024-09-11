@@ -8,6 +8,7 @@ package htlc
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	view3 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -77,6 +78,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 			ttx.WithTMSID(v.TMSID1),
 		)
 		assert.NoError(err, "failed to create an htlc transaction")
+		fmt.Printf("initiator leg [%s]\n", tx.ID())
 
 		wallet := htlc.GetWallet(context, "", token.WithTMSID(v.TMSID1))
 		assert.NotNil(wallet, "wallet not found")
@@ -145,6 +147,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(v.TMSID2),
 		)
+		fmt.Printf("initiator claims [%s]\n", tx.ID())
 		assert.NoError(err, "failed to create an htlc transaction")
 		assert.NoError(tx.Claim(wallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
 
@@ -222,6 +225,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 			ttx.WithTMSID(terms.TMSID2),
 		)
 		assert.NoError(err, "failed to create an htlc transaction")
+		fmt.Printf("responder leg [%s]\n", tx.ID())
 
 		wallet := htlc.GetWallet(context, "", token.WithTMSID(terms.TMSID2))
 		assert.NotNil(wallet, "wallet not found")
@@ -277,6 +281,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 			ttx.WithTMSID(terms.TMSID1),
 		)
 		assert.NoError(err, "failed to create an htlc transaction")
+		fmt.Printf("responder claim [%s]\n", tx.ID())
 		assert.NoError(tx.Claim(wallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
 
 		_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
