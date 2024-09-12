@@ -306,6 +306,6 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		assert.NoError(context.Session().SendError([]byte(err.Error())), "failed to notify initiator about the error [%s]", err)
 		return nil, err
 	}
-	assert.NoError(context.Session().SendError([]byte("OK")), "failed to notify initiator about completion")
+	assert.NoError(context.Session().Send([]byte("OK")), "failed to notify initiator about completion")
 	return nil, nil
 }
