@@ -283,12 +283,15 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		assert.NoError(err, "failed to create an htlc transaction")
 		fmt.Printf("responder claim [%s]\n", tx.ID())
 		assert.NoError(tx.Claim(wallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
+		fmt.Printf("responder claim [%s], added claim\n", tx.ID())
 
 		_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
 		assert.NoError(err, "failed to collect endorsements for htlc transaction")
+		fmt.Printf("responder claim [%s], collected endorsement\n", tx.ID())
 
 		_, err = context.RunView(htlc.NewOrderingAndFinalityView(tx))
 		assert.NoError(err, "failed to commit htlc transaction")
+		fmt.Printf("responder claim [%s], ordering done\n", tx.ID())
 
 		return nil, nil
 	})
