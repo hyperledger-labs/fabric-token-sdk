@@ -161,6 +161,12 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 	})
 	assert.NoError(err, "failed to complete responder's leg (as initiator)")
 
+	// wait an ack
+	s, err := context.GetSession(context.Initiator(), v.Recipient)
+	assert.NoError(err, "failed to get session to [%s]", v.Recipient)
+	_, err = ttx.ReadMessage(s, time.Minute)
+
+	assert.NoError(err, "failed to get ack ")
 	return txID, nil
 }
 
@@ -295,7 +301,10 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 
 		return nil, nil
 	})
-	assert.NoError(err, "failed completing responder's leg (as initiator)")
-
+	if err != nil {
+		assert.NoError(context.Session().SendError([]byte(err.Error())), "failed to notify initiator about the error [%s]", err)
+		return nil, err
+	}
+	assert.NoError(context.Session().SendError([]byte("OK")), "failed to notify initiator about completion")
 	return nil, nil
 }
