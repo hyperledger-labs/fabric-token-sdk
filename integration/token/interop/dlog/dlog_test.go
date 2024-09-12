@@ -93,7 +93,7 @@ func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names 
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
 		SDKs:            []api2.SDK{&fdlog.SDK{}},
-		FSCLogSpec:      "token-sdk=info:fabric-sdk.Committer=debug:info",
+		FSCLogSpec:      "token-sdk=info:fabric-sdk=debug:info",
 	}))
 	return ts, selector
 }
