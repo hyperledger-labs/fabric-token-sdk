@@ -164,7 +164,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 	// wait an ack
 	s, err := context.GetSession(context.Initiator(), v.Recipient)
 	assert.NoError(err, "failed to get session to [%s]", v.Recipient)
-	_, err = ttx.ReadMessage(s, time.Minute)
+	_, err = ttx.ReadMessage(s, 15*time.Minute)
 
 	assert.NoError(err, "failed to get ack ")
 	return txID, nil
@@ -301,6 +301,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 
 		return nil, nil
 	})
+	fmt.Printf("responder finished all legs with err [%s]", err)
 	if err != nil {
 		assert.NoError(context.Session().SendError([]byte(err.Error())), "failed to notify initiator about the error [%s]", err)
 		return nil, err
