@@ -257,6 +257,8 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 	})
 	assert.NoError(err, "failed completing responder's leg (as initiator)")
 
+	time.Sleep(30 * time.Second)
+
 	// Claim initiator's script
 	_, err = view2.AsInitiatorCall(context, v, func(context view.Context) (interface{}, error) {
 		// Scan for the pre-image, this will be the signal that the initiator has claimed responder's script
