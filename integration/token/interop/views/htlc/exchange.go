@@ -288,6 +288,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		)
 		assert.NoError(err, "failed to create an htlc transaction")
 		fmt.Printf("responder claim [%s]\n", tx.ID())
+
 		assert.NoError(tx.Claim(wallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
 		fmt.Printf("responder claim [%s], added claim\n", tx.ID())
 
