@@ -452,7 +452,7 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 			err := c.distributeEvnToParty(context, &entry, txRaw, owner)
 			return err == nil, err
 		}); err != nil {
-			return errors.Wrapf(err, "failed distribute evn to party [%s]", entry.ID)
+			return errors.Wrapf(err, "failed distribute evn to party [%v]", entry)
 		}
 	}
 
@@ -637,7 +637,7 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	}
 	if len(msg) == 0 {
 		info := context.Session().Info()
-		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
+		return nil, errors.Errorf("received empty message, session closed [%s:%v], closed by [%s]", info.ID, info.Closed, info.WhoClosed)
 	}
 	tx, err := NewTransactionFromBytes(context, msg)
 	if err != nil {
