@@ -43,7 +43,7 @@ func NewAuditDBManager(in struct {
 	ConfigProvider *config2.Service
 	Drivers        []db.NamedDriver[dbdriver.AuditDBDriver] `group:"auditdb-drivers"`
 }) *auditdb.Manager {
-	return auditdb.NewHolder(in.Drivers).NewManager(in.ConfigService, dbconfig.NewConfig(in.ConfigProvider, "ttxdb.persistence.type", "db.persistence.type"))
+	return auditdb.NewHolder(in.Drivers).NewManager(in.ConfigService, dbconfig.NewConfig(in.ConfigProvider, "auditdb.persistence.type", "db.persistence.type"))
 }
 
 // Transaction DB
