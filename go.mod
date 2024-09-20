@@ -3,8 +3,8 @@ module github.com/hyperledger-labs/fabric-token-sdk
 go 1.22.6
 
 require (
-	github.com/IBM/idemix v0.0.2-0.20240816143710-3dce4618d760
-	github.com/IBM/idemix/bccsp/types v0.0.0-20240816143710-3dce4618d760
+	github.com/IBM/idemix v0.0.2-0.20240829143510-a3d85aa69d56
+	github.com/IBM/idemix/bccsp/types v0.0.0-20240829143510-a3d85aa69d56
 	github.com/IBM/mathlib v0.0.3-0.20231011094432-44ee0eb539da
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240916124041-9962e1244257
@@ -59,12 +59,11 @@ require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20240614151806-1a543779efde // indirect
-	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20240614151806-1a543779efde // indirect
+	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20240820063231-23c21a416ee1 // indirect
+	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20240820063231-23c21a416ee1 // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.11.5 // indirect
-	github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20231023164747-f3f972769504 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
