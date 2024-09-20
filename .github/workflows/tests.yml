@@ -13,7 +13,6 @@ on:
         description: 'FSC dependency'
 
 env:
-  FTS_PATH: "${{ github.workspace }}/fabric-token-sdk"
   GOFLAGS: -mod=mod
 
 jobs:
@@ -24,16 +23,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          path: ${{ env.FTS_PATH }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: "${{ env.FTS_PATH }}/go.mod"
+          go-version-file: "go.mod"
+          cache-dependency-path: "**/*.sum"
 
       - name: Replace FSC dep
-        working-directory: ${{ env.FTS_PATH }}
         run: |
           if [ -n "${{ github.event.inputs.fsc-version }}" ]; then
             echo "Replace FSC dependency"
@@ -44,11 +41,9 @@ jobs:
           fi
 
       - name: Set up tools
-        working-directory: ${{ env.FTS_PATH }}
         run: make install-tools
 
       - name: Run checks
-        working-directory: ${{ env.FTS_PATH }}
         run: make checks
 
   utest:
@@ -61,20 +56,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          path: ${{ env.FTS_PATH }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: "${{ env.FTS_PATH }}/go.mod"
+          go-version-file: "go.mod"
+          cache-dependency-path: "**/*.sum"
 
       - name: Set up tools
-        working-directory: ${{ env.FTS_PATH }}
         run: make install-tools
 
       - name: Run ${{ matrix.tests }}
-        working-directory: ${{ env.FTS_PATH }}
         run: make ${{ matrix.tests }}
 
   itest:
@@ -129,26 +121,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          path: ${{ env.FTS_PATH }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: "${{ env.FTS_PATH }}/go.mod"
+          go-version-file: "go.mod"
+          cache-dependency-path: "**/*.sum"
 
       - name: Set up tools
-        working-directory: ${{ env.FTS_PATH }}
         run: make install-tools
 
       - name: Download fabric binaries
-        working-directory: ${{ env.FTS_PATH }}
         run: make download-fabric
 
       - name: Docker
-        working-directory: ${{ env.FTS_PATH }}
         run: make docker-images
 
       - name: Run ${{ matrix.tests }}
-        working-directory: ${{ env.FTS_PATH }}
         run: make integration-tests-${{ matrix.tests }}
