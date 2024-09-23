@@ -23,7 +23,7 @@ func OpenAuditTransactionDB(k common.Opts) (driver.AuditTransactionDB, error) {
 }
 
 func NewAuditTransactionDB(db *sql.DB, opts common.NewDBOpts) (driver.AuditTransactionDB, error) {
-	return common.NewAuditTransactionDB(db, opts)
+	return common.NewAuditTransactionDB(db, opts, common.NewTokenInterpreter(sqlite.NewInterpreter()))
 }
 
 func OpenTransactionDB(k common.Opts) (driver.TokenTransactionDB, error) {
@@ -35,5 +35,5 @@ func OpenTransactionDB(k common.Opts) (driver.TokenTransactionDB, error) {
 }
 
 func NewTransactionDB(db *sql.DB, opts common.NewDBOpts) (driver.TokenTransactionDB, error) {
-	return common.NewTransactionDB(db, opts)
+	return common.NewTransactionDB(db, opts, common.NewTokenInterpreter(sqlite.NewInterpreter()))
 }

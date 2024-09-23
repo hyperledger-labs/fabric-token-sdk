@@ -23,8 +23,8 @@ type TokenInterpreter interface {
 	HasTransactionParams(params driver.QueryTransactionsParams, table string) common.Condition
 }
 
-func newTokenInterpreter() TokenInterpreter {
-	return &tokenInterpreter{Interpreter: common.NewInterpreter()}
+func NewTokenInterpreter(ci common.Interpreter) TokenInterpreter {
+	return &tokenInterpreter{Interpreter: ci}
 }
 
 type tokenInterpreter struct {

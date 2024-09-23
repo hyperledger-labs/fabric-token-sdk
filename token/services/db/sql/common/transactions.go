@@ -34,24 +34,26 @@ type transactionTables struct {
 type TransactionDB struct {
 	db    *sql.DB
 	table transactionTables
+	ci    TokenInterpreter
 }
 
-func newTransactionDB(db *sql.DB, tables transactionTables) *TransactionDB {
+func newTransactionDB(db *sql.DB, tables transactionTables, ci TokenInterpreter) *TransactionDB {
 	return &TransactionDB{
 		db:    db,
 		table: tables,
+		ci:    ci,
 	}
 }
 
-func NewAuditTransactionDB(sqlDB *sql.DB, opts NewDBOpts) (driver.AuditTransactionDB, error) {
+func NewAuditTransactionDB(sqlDB *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.AuditTransactionDB, error) {
 	return NewTransactionDB(sqlDB, NewDBOpts{
 		DataSource:   opts.DataSource,
 		TablePrefix:  opts.TablePrefix + "_aud",
 		CreateSchema: opts.CreateSchema,
-	})
+	}, ci)
 }
 
-func NewTransactionDB(db *sql.DB, opts NewDBOpts) (driver.TokenTransactionDB, error) {
+func NewTransactionDB(db *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.TokenTransactionDB, error) {
 	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
@@ -62,7 +64,7 @@ func NewTransactionDB(db *sql.DB, opts NewDBOpts) (driver.TokenTransactionDB, er
 		Requests:              tables.Requests,
 		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
-	})
+	}, ci)
 	if opts.CreateSchema {
 		if err = common.InitSchema(db, []string{transactionsDB.GetSchema()}...); err != nil {
 			return nil, err
@@ -88,7 +90,8 @@ func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
 }
 
 func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
-	conditions, args := movementConditionsSql(params)
+	where, args := common.Where(db.ci.HasMovementsParams(params))
+	conditions := where + movementConditionsSql(params)
 	query := fmt.Sprintf("SELECT %s.tx_id, enrollment_id, token_type, amount, %s.status FROM %s %s %s",
 		db.table.Movements, db.table.Requests,
 		db.table.Movements, joinOnTxID(db.table.Movements, db.table.Requests), conditions)
@@ -128,7 +131,7 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 }
 
 func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
-	conditions, args := common.Where(b.HasTransactionParams(params, db.table.Transactions))
+	conditions, args := common.Where(db.ci.HasTransactionParams(params, db.table.Transactions))
 	query := fmt.Sprintf(
 		"SELECT %s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, %s.application_metadata, stored_at FROM %s %s %s",
 		db.table.Transactions, db.table.Requests, db.table.Requests,
@@ -161,7 +164,7 @@ func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error)
 }
 
 func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
-	conditions, args := common.Where(b.HasValidationParams(params))
+	conditions, args := common.Where(db.ci.HasValidationParams(params))
 	query := fmt.Sprintf("SELECT %s.tx_id, %s.request, metadata, %s.status, %s.stored_at FROM %s %s %s",
 		db.table.Validations, db.table.Requests, db.table.Requests, db.table.Validations,
 		db.table.Validations, joinOnTxID(db.table.Validations, db.table.Requests), conditions)
@@ -177,7 +180,7 @@ func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsPa
 
 // QueryTokenRequests returns an iterator over the token requests matching the passed params
 func (db *TransactionDB) QueryTokenRequests(params driver.QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
-	conditions, args := common.Where(b.InInts("status", params.Statuses))
+	conditions, args := common.Where(db.ci.InInts("status", params.Statuses))
 
 	query := fmt.Sprintf("SELECT tx_id, request, status FROM %s %s", db.table.Requests, conditions)
 	logger.Debug(query, args)

@@ -17,6 +17,8 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
+var b = NewTokenInterpreter(common.NewInterpreter())
+
 func TestTransactionSql(t *testing.T) {
 	now := time.Now().Local().UTC()
 	lastYear := now.AddDate(-1, 0, 0)
@@ -225,7 +227,8 @@ func TestMovementConditions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, actualArgs := movementConditionsSql(tc.params)
+			where, actualArgs := common.Where(b.HasMovementsParams(tc.params))
+			actualSql := where + movementConditionsSql(tc.params)
 			assert.Equal(t, tc.expectedSql, actualSql)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -307,16 +310,17 @@ func TestTokenSql(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, _, actualArgs := tokenQuerySql(tc.params, "", "")
+			actualSql, actualArgs := common.Where(b.HasTokenDetails(tc.params, ""))
 			assert.Equal(t, tc.expectedSql, actualSql, tc.name)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
 	}
 	// with join
-	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
+	where, args := common.Where(b.HasTokenDetails(driver.QueryTokenDetailsParams{
 		IDs:      []*token.ID{{TxId: "a", Index: 1}},
 		WalletID: "me",
-	}, "A", "B")
+	}, "A"))
+	join := joinOnTokenID("A", "B")
 	assert.Equal(t, "WHERE (owner = true AND (A.tx_id, A.idx) IN (($1, $2)) AND (wallet_id = $3 OR owner_wallet_id = $4) AND is_deleted = false)", where, "join")
 	assert.Equal(t, "LEFT JOIN B ON A.tx_id = B.tx_id AND A.idx = B.idx", join, "join")
 	assert.Len(t, args, 4)
