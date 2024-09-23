@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -29,7 +30,12 @@ type SelectorService struct {
 	managerLazyCache lazy.Provider[*token.ManagementService, token.SelectorManager]
 }
 
-func NewService(tms *token.ManagementService, lockerProvider LockerProvider, cfg sdriver.SelectorConfig) *SelectorService {
+func NewService(lockerProvider LockerProvider, c core.ConfigProvider) *SelectorService {
+	cfg, err := sdriver.New(c)
+	if err != nil {
+		logger.Errorf("error getting selector config, using defaults. %s", err.Error())
+	}
+
 	loader := &loader{
 		lockerProvider:       lockerProvider,
 		numRetries:           cfg.GetNumRetries(),
