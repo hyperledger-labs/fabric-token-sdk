@@ -26,7 +26,7 @@ func initTransactionsDB(driverName common.SQLDriverType, dataSourceName, tablePr
 		DataSource:   dataSourceName,
 		TablePrefix:  tablePrefix,
 		CreateSchema: true,
-	})
+	}, NewTokenInterpreter(common.NewInterpreter()))
 	if err != nil {
 		return nil, err
 	}

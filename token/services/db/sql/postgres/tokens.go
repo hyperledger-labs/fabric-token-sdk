@@ -17,7 +17,7 @@ import (
 )
 
 func NewTokenDB(db *sql.DB, opts common.NewDBOpts) (driver.TokenDB, error) {
-	return common.NewTokenDB(db, opts)
+	return common.NewTokenDB(db, opts, common.NewTokenInterpreter(postgres.NewInterpreter()))
 }
 
 type TokenNotifier struct {

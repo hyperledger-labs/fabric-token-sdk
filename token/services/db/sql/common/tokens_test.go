@@ -25,7 +25,7 @@ func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix st
 		DataSource:   dataSourceName,
 		TablePrefix:  tablePrefix,
 		CreateSchema: true,
-	})
+	}, NewTokenInterpreter(common.NewInterpreter()))
 	if err != nil {
 		return nil, err
 	}

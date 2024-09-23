@@ -30,7 +30,7 @@ type tokenTables struct {
 	Certifications string
 }
 
-func NewTokenDB(db *sql.DB, opts NewDBOpts) (driver.TokenDB, error) {
+func NewTokenDB(db *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.TokenDB, error) {
 	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
@@ -41,7 +41,7 @@ func NewTokenDB(db *sql.DB, opts NewDBOpts) (driver.TokenDB, error) {
 		Ownership:      tables.Ownership,
 		PublicParams:   tables.PublicParams,
 		Certifications: tables.Certifications,
-	})
+	}, ci)
 	if opts.CreateSchema {
 		if err = common.InitSchema(db, tokenDB.GetSchema()); err != nil {
 			return nil, err
@@ -53,12 +53,14 @@ func NewTokenDB(db *sql.DB, opts NewDBOpts) (driver.TokenDB, error) {
 type TokenDB struct {
 	db    *sql.DB
 	table tokenTables
+	ci    TokenInterpreter
 }
 
-func newTokenDB(db *sql.DB, tables tokenTables) *TokenDB {
+func newTokenDB(db *sql.DB, tables tokenTables, ci TokenInterpreter) *TokenDB {
 	return &TokenDB{
 		db:    db,
 		table: tables,
+		ci:    ci,
 	}
 }
 
@@ -85,7 +87,7 @@ func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	cond := b.HasTokens("tx_id", "idx", ids...)
+	cond := db.ci.HasTokens("tx_id", "idx", ids...)
 	args := append([]any{deletedBy, time.Now().UTC()}, cond.Params()...)
 	offset := 3
 	where := cond.ToString(&offset)
@@ -123,10 +125,12 @@ func (db *TokenDB) UnspentTokensIterator() (tdriver.UnspentTokensIterator, error
 // The token type can be empty. In that case, tokens of any type are returned.
 func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenType string) (tdriver.UnspentTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
-	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
+	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: tokenType,
-	}, db.table.Tokens, db.table.Ownership)
+	}, db.table.Tokens))
+	join := joinOnTokenID(db.table.Tokens, db.table.Ownership)
+
 	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_raw, token_type, quantity FROM %s %s %s",
 		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
 
@@ -141,7 +145,7 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenT
 // UnspentTokensInWalletIterator returns the minimum information about the tokens needed for the selector
 func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.SpendableTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
-	where, args := common.Where(b.HasTokenDetails(driver.QueryTokenDetailsParams{
+	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
 	}, ""))
@@ -162,10 +166,11 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 
 // Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
 func (db *TokenDB) Balance(walletID, typ string) (uint64, error) {
-	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
+	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
-	}, db.table.Tokens, db.table.Ownership)
+	}, db.table.Tokens))
+	join := joinOnTokenID(db.table.Tokens, db.table.Ownership)
 	query := fmt.Sprintf("SELECT SUM(amount) FROM %s %s %s", db.table.Tokens, join, where)
 
 	logger.Debug(query, args)
@@ -234,8 +239,8 @@ func (db *TokenDB) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
 	if len(ids) == 0 {
 		return []*token.Token{}, nil
 	}
-	where, args := common.Where(b.And(
-		b.HasTokens("tx_id", "idx", ids...),
+	where, args := common.Where(db.ci.And(
+		db.ci.HasTokens("tx_id", "idx", ids...),
 		common.ConstCondition("auditor = true"),
 	))
 
@@ -372,7 +377,7 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
 		return [][]byte{}, nil
 	}
-	where, args := common.Where(b.HasTokens("tx_id", "idx", ids...))
+	where, args := common.Where(db.ci.HasTokens("tx_id", "idx", ids...))
 
 	query := fmt.Sprintf("SELECT tx_id, idx, ledger FROM %s %s", db.table.Tokens, where)
 	logger.Debug(query, args)
@@ -414,7 +419,7 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 	if len(ids) == 0 {
 		return [][]byte{}, [][]byte{}, nil
 	}
-	where, args := common.Where(b.HasTokens("tx_id", "idx", ids...))
+	where, args := common.Where(db.ci.HasTokens("tx_id", "idx", ids...))
 
 	query := fmt.Sprintf("SELECT tx_id, idx, ledger, ledger_metadata FROM %s %s", db.table.Tokens, where)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
@@ -460,8 +465,8 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 	if len(inputs) == 0 {
 		return []*token.Token{}, nil
 	}
-	where, args := common.Where(b.And(
-		b.HasTokens("tx_id", "idx", inputs...),
+	where, args := common.Where(db.ci.And(
+		db.ci.HasTokens("tx_id", "idx", inputs...),
 		common.ConstCondition("is_deleted = false"),
 		common.ConstCondition("owner = true"),
 	))
@@ -534,7 +539,8 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 // Filters work cumulatively and may be left empty. If a token is owned by two enrollmentIDs and there
 // is no filter on enrollmentID, the token will be returned twice (once for each owner).
 func (db *TokenDB) QueryTokenDetails(params driver.QueryTokenDetailsParams) ([]driver.TokenDetails, error) {
-	where, join, args := tokenQuerySql(params, db.table.Tokens, db.table.Ownership)
+	where, args := common.Where(db.ci.HasTokenDetails(params, db.table.Tokens))
+	join := joinOnTokenID(db.table.Tokens, db.table.Ownership)
 
 	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_identity, owner_type, wallet_id, token_type, amount, is_deleted, spent_by, stored_at FROM %s %s %s",
 		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
@@ -577,7 +583,7 @@ func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, erro
 	if len(inputs) == 0 {
 		return []string{}, []bool{}, nil
 	}
-	where, args := common.Where(b.HasTokens("tx_id", "idx", inputs...))
+	where, args := common.Where(db.ci.HasTokens("tx_id", "idx", inputs...))
 
 	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_deleted FROM %s %s", db.table.Tokens, where)
 	logger.Debug(query, args)
@@ -708,7 +714,7 @@ func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {
 	if tokenID == nil {
 		return false
 	}
-	where, args := common.Where(b.HasTokens("tx_id", "idx", tokenID))
+	where, args := common.Where(db.ci.HasTokens("tx_id", "idx", tokenID))
 
 	query := fmt.Sprintf("SELECT certification FROM %s %s", db.table.Certifications, where)
 	logger.Debug(query, args)
@@ -733,7 +739,7 @@ func (db *TokenDB) GetCertifications(ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	where, args := common.Where(b.HasTokens("tx_id", "idx", ids...))
+	where, args := common.Where(db.ci.HasTokens("tx_id", "idx", ids...))
 	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s %s ", db.table.Certifications, where)
 
 	rows, err := db.db.Query(query, args...)
@@ -852,10 +858,11 @@ type TokenTransaction struct {
 
 func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint64, includeDeleted bool) (*token.Token, []string, error) {
 	span := trace.SpanFromContext(ctx)
-	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
+	where, args := common.Where(t.db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		IDs:            []*token.ID{{TxId: txID, Index: index}},
 		IncludeDeleted: includeDeleted,
-	}, t.db.table.Tokens, t.db.table.Ownership)
+	}, t.db.table.Tokens))
+	join := joinOnTokenID(t.db.table.Tokens, t.db.table.Ownership)
 
 	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, %s.wallet_id, owner_wallet_id FROM %s %s %s", t.db.table.Ownership, t.db.table.Tokens, join, where)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))

@@ -11,17 +11,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
-var b = newTokenInterpreter()
-
-func movementConditionsSql(params driver.QueryMovementsParams) (string, []any) {
+func movementConditionsSql(params driver.QueryMovementsParams) string {
 	sb := strings.Builder{}
-
-	where, args := common.Where(b.HasMovementsParams(params))
-	sb.WriteString(where)
 
 	// Order by stored_at
 	if params.SearchDirection == driver.FromBeginning {
@@ -36,14 +30,7 @@ func movementConditionsSql(params driver.QueryMovementsParams) (string, []any) {
 		sb.WriteString(strconv.Itoa(params.NumRecords))
 	}
 
-	return sb.String(), args
-}
-
-// tokenQuerySql requires a join with the token ownership table if WalletID is not empty
-func tokenQuerySql(params driver.QueryTokenDetailsParams, tokenTable, ownerTable string) (string, string, []any) {
-	w, ps := common.Where(b.HasTokenDetails(params, tokenTable))
-
-	return w, joinOnTokenID(tokenTable, ownerTable), ps
+	return sb.String()
 }
 
 func joinOnTxID(table, other string) string {
