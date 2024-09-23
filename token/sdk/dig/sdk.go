@@ -104,9 +104,6 @@ func (p *SDK) Install() error {
 		p.Container().Provide(func(ttxdbManager *ttxdb.Manager) *network2.LockerProvider {
 			return network2.NewLockerProvider(ttxdbManager, 2*time.Second, 5*time.Minute)
 		}, dig.As(new(selector.LockerProvider))),
-		p.Container().Provide(func() (sdriver.SelectorConfig, error) {
-			return sdriver.New(p.ConfigService())
-		}),
 		p.Container().Provide(selectorProviders[sdriver.Driver(p.ConfigService().GetString("token.selector.driver"))], dig.As(new(token.SelectorManagerProvider))),
 		p.Container().Provide(network2.NewCertificationClientProvider, dig.As(new(token.CertificationClientProvider))),
 		p.Container().Provide(func(networkProvider *network.Provider) *vault.ProviderAdaptor {

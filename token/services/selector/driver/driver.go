@@ -26,9 +26,9 @@ type SelectorConfig interface {
 type Driver string
 
 type Config struct {
-	Driver        Driver        `json:"driver,omitempty"`
-	RetryInterval time.Duration `json:"retryInterval,omitempty"`
-	NumRetries    int           `json:"numRetries,omitempty"`
+	Driver        Driver        `yaml:"driver,omitempty"`
+	RetryInterval time.Duration `yaml:"retryInterval,omitempty"`
+	NumRetries    int           `yaml:"numRetries,omitempty"`
 }
 
 func (c Config) GetDriver() Driver {
@@ -60,7 +60,7 @@ func New(config configService) (SelectorConfig, error) {
 	c := Config{}
 	err := config.UnmarshalKey("token.selector", &c)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid config for key [token.selector]: expected retryInterval (duration) and numRetries (integer))")
+		return c, errors.Wrap(err, "invalid config for key [token.selector]: expected retryInterval (duration) and numRetries (integer))")
 	}
 	return c, nil
 }
