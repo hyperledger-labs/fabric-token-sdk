@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/schema"
+
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -246,7 +248,7 @@ func (l *LocalMembership) registerProvider(identityConfig driver.IdentityConfigu
 	if err != nil {
 		return errors.WithMessage(err, "failed to instantiate crypto provider")
 	}
-	provider, err := NewProvider(conf, l.signerService, bccsp.EidNymRhNym, cryptoProvider)
+	provider, err := NewProvider(conf, l.signerService, bccsp.EidNymRhNym, cryptoProvider, &schema.DefaultManager{}, "")
 	if err != nil {
 		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", identityConfig.URL)
 	}

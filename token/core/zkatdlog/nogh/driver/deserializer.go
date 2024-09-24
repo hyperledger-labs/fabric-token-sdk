@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/schema"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
@@ -29,7 +30,12 @@ func NewDeserializer(pp *crypto.PublicParams) (*Deserializer, error) {
 	if pp == nil {
 		return nil, errors.New("failed to get deserializer: nil public parameters")
 	}
-	idemixDes, err := idemix.NewDeserializer(pp.IdemixIssuerPK, pp.IdemixCurveID)
+	idemixDes, err := idemix.NewEidNymRhNymDeserializer(
+		&schema.DefaultManager{},
+		"",
+		pp.IdemixIssuerPK,
+		pp.IdemixCurveID,
+	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", pp.IdemixCurveID)
 	}

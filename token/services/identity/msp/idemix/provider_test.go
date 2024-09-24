@@ -13,6 +13,7 @@ import (
 
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/schema"
 
 	idemix2 "github.com/IBM/idemix"
 	"github.com/IBM/idemix/bccsp/types"
@@ -43,15 +44,15 @@ func TestProvider(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	p, err = idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider)
+	p, err = idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	p, err = idemix.NewProvider(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
+	p, err = idemix.NewProvider(config, sigService, bccsp.EidNymRhNym, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 }
@@ -72,7 +73,7 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -102,7 +103,7 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider)
+	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -145,7 +146,7 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider)
+	p, err := idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -167,7 +168,7 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err = idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider)
+	p, err = idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -189,7 +190,7 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider)
+	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -223,7 +224,7 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -233,7 +234,7 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p2, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p2, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p2)
 
@@ -273,13 +274,13 @@ func TestProvider_DeserializeSigner(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
 	config, err = msp2.GetLocalMspConfigWithType("./testdata/sameissuer/idemix2", nil, "idemix", "idemix")
 	assert.NoError(t, err)
-	p2, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p2, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p2)
 
@@ -336,7 +337,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := msp.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider)
+	p, err := idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -358,7 +359,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = msp.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err = idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider)
+	p, err = idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -380,7 +381,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = msp.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider)
+	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -417,7 +418,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := msp.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewProvider(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
+	p, err := idemix.NewProvider(config, sigService, bccsp.EidNymRhNym, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -449,7 +450,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = msp.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider)
+	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider, &schema.DefaultManager{}, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
