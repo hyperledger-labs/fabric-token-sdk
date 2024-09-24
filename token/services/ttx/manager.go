@@ -119,7 +119,7 @@ func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
 		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	it, err := db.ttxDB.TokenRequests(ttxdb.QueryTokenRequestsParams{Statuses: []TxStatus{driver.Pending, driver.Unknown}})
+	it, err := db.ttxDB.TokenRequests(ttxdb.QueryTokenRequestsParams{Statuses: []TxStatus{driver.Pending, driver.Unknown, driver.Deleted}})
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
