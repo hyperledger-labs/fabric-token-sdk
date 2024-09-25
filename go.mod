@@ -7,7 +7,7 @@ require (
 	github.com/IBM/idemix/bccsp/types v0.0.0-20240816143710-3dce4618d760
 	github.com/IBM/mathlib v0.0.3-0.20231011094432-44ee0eb539da
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240925070339-2ce807cdbda5
+	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240925085056-08521ad4c3cc
 	github.com/hyperledger-labs/orion-sdk-go v0.2.10
 	github.com/hyperledger-labs/orion-server v0.2.10
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
