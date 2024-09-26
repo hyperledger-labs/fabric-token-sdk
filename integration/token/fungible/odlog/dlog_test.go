@@ -41,6 +41,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 			//FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:info",
 			//FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:view-sdk.services.comm=debug:info",
 			ReplicationOpts: opts,
+			OnlyUnity:       true,
 		},
 	))
 	return ts, selector
