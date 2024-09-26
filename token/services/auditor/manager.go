@@ -67,6 +67,7 @@ func (cm *Manager) Auditor(tmsID token.TMSID) (*Auditor, error) {
 	return cm.getAuditor(tmsID)
 }
 
+// RestoreTMS restores the auditdb corresponding to the passed TMS ID.
 func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 	logger.Infof("restore audit dbs for entry [%s]...", tmsID)
 	if err := cm.restore(tmsID); err != nil {
@@ -134,7 +135,7 @@ func (cm *Manager) restore(tmsID token.TMSID) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get auditor for [%s]", tmsID)
 	}
-	it, err := auditor.auditDB.TokenRequests(auditdb.QueryTokenRequestsParams{Statuses: []TxStatus{auditdb.Pending, auditdb.Unknown, auditdb.Deleted}})
+	it, err := auditor.auditDB.TokenRequests(auditdb.QueryTokenRequestsParams{Statuses: []TxStatus{auditdb.Pending}})
 	if err != nil {
 		return errors.Errorf("failed to get tx iterator for [%s]", tmsID)
 	}

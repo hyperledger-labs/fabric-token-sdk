@@ -66,6 +66,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 			ReplicationOpts: opts,
 			WebEnabled:      true, // Needed for the Remote Wallet with websockets
 			//FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
+			OnlyUnity: true,
 		},
 	))
 	return ts, selector

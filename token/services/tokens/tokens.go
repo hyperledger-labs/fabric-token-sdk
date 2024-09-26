@@ -119,7 +119,7 @@ func (t *Tokens) Append(ctx context.Context, tmsID token.TMSID, txID string, req
 	if err = ts.Commit(); err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to commit tokens to database", txID)
 	}
-	logger.Debugf("transaction [%s], committed tokens to database", txID)
+	logger.Debugf("transaction [%s], committed tokens [%d:%d] to database", txID, len(toAppend), len(toSpend))
 
 	return nil
 }

@@ -39,6 +39,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 			Aries:           true,
 			SDKs:            []api.SDK{&ofabtoken.SDK{}},
 			ReplicationOpts: opts,
+			OnlyUnity:       true,
 		},
 	))
 	return ts, selector
