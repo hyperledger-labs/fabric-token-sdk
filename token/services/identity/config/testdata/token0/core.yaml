@@ -20,6 +20,17 @@ token:
             path: /path/to/crypto/issuer1
           - id: issuer2
             path: /path/to/crypto/issuer2
+            opts:
+              BCCSP:
+                Default: SW
+                SW:
+                  Hash: SHA2
+                  Security: 256
+                PKCS11:
+                  Hash: SHA2
+                  Label: test
+                  Pin: 1234
+                  Security: 256
         auditors:
           - default: true
             id: auditor1

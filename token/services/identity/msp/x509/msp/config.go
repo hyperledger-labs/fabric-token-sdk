@@ -8,8 +8,8 @@ package msp
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp/pkcs11"
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 )
 
 type MSPOpts struct {
@@ -48,19 +48,20 @@ type KeyIDMapping struct {
 }
 
 // ToBCCSPOpts converts the passed opts to `config.BCCSP`
-func ToBCCSPOpts(opts interface{}) (*BCCSP, error) {
-	if opts == nil {
-		return nil, nil
+func ToBCCSPOpts(boxed interface{}) (*BCCSP, error) {
+	opts := &MSPOpts{}
+	config := &mapstructure.DecoderConfig{
+		WeaklyTypedInput: true, // allow pin to be a string
+		Result:           &opts,
 	}
-	out, err := yaml.Marshal(opts)
+
+	decoder, err := mapstructure.NewDecoder(config)
 	if err != nil {
-		return nil, errors.Wrapf(err, "faild to marshal [%v]", opts)
+		return opts.BCCSP, err
 	}
-	mspOpts := &MSPOpts{}
-	if err := yaml.Unmarshal(out, mspOpts); err != nil {
-		return nil, errors.Wrapf(err, "faild to unmarshal [%v] to BCCSP options", opts)
-	}
-	return mspOpts.BCCSP, nil
+
+	err = decoder.Decode(boxed)
+	return opts.BCCSP, err
 }
 
 func ToPKCS11OptsOpts(o *PKCS11) *pkcs11.PKCS11Opts {
