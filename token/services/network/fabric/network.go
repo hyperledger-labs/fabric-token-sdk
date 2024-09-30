@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
@@ -158,9 +159,10 @@ type Network struct {
 	tokensProvider *tokens2.Manager
 	finalityTracer trace.Tracer
 
-	vaultLazyCache      lazy.Provider[string, driver.Vault]
-	tokenVaultLazyCache lazy.Provider[string, driver.TokenVault]
-	subscribers         *events.Subscribers
+	vaultLazyCache             lazy.Provider[string, driver.Vault]
+	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
+	subscribers                *events.Subscribers
+	defaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher
 
 	endorsementServiceProvider *endorsement.ServiceProvider
 }
@@ -176,6 +178,7 @@ func NewNetwork(
 	tmsProvider *token2.ManagementServiceProvider,
 	endorsementServiceProvider *endorsement.ServiceProvider,
 	tracerProvider trace.TracerProvider,
+	defaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -195,6 +198,7 @@ func NewNetwork(
 		vaultLazyCache:             lazy.NewProvider(loader.loadVault),
 		tokenVaultLazyCache:        lazy.NewProvider(loader.loadTokenVault),
 		subscribers:                events.NewSubscribers(),
+		defaultPublicParamsFetcher: defaultPublicParamsFetcher,
 		endorsementServiceProvider: endorsementServiceProvider,
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "tokensdk_fabric",
@@ -359,17 +363,7 @@ func (n *Network) ComputeTxID(id *driver.TxID) string {
 }
 
 func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
-	ppBoxed, err := n.viewManager.InitiateView(
-		chaincode.NewQueryView(
-			namespace,
-			QueryPublicParamsFunction,
-		).WithNetwork(n.Name()).WithChannel(n.Channel()),
-		context.TODO(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return ppBoxed.([]byte), nil
+	return n.defaultPublicParamsFetcher.Fetch(n.Name(), n.Channel(), namespace)
 }
 
 func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {

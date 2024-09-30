@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
+import "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+
 // SerializedPublicParameters is the serialized form of PublicParameters.
 type SerializedPublicParameters struct {
 	// Identifier is the unique identifier of this public parameters.
@@ -20,6 +22,12 @@ func (pp *SerializedPublicParameters) Deserialize(raw []byte) error {
 		return err
 	}
 	return nil
+}
+
+// DefaultPublicParamsFetcher models a public parameters fetcher per namespace.
+type DefaultPublicParamsFetcher interface {
+	// Fetch fetches the public parameters from a repository for a given namespace.
+	Fetch(network driver.Network, channel driver.Channel, namespace driver.Namespace) ([]byte, error)
 }
 
 // PublicParamsFetcher models a public parameters fetcher.

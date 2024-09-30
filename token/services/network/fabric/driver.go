@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -22,17 +23,20 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+type DefaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher
+
 type Driver struct {
-	fnsProvider      *fabric.NetworkServiceProvider
-	vaultProvider    vault.Provider
-	tokensManager    *tokens.Manager
-	configService    *config.Service
-	viewManager      *view.Manager
-	viewRegistry     driver2.Registry
-	filterProvider   *common.AcceptTxInDBFilterProvider
-	tmsProvider      *token.ManagementServiceProvider
-	identityProvider driver2.IdentityProvider
-	tracerProvider   trace.TracerProvider
+	fnsProvider                *fabric.NetworkServiceProvider
+	vaultProvider              vault.Provider
+	tokensManager              *tokens.Manager
+	configService              *config.Service
+	viewManager                *view.Manager
+	viewRegistry               driver2.Registry
+	filterProvider             *common.AcceptTxInDBFilterProvider
+	tmsProvider                *token.ManagementServiceProvider
+	identityProvider           driver2.IdentityProvider
+	tracerProvider             trace.TracerProvider
+	defaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher
 }
 
 func NewDriver(
@@ -46,20 +50,22 @@ func NewDriver(
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
 	identityProvider driver2.IdentityProvider,
+	defaultPublicParamsFetcher DefaultPublicParamsFetcher,
 ) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name: "fabric",
 		Driver: &Driver{
-			fnsProvider:      fnsProvider,
-			vaultProvider:    vaultProvider,
-			tokensManager:    tokensManager,
-			configService:    configService,
-			viewManager:      viewManager,
-			viewRegistry:     viewRegistry,
-			filterProvider:   filterProvider,
-			tmsProvider:      tmsProvider,
-			identityProvider: identityProvider,
-			tracerProvider:   tracerProvider,
+			fnsProvider:                fnsProvider,
+			vaultProvider:              vaultProvider,
+			tokensManager:              tokensManager,
+			configService:              configService,
+			viewManager:                viewManager,
+			viewRegistry:               viewRegistry,
+			filterProvider:             filterProvider,
+			tmsProvider:                tmsProvider,
+			identityProvider:           identityProvider,
+			tracerProvider:             tracerProvider,
+			defaultPublicParamsFetcher: defaultPublicParamsFetcher,
 		},
 	}
 }
@@ -92,5 +98,6 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 			d.tmsProvider,
 		),
 		d.tracerProvider,
+		d.defaultPublicParamsFetcher,
 	), nil
 }

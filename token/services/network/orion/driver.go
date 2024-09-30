@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -21,6 +22,8 @@ import (
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type DefaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher
 
 func NewDriver(
 	onsProvider *orion.NetworkServiceProvider,
@@ -32,36 +35,39 @@ func NewDriver(
 	identityProvider view2.IdentityProvider,
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
+	defaultPublicParamsFetcher DefaultPublicParamsFetcher,
 	tracerProvider trace.TracerProvider,
 ) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name: "orion",
 		Driver: &Driver{
-			onsProvider:      onsProvider,
-			viewRegistry:     viewRegistry,
-			viewManager:      viewManager,
-			vaultProvider:    vaultProvider,
-			configProvider:   configProvider,
-			configService:    configService,
-			identityProvider: identityProvider,
-			filterProvider:   filterProvider,
-			tmsProvider:      tmsProvider,
-			tracerProvider:   tracerProvider,
+			onsProvider:                onsProvider,
+			viewRegistry:               viewRegistry,
+			viewManager:                viewManager,
+			vaultProvider:              vaultProvider,
+			configProvider:             configProvider,
+			configService:              configService,
+			identityProvider:           identityProvider,
+			filterProvider:             filterProvider,
+			tmsProvider:                tmsProvider,
+			defaultPublicParamsFetcher: defaultPublicParamsFetcher,
+			tracerProvider:             tracerProvider,
 		},
 	}
 }
 
 type Driver struct {
-	onsProvider      *orion.NetworkServiceProvider
-	viewRegistry     driver2.Registry
-	viewManager      *view.Manager
-	vaultProvider    vault.Provider
-	configProvider   configProvider
-	configService    *config.Service
-	identityProvider view2.IdentityProvider
-	filterProvider   *common.AcceptTxInDBFilterProvider
-	tmsProvider      *token.ManagementServiceProvider
-	tracerProvider   trace.TracerProvider
+	onsProvider                *orion.NetworkServiceProvider
+	viewRegistry               driver2.Registry
+	viewManager                *view.Manager
+	vaultProvider              vault.Provider
+	configProvider             configProvider
+	configService              *config.Service
+	identityProvider           view2.IdentityProvider
+	filterProvider             *common.AcceptTxInDBFilterProvider
+	tmsProvider                *token.ManagementServiceProvider
+	defaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher
+	tracerProvider             trace.TracerProvider
 }
 
 func (d *Driver) New(network, _ string) (driver.Network, error) {
@@ -92,6 +98,7 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		d.configService,
 		d.filterProvider,
 		dbManager,
+		d.defaultPublicParamsFetcher,
 		d.tracerProvider,
 	), nil
 }
