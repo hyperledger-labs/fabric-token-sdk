@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
@@ -44,10 +45,11 @@ type Network struct {
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
 	finalityTracer trace.Tracer
 
-	vaultLazyCache      lazy.Provider[string, driver.Vault]
-	tokenVaultLazyCache lazy.Provider[string, driver.TokenVault]
-	subscribers         *events.Subscribers
-	dbManager           *DBManager
+	vaultLazyCache             lazy.Provider[string, driver.Vault]
+	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
+	subscribers                *events.Subscribers
+	dbManager                  *DBManager
+	defaultPublicParamsFetcher driver2.DefaultPublicParamsFetcher
 }
 
 func NewNetwork(
@@ -59,6 +61,7 @@ func NewNetwork(
 	nsFinder common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
 	dbManager *DBManager,
+	defaultPublicParamsFetcher driver2.DefaultPublicParamsFetcher,
 	tracerProvider trace.TracerProvider,
 ) *Network {
 	loader := &loader{
@@ -77,6 +80,7 @@ func NewNetwork(
 		vaultLazyCache:      lazy.NewProvider(loader.loadVault),
 		tokenVaultLazyCache: lazy.NewProvider(loader.loadTokenVault),
 		subscribers:         events.NewSubscribers(), ledger: &ledger{network: n.Name(), viewManager: viewManager, dbManager: dbManager},
+		defaultPublicParamsFetcher: defaultPublicParamsFetcher,
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "tokensdk_orion",
 			LabelNames: []tracing.LabelName{},
