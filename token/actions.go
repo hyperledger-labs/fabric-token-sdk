@@ -77,7 +77,7 @@ func (t *TransferAction) SerializeOutputAt(i int) ([]byte, error) {
 }
 
 // GetInputs returns the input ids used in the action.
-func (t *TransferAction) GetInputs() ([]*token.ID, error) {
+func (t *TransferAction) GetInputs() []*token.ID {
 	return t.a.GetInputs()
 }
 
