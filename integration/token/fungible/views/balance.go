@@ -9,19 +9,19 @@ package views
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
 
 type BalanceQuery struct {
-	TMSID  *token.TMSID
-	Wallet string
-	Type   string
+	TMSID     *token.TMSID
+	SkipCheck bool
+	Wallet    string
+	Type      string
 }
 
 type Balance struct {
@@ -43,16 +43,11 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
 	}
 
-	span.AddEvent("start_sum_calculation")
-	balance, err := wallet.Balance(token.WithType(b.Type))
-	if err != nil {
-		return nil, err
-	}
-	span.AddEvent("end_sum_calculation")
-
 	span.AddEvent("start_sum_calculation_unspent")
 	unspentTokens, err := wallet.ListUnspentTokens(token.WithType(b.Type))
-	assert.NoError(err, "failed listing unspent tokens")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed listing unspent tokens")
+	}
 	precision := tms.PublicParametersManager().PublicParameters().Precision()
 	sum := token2.NewZeroQuantity(precision)
 	for _, tok := range unspentTokens.Tokens {
@@ -63,10 +58,20 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 		sum = sum.Add(q)
 	}
 	span.AddEvent("end_sum_calculation_unspent")
-	expected := sum.ToBigInt().Uint64()
-	assert.Equal(expected, balance, "balance doesn't match [%d]!=[%d]", balance, expected)
 
-	return Balance{Quantity: strconv.FormatUint(balance, 10), Type: b.Type}, nil
+	if !b.SkipCheck {
+		span.AddEvent("start_sum_calculation")
+		balance, err := wallet.Balance(token.WithType(b.Type))
+		if err != nil {
+			return nil, err
+		}
+		span.AddEvent("end_sum_calculation")
+		if sum.ToBigInt().Uint64() != balance {
+			return nil, errors.Errorf("balance doesn't match [%d]!=[%d]", balance, sum.ToBigInt().Uint64())
+		}
+	}
+
+	return Balance{Quantity: sum.Decimal(), Type: b.Type}, nil
 }
 
 type BalanceViewFactory struct{}

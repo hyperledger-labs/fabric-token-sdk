@@ -10,11 +10,12 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/pkg/errors"
 )
 
 // ListIssuedTokens contains the input to query the list of issued tokens
@@ -34,7 +35,9 @@ type ListIssuedTokensView struct {
 func (p *ListIssuedTokensView) Call(context view.Context) (interface{}, error) {
 	// Tokens issued by identities in this wallet will be listed
 	wallet := ttx.GetIssuerWallet(context, p.Wallet, ServiceOpts(p.TMSID)...)
-	assert.NotNil(wallet, "wallet [%s] not found", p.Wallet)
+	if wallet == nil {
+		return nil, errors.Errorf("wallet [%s] not found", p.Wallet)
+	}
 
 	// Return the list of issued tokens by type
 	return wallet.ListIssuedTokens(ttx.WithType(p.TokenType))
@@ -44,8 +47,9 @@ type ListIssuedTokensViewFactory struct{}
 
 func (i *ListIssuedTokensViewFactory) NewView(in []byte) (view.View, error) {
 	f := &ListIssuedTokensView{ListIssuedTokens: &ListIssuedTokens{}}
-	err := json.Unmarshal(in, f.ListIssuedTokens)
-	assert.NoError(err, "failed unmarshalling input")
+	if err := json.Unmarshal(in, f.ListIssuedTokens); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling input")
+	}
 	return f, nil
 }
 
@@ -61,35 +65,30 @@ type ListAuditedTransactionsView struct {
 func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, error) {
 	// Tokens issued by identities in this wallet will be listed
 	w := ttx.MyAuditorWallet(context)
-	assert.NotNil(w, "failed getting default auditor wallet")
+	if w == nil {
+		return nil, errors.New("failed getting default auditor wallet")
+	}
 
 	// Get query executor
 	auditor, err := ttx.NewAuditor(context, w)
-	assert.NoError(err, "failed to get auditor instance")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get auditor instance")
+	}
 
 	it, err := auditor.Transactions(ttxdb.QueryTransactionsParams{From: p.From, To: p.To})
-	assert.NoError(err, "failed querying transactions")
-	defer it.Close()
-
-	// Return the list of audited transactions
-	var txs []*ttxdb.TransactionRecord
-	for {
-		tx, err := it.Next()
-		assert.NoError(err, "failed iterating over transactions")
-		if tx == nil {
-			break
-		}
-		txs = append(txs, tx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed querying transactions")
 	}
-	return txs, nil
+	return ToSlice(it)
 }
 
 type ListAuditedTransactionsViewFactory struct{}
 
 func (i *ListAuditedTransactionsViewFactory) NewView(in []byte) (view.View, error) {
 	f := &ListAuditedTransactionsView{ListAuditedTransactions: &ListAuditedTransactions{}}
-	err := json.Unmarshal(in, f.ListAuditedTransactions)
-	assert.NoError(err, "failed unmarshalling input")
+	if err := json.Unmarshal(in, f.ListAuditedTransactions); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling input")
+	}
 	return f, nil
 }
 
@@ -101,6 +100,7 @@ type ListAcceptedTransactions struct {
 	To              *time.Time
 	ActionTypes     []ttxdb.ActionType
 	Statuses        []ttxdb.TxStatus
+	TMSID           *token.TMSID
 }
 
 type ListAcceptedTransactionsView struct {
@@ -109,7 +109,7 @@ type ListAcceptedTransactionsView struct {
 
 func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, error) {
 	// Get query executor
-	owner := ttx.NewOwner(context, token.GetManagementService(context))
+	owner := ttx.NewOwner(context, token.GetManagementService(context, ServiceOpts(p.TMSID)...))
 	it, err := owner.Transactions(ttxdb.QueryTransactionsParams{
 		SenderWallet:    p.SenderWallet,
 		RecipientWallet: p.RecipientWallet,
@@ -118,28 +118,20 @@ func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, 
 		ActionTypes:     p.ActionTypes,
 		Statuses:        p.Statuses,
 	})
-	assert.NoError(err, "failed querying transactions")
-	defer it.Close()
-
-	// Return the list of accepted transactions
-	var txs []*ttxdb.TransactionRecord
-	for {
-		tx, err := it.Next()
-		assert.NoError(err, "failed iterating over transactions")
-		if tx == nil {
-			break
-		}
-		txs = append(txs, tx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed querying transactions")
 	}
-	return txs, nil
+
+	return ToSlice(it)
 }
 
 type ListAcceptedTransactionsViewFactory struct{}
 
 func (l *ListAcceptedTransactionsViewFactory) NewView(in []byte) (view.View, error) {
 	v := &ListAcceptedTransactionsView{ListAcceptedTransactions: &ListAcceptedTransactions{}}
-	err := json.Unmarshal(in, v.ListAcceptedTransactions)
-	assert.NoError(err, "failed unmarshalling input")
+	if err := json.Unmarshal(in, v.ListAcceptedTransactions); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling input")
+	}
 	return v, nil
 }
 
@@ -156,7 +148,9 @@ type TransactionInfoView struct {
 func (t *TransactionInfoView) Call(context view.Context) (interface{}, error) {
 	owner := ttx.NewOwner(context, token.GetManagementService(context, ServiceOpts(t.TMSID)...))
 	info, err := owner.TransactionInfo(t.TransactionID)
-	assert.NoError(err, "failed getting transaction info")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting transaction info")
+	}
 
 	return info, nil
 }
@@ -165,7 +159,23 @@ type TransactionInfoViewFactory struct{}
 
 func (p *TransactionInfoViewFactory) NewView(in []byte) (view.View, error) {
 	f := &TransactionInfoView{TransactionInfo: &TransactionInfo{}}
-	err := json.Unmarshal(in, f.TransactionInfo)
-	assert.NoError(err, "failed unmarshalling input")
+	if err := json.Unmarshal(in, f.TransactionInfo); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling input")
+	}
 	return f, nil
+}
+
+func ToSlice[T any](it collections.Iterator[*T]) ([]*T, error) {
+	defer it.Close()
+	var items []*T
+	for {
+		if tx, err := it.Next(); err != nil {
+			return nil, errors.Wrapf(err, "failed iterating over transactions")
+		} else if tx == nil {
+			break
+		} else {
+			items = append(items, tx)
+		}
+	}
+	return items, nil
 }
