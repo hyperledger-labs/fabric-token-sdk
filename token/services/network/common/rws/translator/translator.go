@@ -200,10 +200,7 @@ func (w *Translator) checkIssue(issue IssueAction) error {
 }
 
 func (w *Translator) checkTransfer(t TransferAction) error {
-	inputs, err := t.GetInputs()
-	if err != nil {
-		return errors.Wrapf(err, "invalid transfer: failed getting input IDs")
-	}
+	inputs := t.GetInputs()
 
 	if !t.IsGraphHiding() {
 		// in this case, the state must exist
@@ -420,11 +417,9 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 
 func (w *Translator) spendTokens(transferAction TransferAction) error {
 	if !transferAction.IsGraphHiding() {
-		ids, err := transferAction.GetInputs()
-		if err != nil {
-			return err
-		}
+		ids := transferAction.GetInputs()
 		rwsetKeys := make([]string, len(ids))
+		var err error
 		for i, input := range ids {
 			rwsetKeys[i], err = keys.CreateTokenKey(input.TxId, input.Index)
 			if err != nil {

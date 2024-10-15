@@ -224,7 +224,7 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMe
 		s.Logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner.Raw))
 	}
 
-	return transfer.NewVerifier(tr.InputCommitments, com, pp).Verify(tr.Proof)
+	return transfer.NewVerifier(getTokenData(tr.InputTokens), com, pp).Verify(tr.Proof)
 }
 
 // DeserializeTransferAction un-marshals a TransferActionMetadata from the passed array of bytes.
@@ -236,4 +236,12 @@ func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.Transfer
 		return nil, err
 	}
 	return transferAction, nil
+}
+
+func getTokenData(tokens []*token.Token) []*math.G1 {
+	tokenData := make([]*math.G1, len(tokens))
+	for i := 0; i < len(tokens); i++ {
+		tokenData[i] = tokens[i].Data
+	}
+	return tokenData
 }

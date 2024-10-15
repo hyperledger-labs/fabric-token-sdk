@@ -73,9 +73,10 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 
 	// assemble transfer action
 	transfer := &TransferAction{
-		Inputs:   tokenIDs,
-		Outputs:  outs,
-		Metadata: meta.TransferActionMetadata(opts.Attributes),
+		Inputs:      tokenIDs,
+		InputTokens: inputTokens,
+		Outputs:     outs,
+		Metadata:    meta.TransferActionMetadata(opts.Attributes),
 	}
 
 	ws := s.WalletService

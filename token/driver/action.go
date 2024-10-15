@@ -58,7 +58,9 @@ type TransferAction interface {
 	// SerializeOutputAt returns the serialized output at the passed index
 	SerializeOutputAt(index int) ([]byte, error)
 	// GetInputs returns the identifiers of the inputs in the action.
-	GetInputs() ([]*token.ID, error)
+	GetInputs() []*token.ID
+	// GetSerializedInputs returns the serialized inputs of the action
+	GetSerializedInputs() ([][]byte, error)
 	// GetSerialNumbers returns the serial numbers of the inputs if this action supports graph hiding
 	GetSerialNumbers() []string
 	// IsGraphHiding returns true if the action is graph hiding
