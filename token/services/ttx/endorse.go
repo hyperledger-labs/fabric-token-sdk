@@ -641,6 +641,7 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	}
 	tx, err := NewTransactionFromBytes(context, msg)
 	if err != nil {
+		logger.Warnf("failed creating transaction from bytes: [%v], try to unmarshal as signature request...", err)
 		// try to unmarshal as SignatureRequest
 		tx, err = f.unmarshalAsSignatureRequest(context, msg)
 		if err != nil {
