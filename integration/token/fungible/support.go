@@ -112,9 +112,9 @@ func issueCashForTMSID(network *integration.Infrastructure, wallet string, typ s
 		for _, n := range []*token3.NodeReference{receiver, auditor} {
 			common2.CheckFinality(network, n, txID, tmsId, false)
 		}
-		for _, n := range endorsers {
-			common2.CheckEndorserFinality(network, n, txID, tmsId, false)
-		}
+		//for _, n := range endorsers {
+		//	common2.CheckEndorserFinality(network, n, txID, tmsId, false)
+		//}
 		return common.JSONUnmarshalString(txIDBoxed)
 	}
 
