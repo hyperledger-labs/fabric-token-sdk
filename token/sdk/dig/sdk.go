@@ -228,14 +228,14 @@ func connectNetworks(configService *config2.Service, networkProvider *network.Pr
 		if err != nil {
 			return errors.Wrapf(err, "failed to get network [%s]", tmsID)
 		}
-		opts, err := net.Connect(tmsID.Namespace)
+		_, err = net.Connect(tmsID.Namespace)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
 		}
-		_, err = tmsProvider.GetManagementService(opts...)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to instantiate tms [%s]", tmsID)
-		}
+		//_, err = tmsProvider.GetManagementService(opts...)
+		//if err != nil {
+		//	return errors.WithMessagef(err, "failed to instantiate tms [%s]", tmsID)
+		//}
 	}
 	logger.Infof("Token platform enabled, starting...done")
 	return nil
