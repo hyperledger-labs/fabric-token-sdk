@@ -274,6 +274,12 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 	if err := committer.AddTransactionFilter(transactionFilter); err != nil {
 		return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
 	}
+
+	// Let the endorsement service initialize itself, if needed
+	_, err = n.endorsementServiceProvider.Get(tmsID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get endorsement service at [%s]", tmsID)
+	}
 	return nil, nil
 }
 

@@ -49,7 +49,6 @@ func NewServiceProvider(
 	viewManager ViewManager,
 	viewRegistry ViewRegistry,
 	identityProvider IdentityProvider,
-	tmsProvider *token2.ManagementServiceProvider,
 ) *ServiceProvider {
 	l := &loader{
 		fns:              fns,
@@ -57,7 +56,6 @@ func NewServiceProvider(
 		viewManager:      viewManager,
 		viewRegistry:     viewRegistry,
 		identityProvider: identityProvider,
-		tmsProvider:      tmsProvider,
 	}
 	return &ServiceProvider{Provider: lazy.NewProviderWithKeyMapper(key, l.load)}
 }
@@ -72,11 +70,9 @@ type loader struct {
 	viewManager      ViewManager
 	viewRegistry     ViewRegistry
 	identityProvider IdentityProvider
-	tmsProvider      *token2.ManagementServiceProvider
 }
 
 func (l *loader) load(tmsID token2.TMSID) (Service, error) {
-	// if I'm an endorser, I need to process all token transactions
 	configuration, err := l.configService.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get configuration for [%s]", tmsID)
@@ -88,11 +84,7 @@ func (l *loader) load(tmsID token2.TMSID) (Service, error) {
 	}
 
 	logger.Infof("FSC endorsement enabled...")
-	tms, err := l.tmsProvider.GetManagementService(token2.WithTMSID(tmsID))
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get tms for [%s]", tmsID)
-	}
-	return newFSCService(l.fns, tms, configuration, l.viewRegistry, l.viewManager, l.identityProvider)
+	return newFSCService(l.fns, tmsID, configuration, l.viewRegistry, l.viewManager, l.identityProvider)
 }
 
 func key(tmsID token2.TMSID) string {
