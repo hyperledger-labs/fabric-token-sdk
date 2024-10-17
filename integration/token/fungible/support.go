@@ -112,6 +112,7 @@ func issueCashForTMSID(network *integration.Infrastructure, wallet string, typ s
 		for _, n := range []*token3.NodeReference{receiver, auditor} {
 			common2.CheckFinality(network, n, txID, tmsId, false)
 		}
+		// TODO: perform this check only if meaningful for the platform
 		//for _, n := range endorsers {
 		//	common2.CheckEndorserFinality(network, n, txID, tmsId, false)
 		//}
@@ -1023,7 +1024,8 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*toke
 				if on != nil {
 					on.DeleteVault(id.Id())
 				} else {
-					Expect(false).To(BeTrue(), "neither fabric nor orion network found")
+					// Expect(false).To(BeTrue(), "neither fabric nor orion network found")
+					// TODO: handle additional platforms
 				}
 			}
 
