@@ -23,8 +23,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type DefaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
-
 func NewDriver(
 	onsProvider *orion.NetworkServiceProvider,
 	viewRegistry driver2.Registry,
@@ -35,23 +33,21 @@ func NewDriver(
 	identityProvider view2.IdentityProvider,
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
-	defaultPublicParamsFetcher DefaultPublicParamsFetcher,
 	tracerProvider trace.TracerProvider,
 ) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name: "orion",
 		Driver: &Driver{
-			onsProvider:                onsProvider,
-			viewRegistry:               viewRegistry,
-			viewManager:                viewManager,
-			vaultProvider:              vaultProvider,
-			configProvider:             configProvider,
-			configService:              configService,
-			identityProvider:           identityProvider,
-			filterProvider:             filterProvider,
-			tmsProvider:                tmsProvider,
-			defaultPublicParamsFetcher: defaultPublicParamsFetcher,
-			tracerProvider:             tracerProvider,
+			onsProvider:      onsProvider,
+			viewRegistry:     viewRegistry,
+			viewManager:      viewManager,
+			vaultProvider:    vaultProvider,
+			configProvider:   configProvider,
+			configService:    configService,
+			identityProvider: identityProvider,
+			filterProvider:   filterProvider,
+			tmsProvider:      tmsProvider,
+			tracerProvider:   tracerProvider,
 		},
 	}
 }
