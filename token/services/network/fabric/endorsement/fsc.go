@@ -29,13 +29,12 @@ const (
 
 func newFSCService(
 	nw *fabric.NetworkService,
-	tms *token.ManagementService,
+	tmsID token.TMSID,
 	configuration tdriver.Configuration,
 	viewRegistry ViewRegistry,
 	viewManager ViewManager,
 	identityProvider IdentityProvider,
 ) (*fscService, error) {
-	tmsID := tms.ID()
 	ch, err := nw.Channel(tmsID.Channel)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting channel [%s]", tmsID.Channel)
@@ -43,6 +42,7 @@ func newFSCService(
 	committer := ch.Committer()
 	if configuration.GetBool(AmIAnEndorserKey) {
 		logger.Info("this node is an endorser, prepare it...")
+		// if I'm an endorser, I need to process all token transactions
 		if err := committer.ProcessNamespace(tmsID.Namespace); err != nil {
 			return nil, errors.WithMessagef(err, "failed to add namespace to committer [%s]", tmsID.Namespace)
 		}
@@ -77,14 +77,14 @@ func newFSCService(
 
 	return &fscService{
 		endorsers:   endorsers,
-		tms:         tms,
+		tmsID:       tmsID,
 		viewManager: viewManager,
 		policyType:  policyType,
 	}, nil
 }
 
 type fscService struct {
-	tms         *token.ManagementService
+	tmsID       token.TMSID
 	endorsers   []view.Identity
 	viewManager ViewManager
 	policyType  string
@@ -103,7 +103,7 @@ func (e *fscService) Endorse(context view.Context, requestRaw []byte, signer vie
 	logger.Debugf("request approval via fts endrosers with policy [%s]: [%d]...", e.policyType, len(endorsers))
 
 	envBoxed, err := e.viewManager.InitiateView(&fts.RequestApprovalView{
-		TMS:        e.tms,
+		TMSID:      e.tmsID,
 		RequestRaw: requestRaw,
 		TxID:       txID,
 		Endorsers:  endorsers,

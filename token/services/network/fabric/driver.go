@@ -89,14 +89,7 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		d.tokensManager,
 		d.viewManager,
 		d.tmsProvider,
-		endorsement.NewServiceProvider(
-			fns,
-			d.configService,
-			d.viewManager,
-			d.viewRegistry,
-			d.identityProvider,
-			d.tmsProvider,
-		),
+		endorsement.NewServiceProvider(fns, d.configService, d.viewManager, d.viewRegistry, d.identityProvider),
 		d.tracerProvider,
 		d.defaultPublicParamsFetcher,
 	), nil
