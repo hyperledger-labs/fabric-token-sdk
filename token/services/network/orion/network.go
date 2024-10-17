@@ -132,13 +132,7 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 	if err := n.n.Committer().AddTransactionFilter(transactionFilter); err != nil {
 		return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
 	}
-
-	// fetch public params and instantiate the tms
-	ppRaw, err := n.FetchPublicParameters(ns)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to fetch public parameters for [%s]", tmsID)
-	}
-	return []token2.ServiceOption{token2.WithTMSID(tmsID), token2.WithPublicParameter(ppRaw)}, nil
+	return nil, nil
 }
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {

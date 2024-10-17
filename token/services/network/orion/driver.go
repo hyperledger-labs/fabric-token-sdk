@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -53,17 +52,16 @@ func NewDriver(
 }
 
 type Driver struct {
-	onsProvider                *orion.NetworkServiceProvider
-	viewRegistry               driver2.Registry
-	viewManager                *view.Manager
-	vaultProvider              vault.Provider
-	configProvider             configProvider
-	configService              *config.Service
-	identityProvider           view2.IdentityProvider
-	filterProvider             *common.AcceptTxInDBFilterProvider
-	tmsProvider                *token.ManagementServiceProvider
-	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
-	tracerProvider             trace.TracerProvider
+	onsProvider      *orion.NetworkServiceProvider
+	viewRegistry     driver2.Registry
+	viewManager      *view.Manager
+	vaultProvider    vault.Provider
+	configProvider   configProvider
+	configService    *config.Service
+	identityProvider view2.IdentityProvider
+	filterProvider   *common.AcceptTxInDBFilterProvider
+	tmsProvider      *token.ManagementServiceProvider
+	tracerProvider   trace.TracerProvider
 }
 
 func (d *Driver) New(network, _ string) (driver.Network, error) {
