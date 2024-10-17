@@ -162,7 +162,7 @@ type Network struct {
 	vaultLazyCache             lazy.Provider[string, driver.Vault]
 	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
 	subscribers                *events.Subscribers
-	defaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher
+	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
 
 	endorsementServiceProvider *endorsement.ServiceProvider
 }
@@ -178,7 +178,7 @@ func NewNetwork(
 	tmsProvider *token2.ManagementServiceProvider,
 	endorsementServiceProvider *endorsement.ServiceProvider,
 	tracerProvider trace.TracerProvider,
-	defaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher,
+	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,

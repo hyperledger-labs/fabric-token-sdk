@@ -24,9 +24,9 @@ func (pp *SerializedPublicParameters) Deserialize(raw []byte) error {
 	return nil
 }
 
-// DefaultPublicParamsFetcher models a public parameters fetcher per namespace.
-type DefaultPublicParamsFetcher interface {
-	// Fetch fetches the public parameters from a repository for a given namespace.
+// NetworkPublicParamsFetcher models a public parameters fetcher per network.
+type NetworkPublicParamsFetcher interface {
+	// Fetch fetches the public parameters for the given network, channel, and namespace
 	Fetch(network driver.Network, channel driver.Channel, namespace driver.Namespace) ([]byte, error)
 }
 
