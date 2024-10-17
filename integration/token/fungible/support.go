@@ -1023,10 +1023,10 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*toke
 				on := orion.Network(network.Ctx, "orion")
 				if on != nil {
 					on.DeleteVault(id.Id())
-				} else {
+				} /*else {
 					// Expect(false).To(BeTrue(), "neither fabric nor orion network found")
 					// TODO: handle additional platforms
-				}
+				}*/
 			}
 
 			// delete token dbs as well
