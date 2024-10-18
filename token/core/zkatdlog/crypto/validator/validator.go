@@ -16,11 +16,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-type ValidateTransferFunc = common.ValidateTransferFunc[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction]
+type ValidateTransferFunc = common.ValidateTransferFunc[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction, driver.Deserializer]
 
-type ValidateIssueFunc = common.ValidateIssueFunc[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction]
+type ValidateIssueFunc = common.ValidateIssueFunc[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction, driver.Deserializer]
 
-type Context = common.Context[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction]
+type Context = common.Context[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction, driver.Deserializer]
 
 type ActionDeserializer struct{}
 
@@ -46,7 +46,7 @@ func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*iss
 	return issueActions, transferActions, nil
 }
 
-type Validator = common.Validator[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction]
+type Validator = common.Validator[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction, driver.Deserializer]
 
 func New(logger logging.Logger, pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
 	transferValidators := []ValidateTransferFunc{
@@ -60,7 +60,7 @@ func New(logger logging.Logger, pp *crypto.PublicParams, deserializer driver.Des
 		IssueValidate,
 	}
 
-	return common.NewValidator[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction](
+	return common.NewValidator[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction, driver.Deserializer](
 		logger,
 		pp,
 		deserializer,
