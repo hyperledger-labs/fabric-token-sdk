@@ -32,7 +32,7 @@ const (
 var logger = logging.MustGetLogger("token-sdk.network.fabric.fts")
 
 type RequestApprovalView struct {
-	TMS        *token2.ManagementService
+	TMSID      token2.TMSID
 	TxID       driver.TxID
 	RequestRaw []byte
 	// RequestAnchor, if not nil it will instruct the approver to verify the token request using this anchor and not the transaction it.
@@ -55,11 +55,15 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessagef(err, "failed to create endorser transaction")
 	}
 
-	tx.SetProposal(r.TMS.Namespace(), "", InvokeFunction)
+	tms := token2.GetManagementService(context, token2.WithTMSID(r.TMSID))
+	if tms == nil {
+		return nil, errors.Errorf("no token management service for [%s]", r.TMSID)
+	}
+	tx.SetProposal(tms.Namespace(), "", InvokeFunction)
 	if err := tx.EndorseProposal(); err != nil {
 		return nil, errors.WithMessagef(err, "failed to endorse proposal")
 	}
-	if err := tx.SetTransientState("tmsID", r.TMS.ID()); err != nil {
+	if err := tx.SetTransientState("tmsID", tms.ID()); err != nil {
 		return nil, errors.WithMessagef(err, "failed to set TMS ID transient")
 	}
 	if err := tx.SetTransient("token_request", r.RequestRaw); err != nil {

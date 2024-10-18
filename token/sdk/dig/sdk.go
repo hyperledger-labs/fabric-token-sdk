@@ -42,7 +42,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
@@ -144,7 +143,6 @@ func (p *SDK) Install() error {
 			return sherdlock.NewFetcherProvider(dbManager, notifierManager, metricsProvider, sherdlock.Mixed)
 		}),
 		p.Container().Provide(fabric.NewChaincodePublicParamsFetcher, dig.As(new(fabric.DefaultPublicParamsFetcher))),
-		p.Container().Provide(orion.NewCustodianPublicParamsFetcher, dig.As(new(orion.DefaultPublicParamsFetcher))),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")
@@ -228,14 +226,14 @@ func connectNetworks(configService *config2.Service, networkProvider *network.Pr
 		if err != nil {
 			return errors.Wrapf(err, "failed to get network [%s]", tmsID)
 		}
-		opts, err := net.Connect(tmsID.Namespace)
+		_, err = net.Connect(tmsID.Namespace)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
 		}
-		_, err = tmsProvider.GetManagementService(opts...)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to instantiate tms [%s]", tmsID)
-		}
+		//_, err = tmsProvider.GetManagementService(opts...)
+		//if err != nil {
+		//	return errors.WithMessagef(err, "failed to instantiate tms [%s]", tmsID)
+		//}
 	}
 	logger.Infof("Token platform enabled, starting...done")
 	return nil

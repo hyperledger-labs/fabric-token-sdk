@@ -162,7 +162,7 @@ type Network struct {
 	vaultLazyCache             lazy.Provider[string, driver.Vault]
 	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
 	subscribers                *events.Subscribers
-	defaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher
+	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
 
 	endorsementServiceProvider *endorsement.ServiceProvider
 }
@@ -178,7 +178,7 @@ func NewNetwork(
 	tmsProvider *token2.ManagementServiceProvider,
 	endorsementServiceProvider *endorsement.ServiceProvider,
 	tracerProvider trace.TracerProvider,
-	defaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher,
+	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -275,25 +275,12 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 		return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
 	}
 
-	// check the vault for public parameters,
-	// use them if they exists
-	v, err := n.TokenVault(ns)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get network at [%s]", tmsID)
-	}
-	ppRaw, err := v.QueryEngine().PublicParams()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get public params at [%s]", tmsID)
-	}
-	if len(ppRaw) != 0 {
-		return []token2.ServiceOption{token2.WithTMSID(tmsID), token2.WithPublicParameter(ppRaw)}, nil
-	}
 	// Let the endorsement service initialize itself, if needed
 	_, err = n.endorsementServiceProvider.Get(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get endorsement service at [%s]", tmsID)
 	}
-	return []token2.ServiceOption{token2.WithTMSID(tmsID)}, nil
+	return nil, nil
 }
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {
