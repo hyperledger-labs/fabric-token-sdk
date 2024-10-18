@@ -39,6 +39,7 @@ type WalletRegistry interface {
 	RegisterWallet(id string, wallet driver.Wallet) error
 	BindIdentity(identity driver.Identity, eID string, wID string, meta any) error
 	ContainsIdentity(i driver.Identity, id string) bool
+	GetIdentityMetadata(identity driver.Identity, wID string, meta any) error
 }
 
 type WalletFactory interface {
