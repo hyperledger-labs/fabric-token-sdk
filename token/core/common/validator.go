@@ -20,10 +20,10 @@ const (
 	TokenRequestToSign driver.ValidationAttributeID = "trs"
 )
 
-type Context[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction] struct {
+type Context[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
 	Logger            logging.Logger
 	PP                P
-	Deserializer      driver.Deserializer
+	Deserializer      DS
 	SignatureProvider driver.SignatureProvider
 	Signatures        [][]byte
 	InputTokens       []T
@@ -34,38 +34,38 @@ type Context[P driver.PublicParameters, T any, TA driver.TransferAction, IA driv
 	Attributes        driver.ValidationAttributes
 }
 
-func (c *Context[P, T, TA, IA]) CountMetadataKey(key string) {
+func (c *Context[P, T, TA, IA, DS]) CountMetadataKey(key string) {
 	c.MetadataCounter[key] = c.MetadataCounter[key] + 1
 }
 
-type ValidateTransferFunc[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction] func(ctx *Context[P, T, TA, IA]) error
+type ValidateTransferFunc[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(ctx *Context[P, T, TA, IA, DS]) error
 
-type ValidateIssueFunc[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction] func(ctx *Context[P, T, TA, IA]) error
+type ValidateIssueFunc[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(ctx *Context[P, T, TA, IA, DS]) error
 
 type ActionDeserializer[TA driver.TransferAction, IA driver.IssueAction] interface {
 	DeserializeActions(tr *driver.TokenRequest) ([]IA, []TA, error)
 }
 
-type Validator[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction] struct {
+type Validator[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
 	Logger             logging.Logger
 	PublicParams       P
-	Deserializer       driver.Deserializer
+	Deserializer       DS
 	ActionDeserializer ActionDeserializer[TA, IA]
-	TransferValidators []ValidateTransferFunc[P, T, TA, IA]
-	IssueValidators    []ValidateIssueFunc[P, T, TA, IA]
+	TransferValidators []ValidateTransferFunc[P, T, TA, IA, DS]
+	IssueValidators    []ValidateIssueFunc[P, T, TA, IA, DS]
 	Serializer         driver.Serializer
 }
 
-func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction](
+func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](
 	Logger logging.Logger,
 	publicParams P,
-	deserializer driver.Deserializer,
+	deserializer DS,
 	actionDeserializer ActionDeserializer[TA, IA],
-	transferValidators []ValidateTransferFunc[P, T, TA, IA],
-	issueValidators []ValidateIssueFunc[P, T, TA, IA],
+	transferValidators []ValidateTransferFunc[P, T, TA, IA, DS],
+	issueValidators []ValidateIssueFunc[P, T, TA, IA, DS],
 	serializer driver.Serializer,
-) *Validator[P, T, TA, IA] {
-	return &Validator[P, T, TA, IA]{
+) *Validator[P, T, TA, IA, DS] {
+	return &Validator[P, T, TA, IA, DS]{
 		Logger:             Logger,
 		PublicParams:       publicParams,
 		Deserializer:       deserializer,
@@ -76,7 +76,7 @@ func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA
 	}
 }
 
-func (v *Validator[P, T, TA, IA]) VerifyTokenRequestFromRaw(ctx context.Context, getState driver.GetStateFnc, anchor string, raw []byte) ([]interface{}, driver.ValidationAttributes, error) {
+func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Context, getState driver.GetStateFnc, anchor string, raw []byte) ([]interface{}, driver.ValidationAttributes, error) {
 	if len(raw) == 0 {
 		return nil, nil, errors.New("empty token request")
 	}
@@ -115,7 +115,7 @@ func (v *Validator[P, T, TA, IA]) VerifyTokenRequestFromRaw(ctx context.Context,
 	return v.VerifyTokenRequest(backend, backend, anchor, tr, attributes)
 }
 
-func (v *Validator[P, T, TA, IA]) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, anchor string, tr *driver.TokenRequest, attributes driver.ValidationAttributes) ([]interface{}, driver.ValidationAttributes, error) {
+func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, anchor string, tr *driver.TokenRequest, attributes driver.ValidationAttributes) ([]interface{}, driver.ValidationAttributes, error) {
 	if err := v.verifyAuditorSignature(signatureProvider, attributes); err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", anchor)
 	}
@@ -142,7 +142,7 @@ func (v *Validator[P, T, TA, IA]) VerifyTokenRequest(ledger driver.Ledger, signa
 	return actions, attributes, nil
 }
 
-func (v *Validator[P, T, TA, IA]) UnmarshalActions(raw []byte) ([]interface{}, error) {
+func (v *Validator[P, T, TA, IA, DS]) UnmarshalActions(raw []byte) ([]interface{}, error) {
 	tr := &driver.TokenRequest{}
 	err := tr.FromBytes(raw)
 	if err != nil {
@@ -163,7 +163,7 @@ func (v *Validator[P, T, TA, IA]) UnmarshalActions(raw []byte) ([]interface{}, e
 	return res, nil
 }
 
-func (v *Validator[P, T, TA, IA]) verifyAuditorSignature(signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
+func (v *Validator[P, T, TA, IA, DS]) verifyAuditorSignature(signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
 	if len(v.PublicParams.Auditors()) != 0 {
 		auditor := v.PublicParams.Auditors()[0]
 		verifier, err := v.Deserializer.GetAuditorVerifier(auditor)
@@ -176,7 +176,7 @@ func (v *Validator[P, T, TA, IA]) verifyAuditorSignature(signatureProvider drive
 	return nil
 }
 
-func (v *Validator[P, T, TA, IA]) verifyIssues(ledger driver.Ledger, issues []IA, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
+func (v *Validator[P, T, TA, IA, DS]) verifyIssues(ledger driver.Ledger, issues []IA, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
 	for _, issue := range issues {
 		if err := v.verifyIssue(issue, ledger, signatureProvider, attributes); err != nil {
 			return errors.Wrapf(err, "failed to verify transfer action")
@@ -185,8 +185,8 @@ func (v *Validator[P, T, TA, IA]) verifyIssues(ledger driver.Ledger, issues []IA
 	return nil
 }
 
-func (v *Validator[P, T, TA, IA]) verifyIssue(tr IA, ledger driver.Ledger, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
-	context := &Context[P, T, TA, IA]{
+func (v *Validator[P, T, TA, IA, DS]) verifyIssue(tr IA, ledger driver.Ledger, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
+	context := &Context[P, T, TA, IA, DS]{
 		Logger:            v.Logger,
 		PP:                v.PublicParams,
 		Deserializer:      v.Deserializer,
@@ -217,7 +217,7 @@ func (v *Validator[P, T, TA, IA]) verifyIssue(tr IA, ledger driver.Ledger, signa
 	return nil
 }
 
-func (v *Validator[P, T, TA, IA]) verifyTransfers(ledger driver.Ledger, transferActions []TA, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
+func (v *Validator[P, T, TA, IA, DS]) verifyTransfers(ledger driver.Ledger, transferActions []TA, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
 	v.Logger.Debugf("check sender start...")
 	defer v.Logger.Debugf("check sender finished.")
 	for _, action := range transferActions {
@@ -228,8 +228,8 @@ func (v *Validator[P, T, TA, IA]) verifyTransfers(ledger driver.Ledger, transfer
 	return nil
 }
 
-func (v *Validator[P, T, TA, IA]) verifyTransfer(tr TA, ledger driver.Ledger, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
-	context := &Context[P, T, TA, IA]{
+func (v *Validator[P, T, TA, IA, DS]) verifyTransfer(tr TA, ledger driver.Ledger, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
+	context := &Context[P, T, TA, IA, DS]{
 		Logger:            v.Logger,
 		PP:                v.PublicParams,
 		Deserializer:      v.Deserializer,
