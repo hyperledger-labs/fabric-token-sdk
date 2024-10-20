@@ -8,7 +8,7 @@ require (
 	github.com/IBM/mathlib v0.0.3-0.20231011094432-44ee0eb539da
 	github.com/gin-gonic/gin v1.10.0
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240927123208-a8e6c3cd99ce
+	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20241005130302-4dc84b0086d5
 	github.com/hyperledger-labs/orion-sdk-go v0.2.10
 	github.com/hyperledger-labs/orion-server v0.2.10
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
