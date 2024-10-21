@@ -60,6 +60,7 @@ func RegisterAuditorForTMSID(network *integration.Infrastructure, auditor *token
 
 func getTmsId(network *integration.Infrastructure, namespace string) *token2.TMSID {
 	fabricTopology := getFabricTopology(network)
+	Expect(fabricTopology).NotTo(BeNil())
 	return &token2.TMSID{
 		Network:   fabricTopology.Name(),
 		Channel:   fabricTopology.Channels[0].Name,
@@ -73,7 +74,7 @@ func getFabricTopology(network *integration.Infrastructure) *topology2.Topology 
 			return t.(*topology2.Topology)
 		}
 	}
-	panic("no fabric topology found")
+	return nil
 }
 
 func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, expectedErrorMsgs ...string) string {
@@ -112,10 +113,12 @@ func issueCashForTMSID(network *integration.Infrastructure, wallet string, typ s
 		for _, n := range []*token3.NodeReference{receiver, auditor} {
 			common2.CheckFinality(network, n, txID, tmsId, false)
 		}
-		// TODO: perform this check only if meaningful for the platform
-		//for _, n := range endorsers {
-		//	common2.CheckEndorserFinality(network, n, txID, tmsId, false)
-		//}
+		// Perform this check only if there is a fabric network
+		if getFabricTopology(network) != nil {
+			for _, n := range endorsers {
+				common2.CheckEndorserFinality(network, n, txID, tmsId, false)
+			}
+		}
 		return common.JSONUnmarshalString(txIDBoxed)
 	}
 
@@ -1023,10 +1026,10 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*toke
 				on := orion.Network(network.Ctx, "orion")
 				if on != nil {
 					on.DeleteVault(id.Id())
-				} /*else {
-					// Expect(false).To(BeTrue(), "neither fabric nor orion network found")
+				} else {
 					// TODO: handle additional platforms
-				}*/
+					logger.Warnf("neither fabric nor orion network found")
+				}
 			}
 
 			// delete token dbs as well
