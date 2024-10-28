@@ -16,9 +16,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	topology2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	tplatform "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
@@ -1003,6 +1001,10 @@ func JSONUnmarshalFloat64(v interface{}) float64 {
 	return s
 }
 
+type deleteVaultPlatform interface {
+	DeleteVault(id string)
+}
+
 func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*token3.NodeReference) {
 	logger.Infof("restart [%v], [%v]", ids, RestartEnabled)
 	if !RestartEnabled {
@@ -1014,16 +1016,10 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*toke
 	time.Sleep(10 * time.Second)
 	if deleteVault {
 		for _, id := range ids {
-			fn := fabric.Network(network.Ctx, "default")
-			if fn != nil {
-				fn.DeleteVault(id.Id())
-			} else {
-				// skip
-				on := orion.Network(network.Ctx, "orion")
-				if on != nil {
-					on.DeleteVault(id.Id())
-				} else {
-					Expect(false).To(BeTrue(), "neither fabric nor orion network found")
+			for name, platform := range network.Ctx.PlatformsByName {
+				if dv, ok := platform.(deleteVaultPlatform); ok {
+					logger.Infof("Platform %d supports delete vault. Deleting...", name)
+					dv.DeleteVault(id.Id())
 				}
 			}
 

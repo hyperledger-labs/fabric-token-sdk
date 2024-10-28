@@ -144,7 +144,11 @@ func (p *SDK) Install() error {
 			return sherdlock.NewFetcherProvider(dbManager, notifierManager, metricsProvider, sherdlock.Mixed)
 		}),
 		p.Container().Provide(fabric.NewChaincodePublicParamsFetcher, dig.As(new(fabric.DefaultPublicParamsFetcher))),
+		p.Container().Provide(fabric.NewTokenExecutorProvider, dig.As(new(fabric.TokenQueryExecutorProvider))),
+		p.Container().Provide(fabric.NewSpentTokenExecutorProvider, dig.As(new(fabric.SpentTokenQueryExecutorProvider))),
 		p.Container().Provide(orion.NewCustodianPublicParamsFetcher, dig.As(new(orion.DefaultPublicParamsFetcher))),
+		p.Container().Provide(orion.NewTokenExecutorProvider, dig.As(new(orion.TokenQueryExecutorProvider))),
+		p.Container().Provide(orion.NewSpentTokenExecutorProvider, dig.As(new(orion.SpentTokenQueryExecutorProvider))),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")

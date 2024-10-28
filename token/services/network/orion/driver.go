@@ -25,6 +25,10 @@ import (
 
 type DefaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher
 
+type TokenQueryExecutorProvider driver3.TokenQueryExecutorProvider
+
+type SpentTokenQueryExecutorProvider driver3.SpentTokenQueryExecutorProvider
+
 func NewDriver(
 	onsProvider *orion.NetworkServiceProvider,
 	viewRegistry driver2.Registry,
@@ -36,38 +40,44 @@ func NewDriver(
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 	defaultPublicParamsFetcher DefaultPublicParamsFetcher,
+	tokenQueryExecutorProvider TokenQueryExecutorProvider,
+	spentTokenQueryExecutorProvider SpentTokenQueryExecutorProvider,
 	tracerProvider trace.TracerProvider,
 ) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name: "orion",
 		Driver: &Driver{
-			onsProvider:                onsProvider,
-			viewRegistry:               viewRegistry,
-			viewManager:                viewManager,
-			vaultProvider:              vaultProvider,
-			configProvider:             configProvider,
-			configService:              configService,
-			identityProvider:           identityProvider,
-			filterProvider:             filterProvider,
-			tmsProvider:                tmsProvider,
-			defaultPublicParamsFetcher: defaultPublicParamsFetcher,
-			tracerProvider:             tracerProvider,
+			onsProvider:                     onsProvider,
+			viewRegistry:                    viewRegistry,
+			viewManager:                     viewManager,
+			vaultProvider:                   vaultProvider,
+			configProvider:                  configProvider,
+			configService:                   configService,
+			identityProvider:                identityProvider,
+			filterProvider:                  filterProvider,
+			tmsProvider:                     tmsProvider,
+			defaultPublicParamsFetcher:      defaultPublicParamsFetcher,
+			tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
+			spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
+			tracerProvider:                  tracerProvider,
 		},
 	}
 }
 
 type Driver struct {
-	onsProvider                *orion.NetworkServiceProvider
-	viewRegistry               driver2.Registry
-	viewManager                *view.Manager
-	vaultProvider              vault.Provider
-	configProvider             configProvider
-	configService              *config.Service
-	identityProvider           view2.IdentityProvider
-	filterProvider             *common.AcceptTxInDBFilterProvider
-	tmsProvider                *token.ManagementServiceProvider
-	defaultPublicParamsFetcher driver3.DefaultPublicParamsFetcher
-	tracerProvider             trace.TracerProvider
+	onsProvider                     *orion.NetworkServiceProvider
+	viewRegistry                    driver2.Registry
+	viewManager                     *view.Manager
+	vaultProvider                   vault.Provider
+	configProvider                  configProvider
+	configService                   *config.Service
+	identityProvider                view2.IdentityProvider
+	filterProvider                  *common.AcceptTxInDBFilterProvider
+	tmsProvider                     *token.ManagementServiceProvider
+	defaultPublicParamsFetcher      driver3.DefaultPublicParamsFetcher
+	tokenQueryExecutorProvider      TokenQueryExecutorProvider
+	spentTokenQueryExecutorProvider SpentTokenQueryExecutorProvider
+	tracerProvider                  trace.TracerProvider
 }
 
 func (d *Driver) New(network, _ string) (driver.Network, error) {
@@ -89,6 +99,14 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		}
 	}
 
+	tokenQueryExecutor, err := d.tokenQueryExecutorProvider.GetExecutor(network, "")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get token query executor")
+	}
+	spentTokenQueryExecutor, err := d.spentTokenQueryExecutorProvider.GetSpentExecutor(network, "")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get spent token query executor")
+	}
 	return NewNetwork(
 		d.viewManager,
 		d.tmsProvider,
@@ -99,6 +117,8 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		d.filterProvider,
 		dbManager,
 		d.defaultPublicParamsFetcher,
+		tokenQueryExecutor,
+		spentTokenQueryExecutor,
 		d.tracerProvider,
 	), nil
 }

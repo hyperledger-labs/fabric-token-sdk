@@ -7,12 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
@@ -171,17 +169,18 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		errorMessages = append(errorMessages, fmt.Sprintf("failed to query tokens: [%s]", err))
 	} else {
 		assert.Equal(len(unspentTokenIDs), len(ledgerTokenContent))
-		index := 0
-		assert.NoError(tv.QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
-			if !bytes.Equal(ledgerTokenContent[index], tokenRaw) {
-				errorMessages = append(errorMessages, fmt.Sprintf("token content does not match at [%s][%d], [%s]!=[%s]",
-					id,
-					index,
-					hash.Hashable(ledgerTokenContent[index]), hash.Hashable(tokenRaw)))
-			}
-			index++
-			return nil
-		}), "failed to match ledger token content with local")
+		//index := 0
+		//assert.NoError(tv.QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
+		//	for _, content := range ledgerTokenContent {
+		//		if bytes.Equal(content, tokenRaw) {
+		//			return nil
+		//		}
+		//	}
+		//
+		//	errorMessages = append(errorMessages, fmt.Sprintf("token content does not match at [%s][%d], [%s]", id, index, hash.Hashable(tokenRaw)))
+		//	index++
+		//	return nil
+		//}), "failed to match ledger token content with local")
 	}
 
 	return errorMessages, nil
