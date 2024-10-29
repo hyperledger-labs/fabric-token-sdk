@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func NewDriver(
+func NewNamedDriver(
 	onsProvider *orion.NetworkServiceProvider,
 	viewRegistry driver2.Registry,
 	viewManager *view.Manager,
@@ -35,33 +35,41 @@ func NewDriver(
 	tracerProvider trace.TracerProvider,
 ) driver.NamedDriver {
 	return driver.NamedDriver{
-		Name: "orion",
-		Driver: &Driver{
-			onsProvider:      onsProvider,
-			viewRegistry:     viewRegistry,
-			viewManager:      viewManager,
-			vaultProvider:    vaultProvider,
-			configProvider:   configProvider,
-			configService:    configService,
-			identityProvider: identityProvider,
-			filterProvider:   filterProvider,
-			tmsProvider:      tmsProvider,
-			tracerProvider:   tracerProvider,
-		},
+		Name:   "orion",
+		Driver: NewDriver(onsProvider, viewRegistry, viewManager, vaultProvider, configProvider, configService, identityProvider, filterProvider, tmsProvider, NewTokenExecutorProvider(), NewSpentTokenExecutorProvider(), tracerProvider),
+	}
+}
+
+func NewDriver(onsProvider *orion.NetworkServiceProvider, viewRegistry driver2.Registry, viewManager *view.Manager, vaultProvider *vault2.Provider, configProvider *view.ConfigService, configService *config.Service, identityProvider view2.IdentityProvider, filterProvider *common.AcceptTxInDBFilterProvider, tmsProvider *token.ManagementServiceProvider, tokenQueryExecutorProvider driver.TokenQueryExecutorProvider, spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider, tracerProvider trace.TracerProvider) *Driver {
+	return &Driver{
+		onsProvider:                     onsProvider,
+		viewRegistry:                    viewRegistry,
+		viewManager:                     viewManager,
+		vaultProvider:                   vaultProvider,
+		configProvider:                  configProvider,
+		configService:                   configService,
+		identityProvider:                identityProvider,
+		filterProvider:                  filterProvider,
+		tmsProvider:                     tmsProvider,
+		tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
+		spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
+		tracerProvider:                  tracerProvider,
 	}
 }
 
 type Driver struct {
-	onsProvider      *orion.NetworkServiceProvider
-	viewRegistry     driver2.Registry
-	viewManager      *view.Manager
-	vaultProvider    vault.Provider
-	configProvider   configProvider
-	configService    *config.Service
-	identityProvider view2.IdentityProvider
-	filterProvider   *common.AcceptTxInDBFilterProvider
-	tmsProvider      *token.ManagementServiceProvider
-	tracerProvider   trace.TracerProvider
+	onsProvider                     *orion.NetworkServiceProvider
+	viewRegistry                    driver2.Registry
+	viewManager                     *view.Manager
+	vaultProvider                   vault.Provider
+	configProvider                  configProvider
+	configService                   *config.Service
+	identityProvider                view2.IdentityProvider
+	filterProvider                  *common.AcceptTxInDBFilterProvider
+	tmsProvider                     *token.ManagementServiceProvider
+	tokenQueryExecutorProvider      driver.TokenQueryExecutorProvider
+	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider
+	tracerProvider                  trace.TracerProvider
 }
 
 func (d *Driver) New(network, _ string) (driver.Network, error) {
@@ -83,6 +91,14 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		}
 	}
 
+	tokenQueryExecutor, err := d.tokenQueryExecutorProvider.GetExecutor(n.Name(), "")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get token query executor")
+	}
+	spentTokenQueryExecutor, err := d.spentTokenQueryExecutorProvider.GetSpentExecutor(n.Name(), "")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get spent token query executor")
+	}
 	return NewNetwork(
 		d.viewManager,
 		d.tmsProvider,
@@ -92,6 +108,8 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		d.configService,
 		d.filterProvider,
 		dbManager,
+		tokenQueryExecutor,
+		spentTokenQueryExecutor,
 		d.tracerProvider,
 	), nil
 }

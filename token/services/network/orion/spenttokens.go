@@ -14,7 +14,6 @@ import (
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
 )
 
@@ -29,17 +28,17 @@ type SpentTokensResponse struct {
 }
 
 type RequestSpentTokensView struct {
-	Network   driver.Network
+	Network   string
 	Namespace string
 	IDs       []string
 }
 
-func NewRequestSpentTokensView(network driver.Network, namespace string, IDs []string) *RequestSpentTokensView {
+func NewRequestSpentTokensView(network string, namespace string, IDs []string) *RequestSpentTokensView {
 	return &RequestSpentTokensView{Network: network, Namespace: namespace, IDs: IDs}
 }
 
 func (r *RequestSpentTokensView) Call(context view.Context) (interface{}, error) {
-	custodian, err := GetCustodian(view2.GetConfigService(context), r.Network.Name())
+	custodian, err := GetCustodian(view2.GetConfigService(context), r.Network)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get custodian identifier")
 	}
@@ -50,7 +49,7 @@ func (r *RequestSpentTokensView) Call(context view.Context) (interface{}, error)
 	}
 	// TODO: Should we sign the SpentTokens request?
 	request := &SpentTokensRequest{
-		Network:   r.Network.Name(),
+		Network:   r.Network,
 		Namespace: r.Namespace,
 		IDs:       r.IDs,
 	}

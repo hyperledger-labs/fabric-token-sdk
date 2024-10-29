@@ -26,20 +26,22 @@ import (
 type DefaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
 
 type Driver struct {
-	fnsProvider                *fabric.NetworkServiceProvider
-	vaultProvider              vault.Provider
-	tokensManager              *tokens.Manager
-	configService              *config.Service
-	viewManager                *view.Manager
-	viewRegistry               driver2.Registry
-	filterProvider             *common.AcceptTxInDBFilterProvider
-	tmsProvider                *token.ManagementServiceProvider
-	identityProvider           driver2.IdentityProvider
-	tracerProvider             trace.TracerProvider
-	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
+	fnsProvider                     *fabric.NetworkServiceProvider
+	vaultProvider                   vault.Provider
+	tokensManager                   *tokens.Manager
+	configService                   *config.Service
+	viewManager                     *view.Manager
+	viewRegistry                    driver2.Registry
+	filterProvider                  *common.AcceptTxInDBFilterProvider
+	tmsProvider                     *token.ManagementServiceProvider
+	identityProvider                driver2.IdentityProvider
+	tracerProvider                  trace.TracerProvider
+	defaultPublicParamsFetcher      driver3.NetworkPublicParamsFetcher
+	tokenQueryExecutorProvider      driver.TokenQueryExecutorProvider
+	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider
 }
 
-func NewDriver(
+func NewNamedDriver(
 	fnsProvider *fabric.NetworkServiceProvider,
 	vaultProvider *vault2.Provider,
 	tokensManager *tokens.Manager,
@@ -53,20 +55,26 @@ func NewDriver(
 	defaultPublicParamsFetcher DefaultPublicParamsFetcher,
 ) driver.NamedDriver {
 	return driver.NamedDriver{
-		Name: "fabric",
-		Driver: &Driver{
-			fnsProvider:                fnsProvider,
-			vaultProvider:              vaultProvider,
-			tokensManager:              tokensManager,
-			configService:              configService,
-			viewManager:                viewManager,
-			viewRegistry:               viewRegistry,
-			filterProvider:             filterProvider,
-			tmsProvider:                tmsProvider,
-			identityProvider:           identityProvider,
-			tracerProvider:             tracerProvider,
-			defaultPublicParamsFetcher: defaultPublicParamsFetcher,
-		},
+		Name:   "fabric",
+		Driver: NewDriver(fnsProvider, vaultProvider, tokensManager, configService, viewManager, viewRegistry, filterProvider, tmsProvider, tracerProvider, identityProvider, defaultPublicParamsFetcher, NewTokenExecutorProvider(), NewSpentTokenExecutorProvider()),
+	}
+}
+
+func NewDriver(fnsProvider *fabric.NetworkServiceProvider, vaultProvider *vault2.Provider, tokensManager *tokens.Manager, configService *config.Service, viewManager *view.Manager, viewRegistry driver2.Registry, filterProvider *common.AcceptTxInDBFilterProvider, tmsProvider *token.ManagementServiceProvider, tracerProvider trace.TracerProvider, identityProvider driver2.IdentityProvider, defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher, tokenQueryExecutorProvider driver.TokenQueryExecutorProvider, spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider) *Driver {
+	return &Driver{
+		fnsProvider:                     fnsProvider,
+		vaultProvider:                   vaultProvider,
+		tokensManager:                   tokensManager,
+		configService:                   configService,
+		viewManager:                     viewManager,
+		viewRegistry:                    viewRegistry,
+		filterProvider:                  filterProvider,
+		tmsProvider:                     tmsProvider,
+		identityProvider:                identityProvider,
+		tracerProvider:                  tracerProvider,
+		defaultPublicParamsFetcher:      defaultPublicParamsFetcher,
+		tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
+		spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
 	}
 }
 
@@ -80,6 +88,15 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		return nil, errors.WithMessagef(err, "fabric channel [%s:%s] not found", network, channel)
 	}
 
+	tokenQueryExecutor, err := d.tokenQueryExecutorProvider.GetExecutor(fns.Name(), ch.Name())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get token query executor for [%s:%s]", fns.Name(), ch.Name())
+	}
+	spentTokenQueryExecutor, err := d.spentTokenQueryExecutorProvider.GetSpentExecutor(fns.Name(), ch.Name())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get spent token query executor")
+	}
+
 	return NewNetwork(
 		fns,
 		ch,
@@ -90,7 +107,9 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		d.viewManager,
 		d.tmsProvider,
 		endorsement.NewServiceProvider(fns, d.configService, d.viewManager, d.viewRegistry, d.identityProvider),
+		tokenQueryExecutor,
 		d.tracerProvider,
 		d.defaultPublicParamsFetcher,
+		spentTokenQueryExecutor,
 	), nil
 }

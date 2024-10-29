@@ -111,6 +111,7 @@ func (p *SDK) Install() error {
 			return &vault.ProviderAdaptor{Provider: networkProvider}
 		}, dig.As(new(token.VaultProvider))),
 		p.Container().Provide(token.NewManagementServiceProvider),
+		p.Container().Provide(token.NewTMSNormalizer, dig.As(new(token.TMSNormalizer))),
 		p.Container().Provide(digutils.Identity[*token.ManagementServiceProvider](), dig.As(new(ttx.TMSProvider), new(tokens.TMSProvider), new(auditor.TokenManagementServiceProvider))),
 		p.Container().Provide(NewTTXDBManager),
 		p.Container().Provide(digutils.Identity[*ttxdb.Manager](), dig.As(new(ttx.DBProvider), new(network2.TTXDBProvider))),

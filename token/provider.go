@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
@@ -21,6 +22,8 @@ type Normalizer interface {
 	// Normalize normalizes the given ServiceOptions struct.
 	Normalize(opt *ServiceOptions) (*ServiceOptions, error)
 }
+
+type TMSNormalizer Normalizer
 
 // VaultProvider provides token vault instances
 type VaultProvider interface {
@@ -54,7 +57,7 @@ type CertificationClientProvider interface {
 type ManagementServiceProvider struct {
 	logger                      logging.Logger
 	tmsProvider                 driver.TokenManagerServiceProvider
-	normalizer                  Normalizer
+	normalizer                  TMSNormalizer
 	certificationClientProvider CertificationClientProvider
 	selectorManagerProvider     SelectorManagerProvider
 	vaultProvider               VaultProvider
@@ -64,7 +67,7 @@ type ManagementServiceProvider struct {
 func NewManagementServiceProvider(
 	logger logging.Logger,
 	tmsProvider driver.TokenManagerServiceProvider,
-	normalizer Normalizer,
+	normalizer TMSNormalizer,
 	vaultProvider VaultProvider,
 	certificationClientProvider CertificationClientProvider,
 	selectorManagerProvider SelectorManagerProvider,
@@ -95,7 +98,7 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to compile options")
 	}
-	opt, err = p.normalize(opt)
+	opt, err = p.normalizer.Normalize(opt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to normalize options")
 	}
@@ -142,7 +145,19 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 	return ms, nil
 }
 
-func (p *ManagementServiceProvider) normalize(opt *ServiceOptions) (*ServiceOptions, error) {
+func NewTMSNormalizer(tmsProvider core.ConfigProvider, normalizer Normalizer) *tmsNormalizer {
+	return &tmsNormalizer{
+		tmsProvider: tmsProvider,
+		normalizer:  normalizer,
+	}
+}
+
+type tmsNormalizer struct {
+	tmsProvider core.ConfigProvider
+	normalizer  Normalizer
+}
+
+func (p *tmsNormalizer) Normalize(opt *ServiceOptions) (*ServiceOptions, error) {
 	// lookup configurations
 	configs, err := p.tmsProvider.Configurations()
 	if err != nil {
