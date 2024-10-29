@@ -42,6 +42,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
@@ -143,6 +144,10 @@ func (p *SDK) Install() error {
 			return sherdlock.NewFetcherProvider(dbManager, notifierManager, metricsProvider, sherdlock.Mixed)
 		}),
 		p.Container().Provide(fabric.NewChaincodePublicParamsFetcher, dig.As(new(fabric.DefaultPublicParamsFetcher))),
+		p.Container().Provide(fabric.NewTokenExecutorProvider, dig.As(new(fabric.TokenQueryExecutorProvider))),
+		p.Container().Provide(fabric.NewSpentTokenExecutorProvider, dig.As(new(fabric.SpentTokenQueryExecutorProvider))),
+		p.Container().Provide(orion.NewTokenExecutorProvider, dig.As(new(orion.TokenQueryExecutorProvider))),
+		p.Container().Provide(orion.NewSpentTokenExecutorProvider, dig.As(new(orion.SpentTokenQueryExecutorProvider))),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")

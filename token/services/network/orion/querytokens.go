@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -29,17 +28,17 @@ type QueryTokensResponse struct {
 }
 
 type RequestQueryTokensView struct {
-	Network   driver.Network
+	Network   string
 	Namespace string
 	IDs       []*token2.ID
 }
 
-func NewRequestQueryTokensView(network driver.Network, namespace string, IDs []*token2.ID) *RequestQueryTokensView {
+func NewRequestQueryTokensView(network string, namespace string, IDs []*token2.ID) *RequestQueryTokensView {
 	return &RequestQueryTokensView{Network: network, Namespace: namespace, IDs: IDs}
 }
 
 func (r *RequestQueryTokensView) Call(context view.Context) (interface{}, error) {
-	custodian, err := GetCustodian(view2.GetConfigService(context), r.Network.Name())
+	custodian, err := GetCustodian(view2.GetConfigService(context), r.Network)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get custodian identifier")
 	}
@@ -50,7 +49,7 @@ func (r *RequestQueryTokensView) Call(context view.Context) (interface{}, error)
 	}
 	// TODO: Should we sign the QueryTokens request?
 	request := &QueryTokensRequest{
-		Network:   r.Network.Name(),
+		Network:   r.Network,
 		Namespace: r.Namespace,
 		IDs:       r.IDs,
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -21,6 +22,10 @@ import (
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type TokenQueryExecutorProvider driver3.TokenQueryExecutorProvider
+
+type SpentTokenQueryExecutorProvider driver3.SpentTokenQueryExecutorProvider
 
 func NewDriver(
 	onsProvider *orion.NetworkServiceProvider,
@@ -32,36 +37,42 @@ func NewDriver(
 	identityProvider view2.IdentityProvider,
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
+	tokenQueryExecutorProvider TokenQueryExecutorProvider,
+	spentTokenQueryExecutorProvider SpentTokenQueryExecutorProvider,
 	tracerProvider trace.TracerProvider,
 ) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name: "orion",
 		Driver: &Driver{
-			onsProvider:      onsProvider,
-			viewRegistry:     viewRegistry,
-			viewManager:      viewManager,
-			vaultProvider:    vaultProvider,
-			configProvider:   configProvider,
-			configService:    configService,
-			identityProvider: identityProvider,
-			filterProvider:   filterProvider,
-			tmsProvider:      tmsProvider,
-			tracerProvider:   tracerProvider,
+			onsProvider:                     onsProvider,
+			viewRegistry:                    viewRegistry,
+			viewManager:                     viewManager,
+			vaultProvider:                   vaultProvider,
+			configProvider:                  configProvider,
+			configService:                   configService,
+			identityProvider:                identityProvider,
+			filterProvider:                  filterProvider,
+			tmsProvider:                     tmsProvider,
+			tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
+			spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
+			tracerProvider:                  tracerProvider,
 		},
 	}
 }
 
 type Driver struct {
-	onsProvider      *orion.NetworkServiceProvider
-	viewRegistry     driver2.Registry
-	viewManager      *view.Manager
-	vaultProvider    vault.Provider
-	configProvider   configProvider
-	configService    *config.Service
-	identityProvider view2.IdentityProvider
-	filterProvider   *common.AcceptTxInDBFilterProvider
-	tmsProvider      *token.ManagementServiceProvider
-	tracerProvider   trace.TracerProvider
+	onsProvider                     *orion.NetworkServiceProvider
+	viewRegistry                    driver2.Registry
+	viewManager                     *view.Manager
+	vaultProvider                   vault.Provider
+	configProvider                  configProvider
+	configService                   *config.Service
+	identityProvider                view2.IdentityProvider
+	filterProvider                  *common.AcceptTxInDBFilterProvider
+	tmsProvider                     *token.ManagementServiceProvider
+	tokenQueryExecutorProvider      TokenQueryExecutorProvider
+	spentTokenQueryExecutorProvider SpentTokenQueryExecutorProvider
+	tracerProvider                  trace.TracerProvider
 }
 
 func (d *Driver) New(network, _ string) (driver.Network, error) {
@@ -83,6 +94,14 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		}
 	}
 
+	tokenQueryExecutor, err := d.tokenQueryExecutorProvider.GetExecutor(n.Name(), "")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get token query executor")
+	}
+	spentTokenQueryExecutor, err := d.spentTokenQueryExecutorProvider.GetSpentExecutor(n.Name(), "")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get spent token query executor")
+	}
 	return NewNetwork(
 		d.viewManager,
 		d.tmsProvider,
@@ -92,6 +111,8 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		d.configService,
 		d.filterProvider,
 		dbManager,
+		tokenQueryExecutor,
+		spentTokenQueryExecutor,
 		d.tracerProvider,
 	), nil
 }

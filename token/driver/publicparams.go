@@ -6,7 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-import "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+)
 
 // SerializedPublicParameters is the serialized form of PublicParameters.
 type SerializedPublicParameters struct {
