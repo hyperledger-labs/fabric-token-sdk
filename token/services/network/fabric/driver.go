@@ -45,7 +45,7 @@ type Driver struct {
 	spentTokenQueryExecutorProvider SpentTokenQueryExecutorProvider
 }
 
-func NewDriver(
+func NewNamedDriver(
 	fnsProvider *fabric.NetworkServiceProvider,
 	vaultProvider *vault2.Provider,
 	tokensManager *tokens.Manager,
@@ -61,22 +61,26 @@ func NewDriver(
 	spentTokenQueryExecutorProvider SpentTokenQueryExecutorProvider,
 ) driver.NamedDriver {
 	return driver.NamedDriver{
-		Name: "fabric",
-		Driver: &Driver{
-			fnsProvider:                     fnsProvider,
-			vaultProvider:                   vaultProvider,
-			tokensManager:                   tokensManager,
-			configService:                   configService,
-			viewManager:                     viewManager,
-			viewRegistry:                    viewRegistry,
-			filterProvider:                  filterProvider,
-			tmsProvider:                     tmsProvider,
-			identityProvider:                identityProvider,
-			tracerProvider:                  tracerProvider,
-			defaultPublicParamsFetcher:      defaultPublicParamsFetcher,
-			tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
-			spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
-		},
+		Name:   "fabric",
+		Driver: NewDriver(fnsProvider, vaultProvider, tokensManager, configService, viewManager, viewRegistry, filterProvider, tmsProvider, tracerProvider, identityProvider, defaultPublicParamsFetcher, tokenQueryExecutorProvider, spentTokenQueryExecutorProvider),
+	}
+}
+
+func NewDriver(fnsProvider *fabric.NetworkServiceProvider, vaultProvider *vault2.Provider, tokensManager *tokens.Manager, configService *config.Service, viewManager *view.Manager, viewRegistry driver2.Registry, filterProvider *common.AcceptTxInDBFilterProvider, tmsProvider *token.ManagementServiceProvider, tracerProvider trace.TracerProvider, identityProvider driver2.IdentityProvider, defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher, tokenQueryExecutorProvider driver3.TokenQueryExecutorProvider, spentTokenQueryExecutorProvider driver3.SpentTokenQueryExecutorProvider) *Driver {
+	return &Driver{
+		fnsProvider:                     fnsProvider,
+		vaultProvider:                   vaultProvider,
+		tokensManager:                   tokensManager,
+		configService:                   configService,
+		viewManager:                     viewManager,
+		viewRegistry:                    viewRegistry,
+		filterProvider:                  filterProvider,
+		tmsProvider:                     tmsProvider,
+		identityProvider:                identityProvider,
+		tracerProvider:                  tracerProvider,
+		defaultPublicParamsFetcher:      defaultPublicParamsFetcher,
+		tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
+		spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
 	}
 }
 

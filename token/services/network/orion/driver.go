@@ -27,7 +27,7 @@ type TokenQueryExecutorProvider driver3.TokenQueryExecutorProvider
 
 type SpentTokenQueryExecutorProvider driver3.SpentTokenQueryExecutorProvider
 
-func NewDriver(
+func NewNamedDriver(
 	onsProvider *orion.NetworkServiceProvider,
 	viewRegistry driver2.Registry,
 	viewManager *view.Manager,
@@ -42,21 +42,25 @@ func NewDriver(
 	tracerProvider trace.TracerProvider,
 ) driver.NamedDriver {
 	return driver.NamedDriver{
-		Name: "orion",
-		Driver: &Driver{
-			onsProvider:                     onsProvider,
-			viewRegistry:                    viewRegistry,
-			viewManager:                     viewManager,
-			vaultProvider:                   vaultProvider,
-			configProvider:                  configProvider,
-			configService:                   configService,
-			identityProvider:                identityProvider,
-			filterProvider:                  filterProvider,
-			tmsProvider:                     tmsProvider,
-			tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
-			spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
-			tracerProvider:                  tracerProvider,
-		},
+		Name:   "orion",
+		Driver: NewDriver(onsProvider, viewRegistry, viewManager, vaultProvider, configProvider, configService, identityProvider, filterProvider, tmsProvider, tokenQueryExecutorProvider, spentTokenQueryExecutorProvider, tracerProvider),
+	}
+}
+
+func NewDriver(onsProvider *orion.NetworkServiceProvider, viewRegistry driver2.Registry, viewManager *view.Manager, vaultProvider *vault2.Provider, configProvider *view.ConfigService, configService *config.Service, identityProvider view2.IdentityProvider, filterProvider *common.AcceptTxInDBFilterProvider, tmsProvider *token.ManagementServiceProvider, tokenQueryExecutorProvider TokenQueryExecutorProvider, spentTokenQueryExecutorProvider SpentTokenQueryExecutorProvider, tracerProvider trace.TracerProvider) *Driver {
+	return &Driver{
+		onsProvider:                     onsProvider,
+		viewRegistry:                    viewRegistry,
+		viewManager:                     viewManager,
+		vaultProvider:                   vaultProvider,
+		configProvider:                  configProvider,
+		configService:                   configService,
+		identityProvider:                identityProvider,
+		filterProvider:                  filterProvider,
+		tmsProvider:                     tmsProvider,
+		tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
+		spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
+		tracerProvider:                  tracerProvider,
 	}
 }
 

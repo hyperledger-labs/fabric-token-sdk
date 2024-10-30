@@ -32,7 +32,7 @@ func NewFrom(sdk dig2.SDK) *SDK {
 
 func (p *SDK) Install() error {
 	err := errors.Join(
-		p.Container().Provide(fabric.NewDriver, dig.Group("network-drivers")),
+		p.Container().Provide(fabric.NewNamedDriver, dig.Group("network-drivers")),
 		p.Container().Provide(fabtoken.NewDriver, dig.Group("token-drivers")),
 		p.Container().Provide(dlog.NewDriver, dig.Group("token-drivers")),
 	)

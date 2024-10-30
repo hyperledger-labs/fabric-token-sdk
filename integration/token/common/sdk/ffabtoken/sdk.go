@@ -26,7 +26,7 @@ func NewSDK(registry node.Registry) *SDK {
 
 func (p *SDK) Install() error {
 	err := errors.Join(
-		p.Container().Provide(fabric.NewDriver, dig.Group("network-drivers")),
+		p.Container().Provide(fabric.NewNamedDriver, dig.Group("network-drivers")),
 		p.Container().Provide(fabtoken.NewDriver, dig.Group("token-drivers")),
 	)
 	if err != nil {

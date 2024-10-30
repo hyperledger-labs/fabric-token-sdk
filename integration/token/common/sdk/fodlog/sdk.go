@@ -35,12 +35,12 @@ func (p *SDK) OrionEnabled() bool { return p.ConfigService().GetBool("orion.enab
 
 func (p *SDK) Install() error {
 	if p.FabricEnabled() {
-		if err := p.Container().Provide(fabric.NewDriver, dig.Group("network-drivers")); err != nil {
+		if err := p.Container().Provide(fabric.NewNamedDriver, dig.Group("network-drivers")); err != nil {
 			return err
 		}
 	}
 	if p.OrionEnabled() {
-		if err := p.Container().Provide(orion.NewDriver, dig.Group("network-drivers")); err != nil {
+		if err := p.Container().Provide(orion.NewNamedDriver, dig.Group("network-drivers")); err != nil {
 			return err
 		}
 	}
