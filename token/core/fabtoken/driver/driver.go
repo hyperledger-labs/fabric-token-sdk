@@ -8,6 +8,7 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
@@ -63,6 +64,8 @@ func NewDriver(
 func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (driver.TokenManagerService, error) {
 	logger := logging.DriverLogger("token-sdk.driver.fabtoken", networkID, channel, namespace)
 
+	logger.Debugf("creating new token service with public parameters [%s]", hash.Hashable(publicParams))
+
 	if len(publicParams) == 0 {
 		return nil, errors.Errorf("empty public parameters")
 	}
@@ -104,7 +107,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
 	authorization := common.NewAuthorizationMultiplexer(
-		common.NewTMSAuthorization(publicParamsManager.PublicParams(), ws),
+		common.NewTMSAuthorization(logger, publicParamsManager.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
 	)
 	service, err := fabtoken.NewService(

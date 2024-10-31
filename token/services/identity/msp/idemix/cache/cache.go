@@ -12,14 +12,13 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"go.uber.org/zap/zapcore"
 )
 
 var logger = logging.MustGetLogger("token-sdk.services.identity.msp.idemix")
 
-type IdentityCacheBackendFunc func(opts *common.IdentityOptions) (driver.Identity, []byte, error)
+type IdentityCacheBackendFunc func(auditInfo []byte) (driver.Identity, []byte, error)
 
 type identityCacheEntry struct {
 	Identity driver.Identity
@@ -27,29 +26,27 @@ type identityCacheEntry struct {
 }
 
 type IdentityCache struct {
-	once   sync.Once
-	backed IdentityCacheBackendFunc
-	cache  chan identityCacheEntry
-	opts   *common.IdentityOptions
+	once      sync.Once
+	backed    IdentityCacheBackendFunc
+	auditInfo []byte
+	cache     chan identityCacheEntry
 }
 
-func NewIdentityCache(backed IdentityCacheBackendFunc, size int, opts *common.IdentityOptions) *IdentityCache {
+func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byte) *IdentityCache {
 	logger.Debugf("new identity cache with size [%d]", size)
 	ci := &IdentityCache{
-		backed: backed,
-		cache:  make(chan identityCacheEntry, size),
-		opts:   opts,
+		backed:    backed,
+		cache:     make(chan identityCacheEntry, size),
+		auditInfo: auditInfo,
 	}
 
 	return ci
 }
 
-func (c *IdentityCache) Identity(opts *common.IdentityOptions) (driver.Identity, []byte, error) {
-	if opts != nil {
-		// are the opts equal to the cache opts, if yes, use the cache
-		if c.opts != nil && (opts.EIDExtension != c.opts.EIDExtension || !bytes.Equal(opts.AuditInfo, c.opts.AuditInfo)) {
-			return c.fetchIdentityFromBackend(opts)
-		}
+func (c *IdentityCache) Identity(auditInfo []byte) (driver.Identity, []byte, error) {
+	// Is the auditInfo equal to that used to fill the cache? If yes, use the cache
+	if !bytes.Equal(auditInfo, c.auditInfo) {
+		return c.fetchIdentityFromBackend(auditInfo)
 	}
 
 	c.once.Do(func() {
@@ -88,7 +85,7 @@ func (c *IdentityCache) fetchIdentityFromCache() (driver.Identity, []byte, error
 			logger.Debugf("fetching identity from cache [%s][%d] took [%v]", identity, len(audit), time.Since(start))
 		}
 	case <-timeout.C:
-		id, a, err := c.backed(c.opts)
+		id, a, err := c.backed(c.auditInfo)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -102,11 +99,11 @@ func (c *IdentityCache) fetchIdentityFromCache() (driver.Identity, []byte, error
 	return identity, audit, nil
 }
 
-func (c *IdentityCache) fetchIdentityFromBackend(opts *common.IdentityOptions) (driver.Identity, []byte, error) {
+func (c *IdentityCache) fetchIdentityFromBackend(auditInfo []byte) (driver.Identity, []byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("fetching identity from backend")
 	}
-	id, audit, err := c.backed(opts)
+	id, audit, err := c.backed(auditInfo)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -120,7 +117,7 @@ func (c *IdentityCache) fetchIdentityFromBackend(opts *common.IdentityOptions) (
 func (c *IdentityCache) provisionIdentities() {
 	count := 0
 	for {
-		id, audit, err := c.backed(c.opts)
+		id, audit, err := c.backed(c.auditInfo)
 		if err != nil {
 			logger.Errorf("failed to provision identity [%s]", err)
 			continue

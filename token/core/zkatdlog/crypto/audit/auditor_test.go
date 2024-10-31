@@ -255,7 +255,7 @@ func getIdemixInfo(dir string) (driver.Identity, *msp3.AuditInfo) {
 	Expect(err).NotTo(HaveOccurred())
 	cryptoProvider, err := msp3.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	Expect(err).NotTo(HaveOccurred())
-	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 

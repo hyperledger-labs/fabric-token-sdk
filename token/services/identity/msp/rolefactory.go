@@ -11,13 +11,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	x5092 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
 
@@ -42,13 +42,14 @@ var RoleToMSPID = map[driver.IdentityRole]string{
 
 // RoleFactory is the factory for creating wallets, idemix and x509
 type RoleFactory struct {
+	Logger                 logging.Logger
 	TMSID                  token.TMSID
-	Config                 config2.Config
+	Config                 driver2.Config
 	FSCIdentity            driver.Identity
 	NetworkDefaultIdentity driver.Identity
-	IdentityProvider       common.IdentityProvider
-	SignerService          common.SigService
-	BinderService          common.BinderService
+	IdentityProvider       driver2.IdentityProvider
+	SignerService          driver2.SigService
+	BinderService          driver2.BinderService
 	StorageProvider        identity.StorageProvider
 	DeserializerManager    driver2.DeserializerManager
 	ignoreRemote           bool
@@ -56,18 +57,20 @@ type RoleFactory struct {
 
 // NewRoleFactory creates a new RoleFactory
 func NewRoleFactory(
+	logger logging.Logger,
 	TMSID token.TMSID,
-	config config2.Config,
+	config driver2.Config,
 	fscIdentity driver.Identity,
 	networkDefaultIdentity driver.Identity,
-	identityProvider common.IdentityProvider,
-	signerService common.SigService,
-	binderService common.BinderService,
+	identityProvider driver2.IdentityProvider,
+	signerService driver2.SigService,
+	binderService driver2.BinderService,
 	storageProvider identity.StorageProvider,
 	deserializerManager driver2.DeserializerManager,
 	ignoreRemote bool,
 ) *RoleFactory {
 	return &RoleFactory{
+		Logger:                 logger,
 		TMSID:                  TMSID,
 		Config:                 config,
 		FSCIdentity:            fscIdentity,
@@ -83,6 +86,7 @@ func NewRoleFactory(
 
 // NewIdemix creates a new Idemix-based role
 func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerPublicKey []byte, curveID math3.CurveID) (identity.Role, error) {
+	f.Logger.Debugf("create idemix role for [%s]", driver.IdentityRoleStrings[role])
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -100,24 +104,30 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
 	}
-	lm := idemix2.NewLocalMembership(
-		issuerPublicKey,
-		curveID,
+	lm := common2.NewLocalMembership(
+		f.Logger,
 		f.Config,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
 		f.DeserializerManager,
 		identityDB,
-		keyStore,
-		RoleToMSPID[role],
-		cacheSize,
-		identities,
-		f.ignoreRemote,
+		f.BinderService,
+		IdemixIdentity,
+		idemix2.NewKeyManagerProvider(
+			issuerPublicKey,
+			curveID,
+			RoleToMSPID[role],
+			keyStore,
+			f.SignerService,
+			f.Config,
+			cacheSize,
+			f.ignoreRemote,
+		),
 	)
-	if err := lm.Load(); err != nil {
+	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
-	return &BindingRole{
+	return &WrappingBindingRole{
 		Role:             idemix2.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
 		IdentityType:     IdemixIdentity,
 		RootIdentity:     f.FSCIdentity,
@@ -136,6 +146,8 @@ func (f *RoleFactory) NewWrappedX509(role driver.IdentityRole, ignoreRemote bool
 }
 
 func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType string, ignoreRemote bool) (identity.Role, error) {
+	f.Logger.Debugf("create x509 role for [%s]", driver.IdentityRoleStrings[role])
+
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -144,20 +156,21 @@ func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType str
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
-	lm := x5092.NewLocalMembership(
+	lm := common2.NewLocalMembership(
+		logging.MustGetLogger("token-sdk.services.identity.msp.x509"),
 		f.Config,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
-		f.BinderService,
 		f.DeserializerManager,
 		identityDB,
-		RoleToMSPID[role],
-		ignoreRemote,
+		f.BinderService,
+		x5092.IdentityConfigurationType,
+		x5092.NewKeyManagerProvider(f.Config, RoleToMSPID[role], f.SignerService, ignoreRemote),
 	)
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
-	return &BindingRole{
+	return &WrappingBindingRole{
 		Role:             x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
 		IdentityType:     identityType,
 		RootIdentity:     f.FSCIdentity,
@@ -171,21 +184,32 @@ func (f *RoleFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Ide
 	return f.Config.IdentitiesForRole(role)
 }
 
-type BindingRole struct {
+// BindingRole returns a new role wrapping the passed one.
+// Identities will be bound to the long term identities this factory refers to.
+func (f *RoleFactory) BindingRole(role identity.Role) (identity.Role, error) {
+	return &WrappingBindingRole{
+		Role:             role,
+		RootIdentity:     f.FSCIdentity,
+		IdentityProvider: f.IdentityProvider,
+		BinderService:    f.BinderService,
+	}, nil
+}
+
+type WrappingBindingRole struct {
 	identity.Role
 	IdentityType identity.Type
 
 	RootIdentity     driver.Identity
-	IdentityProvider common.IdentityProvider
-	BinderService    common.BinderService
+	IdentityProvider driver2.IdentityProvider
+	BinderService    driver2.BinderService
 }
 
-func (r *BindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
+func (r *WrappingBindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 	info, err := r.Role.GetIdentityInfo(id)
 	if err != nil {
 		return nil, err
 	}
-	return &Info{
+	return &WrappingBindingInfo{
 		IdentityInfo:     info,
 		IdentityType:     r.IdentityType,
 		RootIdentity:     r.RootIdentity,
@@ -194,26 +218,26 @@ func (r *BindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 	}, nil
 }
 
-// Info wraps a driver.IdentityInfo to further register the audit info,
+// WrappingBindingInfo wraps a driver.IdentityInfo to further register the audit info,
 // and binds the new identity to the default FSC node identity
-type Info struct {
+type WrappingBindingInfo struct {
 	driver.IdentityInfo
 	IdentityType identity.Type
 
 	RootIdentity     driver.Identity
-	IdentityProvider common.IdentityProvider
-	BinderService    common.BinderService
+	IdentityProvider driver2.IdentityProvider
+	BinderService    driver2.BinderService
 }
 
-func (i *Info) ID() string {
+func (i *WrappingBindingInfo) ID() string {
 	return i.IdentityInfo.ID()
 }
 
-func (i *Info) EnrollmentID() string {
+func (i *WrappingBindingInfo) EnrollmentID() string {
 	return i.IdentityInfo.EnrollmentID()
 }
 
-func (i *Info) Get() (driver.Identity, []byte, error) {
+func (i *WrappingBindingInfo) Get() (driver.Identity, []byte, error) {
 	// get the identity
 	id, ai, err := i.IdentityInfo.Get()
 	if err != nil {
