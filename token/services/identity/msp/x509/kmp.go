@@ -22,10 +22,9 @@ import (
 )
 
 const (
-	KeystoreFullFolder        = "keystoreFull"
-	PrivateKeyFileName        = "priv_sk"
-	KeystoreFolder            = "keystore"
-	IdentityConfigurationType = "x509"
+	KeystoreFullFolder = "keystoreFull"
+	PrivateKeyFileName = "priv_sk"
+	KeystoreFolder     = "keystore"
 )
 
 type KeyManagerProvider struct {

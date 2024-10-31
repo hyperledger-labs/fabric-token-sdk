@@ -112,7 +112,7 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 		f.DeserializerManager,
 		identityDB,
 		f.BinderService,
-		IdemixIdentity,
+		RoleToMSPID[role],
 		idemix2.NewKeyManagerProvider(
 			issuerPublicKey,
 			curveID,
@@ -164,7 +164,7 @@ func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType str
 		f.DeserializerManager,
 		identityDB,
 		f.BinderService,
-		x5092.IdentityConfigurationType,
+		RoleToMSPID[role],
 		x5092.NewKeyManagerProvider(f.Config, RoleToMSPID[role], f.SignerService, ignoreRemote),
 	)
 	if err := lm.Load(identities); err != nil {
