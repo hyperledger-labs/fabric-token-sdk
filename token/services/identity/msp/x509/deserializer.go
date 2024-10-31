@@ -21,7 +21,7 @@ import (
 // MSPIdentityDeserializer takes as MSP identity and returns an ECDSA verifier
 type MSPIdentityDeserializer struct{}
 
-func (deserializer *MSPIdentityDeserializer) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
+func (d *MSPIdentityDeserializer) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
 	si := &msp.SerializedIdentity{}
 	err := proto.Unmarshal(id, si)
 	if err != nil {

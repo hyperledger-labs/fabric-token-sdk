@@ -15,8 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
@@ -68,6 +68,7 @@ func (d *base) newWalletService(
 		return nil, errors.WithMessage(err, "failed to create identity config")
 	}
 	roleFactory := msp.NewRoleFactory(
+		logger,
 		tmsID,
 		identityConfig,         // config
 		fscIdentity,            // FSC identity

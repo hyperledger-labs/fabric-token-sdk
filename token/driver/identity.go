@@ -25,6 +25,15 @@ const (
 	CertifierRole
 )
 
+var (
+	IdentityRoleStrings = map[IdentityRole]string{
+		IssuerRole:    "issuer",
+		AuditorRole:   "auditor",
+		OwnerRole:     "owner",
+		CertifierRole: "certifier",
+	}
+)
+
 // IdentityInfo models a long-term identity inside the Identity Provider.
 // An identity has an identifier (ID) and an Enrollment ID, unique identifier.
 // An identity can be remote, meaning that the corresponding secret key is remotely available.

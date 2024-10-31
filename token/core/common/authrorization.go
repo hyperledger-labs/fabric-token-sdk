@@ -10,7 +10,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type Authorization interface {
@@ -27,20 +29,25 @@ type Authorization interface {
 
 // WalletBasedAuthorization is a wallet-based authorization implementation
 type WalletBasedAuthorization struct {
+	Logger           logging.Logger
 	PublicParameters driver.PublicParameters
 	WalletService    driver.WalletService
 	amIAnAuditor     bool
 }
 
-func NewTMSAuthorization(publicParameters driver.PublicParameters, walletService driver.WalletService) *WalletBasedAuthorization {
+func NewTMSAuthorization(logger logging.Logger, publicParameters driver.PublicParameters, walletService driver.WalletService) *WalletBasedAuthorization {
 	amIAnAuditor := false
+	var errs []error
 	for _, identity := range publicParameters.Auditors() {
-		if _, err := walletService.AuditorWallet(identity); err == nil {
+		_, err := walletService.AuditorWallet(identity)
+		if err == nil {
 			amIAnAuditor = true
 			break
 		}
+		errs = append(errs, errors.Wrapf(err, "I'm not this auditor identity [%s]", identity))
 	}
-	return &WalletBasedAuthorization{PublicParameters: publicParameters, WalletService: walletService, amIAnAuditor: amIAnAuditor}
+	logger.Debugf("am I an auditor? [%v], with errs [%v]", amIAnAuditor, errs)
+	return &WalletBasedAuthorization{Logger: logger, PublicParameters: publicParameters, WalletService: walletService, amIAnAuditor: amIAnAuditor}
 }
 
 // IsMine returns true if the passed token is owned by an owner wallet.

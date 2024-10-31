@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
@@ -31,7 +30,7 @@ type SignerService interface {
 	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
 }
 
-type Provider struct {
+type KeyManager struct {
 	*msp.Deserializer
 	userKey       bccsp.Key
 	conf          idemixmsp.IdemixMSPConfig
@@ -41,7 +40,7 @@ type Provider struct {
 	verType bccsp.VerificationType
 }
 
-func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*Provider, error) {
+func NewKeyManager(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*KeyManager, error) {
 	logger.Debugf("Setting up Idemix-based MSP instance")
 
 	if conf1 == nil {
@@ -87,7 +86,7 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 	}
 
 	if conf.Signer == nil {
-		// No credential in config, so we don't setup a default signer
+		// No credential in config, so we don't set up a default signer
 		return nil, errors.Errorf("no signer information found")
 	}
 
@@ -147,7 +146,7 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 		sigType = bccsp.Standard
 	}
 
-	return &Provider{
+	return &KeyManager{
 		Deserializer: &msp.Deserializer{
 			Name:            conf.Name,
 			Csp:             cryptoProvider,
@@ -164,7 +163,7 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 	}, nil
 }
 
-func (p *Provider) Identity(opts *common.IdentityOptions) (driver.Identity, []byte, error) {
+func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error) {
 	// Derive NymPublicKey
 	nymKey, err := p.Csp.KeyDeriv(
 		p.userKey,
@@ -199,20 +198,15 @@ func (p *Provider) Identity(opts *common.IdentityOptions) (driver.Identity, []by
 	rh := p.conf.Signer.RevocationHandle
 	sigType := p.sigType
 	var signerMetadata *bccsp.IdemixSignerMetadata
-	if opts != nil {
-		if opts.EIDExtension {
-			sigType = bccsp.EidNymRhNym
+	if len(auditInfo) != 0 {
+		ai, err := p.DeserializeAuditInfo(auditInfo)
+		if err != nil {
+			return nil, nil, err
 		}
-		if len(opts.AuditInfo) != 0 {
-			ai, err := p.DeserializeAuditInfo(opts.AuditInfo)
-			if err != nil {
-				return nil, nil, err
-			}
 
-			signerMetadata = &bccsp.IdemixSignerMetadata{
-				EidNymAuditData: ai.EidNymAuditData,
-				RhNymAuditData:  ai.RhNymAuditData,
-			}
+		signerMetadata = &bccsp.IdemixSignerMetadata{
+			EidNymAuditData: ai.EidNymAuditData,
+			RhNymAuditData:  ai.RhNymAuditData,
 		}
 	}
 
@@ -295,11 +289,11 @@ func (p *Provider) Identity(opts *common.IdentityOptions) (driver.Identity, []by
 	return raw, infoRaw, nil
 }
 
-func (p *Provider) IsRemote() bool {
+func (p *KeyManager) IsRemote() bool {
 	return p.userKey == nil
 }
 
-func (p *Provider) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
+func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
 	r, err := p.Deserialize(raw, true)
 	if err != nil {
 		return nil, err
@@ -308,7 +302,7 @@ func (p *Provider) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
 	return r.Identity, nil
 }
 
-func (p *Provider) DeserializeSigner(raw []byte) (driver.Signer, error) {
+func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
 	r, err := p.Deserialize(raw, true)
 	if err != nil {
 		return nil, err
@@ -337,7 +331,7 @@ func (p *Provider) DeserializeSigner(raw []byte) (driver.Signer, error) {
 	return si, nil
 }
 
-func (p *Provider) Info(raw []byte, auditInfo []byte) (string, error) {
+func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
 	r, err := p.Deserialize(raw, true)
 	if err != nil {
 		return "", err
@@ -361,15 +355,19 @@ func (p *Provider) Info(raw []byte, auditInfo []byte) (string, error) {
 	return fmt.Sprintf("MSP.Idemix: [%s][%s][%s][%s][%s]", eid, driver.Identity(raw).UniqueID(), r.SerializedIdentity.Mspid, r.OU.OrganizationalUnitIdentifier, r.Role.Role.String()), nil
 }
 
-func (p *Provider) String() string {
-	return fmt.Sprintf("Idemix Provider [%s]", hash.Hashable(p.Ipk).String())
+func (p *KeyManager) String() string {
+	return fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(p.Ipk).String())
 }
 
-func (p *Provider) EnrollmentID() string {
+func (p *KeyManager) EnrollmentID() string {
 	return p.conf.Signer.EnrollmentId
 }
 
-func (p *Provider) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentity, error) {
+func (p *KeyManager) Anonymous() bool {
+	return true
+}
+
+func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentity, error) {
 	si := &m.SerializedIdentity{}
 	err := proto.Unmarshal(raw, si)
 	if err != nil {

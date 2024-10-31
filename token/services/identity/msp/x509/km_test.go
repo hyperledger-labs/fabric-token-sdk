@@ -13,8 +13,10 @@ import (
 )
 
 func TestDeserializer(t *testing.T) {
-	p, _, err := NewProvider("./testdata/msp", "", "apple", nil, nil)
+	p, _, err := NewKeyManager("./testdata/msp", "", "apple", nil, nil)
 	assert.NoError(t, err)
+	assert.False(t, p.Anonymous())
+
 	id, auditInfo, err := p.Identity(nil)
 	assert.NoError(t, err)
 	eID := p.EnrollmentID()
