@@ -35,7 +35,7 @@ const (
 )
 
 var _ = Describe("EndToEnd", func() {
-	for _, t := range integration2.WebSocketNoReplicationOnly {
+	for _, t := range integration2.AllTestTypes {
 		Describe("T1 Fungible with Auditor ne Issuer", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
@@ -138,9 +138,9 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			Monitoring:          false,
 			ReplicationOpts:     opts,
 			FSCBasedEndorsement: mask&WithEndorsers > 0,
-			FSCLogSpec:          "token-sdk=debug:fabric-sdk=debug:info",
-			OnlyUnity:           true,
-			TokenSelector:       tokenSelector,
+			// FSCLogSpec:          "token-sdk=debug:fabric-sdk=debug:info",
+			OnlyUnity:     true,
+			TokenSelector: tokenSelector,
 		},
 	))
 	return ts, selector
