@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/yaml.v2"
 )
 
 type KeyManagerProvider interface {
@@ -192,10 +193,15 @@ func (l *LocalMembership) Load(identities []*config.Identity) error {
 }
 
 func (l *LocalMembership) registerIdentity(identity config.Identity) error {
+	// marshal opts
+	optsRaw, err := yaml.Marshal(identity.Opts)
+	if err != nil {
+		return errors.WithMessage(err, "failed to marshal identity options")
+	}
 	return l.registerIdentityConfiguration(&driver.IdentityConfiguration{
 		ID:     identity.ID,
 		URL:    identity.Path,
-		Config: nil,
+		Config: optsRaw,
 		Raw:    nil,
 	}, identity.Default)
 }

@@ -61,10 +61,10 @@ func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (common
 	return k.registerIdentity(mspConfig, identityConfig, idConfig)
 }
 
-func (k *KeyManagerProvider) registerIdentity(conf *m.MSPConfig, c *config.Identity, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
+func (k *KeyManagerProvider) registerIdentity(conf *m.MSPConfig, identityConfig *config.Identity, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
 	// Try to register the MSP provider
-	translatedPath := k.config.TranslatePath(c.Path)
-	p, err := k.registerProvider(conf, c, translatedPath, idConfig)
+	translatedPath := k.config.TranslatePath(identityConfig.Path)
+	p, err := k.registerProvider(conf, identityConfig, translatedPath, idConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to register MSP provider")
 	}

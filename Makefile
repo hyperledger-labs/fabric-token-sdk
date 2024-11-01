@@ -123,9 +123,13 @@ clean:
 	docker network prune -f
 	docker container prune -f
 	rm -rf ./integration/token/fungible/dlog/cmd/
+	rm -rf ./integration/token/fungible/dlog/testdata/
 	rm -rf ./integration/token/fungible/dloghsm/cmd/
+	rm -rf ./integration/token/fungible/dloghsm/testdata/
 	rm -rf ./integration/token/fungible/dlogstress/cmd/
+	rm -rf ./integration/token/fungible/dlogstress/testdata/
 	rm -rf ./integration/token/fungible/fabtoken/cmd/
+	rm -rf ./integration/token/fungible/fabtoken/testdata/
 	rm -rf ./integration/token/fungible/odlog/cmd/
 	rm -rf ./integration/token/fungible/ofabtoken/cmd/
 	rm -rf ./integration/token/fungible/mixed/cmd/
