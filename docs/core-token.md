@@ -68,7 +68,7 @@ token:
             # Therefore, also FSC nodes equipped with proper endorsement keys can perform the same function.
             # This section is dedicated to the configuration of the endorsement of the token chaincode by
             # other FSC nodes.
-            endorsement:
+            fsc_endorsement:
               # Is this node an endorser?: true/false
               endorser: true
               # If this node is an endorser, which Fabric identity should be used to sign the endorsement?

@@ -87,15 +87,7 @@ func NewRoleFactory(
 // NewIdemix creates a new Idemix-based role
 func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerPublicKey []byte, curveID math3.CurveID) (identity.Role, error) {
 	f.Logger.Debugf("create idemix role for [%s]", driver.IdentityRoleStrings[role])
-	identities, err := f.IdentitiesForRole(role)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
-	}
 
-	identityDB, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get wallet path storage")
-	}
 	backend, err := f.StorageProvider.NewKeystore()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get new keystore backend")
@@ -103,6 +95,21 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 	keyStore, err := msp.NewKeyStore(curveID, backend)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
+	}
+	kmp := idemix2.NewKeyManagerProvider(
+		issuerPublicKey,
+		curveID,
+		RoleToMSPID[role],
+		keyStore,
+		f.SignerService,
+		f.Config,
+		cacheSize,
+		f.ignoreRemote,
+	)
+
+	identityDB, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
 	lm := common2.NewLocalMembership(
 		f.Logger,
@@ -113,22 +120,17 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 		identityDB,
 		f.BinderService,
 		RoleToMSPID[role],
-		idemix2.NewKeyManagerProvider(
-			issuerPublicKey,
-			curveID,
-			RoleToMSPID[role],
-			keyStore,
-			f.SignerService,
-			f.Config,
-			cacheSize,
-			f.ignoreRemote,
-		),
+		kmp,
 	)
+	identities, err := f.IdentitiesForRole(role)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
+	}
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
 	return &WrappingBindingRole{
-		Role:             idemix2.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
+		Role:             common2.NewAnonymousRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
 		IdentityType:     IdemixIdentity,
 		RootIdentity:     f.FSCIdentity,
 		IdentityProvider: f.IdentityProvider,
@@ -148,10 +150,8 @@ func (f *RoleFactory) NewWrappedX509(role driver.IdentityRole, ignoreRemote bool
 func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType string, ignoreRemote bool) (identity.Role, error) {
 	f.Logger.Debugf("create x509 role for [%s]", driver.IdentityRoleStrings[role])
 
-	identities, err := f.IdentitiesForRole(role)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
-	}
+	kmp := x5092.NewKeyManagerProvider(f.Config, RoleToMSPID[role], f.SignerService, ignoreRemote)
+
 	identityDB, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
@@ -165,13 +165,18 @@ func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType str
 		identityDB,
 		f.BinderService,
 		RoleToMSPID[role],
-		x5092.NewKeyManagerProvider(f.Config, RoleToMSPID[role], f.SignerService, ignoreRemote),
+		kmp,
 	)
+	identities, err := f.IdentitiesForRole(role)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
+	}
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
+
 	return &WrappingBindingRole{
-		Role:             x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
+		Role:             common2.NewLongTermRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
 		IdentityType:     identityType,
 		RootIdentity:     f.FSCIdentity,
 		IdentityProvider: f.IdentityProvider,
