@@ -46,7 +46,7 @@ var _ = Describe("EndToEnd", func() {
 
 func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewLocalTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
+	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
 		common.Opts{
 			Backend:         "fabric",
 			CommType:        commType,
