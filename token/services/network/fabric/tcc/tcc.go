@@ -15,11 +15,10 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
@@ -79,7 +78,7 @@ func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error(fmt.Sprintf("failed to get public parameters: %s", err))
 	}
 
-	w := translator.New("", &rwsWrapper{stub: stub}, "")
+	w := translator.New(stub.GetTxID(), translator.NewExRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()))
 	if err := w.Write(&SetupAction{SetupParameters: ppRaw}); err != nil {
 		return shim.Error(err.Error())
 	}
@@ -225,7 +224,7 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	}
 
 	// Write
-	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
+	w := translator.New(stub.GetTxID(), translator.NewExRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()))
 	for _, action := range actions {
 		err = w.Write(action)
 		if err != nil {
@@ -245,7 +244,7 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 }
 
 func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) pb.Response {
-	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
+	w := translator.New(stub.GetTxID(), translator.NewExRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()))
 	raw, err := w.ReadSetupParameters()
 	if err != nil {
 		return shim.Error("failed to retrieve public parameters: " + err.Error())
@@ -268,7 +267,7 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 
 	logger.Infof("query tokens [%v]...", ids)
 
-	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
+	w := translator.New(stub.GetTxID(), translator.NewExRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()))
 	res, err := w.QueryTokens(ids)
 	if err != nil {
 		logger.Errorf("failed query tokens [%v]: [%s]", ids, err)
@@ -296,7 +295,7 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 
 	logger.Debugf("check if tokens are spent [%v]...", ids)
 
-	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
+	w := translator.New(stub.GetTxID(), translator.NewExRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()))
 	res, err := w.AreTokensSpent(ids, cc.PublicParameters.GraphHiding())
 	if err != nil {
 		logger.Errorf("failed to check if tokens are spent [%v]: [%s]", ids, err)

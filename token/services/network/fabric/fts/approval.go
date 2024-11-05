@@ -195,10 +195,11 @@ func (r *RequestApprovalResponderView) translate(
 	actions ...any,
 ) error {
 	// prepare the rws as usual
-	w := translator.New(tx.ID(), &rwsWrapper{stub: rws}, tms.Namespace())
+	txID := tx.ID()
+	w := translator.New(txID, translator.NewExRWSetWrapper(&rwsWrapper{stub: rws}, tms.Namespace(), txID))
 	for _, action := range actions {
 		if err := w.Write(action); err != nil {
-			return errors.Wrapf(err, "failed to write token action for tx [%s]", tx.ID())
+			return errors.Wrapf(err, "failed to write token action for tx [%s]", txID)
 		}
 	}
 	err := w.AddPublicParamsDependency()

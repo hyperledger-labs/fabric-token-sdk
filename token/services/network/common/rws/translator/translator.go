@@ -8,7 +8,6 @@ package translator
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -21,23 +20,19 @@ var logger = logging.MustGetLogger("token-sdk.vault.translator")
 
 // Translator validates token requests and generates the corresponding RWSets
 type Translator struct {
-	RWSet RWSet
+	RWSet ExRWSet
 	TxID  string
 	// SpentIDs the spent IDs added so far
 	SpentIDs []string
-
-	counter   uint64
-	namespace string
+	counter  uint64
 }
 
-func New(txID string, rwSet RWSet, namespace string) *Translator {
+func New(txID string, rws ExRWSet) *Translator {
 	w := &Translator{
-		RWSet:     rwSet,
-		TxID:      txID,
-		counter:   0,
-		namespace: namespace,
+		RWSet:   rws,
+		TxID:    txID,
+		counter: 0,
 	}
-
 	return w
 }
 
@@ -66,12 +61,8 @@ func (w *Translator) CommitTokenRequest(raw []byte, storeHash bool) ([]byte, err
 	if err != nil {
 		return nil, errors.Errorf("can't create for token request '%s'", w.TxID)
 	}
-	tr, err := w.RWSet.GetState(w.namespace, key)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read token request'%s'", w.TxID)
-	}
-	if len(tr) != 0 {
-		return nil, errors.Wrapf(errors.New("token request with same ID already exists"), "failed to write token request'%s'", w.TxID)
+	if err := w.RWSet.AddStateMustNotExist(key); err != nil {
+		return nil, errors.Wrapf(err, "failed to read token request")
 	}
 	var h []byte
 	if storeHash {
@@ -86,7 +77,7 @@ func (w *Translator) CommitTokenRequest(raw []byte, storeHash bool) ([]byte, err
 		raw = hash.Sum(nil)
 		h = raw
 	}
-	err = w.RWSet.SetState(w.namespace, key, raw)
+	err = w.RWSet.SetState(key, raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write token request'%s'", w.TxID)
 	}
@@ -98,7 +89,7 @@ func (w *Translator) ReadTokenRequest() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Errorf("can't create for token request '%s'", w.TxID)
 	}
-	tr, err := w.RWSet.GetState(w.namespace, key)
+	tr, err := w.RWSet.GetState(key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read token request'%s'", w.TxID)
 	}
@@ -110,7 +101,7 @@ func (w *Translator) ReadSetupParameters() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create setup key")
 	}
-	raw, err := w.RWSet.GetState(w.namespace, setupKey)
+	raw, err := w.RWSet.GetState(setupKey)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get setup parameters")
 	}
@@ -122,12 +113,8 @@ func (w *Translator) AddPublicParamsDependency() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to create setup key")
 	}
-	h, err := w.RWSet.GetState(w.namespace, setupKey)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get setup parameters")
-	}
-	if len(h) == 0 {
-		return errors.Errorf("not public parameters available")
+	if err := w.RWSet.AddStateMustExist(setupKey); err != nil {
+		return errors.Wrapf(err, "failed to add public params dependency")
 	}
 	return nil
 }
@@ -143,7 +130,7 @@ func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 			// return nil, errors.Errorf("error creating output ID: %s", err)
 		}
 		logger.Debugf("query state [%s:%s]", id, outputID)
-		bytes, err := w.RWSet.GetState(w.namespace, outputID)
+		bytes, err := w.RWSet.GetState(outputID)
 		if err != nil {
 			errs = append(errs, errors.Wrapf(err, "failed getting output for [%s]", outputID))
 			continue
@@ -164,8 +151,33 @@ func (w *Translator) GetTransferMetadataSubKey(k string) (string, error) {
 	return keys.GetTransferMetadataSubKey(k)
 }
 
-func (w *Translator) AreTokensSpent(id []string, graphHiding bool) ([]bool, error) {
-	return w.areTokensSpent(id, graphHiding)
+func (w *Translator) AreTokensSpent(ids []string, graphHiding bool) ([]bool, error) {
+	res := make([]bool, len(ids))
+	if graphHiding {
+		for i, id := range ids {
+			logger.Debugf("check serial number %s\n", id)
+			k, err := keys.CreateSNKey(id)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to generate key for id [%s]", id)
+			}
+			v, err := w.RWSet.GetState(k)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get serial number %s", id)
+			}
+			res[i] = len(v) != 0
+		}
+	} else {
+		for i, id := range ids {
+			logger.Debugf("check state %s\n", id)
+			v, err := w.RWSet.GetState(id)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get output %s", id)
+			}
+			res[i] = len(v) == 0
+		}
+	}
+
+	return res, nil
 }
 
 func (w *Translator) checkProcess(action interface{}) error {
@@ -209,25 +221,15 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}
-			bytes, err := w.RWSet.GetState(w.namespace, key)
-			if err != nil {
-				return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)
-			}
-			// in this case, the state must exist
-			if len(bytes) == 0 {
-				return errors.Errorf("invalid transfer: input is already spent [%s]", key)
+			if err := w.RWSet.AddStateMustExist(key); err != nil {
+				return errors.Wrapf(err, "invalid transfer: input must exist")
 			}
 		}
 	} else {
 		// in this case, the state must not exist
 		for _, key := range t.GetSerialNumbers() {
-			bytes, err := w.RWSet.GetState(w.namespace, key)
-			if err != nil {
-				return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)
-			}
-			// in this case, the state must not exist
-			if len(bytes) != 0 {
-				return errors.Errorf("invalid transfer: input is already spent [%s:%v]", key, bytes)
+			if err := w.RWSet.AddStateMustNotExist(key); err != nil {
+				return errors.Wrapf(err, "invalid transfer: serial number must not exist")
 			}
 		}
 	}
@@ -251,13 +253,8 @@ func (w *Translator) checkTokenDoesNotExist(index uint64, txID string) error {
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID")
 	}
-
-	outputBytes, err := w.RWSet.GetState(w.namespace, tokenKey)
-	if err != nil {
-		return err
-	}
-	if len(outputBytes) != 0 {
-		return errors.Errorf("token already exists: %s", tokenKey)
+	if err := w.RWSet.AddStateMustNotExist(tokenKey); err != nil {
+		return errors.Errorf("token already exists")
 	}
 	return nil
 }
@@ -295,7 +292,7 @@ func (w *Translator) commitSetupAction(setup SetupAction) error {
 	if err != nil {
 		return err
 	}
-	err = w.RWSet.SetState(w.namespace, setupKey, raw)
+	err = w.RWSet.SetState(setupKey, raw)
 	if err != nil {
 		return err
 	}
@@ -314,7 +311,7 @@ func (w *Translator) commitSetupAction(setup SetupAction) error {
 	}
 	digest := hash.Sum(nil)
 
-	err = w.RWSet.SetState(w.namespace, setupHashKey, digest)
+	err = w.RWSet.SetState(setupHashKey, digest)
 	if err != nil {
 		return err
 	}
@@ -334,7 +331,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 		if err != nil {
 			return errors.Errorf("error creating output ID: %s", err)
 		}
-		if err := w.RWSet.SetState(w.namespace, outputID, output); err != nil {
+		if err := w.RWSet.SetState(outputID, output); err != nil {
 			return err
 		}
 	}
@@ -346,14 +343,10 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed constructing metadata key")
 		}
-		raw, err := w.RWSet.GetState(w.namespace, k)
-		if err != nil {
-			return err
+		if err := w.RWSet.AddStateMustNotExist(k); err != nil {
+			return errors.Errorf("entry with issue metadata key [%s] is already occupied", key)
 		}
-		if len(raw) != 0 {
-			return errors.Errorf("entry with issue metadata key [%s] is already occupied by [%s]", key, string(raw))
-		}
-		if err := w.RWSet.SetState(w.namespace, k, value); err != nil {
+		if err := w.RWSet.SetState(k, value); err != nil {
 			return err
 		}
 	}
@@ -379,7 +372,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 			if err != nil {
 				return err
 			}
-			err = w.RWSet.SetState(w.namespace, outputID, bytes)
+			err = w.RWSet.SetState(outputID, bytes)
 			if err != nil {
 				return err
 			}
@@ -399,14 +392,10 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed constructing metadata key")
 		}
-		raw, err := w.RWSet.GetState(w.namespace, k)
-		if err != nil {
-			return err
+		if err := w.RWSet.AddStateMustNotExist(k); err != nil {
+			return errors.Errorf("entry with transfer metadata key [%s] is already occupied", key)
 		}
-		if len(raw) != 0 {
-			return errors.Errorf("entry with transfer metadata key [%s] is already occupied by [%s]", key, base64.StdEncoding.EncodeToString(raw))
-		}
-		if err := w.RWSet.SetState(w.namespace, k, value); err != nil {
+		if err := w.RWSet.SetState(k, value); err != nil {
 			return err
 		}
 	}
@@ -429,7 +418,7 @@ func (w *Translator) spendTokens(transferAction TransferAction) error {
 
 		for _, id := range rwsetKeys {
 			logger.Debugf("Delete state %s\n", id)
-			err := w.RWSet.DeleteState(w.namespace, id)
+			err := w.RWSet.DeleteState(id)
 			if err != nil {
 				return errors.Wrapf(err, "failed to delete output %s", id)
 			}
@@ -445,7 +434,7 @@ func (w *Translator) spendTokens(transferAction TransferAction) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to generate key for id [%s]", id)
 			}
-			if err := w.RWSet.SetState(w.namespace, k, []byte(strconv.FormatBool(true))); err != nil {
+			if err := w.RWSet.SetState(k, []byte(strconv.FormatBool(true))); err != nil {
 				return errors.Wrapf(err, "failed to add serial number %s", id)
 			}
 			if err := w.appendSpentID(id); err != nil {
@@ -455,35 +444,6 @@ func (w *Translator) spendTokens(transferAction TransferAction) error {
 	}
 
 	return nil
-}
-
-func (w *Translator) areTokensSpent(ids []string, graphHiding bool) ([]bool, error) {
-	res := make([]bool, len(ids))
-	if graphHiding {
-		for i, id := range ids {
-			logger.Debugf("check serial number %s\n", id)
-			k, err := keys.CreateSNKey(id)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to generate key for id [%s]", id)
-			}
-			v, err := w.RWSet.GetState(w.namespace, k)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to get serial number %s", id)
-			}
-			res[i] = len(v) != 0
-		}
-	} else {
-		for i, id := range ids {
-			logger.Debugf("check state %s\n", id)
-			v, err := w.RWSet.GetState(w.namespace, id)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to get output %s", id)
-			}
-			res[i] = len(v) == 0
-		}
-	}
-
-	return res, nil
 }
 
 func (w *Translator) appendSpentID(id string) error {
