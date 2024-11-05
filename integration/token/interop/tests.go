@@ -8,7 +8,6 @@ package interop
 
 import (
 	"crypto"
-	"encoding/base64"
 	"fmt"
 	"math/big"
 	"strings"
@@ -136,9 +135,8 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 	_, _, hash := HTLCLock(network, defaultTMSID, alice, "", "USD", 1, bob, auditor, 1*time.Hour, nil, crypto.SHA3_256)
 	failedLockTXID, _, _ := HTLCLock(network, defaultTMSID, alice, "", "USD", 1, bob, auditor, 1*time.Hour, hash, crypto.SHA3_256,
 		fmt.Sprintf(
-			"entry with transfer metadata key [%s] is already occupied by [%s]",
+			"entry with transfer metadata key [%s] is already occupied",
 			htlc.LockKey(hash),
-			base64.StdEncoding.EncodeToString(htlc.LockValue(hash)),
 		),
 	)
 	HTLCLock(network, defaultTMSID, alice, "", "USD", 1, bob, auditor, 1*time.Hour, nil, crypto.SHA3_256)
