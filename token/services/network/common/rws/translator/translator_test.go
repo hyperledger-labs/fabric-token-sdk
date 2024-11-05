@@ -37,7 +37,7 @@ var _ = Describe("Translator", func() {
 	BeforeEach(func() {
 		fakeRWSet = &mock.RWSet{}
 
-		writer = translator.New("0", fakeRWSet, tokenNameSpace)
+		writer = translator.New("0", translator.NewExRWSetWrapper(fakeRWSet, tokenNameSpace, "0"))
 
 		fakeRWSet.GetStateReturns(nil, nil)
 		fakeRWSet.SetStateReturns(nil)
@@ -175,7 +175,7 @@ var _ = Describe("Translator", func() {
 			It("transfer fails", func() {
 				err := writer.Write(faketransfer)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("already spent"))
+				Expect(err.Error()).To(ContainSubstring("invalid transfer: input must exist: state [tns:\u0000ztoken\u0000key3\u00000\u0000] does not exist for [0]"))
 				Expect(fakeRWSet.GetStateCallCount()).To(Equal(3))
 			})
 		})
@@ -224,7 +224,7 @@ var _ = Describe("Translator", func() {
 			It("transfer fails", func() {
 				err := writer.Write(faketransfer)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("already spent"))
+				Expect(err.Error()).To(ContainSubstring("invalid transfer: serial number must not exist: state [tns:sn2] already exists for [0]"))
 				Expect(fakeRWSet.GetStateCallCount()).To(Equal(3))
 				ns, snkey := fakeRWSet.GetStateArgsForCall(2)
 				Expect(ns).To(Equal(tokenNameSpace))
@@ -291,7 +291,7 @@ var _ = Describe("Translator", func() {
 			It("commit token request fails", func() {
 				_, err := writer.CommitTokenRequest([]byte("token request"), false)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("token request with same ID already exists"))
+				Expect(err.Error()).To(ContainSubstring("failed to read token request: state [tns:\u0000ztoken\u0000token_request\u00000\u0000] already exists for [0]"))
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(0))
 
 			})

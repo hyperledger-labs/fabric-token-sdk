@@ -293,7 +293,7 @@ func (c *PPInitConfig) Init() error {
 		me: c.CustodianID,
 		tx: tx,
 	}
-	w := translator.New("", rwset, "")
+	w := translator.New("", translator.NewExRWSetWrapper(rwset, "", ""))
 	ppRaw, err := os.ReadFile(c.PPPath)
 	if err != nil {
 		return err
