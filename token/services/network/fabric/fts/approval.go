@@ -9,10 +9,6 @@ package fts
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
