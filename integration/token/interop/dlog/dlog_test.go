@@ -102,6 +102,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
 		SDKs:            []api2.SDK{&fdlog.SDK{}},
+		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:view-sdk=debug:info",
 	}))
 	return ts, selector
 }
@@ -113,7 +114,7 @@ func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
 		SDKs:            []api2.SDK{&fodlog.SDK{}},
-		FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:view-sdk=debug:info",
+		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:view-sdk=debug:info",
 	}))
 	return ts, selector
 }

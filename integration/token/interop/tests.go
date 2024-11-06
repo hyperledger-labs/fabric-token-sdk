@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -271,13 +272,28 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure, sel *t
 	aliceLockTxID, preImage, hash := HTLCLock(network, alpha, alice, "alice.id1", "EUR", 10, sel.Get("alice.id2"), auditor, 30*time.Second, nil, 0)
 	bobLockTxID, _, _ := HTLCLock(network, beta, bob, "bob.id1", "USD", 10, sel.Get("bob.id2"), auditor, 30*time.Second, hash, 0)
 
-	go func() { htlcClaim(network, alpha, alice, "alice.id2", preImage, auditor) }()
-	go func() { htlcClaim(network, beta, bob, "bob.id2", preImage, auditor) }()
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		Expect(func() {
+			htlcClaim(network, alpha, alice, "alice.id2", preImage, auditor)
+		}).ToNot(Panic())
+	}()
+	go func() {
+		defer wg.Done()
+		Expect(func() {
+			htlcClaim(network, beta, bob, "bob.id2", preImage, auditor)
+		}).ToNot(Panic())
+	}()
 	scan(network, alice, hash, crypto.SHA256, "", false, token.WithTMSID(alpha))
 	scan(network, alice, hash, crypto.SHA256, aliceLockTxID, false, token.WithTMSID(alpha))
 
 	scan(network, bob, hash, crypto.SHA256, "", false, token.WithTMSID(beta))
 	scan(network, bob, hash, crypto.SHA256, bobLockTxID, false, token.WithTMSID(beta))
+
+	// wait the completion of the claims above
+	wg.Wait()
 
 	CheckBalanceWithLockedAndHolding(network, alice, "alice.id1", "EUR", 20, 0, 0, -1, token.WithTMSID(alpha))
 	CheckBalanceWithLockedAndHolding(network, alice, "alice.id2", "EUR", 10, 0, 0, -1, token.WithTMSID(alpha))
