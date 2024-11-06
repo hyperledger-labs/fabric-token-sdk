@@ -31,7 +31,7 @@ func HTLCSingleFabricNetworkTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("token-sdk=debug:fabric-sdk=debug:info", "")
+	// fscTopology.SetLogging("token-sdk=debug:fabric-sdk=debug:info", "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -68,7 +68,7 @@ func HTLCSingleOrionNetworkTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("debug", "")
+	// fscTopology.SetLogging("debug", "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -116,7 +116,7 @@ func HTLCTwoFabricNetworksTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("debug", "")
+	// fscTopology.SetLogging("debug", "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -178,7 +178,7 @@ func HTLCNoCrossClaimTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("db.driver.badger=info:debug", "")
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -245,7 +245,7 @@ func HTLCNoCrossClaimWithOrionTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("db.driver.badger=info:debug", "")
+	// fscTopology.SetLogging("db.driver.badger=info:debug", "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -271,7 +271,7 @@ func HTLCNoCrossClaimWithOrionTopology(opts common.Opts) []api.Topology {
 		RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{}).
 		RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{}).
 		RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
-	//TODO Anonymous identity
+	// TODO Anonymous identity
 	addBob(fscTopology).
 		AddOptions(
 			orion.WithRole("bob"),
