@@ -61,7 +61,7 @@ func (w *Translator) CommitTokenRequest(raw []byte, storeHash bool) ([]byte, err
 	if err != nil {
 		return nil, errors.Errorf("can't create for token request '%s'", w.TxID)
 	}
-	if err := w.RWSet.AddStateMustNotExist(key); err != nil {
+	if err := w.RWSet.StateMustNotExist(key); err != nil {
 		return nil, errors.Wrapf(err, "failed to read token request")
 	}
 	var h []byte
@@ -113,7 +113,7 @@ func (w *Translator) AddPublicParamsDependency() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to create setup key")
 	}
-	if err := w.RWSet.AddStateMustExist(setupKey); err != nil {
+	if err := w.RWSet.StateMustExist(setupKey, Any); err != nil {
 		return errors.Wrapf(err, "failed to add public params dependency")
 	}
 	return nil
@@ -221,14 +221,14 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}
-			if err := w.RWSet.AddStateMustExist(key); err != nil {
+			if err := w.RWSet.StateMustExist(key, VersionZero); err != nil {
 				return errors.Wrapf(err, "invalid transfer: input must exist")
 			}
 		}
 	} else {
 		// in this case, the state must not exist
 		for _, key := range t.GetSerialNumbers() {
-			if err := w.RWSet.AddStateMustNotExist(key); err != nil {
+			if err := w.RWSet.StateMustNotExist(key); err != nil {
 				return errors.Wrapf(err, "invalid transfer: serial number must not exist")
 			}
 		}
@@ -253,7 +253,7 @@ func (w *Translator) checkTokenDoesNotExist(index uint64, txID string) error {
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID")
 	}
-	if err := w.RWSet.AddStateMustNotExist(tokenKey); err != nil {
+	if err := w.RWSet.StateMustNotExist(tokenKey); err != nil {
 		return errors.Errorf("token already exists")
 	}
 	return nil
@@ -343,7 +343,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed constructing metadata key")
 		}
-		if err := w.RWSet.AddStateMustNotExist(k); err != nil {
+		if err := w.RWSet.StateMustNotExist(k); err != nil {
 			return errors.Errorf("entry with issue metadata key [%s] is already occupied", key)
 		}
 		if err := w.RWSet.SetState(k, value); err != nil {
@@ -392,7 +392,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed constructing metadata key")
 		}
-		if err := w.RWSet.AddStateMustNotExist(k); err != nil {
+		if err := w.RWSet.StateMustNotExist(k); err != nil {
 			return errors.Errorf("entry with transfer metadata key [%s] is already occupied", key)
 		}
 		if err := w.RWSet.SetState(k, value); err != nil {
