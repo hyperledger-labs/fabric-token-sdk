@@ -106,19 +106,6 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	Expect(p.AddInitConfig(tms)).To(Succeed())
 }
 
-type HelperConfig struct {
-	PPInitConfigs []*PPInitConfig `yaml:"ppInits"`
-}
-
-func (c *HelperConfig) GetByTMSID(tmsID token.TMSID) *PPInitConfig {
-	for _, config := range c.PPInitConfigs {
-		if config.TMSID.Equal(tmsID) {
-			return config
-		}
-	}
-	return nil
-}
-
 func (p *NetworkHandler) AddInitConfig(tms *topology2.TMS) error {
 	orion, ok := p.TokenPlatform.GetContext().PlatformByName(tms.BackendTopology.Name()).(*orion2.Platform)
 	if !ok {
@@ -157,20 +144,6 @@ func (p *NetworkHandler) AddInitConfig(tms *topology2.TMS) error {
 		return err
 	}
 	return os.WriteFile(p.HelperConfigPath(), i, 0766)
-}
-
-func ReadHelperConfig(path string) (*HelperConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var c HelperConfig
-
-	if err := yaml.Unmarshal(data, &c); err != nil {
-		return nil, err
-
-	}
-	return &c, nil
 }
 
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node, uniqueName string) string {
@@ -221,93 +194,6 @@ func (p *NetworkHandler) dataSource(persistence sfcnode.SQLOpts, sourceDir strin
 		return persistence.DataSource
 	}
 	panic("unknown driver type")
-}
-
-type PPInitConfig struct {
-	TMSID                   token.TMSID `yaml:"tmsID"`
-	PPPath                  string      `yaml:"ppPath"`
-	CustodianID             string      `yaml:"custodianId"`
-	CustodianCertPath       string      `yaml:"custodianCertPath"`
-	CustodianPrivateKeyPath string      `yaml:"custodianPrivateKeyPath"`
-	CACertPath              string      `yaml:"caCertPath"`
-	ServerID                string      `yaml:"serverId"`
-	ServerUrl               string      `yaml:"serverUrl"`
-}
-
-func (p *PPInitConfig) createUserSession(bcdb bcdb.BCDB) (bcdb.DBSession, error) {
-	return bcdb.Session(&config.SessionConfig{
-		UserConfig: &config.UserConfig{
-			UserID:         p.CustodianID,
-			CertPath:       p.CustodianCertPath,
-			PrivateKeyPath: p.CustodianPrivateKeyPath,
-		},
-		TxTimeout: time.Second * 5,
-	})
-}
-
-func (p *PPInitConfig) createDBInstance() (bcdb.BCDB, error) {
-	c := &logger2.Config{
-		Level:         "info",
-		OutputPath:    []string{"stdout"},
-		ErrOutputPath: []string{"stderr"},
-		Encoding:      "console",
-		Name:          "bcdb-client",
-	}
-	clientLogger, err := logger2.New(c)
-	if err != nil {
-		return nil, err
-	}
-
-	return bcdb.Create(&config.ConnectionConfig{
-		RootCAs: []string{
-			p.CACertPath,
-		},
-		ReplicaSet: []*config.Replica{
-			{
-				ID:       p.ServerID,
-				Endpoint: p.ServerUrl,
-			},
-		},
-		Logger: clientLogger,
-	})
-}
-
-func (c *PPInitConfig) Init() error {
-	// Store the public parameters in orion
-	db, err := c.createDBInstance()
-	if err != nil {
-		return err
-	}
-
-	session, err := c.createUserSession(db)
-	if err != nil {
-		return err
-	}
-	tx, err := session.DataTx()
-	if err != nil {
-		return err
-	}
-
-	rwset := &RWSWrapper{
-		db: c.TMSID.Namespace,
-		me: c.CustodianID,
-		tx: tx,
-	}
-	w := translator.New("", translator.NewExRWSetWrapper(rwset, "", ""))
-	ppRaw, err := os.ReadFile(c.PPPath)
-	if err != nil {
-		return err
-	}
-	action := &tcc.SetupAction{
-		SetupParameters: ppRaw,
-	}
-	if err := w.Write(action); err != nil {
-		return err
-	}
-	if _, _, err = tx.Commit(true); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
@@ -457,4 +343,118 @@ func (p *NetworkHandler) GetEntry(tms *topology2.TMS) *Entry {
 		p.Entries[tms.Network+tms.Channel+tms.Namespace] = entry
 	}
 	return entry
+}
+
+type PPInitConfig struct {
+	TMSID                   token.TMSID `yaml:"tmsID"`
+	PPPath                  string      `yaml:"ppPath"`
+	CustodianID             string      `yaml:"custodianId"`
+	CustodianCertPath       string      `yaml:"custodianCertPath"`
+	CustodianPrivateKeyPath string      `yaml:"custodianPrivateKeyPath"`
+	CACertPath              string      `yaml:"caCertPath"`
+	ServerID                string      `yaml:"serverId"`
+	ServerUrl               string      `yaml:"serverUrl"`
+}
+
+func (p *PPInitConfig) createUserSession(bcdb bcdb.BCDB) (bcdb.DBSession, error) {
+	return bcdb.Session(&config.SessionConfig{
+		UserConfig: &config.UserConfig{
+			UserID:         p.CustodianID,
+			CertPath:       p.CustodianCertPath,
+			PrivateKeyPath: p.CustodianPrivateKeyPath,
+		},
+		TxTimeout: time.Second * 5,
+	})
+}
+
+func (p *PPInitConfig) createDBInstance() (bcdb.BCDB, error) {
+	c := &logger2.Config{
+		Level:         "info",
+		OutputPath:    []string{"stdout"},
+		ErrOutputPath: []string{"stderr"},
+		Encoding:      "console",
+		Name:          "bcdb-client",
+	}
+	clientLogger, err := logger2.New(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return bcdb.Create(&config.ConnectionConfig{
+		RootCAs: []string{
+			p.CACertPath,
+		},
+		ReplicaSet: []*config.Replica{
+			{
+				ID:       p.ServerID,
+				Endpoint: p.ServerUrl,
+			},
+		},
+		Logger: clientLogger,
+	})
+}
+
+func (p *PPInitConfig) Init() error {
+	// Store the public parameters in orion
+	db, err := p.createDBInstance()
+	if err != nil {
+		return err
+	}
+
+	session, err := p.createUserSession(db)
+	if err != nil {
+		return err
+	}
+	tx, err := session.DataTx()
+	if err != nil {
+		return err
+	}
+
+	rwset := &RWSWrapper{
+		db: p.TMSID.Namespace,
+		me: p.CustodianID,
+		tx: tx,
+	}
+	w := translator.New("", translator.NewRWSetWrapper(rwset, "", ""))
+	ppRaw, err := os.ReadFile(p.PPPath)
+	if err != nil {
+		return err
+	}
+	action := &tcc.SetupAction{
+		SetupParameters: ppRaw,
+	}
+	if err := w.Write(action); err != nil {
+		return err
+	}
+	if _, _, err = tx.Commit(true); err != nil {
+		return err
+	}
+	return nil
+}
+
+type HelperConfig struct {
+	PPInitConfigs []*PPInitConfig `yaml:"ppInits"`
+}
+
+func ReadHelperConfig(path string) (*HelperConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var c HelperConfig
+
+	if err := yaml.Unmarshal(data, &c); err != nil {
+		return nil, err
+
+	}
+	return &c, nil
+}
+
+func (c *HelperConfig) GetByTMSID(tmsID token.TMSID) *PPInitConfig {
+	for _, config := range c.PPInitConfigs {
+		if config.TMSID.Equal(tmsID) {
+			return config
+		}
+	}
+	return nil
 }
