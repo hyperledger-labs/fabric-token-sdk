@@ -166,7 +166,7 @@ func (s *SessionManager) readPublicParameters(namespace string) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s]", s.Orion.Name())
 	}
-	w := translator.New("", translator.NewExRWSetWrapper(&ReadOnlyRWSWrapper{qe: qe}, "", ""))
+	w := translator.New("", translator.NewRWSetWrapper(&ReadOnlyRWSWrapper{qe: qe}, "", ""))
 	ppRaw, err := w.ReadSetupParameters()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to retrieve public parameters")

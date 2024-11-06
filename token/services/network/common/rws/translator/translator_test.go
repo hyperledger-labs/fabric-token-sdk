@@ -37,7 +37,7 @@ var _ = Describe("Translator", func() {
 	BeforeEach(func() {
 		fakeRWSet = &mock.RWSet{}
 
-		writer = translator.New("0", translator.NewExRWSetWrapper(fakeRWSet, tokenNameSpace, "0"))
+		writer = translator.New("0", translator.NewRWSetWrapper(fakeRWSet, tokenNameSpace, "0"))
 
 		fakeRWSet.GetStateReturns(nil, nil)
 		fakeRWSet.SetStateReturns(nil)

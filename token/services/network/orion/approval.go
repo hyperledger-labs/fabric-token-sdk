@@ -239,7 +239,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 		db: request.Namespace,
 		tx: tx,
 	}
-	t := translator.New(request.TxID, translator.NewExRWSetWrapper(rws, "", request.TxID))
+	t := translator.New(request.TxID, translator.NewRWSetWrapper(rws, "", request.TxID))
 	for _, action := range actions {
 		err = t.Write(action)
 		if err != nil {

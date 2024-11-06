@@ -146,7 +146,7 @@ func readPublicParameters(context token.ServiceProvider, network, namespace stri
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s]", network)
 	}
-	w := translator.New("", translator.NewExRWSetWrapper(&ReadOnlyRWSWrapper{qe: qe}, "", ""))
+	w := translator.New("", translator.NewRWSetWrapper(&ReadOnlyRWSWrapper{qe: qe}, "", ""))
 	ppRaw, err := w.ReadSetupParameters()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to retrieve public parameters")
