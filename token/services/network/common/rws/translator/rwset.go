@@ -19,6 +19,16 @@ type RWSet interface {
 	DeleteState(namespace string, key string) error
 }
 
+// KeyVersion defines the supported key versions
+type KeyVersion = int
+
+const (
+	// Any value, any version of the key would work
+	Any KeyVersion = iota
+	// VersionZero value,  version `zero` of the key
+	VersionZero
+)
+
 // ExRWSet interface, used to manipulate the rwset in a more friendly way
 type ExRWSet interface {
 	// SetState adds a write entry to the rwset that write to given value to given key.
@@ -27,10 +37,10 @@ type ExRWSet interface {
 	GetState(key string) ([]byte, error)
 	// DeleteState adds a write entry to the rwset that deletes the passed key
 	DeleteState(key string) error
-	// AddStateMustNotExist adds a read dependency that enforces that the passed key does not exist
-	AddStateMustNotExist(key string) error
-	// AddStateMustExist adds a read dependency that enforces that the passed key does exist
-	AddStateMustExist(key string) error
+	// StateMustNotExist adds a read dependency that enforces that the passed key does not exist
+	StateMustNotExist(key string) error
+	// StateMustExist adds a read dependency that enforces that the passed key does exist
+	StateMustExist(key string, version KeyVersion) error
 }
 
 type RWSetWrapper struct {
@@ -55,7 +65,7 @@ func (w *RWSetWrapper) DeleteState(key string) error {
 	return w.RWSet.DeleteState(w.Namespace, key)
 }
 
-func (w *RWSetWrapper) AddStateMustNotExist(key string) error {
+func (w *RWSetWrapper) StateMustNotExist(key string) error {
 	tr, err := w.RWSet.GetState(w.Namespace, key)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read state [%s:%s] for [%s]", w.Namespace, key, w.TxID)
@@ -66,7 +76,7 @@ func (w *RWSetWrapper) AddStateMustNotExist(key string) error {
 	return nil
 }
 
-func (w *RWSetWrapper) AddStateMustExist(key string) error {
+func (w *RWSetWrapper) StateMustExist(key string, version KeyVersion) error {
 	h, err := w.RWSet.GetState(w.Namespace, key)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read state [%s:%s] for [%s]", w.Namespace, key, w.TxID)
