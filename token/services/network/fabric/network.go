@@ -24,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -137,6 +138,7 @@ type Network struct {
 	tokenQueryExecutor         driver.TokenQueryExecutor
 	spentTokenQueryExecutor    driver.SpentTokenQueryExecutor
 	endorsementServiceProvider *endorsement.ServiceProvider
+	keyTranslator              translator.KeyTranslator
 }
 
 func NewNetwork(
@@ -180,6 +182,7 @@ func NewNetwork(
 			Namespace:  "tokensdk_fabric",
 			LabelNames: []tracing.LabelName{},
 		})),
+		keyTranslator: &keys.Translator{},
 	}
 }
 
@@ -239,6 +242,7 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 			func() *token2.ManagementServiceProvider {
 				return n.tmsProvider
 			},
+			n.keyTranslator,
 		)); err != nil {
 		return nil, errors.WithMessagef(err, "failed to add processor to fabric network [%s]", n.n.Name())
 	}
@@ -345,11 +349,12 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 
 func (n *Network) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
 	wrapper := &FinalityListener{
-		net:       n,
-		root:      listener,
-		network:   n.n.Name(),
-		namespace: namespace,
-		tracer:    n.finalityTracer,
+		net:           n,
+		root:          listener,
+		network:       n.n.Name(),
+		namespace:     namespace,
+		tracer:        n.finalityTracer,
+		keyTranslator: n.keyTranslator,
 	}
 	n.subscribers.Set(txID, listener, wrapper)
 	return n.ch.Committer().AddFinalityListener(txID, wrapper)
@@ -364,7 +369,7 @@ func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityLi
 }
 
 func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration, stopOnLastTx bool) ([]byte, error) {
-	transferMetadataKey, err := keys.CreateTransferActionMetadataKey(key)
+	transferMetadataKey, err := n.keyTranslator.CreateTransferActionMetadataKey(key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)
 	}
@@ -449,11 +454,12 @@ func (n *Network) ProcessNamespace(namespace string) error {
 }
 
 type FinalityListener struct {
-	net       *Network
-	root      driver.FinalityListener
-	network   string
-	namespace string
-	tracer    trace.Tracer
+	net           *Network
+	root          driver.FinalityListener
+	network       string
+	namespace     string
+	tracer        trace.Tracer
+	keyTranslator translator.KeyTranslator
 }
 
 func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string) {
@@ -470,7 +476,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 		}
 	}()
 
-	key, err := keys.CreateTokenRequestKey(txID)
+	key, err := t.keyTranslator.CreateTokenRequestKey(txID)
 	if err != nil {
 		panic(fmt.Sprintf("can't create for token request [%s]", txID))
 	}

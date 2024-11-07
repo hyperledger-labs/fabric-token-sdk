@@ -218,7 +218,12 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	}
 
 	// Verify
-	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(context.Background(), &ledger{stub: stub}, stub.GetTxID(), raw)
+	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(
+		context.Background(),
+		&ledger{stub: stub, keyTranslator: &keys.Translator{}},
+		stub.GetTxID(),
+		raw,
+	)
 	if err != nil {
 		return shim.Error("failed to verify token request: " + err.Error())
 	}
@@ -310,11 +315,12 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 }
 
 type ledger struct {
-	stub shim.ChaincodeStubInterface
+	stub          shim.ChaincodeStubInterface
+	keyTranslator translator.KeyTranslator
 }
 
-func (l *ledger) GetState(id token2.ID) ([]byte, error) {
-	key, err := keys.CreateTokenKey(id.TxId, id.Index)
+func (l *ledger) GetState(id token2.ID, output []byte) ([]byte, error) {
+	key, err := l.keyTranslator.CreateTokenKey(id.TxId, id.Index, output)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting token key for [%v]", id)
 	}

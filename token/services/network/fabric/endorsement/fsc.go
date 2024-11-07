@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/fts"
 	"github.com/pkg/errors"
@@ -46,7 +47,9 @@ func newFSCService(
 		if err := committer.ProcessNamespace(tmsID.Namespace); err != nil {
 			return nil, errors.WithMessagef(err, "failed to add namespace to committer [%s]", tmsID.Namespace)
 		}
-		if err := viewRegistry.RegisterResponder(&fts.RequestApprovalResponderView{}, &fts.RequestApprovalView{}); err != nil {
+		if err := viewRegistry.RegisterResponder(&fts.RequestApprovalResponderView{
+			KeyTranslator: &keys.Translator{},
+		}, &fts.RequestApprovalView{}); err != nil {
 			return nil, errors.WithMessagef(err, "failed to register approval view for [%s]", tmsID)
 		}
 	} else {

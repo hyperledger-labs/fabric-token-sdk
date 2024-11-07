@@ -12,6 +12,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
 )
@@ -72,8 +73,9 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 }
 
 type RequestTxStatusResponderView struct {
-	dbManager   *DBManager
-	statusCache TxStatusResponseCache
+	dbManager     *DBManager
+	statusCache   TxStatusResponseCache
+	keyTranslator translator.KeyTranslator
 }
 
 func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, error) {
@@ -113,7 +115,7 @@ func (r *RequestTxStatusResponderView) process(context view.Context, request *Tx
 			return status, nil
 		}
 	}
-	if status, err := NewStatusFetcher(r.dbManager).FetchStatus(request.Network, request.Namespace, request.TxID); err == nil {
+	if status, err := NewStatusFetcher(r.dbManager, r.keyTranslator).FetchStatus(request.Network, request.Namespace, request.TxID); err == nil {
 		r.statusCache.Add(request.TxID, status)
 		return status, nil
 	} else {

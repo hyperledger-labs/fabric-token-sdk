@@ -9,8 +9,6 @@ package orion
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
@@ -20,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -108,8 +107,9 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 }
 
 type RequestApprovalResponderView struct {
-	dbManager   *DBManager
-	statusCache TxStatusResponseCache
+	dbManager     *DBManager
+	statusCache   TxStatusResponseCache
+	keyTranslator translator.KeyTranslator
 }
 
 func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
@@ -157,7 +157,11 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	}
 
 	// commit
-	txStatusFetcher := &RequestTxStatusResponderView{dbManager: r.dbManager, statusCache: r.statusCache}
+	txStatusFetcher := &RequestTxStatusResponderView{
+		dbManager:     r.dbManager,
+		statusCache:   r.statusCache,
+		keyTranslator: r.keyTranslator,
+	}
 
 	runner := db.NewRetryRunner(5, time.Second, true)
 
@@ -221,7 +225,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 	span.AddEvent("validate_request")
 	actions, attributes, err := token.NewValidator(validator).UnmarshallAndVerifyWithMetadata(
 		context.Context(),
-		&LedgerWrapper{qe: qe},
+		&LedgerWrapper{qe: qe, keyTranslator: &keys.Translator{}},
 		request.TxID,
 		request.Request,
 	)
@@ -266,11 +270,12 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 }
 
 type LedgerWrapper struct {
-	qe *orion.SessionQueryExecutor
+	qe            *orion.SessionQueryExecutor
+	keyTranslator translator.KeyTranslator
 }
 
-func (l *LedgerWrapper) GetState(id token2.ID) ([]byte, error) {
-	key, err := keys.CreateTokenKey(id.TxId, id.Index)
+func (l *LedgerWrapper) GetState(id token2.ID, output []byte) ([]byte, error) {
+	key, err := l.keyTranslator.CreateTokenKey(id.TxId, id.Index, output)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting token key for [%v]", id)
 	}
