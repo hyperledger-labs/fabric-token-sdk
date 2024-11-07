@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -86,8 +87,9 @@ func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
 }
 
 type BroadcastResponderView struct {
-	dbManager   *DBManager
-	statusCache TxStatusResponseCache
+	dbManager     *DBManager
+	statusCache   TxStatusResponseCache
+	keyTranslator translator.KeyTranslator
 }
 
 func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error) {
@@ -108,7 +110,7 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 		return nil, errors.Wrapf(err, "failed to get session manager for [%s]", request.Network)
 	}
 
-	txStatusFetcher := NewStatusFetcher(r.dbManager)
+	txStatusFetcher := NewStatusFetcher(r.dbManager, r.keyTranslator)
 
 	runner := db.NewRetryRunner(5, 1*time.Second, true)
 

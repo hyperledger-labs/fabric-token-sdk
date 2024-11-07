@@ -25,7 +25,8 @@ const (
 
 var _ = Describe("Translator", func() {
 	var (
-		fakeRWSet *mock.RWSet
+		fakeRWSet     *mock.RWSet
+		keyTranslator translator.KeyTranslator
 
 		writer *translator.Translator
 
@@ -36,6 +37,7 @@ var _ = Describe("Translator", func() {
 
 	BeforeEach(func() {
 		fakeRWSet = &mock.RWSet{}
+		keyTranslator = &keys.Translator{}
 
 		writer = translator.New("0", translator.NewRWSetWrapper(fakeRWSet, tokenNameSpace, "0"))
 
@@ -68,7 +70,7 @@ var _ = Describe("Translator", func() {
 				ns, id, out := fakeRWSet.SetStateArgsForCall(0)
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-1")))
-				key, err := keys.CreateTokenKey("0", 0)
+				key, err := keyTranslator.CreateTokenKey("0", 0, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
@@ -76,7 +78,7 @@ var _ = Describe("Translator", func() {
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-2")))
 
-				key, err = keys.CreateTokenKey("0", 1)
+				key, err = keyTranslator.CreateTokenKey("0", 1, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 			})
@@ -131,7 +133,7 @@ var _ = Describe("Translator", func() {
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-1")))
 
-				key, err := keys.CreateTokenKey("0", 0)
+				key, err := keyTranslator.CreateTokenKey("0", 0, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
@@ -139,7 +141,7 @@ var _ = Describe("Translator", func() {
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-2")))
 
-				key, err = keys.CreateTokenKey("0", 1)
+				key, err = keyTranslator.CreateTokenKey("0", 1, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 			})
@@ -204,7 +206,7 @@ var _ = Describe("Translator", func() {
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-1")))
 
-				key, err := keys.CreateTokenKey("0", 0)
+				key, err := keyTranslator.CreateTokenKey("0", 0, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
@@ -212,7 +214,7 @@ var _ = Describe("Translator", func() {
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-2")))
 
-				key, err = keys.CreateTokenKey("0", 1)
+				key, err = keyTranslator.CreateTokenKey("0", 1, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 			})
@@ -254,7 +256,7 @@ var _ = Describe("Translator", func() {
 
 				ns, id, tr := fakeRWSet.SetStateArgsForCall(0)
 				Expect(ns).To(Equal(tokenNameSpace))
-				key, err := keys.CreateTokenRequestKey("0")
+				key, err := keyTranslator.CreateTokenRequestKey("0")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 				Expect(tr).To(Equal([]byte("token request")))

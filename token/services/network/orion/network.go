@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -45,10 +46,12 @@ type Network struct {
 	tokenQueryExecutor      driver.TokenQueryExecutor
 	spentTokenQueryExecutor driver.SpentTokenQueryExecutor
 
-	vaultLazyCache      lazy.Provider[string, driver.Vault]
-	tokenVaultLazyCache lazy.Provider[string, driver.TokenVault]
-	subscribers         *events.Subscribers
-	dbManager           *DBManager
+	vaultLazyCache             lazy.Provider[string, driver.Vault]
+	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
+	subscribers                *events.Subscribers
+	dbManager                  *DBManager
+	defaultPublicParamsFetcher driver2.DefaultPublicParamsFetcher
+	keyTranslator              translator.KeyTranslator
 }
 
 func NewNetwork(
@@ -85,8 +88,8 @@ func NewNetwork(
 			LabelNames: []tracing.LabelName{},
 		})),
 		tokenQueryExecutor:      tokenQueryExecutor,
-		spentTokenQueryExecutor: spentTokenQueryExecutor,
-		dbManager:               dbManager,
+		spentTokenQueryExecutor: spentTokenQueryExecutor,dbManager:     dbManager,
+		keyTranslator: &keys.Translator{},
 	}
 }
 
@@ -266,7 +269,7 @@ func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityLi
 }
 
 func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration, _ bool) ([]byte, error) {
-	k, err := keys.CreateTransferActionMetadataKey(key)
+	k, err := n.keyTranslator.CreateTransferActionMetadataKey(key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)
 	}

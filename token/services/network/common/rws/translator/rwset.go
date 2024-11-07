@@ -16,10 +16,13 @@ type KeyTranslator interface {
 	CreateTokenRequestKey(id string) (string, error)
 	CreateSetupKey() (string, error)
 	CreateSetupHashKey() (string, error)
-	CreateTokenKey(id string, index uint64) (string, error)
+	CreateTokenKey(id string, index uint64, output []byte) (string, error)
 	GetTransferMetadataSubKey(k string) (string, error)
 	CreateSNKey(id string) (string, error)
 	CreateIssueActionMetadataKey(key string) (string, error)
+	// CreateTransferActionMetadataKey returns the transfer action metadata key built from the passed
+	// transaction id, subkey, and index. Index is used to make sure the key is unique with the respect to the
+	// token request this key appears.
 	CreateTransferActionMetadataKey(key string) (string, error)
 }
 

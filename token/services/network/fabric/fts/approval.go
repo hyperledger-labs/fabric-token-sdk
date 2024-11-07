@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -101,7 +100,9 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 	return tx.Envelope()
 }
 
-type RequestApprovalResponderView struct{}
+type RequestApprovalResponderView struct {
+	KeyTranslator translator.KeyTranslator
+}
 
 func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
 	// When the borrower runs the CollectEndorsementsView, at some point, the borrower sends the assembled transaction
@@ -152,8 +153,8 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 
 	// validate token request
 	logger.Debugf("Validate TX [%s]", tx.ID())
-	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(id token.ID) ([]byte, error) {
-		key, err := keys.CreateTokenKey(id.TxId, id.Index)
+	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(id token.ID, output []byte) ([]byte, error) {
+		key, err := r.KeyTranslator.CreateTokenKey(id.TxId, id.Index, output)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to create token key for id [%s]", id)
 		}

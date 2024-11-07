@@ -9,10 +9,11 @@ import (
 )
 
 type ValidatorLedger struct {
-	GetStateStub        func(token.ID) ([]byte, error)
+	GetStateStub        func(token.ID, []byte) ([]byte, error)
 	getStateMutex       sync.RWMutex
 	getStateArgsForCall []struct {
 		arg1 token.ID
+		arg2 []byte
 	}
 	getStateReturns struct {
 		result1 []byte
@@ -26,18 +27,24 @@ type ValidatorLedger struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ValidatorLedger) GetState(arg1 token.ID) ([]byte, error) {
+func (fake *ValidatorLedger) GetState(arg1 token.ID, arg2 []byte) ([]byte, error) {
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
+	}
 	fake.getStateMutex.Lock()
 	ret, specificReturn := fake.getStateReturnsOnCall[len(fake.getStateArgsForCall)]
 	fake.getStateArgsForCall = append(fake.getStateArgsForCall, struct {
 		arg1 token.ID
-	}{arg1})
+		arg2 []byte
+	}{arg1, arg2Copy})
 	stub := fake.GetStateStub
 	fakeReturns := fake.getStateReturns
-	fake.recordInvocation("GetState", []interface{}{arg1})
+	fake.recordInvocation("GetState", []interface{}{arg1, arg2Copy})
 	fake.getStateMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -51,17 +58,17 @@ func (fake *ValidatorLedger) GetStateCallCount() int {
 	return len(fake.getStateArgsForCall)
 }
 
-func (fake *ValidatorLedger) GetStateCalls(stub func(token.ID) ([]byte, error)) {
+func (fake *ValidatorLedger) GetStateCalls(stub func(token.ID, []byte) ([]byte, error)) {
 	fake.getStateMutex.Lock()
 	defer fake.getStateMutex.Unlock()
 	fake.GetStateStub = stub
 }
 
-func (fake *ValidatorLedger) GetStateArgsForCall(i int) token.ID {
+func (fake *ValidatorLedger) GetStateArgsForCall(i int) (token.ID, []byte) {
 	fake.getStateMutex.RLock()
 	defer fake.getStateMutex.RUnlock()
 	argsForCall := fake.getStateArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *ValidatorLedger) GetStateReturns(result1 []byte, result2 error) {

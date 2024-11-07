@@ -125,7 +125,7 @@ func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 	var res [][]byte
 	var errs []error
 	for _, id := range ids {
-		outputID, err := w.KeyTranslator.CreateTokenKey(id.TxId, id.Index)
+		outputID, err := w.KeyTranslator.CreateTokenKey(id.TxId, id.Index, nil)
 		if err != nil {
 			errs = append(errs, errors.Errorf("error creating output ID: %s", err))
 			continue
@@ -205,8 +205,12 @@ func (w *Translator) checkAction(tokenAction interface{}) error {
 func (w *Translator) checkIssue(issue IssueAction) error {
 	// check if the keys of issued tokens aren't already used.
 	// check is assigned owners are valid
+	serializedOutputs, err := issue.GetSerializedOutputs()
+	if err != nil {
+		return errors.Wrapf(err, "failed to get serialized outputs")
+	}
 	for i := 0; i < issue.NumOutputs(); i++ {
-		if err := w.checkTokenDoesNotExist(w.counter+uint64(i), w.TxID); err != nil {
+		if err := w.checkTokenDoesNotExist(w.counter+uint64(i), w.TxID, serializedOutputs[i]); err != nil {
 			return err
 		}
 	}
@@ -218,8 +222,12 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 
 	if !t.IsGraphHiding() {
 		// in this case, the state must exist
-		for _, input := range inputs {
-			key, err := w.KeyTranslator.CreateTokenKey(input.TxId, input.Index)
+		serializedInputs, err := t.GetSerializedInputs()
+		if err != nil {
+			return errors.Wrapf(err, "failed to get serialized inputs")
+		}
+		for i, input := range inputs {
+			key, err := w.KeyTranslator.CreateTokenKey(input.TxId, input.Index, serializedInputs[i])
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}
@@ -240,7 +248,11 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 	for i := 0; i < t.NumOutputs(); i++ {
 		if !t.IsRedeemAt(i) {
 			// this is not a redeemed output
-			err := w.checkTokenDoesNotExist(w.counter+uint64(i), w.TxID)
+			serOutput, err := t.SerializeOutputAt(i)
+			if err != nil {
+				return errors.Wrapf(err, "failed to serialize output [%d]", i)
+			}
+			err = w.checkTokenDoesNotExist(w.counter+uint64(i), w.TxID, serOutput)
 			if err != nil {
 				return err
 			}
@@ -250,8 +262,8 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 	return nil
 }
 
-func (w *Translator) checkTokenDoesNotExist(index uint64, txID string) error {
-	tokenKey, err := w.KeyTranslator.CreateTokenKey(txID, index)
+func (w *Translator) checkTokenDoesNotExist(index uint64, txID string, output []byte) error {
+	tokenKey, err := w.KeyTranslator.CreateTokenKey(txID, index, output)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID")
 	}
@@ -329,7 +341,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 		return err
 	}
 	for i, output := range outputs {
-		outputID, err := w.KeyTranslator.CreateTokenKey(w.TxID, base+uint64(i))
+		outputID, err := w.KeyTranslator.CreateTokenKey(w.TxID, base+uint64(i), output)
 		if err != nil {
 			return errors.Errorf("error creating output ID: %s", err)
 		}
@@ -365,7 +377,11 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	// store outputs
 	for i := 0; i < transferAction.NumOutputs(); i++ {
 		if !transferAction.IsRedeemAt(i) {
-			outputID, err := w.KeyTranslator.CreateTokenKey(w.TxID, base+uint64(i))
+			serOutput, err := transferAction.SerializeOutputAt(i)
+			if err != nil {
+				return errors.Wrapf(err, "error serializing transfer output at index [%d]", i)
+			}
+			outputID, err := w.KeyTranslator.CreateTokenKey(w.TxID, base+uint64(i), serOutput)
 			if err != nil {
 				return errors.Errorf("error creating output ID: %s", err)
 			}
@@ -409,10 +425,13 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 func (w *Translator) spendTokens(transferAction TransferAction) error {
 	if !transferAction.IsGraphHiding() {
 		ids := transferAction.GetInputs()
+		serializedInputs, err := transferAction.GetSerializedInputs()
+		if err != nil {
+			return errors.Wrap(err, "error serializing transfer inputs")
+		}
 		rwsetKeys := make([]string, len(ids))
-		var err error
 		for i, input := range ids {
-			rwsetKeys[i], err = w.KeyTranslator.CreateTokenKey(input.TxId, input.Index)
+			rwsetKeys[i], err = w.KeyTranslator.CreateTokenKey(input.TxId, input.Index, serializedInputs[i])
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}

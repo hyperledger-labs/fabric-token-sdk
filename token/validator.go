@@ -63,6 +63,6 @@ func NewLedgerFromGetter(f driver.GetStateFnc) *stateGetter {
 	return &stateGetter{f: f}
 }
 
-func (g *stateGetter) GetState(id token.ID) ([]byte, error) {
-	return g.f(id)
+func (g *stateGetter) GetState(id token.ID, output []byte) ([]byte, error) {
+	return g.f(id, output)
 }

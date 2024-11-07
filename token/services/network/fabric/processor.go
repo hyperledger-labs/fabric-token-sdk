@@ -9,7 +9,7 @@ package fabric
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -23,14 +23,16 @@ type RWSetProcessor struct {
 	nss            []string
 	GetTokens      GetTokensFunc
 	GetTMSProvider GetTMSProviderFunc
+	KeyTranslator  translator.KeyTranslator
 }
 
-func NewTokenRWSetProcessor(network string, ns string, GetTokens GetTokensFunc, GetTMSProvider GetTMSProviderFunc) *RWSetProcessor {
+func NewTokenRWSetProcessor(network string, ns string, GetTokens GetTokensFunc, GetTMSProvider GetTMSProviderFunc, KeyTranslator translator.KeyTranslator) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:        network,
 		nss:            []string{ns},
 		GetTokens:      GetTokens,
 		GetTMSProvider: GetTMSProvider,
+		KeyTranslator:  KeyTranslator,
 	}
 }
 
@@ -66,7 +68,7 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 // init when invoked extracts the public params from rwset and updates the local version
 func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
 	tsmProvider := r.GetTMSProvider()
-	setUpKey, err := keys.CreateSetupKey()
+	setUpKey, err := r.KeyTranslator.CreateSetupKey()
 	if err != nil {
 		return errors.Errorf("failed creating setup key")
 	}

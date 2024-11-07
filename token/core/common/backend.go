@@ -39,8 +39,8 @@ func (b *Backend) HasBeenSignedBy(id driver.Identity, verifier driver.Verifier) 
 	return sigma, verifier.Verify(b.Message, sigma)
 }
 
-func (b *Backend) GetState(id token.ID) ([]byte, error) {
-	return b.Ledger(id)
+func (b *Backend) GetState(id token.ID, output []byte) ([]byte, error) {
+	return b.Ledger(id, output)
 }
 
 func (b *Backend) Signatures() [][]byte {
