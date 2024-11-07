@@ -12,6 +12,17 @@ import (
 
 //go:generate counterfeiter -o mock/rwset.go -fake-name RWSet . RWSet
 
+type KeyTranslator interface {
+	CreateTokenRequestKey(id string) (string, error)
+	CreateSetupKey() (string, error)
+	CreateSetupHashKey() (string, error)
+	CreateTokenKey(id string, index uint64) (string, error)
+	GetTransferMetadataSubKey(k string) (string, error)
+	CreateSNKey(id string) (string, error)
+	CreateIssueActionMetadataKey(key string) (string, error)
+	CreateTransferActionMetadataKey(key string) (string, error)
+}
+
 // RWSet interface, used to read from, and write to, a rwset.
 type RWSet interface {
 	SetState(namespace string, key string, value []byte) error

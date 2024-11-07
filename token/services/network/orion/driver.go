@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -58,7 +57,7 @@ type Driver struct {
 	onsProvider                     *orion.NetworkServiceProvider
 	viewRegistry                    driver2.Registry
 	viewManager                     *view.Manager
-	vaultProvider                   vault.Provider
+	vaultProvider                   driver.TokenVaultProvider
 	configProvider                  configProvider
 	configService                   *config.Service
 	identityProvider                view2.IdentityProvider

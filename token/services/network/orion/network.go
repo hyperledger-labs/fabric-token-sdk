@@ -22,13 +22,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
 
-type NewVaultFunc = func(network, channel, namespace string) (vault.Vault, error)
+type NewVaultFunc = func(network, channel, namespace string) (driver.TokenVault, error)
 
 type IdentityProvider interface {
 	DefaultIdentity() view.Identity
@@ -303,10 +302,6 @@ func (v *nv) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
-func (v *nv) NewQueryExecutor() (driver.QueryExecutor, error) {
-	panic("not supported")
-}
-
 func (v *nv) Status(id string) (driver.ValidationCode, string, error) {
 	return v.v.Status(id)
 }
@@ -319,11 +314,11 @@ type tokenVault struct {
 	tokenVault driver.TokenVault
 }
 
-func (v *tokenVault) QueryEngine() vault.QueryEngine {
+func (v *tokenVault) QueryEngine() driver.QueryEngine {
 	return v.tokenVault.QueryEngine()
 }
 
-func (v *tokenVault) CertificationStorage() vault.CertificationStorage {
+func (v *tokenVault) CertificationStorage() driver.CertificationStorage {
 	return v.tokenVault.CertificationStorage()
 }
 

@@ -20,8 +20,9 @@ var logger = logging.MustGetLogger("token-sdk.vault.translator")
 
 // Translator validates token requests and generates the corresponding RWSets
 type Translator struct {
-	RWSet ExRWSet
-	TxID  string
+	RWSet         ExRWSet
+	KeyTranslator KeyTranslator
+	TxID          string
 	// SpentIDs the spent IDs added so far
 	SpentIDs []string
 	counter  uint64
@@ -29,9 +30,10 @@ type Translator struct {
 
 func New(txID string, rws ExRWSet) *Translator {
 	w := &Translator{
-		RWSet:   rws,
-		TxID:    txID,
-		counter: 0,
+		RWSet:         rws,
+		TxID:          txID,
+		counter:       0,
+		KeyTranslator: &keys.Translator{},
 	}
 	return w
 }
@@ -57,7 +59,7 @@ func (w *Translator) Write(action interface{}) error {
 }
 
 func (w *Translator) CommitTokenRequest(raw []byte, storeHash bool) ([]byte, error) {
-	key, err := keys.CreateTokenRequestKey(w.TxID)
+	key, err := w.KeyTranslator.CreateTokenRequestKey(w.TxID)
 	if err != nil {
 		return nil, errors.Errorf("can't create for token request '%s'", w.TxID)
 	}
@@ -85,7 +87,7 @@ func (w *Translator) CommitTokenRequest(raw []byte, storeHash bool) ([]byte, err
 }
 
 func (w *Translator) ReadTokenRequest() ([]byte, error) {
-	key, err := keys.CreateTokenRequestKey(w.TxID)
+	key, err := w.KeyTranslator.CreateTokenRequestKey(w.TxID)
 	if err != nil {
 		return nil, errors.Errorf("can't create for token request '%s'", w.TxID)
 	}
@@ -97,7 +99,7 @@ func (w *Translator) ReadTokenRequest() ([]byte, error) {
 }
 
 func (w *Translator) ReadSetupParameters() ([]byte, error) {
-	setupKey, err := keys.CreateSetupKey()
+	setupKey, err := w.KeyTranslator.CreateSetupKey()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create setup key")
 	}
@@ -109,7 +111,7 @@ func (w *Translator) ReadSetupParameters() ([]byte, error) {
 }
 
 func (w *Translator) AddPublicParamsDependency() error {
-	setupKey, err := keys.CreateSetupHashKey()
+	setupKey, err := w.KeyTranslator.CreateSetupHashKey()
 	if err != nil {
 		return errors.Wrapf(err, "failed to create setup key")
 	}
@@ -123,7 +125,7 @@ func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 	var res [][]byte
 	var errs []error
 	for _, id := range ids {
-		outputID, err := keys.CreateTokenKey(id.TxId, id.Index)
+		outputID, err := w.KeyTranslator.CreateTokenKey(id.TxId, id.Index)
 		if err != nil {
 			errs = append(errs, errors.Errorf("error creating output ID: %s", err))
 			continue
@@ -148,7 +150,7 @@ func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 }
 
 func (w *Translator) GetTransferMetadataSubKey(k string) (string, error) {
-	return keys.GetTransferMetadataSubKey(k)
+	return w.KeyTranslator.GetTransferMetadataSubKey(k)
 }
 
 func (w *Translator) AreTokensSpent(ids []string, graphHiding bool) ([]bool, error) {
@@ -156,7 +158,7 @@ func (w *Translator) AreTokensSpent(ids []string, graphHiding bool) ([]bool, err
 	if graphHiding {
 		for i, id := range ids {
 			logger.Debugf("check serial number %s\n", id)
-			k, err := keys.CreateSNKey(id)
+			k, err := w.KeyTranslator.CreateSNKey(id)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to generate key for id [%s]", id)
 			}
@@ -217,7 +219,7 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 	if !t.IsGraphHiding() {
 		// in this case, the state must exist
 		for _, input := range inputs {
-			key, err := keys.CreateTokenKey(input.TxId, input.Index)
+			key, err := w.KeyTranslator.CreateTokenKey(input.TxId, input.Index)
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}
@@ -249,7 +251,7 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 }
 
 func (w *Translator) checkTokenDoesNotExist(index uint64, txID string) error {
-	tokenKey, err := keys.CreateTokenKey(txID, index)
+	tokenKey, err := w.KeyTranslator.CreateTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID")
 	}
@@ -288,7 +290,7 @@ func (w *Translator) commitSetupAction(setup SetupAction) error {
 	if err != nil {
 		return err
 	}
-	setupKey, err := keys.CreateSetupKey()
+	setupKey, err := w.KeyTranslator.CreateSetupKey()
 	if err != nil {
 		return err
 	}
@@ -297,7 +299,7 @@ func (w *Translator) commitSetupAction(setup SetupAction) error {
 		return err
 	}
 
-	setupHashKey, err := keys.CreateSetupHashKey()
+	setupHashKey, err := w.KeyTranslator.CreateSetupHashKey()
 	if err != nil {
 		return err
 	}
@@ -327,7 +329,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 		return err
 	}
 	for i, output := range outputs {
-		outputID, err := keys.CreateTokenKey(w.TxID, base+uint64(i))
+		outputID, err := w.KeyTranslator.CreateTokenKey(w.TxID, base+uint64(i))
 		if err != nil {
 			return errors.Errorf("error creating output ID: %s", err)
 		}
@@ -339,7 +341,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 	// store metadata
 	metadata := issueAction.GetMetadata()
 	for key, value := range metadata {
-		k, err := keys.CreateIssueActionMetadataKey(key)
+		k, err := w.KeyTranslator.CreateIssueActionMetadataKey(key)
 		if err != nil {
 			return errors.Wrapf(err, "failed constructing metadata key")
 		}
@@ -363,7 +365,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	// store outputs
 	for i := 0; i < transferAction.NumOutputs(); i++ {
 		if !transferAction.IsRedeemAt(i) {
-			outputID, err := keys.CreateTokenKey(w.TxID, base+uint64(i))
+			outputID, err := w.KeyTranslator.CreateTokenKey(w.TxID, base+uint64(i))
 			if err != nil {
 				return errors.Errorf("error creating output ID: %s", err)
 			}
@@ -388,7 +390,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	// store metadata
 	metadata := transferAction.GetMetadata()
 	for key, value := range metadata {
-		k, err := keys.CreateTransferActionMetadataKey(key)
+		k, err := w.KeyTranslator.CreateTransferActionMetadataKey(key)
 		if err != nil {
 			return errors.Wrapf(err, "failed constructing metadata key")
 		}
@@ -410,7 +412,7 @@ func (w *Translator) spendTokens(transferAction TransferAction) error {
 		rwsetKeys := make([]string, len(ids))
 		var err error
 		for i, input := range ids {
-			rwsetKeys[i], err = keys.CreateTokenKey(input.TxId, input.Index)
+			rwsetKeys[i], err = w.KeyTranslator.CreateTokenKey(input.TxId, input.Index)
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}
@@ -430,7 +432,7 @@ func (w *Translator) spendTokens(transferAction TransferAction) error {
 		ids := transferAction.GetSerialNumbers()
 		for _, id := range ids {
 			logger.Debugf("add serial number %s\n", id)
-			k, err := keys.CreateSNKey(id)
+			k, err := w.KeyTranslator.CreateSNKey(id)
 			if err != nil {
 				return errors.Wrapf(err, "failed to generate key for id [%s]", id)
 			}
