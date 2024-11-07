@@ -11,9 +11,9 @@ import (
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -22,7 +22,7 @@ type Vault struct {
 	tokenDB *tokendb.DB
 
 	queryEngine          *QueryEngine
-	certificationStorage vault.CertificationStorage
+	certificationStorage driver.CertificationStorage
 }
 
 func NewVault(tmsID token2.TMSID, auditdb *auditdb.DB, ttxdb *ttxdb.DB, tokenDB *tokendb.DB) (*Vault, error) {
@@ -38,11 +38,11 @@ func NewVault(tmsID token2.TMSID, auditdb *auditdb.DB, ttxdb *ttxdb.DB, tokenDB 
 	}, nil
 }
 
-func (v *Vault) QueryEngine() vault.QueryEngine {
+func (v *Vault) QueryEngine() driver.QueryEngine {
 	return v.queryEngine
 }
 
-func (v *Vault) CertificationStorage() vault.CertificationStorage {
+func (v *Vault) CertificationStorage() driver.CertificationStorage {
 	return v.certificationStorage
 }
 
@@ -64,7 +64,7 @@ func (q *QueryEngine) IsPending(id *token.ID) (bool, error) {
 	return vd == ttxdb.Pending, nil
 }
 
-func (q *QueryEngine) GetStatus(txID string) (vault.TxStatus, string, error) {
+func (q *QueryEngine) GetStatus(txID string) (driver.TxStatus, string, error) {
 	vd, msg, err := q.ttxdb.GetStatus(txID)
 	if err != nil || vd == ttxdb.Unknown {
 		vd, msg, err = q.auditDB.GetStatus(txID)

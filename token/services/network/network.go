@@ -136,14 +136,6 @@ type Vault struct {
 	v driver.Vault
 }
 
-func (v *Vault) NewQueryExecutor() (driver.QueryExecutor, error) {
-	return v.v.NewQueryExecutor()
-}
-
-func (v *Vault) GetLastTxID() (string, error) {
-	return v.v.GetLastTxID()
-}
-
 func (v *Vault) Status(id string) (ValidationCode, string, error) {
 	return v.v.Status(id)
 }

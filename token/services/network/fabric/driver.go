@@ -21,14 +21,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
 
 type Driver struct {
 	fnsProvider                     *fabric.NetworkServiceProvider
-	vaultProvider                   vault.Provider
+	vaultProvider                   driver.TokenVaultProvider
 	tokensManager                   *tokens.Manager
 	configService                   *config.Service
 	viewManager                     *view.Manager

@@ -8,7 +8,6 @@ package driver
 
 import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -22,37 +21,29 @@ const (
 	Unknown                // Transaction is unknown
 )
 
+type TxStatus = int
+
 type (
 	// UnspentTokensIterator models an iterator of unspent tokens
 	UnspentTokensIterator = driver2.UnspentTokensIterator
-	QueryEngine           = vault.QueryEngine
-	CertificationStorage  = vault.CertificationStorage
+	QueryEngine           = driver2.QueryEngine
+	CertificationStorage  = driver2.CertificationStorage
 )
 
 // TokenVault models the token vault
 type TokenVault interface {
-	// QueryEngine returns the query engine over this vault
-	QueryEngine() QueryEngine
-
-	// CertificationStorage returns the certification storage over this vault
-	CertificationStorage() CertificationStorage
+	driver2.Vault
 
 	// DeleteTokens delete the passed tokens in the passed namespace
 	DeleteTokens(ids ...*token.ID) error
 }
 
-type QueryExecutor interface {
-	GetState(id token.ID) ([]byte, error)
-	Done()
+type TokenVaultProvider interface {
+	Vault(network, channel, namespace string) (TokenVault, error)
 }
 
 // Vault models the vault service
 type Vault interface {
-	NewQueryExecutor() (QueryExecutor, error)
-
-	// GetLastTxID returns the last transaction ID committed into the vault
-	GetLastTxID() (string, error)
-
 	// Status returns the status of the transaction
 	Status(id string) (ValidationCode, string, error)
 

@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -29,7 +28,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
@@ -47,7 +45,7 @@ const (
 
 var logger = logging.MustGetLogger("token-sdk.network.fabric")
 
-type NewVaultFunc = func(network, channel, namespace string) (vault.Vault, error)
+type NewVaultFunc = func(network, channel, namespace string) (driver.TokenVault, error)
 
 type lm struct {
 	lm *fabric.LocalMembership
@@ -59,23 +57,6 @@ func (n *lm) DefaultIdentity() view.Identity {
 
 func (n *lm) AnonymousIdentity() view.Identity {
 	return n.lm.AnonymousIdentity()
-}
-
-type qe struct {
-	driver2.QueryExecutor
-	ns string
-}
-
-func (q *qe) GetState(id token.ID) ([]byte, error) {
-	key, err := keys.CreateTokenKey(id.TxId, id.Index)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting token key for [%v]", id)
-	}
-	return q.QueryExecutor.GetState(q.ns, key)
-}
-
-func (q *qe) Done() {
-	q.QueryExecutor.Done()
 }
 
 type nv struct {
@@ -96,23 +77,15 @@ func (v *nv) DiscardTx(id string, message string) error {
 	return v.v.DiscardTx(id, message)
 }
 
-func (v *nv) NewQueryExecutor() (driver.QueryExecutor, error) {
-	qeInstance, err := v.v.NewQueryExecutor()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed creating query executor")
-	}
-	return &qe{QueryExecutor: qeInstance, ns: v.ns}, nil
-}
-
 type tokenVault struct {
 	tokenVault driver.TokenVault
 }
 
-func (v *tokenVault) QueryEngine() vault.QueryEngine {
+func (v *tokenVault) QueryEngine() driver.QueryEngine {
 	return v.tokenVault.QueryEngine()
 }
 
-func (v *tokenVault) CertificationStorage() vault.CertificationStorage {
+func (v *tokenVault) CertificationStorage() driver.CertificationStorage {
 	return v.tokenVault.CertificationStorage()
 }
 

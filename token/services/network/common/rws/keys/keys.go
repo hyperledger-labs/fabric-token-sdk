@@ -21,7 +21,6 @@ const (
 	numComponentsInKey = 2 // 2 components: txid, index, excluding TokenKeyPrefix
 
 	TokenKeyPrefix          = "ztoken"
-	TokenMineKeyPrefix      = "mine"
 	TokenSetupKeyPrefix     = "setup"
 	TokenSetupHashKeyPrefix = "setup.hash"
 
@@ -123,4 +122,39 @@ func ValidateCompositeKeyAttribute(str string) error {
 		}
 	}
 	return nil
+}
+
+type Translator struct {
+}
+
+func (t *Translator) CreateTokenRequestKey(id string) (string, error) {
+	return CreateTokenRequestKey(id)
+}
+
+func (t *Translator) CreateSetupKey() (string, error) {
+	return CreateSetupKey()
+}
+
+func (t *Translator) CreateSetupHashKey() (string, error) {
+	return CreateSetupHashKey()
+}
+
+func (t *Translator) CreateTokenKey(id string, index uint64) (string, error) {
+	return CreateTokenKey(id, index)
+}
+
+func (t *Translator) GetTransferMetadataSubKey(k string) (string, error) {
+	return GetTransferMetadataSubKey(k)
+}
+
+func (t *Translator) CreateSNKey(id string) (string, error) {
+	return CreateSNKey(id)
+}
+
+func (t *Translator) CreateIssueActionMetadataKey(key string) (string, error) {
+	return CreateIssueActionMetadataKey(key)
+}
+
+func (t *Translator) CreateTransferActionMetadataKey(key string) (string, error) {
+	return CreateTransferActionMetadataKey(key)
 }
