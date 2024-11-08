@@ -384,12 +384,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 			if err != nil {
 				return errors.Errorf("error creating output ID: %s", err)
 			}
-
-			bytes, err := transferAction.SerializeOutputAt(i)
-			if err != nil {
-				return err
-			}
-			err = w.RWSet.SetState(outputID, bytes)
+			err = w.RWSet.SetState(outputID, serOutput)
 			if err != nil {
 				return err
 			}
