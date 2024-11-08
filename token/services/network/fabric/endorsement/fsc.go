@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/fts"
 	"github.com/pkg/errors"
@@ -28,14 +29,21 @@ const (
 	AllPolicy     = "all"
 )
 
-func newFSCService(
+type FSCService struct {
+	TmsID       token.TMSID
+	Endorsers   []view.Identity
+	ViewManager ViewManager
+	PolicyType  string
+}
+
+func NewFSCService(
 	nw *fabric.NetworkService,
 	tmsID token.TMSID,
 	configuration tdriver.Configuration,
 	viewRegistry ViewRegistry,
 	viewManager ViewManager,
 	identityProvider IdentityProvider,
-) (*fscService, error) {
+) (*FSCService, error) {
 	ch, err := nw.Channel(tmsID.Channel)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting channel [%s]", tmsID.Channel)
@@ -78,34 +86,34 @@ func newFSCService(
 		}
 	}
 
-	return &fscService{
-		endorsers:   endorsers,
+	return &FSCService{
+		Endorsers:   endorsers,
 		tmsID:       tmsID,
-		viewManager: viewManager,
-		policyType:  policyType,
+		ViewManager: viewManager,
+		PolicyType:  policyType,
 	}, nil
 }
 
 type fscService struct {
-	tmsID       token.TMSID
+	tms         *token.ManagementService
 	endorsers   []view.Identity
 	viewManager ViewManager
 	policyType  string
 }
 
-func (e *fscService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
+func (e *FSCService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
 	var endorsers []view.Identity
-	switch e.policyType {
+	switch e.PolicyType {
 	case OneOutNPolicy:
-		endorsers = []view.Identity{e.endorsers[rand.Intn(len(e.endorsers))]}
+		endorsers = []view.Identity{e.Endorsers[rand.Intn(len(e.Endorsers))]}
 	case AllPolicy:
-		endorsers = e.endorsers
+		endorsers = e.Endorsers
 	default:
-		endorsers = e.endorsers
+		endorsers = e.Endorsers
 	}
-	logger.Debugf("request approval via fts endrosers with policy [%s]: [%d]...", e.policyType, len(endorsers))
+	logger.Debugf("request approval via fts endrosers with policy [%s]: [%d]...", e.PolicyType, len(endorsers))
 
-	envBoxed, err := e.viewManager.InitiateView(&fts.RequestApprovalView{
+	envBoxed, err := e.ViewManager.InitiateView(&fts.RequestApprovalView{
 		TMSID:      e.tmsID,
 		RequestRaw: requestRaw,
 		TxID:       txID,
@@ -119,4 +127,8 @@ func (e *fscService) Endorse(context view.Context, requestRaw []byte, signer vie
 		return nil, errors.Errorf("expected driver.Envelope, got [%T]", envBoxed)
 	}
 	return env, nil
+}
+
+func (e *FSCService) KeyTranslator() translator.KeyTranslator {
+	return &keys.Translator{}
 }

@@ -7,6 +7,7 @@ require (
 	github.com/IBM/idemix/bccsp/types v0.0.0-20240816143710-3dce4618d760
 	github.com/IBM/mathlib v0.0.3-0.20231011094432-44ee0eb539da
 	github.com/gin-gonic/gin v1.10.0
+	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20241114072958-8bdbea854812
 	github.com/hyperledger-labs/orion-sdk-go v0.2.10

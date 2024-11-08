@@ -256,10 +256,11 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 	}
 
 	// Let the endorsement service initialize itself, if needed
-	_, err = n.endorsementServiceProvider.Get(tmsID)
+	es, err := n.endorsementServiceProvider.Get(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get endorsement service at [%s]", tmsID)
 	}
+	n.keyTranslator = es.KeyTranslator()
 	return nil, nil
 }
 

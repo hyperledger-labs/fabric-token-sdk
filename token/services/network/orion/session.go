@@ -13,6 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/pkg/errors"
 )
@@ -166,7 +167,7 @@ func (s *SessionManager) readPublicParameters(namespace string) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s]", s.Orion.Name())
 	}
-	w := translator.New("", translator.NewRWSetWrapper(&ReadOnlyRWSWrapper{qe: qe}, "", ""))
+	w := translator.New("", translator.NewRWSetWrapper(&ReadOnlyRWSWrapper{qe: qe}, "", ""), &translator.HashedKeyTranslator{KT: &keys.Translator{}})
 	ppRaw, err := w.ReadSetupParameters()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to retrieve public parameters")

@@ -11,27 +11,29 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 )
 
 const InvokeFunction = "invoke"
 
-type chaincodeEndorsementService struct {
-	tmsID token2.TMSID
+type ChaincodeEndorsementService struct {
+	TMSID token2.TMSID
 }
 
-func newChaincodeEndorsementService(tmsID token2.TMSID) *chaincodeEndorsementService {
-	return &chaincodeEndorsementService{tmsID: tmsID}
+func NewChaincodeEndorsementService(tmsID token2.TMSID) *ChaincodeEndorsementService {
+	return &ChaincodeEndorsementService{TMSID: tmsID}
 }
 
-func (e *chaincodeEndorsementService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
+func (e *ChaincodeEndorsementService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
 	env, err := chaincode.NewEndorseView(
-		e.tmsID.Namespace,
+		e.TMSID.Namespace,
 		InvokeFunction,
 	).WithNetwork(
-		e.tmsID.Network,
+		e.TMSID.Network,
 	).WithChannel(
-		e.tmsID.Channel,
+		e.TMSID.Channel,
 	).WithSignerIdentity(
 		signer,
 	).WithTransientEntry(
@@ -46,4 +48,8 @@ func (e *chaincodeEndorsementService) Endorse(context view.Context, requestRaw [
 		return nil, err
 	}
 	return env, nil
+}
+
+func (e *ChaincodeEndorsementService) KeyTranslator() translator.KeyTranslator {
+	return &keys.Translator{}
 }

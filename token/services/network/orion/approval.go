@@ -225,7 +225,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 	span.AddEvent("validate_request")
 	actions, attributes, err := token.NewValidator(validator).UnmarshallAndVerifyWithMetadata(
 		context.Context(),
-		&LedgerWrapper{qe: qe, keyTranslator: &keys.Translator{}},
+		&LedgerWrapper{qe: qe, keyTranslator: &translator.HashedKeyTranslator{KT: &keys.Translator{}}},
 		request.TxID,
 		request.Request,
 	)
@@ -243,7 +243,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 		db: request.Namespace,
 		tx: tx,
 	}
-	t := translator.New(request.TxID, translator.NewRWSetWrapper(rws, "", request.TxID))
+	t := translator.New(request.TxID, translator.NewRWSetWrapper(rws, "", request.TxID), &translator.HashedKeyTranslator{KT: &keys.Translator{}})
 	for _, action := range actions {
 		err = t.Write(action)
 		if err != nil {

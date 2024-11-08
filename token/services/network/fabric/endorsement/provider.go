@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
 )
@@ -62,6 +63,7 @@ func NewServiceProvider(
 
 type Service interface {
 	Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error)
+	KeyTranslator() translator.KeyTranslator
 }
 
 type loader struct {
@@ -80,11 +82,11 @@ func (l *loader) load(tmsID token2.TMSID) (Service, error) {
 
 	if !configuration.IsSet(FSCEndorsementKey) {
 		logger.Infof("chaincode endorsement enabled...")
-		return newChaincodeEndorsementService(tmsID), nil
+		return NewChaincodeEndorsementService(tmsID), nil
 	}
 
 	logger.Infof("FSC endorsement enabled...")
-	return newFSCService(l.fns, tmsID, configuration, l.viewRegistry, l.viewManager, l.identityProvider)
+	return NewFSCService(l.fns, tmsID, configuration, l.viewRegistry, l.viewManager, l.identityProvider)
 }
 
 func key(tmsID token2.TMSID) string {
