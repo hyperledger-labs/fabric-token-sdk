@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/pkg/errors"
 )
@@ -146,7 +147,7 @@ func readPublicParameters(context token.ServiceProvider, network, namespace stri
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s]", network)
 	}
-	w := translator.New("", translator.NewRWSetWrapper(&ReadOnlyRWSWrapper{qe: qe}, "", ""))
+	w := translator.New("", translator.NewRWSetWrapper(&ReadOnlyRWSWrapper{qe: qe}, "", ""), &translator.HashedKeyTranslator{KT: &keys.Translator{}})
 	ppRaw, err := w.ReadSetupParameters()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to retrieve public parameters")

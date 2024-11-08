@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -28,12 +27,12 @@ type Translator struct {
 	counter  uint64
 }
 
-func New(txID string, rws ExRWSet) *Translator {
+func New(txID string, rws ExRWSet, keyTranslator KeyTranslator) *Translator {
 	w := &Translator{
 		RWSet:         rws,
 		TxID:          txID,
 		counter:       0,
-		KeyTranslator: &keys.Translator{},
+		KeyTranslator: keyTranslator,
 	}
 	return w
 }

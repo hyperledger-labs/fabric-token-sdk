@@ -27,6 +27,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
@@ -415,7 +416,7 @@ func (p *PPInitConfig) Init() error {
 		me: p.CustodianID,
 		tx: tx,
 	}
-	w := translator.New("", translator.NewRWSetWrapper(rwset, "", ""))
+	w := translator.New("", translator.NewRWSetWrapper(rwset, "", ""), &translator.HashedKeyTranslator{KT: &keys.Translator{}})
 	ppRaw, err := os.ReadFile(p.PPPath)
 	if err != nil {
 		return err

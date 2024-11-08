@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -110,7 +111,7 @@ func (r *RequestQueryTokensResponderView) process(context view.Context, request 
 
 	var res [][]byte
 	var errs []error
-	keyTranslator := &keys.Translator{}
+	keyTranslator := &translator.HashedKeyTranslator{KT: &keys.Translator{}}
 	for _, id := range request.IDs {
 		outputID, err := keyTranslator.CreateTokenKey(id.TxId, id.Index, nil)
 		if err != nil {

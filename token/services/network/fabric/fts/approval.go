@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -197,7 +198,7 @@ func (r *RequestApprovalResponderView) translate(
 ) error {
 	// prepare the rws as usual
 	txID := tx.ID()
-	w := translator.New(txID, translator.NewRWSetWrapper(&rwsWrapper{stub: rws}, tms.Namespace(), txID))
+	w := translator.New(txID, translator.NewRWSetWrapper(&rwsWrapper{stub: rws}, tms.Namespace(), txID), &keys.Translator{})
 	for _, action := range actions {
 		if err := w.Write(action); err != nil {
 			return errors.Wrapf(err, "failed to write token action for tx [%s]", txID)

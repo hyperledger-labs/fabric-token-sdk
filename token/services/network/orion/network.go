@@ -89,7 +89,7 @@ func NewNetwork(
 		})),
 		tokenQueryExecutor:      tokenQueryExecutor,
 		spentTokenQueryExecutor: spentTokenQueryExecutor,dbManager:     dbManager,
-		keyTranslator: &keys.Translator{},
+		keyTranslator: &translator.HashedKeyTranslator{KT: &keys.Translator{}},
 	}
 }
 
