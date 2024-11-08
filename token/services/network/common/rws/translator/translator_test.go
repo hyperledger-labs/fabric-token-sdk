@@ -37,7 +37,7 @@ var _ = Describe("Translator", func() {
 
 	BeforeEach(func() {
 		fakeRWSet = &mock.RWSet{}
-		keyTranslator = &translator.HashedKeyTranslator{KT: &keys.Translator{}}
+		keyTranslator = &keys.Translator{}
 
 		writer = translator.New("0", translator.NewRWSetWrapper(fakeRWSet, tokenNameSpace, "0"), keyTranslator)
 
@@ -117,7 +117,12 @@ var _ = Describe("Translator", func() {
 			faketransfer.IsRedeemAtReturnsOnCall(0, false)
 			faketransfer.SerializeOutputAtReturnsOnCall(1, []byte("output-2"), nil)
 			faketransfer.IsRedeemAtReturnsOnCall(1, false)
+			faketransfer.SerializeOutputAtReturnsOnCall(2, []byte("output-1"), nil)
+			faketransfer.IsRedeemAtReturnsOnCall(2, false)
+			faketransfer.SerializeOutputAtReturnsOnCall(3, []byte("output-2"), nil)
+			faketransfer.IsRedeemAtReturnsOnCall(3, false)
 			faketransfer.GetInputsReturns([]*token.ID{{TxId: "key1"}, {TxId: "key2"}, {TxId: "key3"}})
+			faketransfer.GetSerializedInputsReturns([][]byte{[]byte("key1"), []byte("key2"), []byte("key3")}, nil)
 			faketransfer.NumOutputsReturns(2)
 			fakeRWSet.GetStateReturnsOnCall(0, []byte("token-1"), nil)
 			fakeRWSet.GetStateReturnsOnCall(1, []byte("token-2"), nil)
@@ -188,6 +193,10 @@ var _ = Describe("Translator", func() {
 			faketransfer.IsRedeemAtReturnsOnCall(0, false)
 			faketransfer.SerializeOutputAtReturnsOnCall(1, []byte("output-2"), nil)
 			faketransfer.IsRedeemAtReturnsOnCall(1, false)
+			faketransfer.SerializeOutputAtReturnsOnCall(2, []byte("output-1"), nil)
+			faketransfer.IsRedeemAtReturnsOnCall(2, false)
+			faketransfer.SerializeOutputAtReturnsOnCall(3, []byte("output-2"), nil)
+			faketransfer.IsRedeemAtReturnsOnCall(3, false)
 			fakeRWSet.GetStateReturnsOnCall(0, nil, nil)
 			fakeRWSet.GetStateReturnsOnCall(1, nil, nil)
 			fakeRWSet.GetStateReturnsOnCall(2, nil, nil)
