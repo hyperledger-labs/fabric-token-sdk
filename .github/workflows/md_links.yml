@@ -7,10 +7,14 @@ on:
     branches: [ main ]
 
 jobs:
-  markdown-link-check:
+  check-links:
+    name: runner / linkspector
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-      - uses: gaurav-nelson/github-action-markdown-link-check@v1
+      - uses: actions/checkout@v4
+      - name: Run linkspector
+        uses: umbrelladocs/action-linkspector@v1
         with:
-          use-verbose-mode: 'yes'
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review
+          fail_on_error: true
