@@ -109,12 +109,10 @@ func (l *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
 }
 
 func (l *LocalMembership) GetDefaultIdentifier() string {
-	for _, identity := range l.localIdentities {
-		if identity.Default {
-			return identity.Name
-		}
-	}
-	return ""
+	l.localIdentitiesMutex.RLock()
+	defer l.localIdentitiesMutex.RUnlock()
+
+	return l.getDefaultIdentifier()
 }
 
 func (l *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error) {
@@ -137,10 +135,13 @@ func (l *LocalMembership) RegisterIdentity(idConfig driver.IdentityConfiguration
 	l.localIdentitiesMutex.Lock()
 	defer l.localIdentitiesMutex.Unlock()
 
-	return l.registerIdentityConfiguration(&idConfig, l.GetDefaultIdentifier() == "")
+	return l.registerIdentityConfiguration(&idConfig, l.getDefaultIdentifier() == "")
 }
 
 func (l *LocalMembership) IDs() ([]string, error) {
+	l.localIdentitiesMutex.RLock()
+	defer l.localIdentitiesMutex.RUnlock()
+
 	var ids []string
 	for _, identity := range l.localIdentities {
 		ids = append(ids, identity.Name)
@@ -176,7 +177,7 @@ func (l *LocalMembership) Load(identities []*config.Identity) error {
 	l.logger.Debugf("load identities from storage...done")
 
 	// if no default identity, use the first one
-	defaultIdentifier := l.GetDefaultIdentifier()
+	defaultIdentifier := l.getDefaultIdentifier()
 	if len(defaultIdentifier) == 0 {
 		l.logger.Warnf("no default identity, use the first one available")
 		if len(l.localIdentities) > 0 {
@@ -190,6 +191,15 @@ func (l *LocalMembership) Load(identities []*config.Identity) error {
 	}
 
 	return nil
+}
+
+func (l *LocalMembership) getDefaultIdentifier() string {
+	for _, identity := range l.localIdentities {
+		if identity.Default {
+			return identity.Name
+		}
+	}
+	return ""
 }
 
 func (l *LocalMembership) registerIdentity(identity config.Identity) error {
@@ -362,7 +372,7 @@ func (l *LocalMembership) loadFromStorage() error {
 			URL:    entry.URL,
 			Config: entry.Config,
 			Raw:    entry.Raw,
-		}, l.GetDefaultIdentifier() == ""); err != nil {
+		}, l.getDefaultIdentifier() == ""); err != nil {
 			return err
 		}
 	}

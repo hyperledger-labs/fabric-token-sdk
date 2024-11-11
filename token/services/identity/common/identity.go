@@ -13,7 +13,7 @@ type GetIdentityFunc func(auditInfo []byte) (driver.Identity, []byte, error)
 
 // LocalIdentity contains information about an identity
 type LocalIdentity struct {
-	Name         string `yaml:"name,omitempty"`
+	Name         string
 	EnrollmentID string
 	Default      bool
 	GetIdentity  GetIdentityFunc
