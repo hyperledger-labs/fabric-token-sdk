@@ -88,17 +88,10 @@ func NewFSCService(
 
 	return &FSCService{
 		Endorsers:   endorsers,
-		tmsID:       tmsID,
+		TmsID:       tmsID,
 		ViewManager: viewManager,
 		PolicyType:  policyType,
 	}, nil
-}
-
-type fscService struct {
-	tms         *token.ManagementService
-	endorsers   []view.Identity
-	viewManager ViewManager
-	policyType  string
 }
 
 func (e *FSCService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
@@ -114,7 +107,7 @@ func (e *FSCService) Endorse(context view.Context, requestRaw []byte, signer vie
 	logger.Debugf("request approval via fts endrosers with policy [%s]: [%d]...", e.PolicyType, len(endorsers))
 
 	envBoxed, err := e.ViewManager.InitiateView(&fts.RequestApprovalView{
-		TMSID:      e.tmsID,
+		TMSID:      e.TmsID,
 		RequestRaw: requestRaw,
 		TxID:       txID,
 		Endorsers:  endorsers,

@@ -46,12 +46,11 @@ type Network struct {
 	tokenQueryExecutor      driver.TokenQueryExecutor
 	spentTokenQueryExecutor driver.SpentTokenQueryExecutor
 
-	vaultLazyCache             lazy.Provider[string, driver.Vault]
-	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
-	subscribers                *events.Subscribers
-	dbManager                  *DBManager
-	defaultPublicParamsFetcher driver2.DefaultPublicParamsFetcher
-	keyTranslator              translator.KeyTranslator
+	vaultLazyCache      lazy.Provider[string, driver.Vault]
+	tokenVaultLazyCache lazy.Provider[string, driver.TokenVault]
+	subscribers         *events.Subscribers
+	dbManager           *DBManager
+	keyTranslator       translator.KeyTranslator
 }
 
 func NewNetwork(
