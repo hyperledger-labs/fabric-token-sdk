@@ -70,7 +70,7 @@ var _ = Describe("Translator", func() {
 				ns, id, out := fakeRWSet.SetStateArgsForCall(0)
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-1")))
-				key, err := keyTranslator.CreateTokenKey("0", 0, nil)
+				key, err := keyTranslator.CreateOutputSNKey("0", 0, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
@@ -78,7 +78,7 @@ var _ = Describe("Translator", func() {
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-2")))
 
-				key, err = keyTranslator.CreateTokenKey("0", 1, nil)
+				key, err = keyTranslator.CreateOutputSNKey("0", 1, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 			})
@@ -138,7 +138,7 @@ var _ = Describe("Translator", func() {
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-1")))
 
-				key, err := keyTranslator.CreateTokenKey("0", 0, nil)
+				key, err := keyTranslator.CreateOutputSNKey("0", 0, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
@@ -146,7 +146,7 @@ var _ = Describe("Translator", func() {
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-2")))
 
-				key, err = keyTranslator.CreateTokenKey("0", 1, nil)
+				key, err = keyTranslator.CreateOutputSNKey("0", 1, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 			})
@@ -215,7 +215,7 @@ var _ = Describe("Translator", func() {
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-1")))
 
-				key, err := keyTranslator.CreateTokenKey("0", 0, nil)
+				key, err := keyTranslator.CreateOutputSNKey("0", 0, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
@@ -223,7 +223,7 @@ var _ = Describe("Translator", func() {
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-2")))
 
-				key, err = keyTranslator.CreateTokenKey("0", 1, nil)
+				key, err = keyTranslator.CreateOutputSNKey("0", 1, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 			})

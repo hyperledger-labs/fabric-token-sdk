@@ -11,7 +11,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/rp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -99,6 +99,11 @@ func (i *IssueAction) GetCommitments() ([]*math.G1, error) {
 		com[j] = i.OutputTokens[j].Data
 	}
 	return com, nil
+}
+
+// IsGraphHiding returns false, indicating that fabtoken does not hide the transaction graph
+func (i *IssueAction) IsGraphHiding() bool {
+	return false
 }
 
 // NewIssue instantiates an IssueAction given the passed arguments

@@ -272,7 +272,11 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 
 	logger.Infof("query tokens [%v]...", ids)
 
-	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
+	w := translator.New(
+		stub.GetTxID(),
+		translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()),
+		&keys.Translator{},
+	)
 	res, err := w.QueryTokens(ids)
 	if err != nil {
 		logger.Errorf("failed query tokens [%v]: [%s]", ids, err)
@@ -320,7 +324,7 @@ type ledger struct {
 }
 
 func (l *ledger) GetState(id token2.ID, output []byte) ([]byte, error) {
-	key, err := l.keyTranslator.CreateTokenKey(id.TxId, id.Index, output)
+	key, err := l.keyTranslator.CreateOutputKey(id.TxId, id.Index)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting token key for [%v]", id)
 	}

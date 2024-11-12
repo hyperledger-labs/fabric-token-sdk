@@ -275,7 +275,7 @@ type LedgerWrapper struct {
 }
 
 func (l *LedgerWrapper) GetState(id token2.ID, output []byte) ([]byte, error) {
-	key, err := l.keyTranslator.CreateTokenKey(id.TxId, id.Index, output)
+	key, err := l.keyTranslator.CreateOutputKey(id.TxId, id.Index)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting token key for [%v]", id)
 	}

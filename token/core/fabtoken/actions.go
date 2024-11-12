@@ -112,6 +112,11 @@ func (i *IssueAction) GetMetadata() map[string][]byte {
 	return i.Metadata
 }
 
+// IsGraphHiding returns false, indicating that fabtoken does not hide the transaction graph
+func (i *IssueAction) IsGraphHiding() bool {
+	return false
+}
+
 // TransferAction encodes a fabtoken transfer
 type TransferAction struct {
 	// identifier of token to be transferred

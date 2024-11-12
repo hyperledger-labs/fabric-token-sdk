@@ -155,7 +155,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	// validate token request
 	logger.Debugf("Validate TX [%s]", tx.ID())
 	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(id token.ID, output []byte) ([]byte, error) {
-		key, err := r.KeyTranslator.CreateTokenKey(id.TxId, id.Index, output)
+		key, err := r.KeyTranslator.CreateOutputKey(id.TxId, id.Index)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to create token key for id [%s]", id)
 		}

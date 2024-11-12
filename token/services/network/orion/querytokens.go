@@ -113,7 +113,7 @@ func (r *RequestQueryTokensResponderView) process(context view.Context, request 
 	var errs []error
 	keyTranslator := &translator.HashedKeyTranslator{KT: &keys.Translator{}}
 	for _, id := range request.IDs {
-		outputID, err := keyTranslator.CreateTokenKey(id.TxId, id.Index, nil)
+		outputID, err := keyTranslator.CreateOutputSNKey(id.TxId, id.Index, nil)
 		if err != nil {
 			errs = append(errs, errors.Errorf("error creating output ID: %s", err))
 			continue

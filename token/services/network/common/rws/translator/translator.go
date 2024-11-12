@@ -8,7 +8,6 @@ package translator
 
 import (
 	"crypto/sha256"
-	"strconv"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -124,7 +123,7 @@ func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 	var res [][]byte
 	var errs []error
 	for _, id := range ids {
-		outputID, err := w.KeyTranslator.CreateTokenKey(id.TxId, id.Index, nil)
+		outputID, err := w.KeyTranslator.CreateOutputKey(id.TxId, id.Index)
 		if err != nil {
 			errs = append(errs, errors.Errorf("error creating output ID: %s", err))
 			continue
@@ -157,7 +156,7 @@ func (w *Translator) AreTokensSpent(ids []string, graphHiding bool) ([]bool, err
 	if graphHiding {
 		for i, id := range ids {
 			logger.Debugf("check serial number %s\n", id)
-			k, err := w.KeyTranslator.CreateSNKey(id)
+			k, err := w.KeyTranslator.CreateInputSNKey(id)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to generate key for id [%s]", id)
 			}
@@ -202,31 +201,30 @@ func (w *Translator) checkAction(tokenAction interface{}) error {
 }
 
 func (w *Translator) checkIssue(issue IssueAction) error {
-	// check if the keys of issued tokens aren't already used.
-	// check is assigned owners are valid
-	serializedOutputs, err := issue.GetSerializedOutputs()
-	if err != nil {
-		return errors.Wrapf(err, "failed to get serialized outputs")
-	}
-	for i := 0; i < issue.NumOutputs(); i++ {
-		if err := w.checkTokenDoesNotExist(w.counter+uint64(i), w.TxID, serializedOutputs[i]); err != nil {
-			return err
-		}
-	}
+	// check outputs
+	// as long as the transaction id is unique, there is nothing to check here
 	return nil
 }
 
 func (w *Translator) checkTransfer(t TransferAction) error {
 	inputs := t.GetInputs()
 
-	if !t.IsGraphHiding() {
-		// in this case, the state must exist
+	// check inputs
+	if t.IsGraphHiding() {
+		// check that the serial number does not exist
+		for _, key := range t.GetSerialNumbers() {
+			if err := w.RWSet.StateMustNotExist(key); err != nil {
+				return errors.Wrapf(err, "invalid transfer: serial number must not exist")
+			}
+		}
+	} else {
+		// check that the serial number does exist
 		serializedInputs, err := t.GetSerializedInputs()
 		if err != nil {
 			return errors.Wrapf(err, "failed to get serialized inputs")
 		}
 		for i, input := range inputs {
-			key, err := w.KeyTranslator.CreateTokenKey(input.TxId, input.Index, serializedInputs[i])
+			key, err := w.KeyTranslator.CreateOutputSNKey(input.TxId, input.Index, serializedInputs[i])
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}
@@ -234,41 +232,11 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 				return errors.Wrapf(err, "invalid transfer: input must exist")
 			}
 		}
-	} else {
-		// in this case, the state must not exist
-		for _, key := range t.GetSerialNumbers() {
-			if err := w.RWSet.StateMustNotExist(key); err != nil {
-				return errors.Wrapf(err, "invalid transfer: serial number must not exist")
-			}
-		}
 	}
 
-	// check if the keys of the new tokens aren't already used.
-	for i := 0; i < t.NumOutputs(); i++ {
-		if !t.IsRedeemAt(i) {
-			// this is not a redeemed output
-			serOutput, err := t.SerializeOutputAt(i)
-			if err != nil {
-				return errors.Wrapf(err, "failed to serialize output [%d]", i)
-			}
-			err = w.checkTokenDoesNotExist(w.counter+uint64(i), w.TxID, serOutput)
-			if err != nil {
-				return err
-			}
-		}
-	}
+	// check outputs
+	// as long as the transaction id is unique, there is nothing to check here
 
-	return nil
-}
-
-func (w *Translator) checkTokenDoesNotExist(index uint64, txID string, output []byte) error {
-	tokenKey, err := w.KeyTranslator.CreateTokenKey(txID, index, output)
-	if err != nil {
-		return errors.Wrapf(err, "error creating output ID")
-	}
-	if err := w.RWSet.StateMustNotExist(tokenKey); err != nil {
-		return errors.Errorf("token already exists")
-	}
 	return nil
 }
 
@@ -334,18 +302,32 @@ func (w *Translator) commitSetupAction(setup SetupAction) error {
 
 func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 	base := w.counter
+	graphNonHiding := !issueAction.IsGraphHiding()
 
+	// store outputs
 	outputs, err := issueAction.GetSerializedOutputs()
 	if err != nil {
 		return err
 	}
 	for i, output := range outputs {
-		outputID, err := w.KeyTranslator.CreateTokenKey(w.TxID, base+uint64(i), output)
+		// store output
+		outputID, err := w.KeyTranslator.CreateOutputKey(w.TxID, base+uint64(i))
 		if err != nil {
 			return errors.Errorf("error creating output ID: %s", err)
 		}
 		if err := w.RWSet.SetState(outputID, output); err != nil {
 			return err
+		}
+		if graphNonHiding {
+			// store also the serial number of this output.
+			// the serial number is used to check that the token exists at time of spending
+			sn, err := w.KeyTranslator.CreateOutputSNKey(w.TxID, base+uint64(i), output)
+			if err != nil {
+				return errors.Errorf("error creating output ID: %s", err)
+			}
+			if err := w.RWSet.SetState(sn, []byte{1}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -372,27 +354,40 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 // Check the owner of each output to determine how to generate the key
 func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	base := w.counter
+	graphNonHiding := !transferAction.IsGraphHiding()
 
 	// store outputs
 	for i := 0; i < transferAction.NumOutputs(); i++ {
 		if !transferAction.IsRedeemAt(i) {
-			serOutput, err := transferAction.SerializeOutputAt(i)
+			// store output
+			output, err := transferAction.SerializeOutputAt(i)
 			if err != nil {
 				return errors.Wrapf(err, "error serializing transfer output at index [%d]", i)
 			}
-			outputID, err := w.KeyTranslator.CreateTokenKey(w.TxID, base+uint64(i), serOutput)
+			outputID, err := w.KeyTranslator.CreateOutputKey(w.TxID, base+uint64(i))
 			if err != nil {
 				return errors.Errorf("error creating output ID: %s", err)
 			}
-			err = w.RWSet.SetState(outputID, serOutput)
+			err = w.RWSet.SetState(outputID, output)
 			if err != nil {
 				return err
+			}
+			if graphNonHiding {
+				// store also the serial number of this output.
+				// the serial number is used to check that the token exists at time of spending
+				sn, err := w.KeyTranslator.CreateOutputSNKey(w.TxID, base+uint64(i), output)
+				if err != nil {
+					return errors.Errorf("error creating output ID: %s", err)
+				}
+				if err := w.RWSet.SetState(sn, []byte{1}); err != nil {
+					return err
+				}
 			}
 		}
 	}
 
-	// store inputs
-	err := w.spendTokens(transferAction)
+	// spend inputs
+	err := w.spendInputs(transferAction)
 	if err != nil {
 		return err
 	}
@@ -416,27 +411,36 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	return nil
 }
 
-func (w *Translator) spendTokens(transferAction TransferAction) error {
+func (w *Translator) spendInputs(transferAction TransferAction) error {
 	if !transferAction.IsGraphHiding() {
+		// we need to delete the serial numbers and the outputs
+		// recall that the read dependencies are added during the checking phas
 		ids := transferAction.GetInputs()
 		serializedInputs, err := transferAction.GetSerializedInputs()
 		if err != nil {
 			return errors.Wrap(err, "error serializing transfer inputs")
 		}
-		rwsetKeys := make([]string, len(ids))
 		for i, input := range ids {
-			rwsetKeys[i], err = w.KeyTranslator.CreateTokenKey(input.TxId, input.Index, serializedInputs[i])
+			// delete serial number
+			id, err := w.KeyTranslator.CreateOutputSNKey(input.TxId, input.Index, serializedInputs[i])
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}
-		}
-
-		for _, id := range rwsetKeys {
-			logger.Debugf("Delete state %s\n", id)
-			err := w.RWSet.DeleteState(id)
-			if err != nil {
+			logger.Debugf("delete serial number [%s]\n", id)
+			if err := w.RWSet.DeleteState(id); err != nil {
 				return errors.Wrapf(err, "failed to delete output %s", id)
 			}
+			// delete token
+			id, err = w.KeyTranslator.CreateOutputKey(input.TxId, input.Index)
+			if err != nil {
+				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
+			}
+			logger.Debugf("delete serial number [%s]\n", id)
+			if err := w.RWSet.DeleteState(id); err != nil {
+				return errors.Wrapf(err, "failed to delete output %s", id)
+			}
+
+			// finalize
 			if err := w.appendSpentID(id); err != nil {
 				return errors.Wrapf(err, "failed to append spent id [%s]", id)
 			}
@@ -445,11 +449,11 @@ func (w *Translator) spendTokens(transferAction TransferAction) error {
 		ids := transferAction.GetSerialNumbers()
 		for _, id := range ids {
 			logger.Debugf("add serial number %s\n", id)
-			k, err := w.KeyTranslator.CreateSNKey(id)
+			k, err := w.KeyTranslator.CreateInputSNKey(id)
 			if err != nil {
 				return errors.Wrapf(err, "failed to generate key for id [%s]", id)
 			}
-			if err := w.RWSet.SetState(k, []byte(strconv.FormatBool(true))); err != nil {
+			if err := w.RWSet.SetState(k, []byte{1}); err != nil {
 				return errors.Wrapf(err, "failed to add serial number %s", id)
 			}
 			if err := w.appendSpentID(id); err != nil {
@@ -457,7 +461,6 @@ func (w *Translator) spendTokens(transferAction TransferAction) error {
 			}
 		}
 	}
-
 	return nil
 }
 

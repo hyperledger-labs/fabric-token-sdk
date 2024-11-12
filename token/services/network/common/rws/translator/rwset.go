@@ -19,14 +19,15 @@ type KeyTranslator interface {
 	CreateTokenRequestKey(id string) (string, error)
 	CreateSetupKey() (string, error)
 	CreateSetupHashKey() (string, error)
-	CreateTokenKey(id string, index uint64, output []byte) (string, error)
-	GetTransferMetadataSubKey(k string) (string, error)
-	CreateSNKey(id string) (string, error)
+	CreateOutputKey(id string, index uint64) (string, error)
+	CreateOutputSNKey(id string, index uint64, output []byte) (string, error)
+	CreateInputSNKey(id string) (string, error)
 	CreateIssueActionMetadataKey(key string) (string, error)
 	// CreateTransferActionMetadataKey returns the transfer action metadata key built from the passed
 	// transaction id, subkey, and index. Index is used to make sure the key is unique with the respect to the
 	// token request this key appears.
 	CreateTransferActionMetadataKey(key string) (string, error)
+	GetTransferMetadataSubKey(k string) (string, error)
 }
 
 // RWSet interface, used to read from, and write to, a rwset.
@@ -132,12 +133,16 @@ func (h *HashedKeyTranslator) CreateSetupHashKey() (string, error) {
 	return h.hash(2, k)
 }
 
-func (h *HashedKeyTranslator) CreateTokenKey(id string, index uint64, output []byte) (string, error) {
-	k, err := h.KT.CreateTokenKey(id, index, output)
+func (h *HashedKeyTranslator) CreateOutputSNKey(id string, index uint64, output []byte) (string, error) {
+	return h.KT.CreateOutputSNKey(id, index, output)
+}
+
+func (h *HashedKeyTranslator) CreateOutputKey(id string, index uint64) (string, error) {
+	k, err := h.KT.CreateOutputKey(id, index)
 	if err != nil {
 		return "", err
 	}
-	return h.hash(3, k)
+	return h.hash(7, k)
 }
 
 func (h *HashedKeyTranslator) GetTransferMetadataSubKey(k string) (string, error) {
@@ -148,8 +153,8 @@ func (h *HashedKeyTranslator) GetTransferMetadataSubKey(k string) (string, error
 	return h.hash(4, key)
 }
 
-func (h *HashedKeyTranslator) CreateSNKey(id string) (string, error) {
-	k, err := h.KT.CreateSNKey(id)
+func (h *HashedKeyTranslator) CreateInputSNKey(id string) (string, error) {
+	k, err := h.KT.CreateInputSNKey(id)
 	if err != nil {
 		return "", err
 	}
