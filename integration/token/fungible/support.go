@@ -1040,6 +1040,9 @@ func Restart(network *integration.Infrastructure, deleteVault bool, onRestart On
 		// Add extra time to wait for the vault to be reconstructed
 		time.Sleep(40 * time.Second)
 	}
+	for _, id := range ids {
+		onRestart(network, id.Id())
+	}
 }
 
 func RegisterIssuerIdentity(network *integration.Infrastructure, id *token3.NodeReference, walletID, walletPath string) {
