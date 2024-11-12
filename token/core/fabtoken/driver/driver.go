@@ -122,13 +122,13 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 		tmsConfig,
 		observables.NewObservableIssueService(
 			fabtoken.NewIssueService(
-			publicParamsManager,
-			ws,
-			deserializer,
-			[]fabtoken.IssueMetadataProviderFunc{
-				pledge.IssueActionMetadata,
-			},
-		),
+				publicParamsManager,
+				ws,
+				deserializer,
+				[]fabtoken.IssueMetadataProviderFunc{
+					pledge.IssueActionMetadata,
+				},
+			),
 			observables.NewIssue(tracerProvider),
 		),
 		observables.NewObservableTransferService(

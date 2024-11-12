@@ -99,7 +99,6 @@ const (
 	ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
 	FabTokenInteropAssetTransfer
 	ZKATDLogInteropAssetTransfer
-)
 
 	Mixed
 )

@@ -59,6 +59,13 @@ var _ = Describe("FabToken end to end", func() {
 			BeforeEach(ts.Setup)
 			It("Performed an htlc based atomic swap", Label("T6"), func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
 		})
+
+		Describe("Asset Transfer With Two Fabric Networks", func() {
+			ts, selector := newTestSuiteInteropAssetTransfer(t.CommType, t.ReplicationFactor, "alice", "bob")
+			AfterEach(ts.TearDown)
+			BeforeEach(ts.Setup)
+			It("Performed a cross network asset transfer", Label("T7"), func() { interop.TestAssetTransferWithTwoNetworks(ts.II, selector) })
+		})
 	}
 })
 
@@ -106,26 +113,6 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 	return ts, selector
 }
 
-	Describe("Asset Transfer With Two Fabric Networks", func() {
-		BeforeEach(func() {
-			var err error
-			ii, err = integration.New(
-				integration2.FabTokenInteropAssetTransfer.StartPortForNode(),
-				"",
-				interop.AssetTransferTopology("fabtoken", &fabric3.SDK{}, &ffabtoken.SDK{})...,
-			)
-			Expect(err).NotTo(HaveOccurred())
-			ii.RegisterPlatformFactory(token.NewPlatformFactory())
-			ii.Generate()
-			ii.Start()
-		})
-
-		It("Performed a cross network asset transfer", func() {
-			interop.TestAssetTransferWithTwoNetworks(ii)
-		})
-	})
-
-})
 func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
 	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimWithOrionTopology(common.Opts{
@@ -133,6 +120,18 @@ func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
 		SDKs:            []api2.SDK{&fofabtoken.SDK{}},
+	}))
+	return ts, selector
+}
+
+func newTestSuiteInteropAssetTransfer(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
+	opts, selector := token2.NewReplicationOptions(factor, names...)
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropAssetTransfer.StartPortForNode, interop.AssetTransferTopology(common.Opts{
+		CommType:        commType,
+		ReplicationOpts: opts,
+		TokenSDKDriver:  "fabtoken",
+		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
+		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:view-sdk=debug:info",
 	}))
 	return ts, selector
 }

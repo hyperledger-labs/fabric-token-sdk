@@ -49,6 +49,7 @@ func (t *Transaction) Pledge(wallet *token.OwnerWallet, destNetwork string, dead
 		return "", err
 	}
 	_, err = t.TokenRequest.Transfer(
+		t.Context,
 		wallet,
 		typ,
 		[]uint64{value},

@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/weaver"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
@@ -181,7 +180,7 @@ func HTLCNoCrossClaimTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	 fscTopology.SetLogging(opts.FSCLogSpec, "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -309,7 +308,7 @@ func HTLCNoCrossClaimWithOrionTopology(opts common.Opts) []api.Topology {
 	return []api.Topology{f1Topology, orionTopology, tokenTopology, fscTopology}
 }
 
-func AssetTransferTopology(tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
+func AssetTransferTopology(opts common.Opts) []api.Topology {
 	// Define two Fabric topologies
 	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
 	f1Topology.EnableIdemix()

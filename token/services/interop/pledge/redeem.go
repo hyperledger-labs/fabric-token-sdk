@@ -83,6 +83,7 @@ func (t *Transaction) RedeemPledge(wallet *token.OwnerWallet, tok *token2.Unspen
 	proofKey := RedeemPledgeKey + fmt.Sprintf(".%d.%s", tokenID.Index, tokenID.TxId)
 
 	err = t.TokenRequest.Redeem(
+		t.Context,
 		wallet,
 		tok.Type,
 		q.ToBigInt().Uint64(),

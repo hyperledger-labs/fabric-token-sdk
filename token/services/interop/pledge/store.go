@@ -14,21 +14,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-type store interface {
-	Exists(id string) bool
-	Put(id string, state interface{}) error
-	Get(id string, state interface{}) error
-	Delete(id string) error
-	GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error)
-}
-
 type VaultStore struct {
-	store store
+	store *kvs.KVS
 }
 
 func Vault(sf view.ServiceProvider) *VaultStore {
+	store, err := sf.GetService(&kvs.KVS{})
+	if err != nil {
+		panic(err)
+	}
 	return &VaultStore{
-		store: kvs.GetService(sf),
+		store: store.(*kvs.KVS),
 	}
 }
 

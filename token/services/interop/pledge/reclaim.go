@@ -85,6 +85,14 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 
 	proofKey := MetadataReclaimKey + fmt.Sprintf(".%d.%s", tokenID.Index, tokenID.TxId)
 
-	_, err = t.TokenRequest.Transfer(wallet, tok.Type, []uint64{q.ToBigInt().Uint64()}, []view.Identity{script.Sender}, token.WithTokenIDs(tok.Id), token.WithTransferMetadata(proofKey, proof))
+	_, err = t.TokenRequest.Transfer(
+		t.Context,
+		wallet,
+		tok.Type,
+		[]uint64{q.ToBigInt().Uint64()},
+		[]view.Identity{script.Sender},
+		token.WithTokenIDs(tok.Id),
+		token.WithTransferMetadata(proofKey, proof),
+	)
 	return err
 }

@@ -19,7 +19,7 @@ const loggerNameSeparator = "."
 type Logger = logging.Logger
 
 func MustGetLogger(name string) Logger {
-	return flogging.MustGetLogger(name)
+	return logging.MustGetLogger(name)
 }
 
 func DriverLogger(prefix string, networkID string, channel string, namespace string) Logger {

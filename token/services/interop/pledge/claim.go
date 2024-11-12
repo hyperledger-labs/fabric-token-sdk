@@ -41,7 +41,14 @@ func (t *Transaction) Claim(issuerWallet *token.IssuerWallet, typ string, value 
 		return errors.Errorf("must provide a proof")
 	}
 
-	_, err := t.TokenRequest.Issue(issuerWallet, recipient, typ, value, WithMetadata(originTokenID, originNetwork, proof))
+	_, err := t.TokenRequest.Issue(
+		t.Context,
+		issuerWallet,
+		recipient,
+		typ,
+		value,
+		WithMetadata(originTokenID, originNetwork, proof),
+	)
 	return err
 }
 

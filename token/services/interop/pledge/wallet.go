@@ -59,7 +59,7 @@ func NewIssuerWallet(sp view.ServiceProvider, wallet *token.IssuerWallet) *Issue
 		logger.Errorf("could not find network [%s]", tmsID)
 		return nil
 	}
-	v, err := net.Vault(tmsID.Namespace)
+	v, err := net.TokenVault(tmsID.Namespace)
 	if err != nil {
 		logger.Errorf("failed to get vault for [%s]: [%s]", tmsID, err)
 	}
@@ -101,7 +101,7 @@ func Wallet(sp view.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
 		logger.Errorf("could not find network [%s]", tmsID)
 		return nil
 	}
-	v, err := net.Vault(tmsID.Namespace)
+	v, err := net.TokenVault(tmsID.Namespace)
 	if err != nil {
 		logger.Errorf("failed to get vault for [%s]: [%s]", tmsID, err)
 	}
