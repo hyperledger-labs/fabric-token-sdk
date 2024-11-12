@@ -23,7 +23,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", func() { fungible.TestMixed(ts.II, selector) })
+			It("succeeded", func() { fungible.TestMixed(ts.II, nil, selector) })
 		})
 	}
 })

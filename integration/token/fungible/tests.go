@@ -264,9 +264,9 @@ var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 	},
 }
 
-type OnAuditorRestartFunc = func(*integration.Infrastructure, string)
+type OnRestartFunc = func(*integration.Infrastructure, string)
 
-func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRestart OnAuditorRestartFunc, aries bool, sel *token3.ReplicaSelector) {
+func TestAll(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, aries bool, sel *token3.ReplicaSelector) {
 	auditor := sel.Get(auditorId)
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
@@ -274,7 +274,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	charlie := sel.Get("charlie")
 	manager := sel.Get("manager")
 	endorsers := GetEndorsers(network, sel)
-	RegisterAuditor(network, auditor, nil)
+	RegisterAuditor(network, auditor)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
@@ -317,8 +317,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	h = ListIssuerHistory(network, "", "EUR", issuer)
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
-	Restart(network, true, auditor)
-	RegisterAuditor(network, auditor, onAuditorRestart)
+	Restart(network, true, onRestart, auditor)
+	RegisterAuditor(network, auditor)
 
 	CheckBalanceAndHolding(network, alice, "", "USD", 120, auditor)
 	CheckBalanceAndHolding(network, alice, "alice", "USD", 120, auditor)
@@ -376,7 +376,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckBalanceAndHolding(network, alice, "", "USD", 120, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 30, auditor)
 
-	Restart(network, false, alice)
+	Restart(network, false, onRestart, alice)
 
 	t8 := time.Now()
 	TransferCash(network, alice, "", "USD", 111, bob, auditor)
@@ -431,7 +431,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 
 	IssueCash(network, "", "USD", 1, alice, auditor, true, issuer)
 
-	testTwoGeneratedOwnerWalletsSameNode(network, auditor, !aries, sel)
+	testTwoGeneratedOwnerWalletsSameNode(network, auditor, !aries, sel, onRestart)
 
 	CheckBalanceAndHolding(network, alice, "", "USD", 10, auditor)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 0, auditor)
@@ -472,8 +472,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckBalanceAndHolding(network, issuer, "issuer.owner", "EUR", 10, auditor)
 
 	// Restart the auditor
-	Restart(network, true, auditor)
-	RegisterAuditor(network, auditor, onAuditorRestart)
+	Restart(network, true, onRestart, auditor)
+	RegisterAuditor(network, auditor)
 
 	CheckBalanceAndHolding(network, issuer, "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, issuer, "", "EUR", 150, auditor)
@@ -505,9 +505,9 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Pending]", txID2),
 	}, bob)
 	fmt.Printf("prepared transactions [%s:%s]", txID1, txID2)
-	Restart(network, true, bob)
-	Restart(network, false, auditor)
-	RegisterAuditor(network, auditor, onAuditorRestart)
+	Restart(network, true, onRestart, bob)
+	Restart(network, false, onRestart, auditor)
+	RegisterAuditor(network, auditor)
 	CheckBalance(network, bob, "", "PINE", 0)
 	CheckHolding(network, bob, "", "PINE", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 20, auditor)
@@ -544,7 +544,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onAuditorRes
 	CheckOwnerDB(network, nil, alice, bob)
 	CheckOwnerDB(network, nil, issuer, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
-	Restart(network, false, alice, bob, charlie, manager)
+	Restart(network, false, onRestart, alice, bob, charlie, manager)
 	CheckOwnerDB(network, nil, alice, bob)
 	CheckOwnerDB(network, nil, issuer, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
@@ -796,7 +796,7 @@ func TestSelector(network *integration.Infrastructure, auditorId string, sel *to
 	bob := sel.Get("bob")
 	charlie := sel.Get("charlie")
 	manager := sel.Get("manager")
-	RegisterAuditor(network, auditor, nil)
+	RegisterAuditor(network, auditor)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
@@ -832,12 +832,12 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditorId strin
 		auditor = issuer
 		errorMessage = "failed verifying auditor signature"
 	}
-	RegisterAuditor(network, auditor, nil)
+	RegisterAuditor(network, auditor)
 	txId := IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
 	Expect(txId).NotTo(BeEmpty())
 	CheckBalanceAndHolding(network, alice, "", "USD", 110, auditor)
 
-	RegisterAuditor(network, newAuditor, nil)
+	RegisterAuditor(network, newAuditor)
 	UpdatePublicParams(network, ppBytes, tms)
 
 	Eventually(GetPublicParams).WithArguments(network, newIssuer).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
@@ -863,7 +863,7 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditorId strin
 	CheckOwnerWalletIDs(network, manager, "manager.id1", "manager.id2", "manager.id3")
 }
 
-func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor *token3.NodeReference, useFabricCA bool, sel *token3.ReplicaSelector) {
+func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor *token3.NodeReference, useFabricCA bool, sel *token3.ReplicaSelector, onRestart OnRestartFunc) {
 
 	issuer := sel.Get("issuer")
 	charlie := sel.Get("charlie")
@@ -876,7 +876,7 @@ func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, a
 
 	IssueCash(network, "", "SPE", 100, charlie, auditor, true, issuer)
 	TransferCash(network, charlie, "", "SPE", 25, sel.Get("charlie.ExtraId1"), auditor)
-	Restart(network, false, charlie)
+	Restart(network, false, onRestart, charlie)
 	TransferCash(network, charlie, "charlie.ExtraId1", "SPE", 15, sel.Get("charlie.ExtraId2"), auditor)
 
 	CheckBalanceAndHolding(network, charlie, "", "SPE", 75, auditor)
@@ -890,7 +890,7 @@ func TestRevokeIdentity(network *integration.Infrastructure, auditorId string, s
 	alice := sel.Get("alice")
 	bob := sel.Get("bob")
 
-	RegisterAuditor(network, auditor, nil)
+	RegisterAuditor(network, auditor)
 
 	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
 	CheckBalanceAndHolding(network, alice, "", "USD", 110, auditor)
@@ -914,7 +914,7 @@ func TestRevokeIdentity(network *integration.Infrastructure, auditorId string, s
 	CheckBalanceAndHolding(network, bob, "bob.id1", "USD", 90, auditor)
 }
 
-func TestMixed(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
+func TestMixed(network *integration.Infrastructure, onRestart OnRestartFunc, sel *token3.ReplicaSelector) {
 	auditor1 := sel.Get("auditor1")
 	auditor2 := sel.Get("auditor2")
 	issuer1 := sel.Get("issuer1")
@@ -924,8 +924,8 @@ func TestMixed(network *integration.Infrastructure, sel *token3.ReplicaSelector)
 
 	dlogId := getTmsId(network, DLogNamespace)
 	fabTokenId := getTmsId(network, FabTokenNamespace)
-	RegisterAuditorForTMSID(network, auditor1, dlogId, nil)
-	RegisterAuditorForTMSID(network, auditor2, fabTokenId, nil)
+	RegisterAuditorForTMSID(network, auditor1, dlogId)
+	RegisterAuditorForTMSID(network, auditor2, fabTokenId)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(40 * time.Second)
@@ -965,10 +965,10 @@ func TestMixed(network *integration.Infrastructure, sel *token3.ReplicaSelector)
 	IssueCashForTMSID(network, "", "MAX", 65536, bob, auditor2, true, issuer2, fabTokenId, "q is larger than max token value [65535]")
 
 	// Shut down one auditor and try to issue cash for both chaincodes
-	Restart(network, true, auditor2)
+	Restart(network, true, onRestart, auditor2)
 	IssueCashForTMSID(network, "", "USD", 10, alice, auditor1, true, issuer1, dlogId)
 	IssueCashForTMSID(network, "", "USD", 20, alice, auditor2, true, issuer2, fabTokenId, "")
-	RegisterAuditor(network, auditor2, nil)
+	RegisterAuditor(network, auditor2)
 	IssueCashForTMSID(network, "", "USD", 30, alice, auditor2, true, issuer2, fabTokenId)
 
 	CheckBalanceAndHoldingForTMSID(network, alice, "", "USD", 100, auditor1, dlogId)
@@ -987,7 +987,7 @@ func TestRemoteOwnerWalletWithWMP(network *integration.Infrastructure, wmp *Wall
 	charlie := sel.Get("charlie")
 	manager := sel.Get("manager")
 
-	RegisterAuditor(network, auditor, nil)
+	RegisterAuditor(network, auditor)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
@@ -1089,7 +1089,7 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	charlie := selector.Get("charlie")
 	manager := selector.Get("manager")
 
-	RegisterAuditor(network, auditor, nil)
+	RegisterAuditor(network, auditor)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
