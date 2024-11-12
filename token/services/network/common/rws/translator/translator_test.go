@@ -65,7 +65,7 @@ var _ = Describe("Translator", func() {
 				err := writer.Write(fakeissue)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(fakeRWSet.SetStateCallCount()).To(Equal(2))
+				Expect(fakeRWSet.SetStateCallCount()).To(Equal(4))
 
 				ns, id, out := fakeRWSet.SetStateArgsForCall(0)
 				Expect(ns).To(Equal(tokenNameSpace))
