@@ -7,6 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package keys
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"strconv"
 	"unicode/utf8"
 
@@ -16,37 +19,46 @@ import (
 const (
 	minUnicodeRuneValue   = 0 // U+0000
 	compositeKeyNamespace = "\x00"
-	MaxUnicodeRuneValue   = utf8.MaxRune // U+10FFFF - maximum (and unallocated) code point
+	maxUnicodeRuneValue   = utf8.MaxRune // U+10FFFF - maximum (and unallocated) code point
+	numComponentsInKey    = 2            // 2 components: txid, index, excluding TokenKeyPrefix
 
-	numComponentsInKey = 2 // 2 components: txid, index, excluding TokenKeyPrefix
-
-	TokenKeyPrefix          = "ztoken"
-	TokenSetupKeyPrefix     = "setup"
-	TokenSetupHashKeyPrefix = "setup.hash"
-
-	TokenRequestKeyPrefix  = "token_request"
-	SerialNumber           = "sn"
-	IssueActionMetadata    = "iam"
-	TransferActionMetadata = "tam"
+	OutputSNKeyPrefix            = "osn"
+	TokenSetupKeyPrefix          = "se"
+	TokenSetupHashKeyPrefix      = "seh"
+	TokenRequestKeyPrefix        = "tr"
+	InputSerialNumberPrefix      = "sn"
+	IssueActionMetadataPrefix    = "iam"
+	TransferActionMetadataPrefix = "tam"
 )
 
 type Translator struct {
 }
 
 func (t *Translator) CreateTokenRequestKey(id string) (string, error) {
-	return createCompositeKey(TokenKeyPrefix, []string{TokenRequestKeyPrefix, id})
+	return createCompositeKey(TokenRequestKeyPrefix, []string{id})
 }
 
 func (t *Translator) CreateSetupKey() (string, error) {
-	return createCompositeKey(TokenKeyPrefix, []string{TokenSetupKeyPrefix})
+	return createCompositeKey(TokenSetupKeyPrefix, nil)
 }
 
 func (t *Translator) CreateSetupHashKey() (string, error) {
-	return createCompositeKey(TokenKeyPrefix, []string{TokenSetupHashKeyPrefix})
+	return createCompositeKey(TokenSetupHashKeyPrefix, nil)
 }
 
-func (t *Translator) CreateTokenKey(id string, index uint64, output []byte) (string, error) {
-	return createCompositeKey(TokenKeyPrefix, []string{id, strconv.FormatUint(index, 10)})
+func (t *Translator) CreateOutputSNKey(id string, index uint64, output []byte) (string, error) {
+	hf := sha256.New()
+	hf.Write([]byte(OutputSNKeyPrefix))
+	hf.Write([]byte(id))
+	indexBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(indexBytes, index)
+	hf.Write(indexBytes)
+	hf.Write(output)
+	return createCompositeKey(OutputSNKeyPrefix, []string{hex.EncodeToString(hf.Sum(nil))})
+}
+
+func (t *Translator) CreateOutputKey(id string, index uint64) (string, error) {
+	return createCompositeKey(id, []string{strconv.FormatUint(index, 10)})
 }
 
 func (t *Translator) GetTransferMetadataSubKey(k string) (string, error) {
@@ -54,28 +66,25 @@ func (t *Translator) GetTransferMetadataSubKey(k string) (string, error) {
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to split composite key [%s]", k)
 	}
-	if len(components) != 2 {
-		return "", errors.Wrapf(err, "key [%s] should contain 2 components, got [%d]", k, len(components))
+	if len(components) != 1 {
+		return "", errors.Wrapf(err, "key [%s] should contain 1 component, got [%d]", k, len(components))
 	}
-	if prefix != TokenKeyPrefix {
+	if prefix != TransferActionMetadataPrefix {
 		return "", errors.Errorf("key [%s] doesn not contain the token key prefix", k)
 	}
-	if components[0] != TransferActionMetadata {
-		return "", errors.Errorf("key [%s] doesn not contain the token transfer action medatata prefix", k)
-	}
-	return components[1], nil
+	return components[0], nil
 }
 
-func (t *Translator) CreateSNKey(id string) (string, error) {
-	return createCompositeKey(TokenKeyPrefix, []string{SerialNumber, id})
+func (t *Translator) CreateInputSNKey(id string) (string, error) {
+	return createCompositeKey(InputSerialNumberPrefix, []string{id})
 }
 
 func (t *Translator) CreateIssueActionMetadataKey(key string) (string, error) {
-	return createCompositeKey(TokenKeyPrefix, []string{IssueActionMetadata, key})
+	return createCompositeKey(IssueActionMetadataPrefix, []string{key})
 }
 
 func (t *Translator) CreateTransferActionMetadataKey(key string) (string, error) {
-	return createCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, key})
+	return createCompositeKey(TransferActionMetadataPrefix, []string{key})
 }
 
 // createCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go
@@ -98,9 +107,9 @@ func validateCompositeKeyAttribute(str string) error {
 		return errors.Errorf("not a valid utf8 string: [%x]", str)
 	}
 	for index, runeValue := range str {
-		if runeValue == minUnicodeRuneValue || runeValue == MaxUnicodeRuneValue {
+		if runeValue == minUnicodeRuneValue || runeValue == maxUnicodeRuneValue {
 			return errors.Errorf(`input contain unicode %#U starting at position [%d]. %#U and %#U are not allowed in the input attribute of a composite key`,
-				runeValue, index, minUnicodeRuneValue, MaxUnicodeRuneValue)
+				runeValue, index, minUnicodeRuneValue, maxUnicodeRuneValue)
 		}
 	}
 	return nil

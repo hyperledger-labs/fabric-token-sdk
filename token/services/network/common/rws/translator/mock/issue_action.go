@@ -50,6 +50,16 @@ type IssueAction struct {
 	isAnonymousReturnsOnCall map[int]struct {
 		result1 bool
 	}
+	IsGraphHidingStub        func() bool
+	isGraphHidingMutex       sync.RWMutex
+	isGraphHidingArgsForCall []struct {
+	}
+	isGraphHidingReturns struct {
+		result1 bool
+	}
+	isGraphHidingReturnsOnCall map[int]struct {
+		result1 bool
+	}
 	NumOutputsStub        func() int
 	numOutputsMutex       sync.RWMutex
 	numOutputsArgsForCall []struct {
@@ -291,6 +301,59 @@ func (fake *IssueAction) IsAnonymousReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
+func (fake *IssueAction) IsGraphHiding() bool {
+	fake.isGraphHidingMutex.Lock()
+	ret, specificReturn := fake.isGraphHidingReturnsOnCall[len(fake.isGraphHidingArgsForCall)]
+	fake.isGraphHidingArgsForCall = append(fake.isGraphHidingArgsForCall, struct {
+	}{})
+	stub := fake.IsGraphHidingStub
+	fakeReturns := fake.isGraphHidingReturns
+	fake.recordInvocation("IsGraphHiding", []interface{}{})
+	fake.isGraphHidingMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *IssueAction) IsGraphHidingCallCount() int {
+	fake.isGraphHidingMutex.RLock()
+	defer fake.isGraphHidingMutex.RUnlock()
+	return len(fake.isGraphHidingArgsForCall)
+}
+
+func (fake *IssueAction) IsGraphHidingCalls(stub func() bool) {
+	fake.isGraphHidingMutex.Lock()
+	defer fake.isGraphHidingMutex.Unlock()
+	fake.IsGraphHidingStub = stub
+}
+
+func (fake *IssueAction) IsGraphHidingReturns(result1 bool) {
+	fake.isGraphHidingMutex.Lock()
+	defer fake.isGraphHidingMutex.Unlock()
+	fake.IsGraphHidingStub = nil
+	fake.isGraphHidingReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *IssueAction) IsGraphHidingReturnsOnCall(i int, result1 bool) {
+	fake.isGraphHidingMutex.Lock()
+	defer fake.isGraphHidingMutex.Unlock()
+	fake.IsGraphHidingStub = nil
+	if fake.isGraphHidingReturnsOnCall == nil {
+		fake.isGraphHidingReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.isGraphHidingReturnsOnCall[i] = struct {
+		result1 bool
+	}{result1}
+}
+
 func (fake *IssueAction) NumOutputs() int {
 	fake.numOutputsMutex.Lock()
 	ret, specificReturn := fake.numOutputsReturnsOnCall[len(fake.numOutputsArgsForCall)]
@@ -411,6 +474,8 @@ func (fake *IssueAction) Invocations() map[string][][]interface{} {
 	defer fake.getSerializedOutputsMutex.RUnlock()
 	fake.isAnonymousMutex.RLock()
 	defer fake.isAnonymousMutex.RUnlock()
+	fake.isGraphHidingMutex.RLock()
+	defer fake.isGraphHidingMutex.RUnlock()
 	fake.numOutputsMutex.RLock()
 	defer fake.numOutputsMutex.RUnlock()
 	fake.serializeMutex.RLock()

@@ -21,6 +21,8 @@ type IssueAction interface {
 	IsAnonymous() bool
 	GetIssuer() []byte
 	GetMetadata() map[string][]byte
+	// IsGraphHiding returns true if the action is graph hiding
+	IsGraphHiding() bool
 }
 
 //go:generate counterfeiter -o mock/transfer_action.go -fake-name TransferAction . TransferAction

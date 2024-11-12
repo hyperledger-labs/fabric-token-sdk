@@ -31,6 +31,8 @@ type IssueAction interface {
 	GetIssuer() []byte
 	// GetMetadata returns the metadata of the action
 	GetMetadata() map[string][]byte
+	// IsGraphHiding returns true if the action is graph hiding
+	IsGraphHiding() bool
 }
 
 // Output models an output of an action
