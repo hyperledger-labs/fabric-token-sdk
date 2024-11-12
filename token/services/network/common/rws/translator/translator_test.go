@@ -70,30 +70,16 @@ var _ = Describe("Translator", func() {
 				ns, id, out := fakeRWSet.SetStateArgsForCall(0)
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-1")))
-				key, err := keyTranslator.CreateOutputSNKey("0", 0, nil)
+				key, err := keyTranslator.CreateOutputKey("0", 0)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
 				ns, id, out = fakeRWSet.SetStateArgsForCall(1)
-				Expect(ns).To(Equal(tokenNameSpace))
-				Expect(out).To(Equal([]byte("output-2")))
-
-				key, err = keyTranslator.CreateOutputSNKey("0", 1, nil)
+				key, err = keyTranslator.CreateOutputSNKey("0", 0, []byte("output-1"))
 				Expect(err).NotTo(HaveOccurred())
+				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(id).To(Equal(key))
-			})
-		})
-
-		When("created tokens already exist", func() {
-			BeforeEach(func() {
-				fakeRWSet.GetStateReturnsOnCall(0, []byte("this is already occupied"), nil)
-			})
-			It("issue fails", func() {
-				err := writer.Write(fakeissue)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("token already exists"))
-				Expect(fakeRWSet.GetStateCallCount()).To(Equal(1))
-
+				Expect(out).To(Equal([]byte{1}))
 			})
 		})
 
@@ -132,35 +118,35 @@ var _ = Describe("Translator", func() {
 			It("succeeds", func() {
 				err := writer.Write(faketransfer)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(fakeRWSet.SetStateCallCount()).To(Equal(2))
+				Expect(fakeRWSet.SetStateCallCount()).To(Equal(4))
 
 				ns, id, out := fakeRWSet.SetStateArgsForCall(0)
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-1")))
-
-				key, err := keyTranslator.CreateOutputSNKey("0", 0, nil)
+				key, err := keyTranslator.CreateOutputKey("0", 0)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
 				ns, id, out = fakeRWSet.SetStateArgsForCall(1)
 				Expect(ns).To(Equal(tokenNameSpace))
-				Expect(out).To(Equal([]byte("output-2")))
-
-				key, err = keyTranslator.CreateOutputSNKey("0", 1, nil)
+				Expect(out).To(Equal([]byte{1}))
+				key, err = keyTranslator.CreateOutputSNKey("0", 0, []byte("output-1"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
-			})
-		})
-		When("created tokens already exist", func() {
-			BeforeEach(func() {
-				fakeRWSet.GetStateReturnsOnCall(3, []byte("this is already occupied"), nil)
-			})
-			It("transfer fails", func() {
-				err := writer.Write(faketransfer)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("token already exists"))
-				Expect(fakeRWSet.GetStateCallCount()).To(Equal(4))
 
+				ns, id, out = fakeRWSet.SetStateArgsForCall(2)
+				Expect(ns).To(Equal(tokenNameSpace))
+				Expect(out).To(Equal([]byte("output-2")))
+				key, err = keyTranslator.CreateOutputKey("0", 1)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(id).To(Equal(key))
+
+				ns, id, out = fakeRWSet.SetStateArgsForCall(3)
+				Expect(ns).To(Equal(tokenNameSpace))
+				Expect(out).To(Equal([]byte{1}))
+				key, err = keyTranslator.CreateOutputSNKey("0", 1, []byte("output-2"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(id).To(Equal(key))
 			})
 		})
 		When("created tokens cannot be added", func() {
@@ -182,7 +168,7 @@ var _ = Describe("Translator", func() {
 			It("transfer fails", func() {
 				err := writer.Write(faketransfer)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("invalid transfer: input must exist: state [tns:\u0000ztoken\u0000key3\u00000\u0000] does not exist for [0]"))
+				Expect(err.Error()).To(ContainSubstring("invalid transfer: input must exist: state [tns:\u0000osn\u000036b5ff4beb43fa740b74993c3f0886e3343360342b128a1954efa458aca77029\u0000] does not exist for [0]"))
 				Expect(fakeRWSet.GetStateCallCount()).To(Equal(3))
 			})
 		})
@@ -214,16 +200,35 @@ var _ = Describe("Translator", func() {
 				ns, id, out := fakeRWSet.SetStateArgsForCall(0)
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-1")))
-
-				key, err := keyTranslator.CreateOutputSNKey("0", 0, nil)
+				key, err := keyTranslator.CreateOutputKey("0", 0)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
 				ns, id, out = fakeRWSet.SetStateArgsForCall(1)
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-2")))
+				key, err = keyTranslator.CreateOutputKey("0", 1)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(id).To(Equal(key))
 
-				key, err = keyTranslator.CreateOutputSNKey("0", 1, nil)
+				ns, id, out = fakeRWSet.SetStateArgsForCall(2)
+				Expect(ns).To(Equal(tokenNameSpace))
+				Expect(out).To(Equal([]byte{1}))
+				key, err = keyTranslator.CreateInputSNKey("sn0")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(id).To(Equal(key))
+
+				ns, id, out = fakeRWSet.SetStateArgsForCall(3)
+				Expect(ns).To(Equal(tokenNameSpace))
+				Expect(out).To(Equal([]byte{1}))
+				key, err = keyTranslator.CreateInputSNKey("sn1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(id).To(Equal(key))
+
+				ns, id, out = fakeRWSet.SetStateArgsForCall(4)
+				Expect(ns).To(Equal(tokenNameSpace))
+				Expect(out).To(Equal([]byte{1}))
+				key, err = keyTranslator.CreateInputSNKey("sn2")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 			})
@@ -302,7 +307,7 @@ var _ = Describe("Translator", func() {
 			It("commit token request fails", func() {
 				_, err := writer.CommitTokenRequest([]byte("token request"), false)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to read token request: state [tns:\u0000ztoken\u0000token_request\u00000\u0000] already exists for [0]"))
+				Expect(err.Error()).To(ContainSubstring("failed to read token request: state [tns:\u0000tr\u00000\u0000] already exists for [0]"))
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(0))
 
 			})
