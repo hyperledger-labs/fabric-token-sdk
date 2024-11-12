@@ -134,7 +134,11 @@ func (h *HashedKeyTranslator) CreateSetupHashKey() (string, error) {
 }
 
 func (h *HashedKeyTranslator) CreateOutputSNKey(id string, index uint64, output []byte) (string, error) {
-	return h.KT.CreateOutputSNKey(id, index, output)
+	k, err := h.KT.CreateOutputSNKey(id, index, output)
+	if err != nil {
+		return "", err
+	}
+	return h.hash(3, k)
 }
 
 func (h *HashedKeyTranslator) CreateOutputKey(id string, index uint64) (string, error) {
@@ -142,7 +146,7 @@ func (h *HashedKeyTranslator) CreateOutputKey(id string, index uint64) (string, 
 	if err != nil {
 		return "", err
 	}
-	return h.hash(7, k)
+	return h.hash(4, k)
 }
 
 func (h *HashedKeyTranslator) GetTransferMetadataSubKey(k string) (string, error) {
@@ -150,7 +154,7 @@ func (h *HashedKeyTranslator) GetTransferMetadataSubKey(k string) (string, error
 	if err != nil {
 		return "", err
 	}
-	return h.hash(4, key)
+	return h.hash(5, key)
 }
 
 func (h *HashedKeyTranslator) CreateInputSNKey(id string) (string, error) {
@@ -158,7 +162,7 @@ func (h *HashedKeyTranslator) CreateInputSNKey(id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return h.hash(5, k)
+	return h.hash(6, k)
 }
 
 func (h *HashedKeyTranslator) CreateIssueActionMetadataKey(key string) (string, error) {
@@ -166,7 +170,7 @@ func (h *HashedKeyTranslator) CreateIssueActionMetadataKey(key string) (string, 
 	if err != nil {
 		return "", err
 	}
-	return h.hash(6, k)
+	return h.hash(7, k)
 }
 
 func (h *HashedKeyTranslator) CreateTransferActionMetadataKey(key string) (string, error) {
@@ -174,7 +178,7 @@ func (h *HashedKeyTranslator) CreateTransferActionMetadataKey(key string) (strin
 	if err != nil {
 		return "", err
 	}
-	return h.hash(7, k)
+	return h.hash(8, k)
 }
 
 func (h *HashedKeyTranslator) hash(code byte, k string) (string, error) {
