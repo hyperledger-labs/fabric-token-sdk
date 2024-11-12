@@ -1040,8 +1040,11 @@ func Restart(network *integration.Infrastructure, deleteVault bool, onRestart On
 		// Add extra time to wait for the vault to be reconstructed
 		time.Sleep(40 * time.Second)
 	}
-	for _, id := range ids {
-		onRestart(network, id.Id())
+	if onRestart != nil {
+		for _, id := range ids {
+			logger.Infof("Calling on restart for [%s]", id.Id())
+			onRestart(network, id.Id())
+		}
 	}
 }
 
