@@ -42,18 +42,15 @@ type Stream interface {
 	Result() ([]byte, error)
 }
 
-func RegisterAuditor(network *integration.Infrastructure, auditor *token3.NodeReference, onAuditorRestart OnAuditorRestartFunc) {
-	RegisterAuditorForTMSID(network, auditor, nil, onAuditorRestart)
+func RegisterAuditor(network *integration.Infrastructure, auditor *token3.NodeReference) {
+	RegisterAuditorForTMSID(network, auditor, nil)
 }
 
-func RegisterAuditorForTMSID(network *integration.Infrastructure, auditor *token3.NodeReference, tmsId *token2.TMSID, onAuditorRestart OnAuditorRestartFunc) {
+func RegisterAuditorForTMSID(network *integration.Infrastructure, auditor *token3.NodeReference, tmsId *token2.TMSID) {
 	_, err := network.Client(auditor.ReplicaName()).CallView("registerAuditor", common.JSONMarshall(&views.RegisterAuditor{
 		TMSID: tmsId,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	if onAuditorRestart != nil {
-		onAuditorRestart(network, auditor.Id())
-	}
 }
 
 func getTmsId(network *integration.Infrastructure, namespace string) *token2.TMSID {
@@ -1009,7 +1006,7 @@ type deleteVaultPlatform interface {
 	DeleteVault(id string)
 }
 
-func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*token3.NodeReference) {
+func Restart(network *integration.Infrastructure, deleteVault bool, onRestart OnRestartFunc, ids ...*token3.NodeReference) {
 	logger.Infof("restart [%v], [%v]", ids, RestartEnabled)
 	if !RestartEnabled {
 		return
@@ -1042,6 +1039,12 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*toke
 	if deleteVault {
 		// Add extra time to wait for the vault to be reconstructed
 		time.Sleep(40 * time.Second)
+	}
+	if onRestart != nil {
+		for _, id := range ids {
+			logger.Infof("Calling on restart for [%s]", id.Id())
+			onRestart(network, id.Id())
+		}
 	}
 }
 
