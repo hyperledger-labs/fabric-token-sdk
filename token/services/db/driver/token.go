@@ -85,7 +85,7 @@ type QueryTokenDetailsParams struct {
 	OwnerType string
 	// TokenType (optional) is the type of token
 	TokenType string
-	//IDs is an optional list of specific token ids to return
+	// IDs is an optional list of specific token ids to return
 	IDs []*token.ID
 	// TransactionIDs selects tokens that are the output of the provided transaction ids.
 	TransactionIDs []string
@@ -163,6 +163,8 @@ type TokenDB interface {
 	StorePublicParams(raw []byte) error
 	// PublicParams returns the stored public parameters
 	PublicParams() ([]byte, error)
+	// PublicParamsByHash returns the public parameters whose hash matches the passed one.
+	PublicParamsByHash(rawHash []byte) ([]byte, error)
 	// NewTokenDBTransaction returns a new Transaction to commit atomically multiple operations
 	NewTokenDBTransaction(ctx context.Context) (TokenDBTransaction, error)
 	// QueryTokenDetails provides detailed information about tokens
