@@ -14,6 +14,7 @@ import (
 	"time"
 
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	assert2 "github.com/stretchr/testify/assert"
@@ -94,7 +95,7 @@ func TSubscribeRead(t *testing.T, db driver.TokenDB, notifier driver.TokenNotifi
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction(context.TODO())
 	assert.NoError(t, err)
-	//assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
+	// assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
 	_, _, err = tx.GetToken(context.TODO(), "tx1", 0, true)
 	assert.NoError(t, err)
 	assert.NoError(t, tx.Commit())
@@ -728,7 +729,9 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 
 func TPublicParams(t *testing.T, db *TokenDB) {
 	b := []byte("test bytes")
+	bHash := hash.Hashable(b).Raw()
 	b1 := []byte("test bytes1")
+	b1Hash := hash.Hashable(b1).Raw()
 
 	res, err := db.PublicParams()
 	assert.NoError(t, err) // not found
@@ -738,14 +741,24 @@ func TPublicParams(t *testing.T, db *TokenDB) {
 	assert.NoError(t, err)
 
 	res, err = db.PublicParams()
-	assert.NoError(t, err) // not found
+	assert.NoError(t, err)
+	assert.Equal(t, res, b)
+
+	// retrieve by hash
+	res, err = db.PublicParamsByHash(bHash)
+	assert.NoError(t, err)
 	assert.Equal(t, res, b)
 
 	err = db.StorePublicParams(b1)
 	assert.NoError(t, err)
 
 	res, err = db.PublicParams()
-	assert.NoError(t, err) // not found
+	assert.NoError(t, err)
+	assert.Equal(t, res, b1)
+
+	// retrieve by hash
+	res, err = db.PublicParamsByHash(b1Hash)
+	assert.NoError(t, err)
 	assert.Equal(t, res, b1)
 }
 

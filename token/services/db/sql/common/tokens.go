@@ -16,6 +16,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -656,10 +657,9 @@ func (db *TokenDB) TransactionExists(ctx context.Context, id string) (bool, erro
 
 func (db *TokenDB) StorePublicParams(raw []byte) error {
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (raw, stored_at) VALUES ($1, $2)", db.table.PublicParams)
+	query := fmt.Sprintf("INSERT INTO %s (raw, raw_hash, stored_at) VALUES ($1, $2, $3)", db.table.PublicParams)
 	logger.Debug(query, fmt.Sprintf("store public parameters (%d bytes), %v", len(raw), now))
-
-	_, err := db.db.Exec(query, raw, now)
+	_, err := db.db.Exec(query, raw, hash.Hashable(raw).Raw(), now)
 	return err
 }
 
@@ -669,6 +669,22 @@ func (db *TokenDB) PublicParams() ([]byte, error) {
 	logger.Debug(query)
 
 	row := db.db.QueryRow(query)
+	err := row.Scan(&params)
+	if err != nil {
+		if errors.HasCause(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	return params, nil
+}
+
+func (db *TokenDB) PublicParamsByHash(rawHash []byte) ([]byte, error) {
+	var params []byte
+	query := fmt.Sprintf("SELECT raw FROM %s WHERE raw_hash = $1;", db.table.PublicParams)
+	logger.Debug(query)
+
+	row := db.db.QueryRow(query, rawHash)
 	err := row.Scan(&params)
 	if err != nil {
 		if errors.HasCause(err, sql.ErrNoRows) {
@@ -813,9 +829,11 @@ func (db *TokenDB) GetSchema() string {
 
 		-- Public Parameters
 		CREATE TABLE IF NOT EXISTS %s (
+			raw_hash BYTEA,
 			raw BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL PRIMARY KEY
 		);
+		CREATE INDEX IF NOT EXISTS pp_hash_%s ON %s ( raw_hash );
 
 		-- Certifications
 		CREATE TABLE IF NOT EXISTS %s (
@@ -831,7 +849,7 @@ func (db *TokenDB) GetSchema() string {
 		db.table.Tokens, db.table.Tokens,
 		db.table.Tokens, db.table.Tokens,
 		db.table.Ownership, db.table.Tokens,
-		db.table.PublicParams,
+		db.table.PublicParams, db.table.PublicParams, db.table.PublicParams,
 		db.table.Certifications, db.table.Tokens,
 	)
 }
@@ -913,7 +931,7 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 
 func (t *TokenTransaction) Delete(ctx context.Context, txID string, index uint64, deletedBy string) error {
 	span := trace.SpanFromContext(ctx)
-	//logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
+	// logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
 	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE tx_id = $3 AND idx = $4;", t.db.table.Tokens)
@@ -933,7 +951,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 	}
 
 	span := trace.SpanFromContext(ctx)
-	//logger.Debugf("store record [%s:%d,%v] in table [%s]", tr.TxID, tr.Index, owners, t.db.table.Tokens)
+	// logger.Debugf("store record [%s:%d,%v] in table [%s]", tr.TxID, tr.Index, owners, t.db.table.Tokens)
 
 	// Store token
 	now := time.Now().UTC()
