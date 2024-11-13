@@ -10,33 +10,14 @@ import (
 	url2 "net/url"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/driver"
 	"github.com/pkg/errors"
 )
 
 var (
-	sspDriverMu sync.RWMutex
-	sspDriver   = make(map[string]driver.SSPDriver)
-)
-
-// RegisterSSPDriver makes an SSPDriver available by the provided name.
-// If Register is called twice with the same name or if ssp is nil,
-// it panics.
-func RegisterSSPDriver(name string, driver driver.SSPDriver) {
-	sspDriverMu.Lock()
-	defer sspDriverMu.Unlock()
-	if driver == nil {
-		panic("Register ssp is nil")
-	}
-	if _, dup := sspDriver[name]; dup {
-		panic("Register called twice for ssp " + name)
-	}
-	sspDriver[name] = driver
-}
-
-var (
+	logger = flogging.MustGetLogger("token-sdk.services.interop.state")
 	// TokenExistsError is returned when the token already exists
 	TokenExistsError = errors.New("token exists")
 	// TokenDoesNotExistError is returned when the token does not exist
@@ -44,17 +25,21 @@ var (
 )
 
 type ServiceProvider struct {
-	sp view.ServiceProvider
-
-	sspsMu sync.RWMutex
-	ssps   map[string]driver.StateServiceProvider
+	sspsMu     sync.RWMutex
+	ssps       map[string]driver.StateServiceProvider
+	sspDrivers map[driver.SSPDriverName]driver.NamedSSPDriver
 }
 
-func NewServiceProvider(sp view.ServiceProvider) *ServiceProvider {
+func NewServiceProvider() *ServiceProvider {
 	return &ServiceProvider{
-		sp:   sp,
-		ssps: map[string]driver.StateServiceProvider{},
+		ssps:       map[string]driver.StateServiceProvider{},
+		sspDrivers: map[driver.SSPDriverName]driver.NamedSSPDriver{},
 	}
+}
+
+func (p *ServiceProvider) RegisterDriver(driver driver.NamedSSPDriver) {
+	logger.Debugf("register driver [%s]", driver.Name)
+	p.sspDrivers[driver.Name] = driver
 }
 
 func (p *ServiceProvider) QueryExecutor(url string) (driver.StateQueryExecutor, error) {
@@ -91,11 +76,11 @@ func (p *ServiceProvider) ssp(url string) (driver.StateServiceProvider, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed parsing url")
 		}
-		provider, ok := sspDriver[u.Scheme]
+		provider, ok := p.sspDrivers[driver.SSPDriverName(u.Scheme)]
 		if !ok {
 			return nil, errors.Errorf("invalid scheme, expected fabric, got [%s]", u.Scheme)
 		}
-		ssp, err = provider.New(p.sp)
+		ssp, err = provider.Driver.New()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting state service provider for [%s]", u.Scheme)
 		}

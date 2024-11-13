@@ -168,6 +168,10 @@ func (m *TMSProvider) Configurations() ([]driver.Configuration, error) {
 	return res, nil
 }
 
+func (m *TMSProvider) PublicParametersFromBytes(raw []byte) (driver.PublicParameters, error) {
+	return m.tokenDriverService.PublicParametersFromBytes(raw)
+}
+
 func (m *TMSProvider) SetCallback(callback CallbackFunc) {
 	m.callback = callback
 }

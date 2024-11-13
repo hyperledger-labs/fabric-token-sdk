@@ -24,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	pledge2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -111,6 +112,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	authorization := common.NewAuthorizationMultiplexer(
 		common.NewTMSAuthorization(logger, ppm.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
+		pledge2.NewScriptAuth(ws),
 	)
 
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)

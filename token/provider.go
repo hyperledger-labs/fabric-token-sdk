@@ -93,6 +93,14 @@ func (p *ManagementServiceProvider) NewManagementService(opts ...ServiceOption) 
 	return p.managementService(true, opts...)
 }
 
+func (p *ManagementServiceProvider) PublicParametersFromBytes(raw []byte) (*PublicParameters, error) {
+	pp, err := p.tmsProvider.PublicParametersFromBytes(raw)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed unmarshalling public parameters")
+	}
+	return &PublicParameters{PublicParameters: pp}, nil
+}
+
 func (p *ManagementServiceProvider) managementService(aNew bool, opts ...ServiceOption) (*ManagementService, error) {
 	opt, err := CompileServiceOptions(opts...)
 	if err != nil {

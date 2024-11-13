@@ -21,7 +21,7 @@ import (
 	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/fabric"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 )
@@ -361,7 +361,8 @@ func TestFastExchange(network *integration.Infrastructure, sel *token2.ReplicaSe
 }
 
 func TestAssetTransferWithTwoNetworks(network *integration.Infrastructure, sel *token2.ReplicaSelector) {
-	issuer := sel.Get("issuer")
+	issuerAlpha := sel.Get("issuerAlpha")
+	issuerBeta := sel.Get("issuerBeta")
 	alice := sel.Get("alice")
 	bob := sel.Get("bob")
 	auditor := sel.Get("auditor")
@@ -386,41 +387,41 @@ func TestAssetTransferWithTwoNetworks(network *integration.Infrastructure, sel *
 	RegisterAuditor(network, token.WithTMSID(alpha))
 	RegisterAuditor(network, token.WithTMSID(beta))
 
-	IssueCashWithTMS(network, alpha, "issuerAlpha", "", "USD", 50, "alice")
-	IssueCashWithTMS(network, alpha, "issuerAlpha", "", "EUR", 10, "alice")
+	IssueCashWithTMS(network, alpha, issuerAlpha, "", "USD", 50, alice, auditor)
+	IssueCashWithTMS(network, alpha, issuerAlpha, "", "EUR", 10, alice, auditor)
 	CheckBalance(network, alice, "", "USD", 50)
 	CheckBalance(network, alice, "", "EUR", 10)
 
 	// Pledge + Claim
-	txid, pledgeid := Pledge(network, alice, "", "USD", 50, "bob", "issuerAlpha", betaURL, time.Minute*1, token.WithTMSID(alpha))
+	txid, pledgeid := Pledge(network, alice, "", "USD", 50, bob, issuerAlpha, betaURL, time.Minute*1, token.WithTMSID(alpha))
 	CheckBalance(network, alice, "", "USD", 0)
-	CheckBalance(network, "bob", "", "USD", 0)
+	CheckBalance(network, bob, "", "USD", 0)
 
 	PledgeIDExists(network, alice, pledgeid, txid, token.WithTMSID(alpha))
 
-	Claim(network, "bob", "issuerBeta", &token2.ID{TxId: txid, Index: 0})
+	Claim(network, bob, issuerBeta, &token3.ID{TxId: txid, Index: 0})
 	CheckBalance(network, alice, "", "USD", 0)
-	CheckBalance(network, "bob", "", "USD", 50)
+	CheckBalance(network, bob, "", "USD", 50)
 
 	time.Sleep(time.Minute * 1)
-	RedeemWithTMS(network, "issuerAlpha", &token2.ID{TxId: txid, Index: 0}, token.WithTMSID(alpha))
+	RedeemWithTMS(network, issuerAlpha, &token3.ID{TxId: txid, Index: 0}, token.WithTMSID(alpha))
 	CheckBalance(network, alice, "", "USD", 0)
-	CheckBalance(network, "bob", "", "USD", 50)
+	CheckBalance(network, bob, "", "USD", 50)
 
 	// Pledge + Reclaim
 
-	IssueCashWithTMS(network, alpha, "issuerAlpha", "", "USD", 50, alice)
+	IssueCashWithTMS(network, alpha, issuerAlpha, "", "USD", 50, alice, auditor)
 	CheckBalance(network, alice, "", "USD", 50, token.WithTMSID(alpha))
-	txid, _ = Pledge(network, alice, "", "USD", 50, "bob", "issuerAlpha", betaURL, time.Second*10, token.WithTMSID(alpha))
+	txid, _ = Pledge(network, alice, "", "USD", 50, bob, issuerAlpha, betaURL, time.Second*10, token.WithTMSID(alpha))
 
 	time.Sleep(time.Second * 15)
 	Reclaim(network, alice, "", txid, token.WithTMSID(alpha))
 	CheckBalance(network, alice, "", "USD", 50, token.WithTMSID(alpha))
-	CheckBalance(network, "bob", "", "USD", 50)
+	CheckBalance(network, bob, "", "USD", 50)
 
-	RedeemWithTMSAndError(network, "issuerAlpha", &token2.ID{TxId: txid, Index: 0}, token.WithTMSID(alpha))
+	RedeemWithTMSAndError(network, issuerAlpha, &token3.ID{TxId: txid, Index: 0}, token.WithTMSID(alpha))
 	CheckBalance(network, alice, "", "USD", 50, token.WithTMSID(alpha))
-	CheckBalance(network, "bob", "", "USD", 50)
+	CheckBalance(network, bob, "", "USD", 50)
 
 	ScanPledgeIDWithError(network, alice, pledgeid, txid, []string{"timeout reached"}, token.WithTMSID(alpha))
 
@@ -428,73 +429,73 @@ func TestAssetTransferWithTwoNetworks(network *integration.Infrastructure, sel *
 
 	ReclaimWithError(network, alice, "", txid, token.WithTMSID(alpha))
 	CheckBalance(network, alice, "", "USD", 50, token.WithTMSID(alpha))
-	CheckBalance(network, "bob", "", "USD", 50)
+	CheckBalance(network, bob, "", "USD", 50)
 
 	// Try to claim after reclaim
 
-	ClaimWithError(network, "bob", "issuerBeta", &token2.ID{TxId: txid, Index: 0})
+	ClaimWithError(network, bob, issuerBeta, &token3.ID{TxId: txid, Index: 0})
 	CheckBalance(network, alice, "", "USD", 50, token.WithTMSID(alpha))
-	CheckBalance(network, "bob", "", "USD", 50)
+	CheckBalance(network, bob, "", "USD", 50)
 
 	// Try to reclaim after claim
 
-	txid, _ = Pledge(network, alice, "", "USD", 10, "bob", "issuerAlpha", betaURL, time.Minute*1, token.WithTMSID(alpha))
+	txid, _ = Pledge(network, alice, "", "USD", 10, bob, issuerAlpha, betaURL, time.Minute*1, token.WithTMSID(alpha))
 	CheckBalance(network, alice, "", "USD", 40)
-	CheckBalance(network, "bob", "", "USD", 50)
+	CheckBalance(network, bob, "", "USD", 50)
 
-	Claim(network, "bob", "issuerBeta", &token2.ID{TxId: txid, Index: 0})
+	Claim(network, bob, issuerBeta, &token3.ID{TxId: txid, Index: 0})
 	CheckBalance(network, alice, "", "USD", 40)
-	CheckBalance(network, "bob", "", "USD", 60)
+	CheckBalance(network, bob, "", "USD", 60)
 
 	time.Sleep(time.Minute * 1)
 
 	ReclaimWithError(network, alice, "", txid, token.WithTMSID(alpha))
 	CheckBalance(network, alice, "", "USD", 40)
-	CheckBalance(network, "bob", "", "USD", 60)
+	CheckBalance(network, bob, "", "USD", 60)
 
 	// Try to claim after claim
 
-	txid, pledgeid = Pledge(network, "bob", "", "USD", 5, alice, "issuerBeta", alphaURL, time.Minute*1, token.WithTMSID(beta))
+	txid, pledgeid = Pledge(network, bob, "", "USD", 5, alice, issuerBeta, alphaURL, time.Minute*1, token.WithTMSID(beta))
 	CheckBalance(network, alice, "", "USD", 40)
-	CheckBalance(network, "bob", "", "USD", 55)
+	CheckBalance(network, bob, "", "USD", 55)
 
-	PledgeIDExists(network, "bob", pledgeid, txid, token.WithTMSID(beta))
+	PledgeIDExists(network, bob, pledgeid, txid, token.WithTMSID(beta))
 
-	Claim(network, alice, "issuerAlpha", &token2.ID{TxId: txid, Index: 0})
+	Claim(network, alice, issuerAlpha, &token3.ID{TxId: txid, Index: 0})
 	CheckBalance(network, alice, "", "USD", 45)
-	CheckBalance(network, "bob", "", "USD", 55)
+	CheckBalance(network, bob, "", "USD", 55)
 
-	ClaimWithError(network, alice, "issuerAlpha", &token2.ID{TxId: txid, Index: 0})
+	ClaimWithError(network, alice, issuerAlpha, &token3.ID{TxId: txid, Index: 0})
 	CheckBalance(network, alice, "", "USD", 45)
-	CheckBalance(network, "bob", "", "USD", 55)
+	CheckBalance(network, bob, "", "USD", 55)
 
 	time.Sleep(1 * time.Minute)
-	RedeemWithTMS(network, "issuerBeta", &token2.ID{TxId: txid, Index: 0}, token.WithTMSID(beta))
+	RedeemWithTMS(network, issuerBeta, &token3.ID{TxId: txid, Index: 0}, token.WithTMSID(beta))
 	CheckBalance(network, alice, "", "USD", 45)
-	CheckBalance(network, "bob", "", "USD", 55)
+	CheckBalance(network, bob, "", "USD", 55)
 
 	// Try to redeem again
-	RedeemWithTMSAndError(network, "issuerBeta", &token2.ID{TxId: txid, Index: 0}, token.WithTMSID(beta), "failed to retrieve pledged token during redeem")
+	RedeemWithTMSAndError(network, issuerBeta, &token3.ID{TxId: txid, Index: 0}, token.WithTMSID(beta), "failed to retrieve pledged token during redeem")
 	CheckBalance(network, alice, "", "USD", 45)
-	CheckBalance(network, "bob", "", "USD", 55)
+	CheckBalance(network, bob, "", "USD", 55)
 
 	// Try to claim or reclaim without pledging
 
-	ClaimWithError(network, alice, "issuerAlpha", &token2.ID{TxId: "", Index: 0})
+	ClaimWithError(network, alice, issuerAlpha, &token3.ID{TxId: "", Index: 0})
 	CheckBalance(network, alice, "", "USD", 45)
-	CheckBalance(network, "bob", "", "USD", 55)
+	CheckBalance(network, bob, "", "USD", 55)
 
 	ReclaimWithError(network, alice, "", "", token.WithTMSID(alpha))
 	CheckBalance(network, alice, "", "USD", 45)
-	CheckBalance(network, "bob", "", "USD", 55)
+	CheckBalance(network, bob, "", "USD", 55)
 
 	// Fast Pledge + Claim
-	FastTransferPledgeClaim(network, alice, "", "USD", 10, "bob", "issuerAlpha", betaURL, time.Minute*1, token.WithTMSID(alpha))
+	FastTransferPledgeClaim(network, alice, "", "USD", 10, bob, issuerAlpha, betaURL, time.Minute*1, token.WithTMSID(alpha))
 	CheckBalance(network, alice, "", "USD", 35)
-	CheckBalance(network, "bob", "", "USD", 65)
+	CheckBalance(network, bob, "", "USD", 65)
 
 	// Fast Pledge + Reclaim
-	FastTransferPledgeReclaim(network, alice, "", "USD", 10, "bob", "issuerAlpha", betaURL, time.Second*5, token.WithTMSID(alpha))
+	FastTransferPledgeReclaim(network, alice, "", "USD", 10, bob, issuerAlpha, betaURL, time.Second*5, token.WithTMSID(alpha))
 	CheckBalance(network, alice, "", "USD", 35)
-	CheckBalance(network, "bob", "", "USD", 65)
+	CheckBalance(network, bob, "", "USD", 65)
 }

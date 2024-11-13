@@ -411,18 +411,18 @@ func AssetTransferTopology(opts common.Opts) []api.Topology {
 	bob.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuerAlpha", "alice"), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuerAlpha", "alice"), f1Topology, f1Topology.Channels[0].Name, opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
-	tms = tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuerBeta", "bob"), f2Topology, f2Topology.Channels[0].Name, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms, true)
+	tms = tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuerBeta", "bob"), f2Topology, f2Topology.Channels[0].Name, opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
 	// Add SDKs to FSC Nodes
-	for _, sdk := range sdks {
+	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
 

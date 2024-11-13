@@ -13,10 +13,8 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/weaver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/driver"
@@ -26,11 +24,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.uber.org/dig"
 )
-
-type RelayProvider interface {
-	Relay(fns *fabric.NetworkService) *weaver.Relay
-}
 
 type PledgeVault interface {
 	PledgeByTokenID(tokenID *token.ID) ([]*pledge.Info, error)
@@ -40,14 +35,14 @@ type GetFabricNetworkServiceFunc = func(string) (*fabric.NetworkService, error)
 
 type StateQueryExecutor struct {
 	Logger           logging.Logger
-	RelayProvider    RelayProvider
+	RelayProvider    fabric2.RelayProvider
 	TargetNetworkURL string
 	RelaySelector    *fabric.NetworkService
 }
 
 func NewStateQueryExecutor(
 	Logger logging.Logger,
-	RelayProvider RelayProvider,
+	RelayProvider fabric2.RelayProvider,
 	targetNetworkURL string,
 	relaySelector *fabric.NetworkService,
 ) (*StateQueryExecutor, error) {
@@ -169,7 +164,7 @@ func (p *StateQueryExecutor) ExistsWithMetadata(tokenID *token.ID, origin string
 
 type StateVerifier struct {
 	Logger                  logging.Logger
-	RelayProvider           RelayProvider
+	RelayProvider           fabric2.RelayProvider
 	NetworkURL              string
 	RelaySelector           *fabric.NetworkService
 	PledgeVault             PledgeVault
@@ -178,7 +173,7 @@ type StateVerifier struct {
 
 func NewStateVerifier(
 	Logger logging.Logger,
-	relayProvider RelayProvider,
+	relayProvider fabric2.RelayProvider,
 	PledgeVault PledgeVault,
 	GetFabricNetworkService GetFabricNetworkServiceFunc,
 	networkURL string,
@@ -373,38 +368,51 @@ func (v *StateVerifier) VerifyProofTokenWithMetadataExistence(proofRaw []byte, t
 }
 
 type StateDriver struct {
-	Logger logging.Logger
+	Logger        logging.Logger
+	FNSProvider   *fabric.NetworkServiceProvider
+	RelayProvider fabric2.RelayProvider
+	VaultStore    *pledge.VaultStore
 }
 
-func NewStateDriver(logger logging.Logger) *StateDriver {
-	return &StateDriver{Logger: logger}
+func NewStateDriver(in struct {
+	dig.In
+	FNSProvider   *fabric.NetworkServiceProvider
+	RelayProvider fabric2.RelayProvider
+	VaultStore    *pledge.VaultStore
+}) fabric2.NamedStateDriver {
+	return fabric2.NamedStateDriver{
+		Name: crypto.DLogPublicParameters,
+		Driver: &StateDriver{
+			Logger:        logging.MustGetLogger("token-sdk.core.zkatdlog"),
+			FNSProvider:   in.FNSProvider,
+			RelayProvider: in.RelayProvider,
+			VaultStore:    in.VaultStore,
+		},
+	}
 }
 
-func (d *StateDriver) NewStateQueryExecutor(sp driver2.ServiceProvider, url string) (driver.StateQueryExecutor, error) {
-	fns, err := fabric.GetDefaultFNS(sp)
+func (d *StateDriver) NewStateQueryExecutor(url string) (driver.StateQueryExecutor, error) {
+	fns, err := d.FNSProvider.FabricNetworkService("")
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get default FNS")
 	}
-	return NewStateQueryExecutor(d.Logger, weaver.GetProvider(sp), url, fns)
+
+	return NewStateQueryExecutor(d.Logger, d.RelayProvider, url, fns)
 }
 
-func (d *StateDriver) NewStateVerifier(sp driver2.ServiceProvider, url string) (driver.StateVerifier, error) {
-	fns, err := fabric.GetDefaultFNS(sp)
+func (d *StateDriver) NewStateVerifier(url string) (driver.StateVerifier, error) {
+	fns, err := d.FNSProvider.FabricNetworkService("")
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get default FNS")
 	}
 	return NewStateVerifier(
 		d.Logger,
-		weaver.GetProvider(sp),
-		pledge.Vault(sp),
+		d.RelayProvider,
+		d.VaultStore,
 		func(id string) (*fabric.NetworkService, error) {
-			return fabric.GetFabricNetworkService(sp, id)
+			return d.FNSProvider.FabricNetworkService(id)
 		},
 		url,
 		fns,
 	)
-}
-
-func init() {
-	fabric2.RegisterStateDriver(crypto.DLogPublicParameters, NewStateDriver(logging.MustGetLogger("token-sdk.core.zkatdlog")))
 }

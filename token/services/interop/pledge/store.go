@@ -18,14 +18,16 @@ type VaultStore struct {
 	store *kvs.KVS
 }
 
+func NewVaultStore(store *kvs.KVS) *VaultStore {
+	return &VaultStore{store: store}
+}
+
 func Vault(sf view.ServiceProvider) *VaultStore {
-	store, err := sf.GetService(&kvs.KVS{})
+	store, err := sf.GetService(&VaultStore{})
 	if err != nil {
 		panic(err)
 	}
-	return &VaultStore{
-		store: store.(*kvs.KVS),
-	}
+	return store.(*VaultStore)
 }
 
 func (ps *VaultStore) Store(info *Info) error {

@@ -47,8 +47,15 @@ type StateServiceProvider interface {
 	URLToTMSID(url string) (token2.TMSID, error)
 }
 
+type SSPDriverName string
+
+type NamedSSPDriver struct {
+	Name   SSPDriverName
+	Driver SSPDriver
+}
+
 // SSPDriver models a driver factory for state-related services
 type SSPDriver interface {
 	// New returns an instance of a state service provider
-	New(sp token2.ServiceProvider) (StateServiceProvider, error)
+	New() (StateServiceProvider, error)
 }

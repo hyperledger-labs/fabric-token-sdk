@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fall"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fofabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ofabtoken"
@@ -130,7 +131,7 @@ func newTestSuiteInteropAssetTransfer(commType fsc.P2PCommunicationType, factor 
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
-		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
+		SDKs:            []api2.SDK{&fall.SDK{}},
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:view-sdk=debug:info",
 	}))
 	return ts, selector
