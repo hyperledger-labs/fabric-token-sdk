@@ -23,8 +23,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type DefaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
-
 type Driver struct {
 	fnsProvider                     *fabric.NetworkServiceProvider
 	vaultProvider                   vault.Provider
@@ -52,11 +50,10 @@ func NewNamedDriver(
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
 	identityProvider driver2.IdentityProvider,
-	defaultPublicParamsFetcher DefaultPublicParamsFetcher,
 ) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name:   "fabric",
-		Driver: NewDriver(fnsProvider, vaultProvider, tokensManager, configService, viewManager, viewRegistry, filterProvider, tmsProvider, tracerProvider, identityProvider, defaultPublicParamsFetcher, NewTokenExecutorProvider(), NewSpentTokenExecutorProvider()),
+		Driver: NewDriver(fnsProvider, vaultProvider, tokensManager, configService, viewManager, viewRegistry, filterProvider, tmsProvider, tracerProvider, identityProvider, NewChaincodePublicParamsFetcher(viewManager), NewTokenExecutorProvider(), NewSpentTokenExecutorProvider()),
 	}
 }
 

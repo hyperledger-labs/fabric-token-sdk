@@ -41,7 +41,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
@@ -143,7 +142,6 @@ func (p *SDK) Install() error {
 		p.Container().Provide(func(dbManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
 			return sherdlock.NewFetcherProvider(dbManager, notifierManager, metricsProvider, sherdlock.Mixed)
 		}),
-		p.Container().Provide(fabric.NewChaincodePublicParamsFetcher, dig.As(new(fabric.DefaultPublicParamsFetcher))),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")
