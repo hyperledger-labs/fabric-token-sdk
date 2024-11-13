@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func NewNamedDriver(
+func NewOrionDriver(
 	onsProvider *orion.NetworkServiceProvider,
 	viewRegistry driver2.Registry,
 	viewManager *view.Manager,
@@ -33,11 +33,8 @@ func NewNamedDriver(
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
-) driver.NamedDriver {
-	return driver.NamedDriver{
-		Name:   "orion",
-		Driver: NewDriver(onsProvider, viewRegistry, viewManager, vaultProvider, configProvider, configService, identityProvider, filterProvider, tmsProvider, NewTokenExecutorProvider(), NewSpentTokenExecutorProvider(), tracerProvider),
-	}
+) driver.Driver {
+	return NewDriver(onsProvider, viewRegistry, viewManager, vaultProvider, configProvider, configService, identityProvider, filterProvider, tmsProvider, NewTokenExecutorProvider(), NewSpentTokenExecutorProvider(), tracerProvider)
 }
 
 func NewDriver(onsProvider *orion.NetworkServiceProvider, viewRegistry driver2.Registry, viewManager *view.Manager, vaultProvider *vault2.Provider, configProvider *view.ConfigService, configService *config.Service, identityProvider view2.IdentityProvider, filterProvider *common.AcceptTxInDBFilterProvider, tmsProvider *token.ManagementServiceProvider, tokenQueryExecutorProvider driver.TokenQueryExecutorProvider, spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider, tracerProvider trace.TracerProvider) *Driver {

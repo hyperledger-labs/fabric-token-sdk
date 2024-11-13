@@ -237,7 +237,7 @@ func connectNetworks(configService *config2.Service, networkProvider *network.Pr
 func registerNetworkDrivers(in struct {
 	dig.In
 	NetworkProvider *network.Provider
-	Drivers         []driver3.NamedDriver `group:"network-drivers"`
+	Drivers         []driver3.Driver `group:"network-drivers"`
 }) {
 	for _, d := range in.Drivers {
 		in.NetworkProvider.RegisterDriver(d)

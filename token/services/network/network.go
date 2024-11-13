@@ -413,19 +413,19 @@ func (n *Network) Connect(ns string) ([]token.ServiceOption, error) {
 type Provider struct {
 	lock     sync.Mutex
 	networks map[string]*Network
-	drivers  []driver.NamedDriver
+	drivers  []driver.Driver
 }
 
 // NewProvider returns a new instance of network provider
 func NewProvider() *Provider {
 	ms := &Provider{
 		networks: map[string]*Network{},
-		drivers:  make([]driver.NamedDriver, 0),
+		drivers:  make([]driver.Driver, 0),
 	}
 	return ms
 }
 
-func (np *Provider) RegisterDriver(driver driver.NamedDriver) {
+func (np *Provider) RegisterDriver(driver driver.Driver) {
 	np.drivers = append(np.drivers, driver)
 }
 
@@ -456,12 +456,12 @@ func (np *Provider) GetNetwork(network string, channel string) (*Network, error)
 func (np *Provider) newNetwork(network string, channel string) (*Network, error) {
 	var errs []error
 	for _, d := range np.drivers {
-		nw, err := d.Driver.New(network, channel)
+		nw, err := d.New(network, channel)
 		if err != nil {
 			errs = append(errs, errors.WithMessagef(err, "failed to create network [%s:%s]", network, channel))
 			continue
 		}
-		logger.Debugf("new network [%s:%s] with driver [%s]", network, channel, d.Name)
+		logger.Debugf("new network [%s:%s]", network, channel)
 		return &Network{n: nw}, nil
 	}
 	return nil, errors.Errorf("no network driver found for [%s:%s], errs [%v]", network, channel, errs)
