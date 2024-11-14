@@ -19,7 +19,7 @@ type PublicParamsManager[T driver.PublicParameters] struct {
 	publicParameters T
 	// label of the public params
 	PPLabel string
-	ppHash  []byte
+	ppHash  driver.PPHash
 }
 
 func NewPublicParamsManager[T driver.PublicParameters](
@@ -67,6 +67,6 @@ func (v *PublicParamsManager[T]) PublicParams() T {
 	return v.publicParameters
 }
 
-func (v *PublicParamsManager[T]) PublicParamsHash() []byte {
+func (v *PublicParamsManager[T]) PublicParamsHash() driver.PPHash {
 	return v.ppHash
 }

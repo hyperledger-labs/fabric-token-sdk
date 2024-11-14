@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -522,7 +523,7 @@ func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 	return ttxDBError(err)
 }
 
-func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadata map[string][]byte, ppHash []byte) error {
+func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadata map[string][]byte, ppHash driver2.PPHash) error {
 	logger.Debugf("adding token request [%s]", txID)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")

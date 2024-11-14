@@ -75,6 +75,6 @@ func (c *PublicParametersManager) PublicParameters() *PublicParameters {
 	return &PublicParameters{PublicParameters: pp, ppm: c.ppm}
 }
 
-func (c *PublicParametersManager) PublicParamsHash() []byte {
+func (c *PublicParametersManager) PublicParamsHash() driver.PPHash {
 	return c.ppm.PublicParamsHash()
 }

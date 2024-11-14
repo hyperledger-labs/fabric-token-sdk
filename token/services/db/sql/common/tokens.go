@@ -688,7 +688,7 @@ func (db *TokenDB) PublicParams() ([]byte, error) {
 	return params, nil
 }
 
-func (db *TokenDB) PublicParamsByHash(rawHash []byte) ([]byte, error) {
+func (db *TokenDB) PublicParamsByHash(rawHash tdriver.PPHash) ([]byte, error) {
 	var params []byte
 	query := fmt.Sprintf("SELECT raw FROM %s WHERE raw_hash = $1;", db.table.PublicParams)
 	logger.Debug(query)

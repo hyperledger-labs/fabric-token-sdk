@@ -32,15 +32,15 @@ type PublicParamsManager struct {
 	publicParametersReturnsOnCall map[int]struct {
 		result1 driver.PublicParameters
 	}
-	PublicParamsHashStub        func() []byte
+	PublicParamsHashStub        func() driver.PPHash
 	publicParamsHashMutex       sync.RWMutex
 	publicParamsHashArgsForCall []struct {
 	}
 	publicParamsHashReturns struct {
-		result1 []byte
+		result1 driver.PPHash
 	}
 	publicParamsHashReturnsOnCall map[int]struct {
-		result1 []byte
+		result1 driver.PPHash
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -158,7 +158,7 @@ func (fake *PublicParamsManager) PublicParametersReturnsOnCall(i int, result1 dr
 	}{result1}
 }
 
-func (fake *PublicParamsManager) PublicParamsHash() []byte {
+func (fake *PublicParamsManager) PublicParamsHash() driver.PPHash {
 	fake.publicParamsHashMutex.Lock()
 	ret, specificReturn := fake.publicParamsHashReturnsOnCall[len(fake.publicParamsHashArgsForCall)]
 	fake.publicParamsHashArgsForCall = append(fake.publicParamsHashArgsForCall, struct {
@@ -182,32 +182,32 @@ func (fake *PublicParamsManager) PublicParamsHashCallCount() int {
 	return len(fake.publicParamsHashArgsForCall)
 }
 
-func (fake *PublicParamsManager) PublicParamsHashCalls(stub func() []byte) {
+func (fake *PublicParamsManager) PublicParamsHashCalls(stub func() driver.PPHash) {
 	fake.publicParamsHashMutex.Lock()
 	defer fake.publicParamsHashMutex.Unlock()
 	fake.PublicParamsHashStub = stub
 }
 
-func (fake *PublicParamsManager) PublicParamsHashReturns(result1 []byte) {
+func (fake *PublicParamsManager) PublicParamsHashReturns(result1 driver.PPHash) {
 	fake.publicParamsHashMutex.Lock()
 	defer fake.publicParamsHashMutex.Unlock()
 	fake.PublicParamsHashStub = nil
 	fake.publicParamsHashReturns = struct {
-		result1 []byte
+		result1 driver.PPHash
 	}{result1}
 }
 
-func (fake *PublicParamsManager) PublicParamsHashReturnsOnCall(i int, result1 []byte) {
+func (fake *PublicParamsManager) PublicParamsHashReturnsOnCall(i int, result1 driver.PPHash) {
 	fake.publicParamsHashMutex.Lock()
 	defer fake.publicParamsHashMutex.Unlock()
 	fake.PublicParamsHashStub = nil
 	if fake.publicParamsHashReturnsOnCall == nil {
 		fake.publicParamsHashReturnsOnCall = make(map[int]struct {
-			result1 []byte
+			result1 driver.PPHash
 		})
 	}
 	fake.publicParamsHashReturnsOnCall[i] = struct {
-		result1 []byte
+		result1 driver.PPHash
 	}{result1}
 }
 

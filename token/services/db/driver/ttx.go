@@ -11,6 +11,7 @@ import (
 	"errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 // TokenTransactionDB defines the interface for a token transaction database.
@@ -30,7 +31,7 @@ type AtomicWrite interface {
 	Rollback()
 
 	// AddTokenRequest binds the passed transaction id to the passed token request
-	AddTokenRequest(txID string, tr []byte, applicationMetadata map[string][]byte, ppHash []byte) error
+	AddTokenRequest(txID string, tr []byte, applicationMetadata map[string][]byte, ppHash driver.PPHash) error
 
 	// AddMovement adds a movement record to the database transaction.
 	// Each token transaction can be seen as a list of movements.
