@@ -41,7 +41,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
@@ -111,6 +110,7 @@ func (p *SDK) Install() error {
 			return &vault.ProviderAdaptor{Provider: networkProvider}
 		}, dig.As(new(token.VaultProvider))),
 		p.Container().Provide(token.NewManagementServiceProvider),
+		p.Container().Provide(token.NewTMSNormalizer, dig.As(new(token.TMSNormalizer))),
 		p.Container().Provide(digutils.Identity[*token.ManagementServiceProvider](), dig.As(new(ttx.TMSProvider), new(tokens.TMSProvider), new(auditor.TokenManagementServiceProvider))),
 		p.Container().Provide(NewTTXDBManager),
 		p.Container().Provide(digutils.Identity[*ttxdb.Manager](), dig.As(new(ttx.DBProvider), new(network2.TTXDBProvider))),
@@ -142,7 +142,6 @@ func (p *SDK) Install() error {
 		p.Container().Provide(func(dbManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
 			return sherdlock.NewFetcherProvider(dbManager, notifierManager, metricsProvider, sherdlock.Mixed)
 		}),
-		p.Container().Provide(fabric.NewChaincodePublicParamsFetcher, dig.As(new(fabric.DefaultPublicParamsFetcher))),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")
@@ -238,7 +237,7 @@ func connectNetworks(configService *config2.Service, networkProvider *network.Pr
 func registerNetworkDrivers(in struct {
 	dig.In
 	NetworkProvider *network.Provider
-	Drivers         []driver3.NamedDriver `group:"network-drivers"`
+	Drivers         []driver3.Driver `group:"network-drivers"`
 }) {
 	for _, d := range in.Drivers {
 		in.NetworkProvider.RegisterDriver(d)

@@ -173,12 +173,13 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		assert.Equal(len(unspentTokenIDs), len(ledgerTokenContent))
 		index := 0
 		assert.NoError(tv.QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
-			if !bytes.Equal(ledgerTokenContent[index], tokenRaw) {
-				errorMessages = append(errorMessages, fmt.Sprintf("token content does not match at [%s][%d], [%s]!=[%s]",
-					id,
-					index,
-					hash.Hashable(ledgerTokenContent[index]), hash.Hashable(tokenRaw)))
+			for _, content := range ledgerTokenContent {
+				if bytes.Equal(content, tokenRaw) {
+					return nil
+				}
 			}
+
+			errorMessages = append(errorMessages, fmt.Sprintf("token content does not match at [%s][%d], [%s]", id, index, hash.Hashable(tokenRaw)))
 			index++
 			return nil
 		}), "failed to match ledger token content with local")

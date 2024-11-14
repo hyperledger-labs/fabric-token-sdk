@@ -9,7 +9,6 @@ package fabric
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -17,7 +16,6 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
@@ -163,7 +161,8 @@ type Network struct {
 	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
 	subscribers                *events.Subscribers
 	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
-
+	tokenQueryExecutor         driver.TokenQueryExecutor
+	spentTokenQueryExecutor    driver.SpentTokenQueryExecutor
 	endorsementServiceProvider *endorsement.ServiceProvider
 }
 
@@ -177,8 +176,10 @@ func NewNetwork(
 	viewManager ViewManager,
 	tmsProvider *token2.ManagementServiceProvider,
 	endorsementServiceProvider *endorsement.ServiceProvider,
+	tokenQueryExecutor driver.TokenQueryExecutor,
 	tracerProvider trace.TracerProvider,
 	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher,
+	spentTokenQueryExecutor driver.SpentTokenQueryExecutor,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -200,6 +201,8 @@ func NewNetwork(
 		subscribers:                events.NewSubscribers(),
 		defaultPublicParamsFetcher: defaultPublicParamsFetcher,
 		endorsementServiceProvider: endorsementServiceProvider,
+		tokenQueryExecutor:         tokenQueryExecutor,
+		spentTokenQueryExecutor:    spentTokenQueryExecutor,
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "tokensdk_fabric",
 			LabelNames: []tracing.LabelName{},
@@ -354,68 +357,11 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 }
 
 func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
-	idsRaw, err := json.Marshal(IDs)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling ids")
-	}
-
-	payloadBoxed, err := context.RunView(chaincode.NewQueryView(
-		namespace,
-		QueryTokensFunctions,
-		idsRaw,
-	).WithNetwork(n.Name()).WithChannel(n.Channel()))
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to query the token chaincode for tokens")
-	}
-
-	// Unbox
-	raw, ok := payloadBoxed.([]byte)
-	if !ok {
-		return nil, errors.Errorf("expected []byte from TCC, got [%T]", payloadBoxed)
-	}
-	var tokens [][]byte
-	if err := json.Unmarshal(raw, &tokens); err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal response")
-	}
-
-	return tokens, nil
+	return n.tokenQueryExecutor.QueryTokens(context, namespace, IDs)
 }
 
 func (n *Network) AreTokensSpent(c view.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
-	sIDs := make([]string, len(tokenIDs))
-	var err error
-	for i, id := range tokenIDs {
-		sIDs[i], err = keys.CreateTokenKey(id.TxId, id.Index)
-		if err != nil {
-			return nil, errors.Wrapf(err, "cannot compute spent id for [%v]", id)
-		}
-	}
-
-	idsRaw, err := json.Marshal(sIDs)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling ids")
-	}
-
-	payloadBoxed, err := c.RunView(chaincode.NewQueryView(
-		namespace,
-		AreTokensSpent,
-		idsRaw,
-	).WithNetwork(n.Name()).WithChannel(n.Channel()))
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to query the token chaincode for tokens spent")
-	}
-
-	// Unbox
-	raw, ok := payloadBoxed.([]byte)
-	if !ok {
-		return nil, errors.Errorf("expected []byte from TCC, got [%T]", payloadBoxed)
-	}
-	var spent []bool
-	if err := json.Unmarshal(raw, &spent); err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal esponse")
-	}
-
-	return spent, nil
+	return n.spentTokenQueryExecutor.QuerySpentTokens(c, namespace, tokenIDs, meta)
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {

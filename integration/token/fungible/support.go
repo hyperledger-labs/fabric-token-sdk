@@ -16,9 +16,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	topology2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	tplatform "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
@@ -44,18 +42,15 @@ type Stream interface {
 	Result() ([]byte, error)
 }
 
-func RegisterAuditor(network *integration.Infrastructure, auditor *token3.NodeReference, onAuditorRestart OnAuditorRestartFunc) {
-	RegisterAuditorForTMSID(network, auditor, nil, onAuditorRestart)
+func RegisterAuditor(network *integration.Infrastructure, auditor *token3.NodeReference) {
+	RegisterAuditorForTMSID(network, auditor, nil)
 }
 
-func RegisterAuditorForTMSID(network *integration.Infrastructure, auditor *token3.NodeReference, tmsId *token2.TMSID, onAuditorRestart OnAuditorRestartFunc) {
+func RegisterAuditorForTMSID(network *integration.Infrastructure, auditor *token3.NodeReference, tmsId *token2.TMSID) {
 	_, err := network.Client(auditor.ReplicaName()).CallView("registerAuditor", common.JSONMarshall(&views.RegisterAuditor{
 		TMSID: tmsId,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	if onAuditorRestart != nil {
-		onAuditorRestart(network, auditor.Id())
-	}
 }
 
 func getTmsId(network *integration.Infrastructure, namespace string) *token2.TMSID {
@@ -1007,7 +1002,11 @@ func JSONUnmarshalFloat64(v interface{}) float64 {
 	return s
 }
 
-func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*token3.NodeReference) {
+type deleteVaultPlatform interface {
+	DeleteVault(id string)
+}
+
+func Restart(network *integration.Infrastructure, deleteVault bool, onRestart OnRestartFunc, ids ...*token3.NodeReference) {
 	logger.Infof("restart [%v], [%v]", ids, RestartEnabled)
 	if !RestartEnabled {
 		return
@@ -1018,17 +1017,10 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*toke
 	time.Sleep(10 * time.Second)
 	if deleteVault {
 		for _, id := range ids {
-			fn := fabric.Network(network.Ctx, "default")
-			if fn != nil {
-				fn.DeleteVault(id.Id())
-			} else {
-				// skip
-				on := orion.Network(network.Ctx, "orion")
-				if on != nil {
-					on.DeleteVault(id.Id())
-				} else {
-					// TODO: handle additional platforms
-					logger.Warnf("neither fabric nor orion network found")
+			for name, platform := range network.Ctx.PlatformsByName {
+				if dv, ok := platform.(deleteVaultPlatform); ok {
+					logger.Infof("Platform %d supports delete vault. Deleting...", name)
+					dv.DeleteVault(id.Id())
 				}
 			}
 
@@ -1047,6 +1039,12 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...*toke
 	if deleteVault {
 		// Add extra time to wait for the vault to be reconstructed
 		time.Sleep(40 * time.Second)
+	}
+	if onRestart != nil {
+		for _, id := range ids {
+			logger.Infof("Calling on restart for [%s]", id.Id())
+			onRestart(network, id.Id())
+		}
 	}
 }
 
