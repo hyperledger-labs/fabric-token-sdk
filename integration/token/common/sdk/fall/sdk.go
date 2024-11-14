@@ -86,9 +86,13 @@ func (p *SDK) Start(ctx context.Context) error {
 		return err
 	}
 
-	return errors.Join(
-		p.Container().Invoke(registerInteropStateDrivers),
-	)
+	fabricEnabled := p.ConfigService().GetBool("fabric.enabled")
+	if fabricEnabled {
+		return errors.Join(
+			p.Container().Invoke(registerInteropStateDrivers),
+		)
+	}
+	return nil
 }
 
 func registerInteropStateDrivers(in struct {
