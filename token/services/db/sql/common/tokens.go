@@ -696,9 +696,6 @@ func (db *TokenDB) PublicParamsByHash(rawHash []byte) ([]byte, error) {
 	row := db.db.QueryRow(query, rawHash)
 	err := row.Scan(&params)
 	if err != nil {
-		if errors.HasCause(err, sql.ErrNoRows) {
-			return nil, nil
-		}
 		return nil, errors.Wrapf(err, "error querying db")
 	}
 	return params, nil
