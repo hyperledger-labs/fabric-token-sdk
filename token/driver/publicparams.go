@@ -60,8 +60,9 @@ type PublicParameters interface {
 	Precision() uint64
 	// String returns a readable version of the public parameters
 	String() string
-
+	// Serialize returns the serialized version of this public parameters
 	Serialize() ([]byte, error)
+	// Validate returns true if the public parameters are well-formed
 	Validate() error
 }
 
@@ -73,4 +74,6 @@ type PublicParamsManager interface {
 	PublicParameters() PublicParameters
 	// NewCertifierKeyPair generates a new key pair for the certifier, if supported
 	NewCertifierKeyPair() ([]byte, []byte, error)
+	// PublicParamsHash returns the hash of the raw public parameters
+	PublicParamsHash() []byte
 }

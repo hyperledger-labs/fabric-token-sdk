@@ -236,7 +236,12 @@ func (r *RequestApprovalResponderView) validate(
 		return nil, nil, errors.WithMessagef(err, "failed to retrieve db [%s]", tms.ID())
 	}
 	logger.Debugf("Append validation record for TX [%s]", tx.ID())
-	if err := db.AppendValidationRecord(tx.ID(), requestRaw, meta); err != nil {
+	if err := db.AppendValidationRecord(
+		tx.ID(),
+		requestRaw,
+		meta,
+		tms.PublicParametersManager().PublicParamsHash(),
+	); err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to append metadata for [%s]", tx.ID())
 	}
 	return actions, meta, nil
