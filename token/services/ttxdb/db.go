@@ -14,6 +14,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -300,7 +301,7 @@ func (d *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, erro
 }
 
 // AppendValidationRecord appends the given validation metadata related to the given transaction id
-func (d *DB) AppendValidationRecord(txID string, tokenRequest []byte, meta map[string][]byte, ppHash []byte) error {
+func (d *DB) AppendValidationRecord(txID string, tokenRequest []byte, meta map[string][]byte, ppHash driver2.PPHash) error {
 	logger.Debugf("appending new validation record... [%s]", txID)
 
 	w, err := d.db.BeginAtomicWrite()

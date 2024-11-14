@@ -167,7 +167,7 @@ type TokenDB interface {
 	PublicParams() ([]byte, error)
 	// PublicParamsByHash returns the public parameters whose hash matches the passed one.
 	// If not public parameters are available for that hash, it returns an error
-	PublicParamsByHash(rawHash []byte) ([]byte, error)
+	PublicParamsByHash(rawHash driver.PPHash) ([]byte, error)
 	// NewTokenDBTransaction returns a new Transaction to commit atomically multiple operations
 	NewTokenDBTransaction(ctx context.Context) (TokenDBTransaction, error)
 	// QueryTokenDetails provides detailed information about tokens

@@ -10,6 +10,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 )
 
+type PPHash []byte
+
 // SerializedPublicParameters is the serialized form of PublicParameters.
 type SerializedPublicParameters struct {
 	// Identifier is the unique identifier of this public parameters.
@@ -75,5 +77,5 @@ type PublicParamsManager interface {
 	// NewCertifierKeyPair generates a new key pair for the certifier, if supported
 	NewCertifierKeyPair() ([]byte, []byte, error)
 	// PublicParamsHash returns the hash of the raw public parameters
-	PublicParamsHash() []byte
+	PublicParamsHash() PPHash
 }
