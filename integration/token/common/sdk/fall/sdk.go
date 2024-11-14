@@ -41,16 +41,7 @@ func NewFrom(sdk dig2.SDK) *SDK {
 
 func (p *SDK) Install() error {
 	err := errors.Join(
-		// weaver
-		p.Container().Provide(weaver.NewProvider, dig.As(new(fabric2.RelayProvider))),
-		// state provider
-		p.Container().Provide(state.NewServiceProvider),
-		p.Container().Provide(fabric3.NewStateDriver, dig.Group("fabric-ssp-state-drivers")),
-		p.Container().Provide(fabric4.NewStateDriver, dig.Group("fabric-ssp-state-drivers")),
-		p.Container().Provide(fabric2.NewSSPDriver, dig.Group("ssp-drivers")),
-		p.Container().Provide(pledge.NewVaultStore),
-
-		p.Container().Provide(fabric.NewGenericDriver, dig.Group("network-drivers")),
+		p.Container().Provide(fabric.NewDriver, dig.Group("network-drivers")),
 		p.Container().Provide(fabtoken.NewDriver, dig.Group("token-drivers")),
 		p.Container().Provide(dlog.NewDriver, dig.Group("token-drivers")),
 	)
@@ -58,15 +49,36 @@ func (p *SDK) Install() error {
 		return err
 	}
 
+	fabricEnabled := p.ConfigService().GetBool("fabric.enabled")
+	if fabricEnabled {
+		err := errors.Join(
+			// weaver
+			p.Container().Provide(weaver.NewProvider, dig.As(new(fabric2.RelayProvider))),
+			// state provider
+			p.Container().Provide(state.NewServiceProvider),
+			p.Container().Provide(fabric3.NewStateDriver, dig.Group("fabric-ssp-state-drivers")),
+			p.Container().Provide(fabric4.NewStateDriver, dig.Group("fabric-ssp-state-drivers")),
+			p.Container().Provide(fabric2.NewSSPDriver, dig.Group("ssp-drivers")),
+			p.Container().Provide(pledge.NewVaultStore),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err := p.SDK.Install(); err != nil {
 		return err
 	}
 
-	return errors.Join(
-		digutils.Register[fabric2.RelayProvider](p.Container()),
-		digutils.Register[*pledge.VaultStore](p.Container()),
-		digutils.Register[*state.ServiceProvider](p.Container()),
-	)
+	if fabricEnabled {
+		return errors.Join(
+			digutils.Register[fabric2.RelayProvider](p.Container()),
+			digutils.Register[*pledge.VaultStore](p.Container()),
+			digutils.Register[*state.ServiceProvider](p.Container()),
+		)
+	}
+
+	return nil
 }
 
 func (p *SDK) Start(ctx context.Context) error {
