@@ -159,7 +159,8 @@ type TokenDB interface {
 	WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
 	// TransactionExists returns true if a token with that transaction id exists in the db
 	TransactionExists(ctx context.Context, id string) (bool, error)
-	// StorePublicParams stores the public parameters
+	// StorePublicParams stores the public parameters.
+	// If they already exist, the function return with no error. No changes are applied.
 	StorePublicParams(raw []byte) error
 	// PublicParams returns the stored public parameters
 	PublicParams() ([]byte, error)
