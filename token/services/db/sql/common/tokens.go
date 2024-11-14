@@ -829,11 +829,11 @@ func (db *TokenDB) GetSchema() string {
 
 		-- Public Parameters
 		CREATE TABLE IF NOT EXISTS %s (
-			raw_hash BYTEA,
+			raw_hash BYTEA PRIMARY KEY,
 			raw BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL PRIMARY KEY
+			stored_at TIMESTAMP NOT NULL 
 		);
-		CREATE INDEX IF NOT EXISTS pp_hash_%s ON %s ( raw_hash );
+		CREATE INDEX IF NOT EXISTS stored_at_%s ON %s ( stored_at );
 
 		-- Certifications
 		CREATE TABLE IF NOT EXISTS %s (
