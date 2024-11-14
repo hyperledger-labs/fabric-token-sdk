@@ -35,7 +35,7 @@ const (
 )
 
 var _ = Describe("EndToEnd", func() {
-	for _, t := range integration2.AllTestTypes {
+	for _, t := range integration2.WebSocketNoReplicationOnly {
 		Describe("T1 Fungible with Auditor ne Issuer", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)

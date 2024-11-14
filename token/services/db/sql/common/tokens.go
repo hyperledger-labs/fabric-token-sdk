@@ -23,7 +23,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
 )
 
 type tokenTables struct {
@@ -658,20 +657,18 @@ func (db *TokenDB) TransactionExists(ctx context.Context, id string) (bool, erro
 }
 
 func (db *TokenDB) StorePublicParams(raw []byte) error {
-	newPPHash := hash.Hashable(raw).Raw()
-	_, err := db.PublicParamsByHash(newPPHash)
-	if err != nil {
-		logger.Debugf("public params [%s] already in the database", base64.StdEncoding.EncodeToString(newPPHash))
+	rawHash := hash.Hashable(raw).Raw()
+	_, err := db.PublicParamsByHash(rawHash)
+	if err == nil {
+		logger.Debugf("public params [%s] already in the database", base64.StdEncoding.EncodeToString(rawHash))
 		// no need to update the public parameters
 		return nil
 	}
 
 	now := time.Now().UTC()
 	query := fmt.Sprintf("INSERT INTO %s (raw, raw_hash, stored_at) VALUES ($1, $2, $3)", db.table.PublicParams)
-	if logger.IsEnabledFor(zap.DebugLevel) {
-		logger.Debug(query, fmt.Sprintf("store public parameters (%d bytes) [%v], hash [%s]", len(raw), now, hash.Hashable(raw)))
-	}
-	_, err = db.db.Exec(query, raw, newPPHash, now)
+	logger.Debugf(query, fmt.Sprintf("store public parameters (%d bytes) [%v], hash [%s]", len(raw), now, base64.StdEncoding.EncodeToString(rawHash)))
+	_, err = db.db.Exec(query, raw, rawHash, now)
 	return err
 }
 
