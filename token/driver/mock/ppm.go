@@ -32,6 +32,16 @@ type PublicParamsManager struct {
 	publicParametersReturnsOnCall map[int]struct {
 		result1 driver.PublicParameters
 	}
+	PublicParamsHashStub        func() []byte
+	publicParamsHashMutex       sync.RWMutex
+	publicParamsHashArgsForCall []struct {
+	}
+	publicParamsHashReturns struct {
+		result1 []byte
+	}
+	publicParamsHashReturnsOnCall map[int]struct {
+		result1 []byte
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -148,6 +158,59 @@ func (fake *PublicParamsManager) PublicParametersReturnsOnCall(i int, result1 dr
 	}{result1}
 }
 
+func (fake *PublicParamsManager) PublicParamsHash() []byte {
+	fake.publicParamsHashMutex.Lock()
+	ret, specificReturn := fake.publicParamsHashReturnsOnCall[len(fake.publicParamsHashArgsForCall)]
+	fake.publicParamsHashArgsForCall = append(fake.publicParamsHashArgsForCall, struct {
+	}{})
+	stub := fake.PublicParamsHashStub
+	fakeReturns := fake.publicParamsHashReturns
+	fake.recordInvocation("PublicParamsHash", []interface{}{})
+	fake.publicParamsHashMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *PublicParamsManager) PublicParamsHashCallCount() int {
+	fake.publicParamsHashMutex.RLock()
+	defer fake.publicParamsHashMutex.RUnlock()
+	return len(fake.publicParamsHashArgsForCall)
+}
+
+func (fake *PublicParamsManager) PublicParamsHashCalls(stub func() []byte) {
+	fake.publicParamsHashMutex.Lock()
+	defer fake.publicParamsHashMutex.Unlock()
+	fake.PublicParamsHashStub = stub
+}
+
+func (fake *PublicParamsManager) PublicParamsHashReturns(result1 []byte) {
+	fake.publicParamsHashMutex.Lock()
+	defer fake.publicParamsHashMutex.Unlock()
+	fake.PublicParamsHashStub = nil
+	fake.publicParamsHashReturns = struct {
+		result1 []byte
+	}{result1}
+}
+
+func (fake *PublicParamsManager) PublicParamsHashReturnsOnCall(i int, result1 []byte) {
+	fake.publicParamsHashMutex.Lock()
+	defer fake.publicParamsHashMutex.Unlock()
+	fake.PublicParamsHashStub = nil
+	if fake.publicParamsHashReturnsOnCall == nil {
+		fake.publicParamsHashReturnsOnCall = make(map[int]struct {
+			result1 []byte
+		})
+	}
+	fake.publicParamsHashReturnsOnCall[i] = struct {
+		result1 []byte
+	}{result1}
+}
+
 func (fake *PublicParamsManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -155,6 +218,8 @@ func (fake *PublicParamsManager) Invocations() map[string][][]interface{} {
 	defer fake.newCertifierKeyPairMutex.RUnlock()
 	fake.publicParametersMutex.RLock()
 	defer fake.publicParametersMutex.RUnlock()
+	fake.publicParamsHashMutex.RLock()
+	defer fake.publicParamsHashMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

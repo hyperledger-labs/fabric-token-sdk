@@ -274,7 +274,8 @@ func (db *TransactionDB) GetSchema() string {
 			request BYTEA NOT NULL,
 			status INT NOT NULL,
 			status_message TEXT NOT NULL,
-			application_metadata JSONB NOT NULL
+			application_metadata JSONB NOT NULL,
+			pp_hash BYTEA NOT NULL
 		);
 
 		-- transactions
@@ -521,7 +522,7 @@ func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 	return ttxDBError(err)
 }
 
-func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadata map[string][]byte) error {
+func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadata map[string][]byte, ppHash []byte) error {
 	logger.Debugf("adding token request [%s]", txID)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
@@ -534,10 +535,10 @@ func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadat
 		return errors.New("error marshaling application metadata")
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, request, status, status_message, application_metadata) VALUES ($1, $2, $3, $4, $5)", w.db.table.Requests)
-	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata))
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, request, status, status_message, application_metadata, pp_hash) VALUES ($1, $2, $3, $4, $5, $6)", w.db.table.Requests)
+	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(ppHash))
 
-	_, err = w.txn.Exec(query, txID, tr, driver.Pending, "", j)
+	_, err = w.txn.Exec(query, txID, tr, driver.Pending, "", j, ppHash)
 	return ttxDBError(err)
 }
 

@@ -228,7 +228,12 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
 	d.cache.Add(record.Anchor, raw)
-	if err := w.AddTokenRequest(record.Anchor, raw, req.Metadata.Application); err != nil {
+	if err := w.AddTokenRequest(
+		record.Anchor,
+		raw,
+		req.Metadata.Application,
+		req.TokenService.PublicParametersManager().PublicParamsHash(),
+	); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
@@ -295,7 +300,7 @@ func (d *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, erro
 }
 
 // AppendValidationRecord appends the given validation metadata related to the given transaction id
-func (d *DB) AppendValidationRecord(txID string, tokenRequest []byte, meta map[string][]byte) error {
+func (d *DB) AppendValidationRecord(txID string, tokenRequest []byte, meta map[string][]byte, ppHash []byte) error {
 	logger.Debugf("appending new validation record... [%s]", txID)
 
 	w, err := d.db.BeginAtomicWrite()
@@ -304,7 +309,7 @@ func (d *DB) AppendValidationRecord(txID string, tokenRequest []byte, meta map[s
 	}
 	// we store the token request, but don't have or care about the application metadata
 	d.cache.Add(txID, tokenRequest)
-	if err := w.AddTokenRequest(txID, tokenRequest, nil); err != nil {
+	if err := w.AddTokenRequest(txID, tokenRequest, nil, ppHash); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", txID)
 	}

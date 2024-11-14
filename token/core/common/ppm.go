@@ -19,6 +19,7 @@ type PublicParamsManager[T driver.PublicParameters] struct {
 	publicParameters T
 	// label of the public params
 	PPLabel string
+	ppHash  []byte
 }
 
 func NewPublicParamsManager[T driver.PublicParameters](
@@ -40,6 +41,7 @@ func NewPublicParamsManager[T driver.PublicParameters](
 		return nil, errors.WithMessage(err, "invalid public parameters")
 	}
 	ppm.publicParameters = pp
+	ppm.ppHash = Hashable(ppRaw).Raw()
 
 	return ppm, nil
 }
@@ -63,4 +65,8 @@ func (v *PublicParamsManager[T]) NewCertifierKeyPair() ([]byte, []byte, error) {
 
 func (v *PublicParamsManager[T]) PublicParams() T {
 	return v.publicParameters
+}
+
+func (v *PublicParamsManager[T]) PublicParamsHash() []byte {
+	return v.ppHash
 }
