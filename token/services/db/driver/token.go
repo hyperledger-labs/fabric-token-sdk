@@ -162,9 +162,11 @@ type TokenDB interface {
 	// StorePublicParams stores the public parameters.
 	// If they already exist, the function return with no error. No changes are applied.
 	StorePublicParams(raw []byte) error
-	// PublicParams returns the stored public parameters
+	// PublicParams returns the stored public parameters.
+	// If not public parameters are available, it returns nil with no error
 	PublicParams() ([]byte, error)
 	// PublicParamsByHash returns the public parameters whose hash matches the passed one.
+	// If not public parameters are available for that hash, it returns an error
 	PublicParamsByHash(rawHash []byte) ([]byte, error)
 	// NewTokenDBTransaction returns a new Transaction to commit atomically multiple operations
 	NewTokenDBTransaction(ctx context.Context) (TokenDBTransaction, error)
