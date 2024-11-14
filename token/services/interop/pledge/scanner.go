@@ -33,7 +33,7 @@ func WithStartingTransaction(txID string) token.ServiceOption {
 // IDExists scans the ledger for a pledge identifier, taking into account the timeout
 // IDExists returns true, if entry identified by key (MetadataKey+pledgeID) is occupied.
 func IDExists(ctx view.Context, pledgeID string, timeout time.Duration, opts ...token.ServiceOption) (bool, error) {
-	logger.Infof("scanning for pledgeID of [%s] with timeout [%s]", pledgeID, timeout)
+	logger.Debugf("scanning for pledgeID of [%s] with timeout [%s]", pledgeID, timeout)
 	tokenOptions, err := token.CompileServiceOptions(opts...)
 	if err != nil {
 		return false, err

@@ -68,7 +68,7 @@ func (t *TypedIdentityDeserializer) DeserializeVerifier(typ string, raw []byte) 
 }
 
 func (t *TypedIdentityDeserializer) Recipients(id token.Identity, typ string, raw []byte) ([]token.Identity, error) {
-	logger.Infof("pledge, get recipients for [%s][%s]", id, typ)
+	logger.Debugf("pledge, get recipients for [%s][%s]", id, typ)
 	if typ != ScriptType {
 		return nil, errors.New("unknown identity type")
 	}
@@ -82,7 +82,7 @@ func (t *TypedIdentityDeserializer) Recipients(id token.Identity, typ string, ra
 }
 
 func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id token.Identity, typ string, raw []byte, p deserializer.AuditInfoProvider) ([][]byte, error) {
-	logger.Infof("1. pledge, get owner audit info for [%s][%s]", id, typ)
+	logger.Debugf("1. pledge, get owner audit info for [%s][%s]", id, typ)
 	if typ != ScriptType {
 		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, ScriptType)
 	}
@@ -93,14 +93,14 @@ func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id token.Identity, typ str
 		return nil, errors.Wrapf(err, "failed to unmarshal htlc script")
 	}
 
-	logger.Infof("2. pledge, get owner audit info for [%s][%s]", id, typ)
+	logger.Debugf("2. pledge, get owner audit info for [%s][%s]", id, typ)
 	auditInfo := &ScriptInfo{}
 	auditInfo.Sender, err = p.GetAuditInfo(script.Sender)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for sender of pledge script [%s]", view.Identity(raw).String())
 	}
 
-	logger.Infof("3. pledge, get owner audit info for [%s][%s]", id, typ)
+	logger.Debugf("3. pledge, get owner audit info for [%s][%s]", id, typ)
 	if len(auditInfo.Sender) == 0 { // in case this is a redeem we need to check the script issuer (and not the script sender)
 		auditInfo.Sender, err = p.GetAuditInfo(script.Issuer)
 		if err != nil {
@@ -111,7 +111,7 @@ func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id token.Identity, typ str
 		}
 	}
 
-	logger.Infof("4. pledge, get owner audit info for [%s][%s]", id, typ)
+	logger.Debugf("4. pledge, get owner audit info for [%s][%s]", id, typ)
 	// Notice that recipient is in another network, but the issuer is
 	// the actual recipient of the script because it is in the same network.
 	auditInfo.Recipient, err = p.GetAuditInfo(script.Issuer)
@@ -119,7 +119,7 @@ func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id token.Identity, typ str
 		return nil, errors.Wrapf(err, "failed getting audit info for issuer of pledge script [%s]", view.Identity(raw).String())
 	}
 
-	logger.Infof("5. pledge, get owner audit info for [%s][%s] [%s]", id, typ, debug.Stack())
+	logger.Debugf("5. pledge, get owner audit info for [%s][%s] [%s]", id, typ, debug.Stack())
 	auditInfoRaw, err := json.Marshal(auditInfo)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshaling audit info for script")
