@@ -26,6 +26,11 @@ integration-tests-interop-dlog-t6:
 integration-tests-interop-dlog-t7:
 	make integration-tests-interop-dlog TEST_FILTER="T7"
 
+.PHONY: integration-tests-interop-dlog
+integration-tests-interop-dlog:
+	cd ./integration/token/interop/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --label-filter="$(TEST_FILTER)" .
+
+
 .PHONY: integration-tests-interop-fabtoken-t1
 integration-tests-interop-fabtoken-t1:
 	make integration-tests-interop-fabtoken TEST_FILTER="T1"
