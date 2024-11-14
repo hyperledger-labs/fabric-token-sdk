@@ -8,6 +8,7 @@ package fabric
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -75,10 +76,10 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 		if err != nil {
 			return err
 		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("Parsing write key [%s]", key)
-		}
 		if key == setUpKey {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("Parsing write key [%s] with hash value [%s]", key, hash.Hashable(val))
+			}
 			if err := tsmProvider.Update(token.TMSID{
 				Network:   tx.Network(),
 				Channel:   tx.Channel(),
