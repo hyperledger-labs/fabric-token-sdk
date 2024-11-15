@@ -17,6 +17,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	topology2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	tplatform "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
@@ -35,6 +37,12 @@ import (
 var (
 	RestartEnabled = true
 )
+
+type TransactionRecord struct {
+	ttxdb.TransactionRecord
+	CheckPrevious bool
+	CheckNext     bool
+}
 
 type Stream interface {
 	Recv(m interface{}) error
@@ -134,7 +142,7 @@ func GetEndorsers(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	return endorsers
 }
 
-func CheckAuditedTransactions(network *integration.Infrastructure, auditor *token3.NodeReference, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
+func CheckAuditedTransactions(network *integration.Infrastructure, auditor *token3.NodeReference, expected []TransactionRecord, start *time.Time, end *time.Time) {
 	txsBoxed, err := network.Client(auditor.ReplicaName()).CallView("historyAuditing", common.JSONMarshall(&views.ListAuditedTransactions{
 		From: start,
 		To:   end,
@@ -159,7 +167,7 @@ func CheckAuditedTransactions(network *integration.Infrastructure, auditor *toke
 	}
 }
 
-func CheckAcceptedTransactions(network *integration.Infrastructure, id *token3.NodeReference, wallet string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time, statuses []ttxdb.TxStatus, actionTypes ...ttxdb.ActionType) {
+func CheckAcceptedTransactions(network *integration.Infrastructure, id *token3.NodeReference, wallet string, expected []TransactionRecord, start *time.Time, end *time.Time, statuses []ttxdb.TxStatus, actionTypes ...ttxdb.ActionType) {
 	eIDBoxed, err := network.Client(id.ReplicaName()).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
 		Wallet: wallet,
 	}))
@@ -183,13 +191,41 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id *token3.N
 		fmt.Printf("tx %d: %+v\n", i, tx)
 		fmt.Printf("expected %d: %+v\n", i, expected[i])
 		txExpected := expected[i]
-		Expect(tx.TokenType).To(Equal(txExpected.TokenType), "tx [%d] tx.TokenType: %s, txExpected.TokenType: %s", i, tx.TokenType, txExpected.TokenType)
-		Expect(strings.HasPrefix(tx.SenderEID, txExpected.SenderEID)).To(BeTrue(), "tx [%d] tx.SenderEID: %s, txExpected.SenderEID: %s", i, tx.SenderEID, txExpected.SenderEID)
-		Expect(strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID)).To(BeTrue(), "tx [%d] tx.RecipientEID: %s, txExpected.RecipientEID: %s", i, tx.RecipientEID, txExpected.RecipientEID)
-		Expect(tx.Status).To(Equal(txExpected.Status), "tx [%d] tx.Status: %s, txExpected.Status: %s", i, tx.Status, txExpected.Status)
-		Expect(tx.ActionType).To(Equal(txExpected.ActionType), "tx [%d] tx.ActionType: %s, txExpected.ActionType: %s", i, tx.ActionType, txExpected.ActionType)
-		Expect(tx.Amount).To(Equal(txExpected.Amount), "tx [%d] tx.Amount: %d, txExpected.Amount: %d", i, tx.Amount, txExpected.Amount)
+		err := matchTransactionRecord(tx, txExpected, i)
+		if err != nil {
+			if txExpected.CheckNext {
+				Expect(matchTransactionRecord(tx, expected[i+1], i+1)).ToNot(HaveOccurred())
+				continue
+			}
+			if txExpected.CheckPrevious {
+				Expect(matchTransactionRecord(tx, expected[i-1], i-1)).ToNot(HaveOccurred())
+				continue
+			}
+			Expect(false).To(BeTrue(), err.Error())
+		}
 	}
+}
+
+func matchTransactionRecord(tx *ttxdb.TransactionRecord, txExpected TransactionRecord, i int) error {
+	if tx.TokenType != txExpected.TokenType {
+		return errors.Errorf("tx [%d] tx.TokenType: %s, txExpected.TokenType: %s", i, tx.TokenType, txExpected.TokenType)
+	}
+	if !strings.HasPrefix(tx.SenderEID, txExpected.SenderEID) {
+		return errors.Errorf("tx [%d] tx.SenderEID: %s, txExpected.SenderEID: %s", i, tx.SenderEID, txExpected.SenderEID)
+	}
+	if !strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID) {
+		return errors.Errorf("tx [%d] tx.RecipientEID: %s, txExpected.RecipientEID: %s", i, tx.RecipientEID, txExpected.RecipientEID)
+	}
+	if tx.Status != txExpected.Status {
+		return errors.Errorf("tx [%d] tx.Status: %s, txExpected.Status: %s", i, tx.Status, txExpected.Status)
+	}
+	if tx.ActionType != txExpected.ActionType {
+		return errors.Errorf("tx [%d] tx.ActionType: %s, txExpected.ActionType: %s", i, tx.ActionType, txExpected.ActionType)
+	}
+	if tx.Amount.Cmp(txExpected.Amount) != 0 {
+		return errors.Errorf("tx [%d] tx.Amount: %d, txExpected.Amount: %d", i, tx.Amount, txExpected.Amount)
+	}
+	return nil
 }
 
 func CheckBalanceAndHolding(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ string, expected uint64, auditor *token3.NodeReference) {

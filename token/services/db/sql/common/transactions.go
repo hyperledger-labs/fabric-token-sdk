@@ -133,6 +133,9 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 
 func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
 	conditions, args := common.Where(db.ci.HasTransactionParams(params, db.table.Transactions))
+	conditions = conditions + movementConditionsSql(driver.QueryMovementsParams{
+		SearchDirection: driver.FromBeginning,
+	})
 	query := fmt.Sprintf(
 		"SELECT %s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, %s.application_metadata, stored_at FROM %s %s %s",
 		db.table.Transactions, db.table.Requests, db.table.Requests,
