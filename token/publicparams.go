@@ -10,6 +10,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+type PPHash = driver.PPHash
+
 type PublicParameters struct {
 	driver.PublicParameters
 	ppm driver.PublicParamsManager
@@ -75,6 +77,6 @@ func (c *PublicParametersManager) PublicParameters() *PublicParameters {
 	return &PublicParameters{PublicParameters: pp, ppm: c.ppm}
 }
 
-func (c *PublicParametersManager) PublicParamsHash() driver.PPHash {
+func (c *PublicParametersManager) PublicParamsHash() PPHash {
 	return c.ppm.PublicParamsHash()
 }

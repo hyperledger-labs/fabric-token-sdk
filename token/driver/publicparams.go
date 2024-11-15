@@ -10,6 +10,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 )
 
+// PPHash is used to model the hash of the raw public parameters.
+// This should avoid confusion between the bytes of the public params themselves and its hash.
 type PPHash []byte
 
 // SerializedPublicParameters is the serialized form of PublicParameters.
