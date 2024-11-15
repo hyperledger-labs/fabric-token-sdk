@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	topology2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -217,10 +216,10 @@ func matchTransactionRecord(tx *ttxdb.TransactionRecord, txExpected TransactionR
 		return errors.Errorf("tx [%d] tx.RecipientEID: %s, txExpected.RecipientEID: %s", i, tx.RecipientEID, txExpected.RecipientEID)
 	}
 	if tx.Status != txExpected.Status {
-		return errors.Errorf("tx [%d] tx.Status: %s, txExpected.Status: %s", i, tx.Status, txExpected.Status)
+		return errors.Errorf("tx [%d] tx.Status: %d, txExpected.Status: %d", i, tx.Status, txExpected.Status)
 	}
 	if tx.ActionType != txExpected.ActionType {
-		return errors.Errorf("tx [%d] tx.ActionType: %s, txExpected.ActionType: %s", i, tx.ActionType, txExpected.ActionType)
+		return errors.Errorf("tx [%d] tx.ActionType: %d, txExpected.ActionType: %d", i, tx.ActionType, txExpected.ActionType)
 	}
 	if tx.Amount.Cmp(txExpected.Amount) != 0 {
 		return errors.Errorf("tx [%d] tx.Amount: %d, txExpected.Amount: %d", i, tx.Amount, txExpected.Amount)
