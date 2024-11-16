@@ -46,6 +46,10 @@ func (t *Output) IsRedeem() bool {
 	return len(t.Output.Owner.Raw) == 0
 }
 
+func (t *Output) GetOwner() []byte {
+	return t.Output.Owner.Raw
+}
+
 // IssueAction encodes a fabtoken Issue
 type IssueAction struct {
 	// issuer's public key

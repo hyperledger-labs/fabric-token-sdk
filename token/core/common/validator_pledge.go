@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package validator
+package common
 
 import (
 	"bytes"
@@ -12,23 +12,22 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/pkg/errors"
 )
 
-func IssuePledgeValidate(ctx *Context) error {
-	for k := range ctx.IssueAction.Metadata {
+func IssuePledgeValidate[P driver.PublicParameters, T driver.Output, TA driver.TransferAction, IA driver.IssueAction](ctx *Context[P, T, TA, IA]) error {
+	for k := range ctx.IssueAction.GetMetadata() {
 		ctx.CountMetadataKey(k)
 	}
 	return nil
 }
 
-func TransferPledgeValidate(ctx *Context) error {
+func TransferPledgeValidate[P driver.PublicParameters, T driver.Output, TA driver.TransferAction, IA driver.IssueAction](ctx *Context[P, T, TA, IA]) error {
 	for _, in := range ctx.InputTokens {
-		id, err := identity.UnmarshalTypedIdentity(in.Owner)
+		id, err := identity.UnmarshalTypedIdentity(in.GetOwner())
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal owner of input token")
 		}
@@ -36,8 +35,8 @@ func TransferPledgeValidate(ctx *Context) error {
 			if len(ctx.InputTokens) != 1 || len(ctx.TransferAction.GetOutputs()) != 1 {
 				return errors.Errorf("invalid transfer action: a pledge script only transfers the ownership of a token")
 			}
-			out := ctx.TransferAction.GetOutputs()[0].(*token.Token)
-			sender, err := identity.UnmarshalTypedIdentity(ctx.InputTokens[0].Owner)
+			out := ctx.TransferAction.GetOutputs()[0]
+			sender, err := identity.UnmarshalTypedIdentity(ctx.InputTokens[0].GetOwner())
 			if err != nil {
 				return err
 			}
@@ -67,7 +66,7 @@ func TransferPledgeValidate(ctx *Context) error {
 				ctx.CountMetadataKey(redeemKey)
 				continue
 			}
-			if !script.Sender.Equal(out.Owner) {
+			if !script.Sender.Equal(out.GetOwner()) {
 				return errors.New("recipient of token does not correspond to sender of reclaim request")
 			}
 
@@ -83,15 +82,11 @@ func TransferPledgeValidate(ctx *Context) error {
 		}
 	}
 
-	for _, o := range ctx.TransferAction.GetOutputs() {
-		out, ok := o.(*token.Token)
-		if !ok {
-			return errors.Errorf("invalid output")
-		}
+	for _, out := range ctx.TransferAction.GetOutputs() {
 		if out.IsRedeem() {
 			continue
 		}
-		owner, err := identity.UnmarshalTypedIdentity(out.Owner)
+		owner, err := identity.UnmarshalTypedIdentity(out.GetOwner())
 		if err != nil {
 			return err
 		}
@@ -117,7 +112,7 @@ func TransferPledgeValidate(ctx *Context) error {
 	return nil
 }
 
-func constructMetadataKey(action *transfer.Action) (string, error) {
+func constructMetadataKey(action driver.TransferAction) (string, error) {
 	inputs, err := action.GetInputs()
 	if err != nil {
 		return "", errors.Wrap(err, "failed to retrieve input IDs from action")

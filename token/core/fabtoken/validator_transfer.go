@@ -8,11 +8,8 @@ package fabtoken
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -81,86 +78,5 @@ func TransferBalanceValidate(ctx *Context) error {
 		return errors.Errorf("input sum %v does not match output sum %v", inputSum, outputSum)
 	}
 
-	return nil
-}
-
-// TransferHTLCValidate checks the validity of the HTLC scripts, if any
-func TransferHTLCValidate(ctx *Context) error {
-	now := time.Now()
-
-	for i, in := range ctx.InputTokens {
-		owner, err := identity.UnmarshalTypedIdentity(in.Owner.Raw)
-		if err != nil {
-			return errors.Wrap(err, "failed to unmarshal owner of input token")
-		}
-		// is it owned by an htlc script?
-		if owner.Type == htlc.ScriptType {
-			// Then, the first output must be compatible with this input.
-			if len(ctx.TransferAction.GetOutputs()) != 1 {
-				return errors.New("invalid transfer action: an htlc script only transfers the ownership of a token")
-			}
-
-			// check type and quantity
-			output := ctx.TransferAction.GetOutputs()[0].(*Output)
-			tok := output.Output
-			if ctx.InputTokens[0].Type != tok.Type {
-				return errors.New("invalid transfer action: type of input does not match type of output")
-			}
-			if ctx.InputTokens[0].Quantity != tok.Quantity {
-				return errors.New("invalid transfer action: quantity of input does not match quantity of output")
-			}
-			if output.IsRedeem() {
-				return errors.New("invalid transfer action: the output corresponding to an htlc spending should not be a redeem")
-			}
-
-			// check owner field
-			script, op, err := htlc.VerifyOwner(ctx.InputTokens[0].Owner.Raw, tok.Owner.Raw, now)
-			if err != nil {
-				return errors.Wrap(err, "failed to verify transfer from htlc script")
-			}
-
-			// check metadata
-			sigma := ctx.Signatures[i]
-			metadataKey, err := htlc.MetadataClaimKeyCheck(ctx.TransferAction, script, op, sigma)
-			if err != nil {
-				return errors.WithMessagef(err, "failed to check htlc metadata")
-			}
-			if op != htlc.Reclaim {
-				ctx.CountMetadataKey(metadataKey)
-			}
-		}
-	}
-
-	for _, o := range ctx.TransferAction.GetOutputs() {
-		out, ok := o.(*Output)
-		if !ok {
-			return errors.New("invalid output")
-		}
-		if out.IsRedeem() {
-			continue
-		}
-
-		// if it is an htlc script then the deadline must still be valid
-		owner, err := identity.UnmarshalTypedIdentity(out.Output.Owner.Raw)
-		if err != nil {
-			return err
-		}
-		if owner.Type == htlc.ScriptType {
-			script := &htlc.Script{}
-			err = json.Unmarshal(owner.Identity, script)
-			if err != nil {
-				return err
-			}
-			if err := script.Validate(now); err != nil {
-				return errors.WithMessagef(err, "htlc script invalid")
-			}
-			metadataKey, err := htlc.MetadataLockKeyCheck(ctx.TransferAction, script)
-			if err != nil {
-				return errors.WithMessagef(err, "failed to check htlc metadata")
-			}
-			ctx.CountMetadataKey(metadataKey)
-			continue
-		}
-	}
 	return nil
 }
