@@ -19,14 +19,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-func IssuePledgeValidate[P driver.PublicParameters, T driver.Output, TA driver.TransferAction, IA driver.IssueAction](ctx *common.Context[P, T, TA, IA]) error {
+func IssuePledgeValidate[P driver.PublicParameters, T driver.Output, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](ctx *common.Context[P, T, TA, IA, DS]) error {
 	for k := range ctx.IssueAction.GetMetadata() {
 		ctx.CountMetadataKey(k)
 	}
 	return nil
 }
 
-func TransferPledgeValidate[P driver.PublicParameters, T driver.Output, TA driver.TransferAction, IA driver.IssueAction](ctx *common.Context[P, T, TA, IA]) error {
+func TransferPledgeValidate[P driver.PublicParameters, T driver.Output, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](ctx *common.Context[P, T, TA, IA, DS]) error {
 	for _, in := range ctx.InputTokens {
 		id, err := identity.UnmarshalTypedIdentity(in.GetOwner())
 		if err != nil {

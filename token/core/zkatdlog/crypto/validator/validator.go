@@ -54,14 +54,14 @@ func New(logger logging.Logger, pp *crypto.PublicParams, deserializer driver.Des
 	transferValidators := []ValidateTransferFunc{
 		TransferSignatureValidate,
 		TransferZKProofValidate,
-		htlc.TransferHTLCValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction],
-		pledge.TransferPledgeValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction],
+		htlc.TransferHTLCValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction, driver.Deserializer],
+		pledge.TransferPledgeValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction, driver.Deserializer],
 	}
 	transferValidators = append(transferValidators, extraValidators...)
 
 	issueValidators := []ValidateIssueFunc{
 		IssueValidate,
-		pledge.IssuePledgeValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction],
+		pledge.IssuePledgeValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction, driver.Deserializer],
 	}
 
 	return common.NewValidator[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction, driver.Deserializer](

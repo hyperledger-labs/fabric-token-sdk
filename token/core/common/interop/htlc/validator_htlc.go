@@ -18,7 +18,7 @@ import (
 )
 
 // TransferHTLCValidate checks the validity of the HTLC scripts, if any
-func TransferHTLCValidate[P driver.PublicParameters, T driver.Output, TA driver.TransferAction, IA driver.IssueAction](ctx *common.Context[P, T, TA, IA]) error {
+func TransferHTLCValidate[P driver.PublicParameters, T driver.Output, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](ctx *common.Context[P, T, TA, IA, DS]) error {
 	now := time.Now()
 
 	for i, in := range ctx.InputTokens {

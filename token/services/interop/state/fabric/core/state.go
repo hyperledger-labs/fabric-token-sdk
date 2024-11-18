@@ -13,8 +13,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/driver"
@@ -28,7 +26,7 @@ import (
 )
 
 type Validator interface {
-	Validate(tok []byte, info *pledge.Info) (driver2.Output, error)
+	Validate(tok []byte, info *pledge.Info) error
 }
 
 type PledgeVault interface {
@@ -254,36 +252,9 @@ func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID,
 	info := pledges[0]
 	v.Logger.Debugf("found pledge info for token id [%s]: [%s]", tokenID, info.Source)
 
-	// check token
-	output, err := v.validator.Validate(raw, info)
-	if err != nil {
+	// validate
+	if err := v.validator.Validate(raw, info); err != nil {
 		return errors.Wrapf(err, "failed to check token")
-	}
-
-	// check script
-	owner, err := identity.UnmarshalTypedIdentity(output.GetOwner())
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal owner of token [%s]", tokenID)
-	}
-	if owner.Type != pledge.ScriptType {
-		return errors.Errorf("invalid owner type, expected [%s], got [%s]", pledge.ScriptType, owner.Type)
-	}
-	script := &pledge.Script{}
-	err = json.Unmarshal(owner.Identity, script)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal pledge script [%s]", tokenID)
-	}
-	if script.Recipient == nil {
-		return errors.Errorf("script in proof encodes invalid recipient")
-	}
-	if !script.Recipient.Equal(info.Script.Recipient) {
-		return errors.Errorf("recipient in claim request does not match recipient in proof")
-	}
-	if script.Deadline != info.Script.Deadline {
-		return errors.Errorf("deadline in claim request does not match deadline in proof")
-	}
-	if script.DestinationNetwork != info.Script.DestinationNetwork {
-		return errors.Errorf("destination network in claim request does not match destination network in proof [%s vs.%s]", info.Script.DestinationNetwork, script.DestinationNetwork)
 	}
 
 	return nil
@@ -424,23 +395,22 @@ type StateDriver struct {
 	FNSProvider   *fabric.NetworkServiceProvider
 	RelayProvider fabric3.RelayProvider
 	VaultStore    *pledge.VaultStore
+	Validator     Validator
 }
 
 func NewStateDriver(
-	name fabric3.StateDriverName,
 	logger logging.Logger,
 	FNSProvider *fabric.NetworkServiceProvider,
-	RelayProvider fabric3.RelayProvider,
-	VaultStore *pledge.VaultStore,
-) fabric3.NamedStateDriver {
-	return fabric3.NamedStateDriver{
-		Name: name,
-		Driver: &StateDriver{
-			Logger:        logger,
-			FNSProvider:   FNSProvider,
-			RelayProvider: RelayProvider,
-			VaultStore:    VaultStore,
-		},
+	relayProvider fabric3.RelayProvider,
+	vaultStore *pledge.VaultStore,
+	validator Validator,
+) *StateDriver {
+	return &StateDriver{
+		Logger:        logger,
+		FNSProvider:   FNSProvider,
+		RelayProvider: relayProvider,
+		VaultStore:    vaultStore,
+		Validator:     validator,
 	}
 }
 
@@ -467,6 +437,6 @@ func (d *StateDriver) NewStateVerifier(url string) (driver.StateVerifier, error)
 		},
 		url,
 		fns,
-		nil,
+		d.Validator,
 	)
 }
