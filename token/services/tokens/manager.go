@@ -79,8 +79,9 @@ func (cm *Manager) newTokens(tmsID token.TMSID) (*Tokens, error) {
 		return nil, errors.WithMessagef(err, "failed to get token store for [%s]", tmsID)
 	}
 	tokens := &Tokens{
-		TMSProvider: cm.tmsProvider,
-		Storage:     storage, RequestsCache: secondcache.NewTyped[*CacheEntry](1000),
+		TMSProvider:   cm.tmsProvider,
+		Storage:       storage,
+		RequestsCache: secondcache.NewTyped[*CacheEntry](1000),
 	}
 	return tokens, nil
 }

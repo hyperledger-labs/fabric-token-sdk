@@ -23,15 +23,15 @@ type Metadata struct {
 
 // GetToken unmarshals the given bytes to extract the token and its issuer (if any).
 func (m *Metadata) GetToken(raw []byte) (*token.Token, Identity, []byte, error) {
-	tokenInfoRaw, err := m.TokenService.GetTokenInfo(m.TokenRequestMetadata, raw)
+	metadata, err := m.TokenService.ExtractMetadata(m.TokenRequestMetadata, raw)
 	if err != nil {
 		return nil, nil, nil, errors.WithMessagef(err, "metadata for [%s] not found", Hashable(raw).String())
 	}
-	tok, id, err := m.TokenService.DeserializeToken(raw, tokenInfoRaw)
+	tok, id, _, err := m.TokenService.Deobfuscate(raw, metadata)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed getting token in the clear")
 	}
-	return tok, id, tokenInfoRaw, nil
+	return tok, id, metadata, nil
 }
 
 // SpentTokenID returns the token IDs of the tokens that were spent by the Token Request this metadata is associated with.

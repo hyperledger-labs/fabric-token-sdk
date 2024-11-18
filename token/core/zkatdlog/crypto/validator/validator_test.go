@@ -496,7 +496,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	sender, err := transfer.NewSender(signers, tokens, ids, inputInf, pp)
 	Expect(err).NotTo(HaveOccurred())
 
-	transfer, inf, err := sender.GenerateZKTransfer(context.TODO(), outvalues, owners)
+	transfer, metas, err := sender.GenerateZKTransfer(context.TODO(), outvalues, owners)
 	Expect(err).NotTo(HaveOccurred())
 
 	raw, err := transfer.Serialize()
@@ -506,9 +506,9 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	raw, err = asn1.Marshal(*tr)
 	Expect(err).NotTo(HaveOccurred())
 
-	marshalledInfo := make([][]byte, len(inf))
-	for i := 0; i < len(inf); i++ {
-		marshalledInfo[i], err = json.Marshal(inf[i])
+	marshalledInfo := make([][]byte, len(metas))
+	for i := 0; i < len(metas); i++ {
+		marshalledInfo[i], err = metas[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 	}
 	metadata := driver.TransferMetadata{}

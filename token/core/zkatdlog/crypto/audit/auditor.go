@@ -264,7 +264,7 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 	if len(token.Owner.OwnerInfo) == 0 {
 		return errors.Errorf("failed to inspect owner at index [%d]: owner info is nil", index)
 	}
-	ro, err := identity.UnmarshalTypedIdentity(token.Token.Owner)
+	ro, err := identity.UnmarshalTypedIdentity(token.Token.GetOwner())
 	if err != nil {
 		return errors.Errorf("owner at index [%d] cannot be unwrapped", index)
 	}
@@ -287,7 +287,7 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 }
 
 func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index int) error {
-	owner, err := identity.UnmarshalTypedIdentity(token.Token.Owner)
+	owner, err := identity.UnmarshalTypedIdentity(token.Token.GetOwner())
 	if err != nil {
 		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
 	}
@@ -347,7 +347,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 		outputs[k] = make([]*AuditableToken, len(md.ReceiversAuditInfos))
 		for i := 0; i < len(md.ReceiversAuditInfos); i++ {
 			ti := &token.Metadata{}
-			err = json.Unmarshal(md.OutputsMetadata[i], ti)
+			err = ti.Deserialize(md.OutputsMetadata[i])
 			if err != nil {
 				return nil, err
 			}
@@ -406,7 +406,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 		outputs[k] = make([]*AuditableToken, len(tr.ReceiverAuditInfos))
 		for i := 0; i < len(tr.ReceiverAuditInfos); i++ {
 			ti := &token.Metadata{}
-			err = json.Unmarshal(tr.OutputsMetadata[i], ti)
+			err = ti.Deserialize(tr.OutputsMetadata[i])
 			if err != nil {
 				return nil, nil, err
 			}

@@ -19,17 +19,28 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type LoadedToken = common.LoadedToken[[]byte, []byte]
+
+type TokenLoader interface {
+	LoadTokens(ctx context.Context, ids []*token2.ID) ([]LoadedToken, error)
+}
+
+type TokenDeserializer interface {
+	DeserializeToken(outputType string, outputRaw []byte, metadataRaw []byte) (*token.Token, *token.Metadata, *token.ConversionWitness, error)
+}
 
 type TransferService struct {
 	Logger                  logging.Logger
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
 	WalletService           driver.WalletService
 	TokenLoader             TokenLoader
-	Deserializer            driver.Deserializer
+	IdentityDeserializer    driver.Deserializer
+	TokenDeserializer       TokenDeserializer
 	Metrics                 *Metrics
 	tracer                  trace.Tracer
 }
@@ -39,40 +50,46 @@ func NewTransferService(
 	publicParametersManager common.PublicParametersManager[*crypto.PublicParams],
 	walletService driver.WalletService,
 	tokenLoader TokenLoader,
-	deserializer driver.Deserializer,
+	identityDeserializer driver.Deserializer,
 	metrics *Metrics,
 	tracerProvider trace.TracerProvider,
+	tokenDeserializer TokenDeserializer,
 ) *TransferService {
 	return &TransferService{
 		Logger:                  logger,
 		PublicParametersManager: publicParametersManager,
 		WalletService:           walletService,
 		TokenLoader:             tokenLoader,
-		Deserializer:            deserializer,
+		IdentityDeserializer:    identityDeserializer,
 		Metrics:                 metrics,
 		tracer: tracerProvider.Tracer("transfer_service", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "tokensdk_dlog",
 			LabelNames: []tracing.LabelName{},
 		})),
+		TokenDeserializer: tokenDeserializer,
 	}
 }
 
 // Transfer returns a TransferActionMetadata as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driver.OwnerWallet, tokenIDs []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driver.OwnerWallet, tokenIDs []*token2.ID, outputTokens []*token2.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	newCtx, span := s.tracer.Start(ctx, "transfer")
 	defer span.End()
 	s.Logger.Debugf("Prepare Transfer Action [%s,%v]", txID, tokenIDs)
 	// load tokens with the passed token identifiers
 	span.AddEvent("load_tokens")
-	tokens, inputInf, senders, err := s.TokenLoader.LoadTokens(newCtx, tokenIDs)
+	loadedTokens, err := s.TokenLoader.LoadTokens(newCtx, tokenIDs)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
-	pp := s.PublicParametersManager.PublicParams()
+	tokens, metas, senders, err := s.prepareInputs(loadedTokens)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to prepare inputs")
+	}
 
 	// get sender
-	sender, err := transfer.NewSender(nil, tokens, tokenIDs, inputInf, pp)
+	pp := s.PublicParametersManager.PublicParams()
+	sender, err := transfer.NewSender(nil, tokens, tokenIDs, metas, pp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -84,7 +101,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	// get values and owners of outputs
 	span.AddEvent("prepare_output_tokens")
 	for i, output := range outputTokens {
-		q, err := token3.ToQuantity(output.Quantity, pp.Precision())
+		q, err := token2.ToQuantity(output.Quantity, pp.Precision())
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed to get value for %dth output", i)
 		}
@@ -95,12 +112,12 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 			outputAuditInfos = append(outputAuditInfos, []byte{})
 			continue
 		}
-		recipients, err := s.Deserializer.Recipients(output.Owner)
+		recipients, err := s.IdentityDeserializer.Recipients(output.Owner)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting recipients")
 		}
 		receivers = append(receivers, recipients...)
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Owner, s.WalletService)
+		auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(output.Owner, s.WalletService)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
 		}
@@ -139,7 +156,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 			receiverAuditInfos = append(receiverAuditInfos, []byte{})
 			continue
 		}
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(receiver, ws)
+		auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(receiver, ws)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", receiver.String())
 		}
@@ -149,7 +166,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	// audit info for senders
 	var senderAuditInfos [][]byte
 	for i, t := range tokens {
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner, ws)
+		auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(t.Owner, ws)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner).String())
 		}
@@ -208,13 +225,13 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMe
 		}
 		// TODO: complete this check...
 		// token information in cleartext
-		meta := &token.Metadata{}
-		if err := meta.Deserialize(outputsMetadata[i]); err != nil {
+		metadata := &token.Metadata{}
+		if err := metadata.Deserialize(outputsMetadata[i]); err != nil {
 			return errors.Wrap(err, "failed unmarshalling token information")
 		}
 
 		// check that token info matches output. If so, return token in cleartext. Else return an error.
-		tok, err := tr.OutputTokens[i].GetTokenInTheClear(meta, pp)
+		tok, err := tr.OutputTokens[i].ToClear(metadata, pp)
 		if err != nil {
 			return errors.Wrap(err, "failed getting token in the clear")
 		}
@@ -233,6 +250,22 @@ func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.Transfer
 		return nil, err
 	}
 	return transferAction, nil
+}
+
+func (s *TransferService) prepareInputs(loadedTokens []LoadedToken) ([]*token.Token, []*token.Metadata, []driver.Identity, error) {
+	tokens := make([]*token.Token, len(loadedTokens))
+	metadata := make([]*token.Metadata, len(loadedTokens))
+	signers := make([]driver.Identity, len(loadedTokens))
+	for i, loadedToken := range loadedTokens {
+		tok, meta, _, err := s.TokenDeserializer.DeserializeToken(loadedToken.TokenType, loadedToken.Token, loadedToken.Metadata)
+		if err != nil {
+			return nil, nil, nil, errors.Wrapf(err, "failed deserializing token [%s]", string(loadedToken.Token))
+		}
+		tokens[i] = tok
+		metadata[i] = meta
+		signers[i] = tok.GetOwner()
+	}
+	return tokens, metadata, signers, nil
 }
 
 func getTokenData(tokens []*token.Token) []*math.G1 {

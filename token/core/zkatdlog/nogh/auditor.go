@@ -22,6 +22,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+type TokenCommitmentLoader interface {
+	GetTokenOutputs(ctx context.Context, ids []*token2.ID) (map[string]*token.Token, error)
+}
+
 type AuditorService struct {
 	Logger                  logging.Logger
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]

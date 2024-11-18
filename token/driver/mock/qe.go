@@ -39,32 +39,16 @@ type QueryEngine struct {
 		result2 string
 		result3 error
 	}
-	GetTokenInfoAndOutputsStub        func(context.Context, []*token.ID) ([][]byte, [][]byte, error)
-	getTokenInfoAndOutputsMutex       sync.RWMutex
-	getTokenInfoAndOutputsArgsForCall []struct {
-		arg1 context.Context
-		arg2 []*token.ID
-	}
-	getTokenInfoAndOutputsReturns struct {
-		result1 [][]byte
-		result2 [][]byte
-		result3 error
-	}
-	getTokenInfoAndOutputsReturnsOnCall map[int]struct {
-		result1 [][]byte
-		result2 [][]byte
-		result3 error
-	}
-	GetTokenInfosStub        func([]*token.ID) ([][]byte, error)
-	getTokenInfosMutex       sync.RWMutex
-	getTokenInfosArgsForCall []struct {
+	GetTokenMetadataStub        func([]*token.ID) ([][]byte, error)
+	getTokenMetadataMutex       sync.RWMutex
+	getTokenMetadataArgsForCall []struct {
 		arg1 []*token.ID
 	}
-	getTokenInfosReturns struct {
+	getTokenMetadataReturns struct {
 		result1 [][]byte
 		result2 error
 	}
-	getTokenInfosReturnsOnCall map[int]struct {
+	getTokenMetadataReturnsOnCall map[int]struct {
 		result1 [][]byte
 		result2 error
 	}
@@ -79,6 +63,24 @@ type QueryEngine struct {
 	}
 	getTokenOutputsReturnsOnCall map[int]struct {
 		result1 error
+	}
+	GetTokenOutputsAndMetaStub        func(context.Context, []*token.ID) ([][]byte, [][]byte, []string, error)
+	getTokenOutputsAndMetaMutex       sync.RWMutex
+	getTokenOutputsAndMetaArgsForCall []struct {
+		arg1 context.Context
+		arg2 []*token.ID
+	}
+	getTokenOutputsAndMetaReturns struct {
+		result1 [][]byte
+		result2 [][]byte
+		result3 []string
+		result4 error
+	}
+	getTokenOutputsAndMetaReturnsOnCall map[int]struct {
+		result1 [][]byte
+		result2 [][]byte
+		result3 []string
+		result4 error
 	}
 	GetTokensStub        func(...*token.ID) ([]*token.Token, error)
 	getTokensMutex       sync.RWMutex
@@ -346,94 +348,21 @@ func (fake *QueryEngine) GetStatusReturnsOnCall(i int, result1 int, result2 stri
 	}{result1, result2, result3}
 }
 
-func (fake *QueryEngine) GetTokenInfoAndOutputs(arg1 context.Context, arg2 []*token.ID) ([][]byte, [][]byte, error) {
-	var arg2Copy []*token.ID
-	if arg2 != nil {
-		arg2Copy = make([]*token.ID, len(arg2))
-		copy(arg2Copy, arg2)
-	}
-	fake.getTokenInfoAndOutputsMutex.Lock()
-	ret, specificReturn := fake.getTokenInfoAndOutputsReturnsOnCall[len(fake.getTokenInfoAndOutputsArgsForCall)]
-	fake.getTokenInfoAndOutputsArgsForCall = append(fake.getTokenInfoAndOutputsArgsForCall, struct {
-		arg1 context.Context
-		arg2 []*token.ID
-	}{arg1, arg2Copy})
-	stub := fake.GetTokenInfoAndOutputsStub
-	fakeReturns := fake.getTokenInfoAndOutputsReturns
-	fake.recordInvocation("GetTokenInfoAndOutputs", []interface{}{arg1, arg2Copy})
-	fake.getTokenInfoAndOutputsMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
-	}
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
-}
-
-func (fake *QueryEngine) GetTokenInfoAndOutputsCallCount() int {
-	fake.getTokenInfoAndOutputsMutex.RLock()
-	defer fake.getTokenInfoAndOutputsMutex.RUnlock()
-	return len(fake.getTokenInfoAndOutputsArgsForCall)
-}
-
-func (fake *QueryEngine) GetTokenInfoAndOutputsCalls(stub func(context.Context, []*token.ID) ([][]byte, [][]byte, error)) {
-	fake.getTokenInfoAndOutputsMutex.Lock()
-	defer fake.getTokenInfoAndOutputsMutex.Unlock()
-	fake.GetTokenInfoAndOutputsStub = stub
-}
-
-func (fake *QueryEngine) GetTokenInfoAndOutputsArgsForCall(i int) (context.Context, []*token.ID) {
-	fake.getTokenInfoAndOutputsMutex.RLock()
-	defer fake.getTokenInfoAndOutputsMutex.RUnlock()
-	argsForCall := fake.getTokenInfoAndOutputsArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *QueryEngine) GetTokenInfoAndOutputsReturns(result1 [][]byte, result2 [][]byte, result3 error) {
-	fake.getTokenInfoAndOutputsMutex.Lock()
-	defer fake.getTokenInfoAndOutputsMutex.Unlock()
-	fake.GetTokenInfoAndOutputsStub = nil
-	fake.getTokenInfoAndOutputsReturns = struct {
-		result1 [][]byte
-		result2 [][]byte
-		result3 error
-	}{result1, result2, result3}
-}
-
-func (fake *QueryEngine) GetTokenInfoAndOutputsReturnsOnCall(i int, result1 [][]byte, result2 [][]byte, result3 error) {
-	fake.getTokenInfoAndOutputsMutex.Lock()
-	defer fake.getTokenInfoAndOutputsMutex.Unlock()
-	fake.GetTokenInfoAndOutputsStub = nil
-	if fake.getTokenInfoAndOutputsReturnsOnCall == nil {
-		fake.getTokenInfoAndOutputsReturnsOnCall = make(map[int]struct {
-			result1 [][]byte
-			result2 [][]byte
-			result3 error
-		})
-	}
-	fake.getTokenInfoAndOutputsReturnsOnCall[i] = struct {
-		result1 [][]byte
-		result2 [][]byte
-		result3 error
-	}{result1, result2, result3}
-}
-
-func (fake *QueryEngine) GetTokenInfos(arg1 []*token.ID) ([][]byte, error) {
+func (fake *QueryEngine) GetTokenMetadata(arg1 []*token.ID) ([][]byte, error) {
 	var arg1Copy []*token.ID
 	if arg1 != nil {
 		arg1Copy = make([]*token.ID, len(arg1))
 		copy(arg1Copy, arg1)
 	}
-	fake.getTokenInfosMutex.Lock()
-	ret, specificReturn := fake.getTokenInfosReturnsOnCall[len(fake.getTokenInfosArgsForCall)]
-	fake.getTokenInfosArgsForCall = append(fake.getTokenInfosArgsForCall, struct {
+	fake.getTokenMetadataMutex.Lock()
+	ret, specificReturn := fake.getTokenMetadataReturnsOnCall[len(fake.getTokenMetadataArgsForCall)]
+	fake.getTokenMetadataArgsForCall = append(fake.getTokenMetadataArgsForCall, struct {
 		arg1 []*token.ID
 	}{arg1Copy})
-	stub := fake.GetTokenInfosStub
-	fakeReturns := fake.getTokenInfosReturns
-	fake.recordInvocation("GetTokenInfos", []interface{}{arg1Copy})
-	fake.getTokenInfosMutex.Unlock()
+	stub := fake.GetTokenMetadataStub
+	fakeReturns := fake.getTokenMetadataReturns
+	fake.recordInvocation("GetTokenMetadata", []interface{}{arg1Copy})
+	fake.getTokenMetadataMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
 	}
@@ -443,46 +372,46 @@ func (fake *QueryEngine) GetTokenInfos(arg1 []*token.ID) ([][]byte, error) {
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *QueryEngine) GetTokenInfosCallCount() int {
-	fake.getTokenInfosMutex.RLock()
-	defer fake.getTokenInfosMutex.RUnlock()
-	return len(fake.getTokenInfosArgsForCall)
+func (fake *QueryEngine) GetTokenMetadataCallCount() int {
+	fake.getTokenMetadataMutex.RLock()
+	defer fake.getTokenMetadataMutex.RUnlock()
+	return len(fake.getTokenMetadataArgsForCall)
 }
 
-func (fake *QueryEngine) GetTokenInfosCalls(stub func([]*token.ID) ([][]byte, error)) {
-	fake.getTokenInfosMutex.Lock()
-	defer fake.getTokenInfosMutex.Unlock()
-	fake.GetTokenInfosStub = stub
+func (fake *QueryEngine) GetTokenMetadataCalls(stub func([]*token.ID) ([][]byte, error)) {
+	fake.getTokenMetadataMutex.Lock()
+	defer fake.getTokenMetadataMutex.Unlock()
+	fake.GetTokenMetadataStub = stub
 }
 
-func (fake *QueryEngine) GetTokenInfosArgsForCall(i int) []*token.ID {
-	fake.getTokenInfosMutex.RLock()
-	defer fake.getTokenInfosMutex.RUnlock()
-	argsForCall := fake.getTokenInfosArgsForCall[i]
+func (fake *QueryEngine) GetTokenMetadataArgsForCall(i int) []*token.ID {
+	fake.getTokenMetadataMutex.RLock()
+	defer fake.getTokenMetadataMutex.RUnlock()
+	argsForCall := fake.getTokenMetadataArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *QueryEngine) GetTokenInfosReturns(result1 [][]byte, result2 error) {
-	fake.getTokenInfosMutex.Lock()
-	defer fake.getTokenInfosMutex.Unlock()
-	fake.GetTokenInfosStub = nil
-	fake.getTokenInfosReturns = struct {
+func (fake *QueryEngine) GetTokenMetadataReturns(result1 [][]byte, result2 error) {
+	fake.getTokenMetadataMutex.Lock()
+	defer fake.getTokenMetadataMutex.Unlock()
+	fake.GetTokenMetadataStub = nil
+	fake.getTokenMetadataReturns = struct {
 		result1 [][]byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) GetTokenInfosReturnsOnCall(i int, result1 [][]byte, result2 error) {
-	fake.getTokenInfosMutex.Lock()
-	defer fake.getTokenInfosMutex.Unlock()
-	fake.GetTokenInfosStub = nil
-	if fake.getTokenInfosReturnsOnCall == nil {
-		fake.getTokenInfosReturnsOnCall = make(map[int]struct {
+func (fake *QueryEngine) GetTokenMetadataReturnsOnCall(i int, result1 [][]byte, result2 error) {
+	fake.getTokenMetadataMutex.Lock()
+	defer fake.getTokenMetadataMutex.Unlock()
+	fake.GetTokenMetadataStub = nil
+	if fake.getTokenMetadataReturnsOnCall == nil {
+		fake.getTokenMetadataReturnsOnCall = make(map[int]struct {
 			result1 [][]byte
 			result2 error
 		})
 	}
-	fake.getTokenInfosReturnsOnCall[i] = struct {
+	fake.getTokenMetadataReturnsOnCall[i] = struct {
 		result1 [][]byte
 		result2 error
 	}{result1, result2}
@@ -553,6 +482,82 @@ func (fake *QueryEngine) GetTokenOutputsReturnsOnCall(i int, result1 error) {
 	fake.getTokenOutputsReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *QueryEngine) GetTokenOutputsAndMeta(arg1 context.Context, arg2 []*token.ID) ([][]byte, [][]byte, []string, error) {
+	var arg2Copy []*token.ID
+	if arg2 != nil {
+		arg2Copy = make([]*token.ID, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.getTokenOutputsAndMetaMutex.Lock()
+	ret, specificReturn := fake.getTokenOutputsAndMetaReturnsOnCall[len(fake.getTokenOutputsAndMetaArgsForCall)]
+	fake.getTokenOutputsAndMetaArgsForCall = append(fake.getTokenOutputsAndMetaArgsForCall, struct {
+		arg1 context.Context
+		arg2 []*token.ID
+	}{arg1, arg2Copy})
+	stub := fake.GetTokenOutputsAndMetaStub
+	fakeReturns := fake.getTokenOutputsAndMetaReturns
+	fake.recordInvocation("GetTokenOutputsAndMeta", []interface{}{arg1, arg2Copy})
+	fake.getTokenOutputsAndMetaMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3, ret.result4
+	}
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3, fakeReturns.result4
+}
+
+func (fake *QueryEngine) GetTokenOutputsAndMetaCallCount() int {
+	fake.getTokenOutputsAndMetaMutex.RLock()
+	defer fake.getTokenOutputsAndMetaMutex.RUnlock()
+	return len(fake.getTokenOutputsAndMetaArgsForCall)
+}
+
+func (fake *QueryEngine) GetTokenOutputsAndMetaCalls(stub func(context.Context, []*token.ID) ([][]byte, [][]byte, []string, error)) {
+	fake.getTokenOutputsAndMetaMutex.Lock()
+	defer fake.getTokenOutputsAndMetaMutex.Unlock()
+	fake.GetTokenOutputsAndMetaStub = stub
+}
+
+func (fake *QueryEngine) GetTokenOutputsAndMetaArgsForCall(i int) (context.Context, []*token.ID) {
+	fake.getTokenOutputsAndMetaMutex.RLock()
+	defer fake.getTokenOutputsAndMetaMutex.RUnlock()
+	argsForCall := fake.getTokenOutputsAndMetaArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *QueryEngine) GetTokenOutputsAndMetaReturns(result1 [][]byte, result2 [][]byte, result3 []string, result4 error) {
+	fake.getTokenOutputsAndMetaMutex.Lock()
+	defer fake.getTokenOutputsAndMetaMutex.Unlock()
+	fake.GetTokenOutputsAndMetaStub = nil
+	fake.getTokenOutputsAndMetaReturns = struct {
+		result1 [][]byte
+		result2 [][]byte
+		result3 []string
+		result4 error
+	}{result1, result2, result3, result4}
+}
+
+func (fake *QueryEngine) GetTokenOutputsAndMetaReturnsOnCall(i int, result1 [][]byte, result2 [][]byte, result3 []string, result4 error) {
+	fake.getTokenOutputsAndMetaMutex.Lock()
+	defer fake.getTokenOutputsAndMetaMutex.Unlock()
+	fake.GetTokenOutputsAndMetaStub = nil
+	if fake.getTokenOutputsAndMetaReturnsOnCall == nil {
+		fake.getTokenOutputsAndMetaReturnsOnCall = make(map[int]struct {
+			result1 [][]byte
+			result2 [][]byte
+			result3 []string
+			result4 error
+		})
+	}
+	fake.getTokenOutputsAndMetaReturnsOnCall[i] = struct {
+		result1 [][]byte
+		result2 [][]byte
+		result3 []string
+		result4 error
+	}{result1, result2, result3, result4}
 }
 
 func (fake *QueryEngine) GetTokens(arg1 ...*token.ID) ([]*token.Token, error) {
@@ -1175,12 +1180,12 @@ func (fake *QueryEngine) Invocations() map[string][][]interface{} {
 	defer fake.balanceMutex.RUnlock()
 	fake.getStatusMutex.RLock()
 	defer fake.getStatusMutex.RUnlock()
-	fake.getTokenInfoAndOutputsMutex.RLock()
-	defer fake.getTokenInfoAndOutputsMutex.RUnlock()
-	fake.getTokenInfosMutex.RLock()
-	defer fake.getTokenInfosMutex.RUnlock()
+	fake.getTokenMetadataMutex.RLock()
+	defer fake.getTokenMetadataMutex.RUnlock()
 	fake.getTokenOutputsMutex.RLock()
 	defer fake.getTokenOutputsMutex.RUnlock()
+	fake.getTokenOutputsAndMetaMutex.RLock()
+	defer fake.getTokenOutputsAndMetaMutex.RUnlock()
 	fake.getTokensMutex.RLock()
 	defer fake.getTokensMutex.RUnlock()
 	fake.isMineMutex.RLock()

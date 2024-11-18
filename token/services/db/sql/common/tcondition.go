@@ -17,6 +17,7 @@ import (
 type TokenInterpreter interface {
 	common.Interpreter
 	HasTokens(colTxID, colIdx common.FieldName, ids ...*token.ID) common.Condition
+	HasTokenTypes(colTokenType common.FieldName, tokenTypes ...string) common.Condition
 	HasTokenDetails(params driver.QueryTokenDetailsParams, tokenTable string) common.Condition
 	HasMovementsParams(params driver.QueryMovementsParams) common.Condition
 	HasValidationParams(params driver.QueryValidationRecordsParams) common.Condition
@@ -43,6 +44,13 @@ func (c *tokenInterpreter) HasTokens(colTxID, colIdx common.FieldName, ids ...*t
 	return c.InTuple([]common.FieldName{colTxID, colIdx}, vals)
 }
 
+func (c *tokenInterpreter) HasTokenTypes(colTokenType common.FieldName, tokenTypes ...string) common.Condition {
+	if len(tokenTypes) == 0 {
+		return common.EmptyCondition
+	}
+	return c.InStrings(colTokenType, tokenTypes)
+}
+
 func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams, tokenTable string) common.Condition {
 	conds := []common.Condition{
 		common.ConstCondition("owner = true"),
@@ -59,6 +67,13 @@ func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams
 	if !params.IncludeDeleted {
 		conds = append(conds, common.ConstCondition("is_deleted = false"))
 	}
+	if params.OnlyNonSpendable {
+		conds = append(conds, common.ConstCondition("spendable = false"))
+	}
+	if params.OnlySpendable {
+		conds = append(conds, common.ConstCondition("spendable = true"))
+	}
+
 	return c.And(conds...)
 }
 

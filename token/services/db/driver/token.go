@@ -36,6 +36,8 @@ type TokenRecord struct {
 	OwnerWalletID string
 	// Ledger is the raw token as stored on the ledger
 	Ledger []byte
+	// LedgerType is the type of the raw token as stored on the ledger
+	LedgerType string
 	// LedgerMetadata is the metadata associated to the content of Ledger
 	LedgerMetadata []byte
 	// Quantity is the number of units of Type carried in the token.
@@ -91,6 +93,10 @@ type QueryTokenDetailsParams struct {
 	TransactionIDs []string
 	// IncludeDeleted determines whether to include spent tokens. It defaults to false.
 	IncludeDeleted bool
+	// OnlyNonSpendable determines whether to include only non-spendable tokens. It defaults to false
+	OnlyNonSpendable bool
+	// OnlySpendable determines whether to include only spendable tokens. It defaults to false
+	OnlySpendable bool
 }
 
 // CertificationDB defines a database to manager token certifications
@@ -110,11 +116,16 @@ type CertificationDB interface {
 
 type TokenDBTransaction interface {
 	// GetToken returns the owned tokens and their identifier keys for the passed ids.
-	GetToken(ctx context.Context, txID string, index uint64, includeDeleted bool) (*token.Token, []string, error)
+	GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error)
 	// Delete marks the passed token as deleted by a given identifier (idempotent)
-	Delete(ctx context.Context, txID string, index uint64, deletedBy string) error
+	Delete(txID string, index uint64, deletedBy string) error
 	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
-	StoreToken(ctx context.Context, tr TokenRecord, owners []string) error
+	StoreToken(tr TokenRecord, owners []string) error
+	// SetSpendable updates the spendable flag of the passed token
+	SetSpendable(txID string, index uint64, spendable bool) error
+	// SetSupportedTokens sets the spendable flag to true for all the tokens having one of the passed token type.
+	// The spendable flag is set to false for the other tokens
+	SetSupportedTokens(supportedTokenTypes []string) error
 	// Commit commits this transaction
 	Commit() error
 	// Rollback rollbacks this transaction
@@ -145,14 +156,10 @@ type TokenDB interface {
 	// GetTokenOutputs returns the value of the tokens as they appear on the ledger for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
 	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
-	// GetTokenInfos returns the metadata of the tokens for the passed ids.
-	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
-	GetTokenInfos(ids []*token.ID) ([][]byte, error)
-	// GetTokenInfoAndOutputs returns both value and metadata of the tokens for the passed ids.
-	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
-	GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error)
-	// GetAllTokenInfos returns the token metadata for the passed ids
-	GetAllTokenInfos(ids []*token.ID) ([][]byte, error)
+	// GetTokenMetadata returns the metadata of the tokens for the passed ids.
+	GetTokenMetadata(ids []*token.ID) ([][]byte, error)
+	// GetTokenOutputsAndMeta retrieves both the token output, metadata, and type for the passed ids.
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []string, error)
 	// GetTokens returns the owned tokens and their identifier keys for the passed ids.
 	GetTokens(inputs ...*token.ID) ([]*token.Token, error)
 	// WhoDeletedTokens for each id, the function return if it was deleted and by who as per the Delete function
