@@ -19,7 +19,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -65,6 +64,7 @@ func NewNetwork(
 	tokenQueryExecutor driver.TokenQueryExecutor,
 	spentTokenQueryExecutor driver.SpentTokenQueryExecutor,
 	tracerProvider trace.TracerProvider,
+	keyTranslator translator.KeyTranslator,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -87,8 +87,8 @@ func NewNetwork(
 			LabelNames: []tracing.LabelName{},
 		})),
 		tokenQueryExecutor:      tokenQueryExecutor,
-		spentTokenQueryExecutor: spentTokenQueryExecutor,dbManager:     dbManager,
-		keyTranslator: &translator.HashedKeyTranslator{KT: &keys.Translator{}},
+		spentTokenQueryExecutor: spentTokenQueryExecutor, dbManager: dbManager,
+		keyTranslator: keyTranslator,
 	}
 }
 

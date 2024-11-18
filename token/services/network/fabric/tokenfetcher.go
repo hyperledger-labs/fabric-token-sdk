@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -60,26 +60,33 @@ func (f *tokenFetcher) QueryTokens(context view.Context, namespace string, IDs [
 	return tokens, nil
 }
 
-func NewSpentTokenExecutorProvider() *spentTokenFetcherProvider {
-	return &spentTokenFetcherProvider{}
+type spentTokenFetcherProvider struct {
+	keyTranslator translator.KeyTranslator
 }
 
-type spentTokenFetcherProvider struct{}
+func NewSpentTokenExecutorProvider(keyTranslator translator.KeyTranslator) *spentTokenFetcherProvider {
+	return &spentTokenFetcherProvider{keyTranslator: keyTranslator}
+}
 
 func (p *spentTokenFetcherProvider) GetSpentExecutor(network, channel string) (driver2.SpentTokenQueryExecutor, error) {
-	return &spentTokenFetcher{network: network, channel: channel}, nil
+	return &spentTokenFetcher{
+		network:       network,
+		channel:       channel,
+		keyTranslator: p.keyTranslator,
+	}, nil
 }
 
 type spentTokenFetcher struct {
-	network string
-	channel string
+	network       string
+	channel       string
+	keyTranslator translator.KeyTranslator
 }
 
 func (f *spentTokenFetcher) QuerySpentTokens(context view.Context, namespace string, IDs []*token.ID, meta []string) ([]bool, error) {
 	sIDs := make([]string, len(IDs))
 	var err error
 	for i, id := range IDs {
-		sIDs[i], err = keys.CreateTokenKey(id.TxId, id.Index)
+		sIDs[i], err = f.keyTranslator.CreateOutputKey(id.TxId, id.Index)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot compute spent id for [%v]", id)
 		}
