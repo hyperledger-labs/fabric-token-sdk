@@ -18,6 +18,7 @@ func TransferSignatureValidate(ctx *Context) error {
 		return errors.Errorf("invalid number of token inputs")
 	}
 
+	ctx.InputTokens = ctx.TransferAction.InputTokens
 	for _, tok := range ctx.InputTokens {
 		ctx.Logger.Debugf("check sender [%s]", driver.Identity(tok.Owner.Raw).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner.Raw)
@@ -32,7 +33,6 @@ func TransferSignatureValidate(ctx *Context) error {
 		ctx.Signatures = append(ctx.Signatures, sigma)
 	}
 
-	ctx.InputTokens = ctx.TransferAction.InputTokens
 	return nil
 }
 
