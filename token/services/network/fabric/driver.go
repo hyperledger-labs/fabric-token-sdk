@@ -18,6 +18,8 @@ import (
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -40,6 +42,7 @@ type Driver struct {
 	tokenQueryExecutorProvider      driver.TokenQueryExecutorProvider
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider
 	supportedDrivers                []string
+	keyTranslator                   translator.KeyTranslator
 }
 
 func NewGenericDriver(
@@ -54,10 +57,43 @@ func NewGenericDriver(
 	tracerProvider trace.TracerProvider,
 	identityProvider driver2.IdentityProvider,
 ) driver.Driver {
-	return NewDriver(fnsProvider, vaultProvider, tokensManager, configService, viewManager, viewRegistry, filterProvider, tmsProvider, tracerProvider, identityProvider, NewChaincodePublicParamsFetcher(viewManager), NewTokenExecutorProvider(), NewSpentTokenExecutorProvider(), config2.GenericDriver)
+	keyTranslator := &keys.Translator{}
+	return NewDriver(
+		fnsProvider,
+		vaultProvider,
+		tokensManager,
+		configService,
+		viewManager,
+		viewRegistry,
+		filterProvider,
+		tmsProvider,
+		tracerProvider,
+		identityProvider,
+		NewChaincodePublicParamsFetcher(viewManager),
+		NewTokenExecutorProvider(),
+		NewSpentTokenExecutorProvider(keyTranslator),
+		keyTranslator,
+		config2.GenericDriver,
+	)
 }
 
-func NewDriver(fnsProvider *fabric.NetworkServiceProvider, vaultProvider *vault2.Provider, tokensManager *tokens.Manager, configService *config.Service, viewManager *view.Manager, viewRegistry driver2.Registry, filterProvider *common.AcceptTxInDBFilterProvider, tmsProvider *token.ManagementServiceProvider, tracerProvider trace.TracerProvider, identityProvider driver2.IdentityProvider, defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher, tokenQueryExecutorProvider driver.TokenQueryExecutorProvider, spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider, supportedDrivers ...string) *Driver {
+func NewDriver(
+	fnsProvider *fabric.NetworkServiceProvider,
+	vaultProvider *vault2.Provider,
+	tokensManager *tokens.Manager,
+	configService *config.Service,
+	viewManager *view.Manager,
+	viewRegistry driver2.Registry,
+	filterProvider *common.AcceptTxInDBFilterProvider,
+	tmsProvider *token.ManagementServiceProvider,
+	tracerProvider trace.TracerProvider,
+	identityProvider driver2.IdentityProvider,
+	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher,
+	tokenQueryExecutorProvider driver.TokenQueryExecutorProvider,
+	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
+	keyTranslator translator.KeyTranslator,
+	supportedDrivers ...string,
+) *Driver {
 	return &Driver{
 		fnsProvider:                     fnsProvider,
 		vaultProvider:                   vaultProvider,
@@ -112,5 +148,6 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		d.tracerProvider,
 		d.defaultPublicParamsFetcher,
 		spentTokenQueryExecutor,
+		d.keyTranslator,
 	), nil
 }

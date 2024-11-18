@@ -16,6 +16,8 @@ import (
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -33,24 +35,22 @@ func NewOrionDriver(
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
 ) driver.Driver {
-	return NewDriver(onsProvider, viewRegistry, viewManager, vaultProvider, configProvider, configService, identityProvider, filterProvider, tmsProvider, NewTokenExecutorProvider(), NewSpentTokenExecutorProvider(), tracerProvider)
-}
-
-func NewDriver(onsProvider *orion.NetworkServiceProvider, viewRegistry driver2.Registry, viewManager *view.Manager, vaultProvider *vault2.Provider, configProvider *view.ConfigService, configService *config.Service, identityProvider view2.IdentityProvider, filterProvider *common.AcceptTxInDBFilterProvider, tmsProvider *token.ManagementServiceProvider, tokenQueryExecutorProvider driver.TokenQueryExecutorProvider, spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider, tracerProvider trace.TracerProvider) *Driver {
-	return &Driver{
-		onsProvider:                     onsProvider,
-		viewRegistry:                    viewRegistry,
-		viewManager:                     viewManager,
-		vaultProvider:                   vaultProvider,
-		configProvider:                  configProvider,
-		configService:                   configService,
-		identityProvider:                identityProvider,
-		filterProvider:                  filterProvider,
-		tmsProvider:                     tmsProvider,
-		tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
-		spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
-		tracerProvider:                  tracerProvider,
-	}
+	keyTranslator := &translator.HashedKeyTranslator{KT: &keys.Translator{}}
+	return NewDriver(
+		onsProvider,
+		viewRegistry,
+		viewManager,
+		vaultProvider,
+		configProvider,
+		configService,
+		identityProvider,
+		filterProvider,
+		tmsProvider,
+		NewTokenExecutorProvider(),
+		NewSpentTokenExecutorProvider(keyTranslator),
+		tracerProvider,
+		keyTranslator,
+	)
 }
 
 type Driver struct {
@@ -66,6 +66,39 @@ type Driver struct {
 	tokenQueryExecutorProvider      driver.TokenQueryExecutorProvider
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider
 	tracerProvider                  trace.TracerProvider
+	keyTranslator                   translator.KeyTranslator
+}
+
+func NewDriver(
+	onsProvider *orion.NetworkServiceProvider,
+	viewRegistry driver2.Registry,
+	viewManager *view.Manager,
+	vaultProvider *vault2.Provider,
+	configProvider *view.ConfigService,
+	configService *config.Service,
+	identityProvider view2.IdentityProvider,
+	filterProvider *common.AcceptTxInDBFilterProvider,
+	tmsProvider *token.ManagementServiceProvider,
+	tokenQueryExecutorProvider driver.TokenQueryExecutorProvider,
+	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
+	tracerProvider trace.TracerProvider,
+	keyTranslator translator.KeyTranslator,
+) *Driver {
+	return &Driver{
+		onsProvider:                     onsProvider,
+		viewRegistry:                    viewRegistry,
+		viewManager:                     viewManager,
+		vaultProvider:                   vaultProvider,
+		configProvider:                  configProvider,
+		configService:                   configService,
+		identityProvider:                identityProvider,
+		filterProvider:                  filterProvider,
+		tmsProvider:                     tmsProvider,
+		tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
+		spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
+		tracerProvider:                  tracerProvider,
+		keyTranslator:                   keyTranslator,
+	}
 }
 
 func (d *Driver) New(network, _ string) (driver.Network, error) {
@@ -107,5 +140,6 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		tokenQueryExecutor,
 		spentTokenQueryExecutor,
 		d.tracerProvider,
+		d.keyTranslator,
 	), nil
 }

@@ -23,7 +23,6 @@ import (
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
@@ -155,6 +154,7 @@ func NewNetwork(
 	tracerProvider trace.TracerProvider,
 	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher,
 	spentTokenQueryExecutor driver.SpentTokenQueryExecutor,
+	keyTranslator translator.KeyTranslator,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -182,7 +182,7 @@ func NewNetwork(
 			Namespace:  "tokensdk_fabric",
 			LabelNames: []tracing.LabelName{},
 		})),
-		keyTranslator: &keys.Translator{},
+		keyTranslator: keyTranslator,
 	}
 }
 
