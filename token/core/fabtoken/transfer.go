@@ -58,9 +58,15 @@ func (s *TransferService) Transfer(
 	}
 
 	var senders []driver.Identity
+	var iTokens []*Output
 	for _, tok := range inputTokens {
 		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner.Raw))
 		senders = append(senders, tok.Owner.Raw)
+		iTokens = append(iTokens, &Output{
+			Type:     tok.Type,
+			Quantity: tok.Quantity,
+			Owner:    tok.Owner,
+		})
 	}
 
 	// prepare outputs
@@ -83,7 +89,7 @@ func (s *TransferService) Transfer(
 	// assemble transfer action
 	transfer := &TransferAction{
 		Inputs:      tokenIDs,
-		InputTokens: inputTokens,
+		InputTokens: iTokens,
 		Outputs:     outs,
 		Metadata:    meta.TransferActionMetadata(opts.Attributes),
 	}

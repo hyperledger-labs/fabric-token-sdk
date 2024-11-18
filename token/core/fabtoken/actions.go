@@ -126,7 +126,7 @@ type TransferAction struct {
 	// identifier of token to be transferred
 	Inputs []*token.ID
 	// InputTokens are the inputs transferred by this action
-	InputTokens []*token.Token
+	InputTokens []*Output
 	// outputs to be created as a result of the transfer
 	Outputs []*Output
 	// Metadata contains the transfer action's metadata
