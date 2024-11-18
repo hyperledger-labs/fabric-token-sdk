@@ -61,13 +61,11 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 			return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", v, precision)
 		}
 		outs = append(outs, &Output{
-			Output: &token2.Token{
-				Owner: &token2.Owner{
-					Raw: owners[i],
-				},
-				Type:     tokenType,
-				Quantity: q.Hex(),
+			Owner: &token2.Owner{
+				Raw: owners[i],
 			},
+			Type:     tokenType,
+			Quantity: q.Hex(),
 		})
 
 		meta := &OutputMetadata{

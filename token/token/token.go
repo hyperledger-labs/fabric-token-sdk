@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"encoding/json"
 	"fmt"
 )
 
@@ -43,21 +42,6 @@ type Token struct {
 	// Quantity is the number of units of Type carried in the token.
 	// It is encoded as a string containing a number in base 16. The string has prefix ``0x''.
 	Quantity string `protobuf:"bytes,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
-}
-
-func (t *Token) Serialize() ([]byte, error) {
-	return json.Marshal(t)
-}
-
-func (t *Token) IsRedeem() bool {
-	return t.Owner == nil || len(t.Owner.Raw) == 0
-}
-
-func (t *Token) GetOwner() []byte {
-	if t.Owner != nil {
-		return t.Owner.Raw
-	}
-	return nil
 }
 
 type IssuedToken struct {

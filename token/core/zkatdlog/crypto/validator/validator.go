@@ -8,6 +8,8 @@ package validator
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
@@ -52,14 +54,14 @@ func New(logger logging.Logger, pp *crypto.PublicParams, deserializer driver.Des
 	transferValidators := []ValidateTransferFunc{
 		TransferSignatureValidate,
 		TransferZKProofValidate,
-		common.TransferHTLCValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction],
-		common.TransferPledgeValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction],
+		htlc.TransferHTLCValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction],
+		pledge.TransferPledgeValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction],
 	}
 	transferValidators = append(transferValidators, extraValidators...)
 
 	issueValidators := []ValidateIssueFunc{
 		IssueValidate,
-		common.IssuePledgeValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction],
+		pledge.IssuePledgeValidate[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction],
 	}
 
 	return common.NewValidator[*crypto.PublicParams, *token.Token, *transfer.Action, *issue.IssueAction, driver.Deserializer](

@@ -62,7 +62,7 @@ func TransferBalanceValidate(ctx *Context) error {
 		}
 	}
 	for _, output := range ctx.TransferAction.GetOutputs() {
-		out := output.(*Output).Output
+		out := output.(*Output)
 		q, err := token.ToQuantity(out.Quantity, ctx.PP.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)

@@ -18,7 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/driver"
-	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/fabric"
+	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
@@ -35,18 +35,18 @@ type GetFabricNetworkServiceFunc = func(string) (*fabric.NetworkService, error)
 
 type StateQueryExecutor struct {
 	Logger           logging.Logger
-	RelayProvider    fabric2.RelayProvider
+	RelayProvider    fabric3.RelayProvider
 	TargetNetworkURL string
 	RelaySelector    *fabric.NetworkService
 }
 
 func NewStateQueryExecutor(
 	Logger logging.Logger,
-	RelayProvider fabric2.RelayProvider,
+	RelayProvider fabric3.RelayProvider,
 	targetNetworkURL string,
 	relaySelector *fabric.NetworkService,
 ) (*StateQueryExecutor, error) {
-	if err := fabric2.CheckFabricScheme(targetNetworkURL); err != nil {
+	if err := fabric3.CheckFabricScheme(targetNetworkURL); err != nil {
 		return nil, err
 	}
 	return &StateQueryExecutor{
@@ -60,19 +60,21 @@ func NewStateQueryExecutor(
 func (p *StateQueryExecutor) Exist(tokenID *token.ID) ([]byte, error) {
 	raw, err := json.Marshal(tokenID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed marshalling tokenID")
 	}
 
+	// get local relay
 	relay := p.RelayProvider.Relay(p.RelaySelector)
-	p.Logger.Debugf("Query [%s] for proof of existence of token [%s], input [%s]", p.TargetNetworkURL, tokenID.String(), base64.StdEncoding.EncodeToString(raw))
 
+	// Query
+	p.Logger.Debugf("Query [%s] for proof of existence of token [%s], input [%s]", p.TargetNetworkURL, tokenID.String(), base64.StdEncoding.EncodeToString(raw))
 	query, err := relay.ToFabric().Query(
 		p.TargetNetworkURL,
 		tcc.ProofOfTokenExistenceQuery,
 		base64.StdEncoding.EncodeToString(raw),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed querying token")
 	}
 	res, err := query.Call()
 	if err != nil {
@@ -97,19 +99,21 @@ func (p *StateQueryExecutor) DoesNotExist(tokenID *token.ID, origin string, dead
 	}
 	raw, err := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed marshalling tokenID")
 	}
+
+	// get local relay
 	relay := p.RelayProvider.Relay(p.RelaySelector)
 
+	// Query
 	p.Logger.Debugf("Query [%s] for proof of non-existence of token [%s], input [%s]", p.TargetNetworkURL, tokenID.String(), base64.StdEncoding.EncodeToString(raw))
-
 	query, err := relay.ToFabric().Query(
 		p.TargetNetworkURL,
 		tcc.ProofOfTokenNonExistenceQuery,
 		base64.StdEncoding.EncodeToString(raw),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed querying token")
 	}
 	res, err := query.Call()
 	if err != nil {
@@ -134,19 +138,21 @@ func (p *StateQueryExecutor) ExistsWithMetadata(tokenID *token.ID, origin string
 	}
 	raw, err := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to marshal proof of token metadata [%s]", req)
 	}
+
+	// Get local relay
 	relay := p.RelayProvider.Relay(p.RelaySelector)
 
+	// Query
 	p.Logger.Debugf("Query [%s] for proof of existence of metadata with token [%s], input [%s]", p.TargetNetworkURL, tokenID.String(), base64.StdEncoding.EncodeToString(raw))
-
 	query, err := relay.ToFabric().Query(
 		p.TargetNetworkURL,
 		tcc.ProofOfTokenMetadataExistenceQuery,
 		base64.StdEncoding.EncodeToString(raw),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to query proof of metadata [%s]", req)
 	}
 	res, err := query.Call()
 	if err != nil {
@@ -164,7 +170,7 @@ func (p *StateQueryExecutor) ExistsWithMetadata(tokenID *token.ID, origin string
 
 type StateVerifier struct {
 	Logger                  logging.Logger
-	RelayProvider           fabric2.RelayProvider
+	RelayProvider           fabric3.RelayProvider
 	NetworkURL              string
 	RelaySelector           *fabric.NetworkService
 	PledgeVault             PledgeVault
@@ -173,13 +179,13 @@ type StateVerifier struct {
 
 func NewStateVerifier(
 	Logger logging.Logger,
-	relayProvider fabric2.RelayProvider,
+	relayProvider fabric3.RelayProvider,
 	PledgeVault PledgeVault,
 	GetFabricNetworkService GetFabricNetworkServiceFunc,
 	networkURL string,
 	relaySelector *fabric.NetworkService,
 ) (*StateVerifier, error) {
-	if err := fabric2.CheckFabricScheme(networkURL); err != nil {
+	if err := fabric3.CheckFabricScheme(networkURL); err != nil {
 		return nil, err
 	}
 	return &StateVerifier{
@@ -193,7 +199,10 @@ func NewStateVerifier(
 }
 
 func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID, metadata []byte) error {
+	// Get local relay
 	relay := v.RelayProvider.Relay(v.RelaySelector)
+
+	// Parse proof
 	proof, err := relay.ToFabric().ProofFromBytes(proofRaw)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal claim proof")
@@ -211,18 +220,18 @@ func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID,
 
 	key, err := keys.CreateProofOfExistenceKey(tokenID)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to create proof of existence key from token [%s]", tokenID)
 	}
-	tmsID, err := fabric2.FabricURLToTMSID(v.NetworkURL)
+	tmsID, err := fabric3.FabricURLToTMSID(v.NetworkURL)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to extract tms id from [%s]", v.NetworkURL)
 	}
 	raw, err := rwset.GetState(tmsID.Namespace, key)
 	if err != nil {
-		return errors.Wrapf(err, "failed to check proof of existence")
+		return errors.Wrapf(err, "failed to get state for token [%s:%s]", tmsID.Namespace, key)
 	}
 	if len(raw) == 0 {
-		return errors.Errorf("failed to check proof of existence, missing key-value pair")
+		return errors.Errorf("token [%s:%s] does not contain proof", tmsID.Namespace, key)
 	}
 
 	// Validate against pledge
@@ -246,15 +255,18 @@ func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID,
 
 func (v *StateVerifier) VerifyProofNonExistence(proofRaw []byte, tokenID *token.ID, origin string, deadline time.Time) error {
 	// v.NetworkURL is the network from which the proof comes from
-	tokenOriginNetworkTMSID, err := fabric2.FabricURLToTMSID(origin)
+	tokenOriginNetworkTMSID, err := fabric3.FabricURLToTMSID(origin)
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse network url")
 	}
+	// get local relay
 	fns, err := v.GetFabricNetworkService(tokenOriginNetworkTMSID.Network)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get fabric network service for network [%s]", tokenOriginNetworkTMSID.Network)
 	}
 	relay := v.RelayProvider.Relay(fns)
+
+	// parse proof
 	proof, err := relay.ToFabric().ProofFromBytes(proofRaw)
 	if err != nil {
 		return errors.Wrapf(err, "failed to umarshal proof")
@@ -270,7 +282,7 @@ func (v *StateVerifier) VerifyProofNonExistence(proofRaw []byte, tokenID *token.
 		return errors.Wrapf(err, "failed creating key for proof of non-existence")
 	}
 
-	proofSourceNetworkTMSID, err := fabric2.FabricURLToTMSID(v.NetworkURL)
+	proofSourceNetworkTMSID, err := fabric3.FabricURLToTMSID(v.NetworkURL)
 	if err != nil {
 		return err
 	}
@@ -292,7 +304,7 @@ func (v *StateVerifier) VerifyProofNonExistence(proofRaw []byte, tokenID *token.
 	if p.TokenID.String() != tokenID.String() {
 		return errors.Errorf("token ID in reclaim request does not match token ID in proof of non-existence")
 	}
-	if p.Origin != fabric2.FabricURL(tokenOriginNetworkTMSID) {
+	if p.Origin != fabric3.FabricURL(tokenOriginNetworkTMSID) {
 		return errors.Errorf("origin in reclaim request does not match origin in proof of non-existence")
 	}
 
@@ -310,15 +322,19 @@ func (v *StateVerifier) VerifyProofNonExistence(proofRaw []byte, tokenID *token.
 // with metadata including the given token ID and origin network, in the target network is valid
 func (v *StateVerifier) VerifyProofTokenWithMetadataExistence(proofRaw []byte, tokenID *token.ID, origin string) error {
 	// v.NetworkURL is the network from which the proof comes from
-	tokenOriginNetworkTMSID, err := fabric2.FabricURLToTMSID(origin)
+	tokenOriginNetworkTMSID, err := fabric3.FabricURLToTMSID(origin)
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse network url")
 	}
+
+	// get local relay
 	fns, err := v.GetFabricNetworkService(tokenOriginNetworkTMSID.Network)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to get fabric network service for network [%s]", tokenOriginNetworkTMSID.Network)
 	}
 	relay := v.RelayProvider.Relay(fns)
+
+	// parse proof
 	proof, err := relay.ToFabric().ProofFromBytes(proofRaw)
 	if err != nil {
 		return errors.Wrapf(err, "failed to umarshal proof")
@@ -334,7 +350,7 @@ func (v *StateVerifier) VerifyProofTokenWithMetadataExistence(proofRaw []byte, t
 		return errors.Wrapf(err, "failed creating key for proof of token existence")
 	}
 
-	proofSourceNetworkTMSID, err := fabric2.FabricURLToTMSID(v.NetworkURL)
+	proofSourceNetworkTMSID, err := fabric3.FabricURLToTMSID(v.NetworkURL)
 	if err != nil {
 		return err
 	}
@@ -353,7 +369,7 @@ func (v *StateVerifier) VerifyProofTokenWithMetadataExistence(proofRaw []byte, t
 	if p.TokenID.String() != tokenID.String() {
 		return errors.Errorf("token ID in redeem request does not match token ID in proof of token existence")
 	}
-	if p.Origin != fabric2.FabricURL(tokenOriginNetworkTMSID) {
+	if p.Origin != fabric3.FabricURL(tokenOriginNetworkTMSID) {
 		return errors.Errorf("origin in redeem request does not match origin in proof of token existence")
 	}
 
@@ -370,17 +386,17 @@ func (v *StateVerifier) VerifyProofTokenWithMetadataExistence(proofRaw []byte, t
 type StateDriver struct {
 	Logger        logging.Logger
 	FNSProvider   *fabric.NetworkServiceProvider
-	RelayProvider fabric2.RelayProvider
+	RelayProvider fabric3.RelayProvider
 	VaultStore    *pledge.VaultStore
 }
 
 func NewStateDriver(in struct {
 	dig.In
 	FNSProvider   *fabric.NetworkServiceProvider
-	RelayProvider fabric2.RelayProvider
+	RelayProvider fabric3.RelayProvider
 	VaultStore    *pledge.VaultStore
-}) fabric2.NamedStateDriver {
-	return fabric2.NamedStateDriver{
+}) fabric3.NamedStateDriver {
+	return fabric3.NamedStateDriver{
 		Name: crypto.DLogPublicParameters,
 		Driver: &StateDriver{
 			Logger:        logging.MustGetLogger("token-sdk.core.zkatdlog"),

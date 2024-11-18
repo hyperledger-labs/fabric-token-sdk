@@ -8,14 +8,15 @@ package fabtoken
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type ValidateTransferFunc = common.ValidateTransferFunc[*PublicParams, *token.Token, *TransferAction, *IssueAction, driver.Deserializer]
+type ValidateTransferFunc = common.ValidateTransferFunc[*PublicParams, *Output, *TransferAction, *IssueAction, driver.Deserializer]
 
-type ValidateIssueFunc = common.ValidateIssueFunc[*PublicParams, *token.Token, *TransferAction, *IssueAction, driver.Deserializer]
+type ValidateIssueFunc = common.ValidateIssueFunc[*PublicParams, *Output, *TransferAction, *IssueAction, driver.Deserializer]
 
 type ActionDeserializer struct{}
 
@@ -41,25 +42,25 @@ func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*Iss
 	return issueActions, transferActions, nil
 }
 
-type Context = common.Context[*PublicParams, *token.Token, *TransferAction, *IssueAction, driver.Deserializer]
+type Context = common.Context[*PublicParams, *Output, *TransferAction, *IssueAction, driver.Deserializer]
 
-type Validator = common.Validator[*PublicParams, *token.Token, *TransferAction, *IssueAction, driver.Deserializer]
+type Validator = common.Validator[*PublicParams, *Output, *TransferAction, *IssueAction, driver.Deserializer]
 
 func NewValidator(logger logging.Logger, pp *PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
 	transferValidators := []ValidateTransferFunc{
 		TransferSignatureValidate,
 		TransferBalanceValidate,
-		common.TransferHTLCValidate[*PublicParams, *token.Token, *TransferAction, *IssueAction],
-		common.TransferPledgeValidate[*PublicParams, *token.Token, *TransferAction, *IssueAction],
+		htlc.TransferHTLCValidate[*PublicParams, *Output, *TransferAction, *IssueAction],
+		pledge.TransferPledgeValidate[*PublicParams, *Output, *TransferAction, *IssueAction],
 	}
 	transferValidators = append(transferValidators, extraValidators...)
 
 	issueValidators := []ValidateIssueFunc{
 		IssueValidate,
-		common.IssuePledgeValidate[*PublicParams, *token.Token, *TransferAction, *IssueAction],
+		pledge.IssuePledgeValidate[*PublicParams, *Output, *TransferAction, *IssueAction],
 	}
 
-	return common.NewValidator[*PublicParams, *token.Token, *TransferAction, *IssueAction, driver.Deserializer](
+	return common.NewValidator[*PublicParams, *Output, *TransferAction, *IssueAction, driver.Deserializer](
 		logger,
 		pp,
 		deserializer,

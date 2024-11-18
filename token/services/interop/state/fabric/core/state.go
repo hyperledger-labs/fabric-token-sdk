@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabric
+package core
 
 import (
 	"encoding/base64"
@@ -13,21 +13,23 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/driver"
 	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.uber.org/dig"
 )
+
+type Validator interface {
+	Validate(tok []byte, info *pledge.Info) (driver2.Output, error)
+}
 
 type PledgeVault interface {
 	PledgeByTokenID(tokenID *token.ID) ([]*pledge.Info, error)
@@ -177,6 +179,7 @@ type StateVerifier struct {
 	RelaySelector           *fabric.NetworkService
 	PledgeVault             PledgeVault
 	GetFabricNetworkService GetFabricNetworkServiceFunc
+	validator               Validator
 }
 
 func NewStateVerifier(
@@ -186,6 +189,7 @@ func NewStateVerifier(
 	GetFabricNetworkService GetFabricNetworkServiceFunc,
 	networkURL string,
 	relaySelector *fabric.NetworkService,
+	validator Validator,
 ) (*StateVerifier, error) {
 	if err := fabric3.CheckFabricScheme(networkURL); err != nil {
 		return nil, err
@@ -197,6 +201,7 @@ func NewStateVerifier(
 		RelaySelector:           relaySelector,
 		PledgeVault:             PledgeVault,
 		GetFabricNetworkService: GetFabricNetworkService,
+		validator:               validator,
 	}, nil
 }
 
@@ -235,11 +240,6 @@ func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID,
 	if len(raw) == 0 {
 		return errors.Errorf("token [%s:%s] does not contain proof", tmsID.Namespace, key)
 	}
-	tok := &token.Token{}
-	err = json.Unmarshal(raw, tok)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal token [%s]", common.Hashable(raw))
-	}
 	// Validate against pledge
 	v.Logger.Debugf("verify proof of existence for token id [%s]", tokenID)
 	pledges, err := v.PledgeVault.PledgeByTokenID(tokenID)
@@ -254,23 +254,19 @@ func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID,
 	info := pledges[0]
 	v.Logger.Debugf("found pledge info for token id [%s]: [%s]", tokenID, info.Source)
 
-	if tok.Type != info.TokenType {
-		return errors.Errorf("type of pledge token does not match type in claim request")
-	}
-	q, err := token.ToQuantity(tok.Quantity, 64)
+	// check token
+	output, err := v.validator.Validate(raw, info)
 	if err != nil {
-		return errors.Wrapf(err, "failed converting token quantity [%s]", tok.Quantity)
+		return errors.Wrapf(err, "failed to check token")
 	}
-	expectedQ := token.NewQuantityFromUInt64(info.Amount)
-	if expectedQ.Cmp(q) != 0 {
-		return errors.Errorf("quantity in pledged token is different from quantity in claim request")
-	}
-	owner, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
+
+	// check script
+	owner, err := identity.UnmarshalTypedIdentity(output.GetOwner())
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal owner of token [%s]", tokenID)
 	}
 	if owner.Type != pledge.ScriptType {
-		return err
+		return errors.Errorf("invalid owner type, expected [%s], got [%s]", pledge.ScriptType, owner.Type)
 	}
 	script := &pledge.Script{}
 	err = json.Unmarshal(owner.Identity, script)
@@ -430,19 +426,20 @@ type StateDriver struct {
 	VaultStore    *pledge.VaultStore
 }
 
-func NewStateDriver(in struct {
-	dig.In
-	FNSProvider   *fabric.NetworkServiceProvider
-	RelayProvider fabric3.RelayProvider
-	VaultStore    *pledge.VaultStore
-}) fabric3.NamedStateDriver {
+func NewStateDriver(
+	name fabric3.StateDriverName,
+	logger logging.Logger,
+	FNSProvider *fabric.NetworkServiceProvider,
+	RelayProvider fabric3.RelayProvider,
+	VaultStore *pledge.VaultStore,
+) fabric3.NamedStateDriver {
 	return fabric3.NamedStateDriver{
-		Name: fabtoken.PublicParameters,
+		Name: name,
 		Driver: &StateDriver{
-			Logger:        logging.MustGetLogger("token-sdk.core.fabtoken"),
-			FNSProvider:   in.FNSProvider,
-			RelayProvider: in.RelayProvider,
-			VaultStore:    in.VaultStore,
+			Logger:        logger,
+			FNSProvider:   FNSProvider,
+			RelayProvider: RelayProvider,
+			VaultStore:    VaultStore,
 		},
 	}
 }
@@ -470,5 +467,6 @@ func (d *StateDriver) NewStateVerifier(url string) (driver.StateVerifier, error)
 		},
 		url,
 		fns,
+		nil,
 	)
 }
