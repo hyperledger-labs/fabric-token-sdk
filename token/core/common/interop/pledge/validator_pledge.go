@@ -55,31 +55,24 @@ func TransferPledgeValidate[P driver.PublicParameters, T driver.Output, TA drive
 				return errors.Wrap(err, "failed constructing metadata key")
 			}
 
+			var metadataKey string
 			if out.IsRedeem() {
-				redeemKey := pledge.RedeemPledgeKey + key
-				v, ok := ctx.TransferAction.GetMetadata()[redeemKey]
-				if !ok {
-					return errors.Errorf("empty metadata of redeem for pledge script with identifier %s", redeemKey)
+				metadataKey = pledge.RedeemPledgeKey + key
+			} else {
+				metadataKey = pledge.MetadataReclaimKey + key
+				if !script.Sender.Equal(out.GetOwner()) {
+					return errors.New("recipient of token does not correspond to sender of reclaim request")
 				}
-				if v == nil {
-					return errors.Errorf("invalid metadatata of redeem for pledge script with identifier %s, metadata should contain a proof", redeemKey)
-				}
-				ctx.CountMetadataKey(redeemKey)
-				continue
-			}
-			if !script.Sender.Equal(out.GetOwner()) {
-				return errors.New("recipient of token does not correspond to sender of reclaim request")
 			}
 
-			reclaimKey := pledge.MetadataReclaimKey + key
-			v, ok := ctx.TransferAction.GetMetadata()[reclaimKey]
+			v, ok := ctx.TransferAction.GetMetadata()[metadataKey]
 			if !ok {
-				return errors.Errorf("empty metadata for pledge script with identifier %s", reclaimKey)
+				return errors.Errorf("metadata key not found [%s]", metadataKey)
 			}
 			if v == nil {
-				return errors.Errorf("invalid metadatata for pledge script with identifier %s, metadata should contain a proof", reclaimKey)
+				return errors.Errorf("empty metadata for key [%s]", metadataKey)
 			}
-			ctx.CountMetadataKey(reclaimKey)
+			ctx.CountMetadataKey(metadataKey)
 		}
 	}
 

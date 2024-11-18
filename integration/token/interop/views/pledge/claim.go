@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// Claim contains the input information to claim a token
+// Claim contains the input information to claim a token.
 type Claim struct {
 	// OriginTokenID is the identifier of the pledged token in the origin network
 	OriginTokenID *token.ID
@@ -28,6 +28,7 @@ type Claim struct {
 }
 
 // ClaimInitiatorView is the view of the initiator of the claim (Bob)
+// Claim a token that has already been pledged, but not yet claimed by someone else, reclaimed by the owner or redeemed by the issuer of the network.
 type ClaimInitiatorView struct {
 	*Claim
 }

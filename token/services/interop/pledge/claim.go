@@ -21,6 +21,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	TokenIDKey = "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/tokenID"
+	NetworkKey = "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/network"
+	ProofKey   = "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/proof"
+)
+
 func (t *Transaction) Claim(issuerWallet *token.IssuerWallet, typ string, value uint64, recipient view.Identity, originTokenID *token2.ID, originNetwork string, proof []byte) error {
 	if typ == "" {
 		return errors.Errorf("must specify a type")
@@ -57,9 +63,9 @@ func WithMetadata(tokenID *token2.ID, network string, proof []byte) token.IssueO
 		if options.Attributes == nil {
 			options.Attributes = make(map[interface{}]interface{})
 		}
-		options.Attributes["github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/tokenID"] = tokenID
-		options.Attributes["github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/network"] = network
-		options.Attributes["github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/proof"] = proof
+		options.Attributes[TokenIDKey] = tokenID
+		options.Attributes[NetworkKey] = network
+		options.Attributes[ProofKey] = proof
 		return nil
 	}
 }

@@ -36,43 +36,43 @@ func TestIssueActionMetadata(t *testing.T) {
 		{
 			name: "missing tokenID",
 			attributes: map[string][]byte{
-				"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/network": []byte("network"),
+				NetworkKey: []byte("network"),
 			},
 			opts: &driver.IssueOptions{
 				Attributes: map[interface{}]interface{}{
-					"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/network": "network",
+					NetworkKey: "network",
 				},
 			},
 			expected: map[string][]byte{
-				"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/network": []byte("network"),
+				NetworkKey: []byte("network"),
 			},
 			errExpected: false,
 		},
 		{
 			name: "missing network",
 			attributes: map[string][]byte{
-				"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/tokenID": []byte("tokenID"),
+				TokenIDKey: []byte("tokenID"),
 			},
 			opts: &driver.IssueOptions{
 				Attributes: map[interface{}]interface{}{
-					"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/tokenID": "tokenID",
+					TokenIDKey: "tokenID",
 				},
 			},
 			expected: map[string][]byte{
-				"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/tokenID": []byte("tokenID"),
+				TokenIDKey: []byte("tokenID"),
 			},
 			errExpected: false,
 		},
 		{
 			name: "valid attributes",
 			attributes: map[string][]byte{
-				"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/network": []byte("network"),
-				"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/tokenID": []byte("tokenID"),
+				NetworkKey: []byte("network"),
+				TokenIDKey: []byte("tokenID"),
 			},
 			opts: &driver.IssueOptions{
 				Attributes: map[interface{}]interface{}{
-					"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/network": "network",
-					"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/tokenID": &token.ID{
+					NetworkKey: "network",
+					TokenIDKey: &token.ID{
 						TxId:  "a_transaction",
 						Index: 2,
 					},
@@ -90,8 +90,8 @@ func TestIssueActionMetadata(t *testing.T) {
 				assert.NoError(t, err)
 				key := common.Hashable(marshalled).String()
 				res := map[string][]byte{
-					"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/network": []byte("network"),
-					"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/tokenID": []byte("tokenID"),
+					NetworkKey:             []byte("network"),
+					TokenIDKey:             []byte("tokenID"),
 					key:                    marshalled,
 					key + "proof_of_claim": nil,
 				}
@@ -104,12 +104,12 @@ func TestIssueActionMetadata(t *testing.T) {
 			attributes: map[string][]byte{},
 			opts: &driver.IssueOptions{
 				Attributes: map[interface{}]interface{}{
-					"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/network": "network",
-					"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/tokenID": &token.ID{
+					NetworkKey: "network",
+					TokenIDKey: &token.ID{
 						TxId:  "a_transaction",
 						Index: 2,
 					},
-					"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/proof": []byte("proof"),
+					ProofKey: []byte("proof"),
 				},
 			},
 			expected: func() map[string][]byte {

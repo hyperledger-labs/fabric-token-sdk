@@ -11,8 +11,15 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+)
+
+const (
+	TokenIDKey = pledge.TokenIDKey
+	NetworkKey = pledge.NetworkKey
+	ProofKey   = pledge.ProofKey
 )
 
 type IssueMetadata struct {
@@ -26,9 +33,9 @@ func IssueActionMetadata(attributes map[string][]byte, opts *driver.IssueOptions
 	var metadata *IssueMetadata
 	var proof []byte
 	if len(opts.Attributes) != 0 {
-		tokenID, ok1 := opts.Attributes["github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/tokenID"]
-		network, ok2 := opts.Attributes["github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/network"]
-		proofOpt, ok3 := opts.Attributes["github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge/proof"]
+		tokenID, ok1 := opts.Attributes[TokenIDKey]
+		network, ok2 := opts.Attributes[NetworkKey]
+		proofOpt, ok3 := opts.Attributes[ProofKey]
 		if ok1 && ok2 {
 			metadata = &IssueMetadata{
 				OriginTokenID: tokenID.(*token.ID),
