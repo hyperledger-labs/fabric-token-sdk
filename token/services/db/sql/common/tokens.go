@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
+	errors2 "errors"
 	"fmt"
 	"runtime/debug"
 	"strings"
@@ -71,7 +72,7 @@ func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error
 	if err != nil {
 		return
 	}
-	if err = tx.StoreToken(context.TODO(), tr, owners); err != nil {
+	if err = tx.StoreToken(tr, owners); err != nil {
 		if err1 := tx.Rollback(); err1 != nil {
 			logger.Errorf("error rolling back: %s", err1.Error())
 		}
@@ -110,7 +111,7 @@ func (db *TokenDB) IsMine(txID string, index uint64) (bool, error) {
 
 	row := db.db.QueryRow(query, txID, index)
 	if err := row.Scan(&id); err != nil {
-		if err == sql.ErrNoRows {
+		if errors2.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
 		return false, errors.Wrapf(err, "error querying db")
@@ -144,12 +145,13 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenT
 	return &UnspentTokensIterator{txs: rows}, err
 }
 
-// UnspentTokensInWalletIterator returns the minimum information about the tokens needed for the selector
+// SpendableTokensIteratorBy returns the minimum information about the tokens needed for the selector
 func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.SpendableTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
-		WalletID:  walletID,
-		TokenType: typ,
+		WalletID:      walletID,
+		TokenType:     typ,
+		OnlySpendable: true,
 	}, ""))
 	query := fmt.Sprintf(
 		"SELECT tx_id, idx, token_type, quantity, owner_wallet_id FROM %s %s",
@@ -168,10 +170,14 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 
 // Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
 func (db *TokenDB) Balance(walletID, typ string) (uint64, error) {
-	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
+	return db.balance(driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
-	}, db.table.Tokens))
+	})
+}
+
+func (db *TokenDB) balance(opts driver.QueryTokenDetailsParams) (uint64, error) {
+	where, args := common.Where(db.ci.HasTokenDetails(opts, db.table.Tokens))
 	join := joinOnTokenID(db.table.Tokens, db.table.Ownership)
 	query := fmt.Sprintf("SELECT SUM(amount) FROM %s %s %s", db.table.Tokens, join, where)
 
@@ -308,7 +314,7 @@ func (db *TokenDB) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 	}
 	defer rows.Close()
 
-	tokens := []*token.IssuedToken{}
+	var tokens []*token.IssuedToken
 	for rows.Next() {
 		tok := token.IssuedToken{
 			Id: &token.ID{
@@ -341,22 +347,22 @@ func (db *TokenDB) GetTokenOutputs(ids []*token.ID, callback tdriver.QueryCallba
 	return nil
 }
 
-// GetTokenInfos retrieves the token metadata for the passed ids.
+// GetTokenMetadata retrieves the token metadata for the passed ids.
 // For each id, the callback is invoked to unmarshal the token metadata
-func (db *TokenDB) GetTokenInfos(ids []*token.ID) ([][]byte, error) {
+func (db *TokenDB) GetTokenMetadata(ids []*token.ID) ([][]byte, error) {
 	return db.GetAllTokenInfos(ids)
 }
 
-// GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
-func (db *TokenDB) GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error) {
+// GetTokenOutputsAndMeta retrieves both the token output, metadata, and type for the passed ids.
+func (db *TokenDB) GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []string, error) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent("get_ledger_token_meta")
-	tokens, metas, err := db.getLedgerTokenAndMeta(ctx, ids)
+	tokens, metas, types, err := db.getLedgerTokenAndMeta(ctx, ids)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	span.AddEvent("create_outputs")
-	return tokens, metas, nil
+	return tokens, metas, types, nil
 }
 
 // GetAllTokenInfos retrieves the token information for the passed ids.
@@ -364,7 +370,7 @@ func (db *TokenDB) GetAllTokenInfos(ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
 		return [][]byte{}, nil
 	}
-	_, metas, err := db.getLedgerTokenAndMeta(context.TODO(), ids)
+	_, metas, _, err := db.getLedgerTokenAndMeta(context.TODO(), ids)
 	return metas, err
 }
 
@@ -410,50 +416,53 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 	return tokens, nil
 }
 
-func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error) {
+func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []string, error) {
 	span := trace.SpanFromContext(ctx)
 	if len(ids) == 0 {
-		return [][]byte{}, [][]byte{}, nil
+		return nil, nil, nil, nil
 	}
 	where, args := common.Where(db.ci.HasTokens("tx_id", "idx", ids...))
 
-	query := fmt.Sprintf("SELECT tx_id, idx, ledger, ledger_metadata FROM %s %s", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, ledger, ledger_type, ledger_metadata  FROM %s %s", db.table.Tokens, where)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	defer rows.Close()
 
 	span.AddEvent("start_scan_rows")
-	infoMap := make(map[string][2][]byte, len(ids))
+	infoMap := make(map[string][3][]byte, len(ids))
 	for rows.Next() {
 		var tok []byte
+		var tokType string
 		var metadata []byte
 		var id token.ID
-		if err := rows.Scan(&id.TxId, &id.Index, &tok, &metadata); err != nil {
-			return nil, nil, err
+		if err := rows.Scan(&id.TxId, &id.Index, &tok, &tokType, &metadata); err != nil {
+			return nil, nil, nil, err
 		}
-		infoMap[id.String()] = [2][]byte{tok, metadata}
+		infoMap[id.String()] = [3][]byte{tok, metadata, []byte(tokType)}
 	}
 	if err = rows.Err(); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	span.AddEvent("end_scan_rows", tracing.WithAttributes(tracing.Int(ResultRowsLabel, len(ids))))
 
 	span.AddEvent("combine_results")
 	tokens := make([][]byte, len(ids))
 	metas := make([][]byte, len(ids))
+	types := make([]string, len(ids))
 	for i, id := range ids {
 		if info, ok := infoMap[id.String()]; !ok {
-			return nil, nil, errors.Errorf("token/metadata not found for [%s]", id)
+			return nil, nil, nil, errors.Errorf("token/metadata not found for [%s]", id)
 		} else {
 			tokens[i] = info[0]
 			metas[i] = info[1]
+			types[i] = string(info[2])
 		}
 	}
-	return tokens, metas, nil
+	return tokens, metas, types, nil
 }
 
 // GetTokens returns the owned tokens and their identifier keys for the passed ids.
@@ -547,7 +556,7 @@ func (db *TokenDB) QueryTokenDetails(params driver.QueryTokenDetailsParams) ([]d
 	}
 	defer rows.Close()
 
-	deets := []driver.TokenDetails{}
+	var tokenDetails []driver.TokenDetails
 	for rows.Next() {
 		td := driver.TokenDetails{}
 		if err := rows.Scan(
@@ -562,15 +571,15 @@ func (db *TokenDB) QueryTokenDetails(params driver.QueryTokenDetailsParams) ([]d
 			&td.SpentBy,
 			&td.StoredAt,
 		); err != nil {
-			return deets, err
+			return tokenDetails, err
 		}
-		deets = append(deets, td)
+		tokenDetails = append(tokenDetails, td)
 	}
-	logger.Debugf("found [%d] tokens", len(deets))
+	logger.Debugf("found [%d] tokens", len(tokenDetails))
 	if err = rows.Err(); err != nil {
-		return deets, err
+		return tokenDetails, err
 	}
-	return deets, nil
+	return tokenDetails, nil
 }
 
 // WhoDeletedTokens returns information about which transaction deleted the passed tokens.
@@ -595,16 +604,16 @@ func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, erro
 
 	counter := 0
 	for rows.Next() {
-		var txid string
+		var txID string
 		var idx uint64
 		var spBy string
 		var isSp bool
-		if err := rows.Scan(&txid, &idx, &spBy, &isSp); err != nil {
+		if err := rows.Scan(&txID, &idx, &spBy, &isSp); err != nil {
 			return spentBy, isSpent, err
 		}
 		// order is not necessarily the same, so we have to set it in a loop
 		for i, inp := range inputs {
-			if inp.TxId == txid && inp.Index == idx {
+			if inp.TxId == txID && inp.Index == idx {
 				isSpent[i] = isSp
 				spentBy[i] = spBy
 				found[i] = true
@@ -641,7 +650,7 @@ func (db *TokenDB) TransactionExists(ctx context.Context, id string) (bool, erro
 	var found string
 	span.AddEvent("scan_rows")
 	if err := row.Scan(&found); err != nil {
-		if err == sql.ErrNoRows {
+		if errors2.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
 		logger.Warnf("tried to check transaction existence for id %s, err %s", id, err)
@@ -805,6 +814,7 @@ func (db *TokenDB) GetSchema() string {
 			owner_identity BYTEA NOT NULL,
 			owner_wallet_id TEXT, 
 			ledger BYTEA NOT NULL,
+            ledger_type TEXT DEFAULT '',
 			ledger_metadata BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
 			is_deleted BOOL NOT NULL DEFAULT false,
@@ -813,6 +823,7 @@ func (db *TokenDB) GetSchema() string {
 			owner BOOL NOT NULL DEFAULT false,
 			auditor BOOL NOT NULL DEFAULT false,
 			issuer BOOL NOT NULL DEFAULT false,
+			spendable BOOL NOT NULL DEFAULT true,
 			PRIMARY KEY (tx_id, idx)
 		);
 		CREATE INDEX IF NOT EXISTS idx_spent_%s ON %s ( is_deleted, owner );
@@ -866,16 +877,20 @@ func (db *TokenDB) NewTokenDBTransaction(ctx context.Context) (driver.TokenDBTra
 	if err != nil {
 		return nil, errors.Errorf("failed starting a db transaction")
 	}
-	return &TokenTransaction{db: db, tx: tx}, nil
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return &TokenTransaction{db: db, tx: tx, ctx: ctx}, nil
 }
 
 type TokenTransaction struct {
-	db *TokenDB
-	tx *sql.Tx
+	db  *TokenDB
+	tx  *sql.Tx
+	ctx context.Context
 }
 
-func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint64, includeDeleted bool) (*token.Token, []string, error) {
-	span := trace.SpanFromContext(ctx)
+func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error) {
+	span := trace.SpanFromContext(t.ctx)
 	where, args := common.Where(t.db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		IDs:            []*token.ID{{TxId: txID, Index: index}},
 		IncludeDeleted: includeDeleted,
@@ -895,7 +910,7 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 	var raw []byte
 	var tokenType string
 	var quantity string
-	owners := []string{}
+	var owners []string
 	var walletID *string
 	for rows.Next() {
 		var tempOwner *string
@@ -927,8 +942,8 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 	}, owners, nil
 }
 
-func (t *TokenTransaction) Delete(ctx context.Context, txID string, index uint64, deletedBy string) error {
-	span := trace.SpanFromContext(ctx)
+func (t *TokenTransaction) Delete(txID string, index uint64, deletedBy string) error {
+	span := trace.SpanFromContext(t.ctx)
 	// logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
@@ -943,17 +958,17 @@ func (t *TokenTransaction) Delete(ctx context.Context, txID string, index uint64
 	return nil
 }
 
-func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord, owners []string) error {
+func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) error {
 	if len(tr.OwnerWalletID) == 0 && len(owners) == 0 && tr.Owner {
 		return errors.Errorf("no owners specified [%s]", string(debug.Stack()))
 	}
 
-	span := trace.SpanFromContext(ctx)
+	span := trace.SpanFromContext(t.ctx)
 	// logger.Debugf("store record [%s:%d,%v] in table [%s]", tr.TxID, tr.Index, owners, t.db.table.Tokens)
 
 	// Store token
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)", t.db.table.Tokens)
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_type, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)", t.db.table.Tokens)
 	logger.Debug(query,
 		tr.TxID,
 		tr.Index,
@@ -963,6 +978,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		len(tr.OwnerIdentity),
 		tr.OwnerWalletID,
 		len(tr.Ledger),
+		tr.LedgerType,
 		len(tr.LedgerMetadata),
 		tr.Type,
 		tr.Quantity,
@@ -981,6 +997,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		tr.OwnerIdentity,
 		tr.OwnerWalletID,
 		tr.Ledger,
+		tr.LedgerType,
 		tr.LedgerMetadata,
 		tr.Type,
 		tr.Quantity,
@@ -1003,6 +1020,55 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 			return errors.Wrapf(err, "error storing token ownership [%s]", tr.TxID)
 		}
 	}
+
+	return nil
+}
+
+func (t *TokenTransaction) SetSpendable(txID string, index uint64, spendable bool) error {
+	span := trace.SpanFromContext(t.ctx)
+	query := fmt.Sprintf("UPDATE %s SET spendable = $1 WHERE tx_id = $2 AND idx = $3;", t.db.table.Tokens)
+	logger.Infof(query, spendable, txID, index)
+	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	if _, err := t.tx.Exec(query, spendable, txID, index); err != nil {
+		span.RecordError(err)
+		return errors.Wrapf(err, "error setting spendable flag to [%v] for [%s]", spendable, txID)
+	}
+	span.AddEvent("end_query")
+	return nil
+
+}
+
+func (t *TokenTransaction) SetSupportedTokens(supportedTokenTypes []string) error {
+	span := trace.SpanFromContext(t.ctx)
+
+	// first set all spendable flags to false
+	query := fmt.Sprintf("UPDATE %s SET spendable = $1;", t.db.table.Tokens)
+	logger.Infof(query, false)
+	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	if _, err := t.tx.Exec(query, false); err != nil {
+		span.RecordError(err)
+		return errors.Wrapf(err, "error setting spendable flag to false for all tokens")
+	}
+	span.AddEvent("end_query")
+
+	// then set the spendable flags to true only for the supported token types
+	cond := t.db.ci.HasTokenTypes("ledger_type", supportedTokenTypes...)
+	args := append([]any{true}, cond.Params()...)
+	offset := 2
+	where := cond.ToString(&offset)
+
+	query = fmt.Sprintf("UPDATE %s SET spendable = $1 WHERE %s;", t.db.table.Tokens, where)
+	logger.Infof(query, args)
+	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	res, err := t.tx.Exec(query, args...)
+	if err != nil {
+		span.RecordError(err)
+		return errors.Wrapf(err, "error setting spendable flag to true for token types [%v]", supportedTokenTypes)
+	} else {
+		rows, _ := res.RowsAffected()
+		logger.Infof("row affected [%d]", rows)
+	}
+	span.AddEvent("end_query")
 
 	return nil
 }
