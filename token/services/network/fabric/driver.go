@@ -109,6 +109,7 @@ func NewDriver(
 		tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
 		spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
 		supportedDrivers:                supportedDrivers,
+		keyTranslator:                   keyTranslator,
 	}
 }
 
