@@ -19,12 +19,12 @@ type ValidationAttributeID = string
 type ValidationAttributes = map[ValidationAttributeID][]byte
 
 // GetStateFnc models a function that returns the value for the given key from the ledger
-type GetStateFnc = func(id token.ID, output []byte) ([]byte, error)
+type GetStateFnc = func(id token.ID) ([]byte, error)
 
 // Ledger models a read-only ledger
 type Ledger interface {
 	// GetState returns the value for the given key
-	GetState(id token.ID, output []byte) ([]byte, error)
+	GetState(id token.ID) ([]byte, error)
 }
 
 type SignatureProvider interface {
@@ -38,7 +38,7 @@ type SignatureProvider interface {
 //go:generate counterfeiter -o mock/validator_ledger.go -fake-name ValidatorLedger . ValidatorLedger
 
 type ValidatorLedger interface {
-	GetState(id token.ID, output []byte) ([]byte, error)
+	GetState(id token.ID) ([]byte, error)
 }
 
 // Validator models a token request validator

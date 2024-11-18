@@ -14,7 +14,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-sdk.vault.translator")
+var (
+	logger   = logging.MustGetLogger("token-sdk.vault.translator")
+	NotEmpty = []byte{1}
+)
 
 // Translator validates token requests and generates the corresponding RWSets
 type Translator struct {
@@ -325,7 +328,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 			if err != nil {
 				return errors.Errorf("error creating output ID: %s", err)
 			}
-			if err := w.RWSet.SetState(sn, []byte{1}); err != nil {
+			if err := w.RWSet.SetState(sn, NotEmpty); err != nil {
 				return err
 			}
 		}
@@ -379,7 +382,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 				if err != nil {
 					return errors.Errorf("error creating output ID: %s", err)
 				}
-				if err := w.RWSet.SetState(sn, []byte{1}); err != nil {
+				if err := w.RWSet.SetState(sn, NotEmpty); err != nil {
 					return err
 				}
 			}
@@ -453,7 +456,7 @@ func (w *Translator) spendInputs(transferAction TransferAction) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to generate key for id [%s]", id)
 			}
-			if err := w.RWSet.SetState(k, []byte{1}); err != nil {
+			if err := w.RWSet.SetState(k, NotEmpty); err != nil {
 				return errors.Wrapf(err, "failed to add serial number %s", id)
 			}
 			if err := w.appendSpentID(id); err != nil {

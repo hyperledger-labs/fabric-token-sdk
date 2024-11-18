@@ -549,6 +549,6 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	return sender, tr, transferMetadata, tokens
 }
 
-func getState(id token2.ID, output []byte) ([]byte, error) {
-	return fakeLedger.GetState(id, output)
+func getState(id token2.ID) ([]byte, error) {
+	return fakeLedger.GetState(id)
 }

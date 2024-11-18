@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"unicode/utf8"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/pkg/errors"
 )
 
@@ -34,19 +35,19 @@ const (
 type Translator struct {
 }
 
-func (t *Translator) CreateTokenRequestKey(id string) (string, error) {
+func (t *Translator) CreateTokenRequestKey(id string) (translator.Key, error) {
 	return createCompositeKey(TokenRequestKeyPrefix, []string{id})
 }
 
-func (t *Translator) CreateSetupKey() (string, error) {
+func (t *Translator) CreateSetupKey() (translator.Key, error) {
 	return createCompositeKey(TokenSetupKeyPrefix, nil)
 }
 
-func (t *Translator) CreateSetupHashKey() (string, error) {
+func (t *Translator) CreateSetupHashKey() (translator.Key, error) {
 	return createCompositeKey(TokenSetupHashKeyPrefix, nil)
 }
 
-func (t *Translator) CreateOutputSNKey(id string, index uint64, output []byte) (string, error) {
+func (t *Translator) CreateOutputSNKey(id string, index uint64, output []byte) (translator.Key, error) {
 	hf := sha256.New()
 	hf.Write([]byte(OutputSNKeyPrefix))
 	hf.Write([]byte(id))
@@ -57,11 +58,11 @@ func (t *Translator) CreateOutputSNKey(id string, index uint64, output []byte) (
 	return createCompositeKey(OutputSNKeyPrefix, []string{hex.EncodeToString(hf.Sum(nil))})
 }
 
-func (t *Translator) CreateOutputKey(id string, index uint64) (string, error) {
+func (t *Translator) CreateOutputKey(id string, index uint64) (translator.Key, error) {
 	return createCompositeKey(id, []string{strconv.FormatUint(index, 10)})
 }
 
-func (t *Translator) GetTransferMetadataSubKey(k string) (string, error) {
+func (t *Translator) GetTransferMetadataSubKey(k string) (translator.Key, error) {
 	prefix, components, err := splitCompositeKey(k)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to split composite key [%s]", k)
@@ -75,20 +76,20 @@ func (t *Translator) GetTransferMetadataSubKey(k string) (string, error) {
 	return components[0], nil
 }
 
-func (t *Translator) CreateInputSNKey(id string) (string, error) {
+func (t *Translator) CreateInputSNKey(id string) (translator.Key, error) {
 	return createCompositeKey(InputSerialNumberPrefix, []string{id})
 }
 
-func (t *Translator) CreateIssueActionMetadataKey(key string) (string, error) {
+func (t *Translator) CreateIssueActionMetadataKey(key string) (translator.Key, error) {
 	return createCompositeKey(IssueActionMetadataPrefix, []string{key})
 }
 
-func (t *Translator) CreateTransferActionMetadataKey(key string) (string, error) {
+func (t *Translator) CreateTransferActionMetadataKey(key string) (translator.Key, error) {
 	return createCompositeKey(TransferActionMetadataPrefix, []string{key})
 }
 
 // createCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go
-func createCompositeKey(objectType string, attributes []string) (string, error) {
+func createCompositeKey(objectType string, attributes []string) (translator.Key, error) {
 	if err := validateCompositeKeyAttribute(objectType); err != nil {
 		return "", err
 	}
@@ -115,7 +116,7 @@ func validateCompositeKeyAttribute(str string) error {
 	return nil
 }
 
-func splitCompositeKey(compositeKey string) (string, []string, error) {
+func splitCompositeKey(compositeKey string) (translator.Key, []string, error) {
 	componentIndex := 1
 	var components []string
 	for i := 1; i < len(compositeKey); i++ {
