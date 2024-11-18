@@ -146,7 +146,7 @@ func (m *enhancedManager) UpdateTokens(deleted []*token.ID, added []token.Unspen
 	}
 	if len(deleted) > 0 {
 		for _, t := range deleted {
-			if err := tx.Delete(context.TODO(), t.TxId, t.Index, "me"); err != nil {
+			if err := tx.Delete(t.TxId, t.Index, "me"); err != nil {
 				err2 := tx.Rollback()
 				return errors.Wrapf(err, "failed to delete - while rolling back: %v", err2)
 			}
@@ -154,7 +154,7 @@ func (m *enhancedManager) UpdateTokens(deleted []*token.ID, added []token.Unspen
 	}
 	if len(added) > 0 {
 		for _, t := range added {
-			if err := tx.StoreToken(context.TODO(), driver.TokenRecord{
+			if err := tx.StoreToken(driver.TokenRecord{
 				TxID:           t.Id.TxId,
 				Index:          t.Id.Index,
 				IssuerRaw:      []byte{},

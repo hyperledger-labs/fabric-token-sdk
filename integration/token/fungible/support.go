@@ -1152,6 +1152,15 @@ func SetKVSEntry(network *integration.Infrastructure, user *token3.NodeReference
 	Expect(err).NotTo(HaveOccurred())
 }
 
+func SetSpendableFlag(network *integration.Infrastructure, user *token3.NodeReference, tokenID token.ID, value bool) {
+	_, err := network.Client(user.ReplicaName()).CallView("SetSpendableFlag", common.JSONMarshall(&views.SetSpendableFlag{
+		TMSID:     token2.TMSID{},
+		TokenID:   tokenID,
+		Spendable: value,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+}
+
 func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, user *token3.NodeReference, wallet string, typ string, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference, expectedErrorMsgs ...string) string {
 	var recipientData *token2.RecipientData
 	if wpm != nil {

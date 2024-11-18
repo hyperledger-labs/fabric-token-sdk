@@ -11,9 +11,12 @@ import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 //go:generate counterfeiter -o mock/tss.go -fake-name TokensService . TokensService
 
 type TokensService interface {
-	// DeserializeToken unmarshals the passed output and uses the passed metadata to derive a token and its issuer (if any).
-	DeserializeToken(output []byte, outputMetadata []byte) (*token.Token, Identity, error)
+	// SupportedTokenTypes returns the supported token types
+	SupportedTokenTypes() []string
 
-	// GetTokenInfo extracts from the given metadata the token info entry corresponding to the given target
-	GetTokenInfo(meta *TokenRequestMetadata, target []byte) ([]byte, error)
+	// Deobfuscate processes the passed output and metadata to derive a token.Token, its issuer (if any), and its token type tag
+	Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, string, error)
+
+	// ExtractMetadata extracts from the given token request metadata the metadata to the given target
+	ExtractMetadata(meta *TokenRequestMetadata, target []byte) ([]byte, error)
 }

@@ -41,6 +41,8 @@ type Output interface {
 	Serialize() ([]byte, error)
 	// IsRedeem returns true if the output is a redeem output
 	IsRedeem() bool
+	// GetOwner returns the owner of this token
+	GetOwner() []byte
 }
 
 //go:generate counterfeiter -o mock/ta.go -fake-name TransferAction . TransferAction

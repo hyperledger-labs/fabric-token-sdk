@@ -134,7 +134,8 @@ func Topology(opts common.Opts) []api.Topology {
 		RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{}).
 		RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{}).
 		RegisterViewFactory("MaliciousTransfer", &views.MaliciousTransferViewFactory{}).
-		RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
+		RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{}).
+		RegisterViewFactory("SetSpendableFlag", &views.SetSpendableFlagViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),

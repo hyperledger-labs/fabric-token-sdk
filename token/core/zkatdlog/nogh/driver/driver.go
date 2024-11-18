@@ -105,7 +105,6 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	deserializer := ws.Deserializer
 	ip := ws.IdentityProvider
 
-	tokDeserializer := &TokenDeserializer{}
 	authorization := common.NewAuthorizationMultiplexer(
 		common.NewTMSAuthorization(logger, ppm.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
@@ -114,6 +113,10 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
 	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
+	tokensService, err := zkatdlog.NewTokensService(ppm)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", networkID, namespace)
+	}
 	service, err := zkatdlog.NewTokenService(
 		logger,
 		ws,
@@ -131,10 +134,11 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 				logger,
 				ppm,
 				ws,
-				common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer),
+				common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
 				deserializer,
 				driverMetrics,
 				d.tracerProvider,
+				tokensService,
 			),
 			observables.NewTransfer(tracerProvider),
 		),
@@ -142,14 +146,14 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 			zkatdlog.NewAuditorService(
 				logger,
 				ppm,
-				common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, tokDeserializer),
+				common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
 				deserializer,
 				driverMetrics,
 				d.tracerProvider,
 			),
 			observables.NewAudit(tracerProvider),
 		),
-		zkatdlog.NewTokensService(ppm),
+		tokensService,
 		authorization,
 	)
 	if err != nil {

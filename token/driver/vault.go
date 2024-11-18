@@ -76,14 +76,14 @@ type QueryEngine interface {
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
 	// PublicParams returns the public parameters
 	PublicParams() ([]byte, error)
-	// GetTokenInfos retrieves the token information for the passed ids.
+	// GetTokenMetadata retrieves the token information for the passed ids.
 	// For each id, the callback is invoked to unmarshal the token information
-	GetTokenInfos(ids []*token.ID) ([][]byte, error)
+	GetTokenMetadata(ids []*token.ID) ([][]byte, error)
 	// GetTokenOutputs retrieves the token output as stored on the ledger for the passed ids.
 	// For each id, the callback is invoked to unmarshal the output
 	GetTokenOutputs(ids []*token.ID, callback QueryCallbackFunc) error
-	// GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
-	GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error)
+	// GetTokenOutputsAndMeta retrieves both the token output and information for the passed ids.
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []string, error)
 	// GetTokens returns the list of tokens with their respective vault keys
 	GetTokens(inputs ...*token.ID) ([]*token.Token, error)
 	// WhoDeletedTokens returns info about who deleted the passed tokens.

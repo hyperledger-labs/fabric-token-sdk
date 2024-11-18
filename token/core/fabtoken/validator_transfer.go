@@ -22,15 +22,16 @@ import (
 func TransferSignatureValidate(ctx *Context) error {
 	ctx.InputTokens = ctx.TransferAction.InputTokens
 	for _, tok := range ctx.InputTokens {
-		ctx.Logger.Debugf("check sender [%s]", driver.Identity(tok.Owner).UniqueID())
-		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner)
+		owner := tok.GetOwner()
+		ctx.Logger.Debugf("check sender [%s]", driver.Identity(owner).UniqueID())
+		verifier, err := ctx.Deserializer.GetOwnerVerifier(owner)
 		if err != nil {
-			return errors.Wrapf(err, "failed deserializing owner [%v][%s]", tok, driver.Identity(tok.Owner).UniqueID())
+			return errors.Wrapf(err, "failed deserializing owner [%v][%s]", tok, driver.Identity(owner).UniqueID())
 		}
-		ctx.Logger.Debugf("signature verification [%v][%s]", tok, driver.Identity(tok.Owner).UniqueID())
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(tok.Owner, verifier)
+		ctx.Logger.Debugf("signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(owner, verifier)
 		if err != nil {
-			return errors.Wrapf(err, "failed signature verification [%v][%s]", tok, driver.Identity(tok.Owner).UniqueID())
+			return errors.Wrapf(err, "failed signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
 		}
 		ctx.Signatures = append(ctx.Signatures, sigma)
 	}
@@ -66,7 +67,7 @@ func TransferBalanceValidate(ctx *Context) error {
 		}
 	}
 	for _, output := range ctx.TransferAction.GetOutputs() {
-		out := output.(*Output).Output
+		out := output.(*Output)
 		q, err := token.ToQuantity(out.Quantity, ctx.PP.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
@@ -90,7 +91,7 @@ func TransferHTLCValidate(ctx *Context) error {
 	now := time.Now()
 
 	for i, in := range ctx.InputTokens {
-		owner, err := identity.UnmarshalTypedIdentity(in.Owner)
+		owner, err := identity.UnmarshalTypedIdentity(in.GetOwner())
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal owner of input token")
 		}
@@ -103,7 +104,7 @@ func TransferHTLCValidate(ctx *Context) error {
 
 			// check type and quantity
 			output := ctx.TransferAction.GetOutputs()[0].(*Output)
-			tok := output.Output
+			tok := output
 			if ctx.InputTokens[0].Type != tok.Type {
 				return errors.New("invalid transfer action: type of input does not match type of output")
 			}
@@ -115,7 +116,7 @@ func TransferHTLCValidate(ctx *Context) error {
 			}
 
 			// check owner field
-			script, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner, tok.Owner, now)
+			script, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].GetOwner(), tok.Owner, now)
 			if err != nil {
 				return errors.Wrap(err, "failed to verify transfer from htlc script")
 			}
@@ -142,7 +143,7 @@ func TransferHTLCValidate(ctx *Context) error {
 		}
 
 		// if it is an htlc script then the deadline must still be valid
-		owner, err := identity.UnmarshalTypedIdentity(out.Output.Owner)
+		owner, err := identity.UnmarshalTypedIdentity(out.Owner)
 		if err != nil {
 			return err
 		}

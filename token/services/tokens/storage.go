@@ -49,7 +49,7 @@ func (d *DBStorage) NewTransaction(ctx context.Context) (*transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewTransaction(d.notifier, tx, d.tmsID)
+	return NewTransaction(ctx, d.notifier, tx, d.tmsID)
 }
 
 func (d *DBStorage) TransactionExists(ctx context.Context, id string) (bool, error) {
@@ -64,6 +64,7 @@ type TokenToAppend struct {
 	txID                  string
 	index                 uint64
 	tok                   *token2.Token
+	tokenOnLedgerType     string
 	tokenOnLedger         []byte
 	tokenOnLedgerMetadata []byte
 	ownerType             string
@@ -76,28 +77,30 @@ type TokenToAppend struct {
 }
 
 type transaction struct {
+	ctx      context.Context
 	notifier events.Publisher
 	tx       *tokendb.Transaction
 	tmsID    token.TMSID
 }
 
-func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
+func NewTransaction(ctx context.Context, notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
 	return &transaction{
+		ctx:      ctx,
 		notifier: notifier,
 		tx:       tx,
 		tmsID:    tmsID,
 	}, nil
 }
 
-func (t *transaction) DeleteToken(ctx context.Context, txID string, index uint64, deletedBy string) error {
-	span := trace.SpanFromContext(ctx)
+func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) error {
+	span := trace.SpanFromContext(t.ctx)
 	span.AddEvent("get_token")
-	tok, owners, err := t.tx.GetToken(ctx, txID, index, true)
+	tok, owners, err := t.tx.GetToken(txID, index, true)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token [%s:%d]", txID, index)
 	}
 	span.AddEvent("delete_token")
-	err = t.tx.Delete(ctx, txID, index, deletedBy)
+	err = t.tx.Delete(txID, index, deletedBy)
 	if err != nil {
 		if tok == nil {
 			logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
@@ -117,43 +120,41 @@ func (t *transaction) DeleteToken(ctx context.Context, txID string, index uint64
 	return nil
 }
 
-func (t *transaction) DeleteTokens(ctx context.Context, deletedBy string, ids []*token2.ID) error {
+func (t *transaction) DeleteTokens(deletedBy string, ids []*token2.ID) error {
 	for _, id := range ids {
-		if err := t.DeleteToken(ctx, id.TxId, id.Index, deletedBy); err != nil {
+		if err := t.DeleteToken(id.TxId, id.Index, deletedBy); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error {
-	span := trace.SpanFromContext(ctx)
+func (t *transaction) AppendToken(tta TokenToAppend) error {
+	span := trace.SpanFromContext(t.ctx)
 	q, err := token2.ToQuantity(tta.tok.Quantity, tta.precision)
 	if err != nil {
 		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tta.tok.Quantity, tta.precision)
 	}
 
 	span.AddEvent("store_token")
-	err = t.tx.StoreToken(ctx,
-		tokendb.TokenRecord{
-			TxID:           tta.txID,
-			Index:          tta.index,
-			IssuerRaw:      tta.issuer,
-			OwnerRaw:       tta.tok.Owner,
-			OwnerType:      tta.ownerType,
-			OwnerIdentity:  tta.ownerIdentity,
-			OwnerWalletID:  tta.ownerWalletID,
-			Ledger:         tta.tokenOnLedger,
-			LedgerMetadata: tta.tokenOnLedgerMetadata,
-			Quantity:       tta.tok.Quantity,
-			Type:           tta.tok.Type,
-			Amount:         q.ToBigInt().Uint64(),
-			Owner:          tta.flags.Mine,
-			Auditor:        tta.flags.Auditor,
-			Issuer:         tta.flags.Issuer,
-		},
-		tta.owners,
-	)
+	err = t.tx.StoreToken(tokendb.TokenRecord{
+		TxID:           tta.txID,
+		Index:          tta.index,
+		IssuerRaw:      tta.issuer,
+		OwnerRaw:       tta.tok.Owner,
+		OwnerType:      tta.ownerType,
+		OwnerIdentity:  tta.ownerIdentity,
+		OwnerWalletID:  tta.ownerWalletID,
+		Ledger:         tta.tokenOnLedger,
+		LedgerType:     tta.tokenOnLedgerType,
+		LedgerMetadata: tta.tokenOnLedgerMetadata,
+		Quantity:       tta.tok.Quantity,
+		Type:           tta.tok.Type,
+		Amount:         q.ToBigInt().Uint64(),
+		Owner:          tta.flags.Mine,
+		Auditor:        tta.flags.Auditor,
+		Issuer:         tta.flags.Issuer,
+	}, tta.owners)
 	if err != nil && !errors2.HasCause(err, driver.UniqueKeyViolation) {
 		return errors.Wrapf(err, "cannot store token in db")
 	}
@@ -193,6 +194,21 @@ func (t *transaction) Rollback() error {
 
 func (t *transaction) Commit() error {
 	return t.tx.Commit()
+}
+
+func (t *transaction) SetSpendableFlag(value bool, ids []*token2.ID) error {
+	var err error
+	for _, id := range ids {
+		err = t.tx.SetSpendable(id.TxId, id.Index, value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (t *transaction) SetSupportedTokens(supportedTokens []string) error {
+	return t.tx.SetSupportedTokens(supportedTokens)
 }
 
 type TokenProcessorEvent struct {
