@@ -9,11 +9,10 @@ import (
 )
 
 type Ledger struct {
-	GetStateStub        func(token.ID, []byte) ([]byte, error)
+	GetStateStub        func(token.ID) ([]byte, error)
 	getStateMutex       sync.RWMutex
 	getStateArgsForCall []struct {
 		arg1 token.ID
-		arg2 []byte
 	}
 	getStateReturns struct {
 		result1 []byte
@@ -27,24 +26,18 @@ type Ledger struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Ledger) GetState(arg1 token.ID, arg2 []byte) ([]byte, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
-	}
+func (fake *Ledger) GetState(arg1 token.ID) ([]byte, error) {
 	fake.getStateMutex.Lock()
 	ret, specificReturn := fake.getStateReturnsOnCall[len(fake.getStateArgsForCall)]
 	fake.getStateArgsForCall = append(fake.getStateArgsForCall, struct {
 		arg1 token.ID
-		arg2 []byte
-	}{arg1, arg2Copy})
+	}{arg1})
 	stub := fake.GetStateStub
 	fakeReturns := fake.getStateReturns
-	fake.recordInvocation("GetState", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("GetState", []interface{}{arg1})
 	fake.getStateMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -58,17 +51,17 @@ func (fake *Ledger) GetStateCallCount() int {
 	return len(fake.getStateArgsForCall)
 }
 
-func (fake *Ledger) GetStateCalls(stub func(token.ID, []byte) ([]byte, error)) {
+func (fake *Ledger) GetStateCalls(stub func(token.ID) ([]byte, error)) {
 	fake.getStateMutex.Lock()
 	defer fake.getStateMutex.Unlock()
 	fake.GetStateStub = stub
 }
 
-func (fake *Ledger) GetStateArgsForCall(i int) (token.ID, []byte) {
+func (fake *Ledger) GetStateArgsForCall(i int) token.ID {
 	fake.getStateMutex.RLock()
 	defer fake.getStateMutex.RUnlock()
 	argsForCall := fake.getStateArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1
 }
 
 func (fake *Ledger) GetStateReturns(result1 []byte, result2 error) {

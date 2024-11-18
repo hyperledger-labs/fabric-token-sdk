@@ -23,11 +23,11 @@ type Validator struct {
 		result1 []interface{}
 		result2 error
 	}
-	VerifyTokenRequestFromRawStub        func(context.Context, func(id token.ID, output []byte) ([]byte, error), string, []byte) ([]interface{}, map[string][]byte, error)
+	VerifyTokenRequestFromRawStub        func(context.Context, func(id token.ID) ([]byte, error), string, []byte) ([]interface{}, map[string][]byte, error)
 	verifyTokenRequestFromRawMutex       sync.RWMutex
 	verifyTokenRequestFromRawArgsForCall []struct {
 		arg1 context.Context
-		arg2 func(id token.ID, output []byte) ([]byte, error)
+		arg2 func(id token.ID) ([]byte, error)
 		arg3 string
 		arg4 []byte
 	}
@@ -114,7 +114,7 @@ func (fake *Validator) UnmarshalActionsReturnsOnCall(i int, result1 []interface{
 	}{result1, result2}
 }
 
-func (fake *Validator) VerifyTokenRequestFromRaw(arg1 context.Context, arg2 func(id token.ID, output []byte) ([]byte, error), arg3 string, arg4 []byte) ([]interface{}, map[string][]byte, error) {
+func (fake *Validator) VerifyTokenRequestFromRaw(arg1 context.Context, arg2 func(id token.ID) ([]byte, error), arg3 string, arg4 []byte) ([]interface{}, map[string][]byte, error) {
 	var arg4Copy []byte
 	if arg4 != nil {
 		arg4Copy = make([]byte, len(arg4))
@@ -124,7 +124,7 @@ func (fake *Validator) VerifyTokenRequestFromRaw(arg1 context.Context, arg2 func
 	ret, specificReturn := fake.verifyTokenRequestFromRawReturnsOnCall[len(fake.verifyTokenRequestFromRawArgsForCall)]
 	fake.verifyTokenRequestFromRawArgsForCall = append(fake.verifyTokenRequestFromRawArgsForCall, struct {
 		arg1 context.Context
-		arg2 func(id token.ID, output []byte) ([]byte, error)
+		arg2 func(id token.ID) ([]byte, error)
 		arg3 string
 		arg4 []byte
 	}{arg1, arg2, arg3, arg4Copy})
@@ -147,13 +147,13 @@ func (fake *Validator) VerifyTokenRequestFromRawCallCount() int {
 	return len(fake.verifyTokenRequestFromRawArgsForCall)
 }
 
-func (fake *Validator) VerifyTokenRequestFromRawCalls(stub func(context.Context, func(id token.ID, output []byte) ([]byte, error), string, []byte) ([]interface{}, map[string][]byte, error)) {
+func (fake *Validator) VerifyTokenRequestFromRawCalls(stub func(context.Context, func(id token.ID) ([]byte, error), string, []byte) ([]interface{}, map[string][]byte, error)) {
 	fake.verifyTokenRequestFromRawMutex.Lock()
 	defer fake.verifyTokenRequestFromRawMutex.Unlock()
 	fake.VerifyTokenRequestFromRawStub = stub
 }
 
-func (fake *Validator) VerifyTokenRequestFromRawArgsForCall(i int) (context.Context, func(id token.ID, output []byte) ([]byte, error), string, []byte) {
+func (fake *Validator) VerifyTokenRequestFromRawArgsForCall(i int) (context.Context, func(id token.ID) ([]byte, error), string, []byte) {
 	fake.verifyTokenRequestFromRawMutex.RLock()
 	defer fake.verifyTokenRequestFromRawMutex.RUnlock()
 	argsForCall := fake.verifyTokenRequestFromRawArgsForCall[i]

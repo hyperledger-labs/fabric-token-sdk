@@ -46,7 +46,7 @@ func (i *IssueAction) GetMetadata() map[string][]byte {
 	return i.a.GetMetadata()
 }
 
-// IsGraphHiding returns false, indicating that fabtoken does not hide the transaction graph
+// IsGraphHiding returns true if the action supports graph hiding.
 func (i *IssueAction) IsGraphHiding() bool {
 	return i.a.IsGraphHiding()
 }
