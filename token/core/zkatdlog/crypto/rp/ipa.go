@@ -177,8 +177,8 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 
 	var leftGen []*mathlib.G1
 	var rightGen []*mathlib.G1
-	leftGen = append(leftGen, v.LeftGenerators...)
-	rightGen = append(rightGen, v.RightGenerators...)
+	leftGen = v.LeftGenerators
+	rightGen = v.RightGenerators
 	for i := 0; i < int(v.NumberOfRounds); i++ {
 		// check well-formedness
 		if proof.L[i] == nil || proof.R[i] == nil {
@@ -226,10 +226,11 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 	var leftGen, rightGen []*mathlib.G1
 	var left, right []*mathlib.Zr
 
-	leftGen = append(leftGen, p.LeftGenerators...)
-	rightGen = append(rightGen, p.RightGenerators...)
-	left = append(left, p.leftVector...)
-	right = append(right, p.rightVector...)
+	leftGen = p.LeftGenerators
+	rightGen = p.RightGenerators
+
+	left = p.leftVector
+	right = p.rightVector
 
 	LArray := make([]*mathlib.G1, p.NumberOfRounds)
 	RArray := make([]*mathlib.G1, p.NumberOfRounds)

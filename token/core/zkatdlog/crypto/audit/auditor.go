@@ -347,7 +347,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 		outputs[k] = make([]*AuditableToken, len(md.ReceiversAuditInfos))
 		for i := 0; i < len(md.ReceiversAuditInfos); i++ {
 			ti := &token.Metadata{}
-			err := json.Unmarshal(md.OutputsMetadata[i], ti)
+			err = json.Unmarshal(md.OutputsMetadata[i], ti)
 			if err != nil {
 				return nil, err
 			}
@@ -357,11 +357,10 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 			if ia.OutputTokens[i].IsRedeem() {
 				return nil, errors.Errorf("issue cannot redeem tokens")
 			}
-			ao, err := NewAuditableToken(ia.OutputTokens[i], md.ReceiversAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
+			outputs[k][i], err = NewAuditableToken(ia.OutputTokens[i], md.ReceiversAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, err
 			}
-			outputs[k][i] = ao
 		}
 	}
 	return outputs, nil
@@ -388,11 +387,10 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 			if inputs[k][i] == nil {
 				return nil, nil, errors.Errorf("input[%d][%d] is nil", k, i)
 			}
-			ai, err := NewAuditableToken(inputs[k][i], tr.SenderAuditInfos[i], "", nil, nil)
+			auditableInputs[k][i], err = NewAuditableToken(inputs[k][i], tr.SenderAuditInfos[i], "", nil, nil)
 			if err != nil {
 				return nil, nil, err
 			}
-			auditableInputs[k][i] = ai
 		}
 		ta := &transfer.Action{}
 		err := json.Unmarshal(transfers[k], ta)
@@ -408,7 +406,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 		outputs[k] = make([]*AuditableToken, len(tr.ReceiverAuditInfos))
 		for i := 0; i < len(tr.ReceiverAuditInfos); i++ {
 			ti := &token.Metadata{}
-			err := json.Unmarshal(tr.OutputsMetadata[i], ti)
+			err = json.Unmarshal(tr.OutputsMetadata[i], ti)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -417,11 +415,10 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
 			// TODO: we need to check also how many recipients the output contains, and check them all in isolation and compatibility
-			ao, err := NewAuditableToken(ta.OutputTokens[i], tr.OutputAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
+			outputs[k][i], err = NewAuditableToken(ta.OutputTokens[i], tr.OutputAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, nil, err
 			}
-			outputs[k][i] = ao
 		}
 	}
 	return auditableInputs, outputs, nil
