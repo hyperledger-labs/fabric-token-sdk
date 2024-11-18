@@ -14,8 +14,8 @@ import (
 	"unicode/utf8"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -94,6 +94,25 @@ func (t *Translator) CreateTransferActionMetadataKey(key string) (translator.Key
 	return createCompositeKey(TransferActionMetadataPrefix, []string{key})
 }
 
+func (t *Translator) CreateProofOfExistenceKey(tokenId *token.ID) (string, error) {
+	id := token2.Hashable(tokenId.String()).String()
+	return createCompositeKey(ProofOfExistencePrefix, []string{id})
+}
+
+func (t *Translator) CreateProofOfNonExistenceKey(tokenID *token.ID, origin string) (string, error) {
+	return createCompositeKey(ProofOfNonExistencePrefix, []string{
+		token2.Hashable(tokenID.String()).String(),
+		token2.Hashable(origin).String(),
+	})
+}
+
+func (t *Translator) CreateProofOfMetadataExistenceKey(tokenID *token.ID, origin string) (string, error) {
+	return createCompositeKey(ProofOfMetadataExistencePrefix, []string{
+		token2.Hashable(tokenID.String()).String(),
+		token2.Hashable(origin).String(),
+	})
+}
+
 // createCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go
 func createCompositeKey(objectType string, attributes []string) (translator.Key, error) {
 	if err := validateCompositeKeyAttribute(objectType); err != nil {
@@ -136,23 +155,4 @@ func splitCompositeKey(compositeKey string) (translator.Key, []string, error) {
 		return "", nil, errors.Errorf("invalid composite key - not enough components found in key '%s', [%d][%v]", compositeKey, len(components), components)
 	}
 	return components[0], components[1:], nil
-}
-
-func CreateProofOfExistenceKey(tokenId *token.ID) (string, error) {
-	id := token2.Hashable(tokenId.String()).String()
-	return CreateCompositeKey(ProofOfExistencePrefix, []string{id})
-}
-
-func CreateProofOfNonExistenceKey(tokenID *token.ID, origin string) (string, error) {
-	return CreateCompositeKey(ProofOfNonExistencePrefix, []string{
-		token2.Hashable(tokenID.String()).String(),
-		token2.Hashable(origin).String(),
-	})
-}
-
-func CreateProofOfMetadataExistenceKey(tokenID *token.ID, origin string) (string, error) {
-	return CreateCompositeKey(ProofOfMetadataExistencePrefix, []string{
-		token2.Hashable(tokenID.String()).String(),
-		token2.Hashable(origin).String(),
-	})
 }

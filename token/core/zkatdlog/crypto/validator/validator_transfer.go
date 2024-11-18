@@ -8,7 +8,6 @@ package validator
 
 import (
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"

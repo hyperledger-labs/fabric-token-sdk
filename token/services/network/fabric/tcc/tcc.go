@@ -364,9 +364,8 @@ func (cc *TokenChaincode) ProofOfTokenExistenceQuery(idRaw []byte, stub shim.Cha
 func (cc *TokenChaincode) proveTokenExists(tokenId *token2.ID, stub shim.ChaincodeStubInterface) pb.Response {
 	logger.Infof("proof of existence [%s]", tokenId.String())
 	logger.Infof("generate proof of existence...")
-	rwset := &rwsWrapper{stub: stub}
-	p := translator.New("", rwset, "")
-	if err := p.ProveTokenExists(tokenId); err != nil {
+	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
+	if err := w.ProveTokenExists(tokenId); err != nil {
 		return shim.Error(fmt.Sprintf("failed to confirm if token with ID [%s] exists", tokenId))
 	}
 	logger.Infof("proof of existence...done.")
@@ -388,9 +387,8 @@ func (cc *TokenChaincode) ProofOfTokenNonExistenceQuery(reqRaw []byte, stub shim
 func (cc *TokenChaincode) proveTokenDoesNotExist(tokenID *token2.ID, origin string, deadline time.Time, stub shim.ChaincodeStubInterface) pb.Response {
 	logger.Infof("proof of non existence of token [%s] from network [%s]", tokenID.String(), origin)
 	logger.Infof("generate proof of non-existence...")
-	rwset := &rwsWrapper{stub: stub}
-	p := translator.New("", rwset, "")
-	if err := p.ProveTokenDoesNotExist(tokenID, origin, deadline); err != nil {
+	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
+	if err := w.ProveTokenDoesNotExist(tokenID, origin, deadline); err != nil {
 		return shim.Error(fmt.Sprintf("failed to confirm if token from network [%s] and with key [%s] does not exist", origin, tokenID.String()))
 	}
 	logger.Infof("proof of non existence...done.")
@@ -412,9 +410,8 @@ func (cc *TokenChaincode) ProofOfTokenMetadataExistenceQuery(reqRaw []byte, stub
 func (cc *TokenChaincode) proveTokenWithMetadataExist(tokenID *token2.ID, origin string, stub shim.ChaincodeStubInterface) pb.Response {
 	logger.Infof("proof of existence of token with metadata [%s] and network [%s]", tokenID.String(), origin)
 	logger.Infof("generate proof of existence...")
-	rwset := &rwsWrapper{stub: stub}
-	p := translator.New("", rwset, "")
-	if err := p.ProveTokenWithMetadataExists(tokenID, origin); err != nil {
+	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
+	if err := w.ProveTokenWithMetadataExists(tokenID, origin); err != nil {
 		fmt.Println(err.Error())
 		return shim.Error(fmt.Sprintf("failed to confirm if token from network [%s] and with key [%s] exist", origin, tokenID.String()))
 	}

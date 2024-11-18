@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -36,22 +35,22 @@ type ProofOfTokenMetadataExistence struct {
 
 // ProveTokenExists queries whether a token with the given token ID exists
 func (w *Translator) ProveTokenExists(tokenId *token.ID) error {
-	key, err := keys.CreateTokenKey(tokenId.TxId, tokenId.Index)
+	key, err := w.KeyTranslator.CreateOutputKey(tokenId.TxId, tokenId.Index)
 	if err != nil {
 		return err
 	}
-	tok, err := w.RWSet.GetState(w.namespace, key)
+	tok, err := w.RWSet.GetState(key)
 	if err != nil {
 		return err
 	}
 	if tok == nil {
 		return errors.Errorf("value at key [%s] is empty", tokenId)
 	}
-	key, err = keys.CreateProofOfExistenceKey(tokenId)
+	key, err = w.KeyTranslator.CreateProofOfExistenceKey(tokenId)
 	if err != nil {
 		return err
 	}
-	err = w.RWSet.SetState(w.namespace, key, tok)
+	err = w.RWSet.SetState(key, tok)
 	if err != nil {
 		return err
 	}
@@ -67,11 +66,11 @@ func (w *Translator) ProveTokenDoesNotExist(tokenID *token.ID, origin string, de
 	if err != nil {
 		return errors.Errorf("failed to marshal token metadata")
 	}
-	key, err := keys.CreateIssueActionMetadataKey(hash.Hashable(metadata).String())
+	key, err := w.KeyTranslator.CreateIssueActionMetadataKey(hash.Hashable(metadata).String())
 	if err != nil {
 		return err
 	}
-	tok, err := w.RWSet.GetState(w.namespace, key)
+	tok, err := w.RWSet.GetState(key)
 	if err != nil {
 		return err
 	}
@@ -83,11 +82,11 @@ func (w *Translator) ProveTokenDoesNotExist(tokenID *token.ID, origin string, de
 	if err != nil {
 		return err
 	}
-	key, err = keys.CreateProofOfNonExistenceKey(tokenID, origin)
+	key, err = w.KeyTranslator.CreateProofOfNonExistenceKey(tokenID, origin)
 	if err != nil {
 		return err
 	}
-	err = w.RWSet.SetState(w.namespace, key, raw)
+	err = w.RWSet.SetState(key, raw)
 	if err != nil {
 		return err
 	}
@@ -100,11 +99,11 @@ func (w *Translator) ProveTokenWithMetadataExists(tokenID *token.ID, origin stri
 	if err != nil {
 		return errors.Errorf("failed to marshal token metadata")
 	}
-	key, err := keys.CreateIssueActionMetadataKey(hash.Hashable(metadata).String())
+	key, err := w.KeyTranslator.CreateIssueActionMetadataKey(hash.Hashable(metadata).String())
 	if err != nil {
 		return err
 	}
-	tok, err := w.RWSet.GetState(w.namespace, key)
+	tok, err := w.RWSet.GetState(key)
 	if err != nil {
 		return err
 	}
@@ -116,11 +115,11 @@ func (w *Translator) ProveTokenWithMetadataExists(tokenID *token.ID, origin stri
 	if err != nil {
 		return err
 	}
-	key, err = keys.CreateProofOfMetadataExistenceKey(tokenID, origin)
+	key, err = w.KeyTranslator.CreateProofOfMetadataExistenceKey(tokenID, origin)
 	if err != nil {
 		return err
 	}
-	err = w.RWSet.SetState(w.namespace, key, raw)
+	err = w.RWSet.SetState(key, raw)
 	if err != nil {
 		return err
 	}

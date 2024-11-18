@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/fabric/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"go.uber.org/dig"
 )
 
@@ -79,6 +80,7 @@ func NewStateDriver(in struct {
 			in.RelayProvider,
 			in.VaultStore,
 			&Validator{},
+			&keys.Translator{},
 		),
 	}
 }

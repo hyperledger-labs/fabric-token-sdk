@@ -180,7 +180,7 @@ func HTLCNoCrossClaimTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	 fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).

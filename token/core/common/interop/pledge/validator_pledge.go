@@ -114,10 +114,7 @@ func TransferPledgeValidate[P driver.PublicParameters, T driver.Output, TA drive
 }
 
 func constructMetadataKey(action driver.TransferAction) (string, error) {
-	inputs, err := action.GetInputs()
-	if err != nil {
-		return "", errors.Wrap(err, "failed to retrieve input IDs from action")
-	}
+	inputs := action.GetInputs()
 	if len(inputs) != 1 {
 		return "", errors.New("invalid transfer action, does not carry a single input")
 	}

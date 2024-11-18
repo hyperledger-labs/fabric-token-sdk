@@ -18,12 +18,18 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/driver"
 	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
+
+// KeyTranslator is used to translate tokens' concepts into backend's keys.
+type KeyTranslator interface {
+	CreateProofOfExistenceKey(tokenId *token.ID) (string, error)
+	CreateProofOfNonExistenceKey(tokenID *token.ID, origin string) (string, error)
+	CreateProofOfMetadataExistenceKey(tokenID *token.ID, origin string) (string, error)
+}
 
 type Validator interface {
 	Validate(tok []byte, info *pledge.Info) error
@@ -178,6 +184,7 @@ type StateVerifier struct {
 	PledgeVault             PledgeVault
 	GetFabricNetworkService GetFabricNetworkServiceFunc
 	validator               Validator
+	keyTranslator           KeyTranslator
 }
 
 func NewStateVerifier(
@@ -188,6 +195,7 @@ func NewStateVerifier(
 	networkURL string,
 	relaySelector *fabric.NetworkService,
 	validator Validator,
+	keyTranslator KeyTranslator,
 ) (*StateVerifier, error) {
 	if err := fabric3.CheckFabricScheme(networkURL); err != nil {
 		return nil, err
@@ -200,6 +208,7 @@ func NewStateVerifier(
 		PledgeVault:             PledgeVault,
 		GetFabricNetworkService: GetFabricNetworkService,
 		validator:               validator,
+		keyTranslator:           keyTranslator,
 	}, nil
 }
 
@@ -223,7 +232,7 @@ func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID,
 		return errors.Wrapf(err, "failed to unmarshal claim proof")
 	}
 
-	key, err := keys.CreateProofOfExistenceKey(tokenID)
+	key, err := v.keyTranslator.CreateProofOfExistenceKey(tokenID)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create proof of existence key from token [%s]", tokenID)
 	}
@@ -284,7 +293,7 @@ func (v *StateVerifier) VerifyProofNonExistence(proofRaw []byte, tokenID *token.
 		return errors.Wrapf(err, "failed to retrieve RWset")
 	}
 
-	key, err := keys.CreateProofOfNonExistenceKey(tokenID, origin)
+	key, err := v.keyTranslator.CreateProofOfNonExistenceKey(tokenID, origin)
 	if err != nil {
 		return errors.Wrapf(err, "failed creating key for proof of non-existence")
 	}
@@ -352,7 +361,7 @@ func (v *StateVerifier) VerifyProofTokenWithMetadataExistence(proofRaw []byte, t
 		return errors.Wrapf(err, "failed to retrieve RWset")
 	}
 
-	key, err := keys.CreateProofOfMetadataExistenceKey(tokenID, origin)
+	key, err := v.keyTranslator.CreateProofOfMetadataExistenceKey(tokenID, origin)
 	if err != nil {
 		return errors.Wrapf(err, "failed creating key for proof of token existence")
 	}
@@ -396,6 +405,7 @@ type StateDriver struct {
 	RelayProvider fabric3.RelayProvider
 	VaultStore    *pledge.VaultStore
 	Validator     Validator
+	KeyTranslator KeyTranslator
 }
 
 func NewStateDriver(
@@ -404,6 +414,7 @@ func NewStateDriver(
 	relayProvider fabric3.RelayProvider,
 	vaultStore *pledge.VaultStore,
 	validator Validator,
+	keyTranslator KeyTranslator,
 ) *StateDriver {
 	return &StateDriver{
 		Logger:        logger,
@@ -411,6 +422,7 @@ func NewStateDriver(
 		RelayProvider: relayProvider,
 		VaultStore:    vaultStore,
 		Validator:     validator,
+		KeyTranslator: keyTranslator,
 	}
 }
 
@@ -438,5 +450,6 @@ func (d *StateDriver) NewStateVerifier(url string) (driver.StateVerifier, error)
 		url,
 		fns,
 		d.Validator,
+		d.KeyTranslator,
 	)
 }

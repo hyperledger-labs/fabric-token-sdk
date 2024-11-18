@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	"encoding/json"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -16,7 +14,6 @@ import (
 
 // TransferSignatureValidate validates the signatures for the inputs spent by an action
 func TransferSignatureValidate(ctx *Context) error {
-	ctx.InputTokens = ctx.TransferAction.InputTokens
 	for _, tok := range ctx.InputTokens {
 		ctx.Logger.Debugf("check sender [%s]", driver.Identity(tok.Owner.Raw).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner.Raw)
