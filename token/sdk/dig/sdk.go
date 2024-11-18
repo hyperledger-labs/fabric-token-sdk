@@ -239,6 +239,7 @@ func registerNetworkDrivers(in struct {
 	NetworkProvider *network.Provider
 	Drivers         []driver3.Driver `group:"network-drivers"`
 }) {
+	logger.Debugf("registering [%d] network drivers", len(in.Drivers))
 	for _, d := range in.Drivers {
 		in.NetworkProvider.RegisterDriver(d)
 	}

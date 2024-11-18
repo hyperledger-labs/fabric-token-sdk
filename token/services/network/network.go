@@ -464,7 +464,7 @@ func (np *Provider) newNetwork(network string, channel string) (*Network, error)
 		logger.Debugf("new network [%s:%s]", network, channel)
 		return &Network{n: nw}, nil
 	}
-	return nil, errors.Errorf("no network driver found for [%s:%s], errs [%v]", network, channel, errs)
+	return nil, errors.Errorf("no network driver found for [%s:%s] among [%d] available, errs [%v]", network, channel, len(np.drivers), errs)
 }
 
 func (np *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
