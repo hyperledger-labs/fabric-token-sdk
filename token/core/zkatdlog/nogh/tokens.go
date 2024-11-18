@@ -48,3 +48,7 @@ func (s *TokensService) DeserializeToken(tok []byte, infoRaw []byte) (*token.Tok
 
 	return to, ti.Issuer, nil
 }
+
+func (s *TokensService) IsSpendable(output []byte, outputMetadata []byte) error {
+	return nil
+}
