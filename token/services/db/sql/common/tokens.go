@@ -128,8 +128,9 @@ func (db *TokenDB) UnspentTokensIterator() (tdriver.UnspentTokensIterator, error
 func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenType string) (tdriver.UnspentTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
-		WalletID:  walletID,
-		TokenType: tokenType,
+		WalletID:      walletID,
+		TokenType:     tokenType,
+		OnlySpendable: true,
 	}, db.table.Tokens))
 	join := joinOnTokenID(db.table.Tokens, db.table.Ownership)
 
@@ -144,7 +145,7 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenT
 	return &UnspentTokensIterator{txs: rows}, err
 }
 
-// UnspentTokensInWalletIterator returns the minimum information about the tokens needed for the selector
+// SpendableTokensIteratorBy returns the minimum information about the tokens needed for the selector
 func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.SpendableTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
@@ -813,6 +814,7 @@ func (db *TokenDB) GetSchema() string {
 			owner BOOL NOT NULL DEFAULT false,
 			auditor BOOL NOT NULL DEFAULT false,
 			issuer BOOL NOT NULL DEFAULT false,
+			spendable BOOL NOT NULL DEFAULT true,
 			PRIMARY KEY (tx_id, idx)
 		);
 		CREATE INDEX IF NOT EXISTS idx_spent_%s ON %s ( is_deleted, owner );

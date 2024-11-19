@@ -91,6 +91,10 @@ type QueryTokenDetailsParams struct {
 	TransactionIDs []string
 	// IncludeDeleted determines whether to include spent tokens. It defaults to false.
 	IncludeDeleted bool
+	// OnlyNonSpendable determines whether to include only non-spendable tokens. It defaults to false
+	OnlyNonSpendable bool
+	// OnlySpendable determines whether to include only spendable tokens. It defaults to false
+	OnlySpendable bool
 }
 
 // CertificationDB defines a database to manager token certifications
