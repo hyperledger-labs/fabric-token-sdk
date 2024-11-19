@@ -33,10 +33,10 @@ type tokenSelectorUnlocker interface {
 }
 
 type manager struct {
-	selectorCache lazy2.Provider[transaction.ID, tokenSelectorUnlocker]
-	locker        Locker
-	evictionDelay time.Duration
-	cleanupPeriod time.Duration
+	selectorCache     lazy2.Provider[transaction.ID, tokenSelectorUnlocker]
+	locker            Locker
+	evictionInterval  time.Duration
+	cleanupTickPeriod time.Duration
 }
 
 type iterator[k any] interface {
@@ -50,15 +50,16 @@ func NewManager(
 	precision uint64,
 	backoff time.Duration,
 	maxRetriesAfterBackOff int,
-	evictionDelay time.Duration,
+	evictionInterval time.Duration,
+	cleanupTickPeriod time.Duration,
 ) *manager {
 	m := &manager{
-		locker:        locker,
-		evictionDelay: evictionDelay,
+		locker:           locker,
+		evictionInterval: evictionInterval,
 		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
 			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff), nil
 		}),
-		cleanupPeriod: cleanupPeriod,
+		cleanupTickPeriod: cleanupTickPeriod,
 	}
 	if cleanupTickPeriod > 0 {
 		go m.cleaner()
@@ -82,12 +83,12 @@ func (m *manager) Close(id transaction.ID) error {
 }
 
 func (m *manager) cleaner() {
-	ticker := time.NewTicker(5 * time.Second) // Change the duration as needed
+	ticker := time.NewTicker(m.cleanupTickPeriod) // Change the duration as needed
 	defer ticker.Stop()
 
 	for range ticker.C {
-		logger.Debugf("cleanup locked tokens with eviction delay of [%s]", m.evictionDelay)
-		if err := m.locker.Cleanup(m.evictionDelay); err != nil {
+		logger.Debugf("cleanup locked tokens with eviction delay of [%s]", m.evictionInterval)
+		if err := m.locker.Cleanup(m.evictionInterval); err != nil {
 			logger.Errorf("failed cleaning up eviction locks: %s", err)
 		}
 	}

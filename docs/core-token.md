@@ -22,6 +22,8 @@ token:
     retryInterval: 5s
     # retry to gain a lock on tokens this amount of times before failing the transaction
     numRetries: 3
+    evictionInterval: 1m
+    cleanupPeriod: 1m
 
   tms:
     mytms: # unique name of this token management system

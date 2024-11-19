@@ -13,22 +13,28 @@ import (
 )
 
 const (
-	Sherdlock Driver = "sherdlock"
-	Simple    Driver = "simple"
+	Sherdlock         Driver = "sherdlock"
+	Simple            Driver = "simple"
+	evictionPeriod           = 1 * time.Minute
+	cleanupTickPeriod        = 1 * time.Minute
 )
 
 type SelectorConfig interface {
 	GetDriver() Driver
 	GetNumRetries() int
 	GetRetryInterval() time.Duration
+	GetEvictionInterval() time.Duration
+	GetCleanupTickPeriod() time.Duration
 }
 
 type Driver string
 
 type Config struct {
-	Driver        Driver        `yaml:"driver,omitempty"`
-	RetryInterval time.Duration `yaml:"retryInterval,omitempty"`
-	NumRetries    int           `yaml:"numRetries,omitempty"`
+	Driver            Driver        `yaml:"driver,omitempty"`
+	RetryInterval     time.Duration `yaml:"retryInterval,omitempty"`
+	NumRetries        int           `yaml:"numRetries,omitempty"`
+	EvictionInterval  time.Duration `yaml:"evictionInterval,omitempty"`
+	CleanupTickPeriod time.Duration `yaml:"cleanupPeriod,omitempty"`
 }
 
 func (c Config) GetDriver() Driver {
@@ -44,11 +50,26 @@ func (c Config) GetNumRetries() int {
 	}
 	return 3
 }
+
 func (c Config) GetRetryInterval() time.Duration {
 	if c.RetryInterval != 0 {
 		return c.RetryInterval
 	}
 	return 5 * time.Second
+}
+
+func (c Config) GetEvictionInterval() time.Duration {
+	if c.EvictionInterval != 0 {
+		return c.EvictionInterval
+	}
+	return evictionPeriod
+}
+
+func (c Config) GetCleanupTickPeriod() time.Duration {
+	if c.CleanupTickPeriod != 0 {
+		return c.CleanupTickPeriod
+	}
+	return cleanupTickPeriod
 }
 
 type configService interface {
