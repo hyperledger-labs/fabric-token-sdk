@@ -17,11 +17,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	cleanupTickPeriod = 1 * time.Minute
-	cleanupPeriod     = 30 * time.Second
-)
-
 type SelectorService struct {
 	managerLazyCache lazy2.Provider[*token.ManagementService, token.SelectorManager]
 }
@@ -37,6 +32,8 @@ func NewService(fetcherProvider FetcherProvider, tokenLockDBManager *tokenlockdb
 		fetcherProvider:    fetcherProvider,
 		retryInterval:      cfg.GetRetryInterval(),
 		numRetries:         cfg.GetNumRetries(),
+		evictionInterval:   cfg.GetEvictionInterval(),
+		cleanupTickPeriod:  cfg.GetCleanupTickPeriod(),
 	}
 	return &SelectorService{
 		managerLazyCache: lazy2.NewProviderWithKeyMapper(key, loader.load),
@@ -56,6 +53,8 @@ type loader struct {
 	fetcherProvider    FetcherProvider
 	numRetries         int
 	retryInterval      time.Duration
+	evictionInterval   time.Duration
+	cleanupTickPeriod  time.Duration
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -77,7 +76,8 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 		pp.Precision(),
 		s.retryInterval,
 		s.numRetries,
-		cleanupTickPeriod,
+		s.evictionInterval,
+		s.cleanupTickPeriod,
 	), nil
 }
 
