@@ -61,7 +61,7 @@ var _ = Describe("DLog end to end", func() {
 			It("Performed an htlc based atomic swap", Label("T6"), func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
 		})
 
-		Describe("Asset Transfer With Two Fabric Networks", func() {
+		Describe("Asset Transfer With Two Fabric Networks", t.Label, func() {
 			ts, selector := newTestSuiteInteropAssetTransfer(t.CommType, t.ReplicationFactor, "alice", "bob")
 			AfterEach(ts.TearDown)
 			BeforeEach(ts.Setup)

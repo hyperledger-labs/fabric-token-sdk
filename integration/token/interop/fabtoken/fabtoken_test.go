@@ -127,7 +127,7 @@ func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int
 
 func newTestSuiteInteropAssetTransfer(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.ZKATDLogInteropAssetTransfer.StartPortForNode, interop.AssetTransferTopology(common.Opts{
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropAssetTransfer.StartPortForNode, interop.AssetTransferTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
