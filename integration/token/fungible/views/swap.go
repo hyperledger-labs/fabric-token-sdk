@@ -86,11 +86,13 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed getting outputs")
-	os := outputs.ByRecipient(other)
+	// get outputs from Bob filtered by Alice type
+	os := outputs.ByRecipient(other).ByType(t.FromAliceType)
 	assert.Equal(0, os.Sum().Cmp(big.NewInt(int64(t.FromAliceAmount))))
 	assert.Equal(os.Count(), os.ByType(t.FromAliceType).Count())
 
-	os = outputs.ByRecipient(me)
+	// get outputs from Alice filtered by Bob's type
+	os = outputs.ByRecipient(me).ByType(t.FromBobType)
 	assert.Equal(0, os.Sum().Cmp(big.NewInt(int64(t.FromBobAmount))))
 	assert.Equal(os.Count(), os.ByType(t.FromBobType).Count())
 
