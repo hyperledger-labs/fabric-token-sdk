@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -32,26 +31,32 @@ type IssueMetadata struct {
 
 func IssueActionMetadata(attributes map[string][]byte, opts *driver.IssueOptions) (map[string][]byte, error) {
 	if len(opts.Attributes) == 0 {
-		return nil, nil
+		return attributes, nil
 	}
 
 	tokenID, hasTokenID := opts.Attributes[TokenIDKey]
 	network, hasNetwork := opts.Attributes[NetworkKey]
-	proofOpt, hasProof := opts.Attributes[ProofKey]
-	if !hasTokenID && !hasNetwork && !hasProof {
-		return nil, nil
+	if !hasTokenID && !hasNetwork {
+		return attributes, nil
 	}
 
-	if hasTokenID && hasNetwork && hasProof {
+	if hasTokenID && hasNetwork {
 		marshalled, err := json.Marshal(&IssueMetadata{tokenID.(*token.ID), network.(string)})
 		if err != nil {
 			return nil, err
 		}
 		key := common.Hashable(marshalled).String()
 		attributes[key] = marshalled
-		attributes[key+ProofOfClaimSuffix] = proofOpt.([]byte)
+
+		// append proof, if needed
+		var proof []byte
+		proofOpt, hasProof := opts.Attributes[ProofKey]
+		if hasProof {
+			proof = proofOpt.([]byte)
+		}
+		attributes[key+ProofOfClaimSuffix] = proof
 		return attributes, nil
 	}
 
-	return nil, errors.Errorf("missing token ID or network or proof")
+	return attributes, nil
 }

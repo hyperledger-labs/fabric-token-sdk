@@ -90,10 +90,10 @@ func TestIssueActionMetadata(t *testing.T) {
 				assert.NoError(t, err)
 				key := common.Hashable(marshalled).String()
 				res := map[string][]byte{
-					NetworkKey:             []byte("network"),
-					TokenIDKey:             []byte("tokenID"),
-					key:                    marshalled,
-					key + "proof_of_claim": nil,
+					NetworkKey:               []byte("network"),
+					TokenIDKey:               []byte("tokenID"),
+					key:                      marshalled,
+					key + ProofOfClaimSuffix: nil,
 				}
 				return res
 			}(),
