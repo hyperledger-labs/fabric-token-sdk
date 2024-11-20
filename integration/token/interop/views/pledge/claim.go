@@ -35,12 +35,12 @@ type ClaimInitiatorView struct {
 
 func (c *ClaimInitiatorView) Call(context view.Context) (interface{}, error) {
 	// Retrieve proof of existence of the passed token id
-	pledges, err := pledge.Vault(context).PledgeByTokenID(c.OriginTokenID)
+	pledgeInfo, err := pledge.Vault(context).PledgeByTokenID(c.OriginTokenID)
 	assert.NoError(err, "failed getting pledge")
-	assert.Equal(1, len(pledges), "expected one pledge, got [%d]", len(pledges))
+	assert.NotNil(pledgeInfo, "expected one pledge, got nil")
 
 	logger.Debugf("request proof of existence")
-	proof, err := pledge.RequestProofOfExistence(context, pledges[0])
+	proof, err := pledge.RequestProofOfExistence(context, pledgeInfo)
 	assert.NoError(err, "failed to retrieve a valid proof of existence")
 	assert.NotNil(proof)
 
@@ -57,7 +57,7 @@ func (c *ClaimInitiatorView) Call(context view.Context) (interface{}, error) {
 	session, err := pledge.RequestClaim(
 		context,
 		fns.IdentityProvider().Identity(c.Issuer),
-		pledges[0],
+		pledgeInfo,
 		me,
 		proof,
 	)
@@ -80,8 +80,8 @@ func (c *ClaimInitiatorView) Call(context view.Context) (interface{}, error) {
 			output := outputs.At(0)
 			assert.NotNil(output, "failed getting the output")
 			assert.NoError(err, "failed parsing quantity")
-			assert.Equal(pledges[0].Amount, output.Quantity.ToBigInt().Uint64())
-			assert.Equal(pledges[0].TokenType, output.Type)
+			assert.Equal(pledgeInfo.Amount, output.Quantity.ToBigInt().Uint64())
+			assert.Equal(pledgeInfo.TokenType, output.Type)
 			assert.Equal(me, output.Owner)
 
 			// If everything is fine, the recipient accepts and sends back her signature.
@@ -93,7 +93,7 @@ func (c *ClaimInitiatorView) Call(context view.Context) (interface{}, error) {
 			assert.NoError(err, "the claim transaction was not committed")
 
 			// Delete pledges
-			err = pledge.Vault(context).Delete(pledges)
+			err = pledge.Vault(context).Delete([]*pledge.Info{pledgeInfo})
 			assert.NoError(err, "failed deleting pledges")
 
 			return tx.ID(), nil

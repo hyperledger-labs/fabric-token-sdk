@@ -36,7 +36,7 @@ type Validator interface {
 }
 
 type PledgeVault interface {
-	PledgeByTokenID(tokenID *token.ID) ([]*pledge.Info, error)
+	PledgeByTokenID(tokenID *token.ID) (*pledge.Info, error)
 }
 
 type GetFabricNetworkServiceFunc = func(string) (*fabric.NetworkService, error)
@@ -249,20 +249,19 @@ func (v *StateVerifier) VerifyProofExistence(proofRaw []byte, tokenID *token.ID,
 	}
 	// Validate against pledge
 	v.Logger.Debugf("verify proof of existence for token id [%s]", tokenID)
-	pledges, err := v.PledgeVault.PledgeByTokenID(tokenID)
+	pledge, err := v.PledgeVault.PledgeByTokenID(tokenID)
 	if err != nil {
 		v.Logger.Errorf("failed retrieving pledge info for token id [%s]: [%s]", tokenID, err)
 		return errors.WithMessagef(err, "failed getting pledge for [%s]", tokenID)
 	}
-	if len(pledges) != 1 {
+	if pledge == nil {
 		v.Logger.Errorf("failed retrieving pledge info for token id [%s]: no info found", tokenID)
-		return errors.Errorf("expected one pledge, got [%d]", len(pledges))
+		return errors.Errorf("expected one pledge, got nil")
 	}
-	info := pledges[0]
-	v.Logger.Debugf("found pledge info for token id [%s]: [%s]", tokenID, info.Source)
+	v.Logger.Debugf("found pledge info for token id [%s]: [%s]", tokenID, pledge.Source)
 
 	// validate
-	if err := v.validator.Validate(raw, info); err != nil {
+	if err := v.validator.Validate(raw, pledge); err != nil {
 		return errors.Wrapf(err, "failed to check token")
 	}
 

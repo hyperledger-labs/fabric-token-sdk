@@ -52,7 +52,7 @@ func (ps *VaultStore) Store(info *Info) error {
 	)
 }
 
-func (ps *VaultStore) PledgeByTokenID(tokenID *token.ID) ([]*Info, error) {
+func (ps *VaultStore) PledgeByTokenID(tokenID *token.ID) (*Info, error) {
 	if tokenID == nil {
 		return nil, errors.Errorf("passed nil token id")
 	}
@@ -67,14 +67,15 @@ func (ps *VaultStore) PledgeByTokenID(tokenID *token.ID) ([]*Info, error) {
 		return nil, errors.Wrapf(err, "failed getting iterator over pledges")
 	}
 
-	var res []*Info
+	var res *Info
 	for it.HasNext() {
 		var info *Info
 		if _, err := it.Next(&info); err != nil {
 			return nil, errors.Wrapf(err, "failed getting next pledge info")
 		}
 		if info.TokenID.TxId == tokenID.TxId && info.TokenID.Index == tokenID.Index {
-			res = append(res, info)
+			res = info
+			break
 		}
 	}
 

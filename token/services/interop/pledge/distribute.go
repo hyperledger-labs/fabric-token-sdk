@@ -133,17 +133,17 @@ func (v *pledgeReceiverView) Call(context view.Context) (interface{}, error) {
 	return info, nil
 }
 
-type AcceptPledgeIndoView struct {
+type AcceptPledgeInfoView struct {
 	info *Info
 }
 
-func NewAcceptPledgeIndoView(info *Info) *AcceptPledgeIndoView {
-	return &AcceptPledgeIndoView{
+func NewAcceptPledgeInfoView(info *Info) *AcceptPledgeInfoView {
+	return &AcceptPledgeInfoView{
 		info: info,
 	}
 }
 
-func (a *AcceptPledgeIndoView) Call(context view.Context) (interface{}, error) {
+func (a *AcceptPledgeInfoView) Call(context view.Context) (interface{}, error) {
 	// Store info
 	if err := Vault(context).Store(a.info); err != nil {
 		return nil, errors.Wrapf(err, "failed storing pledge info")

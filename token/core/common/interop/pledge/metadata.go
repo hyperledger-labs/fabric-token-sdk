@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	TokenIDKey = pledge.TokenIDKey
-	NetworkKey = pledge.NetworkKey
-	ProofKey   = pledge.ProofKey
+	TokenIDKey         = pledge.TokenIDKey
+	NetworkKey         = pledge.NetworkKey
+	ProofKey           = pledge.ProofKey
+	ProofOfClaimSuffix = "proof_of_claim"
 )
 
 type IssueMetadata struct {
@@ -30,31 +31,27 @@ type IssueMetadata struct {
 }
 
 func IssueActionMetadata(attributes map[string][]byte, opts *driver.IssueOptions) (map[string][]byte, error) {
-	var metadata *IssueMetadata
-	var proof []byte
-	if len(opts.Attributes) != 0 {
-		tokenID, ok1 := opts.Attributes[TokenIDKey]
-		network, ok2 := opts.Attributes[NetworkKey]
-		proofOpt, ok3 := opts.Attributes[ProofKey]
-		if ok1 && ok2 {
-			metadata = &IssueMetadata{
-				OriginTokenID: tokenID.(*token.ID),
-				OriginNetwork: network.(string),
-			}
-		}
-		if ok3 {
-			proof = proofOpt.([]byte)
-		}
+	if len(opts.Attributes) == 0 {
+		return nil, nil
 	}
-	if metadata != nil {
-		marshalled, err := json.Marshal(metadata)
+
+	tokenID, hasTokenID := opts.Attributes[TokenIDKey]
+	network, hasNetwork := opts.Attributes[NetworkKey]
+	proofOpt, hasProof := opts.Attributes[ProofKey]
+	if !hasTokenID && !hasNetwork && !hasProof {
+		return nil, nil
+	}
+
+	if hasTokenID && hasNetwork && hasProof {
+		marshalled, err := json.Marshal(&IssueMetadata{tokenID.(*token.ID), network.(string)})
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed marshaling metadata; origin network [%s]; origin tokenID [%s]", metadata.OriginNetwork, metadata.OriginTokenID)
+			return nil, err
 		}
 		key := common.Hashable(marshalled).String()
 		attributes[key] = marshalled
-		attributes[key+"proof_of_claim"] = proof
+		attributes[key+ProofOfClaimSuffix] = proofOpt.([]byte)
+		return attributes, nil
 	}
 
-	return attributes, nil
+	return nil, errors.Errorf("missing token ID or network or proof")
 }

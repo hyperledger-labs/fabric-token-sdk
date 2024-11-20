@@ -116,7 +116,7 @@ func (p *RecipientResponderView) Call(context view.Context) (interface{}, error)
 	// TODO: check pledgeInfo.Script.DestinationNetwork
 
 	// Store the pledge and send a notification back
-	_, err = context.RunView(pledge.NewAcceptPledgeIndoView(pledgeInfo))
+	_, err = context.RunView(pledge.NewAcceptPledgeInfoView(pledgeInfo))
 	assert.NoError(err, "failed accepting pledge info")
 
 	return nil, nil

@@ -129,16 +129,16 @@ func (v *FastPledgeClaimResponderView) Call(context view.Context) (interface{}, 
 	assert.Equal(me, pledgeInfo.Script.Recipient, "recipient is different [%s]!=[%s]", me, pledgeInfo.Script.Recipient)
 
 	// Store the pledge and send a notification back
-	_, err = context.RunView(pledge.NewAcceptPledgeIndoView(pledgeInfo))
+	_, err = context.RunView(pledge.NewAcceptPledgeInfoView(pledgeInfo))
 	assert.NoError(err, "failed accepting pledge info")
 
 	// Retrieve proof of existence of the passed token id
-	pledges, err := pledge.Vault(context).PledgeByTokenID(pledgeInfo.TokenID)
+	pledgeInfo, err = pledge.Vault(context).PledgeByTokenID(pledgeInfo.TokenID)
 	assert.NoError(err, "failed getting pledge")
-	assert.Equal(1, len(pledges), "expected one pledge, got [%d]", len(pledges))
+	assert.NotNil(pledgeInfo, "expected one pledge, got nil")
 
 	logger.Debugf("request proof of existence")
-	proof, err := pledge.RequestProofOfExistence(context, pledges[0])
+	proof, err := pledge.RequestProofOfExistence(context, pledgeInfo)
 	assert.NoError(err, "failed to retrieve a valid proof of existence")
 	assert.NotNil(proof)
 
@@ -156,7 +156,7 @@ func (v *FastPledgeClaimResponderView) Call(context view.Context) (interface{}, 
 		session, err = pledge.RequestClaim(
 			context,
 			fns.IdentityProvider().Identity("issuerBeta"), // TODO get issuer
-			pledges[0],
+			pledgeInfo,
 			me,
 			proof,
 		)
@@ -181,8 +181,8 @@ func (v *FastPledgeClaimResponderView) Call(context view.Context) (interface{}, 
 			output := outputs.At(0)
 			assert.NotNil(output, "failed getting the output")
 			assert.NoError(err, "failed parsing quantity")
-			assert.Equal(pledges[0].Amount, output.Quantity.ToBigInt().Uint64())
-			assert.Equal(pledges[0].TokenType, output.Type)
+			assert.Equal(pledgeInfo.Amount, output.Quantity.ToBigInt().Uint64())
+			assert.Equal(pledgeInfo.TokenType, output.Type)
 			assert.Equal(me, output.Owner)
 
 			// If everything is fine, the recipient accepts and sends back her signature.
@@ -194,7 +194,7 @@ func (v *FastPledgeClaimResponderView) Call(context view.Context) (interface{}, 
 			assert.NoError(err, "the claim transaction was not committed")
 
 			// Delete pledges
-			err = pledge.Vault(context).Delete(pledges)
+			err = pledge.Vault(context).Delete([]*pledge.Info{pledgeInfo})
 			assert.NoError(err, "failed deleting pledges")
 
 			logger.Debugf("Respond to the issuer...done")
@@ -310,16 +310,16 @@ func (v *FastPledgeReClaimResponderView) Call(context view.Context) (interface{}
 	assert.Equal(me, pledgeInfo.Script.Recipient, "recipient is different [%s]!=[%s]", me, pledgeInfo.Script.Recipient)
 
 	// Store the pledge and send a notification back
-	_, err = context.RunView(pledge.NewAcceptPledgeIndoView(pledgeInfo))
+	_, err = context.RunView(pledge.NewAcceptPledgeInfoView(pledgeInfo))
 	assert.NoError(err, "failed accepting pledge info")
 
 	// Retrieve proof of existence of the passed token id
-	pledges, err := pledge.Vault(context).PledgeByTokenID(pledgeInfo.TokenID)
+	pledgeInfo, err = pledge.Vault(context).PledgeByTokenID(pledgeInfo.TokenID)
 	assert.NoError(err, "failed getting pledge")
-	assert.Equal(1, len(pledges), "expected one pledge, got [%d]", len(pledges))
+	assert.NotNil(pledgeInfo, "expected one pledge, got nil")
 
 	logger.Debugf("request proof of existence")
-	proof, err := pledge.RequestProofOfExistence(context, pledges[0])
+	proof, err := pledge.RequestProofOfExistence(context, pledgeInfo)
 	assert.NoError(err, "failed to retrieve a valid proof of existence")
 	assert.NotNil(proof)
 
