@@ -60,10 +60,10 @@ func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams
 		conds = append(conds, common.ConstCondition("is_deleted = false"))
 	}
 	if !params.OnlyNonSpendable {
-		conds = append(conds, common.ConstCondition(fmt.Sprintf("spendable = false")))
+		conds = append(conds, common.ConstCondition("spendable = false"))
 	}
 	if params.OnlySpendable {
-		conds = append(conds, common.ConstCondition(fmt.Sprintf("spendable = true")))
+		conds = append(conds, common.ConstCondition("spendable = true"))
 	}
 
 	return c.And(conds...)
