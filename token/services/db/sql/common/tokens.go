@@ -128,9 +128,8 @@ func (db *TokenDB) UnspentTokensIterator() (tdriver.UnspentTokensIterator, error
 func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenType string) (tdriver.UnspentTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
-		WalletID:      walletID,
-		TokenType:     tokenType,
-		OnlySpendable: true,
+		WalletID:  walletID,
+		TokenType: tokenType,
 	}, db.table.Tokens))
 	join := joinOnTokenID(db.table.Tokens, db.table.Ownership)
 
@@ -149,8 +148,9 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenT
 func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.SpendableTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
-		WalletID:  walletID,
-		TokenType: typ,
+		WalletID:      walletID,
+		TokenType:     typ,
+		OnlySpendable: true,
 	}, ""))
 	query := fmt.Sprintf(
 		"SELECT tx_id, idx, token_type, quantity, owner_wallet_id FROM %s %s",

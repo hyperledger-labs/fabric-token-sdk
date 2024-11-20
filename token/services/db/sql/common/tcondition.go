@@ -59,7 +59,7 @@ func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams
 	if !params.IncludeDeleted {
 		conds = append(conds, common.ConstCondition("is_deleted = false"))
 	}
-	if !params.OnlyNonSpendable {
+	if params.OnlyNonSpendable {
 		conds = append(conds, common.ConstCondition("spendable = false"))
 	}
 	if params.OnlySpendable {
