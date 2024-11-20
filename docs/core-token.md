@@ -22,8 +22,12 @@ token:
     retryInterval: 5s
     # retry to gain a lock on tokens this amount of times before failing the transaction
     numRetries: 3
-    evictionInterval: 1m
-    cleanupPeriod: 1m
+    # evictionInterval is the period a token can be locked, after which it is forcefully unlocked
+    # if evictionInterval is zero, the eviction algorithm is never executed
+    evictionInterval: 3m
+    # cleanupTickPeriod defines how often the eviction algorithm must be executed
+    # if cleanupTickPeriod is zero, the eviction algorithm is never executed
+    cleanupTickPeriod: 1m
 
   tms:
     mytms: # unique name of this token management system
