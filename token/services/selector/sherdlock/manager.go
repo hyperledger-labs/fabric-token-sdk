@@ -54,14 +54,14 @@ func NewManager(
 	cleanupTickPeriod time.Duration,
 ) *manager {
 	m := &manager{
-		locker:           locker,
-		evictionInterval: evictionInterval,
+		locker:            locker,
+		evictionInterval:  evictionInterval,
+		cleanupTickPeriod: cleanupTickPeriod,
 		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
 			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff), nil
 		}),
-		cleanupTickPeriod: cleanupTickPeriod,
 	}
-	if cleanupTickPeriod > 0 {
+	if cleanupTickPeriod > 0 && evictionInterval > 0 {
 		go m.cleaner()
 	}
 	return m

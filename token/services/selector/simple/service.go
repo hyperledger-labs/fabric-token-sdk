@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/config"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -31,7 +31,7 @@ type SelectorService struct {
 }
 
 func NewService(lockerProvider LockerProvider, c core.ConfigProvider) *SelectorService {
-	cfg, err := sdriver.New(c)
+	cfg, err := config.New(c)
 	if err != nil {
 		logger.Errorf("error getting selector config, using defaults. %s", err.Error())
 	}
