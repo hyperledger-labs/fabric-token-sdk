@@ -60,7 +60,9 @@ var _ = Describe("FabToken end to end", func() {
 			BeforeEach(ts.Setup)
 			It("Performed an htlc based atomic swap", Label("T6"), func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
 		})
+	}
 
+	for _, t := range integration2.WebSocketWithReplicationOnly {
 		Describe("Asset Transfer With Two Fabric Networks", t.Label, func() {
 			ts, selector := newTestSuiteInteropAssetTransfer(t.CommType, t.ReplicationFactor, "alice", "bob")
 			AfterEach(ts.TearDown)
