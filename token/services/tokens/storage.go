@@ -92,12 +92,12 @@ func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID to
 func (t *transaction) DeleteToken(ctx context.Context, txID string, index uint64, deletedBy string) error {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent("get_token")
-	tok, owners, err := t.tx.GetToken(ctx, txID, index, true)
+	tok, owners, err := t.tx.GetToken(txID, index, true)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token [%s:%d]", txID, index)
 	}
 	span.AddEvent("delete_token")
-	err = t.tx.Delete(ctx, txID, index, deletedBy)
+	err = t.tx.Delete(txID, index, deletedBy)
 	if err != nil {
 		if tok == nil {
 			logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
@@ -134,26 +134,23 @@ func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error 
 	}
 
 	span.AddEvent("store_token")
-	err = t.tx.StoreToken(ctx,
-		tokendb.TokenRecord{
-			TxID:           tta.txID,
-			Index:          tta.index,
-			IssuerRaw:      tta.issuer,
-			OwnerRaw:       tta.tok.Owner,
-			OwnerType:      tta.ownerType,
-			OwnerIdentity:  tta.ownerIdentity,
-			OwnerWalletID:  tta.ownerWalletID,
-			Ledger:         tta.tokenOnLedger,
-			LedgerMetadata: tta.tokenOnLedgerMetadata,
-			Quantity:       tta.tok.Quantity,
-			Type:           tta.tok.Type,
-			Amount:         q.ToBigInt().Uint64(),
-			Owner:          tta.flags.Mine,
-			Auditor:        tta.flags.Auditor,
-			Issuer:         tta.flags.Issuer,
-		},
-		tta.owners,
-	)
+	err = t.tx.StoreToken(tokendb.TokenRecord{
+		TxID:           tta.txID,
+		Index:          tta.index,
+		IssuerRaw:      tta.issuer,
+		OwnerRaw:       tta.tok.Owner,
+		OwnerType:      tta.ownerType,
+		OwnerIdentity:  tta.ownerIdentity,
+		OwnerWalletID:  tta.ownerWalletID,
+		Ledger:         tta.tokenOnLedger,
+		LedgerMetadata: tta.tokenOnLedgerMetadata,
+		Quantity:       tta.tok.Quantity,
+		Type:           tta.tok.Type,
+		Amount:         q.ToBigInt().Uint64(),
+		Owner:          tta.flags.Mine,
+		Auditor:        tta.flags.Auditor,
+		Issuer:         tta.flags.Issuer,
+	}, tta.owners)
 	if err != nil && !errors2.HasCause(err, driver.UniqueKeyViolation) {
 		return errors.Wrapf(err, "cannot store token in db")
 	}

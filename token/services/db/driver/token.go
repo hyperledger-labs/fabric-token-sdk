@@ -114,11 +114,13 @@ type CertificationDB interface {
 
 type TokenDBTransaction interface {
 	// GetToken returns the owned tokens and their identifier keys for the passed ids.
-	GetToken(ctx context.Context, txID string, index uint64, includeDeleted bool) (*token.Token, []string, error)
+	GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error)
 	// Delete marks the passed token as deleted by a given identifier (idempotent)
-	Delete(ctx context.Context, txID string, index uint64, deletedBy string) error
+	Delete(txID string, index uint64, deletedBy string) error
 	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
-	StoreToken(ctx context.Context, tr TokenRecord, owners []string) error
+	StoreToken(tr TokenRecord, owners []string) error
+	// SetSpendable updates the spendable flag of the passed token
+	SetSpendable(txID string, index uint64, spendable bool) error
 	// Commit commits this transaction
 	Commit() error
 	// Rollback rollbacks this transaction
