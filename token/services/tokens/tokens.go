@@ -105,13 +105,13 @@ func (t *Tokens) Append(ctx context.Context, tmsID token.TMSID, txID string, req
 	}()
 	span.AddEvent("append_tokens")
 	for _, tta := range toAppend {
-		err = ts.AppendToken(ctx, tta)
+		err = ts.AppendToken(tta)
 		if err != nil {
 			return errors.WithMessagef(err, "transaction [%s], failed to append token", txID)
 		}
 	}
 	span.AddEvent("delete_tokens")
-	err = ts.DeleteTokens(ctx, txID, toSpend)
+	err = ts.DeleteTokens(txID, toSpend)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 	}
@@ -182,6 +182,14 @@ func (t *Tokens) StorePublicParams(raw []byte) error {
 // The deletion is attributed to the passed deletedBy argument.
 func (t *Tokens) DeleteToken(deletedBy string, ids ...*token2.ID) (err error) {
 	return t.Storage.tokenDB.DeleteTokens(deletedBy, ids...)
+}
+
+func (t *Tokens) SetSpendableFlag(value bool, ids ...*token2.ID) error {
+	tx, err := t.Storage.NewTransaction(context.TODO())
+	if err != nil {
+		return errors.Wrapf(err, "failed initiating transaction")
+	}
+	return tx.SetSpendableFlag(value, ids)
 }
 
 func (t *Tokens) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {

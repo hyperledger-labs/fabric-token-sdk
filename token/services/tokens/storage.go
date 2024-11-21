@@ -49,7 +49,7 @@ func (d *DBStorage) NewTransaction(ctx context.Context) (*transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewTransaction(d.notifier, tx, d.tmsID)
+	return NewTransaction(ctx, d.notifier, tx, d.tmsID)
 }
 
 func (d *DBStorage) TransactionExists(ctx context.Context, id string) (bool, error) {
@@ -76,21 +76,23 @@ type TokenToAppend struct {
 }
 
 type transaction struct {
+	ctx      context.Context
 	notifier events.Publisher
 	tx       *tokendb.Transaction
 	tmsID    token.TMSID
 }
 
-func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
+func NewTransaction(ctx context.Context, notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
 	return &transaction{
+		ctx:      ctx,
 		notifier: notifier,
 		tx:       tx,
 		tmsID:    tmsID,
 	}, nil
 }
 
-func (t *transaction) DeleteToken(ctx context.Context, txID string, index uint64, deletedBy string) error {
-	span := trace.SpanFromContext(ctx)
+func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) error {
+	span := trace.SpanFromContext(t.ctx)
 	span.AddEvent("get_token")
 	tok, owners, err := t.tx.GetToken(txID, index, true)
 	if err != nil {
@@ -117,17 +119,17 @@ func (t *transaction) DeleteToken(ctx context.Context, txID string, index uint64
 	return nil
 }
 
-func (t *transaction) DeleteTokens(ctx context.Context, deletedBy string, ids []*token2.ID) error {
+func (t *transaction) DeleteTokens(deletedBy string, ids []*token2.ID) error {
 	for _, id := range ids {
-		if err := t.DeleteToken(ctx, id.TxId, id.Index, deletedBy); err != nil {
+		if err := t.DeleteToken(id.TxId, id.Index, deletedBy); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error {
-	span := trace.SpanFromContext(ctx)
+func (t *transaction) AppendToken(tta TokenToAppend) error {
+	span := trace.SpanFromContext(t.ctx)
 	q, err := token2.ToQuantity(tta.tok.Quantity, tta.precision)
 	if err != nil {
 		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tta.tok.Quantity, tta.precision)
@@ -190,6 +192,17 @@ func (t *transaction) Rollback() error {
 
 func (t *transaction) Commit() error {
 	return t.tx.Commit()
+}
+
+func (t *transaction) SetSpendableFlag(value bool, ids []*token2.ID) error {
+	var err error
+	for _, id := range ids {
+		err = t.tx.SetSpendable(id.TxId, id.Index, value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type TokenProcessorEvent struct {

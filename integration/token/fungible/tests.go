@@ -792,6 +792,15 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, bob, "", "Pineapples", 0, auditor)
 	CheckBalanceAndHolding(network, charlie, "", "Pineapples", 0, auditor)
 	CheckAuditorDB(network, auditor, "", nil)
+
+	// test spendable token
+	txIssueSpendableToken := IssueCash(network, "", "Spendable", 3, alice, auditor, true, issuer)
+	SetSpendableFlag(network, alice, token2.ID{TxId: txIssueSpendableToken, Index: 0}, false)
+	TransferCash(network, alice, "", "Spendable", 2, bob, auditor, "no tokens available")
+	SetSpendableFlag(network, alice, token2.ID{TxId: txIssueSpendableToken, Index: 0}, true)
+	TransferCash(network, alice, "", "Spendable", 2, bob, auditor, "no tokens available")
+	CheckBalanceAndHolding(network, alice, "", "Spendable", 1, auditor)
+	CheckBalanceAndHolding(network, bob, "", "Spendable", 2, auditor)
 }
 
 func TestSelector(network *integration.Infrastructure, auditorId string, sel *token3.ReplicaSelector) {
