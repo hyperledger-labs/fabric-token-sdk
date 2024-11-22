@@ -104,10 +104,13 @@ type SetSpendableFlagView struct {
 }
 
 func (s *SetSpendableFlagView) Call(context view.Context) (interface{}, error) {
+	tms := token.GetManagementService(context, token.WithTMSID(s.TMSID))
+	assert.NotNil(tms, "failed getting token management service [%s]", s.TMSID)
+
 	tokensProvider, err := tokens.GetProvider(context)
 	assert.NoError(err, "failed getting tokens provider")
 
-	tokens, err := tokensProvider.Tokens(s.TMSID)
+	tokens, err := tokensProvider.Tokens(tms.ID())
 	assert.NoError(err, "failed getting tokens")
 
 	err = tokens.SetSpendableFlag(s.Spendable, &s.TokenID)
