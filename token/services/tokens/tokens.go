@@ -189,7 +189,13 @@ func (t *Tokens) SetSpendableFlag(value bool, ids ...*token2.ID) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed initiating transaction")
 	}
-	return tx.SetSpendableFlag(value, ids)
+	if err := tx.SetSpendableFlag(value, ids); err != nil {
+		if err2 := tx.Rollback(); err2 != nil {
+			logger.Errorf("failed rolling back transaction that set spendable flag [%s]", err2)
+		}
+		return errors.Wrapf(err, "failed setting spendable flag")
+	}
+	return tx.Commit()
 }
 
 func (t *Tokens) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
