@@ -796,11 +796,12 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// test spendable token
 	txIssueSpendableToken := IssueCash(network, "", "Spendable", 3, alice, auditor, true, issuer)
 	SetSpendableFlag(network, alice, token2.ID{TxId: txIssueSpendableToken, Index: 0}, false)
-	TransferCash(network, alice, "", "Spendable", 2, bob, auditor, "no tokens available")
+	TransferCash(network, alice, "", "Spendable", 2, bob, auditor, "failed selecting tokens")
 	SetSpendableFlag(network, alice, token2.ID{TxId: txIssueSpendableToken, Index: 0}, true)
-	TransferCash(network, alice, "", "Spendable", 2, bob, auditor, "no tokens available")
+	TransferCash(network, alice, "", "Spendable", 2, bob, auditor)
 	CheckBalanceAndHolding(network, alice, "", "Spendable", 1, auditor)
 	CheckBalanceAndHolding(network, bob, "", "Spendable", 2, auditor)
+	CheckAuditorDB(network, auditor, "", nil)
 }
 
 func TestSelector(network *integration.Infrastructure, auditorId string, sel *token3.ReplicaSelector) {
