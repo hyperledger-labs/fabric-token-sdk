@@ -40,6 +40,6 @@ func (l *locker) UnlockByTxID(txID transaction.ID) error {
 	return nil
 }
 
-func (l *locker) Cleanup(evictionDelay time.Duration) error {
+func (l *locker) Cleanup(leaseExpiry time.Duration) error {
 	return nil
 }

@@ -24,7 +24,7 @@ type Locker interface {
 	// Cleanup removes the locks such that either:
 	// 1. The transaction that locked that token is valid or invalid;
 	// 2. The lock is too old.
-	Cleanup(evictionDelay time.Duration) error
+	Cleanup(leaseExpiry time.Duration) error
 }
 
 type tokenSelectorUnlocker interface {
@@ -33,10 +33,10 @@ type tokenSelectorUnlocker interface {
 }
 
 type manager struct {
-	selectorCache     lazy2.Provider[transaction.ID, tokenSelectorUnlocker]
-	locker            Locker
-	evictionInterval  time.Duration
-	cleanupTickPeriod time.Duration
+	selectorCache          lazy2.Provider[transaction.ID, tokenSelectorUnlocker]
+	locker                 Locker
+	leaseExpiry            time.Duration
+	leaseCleanupTickPeriod time.Duration
 }
 
 type iterator[k any] interface {
@@ -50,18 +50,18 @@ func NewManager(
 	precision uint64,
 	backoff time.Duration,
 	maxRetriesAfterBackOff int,
-	evictionInterval time.Duration,
-	cleanupTickPeriod time.Duration,
+	leaseExpiry time.Duration,
+	leaseCleanupTickPeriod time.Duration,
 ) *manager {
 	m := &manager{
-		locker:            locker,
-		evictionInterval:  evictionInterval,
-		cleanupTickPeriod: cleanupTickPeriod,
+		locker:                 locker,
+		leaseExpiry:            leaseExpiry,
+		leaseCleanupTickPeriod: leaseCleanupTickPeriod,
 		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
 			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff), nil
 		}),
 	}
-	if cleanupTickPeriod > 0 && evictionInterval > 0 {
+	if leaseCleanupTickPeriod > 0 && leaseExpiry > 0 {
 		go m.cleaner()
 	}
 	return m
@@ -83,13 +83,13 @@ func (m *manager) Close(id transaction.ID) error {
 }
 
 func (m *manager) cleaner() {
-	ticker := time.NewTicker(m.cleanupTickPeriod) // Change the duration as needed
+	ticker := time.NewTicker(m.leaseCleanupTickPeriod)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		logger.Debugf("cleanup locked tokens with eviction delay of [%s]", m.evictionInterval)
-		if err := m.locker.Cleanup(m.evictionInterval); err != nil {
-			logger.Errorf("failed cleaning up eviction locks: %s", err)
+		logger.Debugf("release token locks older than [%s]", m.leaseExpiry)
+		if err := m.locker.Cleanup(m.leaseExpiry); err != nil {
+			logger.Errorf("failed to release token locks: [%s]", err)
 		}
 	}
 }

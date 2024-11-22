@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	defaultDriver            = driver.Sherdlock
-	defaultEvictionInterval  = 3 * time.Minute
-	defaultCleanupTickPeriod = 1 * time.Minute
-	defaultNumRetries        = 3
-	defaultRetryInterval     = 5 * time.Second
+	defaultDriver                 = driver.Sherdlock
+	defaultLeaseExpiry            = 3 * time.Minute
+	defaultLeaseCleanupTickPeriod = 1 * time.Minute
+	defaultNumRetries             = 3
+	defaultRetryInterval          = 5 * time.Second
 )
 
 type configService interface {
@@ -26,11 +26,11 @@ type configService interface {
 }
 
 type Config struct {
-	Driver            driver.Driver `yaml:"driver,omitempty"`
-	RetryInterval     time.Duration `yaml:"retryInterval,omitempty"`
-	NumRetries        int           `yaml:"numRetries,omitempty"`
-	EvictionInterval  time.Duration `yaml:"evictionInterval,omitempty"`
-	CleanupTickPeriod time.Duration `yaml:"cleanupTickPeriod,omitempty"`
+	Driver                 driver.Driver `yaml:"driver,omitempty"`
+	RetryInterval          time.Duration `yaml:"retryInterval,omitempty"`
+	NumRetries             int           `yaml:"numRetries,omitempty"`
+	LeaseExpiry            time.Duration `yaml:"leaseExpiry,omitempty"`
+	LeaseCleanupTickPeriod time.Duration `yaml:"leaseCleanupTickPeriod,omitempty"`
 }
 
 // New returns a SelectorConfig with the values from the token.selector key
@@ -64,16 +64,16 @@ func (c *Config) GetRetryInterval() time.Duration {
 	return defaultRetryInterval
 }
 
-func (c *Config) GetEvictionInterval() time.Duration {
-	if c.EvictionInterval != 0 {
-		return c.EvictionInterval
+func (c *Config) GetLeaseExpiry() time.Duration {
+	if c.LeaseExpiry != 0 {
+		return c.LeaseExpiry
 	}
-	return defaultEvictionInterval
+	return defaultLeaseExpiry
 }
 
-func (c *Config) GetCleanupTickPeriod() time.Duration {
-	if c.CleanupTickPeriod != 0 {
-		return c.CleanupTickPeriod
+func (c *Config) GetLeaseCleanupTickPeriod() time.Duration {
+	if c.LeaseCleanupTickPeriod != 0 {
+		return c.LeaseCleanupTickPeriod
 	}
-	return defaultCleanupTickPeriod
+	return defaultLeaseCleanupTickPeriod
 }

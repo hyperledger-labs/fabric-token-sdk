@@ -28,12 +28,12 @@ func NewService(fetcherProvider FetcherProvider, tokenLockDBManager *tokenlockdb
 	}
 
 	loader := &loader{
-		tokenLockDBManager: tokenLockDBManager,
-		fetcherProvider:    fetcherProvider,
-		retryInterval:      cfg.GetRetryInterval(),
-		numRetries:         cfg.GetNumRetries(),
-		evictionInterval:   cfg.GetEvictionInterval(),
-		cleanupTickPeriod:  cfg.GetCleanupTickPeriod(),
+		tokenLockDBManager:     tokenLockDBManager,
+		fetcherProvider:        fetcherProvider,
+		retryInterval:          cfg.GetRetryInterval(),
+		numRetries:             cfg.GetNumRetries(),
+		leaseExpiry:            cfg.GetLeaseExpiry(),
+		leaseCleanupTickPeriod: cfg.GetLeaseCleanupTickPeriod(),
 	}
 	return &SelectorService{
 		managerLazyCache: lazy2.NewProviderWithKeyMapper(key, loader.load),
@@ -49,12 +49,12 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 }
 
 type loader struct {
-	tokenLockDBManager *tokenlockdb.Manager
-	fetcherProvider    FetcherProvider
-	numRetries         int
-	retryInterval      time.Duration
-	evictionInterval   time.Duration
-	cleanupTickPeriod  time.Duration
+	tokenLockDBManager     *tokenlockdb.Manager
+	fetcherProvider        FetcherProvider
+	numRetries             int
+	retryInterval          time.Duration
+	leaseExpiry            time.Duration
+	leaseCleanupTickPeriod time.Duration
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -76,8 +76,8 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 		pp.Precision(),
 		s.retryInterval,
 		s.numRetries,
-		s.evictionInterval,
-		s.cleanupTickPeriod,
+		s.leaseExpiry,
+		s.leaseCleanupTickPeriod,
 	), nil
 }
 

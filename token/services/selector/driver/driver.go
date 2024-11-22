@@ -19,8 +19,8 @@ type SelectorConfig interface {
 	GetDriver() Driver
 	GetNumRetries() int
 	GetRetryInterval() time.Duration
-	GetEvictionInterval() time.Duration
-	GetCleanupTickPeriod() time.Duration
+	GetLeaseExpiry() time.Duration
+	GetLeaseCleanupTickPeriod() time.Duration
 }
 
 type Driver string
