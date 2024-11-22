@@ -210,8 +210,6 @@ func (w *Translator) checkIssue(issue IssueAction) error {
 }
 
 func (w *Translator) checkTransfer(t TransferAction) error {
-	inputs := t.GetInputs()
-
 	// check inputs
 
 	// we must check that the serial number does not exist, if any are in the action
@@ -222,9 +220,13 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 	}
 
 	// we must check that the serial number for serialized inputs must exist, if any are in the action
+	inputs := t.GetInputs()
 	serializedInputs, err := t.GetSerializedInputs()
 	if err != nil {
 		return errors.Wrapf(err, "failed to get serialized inputs")
+	}
+	if len(serializedInputs) != len(inputs) {
+		return errors.Errorf("inputs and serialized inputs length mismatch")
 	}
 	for i, input := range inputs {
 		key, err := w.KeyTranslator.CreateOutputSNKey(input.TxId, input.Index, serializedInputs[i])
