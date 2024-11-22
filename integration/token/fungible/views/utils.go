@@ -93,14 +93,14 @@ func (p *SetKVSEntryViewFactory) NewView(in []byte) (view.View, error) {
 	return f, nil
 }
 
-type SpendableFlag struct {
+type SetSpendableFlag struct {
 	TMSID     token.TMSID
 	TokenID   token2.ID
 	Spendable bool
 }
 
 type SetSpendableFlagView struct {
-	*SpendableFlag
+	*SetSpendableFlag
 }
 
 func (s *SetSpendableFlagView) Call(context view.Context) (interface{}, error) {
@@ -119,8 +119,8 @@ func (s *SetSpendableFlagView) Call(context view.Context) (interface{}, error) {
 type SetSpendableFlagViewFactory struct{}
 
 func (p *SetSpendableFlagViewFactory) NewView(in []byte) (view.View, error) {
-	f := &SetSpendableFlagView{SpendableFlag: &SpendableFlag{}}
-	err := json.Unmarshal(in, f.SpendableFlag)
+	f := &SetSpendableFlagView{SetSpendableFlag: &SetSpendableFlag{}}
+	err := json.Unmarshal(in, f.SetSpendableFlag)
 	assert.NoError(err, "failed unmarshalling input")
 
 	return f, nil

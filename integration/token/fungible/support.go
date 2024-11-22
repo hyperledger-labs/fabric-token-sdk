@@ -1153,7 +1153,7 @@ func SetKVSEntry(network *integration.Infrastructure, user *token3.NodeReference
 }
 
 func SetSpendableFlag(network *integration.Infrastructure, user *token3.NodeReference, tokenID token.ID, value bool) {
-	_, err := network.Client(user.ReplicaName()).CallView("SetKVSEntry", common.JSONMarshall(&views.SpendableFlag{
+	_, err := network.Client(user.ReplicaName()).CallView("SetSpendableFlag", common.JSONMarshall(&views.SetSpendableFlag{
 		TMSID:     token2.TMSID{},
 		TokenID:   tokenID,
 		Spendable: value,
