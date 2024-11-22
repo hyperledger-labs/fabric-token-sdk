@@ -166,10 +166,10 @@ func RequestProofOfNonExistence(context view.Context, tokenID *token2.ID, origin
 	return proof, nil
 }
 
-// RequestProofOfTokenWithMetadataExistence request a proof of a token existence with the given token ID and origin network,
+// RequestProofOfExistenceOfTokenWithMetadata request a proof of a token existence with the given token ID and origin network,
 // in the destination network identified by the given script.
 // If no error is returned, the proof is valid with the respect to the given script.
-func RequestProofOfTokenWithMetadataExistence(context view.Context, tokenID *token2.ID, originTMSID token.TMSID, script *Script) ([]byte, error) {
+func RequestProofOfExistenceOfTokenWithMetadata(context view.Context, tokenID *token2.ID, originTMSID token.TMSID, script *Script) ([]byte, error) {
 	// collect proof
 	net := network.GetInstance(context, originTMSID.Network, originTMSID.Channel)
 	if net == nil {

@@ -38,7 +38,7 @@ func (rv *RedeemView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to retrieve pledged token during redeem")
 
 	// make sure token was in fact claimed in the other network
-	proof, err := pledge.RequestProofOfTokenWithMetadataExistence(context, rv.TokenID, rv.TMSID, script)
+	proof, err := pledge.RequestProofOfExistenceOfTokenWithMetadata(context, rv.TokenID, rv.TMSID, script)
 	assert.NoError(err, "failed to retrieve and verify proof of token existence")
 
 	// Create a new transaction
