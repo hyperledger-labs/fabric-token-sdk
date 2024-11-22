@@ -203,7 +203,7 @@ type TokenLockDB interface {
 	// Cleanup removes the locks such that either:
 	// 1. The transaction that locked that token is valid or invalid;
 	// 2. The lock is too old.
-	Cleanup(evictionDelay time.Duration) error
+	Cleanup(leaseExpiry time.Duration) error
 	// Close closes the database
 	Close() error
 }

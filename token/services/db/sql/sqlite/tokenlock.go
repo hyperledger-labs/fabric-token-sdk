@@ -20,7 +20,7 @@ type TokenLockDB struct {
 	*common.TokenLockDB
 }
 
-func (db *TokenLockDB) Cleanup(evictionDelay time.Duration) error {
+func (db *TokenLockDB) Cleanup(leaseExpiry time.Duration) error {
 	query := fmt.Sprintf(
 		"DELETE FROM %s WHERE tx_id IN ("+
 			"SELECT %s.tx_id FROM %s JOIN %s ON %s.tx_id = %s.tx_id WHERE %s.status IN (%d) "+
@@ -28,7 +28,7 @@ func (db *TokenLockDB) Cleanup(evictionDelay time.Duration) error {
 			");",
 		db.Table.TokenLocks,
 		db.Table.TokenLocks, db.Table.TokenLocks, db.Table.Requests, db.Table.TokenLocks, db.Table.Requests, db.Table.Requests, driver.Deleted,
-		db.Table.TokenLocks, int(evictionDelay.Seconds()),
+		db.Table.TokenLocks, int(leaseExpiry.Seconds()),
 	)
 	db.Logger.Debug(query)
 	_, err := db.DB.Exec(query)
