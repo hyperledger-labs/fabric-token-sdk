@@ -213,27 +213,26 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 	inputs := t.GetInputs()
 
 	// check inputs
-	if t.IsGraphHiding() {
-		// check that the serial number does not exist
-		for _, key := range t.GetSerialNumbers() {
-			if err := w.RWSet.StateMustNotExist(key); err != nil {
-				return errors.Wrapf(err, "invalid transfer: serial number must not exist")
-			}
+
+	// we must check that the serial number does not exist, if any are in the action
+	for _, key := range t.GetSerialNumbers() {
+		if err := w.RWSet.StateMustNotExist(key); err != nil {
+			return errors.Wrapf(err, "invalid transfer: serial number must not exist")
 		}
-	} else {
-		// check that the serial number does exist
-		serializedInputs, err := t.GetSerializedInputs()
+	}
+
+	// we must check that the serial number for serialized inputs must exist, if any are in the action
+	serializedInputs, err := t.GetSerializedInputs()
+	if err != nil {
+		return errors.Wrapf(err, "failed to get serialized inputs")
+	}
+	for i, input := range inputs {
+		key, err := w.KeyTranslator.CreateOutputSNKey(input.TxId, input.Index, serializedInputs[i])
 		if err != nil {
-			return errors.Wrapf(err, "failed to get serialized inputs")
+			return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 		}
-		for i, input := range inputs {
-			key, err := w.KeyTranslator.CreateOutputSNKey(input.TxId, input.Index, serializedInputs[i])
-			if err != nil {
-				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
-			}
-			if err := w.RWSet.StateMustExist(key, VersionZero); err != nil {
-				return errors.Wrapf(err, "invalid transfer: input must exist")
-			}
+		if err := w.RWSet.StateMustExist(key, VersionZero); err != nil {
+			return errors.Wrapf(err, "invalid transfer: input must exist")
 		}
 	}
 
@@ -415,10 +414,10 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 }
 
 func (w *Translator) spendInputs(transferAction TransferAction) error {
-	if !transferAction.IsGraphHiding() {
-		// we need to delete the serial numbers and the outputs
-		// recall that the read dependencies are added during the checking phas
-		ids := transferAction.GetInputs()
+	// we need to delete the serial numbers and the outputs, if any
+	// recall that the read dependencies are added during the checking phase
+	ids := transferAction.GetInputs()
+	if len(ids) != 0 {
 		serializedInputs, err := transferAction.GetSerializedInputs()
 		if err != nil {
 			return errors.Wrap(err, "error serializing transfer inputs")
@@ -448,20 +447,21 @@ func (w *Translator) spendInputs(transferAction TransferAction) error {
 				return errors.Wrapf(err, "failed to append spent id [%s]", id)
 			}
 		}
-	} else {
-		ids := transferAction.GetSerialNumbers()
-		for _, id := range ids {
-			logger.Debugf("add serial number %s\n", id)
-			k, err := w.KeyTranslator.CreateInputSNKey(id)
-			if err != nil {
-				return errors.Wrapf(err, "failed to generate key for id [%s]", id)
-			}
-			if err := w.RWSet.SetState(k, NotEmpty); err != nil {
-				return errors.Wrapf(err, "failed to add serial number %s", id)
-			}
-			if err := w.appendSpentID(id); err != nil {
-				return errors.Wrapf(err, "failed to append spent id [%s]", id)
-			}
+	}
+
+	// we must also write any serial number
+	sns := transferAction.GetSerialNumbers()
+	for _, id := range sns {
+		logger.Debugf("add serial number %s\n", id)
+		k, err := w.KeyTranslator.CreateInputSNKey(id)
+		if err != nil {
+			return errors.Wrapf(err, "failed to generate key for id [%s]", id)
+		}
+		if err := w.RWSet.SetState(k, NotEmpty); err != nil {
+			return errors.Wrapf(err, "failed to add serial number %s", id)
+		}
+		if err := w.appendSpentID(id); err != nil {
+			return errors.Wrapf(err, "failed to append spent id [%s]", id)
 		}
 	}
 	return nil
