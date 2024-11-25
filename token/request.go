@@ -498,7 +498,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		outputs = append(outputs, &Output{
 			ActionIndex:       i,
 			Index:             counter,
-			Owner:             tok.Owner.Raw,
+			Owner:             tok.Owner,
 			OwnerAuditInfo:    issueMeta.ReceiversAuditInfos[j],
 			EnrollmentID:      eID,
 			RevocationHandler: rID,
@@ -545,7 +545,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		var eID string
 		var rID string
 		var receiverAuditInfo []byte
-		if len(tok.Owner.Raw) != 0 {
+		if len(tok.Owner) != 0 {
 			receiverAuditInfo = transferMeta.ReceiverAuditInfos[j]
 			eID, rID, err = tms.WalletService().GetEIDAndRH(transferMeta.Receivers[j], receiverAuditInfo)
 			if err != nil {
@@ -565,7 +565,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		outputs = append(outputs, &Output{
 			ActionIndex:       i,
 			Index:             counter,
-			Owner:             tok.Owner.Raw,
+			Owner:             tok.Owner,
 			OwnerAuditInfo:    receiverAuditInfo,
 			EnrollmentID:      eID,
 			RevocationHandler: rID,
@@ -1012,7 +1012,7 @@ func (r *Request) AuditRecord() (*AuditRecord, error) {
 		in.Quantity = q
 
 		// retrieve the owner's audit info
-		ownerAuditInfo, err := r.TokenService.tms.WalletService().GetAuditInfo(toks[i].Owner.Raw)
+		ownerAuditInfo, err := r.TokenService.tms.WalletService().GetAuditInfo(toks[i].Owner)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting audit info for owner [%s]", toks[i].Owner)
 		}
@@ -1184,7 +1184,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 		}
 
 		outputTokens = append(outputTokens, &token.Token{
-			Owner:    &token.Owner{Raw: restIdentity},
+			Owner:    restIdentity,
 			Type:     tokenType,
 			Quantity: diff.Hex(),
 		})
@@ -1229,7 +1229,7 @@ func (r *Request) genOutputs(values []uint64, owners []Identity, tokenType strin
 
 		// single output is fine
 		outputTokens = append(outputTokens, &token.Token{
-			Owner:    &token.Owner{Raw: owners[i]},
+			Owner:    owners[i],
 			Type:     tokenType,
 			Quantity: q.Hex(),
 		})

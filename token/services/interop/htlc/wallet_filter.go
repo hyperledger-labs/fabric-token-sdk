@@ -25,7 +25,7 @@ type PreImageSelector struct {
 }
 
 func (f *PreImageSelector) Filter(tok *token.UnspentToken, script *Script) (bool, error) {
-	logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
+	logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
 
 	if !script.HashInfo.HashFunc.Available() {
 		logger.Errorf("script hash function not available [%d]", script.HashInfo.HashFunc)
@@ -46,7 +46,7 @@ func (f *PreImageSelector) Filter(tok *token.UnspentToken, script *Script) (bool
 	}
 
 	// does the preimage match?
-	logger.Debugf("token [%s,%s,%s,%s] does hashes match?", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity,
+	logger.Debugf("token [%s,%s,%s,%s] does hashes match?", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity,
 		base64.StdEncoding.EncodeToString(h), base64.StdEncoding.EncodeToString(script.HashInfo.Hash))
 
 	return bytes.Equal(h, script.HashInfo.Hash), nil
@@ -54,7 +54,7 @@ func (f *PreImageSelector) Filter(tok *token.UnspentToken, script *Script) (bool
 
 // SelectExpired selects expired htlc-tokens
 func SelectExpired(tok *token.UnspentToken, script *Script) (bool, error) {
-	logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
+	logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
 	now := time.Now()
 	logger.Debugf("[%v]<=[%v], sender [%s], recipient [%s]?", script.Deadline, now, script.Sender.UniqueID(), script.Recipient.UniqueID())
 	return script.Deadline.Before(now), nil
@@ -73,7 +73,7 @@ type ExpiredAndHashSelector struct {
 }
 
 func (s *ExpiredAndHashSelector) Select(tok *token.UnspentToken, script *Script) (bool, error) {
-	logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
+	logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
 	now := time.Now()
 	logger.Debugf("[%v]<=[%v], sender [%s], recipient [%s]?", script.Deadline, now, script.Sender.UniqueID(), script.Recipient.UniqueID())
 	return script.Deadline.Before(now) && bytes.Equal(script.HashInfo.Hash, s.Hash), nil

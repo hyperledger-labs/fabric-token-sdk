@@ -49,9 +49,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		}
 		outs = append(outs, &Output{
 			Output: &token2.Token{
-				Owner: &token2.Owner{
-					Raw: owners[i],
-				},
+				Owner:    owners[i],
 				Type:     tokenType,
 				Quantity: q.Hex(),
 			},

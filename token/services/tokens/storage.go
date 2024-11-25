@@ -139,7 +139,7 @@ func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error 
 			TxID:           tta.txID,
 			Index:          tta.index,
 			IssuerRaw:      tta.issuer,
-			OwnerRaw:       tta.tok.Owner.Raw,
+			OwnerRaw:       tta.tok.Owner,
 			OwnerType:      tta.ownerType,
 			OwnerIdentity:  tta.ownerIdentity,
 			OwnerWalletID:  tta.ownerWalletID,

@@ -90,12 +90,12 @@ func (q *MockQueryService) Add(key string, t *token2.UnspentToken) {
 }
 
 func (q *MockQueryService) WarmupCache(walletID, tokenType string) {
-	//fmt.Printf("try to find by %s %s\n", walletID, tokenType)
+	// fmt.Printf("try to find by %s %s\n", walletID, tokenType)
 	keys := make([]string, 0, len(q.kvs))
 	for k := range q.kvs {
 		// do some filtering
 		if strings.Contains(k, walletID) && strings.Contains(k, tokenType) {
-			//fmt.Printf("filter key=%s\n", k)
+			// fmt.Printf("filter key=%s\n", k)
 			keys = append(keys, k)
 		}
 	}
@@ -134,7 +134,7 @@ func (q *MockQueryService) SpendableTokensIteratorBy(ctx context.Context, wallet
 	return collections.Map(it, func(ut *token2.UnspentToken) (*token2.UnspentTokenInWallet, error) {
 		return &token2.UnspentTokenInWallet{
 			Id:       ut.Id,
-			WalletID: string(ut.Owner.Raw),
+			WalletID: string(ut.Owner),
 			Type:     ut.Type,
 			Quantity: ut.Quantity,
 		}, nil
@@ -181,7 +181,7 @@ func (n *NoLock) IsLocked(id *token2.ID) bool {
 }
 
 type TokenFilter struct {
-	Wallet   *token2.Owner
+	Wallet   []byte
 	WalletID string
 }
 
@@ -190,5 +190,5 @@ func (c *TokenFilter) ID() string {
 }
 
 func (c *TokenFilter) ContainsToken(token *token2.UnspentToken) bool {
-	return bytes.Equal(token.Owner.Raw, c.Wallet.Raw)
+	return bytes.Equal(token.Owner, c.Wallet)
 }

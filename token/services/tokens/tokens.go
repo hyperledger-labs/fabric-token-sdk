@@ -279,7 +279,7 @@ func (t *Tokens) parse(auth driver.Authorization, txID string, md MetaData, is *
 			continue
 		}
 
-		ownerType, ownerIdentity, err := auth.OwnerType(tok.Owner.Raw)
+		ownerType, ownerIdentity, err := auth.OwnerType(tok.Owner)
 		if err != nil {
 			logger.Errorf("could not unmarshal identity when storing token: %s", err.Error())
 			continue

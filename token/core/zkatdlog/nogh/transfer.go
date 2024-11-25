@@ -92,20 +92,20 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 		if output.Owner == nil {
 			return nil, nil, errors.Errorf("failed to get owner for %dth output: nil owner", i)
 		}
-		owners = append(owners, output.Owner.Raw)
-		if len(output.Owner.Raw) == 0 { // redeem
-			receivers = append(receivers, output.Owner.Raw)
+		owners = append(owners, output.Owner)
+		if len(output.Owner) == 0 { // redeem
+			receivers = append(receivers, output.Owner)
 			outputAuditInfos = append(outputAuditInfos, []byte{})
 			continue
 		}
-		recipients, err := s.Deserializer.Recipients(output.Owner.Raw)
+		recipients, err := s.Deserializer.Recipients(output.Owner)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting recipients")
 		}
 		receivers = append(receivers, recipients...)
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Owner.Raw, s.WalletService)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Owner, s.WalletService)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner.Raw).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
 		}
 		outputAuditInfos = append(outputAuditInfos, auditInfo...)
 	}
@@ -221,7 +221,7 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMe
 		if err != nil {
 			return errors.Wrap(err, "failed getting token in the clear")
 		}
-		s.Logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner.Raw))
+		s.Logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
 	}
 
 	return transfer.NewVerifier(getTokenData(tr.InputTokens), com, pp).Verify(tr.Proof)

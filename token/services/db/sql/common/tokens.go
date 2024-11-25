@@ -259,13 +259,11 @@ func (db *TokenDB) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
 	for rows.Next() {
 		id := token.ID{}
 		tok := token.Token{
-			Owner: &token.Owner{
-				Raw: []byte{},
-			},
+			Owner:    []byte{},
 			Type:     "",
 			Quantity: "",
 		}
-		if err := rows.Scan(&id.TxId, &id.Index, &tok.Owner.Raw, &tok.Type, &tok.Quantity); err != nil {
+		if err := rows.Scan(&id.TxId, &id.Index, &tok.Owner, &tok.Type, &tok.Quantity); err != nil {
 			return tokens, err
 		}
 
@@ -317,16 +315,12 @@ func (db *TokenDB) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 				TxId:  "",
 				Index: 0,
 			},
-			Owner: &token.Owner{
-				Raw: []byte{},
-			},
+			Owner:    []byte{},
 			Type:     "",
 			Quantity: "",
-			Issuer: &token.Owner{
-				Raw: []byte{},
-			},
+			Issuer:   []byte{},
 		}
-		if err := rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner.Raw, &tok.Type, &tok.Quantity, &tok.Issuer.Raw); err != nil {
+		if err := rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner, &tok.Type, &tok.Quantity, &tok.Issuer); err != nil {
 			return nil, err
 		}
 		tokens = append(tokens, &tok)
@@ -498,7 +492,7 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 			return tokens, err
 		}
 		tok := &token.Token{
-			Owner:    &token.Owner{Raw: ownerRaw},
+			Owner:    ownerRaw,
 			Type:     typ,
 			Quantity: quantity,
 		}
@@ -927,9 +921,7 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 		return nil, owners, nil
 	}
 	return &token.Token{
-		Owner: &token.Owner{
-			Raw: raw,
-		},
+		Owner:    raw,
 		Type:     tokenType,
 		Quantity: quantity,
 	}, owners, nil
@@ -1076,10 +1068,8 @@ func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
 		return nil, err
 	}
 	return &token.UnspentToken{
-		Id: &id,
-		Owner: &token.Owner{
-			Raw: owner,
-		},
+		Id:       &id,
+		Owner:    owner,
 		Type:     typ,
 		Quantity: quantity,
 	}, err

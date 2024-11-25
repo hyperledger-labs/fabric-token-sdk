@@ -60,7 +60,7 @@ func (t *Token) GetTokenInTheClear(meta *Metadata, pp *crypto.PublicParams) (*to
 	return &token2.Token{
 		Type:     meta.Type,
 		Quantity: "0x" + meta.Value.String(),
-		Owner:    &token2.Owner{Raw: t.Owner},
+		Owner:    t.Owner,
 	}, nil
 }
 
