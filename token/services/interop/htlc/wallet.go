@@ -357,22 +357,22 @@ func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
 			logger.Debugf("no more tokens!")
 			return nil, nil
 		}
-		owner, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
+		owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
 		if err != nil {
-			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
+			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
 			continue
 		}
 		if owner.Type == ScriptType {
 			script := &Script{}
 			if err := json.Unmarshal(owner.Identity, script); err != nil {
-				logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
+				logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
 				continue
 			}
 			if script.Sender.IsNone() {
-				logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
+				logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
 				continue
 			}
-			logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
+			logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
 
 			pickItem, err := f.selector(tok, script)
 			if err != nil {

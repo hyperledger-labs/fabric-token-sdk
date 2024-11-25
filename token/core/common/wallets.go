@@ -43,7 +43,7 @@ func (w *AuditorWallet) Contains(identity driver.Identity) bool {
 }
 
 func (w *AuditorWallet) ContainsToken(token *token.UnspentToken) bool {
-	return w.Contains(token.Owner.Raw)
+	return w.Contains(token.Owner)
 }
 
 func (w *AuditorWallet) GetAuditorIdentity() (driver.Identity, error) {
@@ -88,7 +88,7 @@ func (w *IssuerWallet) Contains(identity driver.Identity) bool {
 }
 
 func (w *IssuerWallet) ContainsToken(token *token.UnspentToken) bool {
-	return w.Contains(token.Owner.Raw)
+	return w.Contains(token.Owner)
 }
 
 func (w *IssuerWallet) GetIssuerIdentity(tokenType string) (driver.Identity, error) {
@@ -116,7 +116,7 @@ func (w *IssuerWallet) HistoryTokens(opts *driver.ListTokensOptions) (*token.Iss
 			continue
 		}
 
-		if !w.Contains(t.Issuer.Raw) {
+		if !w.Contains(t.Issuer) {
 			w.Logger.Debugf("issuer wallet [%s]: discarding token, issuer does not belong to wallet", w.ID())
 			continue
 		}
@@ -152,7 +152,7 @@ func (w *CertifierWallet) Contains(identity driver.Identity) bool {
 }
 
 func (w *CertifierWallet) ContainsToken(token *token.UnspentToken) bool {
-	return w.Contains(token.Owner.Raw)
+	return w.Contains(token.Owner)
 }
 
 func (w *CertifierWallet) GetCertifierIdentity() (driver.Identity, error) {
@@ -193,7 +193,7 @@ func (w *LongTermOwnerWallet) Contains(identity driver.Identity) bool {
 }
 
 func (w *LongTermOwnerWallet) ContainsToken(token *token.UnspentToken) bool {
-	return w.Contains(token.Owner.Raw)
+	return w.Contains(token.Owner)
 }
 
 func (w *LongTermOwnerWallet) GetRecipientIdentity() (driver.Identity, error) {
@@ -309,7 +309,7 @@ func (w *AnonymousOwnerWallet) Contains(identity driver.Identity) bool {
 
 // ContainsToken returns true if the passed token is owned by this wallet
 func (w *AnonymousOwnerWallet) ContainsToken(token *token.UnspentToken) bool {
-	return w.Contains(token.Owner.Raw)
+	return w.Contains(token.Owner)
 }
 
 func (w *AnonymousOwnerWallet) GetRecipientIdentity() (driver.Identity, error) {

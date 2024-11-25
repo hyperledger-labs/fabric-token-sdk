@@ -90,7 +90,7 @@ func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Q
 		selected := filter.ContainsToken(t)
 		if !selected {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("token [%s,%s,%v] owner does not belong to the passed wallet", view.Identity(t.Owner.Raw), q, selected)
+				logger.Debugf("token [%s,%s,%v] owner does not belong to the passed wallet", view.Identity(t.Owner), q, selected)
 			}
 			continue
 		}

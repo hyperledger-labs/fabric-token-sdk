@@ -123,7 +123,7 @@ func BenchmarkSelectorParallel(b *testing.B) {
 func setup(s *Setting) {
 
 	walletID := "wallet0"
-	walletOwner := &token2.Owner{Raw: []byte(walletID)}
+	walletOwner := []byte(walletID)
 
 	walletIDByRawIdentity := func(rawIdentity []byte) string {
 		return string(rawIdentity)
@@ -145,7 +145,7 @@ func setup(s *Setting) {
 			Quantity: q.Decimal(),
 		}
 
-		k := fmt.Sprintf("etoken.%s.%s.%s.%d", string(walletOwner.Raw), testutils.TokenType, t.Id.TxId, t.Id.Index)
+		k := fmt.Sprintf("etoken.%s.%s.%s.%d", string(walletOwner), testutils.TokenType, t.Id.TxId, t.Id.Index)
 		qs.Add(k, t)
 	}
 

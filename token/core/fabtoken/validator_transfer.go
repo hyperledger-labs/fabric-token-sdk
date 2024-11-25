@@ -22,15 +22,15 @@ import (
 func TransferSignatureValidate(ctx *Context) error {
 	ctx.InputTokens = ctx.TransferAction.InputTokens
 	for _, tok := range ctx.InputTokens {
-		ctx.Logger.Debugf("check sender [%s]", driver.Identity(tok.Owner.Raw).UniqueID())
-		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner.Raw)
+		ctx.Logger.Debugf("check sender [%s]", driver.Identity(tok.Owner).UniqueID())
+		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner)
 		if err != nil {
-			return errors.Wrapf(err, "failed deserializing owner [%v][%s]", tok, driver.Identity(tok.Owner.Raw).UniqueID())
+			return errors.Wrapf(err, "failed deserializing owner [%v][%s]", tok, driver.Identity(tok.Owner).UniqueID())
 		}
-		ctx.Logger.Debugf("signature verification [%v][%s]", tok, driver.Identity(tok.Owner.Raw).UniqueID())
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(tok.Owner.Raw, verifier)
+		ctx.Logger.Debugf("signature verification [%v][%s]", tok, driver.Identity(tok.Owner).UniqueID())
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(tok.Owner, verifier)
 		if err != nil {
-			return errors.Wrapf(err, "failed signature verification [%v][%s]", tok, driver.Identity(tok.Owner.Raw).UniqueID())
+			return errors.Wrapf(err, "failed signature verification [%v][%s]", tok, driver.Identity(tok.Owner).UniqueID())
 		}
 		ctx.Signatures = append(ctx.Signatures, sigma)
 	}
@@ -90,7 +90,7 @@ func TransferHTLCValidate(ctx *Context) error {
 	now := time.Now()
 
 	for i, in := range ctx.InputTokens {
-		owner, err := identity.UnmarshalTypedIdentity(in.Owner.Raw)
+		owner, err := identity.UnmarshalTypedIdentity(in.Owner)
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal owner of input token")
 		}
@@ -115,7 +115,7 @@ func TransferHTLCValidate(ctx *Context) error {
 			}
 
 			// check owner field
-			script, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner.Raw, tok.Owner.Raw, now)
+			script, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner, tok.Owner, now)
 			if err != nil {
 				return errors.Wrap(err, "failed to verify transfer from htlc script")
 			}
@@ -142,7 +142,7 @@ func TransferHTLCValidate(ctx *Context) error {
 		}
 
 		// if it is an htlc script then the deadline must still be valid
-		owner, err := identity.UnmarshalTypedIdentity(out.Output.Owner.Raw)
+		owner, err := identity.UnmarshalTypedIdentity(out.Output.Owner)
 		if err != nil {
 			return err
 		}

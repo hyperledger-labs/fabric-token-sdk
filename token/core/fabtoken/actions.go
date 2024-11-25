@@ -43,7 +43,7 @@ func (t *Output) Serialize() ([]byte, error) {
 // IsRedeem returns true if the owner of a Output is empty
 // todo update interface to account for nil t.Output.Owner and nil t.Output
 func (t *Output) IsRedeem() bool {
-	return len(t.Output.Owner.Raw) == 0
+	return len(t.Output.Owner) == 0
 }
 
 // IssueAction encodes a fabtoken Issue

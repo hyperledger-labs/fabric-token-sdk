@@ -27,7 +27,7 @@ const defaultCurrency = "CHF"
 
 var (
 	logger                    = flogging.MustGetLogger("token-sdk.selector.tests")
-	defaultWalletOwner        = &token.Owner{Raw: []byte{1, 2, 3}}
+	defaultWalletOwner        = []byte{1, 2, 3}
 	defaultTokenFilter        = &TokenFilter{Wallet: defaultWalletOwner}
 	txId               uint32 = 0
 )
@@ -158,7 +158,7 @@ func (m *enhancedManager) UpdateTokens(deleted []*token.ID, added []token.Unspen
 				TxID:           t.Id.TxId,
 				Index:          t.Id.Index,
 				IssuerRaw:      []byte{},
-				OwnerRaw:       t.Owner.Raw,
+				OwnerRaw:       t.Owner,
 				OwnerType:      "idemix",
 				OwnerIdentity:  []byte{},
 				Ledger:         []byte("ledger"),

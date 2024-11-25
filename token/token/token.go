@@ -25,16 +25,10 @@ func (id ID) String() string {
 	return fmt.Sprintf("[%s:%d]", id.TxId, id.Index)
 }
 
-// Owner holds the identity of a token owner
-type Owner struct {
-	// Raw is the serialization of the identity
-	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3" json:"raw,omitempty"`
-}
-
 // Token is the result of issue and transfer transactions
 type Token struct {
 	// Owner is the token owner
-	Owner *Owner `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
+	Owner []byte `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	// Type is the type of the token
 	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 	// Quantity is the number of units of Type carried in the token.
@@ -46,14 +40,14 @@ type IssuedToken struct {
 	// Id is used to uniquely identify the token in the ledger
 	Id *ID `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Owner is the token owner
-	Owner *Owner `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
+	Owner []byte `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	// Type is the type of the token
 	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 	// Quantity represents the number of units of Type that this unspent token holds.
 	// It is formatted in decimal representation
 	Quantity string `protobuf:"bytes,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
-
-	Issuer *Owner
+	// Issuer is the issuer of this token
+	Issuer []byte
 }
 
 type IssuedTokens struct {
@@ -104,7 +98,7 @@ type UnspentToken struct {
 	// Id is used to uniquely identify the token in the ledger
 	Id *ID
 	// Owner is the token owner
-	Owner *Owner
+	Owner []byte
 	// Type is the type of the token
 	Type string
 	// Quantity represents the number of units of Type that this unspent token holds.

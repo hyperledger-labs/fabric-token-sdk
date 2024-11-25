@@ -52,8 +52,8 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 
 	var senders []driver.Identity
 	for _, tok := range inputTokens {
-		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner.Raw))
-		senders = append(senders, tok.Owner.Raw)
+		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
+		senders = append(senders, tok.Owner)
 	}
 
 	// prepare outputs
@@ -88,28 +88,28 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 		if output.Output == nil || output.Output.Owner == nil {
 			return nil, nil, errors.Errorf("failed to transfer: invalid output at index %d", i)
 		}
-		if len(output.Output.Owner.Raw) == 0 { // redeem
-			receivers = append(receivers, output.Output.Owner.Raw)
+		if len(output.Output.Owner) == 0 { // redeem
+			receivers = append(receivers, output.Output.Owner)
 			outputAuditInfos = append(outputAuditInfos, []byte{})
 			continue
 		}
-		recipients, err := s.Deserializer.Recipients(output.Output.Owner.Raw)
+		recipients, err := s.Deserializer.Recipients(output.Output.Owner)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting recipients")
 		}
 		receivers = append(receivers, recipients...)
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Output.Owner.Raw, ws)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Output.Owner, ws)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Output.Owner.Raw).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Output.Owner).String())
 		}
 		outputAuditInfos = append(outputAuditInfos, auditInfo...)
 	}
 
 	var senderAuditInfos [][]byte
 	for _, t := range inputTokens {
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner.Raw, ws)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner, ws)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner.Raw).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner).String())
 		}
 		senderAuditInfos = append(senderAuditInfos, auditInfo...)
 	}

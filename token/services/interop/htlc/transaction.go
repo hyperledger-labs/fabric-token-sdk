@@ -200,7 +200,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
 	}
-	owner, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
+	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
 	if err != nil {
 		return err
 	}
@@ -225,14 +225,14 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	}
 	logger.Debugf("registering signer for reclaim...")
 	if err := sigService.RegisterSigner(
-		tok.Owner.Raw,
+		tok.Owner,
 		signer,
 		verifier,
 	); err != nil {
 		return err
 	}
 
-	if err := t.Binder.Bind(script.Sender, tok.Owner.Raw); err != nil {
+	if err := t.Binder.Bind(script.Sender, tok.Owner); err != nil {
 		return err
 	}
 
@@ -250,7 +250,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
 	}
 
-	owner, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
+	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
 	if err != nil {
 		return err
 	}
@@ -283,7 +283,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return err
 	}
 	if err := sigService.RegisterSigner(
-		tok.Owner.Raw,
+		tok.Owner,
 		&ClaimSigner{
 			Recipient: recipientSigner,
 			Preimage:  preImage,
@@ -300,7 +300,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return err
 	}
 
-	if err := t.Binder.Bind(script.Recipient, tok.Owner.Raw); err != nil {
+	if err := t.Binder.Bind(script.Recipient, tok.Owner); err != nil {
 		return err
 	}
 

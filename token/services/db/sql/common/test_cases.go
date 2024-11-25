@@ -267,7 +267,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 	assert.Len(t, tok.ByType("TST").Tokens, 23, "expect filter on type to work")
 	for _, token := range tok.Tokens {
 		assert.NotNil(t, token.Owner, "expected owner to not be nil")
-		assert.NotEmpty(t, token.Owner.Raw, "expected owner raw to not be empty")
+		assert.NotEmpty(t, token.Owner, "expected owner raw to not be empty")
 	}
 
 	tokens := getTokensBy(t, db, "alice", "")
@@ -477,7 +477,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 	assert.Equal(t, "0x02", tok[1].Quantity, "expected tx101-1 to be returned")
 	for _, token := range tok {
 		assert.NotNil(t, token.Owner, "expected owner to not be nil")
-		assert.NotEmpty(t, token.Owner.Raw, "expected owner raw to not be empty")
+		assert.NotEmpty(t, token.Owner, "expected owner raw to not be empty")
 	}
 
 	tok, err = db.ListAuditTokens()
@@ -552,9 +552,9 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 	assert.Equal(t, "0x03", tok.Tokens[2].Quantity, "expected tx102-0 to be returned")
 	for _, token := range tok.Tokens {
 		assert.NotNil(t, token.Issuer, "expected issuer to not be nil")
-		assert.NotEmpty(t, token.Issuer.Raw, "expected issuer raw to not be empty")
+		assert.NotEmpty(t, token.Issuer, "expected issuer raw to not be empty")
 		assert.NotNil(t, token.Owner, "expected owner to not be nil")
-		assert.NotEmpty(t, token.Owner.Raw, "expected owner raw to not be empty")
+		assert.NotEmpty(t, token.Owner, "expected owner raw to not be empty")
 	}
 
 	tok, err = db.ListHistoryIssuedTokens()
@@ -562,9 +562,9 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 	assert.Len(t, tok.ByType("DEF").Tokens, 1, "expected tx102-0 to be filtered")
 	for _, token := range tok.Tokens {
 		assert.NotNil(t, token.Issuer, "expected issuer to not be nil")
-		assert.NotEmpty(t, token.Issuer.Raw, "expected issuer raw to not be empty")
+		assert.NotEmpty(t, token.Issuer, "expected issuer raw to not be empty")
 		assert.NotNil(t, token.Owner, "expected owner to not be nil")
-		assert.NotEmpty(t, token.Owner.Raw, "expected owner raw to not be empty")
+		assert.NotEmpty(t, token.Owner, "expected owner raw to not be empty")
 	}
 }
 

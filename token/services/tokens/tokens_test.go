@@ -28,7 +28,7 @@ func (a authMock) Issued(issuer driver.Identity, tok *token2.Token) bool {
 	return false
 }
 func (a authMock) IsMine(tok *token2.Token) (string, []string, bool) {
-	return "", []string{string(tok.Owner.Raw)}, true
+	return "", []string{string(tok.Owner)}, true
 }
 func (a authMock) AmIAnAuditor() bool {
 	return false
@@ -53,9 +53,7 @@ func (md mdMock) GetToken(raw []byte) (*token2.Token, token.Identity, []byte, er
 		parsed = strings.Split(string(raw), ",")
 	}
 	return &token2.Token{
-		Owner: &token2.Owner{
-			Raw: []byte(parsed[0]),
-		},
+		Owner:    []byte(parsed[0]),
 		Type:     parsed[1],
 		Quantity: parsed[2],
 	}, []byte{}, []byte{}, nil

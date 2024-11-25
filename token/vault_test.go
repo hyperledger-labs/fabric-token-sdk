@@ -45,7 +45,7 @@ func TestQueryEngine_ListAuditTokens(t *testing.T) {
 	mockQE := &mock.QueryEngine{}
 	expectedIDs := []*token.ID{{TxId: "a_transaction", Index: 0}}
 	expectedTokens := []*token.Token{{
-		Owner:    &token.Owner{Raw: []byte("some_owner")},
+		Owner:    []byte("some_owner"),
 		Type:     "some_type",
 		Quantity: "some_quantity",
 	}}
@@ -73,7 +73,7 @@ func TestQueryEngine_ListAuditTokens_IsPendingTrue(t *testing.T) {
 	mockQE := &mock.QueryEngine{}
 	expectedIDs := []*token.ID{{TxId: "a_transaction", Index: 0}}
 	expectedTokens := []*token.Token{{
-		Owner:    &token.Owner{Raw: []byte("some_owner")},
+		Owner:    []byte("some_owner"),
 		Type:     "some_type",
 		Quantity: "some_quantity",
 	}}
@@ -196,7 +196,7 @@ func TestQueryEngine_PublicParams_Error(t *testing.T) {
 func TestQueryEngine_GetTokens(t *testing.T) {
 	mockQE := &mock.QueryEngine{}
 	expectedTokens := []*token.Token{{
-		Owner:    &token.Owner{Raw: []byte("some_owner")},
+		Owner:    []byte("some_owner"),
 		Type:     "some_type",
 		Quantity: "some_quantity",
 	}}

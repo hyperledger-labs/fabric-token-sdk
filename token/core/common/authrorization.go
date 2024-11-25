@@ -53,7 +53,7 @@ func NewTMSAuthorization(logger logging.Logger, publicParameters driver.PublicPa
 // IsMine returns true if the passed token is owned by an owner wallet.
 // It returns the ID of the owner wallet and no additional owner identifiers.
 func (w *WalletBasedAuthorization) IsMine(tok *token2.Token) (string, []string, bool) {
-	wallet, err := w.WalletService.OwnerWallet(tok.Owner.Raw)
+	wallet, err := w.WalletService.OwnerWallet(tok.Owner)
 	if err != nil {
 		return "", nil, false
 	}
