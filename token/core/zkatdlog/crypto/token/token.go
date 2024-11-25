@@ -162,3 +162,5 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, 
 	}
 	return com, nil
 }
+
+type ConversionWitness struct{}

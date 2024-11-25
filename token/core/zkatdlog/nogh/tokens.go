@@ -41,21 +41,25 @@ func (s *TokensService) IsSpendable(outputRaw []byte, metadataRaw []byte) error 
 	return err
 }
 
-func (s *TokensService) DeserializeToken(outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, error) {
+func (s *TokensService) DeserializeToken(outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
+	// Here we have to check if what we get in input is already as expected.
+	// If not, we need to check if a conversion is possible.
+	// If not, a failure is to be returned
+
 	// get zkatdlog token
 	output, err := s.getOutput(outputRaw, false)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed getting token output")
+		return nil, nil, nil, errors.Wrapf(err, "failed getting token output")
 	}
 
 	// get metadata
 	metadata := &token2.Metadata{}
 	err = metadata.Deserialize(metadataRaw)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to deserialize token metadata")
+		return nil, nil, nil, errors.Wrap(err, "failed to deserialize token metadata")
 	}
 
-	return output, metadata, nil
+	return output, metadata, nil, nil
 }
 
 func (s *TokensService) deserializeToken(outputRaw []byte, metadataRaw []byte, checkOwner bool) (*token2.Token, *token2.Metadata, *token.Token, error) {

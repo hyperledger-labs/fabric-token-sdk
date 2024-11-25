@@ -105,7 +105,6 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	deserializer := ws.Deserializer
 	ip := ws.IdentityProvider
 
-	tokDeserializer := &TokenDeserializer{}
 	authorization := common.NewAuthorizationMultiplexer(
 		common.NewTMSAuthorization(logger, ppm.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
@@ -144,7 +143,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 			zkatdlog.NewAuditorService(
 				logger,
 				ppm,
-				common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, tokDeserializer),
+				common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
 				deserializer,
 				driverMetrics,
 				d.tracerProvider,
