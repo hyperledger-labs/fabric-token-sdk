@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -24,7 +23,7 @@ type OutputMetadata struct {
 
 // Deserialize un-marshals Metadata
 func (m *OutputMetadata) Deserialize(b []byte) error {
-	typed, err := comm.UnmarshalTypedToken(b)
+	typed, err := fabtoken.UnmarshalTypedToken(b)
 	if err != nil {
 		return errors.Wrapf(err, "failed deserializing metadata")
 	}
@@ -37,7 +36,7 @@ func (m *OutputMetadata) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed serializing token")
 	}
-	return comm.WrapMetadataWithType(raw)
+	return fabtoken.WrapMetadataWithType(raw)
 }
 
 // Output carries the output of an action
@@ -54,7 +53,7 @@ func (t *Output) Serialize() ([]byte, error) {
 
 // Deserialize unmarshals Token
 func (t *Output) Deserialize(bytes []byte) error {
-	typed, err := comm.UnmarshalTypedToken(bytes)
+	typed, err := fabtoken.UnmarshalTypedToken(bytes)
 	if err != nil {
 		return errors.Wrapf(err, "failed deserializing token")
 	}
