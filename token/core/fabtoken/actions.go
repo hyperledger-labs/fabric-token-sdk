@@ -52,6 +52,16 @@ func (t *Output) Serialize() ([]byte, error) {
 	return fabtoken.WrapTokenWithType(raw)
 }
 
+// Deserialize unmarshals Token
+func (t *Output) Deserialize(bytes []byte) error {
+	typed, err := comm.UnmarshalTypedToken(bytes)
+	if err != nil {
+		return errors.Wrapf(err, "failed deserializing token")
+	}
+	t.Output = &token.Token{}
+	return json.Unmarshal(typed.Token, t.Output)
+}
+
 // IsRedeem returns true if the owner of a Token is empty
 // todo update interface to account for nil t.Token.Owner and nil t.Token
 func (t *Output) IsRedeem() bool {

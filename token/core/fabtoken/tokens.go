@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	"encoding/json"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -25,8 +23,8 @@ func NewTokensService() *TokensService {
 
 // Deobfuscate returns a deserialized token and the identity of its issuer
 func (s *TokensService) Deobfuscate(outputRaw []byte, tokenInfoRaw []byte) (*token2.Token, driver.Identity, error) {
-	tok := &token2.Token{}
-	if err := json.Unmarshal(outputRaw, tok); err != nil {
+	tok := &Output{}
+	if err := tok.Deserialize(outputRaw); err != nil {
 		return nil, nil, errors.Wrap(err, "failed unmarshalling token")
 	}
 
@@ -35,7 +33,7 @@ func (s *TokensService) Deobfuscate(outputRaw []byte, tokenInfoRaw []byte) (*tok
 		return nil, nil, errors.Wrap(err, "failed unmarshalling token information")
 	}
 
-	return tok, metadata.Issuer, nil
+	return tok.Output, metadata.Issuer, nil
 }
 
 func (s *TokensService) IsSpendable(output []byte, outputMetadata []byte) error {
