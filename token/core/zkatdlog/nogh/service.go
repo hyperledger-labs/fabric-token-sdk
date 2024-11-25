@@ -7,24 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"context"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
-
-type TokenCommitmentLoader interface {
-	GetTokenOutputs(ctx context.Context, ids []*token2.ID) (map[string]*token.Token, error)
-}
-
-type TokenLoader interface {
-	LoadTokens(ctx context.Context, ids []*token2.ID) ([]*token.Token, []*token.Metadata, []driver.Identity, error)
-}
 
 type Service struct {
 	*common.Service[*crypto.PublicParams]

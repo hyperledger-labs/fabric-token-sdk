@@ -340,10 +340,10 @@ func TestMetadata_GetToken(t *testing.T) {
 	expectedToken := &token2.Token{}
 	expectedIdentity := token.Identity("identity1")
 	expectedTokenInfoRaw := []byte("token info raw")
-	mockTokenService.GetTokenInfoStub = func(metadata *driver.TokenRequestMetadata, raw []byte) ([]byte, error) {
+	mockTokenService.ExtractMetadataStub = func(metadata *driver.TokenRequestMetadata, raw []byte) ([]byte, error) {
 		return expectedTokenInfoRaw, nil
 	}
-	mockTokenService.DeserializeTokenStub = func(raw []byte, tokenInfoRaw []byte) (*token2.Token, token.Identity, error) {
+	mockTokenService.DeobfuscateStub = func(raw []byte, tokenInfoRaw []byte) (*token2.Token, token.Identity, error) {
 		return expectedToken, expectedIdentity, nil
 	}
 

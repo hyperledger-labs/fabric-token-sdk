@@ -114,6 +114,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
 	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
+	tokensService := zkatdlog.NewTokensService(ppm)
 	service, err := zkatdlog.NewTokenService(
 		logger,
 		ws,
@@ -131,10 +132,11 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 				logger,
 				ppm,
 				ws,
-				common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer),
+				common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
 				deserializer,
 				driverMetrics,
 				d.tracerProvider,
+				tokensService,
 			),
 			observables.NewTransfer(tracerProvider),
 		),
@@ -149,7 +151,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 			),
 			observables.NewAudit(tracerProvider),
 		),
-		zkatdlog.NewTokensService(ppm),
+		tokensService,
 		authorization,
 	)
 	if err != nil {

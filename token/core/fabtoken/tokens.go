@@ -24,7 +24,7 @@ func NewTokensService() *TokensService {
 }
 
 // DeserializeToken returns a deserialized token and the identity of its issuer
-func (s *TokensService) DeserializeToken(outputRaw []byte, tokenInfoRaw []byte) (*token2.Token, driver.Identity, error) {
+func (s *TokensService) Deobfuscate(outputRaw []byte, tokenInfoRaw []byte) (*token2.Token, driver.Identity, error) {
 	tok := &token2.Token{}
 	if err := json.Unmarshal(outputRaw, tok); err != nil {
 		return nil, nil, errors.Wrap(err, "failed unmarshalling token")

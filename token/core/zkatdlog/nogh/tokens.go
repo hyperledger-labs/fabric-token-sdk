@@ -25,38 +25,59 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	return &TokensService{TokensService: common.NewTokensService(), PublicParametersManager: publicParametersManager}
 }
 
-// DeserializeToken un-marshals a token and token info from raw bytes
+// Deobfuscate unmarshals a token and token info from raw bytes
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer
-func (s *TokensService) DeserializeToken(outputRaw []byte, metadataRaw []byte) (*token.Token, driver.Identity, error) {
-	return s.deserializeToken(outputRaw, metadataRaw, false)
+func (s *TokensService) Deobfuscate(outputRaw []byte, metadataRaw []byte) (*token.Token, driver.Identity, error) {
+	_, metadata, tok, err := s.deserializeToken(outputRaw, metadataRaw, false)
+	if err != nil {
+		return nil, nil, err
+	}
+	return tok, metadata.Issuer, nil
 }
 
 func (s *TokensService) IsSpendable(outputRaw []byte, metadataRaw []byte) error {
-	_, _, err := s.deserializeToken(outputRaw, metadataRaw, true)
+	_, _, _, err := s.deserializeToken(outputRaw, metadataRaw, true)
 	return err
 }
 
-func (s *TokensService) deserializeToken(outputRaw []byte, metadataRaw []byte, checkOwner bool) (*token.Token, driver.Identity, error) {
+func (s *TokensService) DeserializeToken(outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, error) {
 	// get zkatdlog token
-	output, err := s.getOutput(outputRaw, checkOwner)
+	output, err := s.getOutput(outputRaw, false)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting token output")
 	}
 
-	// get token info
-	ti := &token2.Metadata{}
-	err = ti.Deserialize(metadataRaw)
+	// get metadata
+	metadata := &token2.Metadata{}
+	err = metadata.Deserialize(metadataRaw)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to deserialize token information")
-	}
-	pp := s.PublicParametersManager.PublicParams()
-	to, err := output.GetTokenInTheClear(ti, pp)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to deserialize token")
+		return nil, nil, errors.Wrap(err, "failed to deserialize token metadata")
 	}
 
-	return to, ti.Issuer, nil
+	return output, metadata, nil
+}
+
+func (s *TokensService) deserializeToken(outputRaw []byte, metadataRaw []byte, checkOwner bool) (*token2.Token, *token2.Metadata, *token.Token, error) {
+	// get zkatdlog token
+	output, err := s.getOutput(outputRaw, checkOwner)
+	if err != nil {
+		return nil, nil, nil, errors.Wrapf(err, "failed getting token output")
+	}
+
+	// get metadata
+	metadata := &token2.Metadata{}
+	err = metadata.Deserialize(metadataRaw)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "failed to deserialize token metadata")
+	}
+	pp := s.PublicParametersManager.PublicParams()
+
+	tok, err := output.GetTokenInTheClear(metadata, pp)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "failed to deserialize token")
+	}
+	return output, metadata, tok, nil
 }
 
 func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.Token, error) {

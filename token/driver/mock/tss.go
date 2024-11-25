@@ -10,33 +10,33 @@ import (
 )
 
 type TokensService struct {
-	DeserializeTokenStub        func([]byte, []byte) (*token.Token, view.Identity, error)
-	deserializeTokenMutex       sync.RWMutex
-	deserializeTokenArgsForCall []struct {
+	DeobfuscateStub        func([]byte, []byte) (*token.Token, view.Identity, error)
+	deobfuscateMutex       sync.RWMutex
+	deobfuscateArgsForCall []struct {
 		arg1 []byte
 		arg2 []byte
 	}
-	deserializeTokenReturns struct {
+	deobfuscateReturns struct {
 		result1 *token.Token
 		result2 view.Identity
 		result3 error
 	}
-	deserializeTokenReturnsOnCall map[int]struct {
+	deobfuscateReturnsOnCall map[int]struct {
 		result1 *token.Token
 		result2 view.Identity
 		result3 error
 	}
-	GetTokenInfoStub        func(*driver.TokenRequestMetadata, []byte) ([]byte, error)
-	getTokenInfoMutex       sync.RWMutex
-	getTokenInfoArgsForCall []struct {
+	ExtractMetadataStub        func(*driver.TokenRequestMetadata, []byte) ([]byte, error)
+	extractMetadataMutex       sync.RWMutex
+	extractMetadataArgsForCall []struct {
 		arg1 *driver.TokenRequestMetadata
 		arg2 []byte
 	}
-	getTokenInfoReturns struct {
+	extractMetadataReturns struct {
 		result1 []byte
 		result2 error
 	}
-	getTokenInfoReturnsOnCall map[int]struct {
+	extractMetadataReturnsOnCall map[int]struct {
 		result1 []byte
 		result2 error
 	}
@@ -56,7 +56,7 @@ type TokensService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokensService) DeserializeToken(arg1 []byte, arg2 []byte) (*token.Token, view.Identity, error) {
+func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, view.Identity, error) {
 	var arg1Copy []byte
 	if arg1 != nil {
 		arg1Copy = make([]byte, len(arg1))
@@ -67,16 +67,16 @@ func (fake *TokensService) DeserializeToken(arg1 []byte, arg2 []byte) (*token.To
 		arg2Copy = make([]byte, len(arg2))
 		copy(arg2Copy, arg2)
 	}
-	fake.deserializeTokenMutex.Lock()
-	ret, specificReturn := fake.deserializeTokenReturnsOnCall[len(fake.deserializeTokenArgsForCall)]
-	fake.deserializeTokenArgsForCall = append(fake.deserializeTokenArgsForCall, struct {
+	fake.deobfuscateMutex.Lock()
+	ret, specificReturn := fake.deobfuscateReturnsOnCall[len(fake.deobfuscateArgsForCall)]
+	fake.deobfuscateArgsForCall = append(fake.deobfuscateArgsForCall, struct {
 		arg1 []byte
 		arg2 []byte
 	}{arg1Copy, arg2Copy})
-	stub := fake.DeserializeTokenStub
-	fakeReturns := fake.deserializeTokenReturns
-	fake.recordInvocation("DeserializeToken", []interface{}{arg1Copy, arg2Copy})
-	fake.deserializeTokenMutex.Unlock()
+	stub := fake.DeobfuscateStub
+	fakeReturns := fake.deobfuscateReturns
+	fake.recordInvocation("Deobfuscate", []interface{}{arg1Copy, arg2Copy})
+	fake.deobfuscateMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -86,70 +86,70 @@ func (fake *TokensService) DeserializeToken(arg1 []byte, arg2 []byte) (*token.To
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
-func (fake *TokensService) DeserializeTokenCallCount() int {
-	fake.deserializeTokenMutex.RLock()
-	defer fake.deserializeTokenMutex.RUnlock()
-	return len(fake.deserializeTokenArgsForCall)
+func (fake *TokensService) DeobfuscateCallCount() int {
+	fake.deobfuscateMutex.RLock()
+	defer fake.deobfuscateMutex.RUnlock()
+	return len(fake.deobfuscateArgsForCall)
 }
 
-func (fake *TokensService) DeserializeTokenCalls(stub func([]byte, []byte) (*token.Token, view.Identity, error)) {
-	fake.deserializeTokenMutex.Lock()
-	defer fake.deserializeTokenMutex.Unlock()
-	fake.DeserializeTokenStub = stub
+func (fake *TokensService) DeobfuscateCalls(stub func([]byte, []byte) (*token.Token, view.Identity, error)) {
+	fake.deobfuscateMutex.Lock()
+	defer fake.deobfuscateMutex.Unlock()
+	fake.DeobfuscateStub = stub
 }
 
-func (fake *TokensService) DeserializeTokenArgsForCall(i int) ([]byte, []byte) {
-	fake.deserializeTokenMutex.RLock()
-	defer fake.deserializeTokenMutex.RUnlock()
-	argsForCall := fake.deserializeTokenArgsForCall[i]
+func (fake *TokensService) DeobfuscateArgsForCall(i int) ([]byte, []byte) {
+	fake.deobfuscateMutex.RLock()
+	defer fake.deobfuscateMutex.RUnlock()
+	argsForCall := fake.deobfuscateArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *TokensService) DeserializeTokenReturns(result1 *token.Token, result2 view.Identity, result3 error) {
-	fake.deserializeTokenMutex.Lock()
-	defer fake.deserializeTokenMutex.Unlock()
-	fake.DeserializeTokenStub = nil
-	fake.deserializeTokenReturns = struct {
+func (fake *TokensService) DeobfuscateReturns(result1 *token.Token, result2 view.Identity, result3 error) {
+	fake.deobfuscateMutex.Lock()
+	defer fake.deobfuscateMutex.Unlock()
+	fake.DeobfuscateStub = nil
+	fake.deobfuscateReturns = struct {
 		result1 *token.Token
 		result2 view.Identity
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *TokensService) DeserializeTokenReturnsOnCall(i int, result1 *token.Token, result2 view.Identity, result3 error) {
-	fake.deserializeTokenMutex.Lock()
-	defer fake.deserializeTokenMutex.Unlock()
-	fake.DeserializeTokenStub = nil
-	if fake.deserializeTokenReturnsOnCall == nil {
-		fake.deserializeTokenReturnsOnCall = make(map[int]struct {
+func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token, result2 view.Identity, result3 error) {
+	fake.deobfuscateMutex.Lock()
+	defer fake.deobfuscateMutex.Unlock()
+	fake.DeobfuscateStub = nil
+	if fake.deobfuscateReturnsOnCall == nil {
+		fake.deobfuscateReturnsOnCall = make(map[int]struct {
 			result1 *token.Token
 			result2 view.Identity
 			result3 error
 		})
 	}
-	fake.deserializeTokenReturnsOnCall[i] = struct {
+	fake.deobfuscateReturnsOnCall[i] = struct {
 		result1 *token.Token
 		result2 view.Identity
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *TokensService) GetTokenInfo(arg1 *driver.TokenRequestMetadata, arg2 []byte) ([]byte, error) {
+func (fake *TokensService) ExtractMetadata(arg1 *driver.TokenRequestMetadata, arg2 []byte) ([]byte, error) {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
 		copy(arg2Copy, arg2)
 	}
-	fake.getTokenInfoMutex.Lock()
-	ret, specificReturn := fake.getTokenInfoReturnsOnCall[len(fake.getTokenInfoArgsForCall)]
-	fake.getTokenInfoArgsForCall = append(fake.getTokenInfoArgsForCall, struct {
+	fake.extractMetadataMutex.Lock()
+	ret, specificReturn := fake.extractMetadataReturnsOnCall[len(fake.extractMetadataArgsForCall)]
+	fake.extractMetadataArgsForCall = append(fake.extractMetadataArgsForCall, struct {
 		arg1 *driver.TokenRequestMetadata
 		arg2 []byte
 	}{arg1, arg2Copy})
-	stub := fake.GetTokenInfoStub
-	fakeReturns := fake.getTokenInfoReturns
-	fake.recordInvocation("GetTokenInfo", []interface{}{arg1, arg2Copy})
-	fake.getTokenInfoMutex.Unlock()
+	stub := fake.ExtractMetadataStub
+	fakeReturns := fake.extractMetadataReturns
+	fake.recordInvocation("ExtractMetadata", []interface{}{arg1, arg2Copy})
+	fake.extractMetadataMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -159,46 +159,46 @@ func (fake *TokensService) GetTokenInfo(arg1 *driver.TokenRequestMetadata, arg2 
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *TokensService) GetTokenInfoCallCount() int {
-	fake.getTokenInfoMutex.RLock()
-	defer fake.getTokenInfoMutex.RUnlock()
-	return len(fake.getTokenInfoArgsForCall)
+func (fake *TokensService) ExtractMetadataCallCount() int {
+	fake.extractMetadataMutex.RLock()
+	defer fake.extractMetadataMutex.RUnlock()
+	return len(fake.extractMetadataArgsForCall)
 }
 
-func (fake *TokensService) GetTokenInfoCalls(stub func(*driver.TokenRequestMetadata, []byte) ([]byte, error)) {
-	fake.getTokenInfoMutex.Lock()
-	defer fake.getTokenInfoMutex.Unlock()
-	fake.GetTokenInfoStub = stub
+func (fake *TokensService) ExtractMetadataCalls(stub func(*driver.TokenRequestMetadata, []byte) ([]byte, error)) {
+	fake.extractMetadataMutex.Lock()
+	defer fake.extractMetadataMutex.Unlock()
+	fake.ExtractMetadataStub = stub
 }
 
-func (fake *TokensService) GetTokenInfoArgsForCall(i int) (*driver.TokenRequestMetadata, []byte) {
-	fake.getTokenInfoMutex.RLock()
-	defer fake.getTokenInfoMutex.RUnlock()
-	argsForCall := fake.getTokenInfoArgsForCall[i]
+func (fake *TokensService) ExtractMetadataArgsForCall(i int) (*driver.TokenRequestMetadata, []byte) {
+	fake.extractMetadataMutex.RLock()
+	defer fake.extractMetadataMutex.RUnlock()
+	argsForCall := fake.extractMetadataArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *TokensService) GetTokenInfoReturns(result1 []byte, result2 error) {
-	fake.getTokenInfoMutex.Lock()
-	defer fake.getTokenInfoMutex.Unlock()
-	fake.GetTokenInfoStub = nil
-	fake.getTokenInfoReturns = struct {
+func (fake *TokensService) ExtractMetadataReturns(result1 []byte, result2 error) {
+	fake.extractMetadataMutex.Lock()
+	defer fake.extractMetadataMutex.Unlock()
+	fake.ExtractMetadataStub = nil
+	fake.extractMetadataReturns = struct {
 		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *TokensService) GetTokenInfoReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.getTokenInfoMutex.Lock()
-	defer fake.getTokenInfoMutex.Unlock()
-	fake.GetTokenInfoStub = nil
-	if fake.getTokenInfoReturnsOnCall == nil {
-		fake.getTokenInfoReturnsOnCall = make(map[int]struct {
+func (fake *TokensService) ExtractMetadataReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.extractMetadataMutex.Lock()
+	defer fake.extractMetadataMutex.Unlock()
+	fake.ExtractMetadataStub = nil
+	if fake.extractMetadataReturnsOnCall == nil {
+		fake.extractMetadataReturnsOnCall = make(map[int]struct {
 			result1 []byte
 			result2 error
 		})
 	}
-	fake.getTokenInfoReturnsOnCall[i] = struct {
+	fake.extractMetadataReturnsOnCall[i] = struct {
 		result1 []byte
 		result2 error
 	}{result1, result2}
@@ -279,10 +279,10 @@ func (fake *TokensService) IsSpendableReturnsOnCall(i int, result1 error) {
 func (fake *TokensService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.deserializeTokenMutex.RLock()
-	defer fake.deserializeTokenMutex.RUnlock()
-	fake.getTokenInfoMutex.RLock()
-	defer fake.getTokenInfoMutex.RUnlock()
+	fake.deobfuscateMutex.RLock()
+	defer fake.deobfuscateMutex.RUnlock()
+	fake.extractMetadataMutex.RLock()
+	defer fake.extractMetadataMutex.RUnlock()
 	fake.isSpendableMutex.RLock()
 	defer fake.isSpendableMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
