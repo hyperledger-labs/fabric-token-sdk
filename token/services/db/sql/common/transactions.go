@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -459,7 +460,7 @@ func (t *TokenRequestIterator) Next() (*driver.TokenRequestRecord, error) {
 	); err != nil {
 		return nil, err
 	}
-	r.Status = driver.TxStatus(status)
+	r.Status = status
 	// sqlite database returns nil for empty slice
 	if r.TokenRequest == nil {
 		r.TokenRequest = []byte{}
@@ -468,24 +469,25 @@ func (t *TokenRequestIterator) Next() (*driver.TokenRequestRecord, error) {
 }
 
 func (db *TransactionDB) BeginAtomicWrite() (driver.AtomicWrite, error) {
-	txn, err := db.db.Begin()
-	if err != nil {
-		return nil, err
-	}
-
 	return &AtomicWrite{
-		txn: txn,
-		db:  db,
+		txn: lazy.NewGetter(func() (*sql.Tx, error) {
+			return db.db.Begin()
+		}),
+		db: db,
 	}, nil
 }
 
 type AtomicWrite struct {
-	txn *sql.Tx
+	txn lazy.Getter[*sql.Tx]
 	db  *TransactionDB
 }
 
 func (w *AtomicWrite) Commit() error {
-	if err := w.txn.Commit(); err != nil {
+	tx, err := w.txn.Get()
+	if err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("could not commit transaction: %w", err)
 	}
 	w.txn = nil
@@ -497,7 +499,11 @@ func (w *AtomicWrite) Rollback() {
 		logger.Debug("nothing to roll back")
 		return
 	}
-	if err := w.txn.Rollback(); err != nil && err != sql.ErrTxDone {
+	tx, err := w.txn.Get()
+	if err != nil {
+		logger.Errorf("could not rollback transaction: %w", err)
+	}
+	if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
 		logger.Errorf("error rolling back (ignoring...): %s", err.Error())
 	}
 	w.txn = nil
@@ -521,7 +527,11 @@ func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, stored_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);", w.db.table.Transactions)
 	args := []any{id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Timestamp.UTC()}
 	logger.Debug(query, args)
-	_, err = w.txn.Exec(query, args...)
+	tx, err := w.txn.Get()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(query, args...)
 
 	return ttxDBError(err)
 }
@@ -542,7 +552,11 @@ func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadat
 	query := fmt.Sprintf("INSERT INTO %s (tx_id, request, status, status_message, application_metadata, pp_hash) VALUES ($1, $2, $3, $4, $5, $6)", w.db.table.Requests)
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(ppHash))
 
-	_, err = w.txn.Exec(query, txID, tr, driver.Pending, "", j, ppHash)
+	tx, err := w.txn.Get()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(query, txID, tr, driver.Pending, "", j, ppHash)
 	return ttxDBError(err)
 }
 
@@ -565,7 +579,11 @@ func (w *AtomicWrite) AddMovement(r *driver.MovementRecord) error {
 	query := fmt.Sprintf(`INSERT INTO %s (id, tx_id, enrollment_id, token_type, amount, stored_at) VALUES ($1, $2, $3, $4, $5, $6);`, w.db.table.Movements)
 	args := []any{id, r.TxID, r.EnrollmentID, r.TokenType, amount, now}
 	logger.Debug(query, args)
-	_, err = w.txn.Exec(query, args...)
+	tx, err := w.txn.Get()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(query, args...)
 
 	return ttxDBError(err)
 }
@@ -584,7 +602,11 @@ func (w *AtomicWrite) AddValidationRecord(txID string, meta map[string][]byte) e
 	query := fmt.Sprintf("INSERT INTO %s (tx_id, metadata, stored_at) VALUES ($1, $2, $3)", w.db.table.Validations)
 	logger.Debug(query, txID, len(md), now)
 
-	_, err = w.txn.Exec(query, txID, md, now)
+	tx, err := w.txn.Get()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(query, txID, md, now)
 	return ttxDBError(err)
 }
 

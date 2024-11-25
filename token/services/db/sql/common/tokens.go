@@ -1003,8 +1003,8 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 	// Store ownership
 	span.AddEvent("store_ownerships")
+	query = fmt.Sprintf("INSERT INTO %s (tx_id, idx, wallet_id) VALUES ($1, $2, $3)", t.db.table.Ownership)
 	for _, eid := range owners {
-		query = fmt.Sprintf("INSERT INTO %s (tx_id, idx, wallet_id) VALUES ($1, $2, $3)", t.db.table.Ownership)
 		logger.Debug(query, tr.TxID, tr.Index, eid)
 		span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 		if _, err := t.tx.Exec(query, tr.TxID, tr.Index, eid); err != nil {

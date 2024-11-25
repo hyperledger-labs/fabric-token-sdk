@@ -30,18 +30,6 @@ type (
 	WalletHolder   = db.DriverHolder[driver.WalletDB, driver.WalletDB, *walletDBDriver]
 )
 
-var (
-	identityHolder = db.NewDriverHolder[driver.IdentityDB, driver.IdentityDB, *identityDBDriver](utils.IdentityFunc[driver.IdentityDB]())
-	walletHolder   = db.NewDriverHolder[driver.WalletDB, driver.WalletDB, *walletDBDriver](utils.IdentityFunc[driver.WalletDB]())
-)
-
-func Register(name string, driver driver.IdentityDBDriver) {
-	identityHolder.Register(name, &identityDBDriver{driver})
-	walletHolder.Register(name, &walletDBDriver{driver})
-}
-
-func Drivers() []string { return identityHolder.DriverNames() }
-
 type Manager struct {
 	identityManager *db.Manager[driver.IdentityDB, driver.IdentityDB, *identityDBDriver]
 	walletManager   *db.Manager[driver.WalletDB, driver.WalletDB, *walletDBDriver]
