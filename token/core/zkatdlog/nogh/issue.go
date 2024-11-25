@@ -18,10 +18,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+type IssueMetadataProviderFunc = func(attributes map[string][]byte, opts *driver.IssueOptions) (map[string][]byte, error)
+
 type IssueService struct {
 	PublicParametersManager common2.PublicParametersManager[*crypto.PublicParams]
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
+	IssueMetadataProviders  []IssueMetadataProviderFunc
 	Metrics                 *Metrics
 }
 
@@ -30,12 +33,14 @@ func NewIssueService(
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
 	metrics *Metrics,
+	IssueMetadataProviders []IssueMetadataProviderFunc,
 ) *IssueService {
 	return &IssueService{
 		PublicParametersManager: publicParametersManager,
 		WalletService:           walletService,
 		Deserializer:            deserializer,
 		Metrics:                 metrics,
+		IssueMetadataProviders:  IssueMetadataProviders,
 	}
 }
 
@@ -73,6 +78,15 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, err
 	}
 	s.Metrics.zkIssueDuration.Observe(float64(duration.Milliseconds()))
+
+	actionMetadata := map[string][]byte{}
+	for _, provider := range s.IssueMetadataProviders {
+		actionMetadata, err = provider(actionMetadata, opts)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed generating token action metadata")
+		}
+	}
+	action.Metadata = actionMetadata
 
 	var outputsMetadata [][]byte
 	for _, meta := range zkOutputsMetadata {

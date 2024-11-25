@@ -11,11 +11,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
-	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/pkg/errors"
 )
 
@@ -35,7 +35,8 @@ func NewDeserializer(pp *crypto.PublicParams) (*Deserializer, error) {
 	}
 	m := deserializer.NewTypedVerifierDeserializerMultiplex(idemixDes)
 	m.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes))
-	m.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(m))
+	m.AddTypedVerifierDeserializer(htlc.ScriptType, htlc.NewTypedIdentityDeserializer(m))
+	m.AddTypedVerifierDeserializer(pledge.ScriptType, pledge.NewTypedIdentityDeserializer(m))
 
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(
@@ -80,6 +81,7 @@ type EIDRHDeserializer = deserializer.EIDRHDeserializer
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
 	d.AddDeserializer(msp.IdemixIdentity, &idemix.AuditInfoDeserializer{})
-	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix.AuditInfoDeserializer{}))
+	d.AddDeserializer(htlc.ScriptType, htlc.NewAuditDeserializer(&idemix.AuditInfoDeserializer{}))
+	d.AddDeserializer(pledge.ScriptType, pledge.NewAuditDeserializer(&idemix.AuditInfoDeserializer{}))
 	return d
 }

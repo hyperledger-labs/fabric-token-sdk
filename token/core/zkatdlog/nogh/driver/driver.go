@@ -12,16 +12,19 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/observables"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver/interop/state/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	pledge2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -109,6 +112,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	authorization := common.NewAuthorizationMultiplexer(
 		common.NewTMSAuthorization(logger, ppm.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
+		pledge2.NewScriptAuth(ws),
 	)
 
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
@@ -123,7 +127,9 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 		deserializer,
 		tmsConfig,
 		observables.NewObservableIssueService(
-			zkatdlog.NewIssueService(ppm, ws, deserializer, driverMetrics),
+			zkatdlog.NewIssueService(ppm, ws, deserializer, driverMetrics, []zkatdlog.IssueMetadataProviderFunc{
+				pledge.IssueActionMetadata,
+			}),
 			observables.NewIssue(tracerProvider),
 		),
 		observables.NewObservableTransferService(

@@ -20,10 +20,7 @@ var logger = logging.MustGetLogger("token-sdk")
 type TMSID = driver.TMSID
 
 // ServiceProvider is used to return instances of a given type
-type ServiceProvider interface {
-	// GetService returns an instance of the given type
-	GetService(v interface{}) (interface{}, error)
-}
+type ServiceProvider = driver.ServiceProvider
 
 // ServiceOptions is used to configure the service
 type ServiceOptions struct {

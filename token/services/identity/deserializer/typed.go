@@ -8,7 +8,7 @@ package deserializer
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -18,10 +18,18 @@ import (
 
 var logger = logging.MustGetLogger("token-sdk.services.identity.deserializer")
 
+// VerifierDeserializer is the interface for verifiers' deserializer.
+// A verifier checks the validity of a signature against the identity associated with the verifier
+type VerifierDeserializer interface {
+	DeserializeVerifier(id driver.Identity) (driver.Verifier, error)
+}
+
+type AuditInfoProvider = driver.AuditInfoProvider
+
 type TypedVerifierDeserializer interface {
-	DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error)
-	Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error)
-	GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([][]byte, error)
+	DeserializeVerifier(typ string, raw []byte) (token.Verifier, error)
+	Recipients(id token.Identity, typ string, raw []byte) ([]token.Identity, error)
+	GetOwnerAuditInfo(id token.Identity, typ string, raw []byte, p AuditInfoProvider) ([][]byte, error)
 }
 
 // AuditMatcherDeserializer deserializes raw bytes into a matcher, which allows an auditor to match an identity to an enrollment ID
@@ -83,9 +91,9 @@ func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identi
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
 	}
-	//if recipient.Type != v.identityType {
+	// if recipient.Type != v.identityType {
 	//	return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
-	//}
+	// }
 
 	matcher, err := v.GetOwnerMatcher(ai)
 	if err != nil {
@@ -115,10 +123,10 @@ func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(id driver.Identit
 }
 
 type TypedIdentityVerifierDeserializer struct {
-	common.VerifierDeserializer
+	VerifierDeserializer
 }
 
-func NewTypedIdentityVerifierDeserializer(verifierDeserializer common.VerifierDeserializer) *TypedIdentityVerifierDeserializer {
+func NewTypedIdentityVerifierDeserializer(verifierDeserializer VerifierDeserializer) *TypedIdentityVerifierDeserializer {
 	return &TypedIdentityVerifierDeserializer{VerifierDeserializer: verifierDeserializer}
 }
 

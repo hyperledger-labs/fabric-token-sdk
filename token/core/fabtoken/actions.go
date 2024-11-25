@@ -31,19 +31,23 @@ func (m *OutputMetadata) Serialize() ([]byte, error) {
 }
 
 // Output carries the output of an action
-type Output struct {
-	Output *token.Token
-}
+type Output token.Token
 
 // Serialize marshals a Output
 func (t *Output) Serialize() ([]byte, error) {
-	return json.Marshal(t.Output)
+	return json.Marshal(t)
 }
 
-// IsRedeem returns true if the owner of a Output is empty
-// todo update interface to account for nil t.Output.Owner and nil t.Output
+// IsRedeem returns true if the owner of a Owner is empty
 func (t *Output) IsRedeem() bool {
-	return len(t.Output.Owner.Raw) == 0
+	return t.Owner == nil || len(t.Owner.Raw) == 0
+}
+
+func (t *Output) GetOwner() []byte {
+	if t.Owner != nil {
+		return t.Owner.Raw
+	}
+	return nil
 }
 
 // IssueAction encodes a fabtoken Issue
@@ -122,7 +126,7 @@ type TransferAction struct {
 	// identifier of token to be transferred
 	Inputs []*token.ID
 	// InputTokens are the inputs transferred by this action
-	InputTokens []*token.Token
+	InputTokens []*Output
 	// outputs to be created as a result of the transfer
 	Outputs []*Output
 	// Metadata contains the transfer action's metadata

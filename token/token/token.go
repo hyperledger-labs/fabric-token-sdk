@@ -6,7 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 
 package token
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // ID identifies a token as a function of the identifier of the transaction (issue, transfer)
 // that created it and its index in that transaction

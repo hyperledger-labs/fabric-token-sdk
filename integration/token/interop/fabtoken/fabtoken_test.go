@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fall"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fofabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ofabtoken"
@@ -58,6 +59,15 @@ var _ = Describe("FabToken end to end", func() {
 			AfterEach(ts.TearDown)
 			BeforeEach(ts.Setup)
 			It("Performed an htlc based atomic swap", Label("T6"), func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
+		})
+	}
+
+	for _, t := range integration2.WebSocketWithReplicationOnly {
+		Describe("Asset Transfer With Two Fabric Networks", t.Label, func() {
+			ts, selector := newTestSuiteInteropAssetTransfer(t.CommType, t.ReplicationFactor, "alice", "bob")
+			AfterEach(ts.TearDown)
+			BeforeEach(ts.Setup)
+			It("Performed a cross network asset transfer", Label("T7"), func() { interop.TestAssetTransferWithTwoNetworks(ts.II, selector) })
 		})
 	}
 })
@@ -113,6 +123,18 @@ func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "fabtoken",
 		SDKs:            []api2.SDK{&fofabtoken.SDK{}},
+	}))
+	return ts, selector
+}
+
+func newTestSuiteInteropAssetTransfer(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
+	opts, selector := token2.NewReplicationOptions(factor, names...)
+	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropAssetTransfer.StartPortForNode, interop.AssetTransferTopology(common.Opts{
+		CommType:        commType,
+		ReplicationOpts: opts,
+		TokenSDKDriver:  "fabtoken",
+		SDKs:            []api2.SDK{&fall.SDK{}},
+		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:view-sdk=debug:info",
 	}))
 	return ts, selector
 }

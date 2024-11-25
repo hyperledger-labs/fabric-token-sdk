@@ -97,3 +97,7 @@ type Network interface {
 	// ProcessNamespace indicates to the commit pipeline to process all transaction in the passed namespace
 	ProcessNamespace(namespace string) error
 }
+
+type Interoperability interface {
+	InteropURL(namespace string) string
+}

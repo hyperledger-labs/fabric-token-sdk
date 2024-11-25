@@ -43,7 +43,14 @@ func NewTransferService(
 
 // Transfer returns a TransferAction as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driver.OwnerWallet, tokenIDs []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *TransferService) Transfer(
+	ctx context.Context,
+	txID string,
+	wallet driver.OwnerWallet,
+	tokenIDs []*token.ID,
+	outputs []*token.Token,
+	opts *driver.TransferOptions,
+) (driver.TransferAction, *driver.TransferMetadata, error) {
 	// select inputs
 	inputTokens, err := s.TokenLoader.GetTokens(tokenIDs)
 	if err != nil {
@@ -51,17 +58,25 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	}
 
 	var senders []driver.Identity
+	var iTokens []*Output
 	for _, tok := range inputTokens {
 		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner.Raw))
 		senders = append(senders, tok.Owner.Raw)
+		iTokens = append(iTokens, &Output{
+			Type:     tok.Type,
+			Quantity: tok.Quantity,
+			Owner:    tok.Owner,
+		})
 	}
 
 	// prepare outputs
 	var outs []*Output
 	var outputsMetadata [][]byte
-	for _, output := range Outputs {
+	for _, output := range outputs {
 		outs = append(outs, &Output{
-			Output: output,
+			Owner:    output.Owner,
+			Type:     output.Type,
+			Quantity: output.Quantity,
 		})
 		meta := &OutputMetadata{}
 		metaRaw, err := meta.Serialize()
@@ -74,7 +89,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	// assemble transfer action
 	transfer := &TransferAction{
 		Inputs:      tokenIDs,
-		InputTokens: inputTokens,
+		InputTokens: iTokens,
 		Outputs:     outs,
 		Metadata:    meta.TransferActionMetadata(opts.Attributes),
 	}
@@ -85,22 +100,22 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	var receivers []driver.Identity
 	var outputAuditInfos [][]byte
 	for i, output := range outs {
-		if output.Output == nil || output.Output.Owner == nil {
+		if output == nil || output.Owner == nil {
 			return nil, nil, errors.Errorf("failed to transfer: invalid output at index %d", i)
 		}
-		if len(output.Output.Owner.Raw) == 0 { // redeem
-			receivers = append(receivers, output.Output.Owner.Raw)
+		if len(output.Owner.Raw) == 0 { // redeem
+			receivers = append(receivers, output.Owner.Raw)
 			outputAuditInfos = append(outputAuditInfos, []byte{})
 			continue
 		}
-		recipients, err := s.Deserializer.Recipients(output.Output.Owner.Raw)
+		recipients, err := s.Deserializer.Recipients(output.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting recipients")
 		}
 		receivers = append(receivers, recipients...)
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Output.Owner.Raw, ws)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Owner.Raw, ws)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Output.Owner.Raw).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner.Raw).String())
 		}
 		outputAuditInfos = append(outputAuditInfos, auditInfo...)
 	}
@@ -124,9 +139,10 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", receiver.String())
 		}
+		s.Logger.Debugf("receiver audit info for [%s] is [%s]", receiver, auditInfo)
 		receiverAuditInfos = append(receiverAuditInfos, auditInfo...)
 	}
-	outputs, err := transfer.GetSerializedOutputs()
+	serializedOutputs, err := transfer.GetSerializedOutputs()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting serialized outputs")
 	}
@@ -141,7 +157,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 		TokenIDs:           tokenIDs,
 		Senders:            senders,
 		SenderAuditInfos:   senderAuditInfos,
-		Outputs:            outputs,
+		Outputs:            serializedOutputs,
 		OutputsMetadata:    outputsMetadata,
 		OutputAuditInfos:   outputAuditInfos,
 		Receivers:          receivers,

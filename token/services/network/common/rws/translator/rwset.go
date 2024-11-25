@@ -11,6 +11,7 @@ import (
 
 	"github.com/gobuffalo/packr/v2/file/resolver/encoding/hex"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type (
@@ -42,6 +43,10 @@ type KeyTranslator interface {
 	CreateTransferActionMetadataKey(subkey string) (Key, error)
 	// GetTransferMetadataSubKey returns the subkey in the given transfer action metadata key
 	GetTransferMetadataSubKey(k string) (Key, error)
+
+	CreateProofOfExistenceKey(tokenId *token.ID) (string, error)
+	CreateProofOfNonExistenceKey(tokenID *token.ID, origin string) (string, error)
+	CreateProofOfMetadataExistenceKey(tokenID *token.ID, origin string) (string, error)
 }
 
 // RWSet interface, used to read from, and write to, a rwset.
@@ -121,6 +126,21 @@ func (w *RWSetWrapper) StateMustExist(key Key, version KeyVersion) error {
 
 type HashedKeyTranslator struct {
 	KT KeyTranslator
+}
+
+func (h *HashedKeyTranslator) CreateProofOfExistenceKey(tokenId *token.ID) (string, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (h *HashedKeyTranslator) CreateProofOfNonExistenceKey(tokenID *token.ID, origin string) (string, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (h *HashedKeyTranslator) CreateProofOfMetadataExistenceKey(tokenID *token.ID, origin string) (string, error) {
+	// TODO implement me
+	panic("implement me")
 }
 
 func (h *HashedKeyTranslator) CreateTokenRequestKey(id string) (Key, error) {

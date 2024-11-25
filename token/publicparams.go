@@ -14,7 +14,6 @@ type PPHash = driver.PPHash
 
 type PublicParameters struct {
 	driver.PublicParameters
-	ppm driver.PublicParamsManager
 }
 
 // Precision returns the precision used to represent the token quantity
@@ -74,7 +73,7 @@ func (c *PublicParametersManager) PublicParameters() *PublicParameters {
 	if pp == nil {
 		return nil
 	}
-	return &PublicParameters{PublicParameters: pp, ppm: c.ppm}
+	return &PublicParameters{PublicParameters: pp}
 }
 
 func (c *PublicParametersManager) PublicParamsHash() PPHash {

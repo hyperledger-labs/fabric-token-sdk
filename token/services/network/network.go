@@ -393,6 +393,14 @@ func (n *Network) ProcessNamespace(namespace string) error {
 	return n.n.ProcessNamespace(namespace)
 }
 
+func (n *Network) InteropURL(namespace string) string {
+	interoperability, ok := n.n.(driver.Interoperability)
+	if !ok {
+		panic("interoperability not supported")
+	}
+	return interoperability.InteropURL(namespace)
+}
+
 func (n *Network) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
 	return n.n.Normalize(opt)
 }
@@ -456,7 +464,7 @@ func (np *Provider) newNetwork(network string, channel string) (*Network, error)
 		logger.Debugf("new network [%s:%s]", network, channel)
 		return &Network{n: nw}, nil
 	}
-	return nil, errors.Errorf("no network driver found for [%s:%s], errs [%v]", network, channel, errs)
+	return nil, errors.Errorf("no network driver found for [%s:%s] among [%d] available, errs [%v]", network, channel, len(np.drivers), errs)
 }
 
 func (np *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {

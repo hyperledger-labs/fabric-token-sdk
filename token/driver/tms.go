@@ -96,4 +96,6 @@ type TokenManagerServiceProvider interface {
 	Update(options ServiceOptions) error
 
 	Configurations() ([]Configuration, error)
+
+	PublicParametersFromBytes(raw []byte) (PublicParameters, error)
 }

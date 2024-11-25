@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/state/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
@@ -452,6 +453,14 @@ func (n *Network) ProcessNamespace(namespace string) error {
 		return errors.WithMessagef(err, "failed to register processing of namespace [%s]", namespace)
 	}
 	return nil
+}
+
+func (n *Network) InteropURL(namespace string) string {
+	return fabric2.FabricURL(token2.TMSID{
+		Network:   n.Name(),
+		Channel:   n.Channel(),
+		Namespace: namespace,
+	})
 }
 
 type FinalityListener struct {
