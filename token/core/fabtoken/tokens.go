@@ -23,19 +23,19 @@ func NewTokensService() *TokensService {
 	return &TokensService{TokensService: common.NewTokensService()}
 }
 
-// DeserializeToken returns a deserialized token and the identity of its issuer
+// Deobfuscate returns a deserialized token and the identity of its issuer
 func (s *TokensService) Deobfuscate(outputRaw []byte, tokenInfoRaw []byte) (*token2.Token, driver.Identity, error) {
 	tok := &token2.Token{}
 	if err := json.Unmarshal(outputRaw, tok); err != nil {
 		return nil, nil, errors.Wrap(err, "failed unmarshalling token")
 	}
 
-	tokInfo := &OutputMetadata{}
-	if err := tokInfo.Deserialize(tokenInfoRaw); err != nil {
+	metadata := &OutputMetadata{}
+	if err := metadata.Deserialize(tokenInfoRaw); err != nil {
 		return nil, nil, errors.Wrap(err, "failed unmarshalling token information")
 	}
 
-	return tok, tokInfo.Issuer, nil
+	return tok, metadata.Issuer, nil
 }
 
 func (s *TokensService) IsSpendable(output []byte, outputMetadata []byte) error {

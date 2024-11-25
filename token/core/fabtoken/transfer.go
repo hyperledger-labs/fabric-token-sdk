@@ -63,8 +63,8 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 		outs = append(outs, &Output{
 			Output: *output,
 		})
-		meta := &OutputMetadata{}
-		metaRaw, err := meta.Serialize()
+		metadata := &OutputMetadata{}
+		metaRaw, err := metadata.Serialize()
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed serializing token information")
 		}

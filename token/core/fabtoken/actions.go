@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -21,14 +22,22 @@ type OutputMetadata struct {
 	Issuer []byte
 }
 
-// Deserialize un-marshals OutputMetadata
+// Deserialize un-marshals Metadata
 func (m *OutputMetadata) Deserialize(b []byte) error {
-	return json.Unmarshal(b, m)
+	typed, err := comm.UnmarshalTypedToken(b)
+	if err != nil {
+		return errors.Wrapf(err, "failed deserializing metadata")
+	}
+	return json.Unmarshal(typed.Token, m)
 }
 
-// Serialize marshals OutputMetadata
+// Serialize un-marshals Metadata
 func (m *OutputMetadata) Serialize() ([]byte, error) {
-	return json.Marshal(m)
+	raw, err := json.Marshal(m)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed serializing token")
+	}
+	return comm.WrapMetadataWithType(raw)
 }
 
 // Output carries the output of an action
@@ -36,7 +45,11 @@ type Output fabtoken.Token
 
 // Serialize marshals a Token
 func (t *Output) Serialize() ([]byte, error) {
-	return json.Marshal(t)
+	raw, err := json.Marshal(t)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed serializing token")
+	}
+	return fabtoken.WrapTokenWithType(raw)
 }
 
 // IsRedeem returns true if the owner of a Token is empty
