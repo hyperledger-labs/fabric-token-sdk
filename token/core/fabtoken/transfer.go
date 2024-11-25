@@ -61,7 +61,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	var outputsMetadata [][]byte
 	for _, output := range Outputs {
 		outs = append(outs, &Output{
-			Output: output,
+			Output: *output,
 		})
 		meta := &OutputMetadata{}
 		metaRaw, err := meta.Serialize()
@@ -84,10 +84,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	// assemble transfer metadata
 	var receivers []driver.Identity
 	var outputAuditInfos [][]byte
-	for i, output := range outs {
-		if output.Output == nil || output.Output.Owner == nil {
-			return nil, nil, errors.Errorf("failed to transfer: invalid output at index %d", i)
-		}
+	for _, output := range outs {
 		if len(output.Output.Owner) == 0 { // redeem
 			receivers = append(receivers, output.Output.Owner)
 			outputAuditInfos = append(outputAuditInfos, []byte{})
