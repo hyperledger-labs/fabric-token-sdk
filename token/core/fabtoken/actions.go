@@ -147,7 +147,7 @@ type TransferAction struct {
 	// identifier of token to be transferred
 	Inputs []*token.ID
 	// InputTokens are the inputs transferred by this action
-	InputTokens []*token.Token
+	InputTokens []*Output
 	// outputs to be created as a result of the transfer
 	Outputs []*Output
 	// Metadata contains the transfer action's metadata
@@ -219,7 +219,7 @@ func (t *TransferAction) GetInputs() []*token.ID {
 func (t *TransferAction) GetSerializedInputs() ([][]byte, error) {
 	var res [][]byte
 	for _, token := range t.InputTokens {
-		r, err := json.Marshal(token)
+		r, err := token.Serialize()
 		if err != nil {
 			return nil, err
 		}

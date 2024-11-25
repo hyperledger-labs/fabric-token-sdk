@@ -51,9 +51,11 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	}
 
 	var senders []driver.Identity
+	var inputs []*Output
 	for _, tok := range inputTokens {
 		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
 		senders = append(senders, tok.Owner)
+		inputs = append(inputs, &Output{Output: tok})
 	}
 
 	// prepare outputs
@@ -74,7 +76,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	// assemble transfer action
 	transfer := &TransferAction{
 		Inputs:      tokenIDs,
-		InputTokens: inputTokens,
+		InputTokens: inputs,
 		Outputs:     outs,
 		Metadata:    meta.TransferActionMetadata(opts.Attributes),
 	}
