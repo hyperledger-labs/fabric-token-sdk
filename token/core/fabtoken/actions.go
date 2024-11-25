@@ -32,7 +32,7 @@ func (m *OutputMetadata) Serialize() ([]byte, error) {
 
 // Output carries the output of an action
 type Output struct {
-	Output *token.Token
+	Output token.Token
 }
 
 // Serialize marshals a Output

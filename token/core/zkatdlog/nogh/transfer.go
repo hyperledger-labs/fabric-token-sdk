@@ -89,9 +89,6 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 			return nil, nil, errors.Wrapf(err, "failed to get value for %dth output", i)
 		}
 		values = append(values, q.ToBigInt().Uint64())
-		if output.Owner == nil {
-			return nil, nil, errors.Errorf("failed to get owner for %dth output: nil owner", i)
-		}
 		owners = append(owners, output.Owner)
 		if len(output.Owner) == 0 { // redeem
 			receivers = append(receivers, output.Owner)
