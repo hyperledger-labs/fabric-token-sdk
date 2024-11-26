@@ -15,6 +15,7 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/cache"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/schema"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
@@ -60,7 +61,7 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to instantiate crypto provider")
 	}
-	provider, err := NewKeyManager(conf, l.signerService, bccsp.EidNymRhNym, cryptoProvider)
+	provider, err := NewKeyManager(conf, l.signerService, bccsp.EidNymRhNym, cryptoProvider, &schema.DefaultManager{}, "")
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", identityConfig.URL)
 	}

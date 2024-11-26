@@ -31,6 +31,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	msp3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/schema"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	msp2 "github.com/hyperledger/fabric/msp"
@@ -52,7 +53,7 @@ var _ = Describe("Auditor", func() {
 		Expect(err).NotTo(HaveOccurred())
 		pp, err = crypto.Setup(32, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, math.FP256BN_AMCL)
+		des, err := idemix.NewEidNymRhNymDeserializer(&schema.DefaultManager{}, "", pp.IdemixIssuerPK, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), &noop.Tracer{}, des, pp.PedersenGenerators, nil, fakeSigningIdentity, math.Curves[pp.Curve])
 		fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)
@@ -255,7 +256,7 @@ func getIdemixInfo(dir string) (driver.Identity, *msp3.AuditInfo) {
 	Expect(err).NotTo(HaveOccurred())
 	cryptoProvider, err := msp3.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	Expect(err).NotTo(HaveOccurred())
-	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider, &schema.DefaultManager{}, "")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
