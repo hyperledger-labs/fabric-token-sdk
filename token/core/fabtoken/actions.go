@@ -55,18 +55,17 @@ func (t *Output) Deserialize(bytes []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed deserializing token")
 	}
-	t.Output = &token.Token{}
-	return json.Unmarshal(typed.Token, t.Output)
+	return json.Unmarshal(typed.Token, &t.Output)
 }
 
 // IsRedeem returns true if the owner of a Token is empty
 // todo update interface to account for nil t.Token.Owner and nil t.Token
 func (t *Output) IsRedeem() bool {
-	return len(t.Owner) == 0
+	return len(t.Output.Owner) == 0
 }
 
 func (t *Output) GetOwner() []byte {
-	return t.Owner
+	return t.Output.Owner
 }
 
 // IssueAction encodes a fabtoken Issue

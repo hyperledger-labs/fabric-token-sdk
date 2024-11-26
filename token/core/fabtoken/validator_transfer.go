@@ -116,7 +116,7 @@ func TransferHTLCValidate(ctx *Context) error {
 			}
 
 			// check owner field
-			script, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].GetOwner(), tok.Owner.Raw, now)
+			script, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].GetOwner(), tok.Owner, now)
 			if err != nil {
 				return errors.Wrap(err, "failed to verify transfer from htlc script")
 			}
