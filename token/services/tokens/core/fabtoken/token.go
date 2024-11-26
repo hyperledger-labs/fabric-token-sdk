@@ -22,6 +22,12 @@ type Token struct {
 	Output *token.Token
 }
 
+// Metadata contains a serialization of the issuer of the token..
+// Type, value and owner of token can be derived from the token itself.
+type Metadata struct {
+	Issuer []byte
+}
+
 func WrapTokenWithType(token driver.Token) (driver.Token, error) {
 	return tokens.WrapWithType(Type, token)
 }

@@ -17,9 +17,7 @@ import (
 
 // OutputMetadata contains a serialization of the issuer of the token.
 // type, value and owner of token can be derived from the token itself.
-type OutputMetadata struct {
-	Issuer []byte
-}
+type OutputMetadata fabtoken.Metadata
 
 // Deserialize un-marshals Metadata
 func (m *OutputMetadata) Deserialize(b []byte) error {
