@@ -33,7 +33,7 @@ func (s *TokensService) Deobfuscate(outputRaw []byte, tokenInfoRaw []byte) (*tok
 		return nil, nil, errors.Wrap(err, "failed unmarshalling token information")
 	}
 
-	return &tok.Output, metadata.Issuer, nil
+	return tok.Output, metadata.Issuer, nil
 }
 
 func (s *TokensService) IsSpendable(output []byte, outputMetadata []byte) error {

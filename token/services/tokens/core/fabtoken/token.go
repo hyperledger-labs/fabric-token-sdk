@@ -19,7 +19,7 @@ const (
 
 // Token carries the output of an action
 type Token struct {
-	Output token.Token
+	Output *token.Token
 }
 
 // Metadata contains a serialization of the issuer of the token..

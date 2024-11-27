@@ -42,7 +42,7 @@ type Output fabtoken.Token
 
 // Serialize marshals a Token
 func (t *Output) Serialize() ([]byte, error) {
-	raw, err := json.Marshal(t)
+	raw, err := json.Marshal(t.Output)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed serializing token")
 	}
@@ -55,17 +55,24 @@ func (t *Output) Deserialize(bytes []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed deserializing token")
 	}
-	return json.Unmarshal(typed.Token, &t.Output)
+	if typed.Type != fabtoken.Type {
+		return errors.Errorf("invalid token type [%v]", typed.Type)
+	}
+	t.Output = &token.Token{}
+	return json.Unmarshal(typed.Token, t.Output)
 }
 
 // IsRedeem returns true if the owner of a Token is empty
 // todo update interface to account for nil t.Token.Owner and nil t.Token
 func (t *Output) IsRedeem() bool {
-	return len(t.Output.Owner) == 0
+	return t.Output == nil || len(t.Output.Owner) == 0
 }
 
 func (t *Output) GetOwner() []byte {
-	return t.Output.Owner
+	if t.Output != nil {
+		return t.Output.Owner
+	}
+	return nil
 }
 
 // IssueAction encodes a fabtoken Issue
