@@ -55,7 +55,8 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	for _, tok := range inputTokens {
 		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
 		senders = append(senders, tok.Owner)
-		inputs = append(inputs, &Output{Output: tok})
+		t := Output(*tok)
+		inputs = append(inputs, &t)
 	}
 
 	// prepare outputs
@@ -63,7 +64,9 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	var outputsMetadata [][]byte
 	for _, output := range Outputs {
 		outs = append(outs, &Output{
-			Output: output,
+			Owner:    output.Owner,
+			Type:     output.Type,
+			Quantity: output.Quantity,
 		})
 		metadata := &OutputMetadata{}
 		metaRaw, err := metadata.Serialize()
@@ -87,19 +90,19 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	var receivers []driver.Identity
 	var outputAuditInfos [][]byte
 	for _, output := range outs {
-		if len(output.Output.Owner) == 0 { // redeem
-			receivers = append(receivers, output.Output.Owner)
+		if len(output.Owner) == 0 { // redeem
+			receivers = append(receivers, output.Owner)
 			outputAuditInfos = append(outputAuditInfos, []byte{})
 			continue
 		}
-		recipients, err := s.Deserializer.Recipients(output.Output.Owner)
+		recipients, err := s.Deserializer.Recipients(output.Owner)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting recipients")
 		}
 		receivers = append(receivers, recipients...)
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Output.Owner, ws)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Owner, ws)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Output.Owner).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
 		}
 		outputAuditInfos = append(outputAuditInfos, auditInfo...)
 	}

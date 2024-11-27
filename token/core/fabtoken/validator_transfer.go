@@ -49,25 +49,25 @@ func TransferBalanceValidate(ctx *Context) error {
 	if ctx.InputTokens[0] == nil {
 		return errors.New("first input is nil")
 	}
-	typ := ctx.InputTokens[0].Output.Type
+	typ := ctx.InputTokens[0].Type
 	inputSum := token.NewZeroQuantity(ctx.PP.QuantityPrecision)
 	outputSum := token.NewZeroQuantity(ctx.PP.QuantityPrecision)
 	for i, input := range ctx.InputTokens {
 		if input == nil {
 			return errors.Errorf("input %d is nil", i)
 		}
-		q, err := token.ToQuantity(input.Output.Quantity, ctx.PP.QuantityPrecision)
+		q, err := token.ToQuantity(input.Quantity, ctx.PP.QuantityPrecision)
 		if err != nil {
-			return errors.Wrapf(err, "failed parsing quantity [%s]", input.Output.Quantity)
+			return errors.Wrapf(err, "failed parsing quantity [%s]", input.Quantity)
 		}
 		inputSum.Add(q)
 		// check that all inputs have the same type
-		if input.Output.Type != typ {
-			return errors.Errorf("input type %s does not match type %s", input.Output.Type, typ)
+		if input.Type != typ {
+			return errors.Errorf("input type %s does not match type %s", input.Type, typ)
 		}
 	}
 	for _, output := range ctx.TransferAction.GetOutputs() {
-		out := output.(*Output).Output
+		out := output.(*Output)
 		q, err := token.ToQuantity(out.Quantity, ctx.PP.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
@@ -104,11 +104,11 @@ func TransferHTLCValidate(ctx *Context) error {
 
 			// check type and quantity
 			output := ctx.TransferAction.GetOutputs()[0].(*Output)
-			tok := output.Output
-			if ctx.InputTokens[0].Output.Type != tok.Type {
+			tok := output
+			if ctx.InputTokens[0].Type != tok.Type {
 				return errors.New("invalid transfer action: type of input does not match type of output")
 			}
-			if ctx.InputTokens[0].Output.Quantity != tok.Quantity {
+			if ctx.InputTokens[0].Quantity != tok.Quantity {
 				return errors.New("invalid transfer action: quantity of input does not match quantity of output")
 			}
 			if output.IsRedeem() {
@@ -143,7 +143,7 @@ func TransferHTLCValidate(ctx *Context) error {
 		}
 
 		// if it is an htlc script then the deadline must still be valid
-		owner, err := identity.UnmarshalTypedIdentity(out.Output.Owner)
+		owner, err := identity.UnmarshalTypedIdentity(out.Owner)
 		if err != nil {
 			return err
 		}

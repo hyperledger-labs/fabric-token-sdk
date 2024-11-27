@@ -9,7 +9,7 @@ package fabtoken
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -18,9 +18,7 @@ const (
 )
 
 // Token carries the output of an action
-type Token struct {
-	Output *token.Token
-}
+type Token = token2.Token
 
 // Metadata contains a serialization of the issuer of the token..
 // Type, value and owner of token can be derived from the token itself.
