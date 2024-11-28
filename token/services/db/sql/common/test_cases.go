@@ -39,7 +39,7 @@ type dbEvent struct {
 func collectDBEvents(db driver.TokenNotifier) (*[]dbEvent, error) {
 	ch := make(chan dbEvent)
 	err := db.Subscribe(func(operation driver2.Operation, m map[driver2.ColumnKey]string) {
-		logger.Infof("Received event: [%v]: %v", operation, m)
+		logger.Debugf("Received event: [%v]: %v", operation, m)
 		ch <- dbEvent{op: operation, vals: m}
 	})
 	if err != nil {
