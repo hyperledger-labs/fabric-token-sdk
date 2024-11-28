@@ -933,7 +933,7 @@ func (t *TokenTransaction) Delete(ctx context.Context, txID string, index uint64
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
 	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE tx_id = $3 AND idx = $4;", t.db.table.Tokens)
-	logger.Infof(query, deletedBy, now, txID, index)
+	logger.Debugf(query, deletedBy, now, txID, index)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	if _, err := t.tx.Exec(query, deletedBy, now, txID, index); err != nil {
 		span.RecordError(err)
