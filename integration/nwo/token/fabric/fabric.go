@@ -10,17 +10,11 @@ import (
 	"bytes"
 	"io"
 	"os"
-	"path/filepath"
-	"strings"
 	"text/template"
 	"time"
 
 	math3 "github.com/IBM/mathlib"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
@@ -32,53 +26,28 @@ import (
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.integration.token.fabric")
 
-const (
-	DefaultTokenChaincode                    = "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main"
-	DefaultTokenChaincodeParamsReplaceSuffix = "/token/services/network/fabric/tcc/params.go"
-)
-
-type fabricPlatform interface {
-	UpdateChaincode(chaincodeId string, version string, path string, packageFile string)
-	DeployChaincode(chaincode *topology.ChannelChaincode)
-	InvokeChaincode(cc *topology.ChannelChaincode, method string, args ...[]byte) []byte
-	DefaultIdemixOrgMSPDir() string
-	Topology() *topology.Topology
-	PeerChaincodeAddress(peerName string) string
-	PeersByID(id string) *fabric.Peer
-}
-
-type tokenPlatform interface {
-	TokenGen(keygen common.Command) (*gexec.Session, error)
-	PublicParametersFile(tms *topology2.TMS) string
-	GetContext() api2.Context
-	PublicParameters(tms *topology2.TMS) []byte
-	GetPublicParamsGenerators(driver string) generators.PublicParamsGenerator
-	PublicParametersDir() string
-	GetBuilder() api2.Builder
-	TokenDir() string
-	UpdatePublicParams(tms *topology2.TMS, pp []byte)
-}
-
 type Entry struct {
 	TMS     *topology2.TMS
-	TCC     *TCC
 	CA      common2.CA
 	Wallets map[string]*generators.Wallets
 }
 
-type NetworkHandler struct {
-	common2.NetworkHandler
-	TokenChaincodePath                string
-	TokenChaincodeParamsReplaceSuffix string
-	Entries                           map[string]*Entry
+type Backend interface {
+	PrepareNamespace(entry *Entry, tms *topology2.TMS)
+	UpdatePublicParams(tms *topology2.TMS, raw []byte)
 }
 
-func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *NetworkHandler {
+type NetworkHandler struct {
+	common2.NetworkHandler
+	Entries map[string]*Entry
+	Backend Backend
+}
+
+func NewNetworkHandler(tokenPlatform common2.TokenPlatform, builder api2.Builder, backend Backend) *NetworkHandler {
 	return &NetworkHandler{
 		NetworkHandler: common2.NetworkHandler{
 			TokenPlatform:     tokenPlatform,
@@ -91,9 +60,8 @@ func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *Netwo
 				"dlog": common2.NewIdemixCASupport,
 			},
 		},
-		TokenChaincodePath:                DefaultTokenChaincode,
-		TokenChaincodeParamsReplaceSuffix: DefaultTokenChaincodeParamsReplaceSuffix,
-		Entries:                           map[string]*Entry{},
+		Entries: map[string]*Entry{},
+		Backend: backend,
 	}
 }
 
@@ -137,23 +105,8 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	Expect(os.MkdirAll(p.TokenPlatform.PublicParametersDir(), 0766)).ToNot(HaveOccurred())
 	Expect(os.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(HaveOccurred())
 
-	// Prepare chaincodes
-	var chaincode *topology.ChannelChaincode
-	orgs := tms.BackendParams["fabric.orgs"].([]string)
-
-	if v, ok := tms.BackendParams["fpc.enabled"]; ok && v.(bool) {
-		dockerImage := tms.BackendParams["fpc.docker.image"].(string)
-		cc := p.Fabric(tms).Topology().AddFPCAtOrgs(
-			tms.Namespace,
-			dockerImage,
-			orgs,
-		)
-		cc.Chaincode.Ctor = p.TCCCtor(tms)
-		chaincode = cc
-	} else {
-		chaincode, _ = p.PrepareTCC(tms, orgs)
-		p.Fabric(tms).Topology().AddChaincode(chaincode)
-	}
+	// Prepare namespace
+	p.Backend.PrepareNamespace(entry, tms)
 
 	// Prepare CA, if needed
 	if IsFabricCA(tms) {
@@ -164,8 +117,6 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 			entry.CA = ca
 		}
 	}
-
-	entry.TCC = &TCC{Chaincode: chaincode}
 }
 
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node, uniqueName string) string {
@@ -214,8 +165,6 @@ func (p *NetworkHandler) dataSource(persistence sfcnode.SQLOpts, sourceDir strin
 
 func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 	if !load {
-		p.setupTokenChaincodes(tms)
-
 		// Start the CA, if available
 		entry := p.GetEntry(tms)
 		if entry.CA != nil {
@@ -233,51 +182,7 @@ func (p *NetworkHandler) Cleanup() {
 }
 
 func (p *NetworkHandler) UpdatePublicParams(tms *topology2.TMS, ppRaw []byte) {
-	var cc *topology.ChannelChaincode
-	for _, chaincode := range p.Fabric(tms).Topology().Chaincodes {
-		if chaincode.Chaincode.Name == tms.Namespace {
-			cc = chaincode
-			break
-		}
-	}
-	Expect(cc).NotTo(BeNil(), "failed to find chaincode [%s]", tms.Namespace)
-
-	packageDir := filepath.Join(
-		p.TokenPlatform.GetContext().RootDir(),
-		"token",
-		"chaincodes",
-		"tcc",
-		tms.Network,
-		tms.Channel,
-		tms.Namespace,
-	)
-	newChaincodeVersion := cc.Chaincode.Version + ".1"
-	packageFile := filepath.Join(
-		packageDir,
-		cc.Chaincode.Name+newChaincodeVersion+".tar.gz",
-	)
-	Expect(os.MkdirAll(packageDir, 0766)).ToNot(HaveOccurred())
-
-	paramsFile := PublicPramasTemplate(ppRaw)
-
-	err := packager.New().PackageChaincode(
-		cc.Chaincode.Path,
-		cc.Chaincode.Lang,
-		cc.Chaincode.Label,
-		packageFile,
-		func(filePath string, fileName string) (string, []byte) {
-			if strings.HasSuffix(filePath, p.TokenChaincodeParamsReplaceSuffix) {
-				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", filePath, fileName)
-				return "", paramsFile.Bytes()
-			}
-			return "", nil
-		},
-	)
-	Expect(err).ToNot(HaveOccurred())
-	cc.Chaincode.PackageFile = packageFile
-	p.Fabric(tms).(*fabric.Platform).UpdateChaincode(cc.Chaincode.Name,
-		newChaincodeVersion,
-		cc.Chaincode.Path, cc.Chaincode.PackageFile)
+	p.Backend.UpdatePublicParams(tms, ppRaw)
 }
 
 func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
@@ -410,10 +315,6 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 			wallet.Certifiers[len(wallet.Certifiers)-1].Default = true
 		}
 	}
-}
-
-func (p *NetworkHandler) Fabric(tms *topology2.TMS) fabricPlatform {
-	return p.TokenPlatform.GetContext().PlatformByName(tms.Network).(fabricPlatform)
 }
 
 func (p *NetworkHandler) GetEntry(tms *topology2.TMS) *Entry {
