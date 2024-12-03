@@ -55,8 +55,8 @@ type RWSet interface {
 type KeyVersion = int
 
 const (
-	// Any value, any version of the key would work
-	Any KeyVersion = iota
+	// Latest value, latest version of the key known to the node
+	Latest KeyVersion = iota
 	// VersionZero value,  version `zero` of the key
 	VersionZero
 )

@@ -116,7 +116,7 @@ func (w *Translator) AddPublicParamsDependency() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to create setup key")
 	}
-	if err := w.RWSet.StateMustExist(setupKey, Any); err != nil {
+	if err := w.RWSet.StateMustExist(setupKey, Latest); err != nil {
 		return errors.Wrapf(err, "failed to add public params dependency")
 	}
 	return nil
