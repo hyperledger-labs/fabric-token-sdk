@@ -72,6 +72,7 @@ type ExRWSet interface {
 	// StateMustNotExist adds a read dependency that enforces that the passed key does not exist
 	StateMustNotExist(key Key) error
 	// StateMustExist adds a read dependency that enforces that the passed key does exist
+	// When using VersionZero, this method should be called only for keys that are guaranteed to be used only once.
 	StateMustExist(key Key, version KeyVersion) error
 }
 
@@ -109,6 +110,9 @@ func (w *RWSetWrapper) StateMustNotExist(key Key) error {
 }
 
 func (w *RWSetWrapper) StateMustExist(key Key, version KeyVersion) error {
+	// This wrapper assumes the following:
+	// When StateMustExist is called on VersionZero, Latest behaviour is used instead.
+	// This works under the assumption that keys are used only once.
 	h, err := w.RWSet.GetState(w.Namespace, key)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read state [%s:%s] for [%s]", w.Namespace, key, w.TxID)
