@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -47,8 +46,8 @@ type Network struct {
 
 	vaultLazyCache      lazy.Provider[string, driver.Vault]
 	tokenVaultLazyCache lazy.Provider[string, driver.TokenVault]
-	subscribers         *events.Subscribers
 	dbManager           *DBManager
+	flm                 FinalityListenerManager
 	keyTranslator       translator.KeyTranslator
 }
 
@@ -61,6 +60,7 @@ func NewNetwork(
 	nsFinder common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
 	dbManager *DBManager,
+	flm FinalityListenerManager,
 	tokenQueryExecutor driver.TokenQueryExecutor,
 	spentTokenQueryExecutor driver.SpentTokenQueryExecutor,
 	tracerProvider trace.TracerProvider,
@@ -81,14 +81,16 @@ func NewNetwork(
 		tmsProvider:         tmsProvider,
 		vaultLazyCache:      lazy.NewProvider(loader.loadVault),
 		tokenVaultLazyCache: lazy.NewProvider(loader.loadTokenVault),
-		subscribers:         events.NewSubscribers(), ledger: &ledger{network: n.Name(), viewManager: viewManager, dbManager: dbManager},
+		ledger:              &ledger{network: n.Name(), viewManager: viewManager, dbManager: dbManager},
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "tokensdk_orion",
 			LabelNames: []tracing.LabelName{},
 		})),
 		tokenQueryExecutor:      tokenQueryExecutor,
-		spentTokenQueryExecutor: spentTokenQueryExecutor, dbManager: dbManager,
-		keyTranslator: keyTranslator,
+		spentTokenQueryExecutor: spentTokenQueryExecutor,
+		dbManager:               dbManager,
+		flm:                     flm,
+		keyTranslator:           keyTranslator,
 	}
 }
 
@@ -245,26 +247,11 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 }
 
 func (n *Network) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
-	wrapper := &FinalityListener{
-		net:         n,
-		root:        listener,
-		network:     n.n.Name(),
-		namespace:   namespace,
-		retryRunner: db.NewRetryRunner(3, 100*time.Millisecond, true),
-		viewManager: n.viewManager,
-		dbManager:   n.dbManager,
-		tracer:      n.finalityTracer,
-	}
-	n.subscribers.Set(txID, listener, wrapper)
-	return n.n.Committer().AddFinalityListener(txID, wrapper)
+	return n.flm.AddFinalityListener(namespace, txID, listener)
 }
 
 func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityListener) error {
-	wrapper, ok := n.subscribers.Get(txID, listener)
-	if !ok {
-		return errors.Errorf("listener was not registered")
-	}
-	return n.n.Committer().RemoveFinalityListener(txID, wrapper.(*FinalityListener))
+	return n.flm.RemoveFinalityListener(txID, listener)
 }
 
 func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration, _ bool) ([]byte, error) {
@@ -343,7 +330,6 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 }
 
 type FinalityListener struct {
-	net         *Network
 	root        driver.FinalityListener
 	network     string
 	namespace   string

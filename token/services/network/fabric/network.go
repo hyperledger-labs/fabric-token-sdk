@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -132,7 +131,7 @@ type Network struct {
 
 	vaultLazyCache             lazy.Provider[string, driver.Vault]
 	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
-	subscribers                *events.Subscribers
+	flm                        FinalityListenerManager
 	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
 	tokenQueryExecutor         driver.TokenQueryExecutor
 	spentTokenQueryExecutor    driver.SpentTokenQueryExecutor
@@ -155,6 +154,7 @@ func NewNetwork(
 	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher,
 	spentTokenQueryExecutor driver.SpentTokenQueryExecutor,
 	keyTranslator translator.KeyTranslator,
+	flm FinalityListenerManager,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -173,7 +173,7 @@ func NewNetwork(
 		tokensProvider:             tokensProvider,
 		vaultLazyCache:             lazy.NewProvider(loader.loadVault),
 		tokenVaultLazyCache:        lazy.NewProvider(loader.loadTokenVault),
-		subscribers:                events.NewSubscribers(),
+		flm:                        flm,
 		defaultPublicParamsFetcher: defaultPublicParamsFetcher,
 		endorsementServiceProvider: endorsementServiceProvider,
 		tokenQueryExecutor:         tokenQueryExecutor,
@@ -261,6 +261,7 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 		return nil, errors.WithMessagef(err, "failed to get endorsement service at [%s]", tmsID)
 	}
 	n.keyTranslator = es.KeyTranslator()
+	n.flm.SetKeyTranslator(n.keyTranslator)
 	return nil, nil
 }
 
@@ -349,24 +350,11 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 }
 
 func (n *Network) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
-	wrapper := &FinalityListener{
-		net:           n,
-		root:          listener,
-		network:       n.n.Name(),
-		namespace:     namespace,
-		tracer:        n.finalityTracer,
-		keyTranslator: n.keyTranslator,
-	}
-	n.subscribers.Set(txID, listener, wrapper)
-	return n.ch.Committer().AddFinalityListener(txID, wrapper)
+	return n.flm.AddFinalityListener(namespace, txID, listener)
 }
 
 func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityListener) error {
-	wrapper, ok := n.subscribers.Get(txID, listener)
-	if !ok {
-		return errors.Errorf("listener was not registered")
-	}
-	return n.ch.Committer().RemoveFinalityListener(txID, wrapper.(*FinalityListener))
+	return n.flm.RemoveFinalityListener(txID, listener)
 }
 
 func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration, stopOnLastTx bool) ([]byte, error) {
@@ -455,9 +443,10 @@ func (n *Network) ProcessNamespace(namespace string) error {
 }
 
 type FinalityListener struct {
-	net           *Network
+	flm           driver.FinalityListenerManager
 	root          driver.FinalityListener
 	network       string
+	ch            *fabric.Channel
 	namespace     string
 	tracer        trace.Tracer
 	keyTranslator translator.KeyTranslator
@@ -470,7 +459,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 		if e := recover(); e != nil {
 			span.RecordError(fmt.Errorf("recovered from panic: %v", e))
 			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
-			if err := t.net.AddFinalityListener(txID, t.namespace, t.root); err != nil {
+			if err := t.flm.AddFinalityListener(txID, t.namespace, t.root); err != nil {
 				panic(err)
 			}
 			logger.Debugf("added finality listener for tx [%s]...done", txID)
@@ -482,7 +471,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 		panic(fmt.Sprintf("can't create for token request [%s]", txID))
 	}
 
-	v := t.net.ch.Vault()
+	v := t.ch.Vault()
 	qe, err := v.NewQueryExecutor()
 	if err != nil {
 		panic(fmt.Sprintf("can't get query executor [%s]", txID))

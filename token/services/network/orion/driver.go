@@ -23,6 +23,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+type FinalityListenerManagerProvider interface {
+	NewManager(network string, dbManager *DBManager) (FinalityListenerManager, error)
+}
+
+type FinalityListenerManager driver.FinalityListenerManager
+
 func NewOrionDriver(
 	onsProvider *orion.NetworkServiceProvider,
 	viewRegistry driver2.Registry,
@@ -50,6 +56,7 @@ func NewOrionDriver(
 		NewSpentTokenExecutorProvider(keyTranslator),
 		tracerProvider,
 		keyTranslator,
+		NewCommitterBasedFLMProvider(onsProvider, tracerProvider, viewManager),
 	)
 }
 
@@ -67,6 +74,7 @@ type Driver struct {
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider
 	tracerProvider                  trace.TracerProvider
 	keyTranslator                   translator.KeyTranslator
+	flmProvider                     FinalityListenerManagerProvider
 }
 
 func NewDriver(
@@ -83,6 +91,7 @@ func NewDriver(
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
 	tracerProvider trace.TracerProvider,
 	keyTranslator translator.KeyTranslator,
+	flmProvider FinalityListenerManagerProvider,
 ) *Driver {
 	return &Driver{
 		onsProvider:                     onsProvider,
@@ -98,6 +107,7 @@ func NewDriver(
 		spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
 		tracerProvider:                  tracerProvider,
 		keyTranslator:                   keyTranslator,
+		flmProvider:                     flmProvider,
 	}
 }
 
@@ -128,6 +138,10 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get spent token query executor")
 	}
+	flm, err := d.flmProvider.NewManager(n.Name(), dbManager)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get flm")
+	}
 	return NewNetwork(
 		d.viewManager,
 		d.tmsProvider,
@@ -137,6 +151,7 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 		d.configService,
 		d.filterProvider,
 		dbManager,
+		flm,
 		tokenQueryExecutor,
 		spentTokenQueryExecutor,
 		d.tracerProvider,
