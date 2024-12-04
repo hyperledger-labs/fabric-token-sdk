@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
@@ -86,7 +87,22 @@ func (l *loader) load(tmsID token2.TMSID) (Service, error) {
 	}
 
 	logger.Infof("FSC endorsement enabled...")
-	return NewFSCService(l.fns, tmsID, configuration, l.viewRegistry, l.viewManager, l.identityProvider)
+	return NewFSCService(
+		l.fns,
+		tmsID,
+		configuration,
+		l.viewRegistry,
+		l.viewManager,
+		l.identityProvider,
+		&keys.Translator{},
+		func(txID string, namespace string, rws *fabric.RWSet) (Translator, error) {
+			return translator.New(
+				txID,
+				translator.NewRWSetWrapper(&RWSWrapper{Stub: rws}, namespace, txID),
+				&keys.Translator{},
+			), nil
+		},
+	)
 }
 
 func key(tmsID token2.TMSID) string {

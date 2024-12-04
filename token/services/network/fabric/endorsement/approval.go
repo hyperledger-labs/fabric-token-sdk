@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fts
+package endorsement
 
 import (
 	"time"
@@ -16,20 +16,12 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
-
-const (
-	InvokeFunction = "invoke"
-)
-
-var logger = logging.MustGetLogger("token-sdk.network.fabric.fts")
 
 type RequestApprovalView struct {
 	TMSID      token2.TMSID
@@ -101,8 +93,21 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 	return tx.Envelope()
 }
 
+type Translator interface {
+	AddPublicParamsDependency() error
+	CommitTokenRequest(raw []byte, storeHash bool) ([]byte, error)
+	Write(action any) error
+}
+
+type TranslatorProviderFunc = func(txID string, namespace string, rws *fabric2.RWSet) (Translator, error)
+
 type RequestApprovalResponderView struct {
-	KeyTranslator translator.KeyTranslator
+	keyTranslator translator.KeyTranslator
+	getTranslator TranslatorProviderFunc
+}
+
+func NewRequestApprovalResponderView(keyTranslator translator.KeyTranslator, getTranslator TranslatorProviderFunc) *RequestApprovalResponderView {
+	return &RequestApprovalResponderView{keyTranslator: keyTranslator, getTranslator: getTranslator}
 }
 
 func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
@@ -155,7 +160,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	// validate token request
 	logger.Debugf("Validate TX [%s]", tx.ID())
 	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(id token.ID) ([]byte, error) {
-		key, err := r.KeyTranslator.CreateOutputKey(id.TxId, id.Index)
+		key, err := r.keyTranslator.CreateOutputKey(id.TxId, id.Index)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to create token key for id [%s]", id)
 		}
@@ -198,13 +203,16 @@ func (r *RequestApprovalResponderView) translate(
 ) error {
 	// prepare the rws as usual
 	txID := tx.ID()
-	w := translator.New(txID, translator.NewRWSetWrapper(&rwsWrapper{stub: rws}, tms.Namespace(), txID), &keys.Translator{})
+	w, err := r.getTranslator(txID, tms.Namespace(), rws)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get translator for tx [%s]", tx.ID())
+	}
 	for _, action := range actions {
 		if err := w.Write(action); err != nil {
 			return errors.Wrapf(err, "failed to write token action for tx [%s]", txID)
 		}
 	}
-	err := w.AddPublicParamsDependency()
+	err = w.AddPublicParamsDependency()
 	if err != nil {
 		return errors.Wrapf(err, "failed to add public params dependency")
 	}
@@ -274,25 +282,18 @@ func (r *RequestApprovalResponderView) endorserID(tms *token2.ManagementService,
 	return endorserID, nil
 }
 
-type rwsWrapper struct {
-	stub *fabric2.RWSet
+type RWSWrapper struct {
+	Stub *fabric2.RWSet
 }
 
-func (rwset *rwsWrapper) SetState(namespace string, key string, value []byte) error {
-	return rwset.stub.SetState(namespace, key, value)
+func (rwset *RWSWrapper) SetState(namespace string, key string, value []byte) error {
+	return rwset.Stub.SetState(namespace, key, value)
 }
 
-func (rwset *rwsWrapper) GetState(namespace string, key string) ([]byte, error) {
-	return rwset.stub.GetState(namespace, key)
+func (rwset *RWSWrapper) GetState(namespace string, key string) ([]byte, error) {
+	return rwset.Stub.GetState(namespace, key)
 }
 
-func (rwset *rwsWrapper) DeleteState(namespace string, key string) error {
-	return rwset.stub.DeleteState(namespace, key)
-}
-
-func (rwset *rwsWrapper) Bytes() ([]byte, error) {
-	return nil, nil
-}
-
-func (rwset *rwsWrapper) Done() {
+func (rwset *RWSWrapper) DeleteState(namespace string, key string) error {
+	return rwset.Stub.DeleteState(namespace, key)
 }
