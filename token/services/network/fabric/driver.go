@@ -27,6 +27,15 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+type FinalityListenerManagerProvider interface {
+	NewManager(network, channel string) (FinalityListenerManager, error)
+}
+
+type FinalityListenerManager interface {
+	driver.FinalityListenerManager
+	SetKeyTranslator(keyTranslator translator.KeyTranslator)
+}
+
 type Driver struct {
 	fnsProvider                     *fabric.NetworkServiceProvider
 	vaultProvider                   driver.TokenVaultProvider
@@ -43,6 +52,7 @@ type Driver struct {
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider
 	supportedDrivers                []string
 	keyTranslator                   translator.KeyTranslator
+	flmProvider                     FinalityListenerManagerProvider
 }
 
 func NewGenericDriver(
@@ -73,6 +83,7 @@ func NewGenericDriver(
 		NewTokenExecutorProvider(),
 		NewSpentTokenExecutorProvider(keyTranslator),
 		keyTranslator,
+		NewCommitterBasedFLMProvider(fnsProvider, tracerProvider),
 		config2.GenericDriver,
 	)
 }
@@ -92,6 +103,7 @@ func NewDriver(
 	tokenQueryExecutorProvider driver.TokenQueryExecutorProvider,
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
 	keyTranslator translator.KeyTranslator,
+	flmProvider FinalityListenerManagerProvider,
 	supportedDrivers ...string,
 ) *Driver {
 	return &Driver{
@@ -110,6 +122,7 @@ func NewDriver(
 		spentTokenQueryExecutorProvider: spentTokenQueryExecutorProvider,
 		supportedDrivers:                supportedDrivers,
 		keyTranslator:                   keyTranslator,
+		flmProvider:                     flmProvider,
 	}
 }
 
@@ -134,6 +147,10 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get spent token query executor")
 	}
+	flm, err := d.flmProvider.NewManager(network, channel)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create a new flm")
+	}
 
 	return NewNetwork(
 		fns,
@@ -150,5 +167,6 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		d.defaultPublicParamsFetcher,
 		spentTokenQueryExecutor,
 		d.keyTranslator,
+		flm,
 	), nil
 }

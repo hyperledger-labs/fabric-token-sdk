@@ -97,3 +97,15 @@ type Network interface {
 	// ProcessNamespace indicates to the commit pipeline to process all transaction in the passed namespace
 	ProcessNamespace(namespace string) error
 }
+
+type FinalityListenerManager interface {
+	// AddFinalityListener registers a listener for transaction status for the passed transaction id.
+	// If the status is already valid or invalid, the listener is called immediately.
+	// When the listener is invoked, then it is also removed.
+	// If the transaction id is empty, the listener will be called on status changes of any transaction.
+	// In this case, the listener is not removed
+	AddFinalityListener(namespace string, txID string, listener FinalityListener) error
+
+	// RemoveFinalityListener unregisters the passed listener.
+	RemoveFinalityListener(id string, listener FinalityListener) error
+}
