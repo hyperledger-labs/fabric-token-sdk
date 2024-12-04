@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/fts"
 	"github.com/pkg/errors"
 )
 
@@ -43,6 +42,8 @@ func NewFSCService(
 	viewRegistry ViewRegistry,
 	viewManager ViewManager,
 	identityProvider IdentityProvider,
+	keyTranslator translator.KeyTranslator,
+	getTranslator TranslatorProviderFunc,
 ) (*FSCService, error) {
 	ch, err := nw.Channel(tmsID.Channel)
 	if err != nil {
@@ -55,9 +56,10 @@ func NewFSCService(
 		if err := committer.ProcessNamespace(tmsID.Namespace); err != nil {
 			return nil, errors.WithMessagef(err, "failed to add namespace to committer [%s]", tmsID.Namespace)
 		}
-		if err := viewRegistry.RegisterResponder(&fts.RequestApprovalResponderView{
-			KeyTranslator: &keys.Translator{},
-		}, &fts.RequestApprovalView{}); err != nil {
+		if err := viewRegistry.RegisterResponder(
+			NewRequestApprovalResponderView(keyTranslator, getTranslator),
+			&RequestApprovalView{},
+		); err != nil {
 			return nil, errors.WithMessagef(err, "failed to register approval view for [%s]", tmsID)
 		}
 	} else {
@@ -106,7 +108,7 @@ func (e *FSCService) Endorse(context view.Context, requestRaw []byte, signer vie
 	}
 	logger.Debugf("request approval via fts endrosers with policy [%s]: [%d]...", e.PolicyType, len(endorsers))
 
-	envBoxed, err := e.ViewManager.InitiateView(&fts.RequestApprovalView{
+	envBoxed, err := e.ViewManager.InitiateView(&RequestApprovalView{
 		TMSID:      e.TmsID,
 		RequestRaw: requestRaw,
 		TxID:       txID,
