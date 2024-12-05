@@ -37,7 +37,7 @@ type Entry struct {
 }
 
 type Backend interface {
-	PrepareNamespace(entry *Entry, tms *topology2.TMS)
+	PrepareNamespace(tms *topology2.TMS)
 	UpdatePublicParams(tms *topology2.TMS, raw []byte)
 }
 
@@ -106,7 +106,7 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	Expect(os.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(HaveOccurred())
 
 	// Prepare namespace
-	p.Backend.PrepareNamespace(entry, tms)
+	p.Backend.PrepareNamespace(tms)
 
 	// Prepare CA, if needed
 	if IsFabricCA(tms) {
