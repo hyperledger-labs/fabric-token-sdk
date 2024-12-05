@@ -22,7 +22,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	topology3 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	. "github.com/onsi/gomega"
 )
@@ -61,7 +60,7 @@ func NewGenericBackend(tokenChaincodePath string, tokenChaincodeParamsReplaceSuf
 	return &GenericBackend{TokenChaincodePath: tokenChaincodePath, TokenChaincodeParamsReplaceSuffix: tokenChaincodeParamsReplaceSuffix, TokenPlatform: tokenPlatform}
 }
 
-func (p *GenericBackend) PrepareNamespace(entry *fabric.Entry, tms *topology3.TMS) {
+func (p *GenericBackend) PrepareNamespace(tms *topology3.TMS) {
 	orgs := tms.BackendParams["fabric.orgs"].([]string)
 
 	// Standard Chaincode
