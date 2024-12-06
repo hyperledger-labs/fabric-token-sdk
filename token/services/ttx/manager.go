@@ -12,6 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -100,6 +101,7 @@ func (m *Manager) newDB(tmsID token.TMSID) (*DB, error) {
 			Namespace:  "tokensdk",
 			LabelNames: []tracing.LabelName{txIdLabel},
 		})),
+		checkService: common2.NewChecksService(common2.NewDefaultCheckers(m.tmsProvider, m.networkProvider, ttxDB, tokenDB, tmsID)),
 	}
 	_, err = m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {

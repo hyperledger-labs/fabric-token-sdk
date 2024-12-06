@@ -247,7 +247,7 @@ func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.Unspen
 	if net == nil {
 		return errors.Errorf("cannot load network [%s:%s]", tms.Network(), tms.Channel())
 	}
-	spent, err := net.AreTokensSpent(context, tms.Namespace(), ids, meta)
+	spent, err := net.AreTokensSpent(context.Context(), tms.Namespace(), ids, meta)
 	if err != nil {
 		return errors.WithMessagef(err, "cannot fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
 	}
