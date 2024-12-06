@@ -14,14 +14,14 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-var runner = db.NewRetryRunner(3, 1*time.Second, true)
+var runner = common.NewRetryRunner(3, 1*time.Second, true)
 
 type StatusFetcher struct {
 	dbManager     *DBManager

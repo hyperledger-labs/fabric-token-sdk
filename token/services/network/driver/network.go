@@ -69,10 +69,10 @@ type Network interface {
 	FetchPublicParameters(namespace string) ([]byte, error)
 
 	// QueryTokens retrieves the token content for the passed token ids
-	QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error)
+	QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error)
 
 	// AreTokensSpent retrieves the spent flag for the passed ids
-	AreTokensSpent(context view.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error)
+	AreTokensSpent(context context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error)
 
 	// LocalMembership returns the local membership
 	LocalMembership() LocalMembership

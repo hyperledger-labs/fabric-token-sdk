@@ -13,7 +13,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -62,7 +62,7 @@ func (m *committerBasedFLM) AddFinalityListener(namespace string, txID string, l
 		root:        listener,
 		network:     m.net.Name(),
 		namespace:   namespace,
-		retryRunner: db.NewRetryRunner(3, 100*time.Millisecond, true),
+		retryRunner: common.NewRetryRunner(3, 100*time.Millisecond, true),
 		viewManager: m.viewManager,
 		dbManager:   m.dbManager,
 		tracer:      m.tracer,
