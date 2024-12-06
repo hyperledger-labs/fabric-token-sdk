@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -108,16 +109,18 @@ func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
 	}
+
 	auditor := &Auditor{
-		np:          cm.networkProvider,
-		tmsID:       tmsID,
-		auditDB:     auditDB,
-		tokenDB:     tokenDB,
-		tmsProvider: cm.tmsProvider,
+		networkProvider: cm.networkProvider,
+		tmsID:           tmsID,
+		auditDB:         auditDB,
+		tokenDB:         tokenDB,
+		tmsProvider:     cm.tmsProvider,
 		finalityTracer: cm.tracerProvider.Tracer("auditor", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "tokensdk",
 			LabelNames: []tracing.LabelName{txIdLabel},
 		})),
+		checkService: common2.NewChecksService(common2.NewDefaultCheckers(cm.tmsProvider, cm.networkProvider, auditDB, tokenDB, tmsID)),
 	}
 	return auditor, nil
 }
