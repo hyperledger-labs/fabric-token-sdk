@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
@@ -159,14 +160,14 @@ type Cache interface {
 
 // DB is a database that stores token transactions related information
 type DB struct {
-	*db.StatusSupport
+	*common.StatusSupport
 	db    driver.TokenTransactionDB
 	cache Cache
 }
 
 func newDB(p driver.TokenTransactionDB) *DB {
 	return &DB{
-		StatusSupport: db.NewStatusSupport(),
+		StatusSupport: common.NewStatusSupport(),
 		db:            p,
 		cache:         secondcache.NewTyped[[]byte](1000),
 	}
@@ -260,7 +261,7 @@ func (d *DB) SetStatus(ctx context.Context, txID string, status driver.TxStatus,
 	}
 
 	// notify the listeners
-	d.Notify(db.StatusEvent{
+	d.Notify(common.StatusEvent{
 		Ctx:            ctx,
 		TxID:           txID,
 		ValidationCode: status,

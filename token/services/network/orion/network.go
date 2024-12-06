@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -231,11 +231,11 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return pp.([]byte), nil
 }
 
-func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
+func (n *Network) QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
 	return n.tokenQueryExecutor.QueryTokens(context, namespace, IDs)
 }
 
-func (n *Network) AreTokensSpent(context view.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
+func (n *Network) AreTokensSpent(context context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
 	return n.spentTokenQueryExecutor.QuerySpentTokens(context, namespace, tokenIDs, meta)
 }
 
@@ -334,7 +334,7 @@ type FinalityListener struct {
 	network     string
 	namespace   string
 	tracer      trace.Tracer
-	retryRunner db.RetryRunner
+	retryRunner common.RetryRunner
 	viewManager *view2.Manager
 	dbManager   *DBManager
 }

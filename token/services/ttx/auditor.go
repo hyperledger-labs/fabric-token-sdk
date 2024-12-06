@@ -88,6 +88,10 @@ func (a *TxAuditor) GetTokenRequest(txID string) ([]byte, error) {
 	return a.auditor.GetTokenRequest(txID)
 }
 
+func (a *TxAuditor) Check(context context.Context) ([]string, error) {
+	return a.auditor.Check(context)
+}
+
 type RegisterAuditorView struct {
 	TMSID     token.TMSID
 	AuditView view.View

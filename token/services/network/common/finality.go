@@ -14,7 +14,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -39,7 +39,7 @@ type FinalityListener struct {
 	ttxDB       transactionDB
 	tokens      *tokens.Tokens
 	tracer      trace.Tracer
-	retryRunner db.RetryRunner
+	retryRunner common.RetryRunner
 }
 
 func NewFinalityListener(logger logging.Logger, tmsProvider TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Tokens, tracer trace.Tracer) *FinalityListener {
@@ -50,7 +50,7 @@ func NewFinalityListener(logger logging.Logger, tmsProvider TokenManagementServi
 		ttxDB:       ttxDB,
 		tokens:      tokens,
 		tracer:      tracer,
-		retryRunner: db.NewRetryRunner(db.Infinitely, time.Second, true),
+		retryRunner: common.NewRetryRunner(common.Infinitely, time.Second, true),
 	}
 }
 

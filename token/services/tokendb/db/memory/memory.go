@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
@@ -19,7 +20,7 @@ import (
 func NewDBDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
 	return db.NamedDriver[dbdriver.TokenDBDriver]{
 		Name: mem.MemoryPersistence,
-		Driver: db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
+		Driver: sql2.NewDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
 			sqlDB, opts, err := common.NewSQLDBOpener(sql.OptsKey, sql.EnvVarKey).OpenWithOpts(cp, tmsID)
 			if err != nil {
 				return nil, err
@@ -32,7 +33,7 @@ func NewDBDriver() db.NamedDriver[dbdriver.TokenDBDriver] {
 func NewNotifierDriver() db.NamedDriver[dbdriver.TokenNotifierDriver] {
 	return db.NamedDriver[dbdriver.TokenNotifierDriver]{
 		Name: mem.MemoryPersistence,
-		Driver: db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNotifier, error) {
+		Driver: sql2.NewDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNotifier, error) {
 			sqlDB, opts, err := common.NewSQLDBOpener(sql.OptsKey, sql.EnvVarKey).OpenWithOpts(cp, tmsID)
 			if err != nil {
 				return nil, err

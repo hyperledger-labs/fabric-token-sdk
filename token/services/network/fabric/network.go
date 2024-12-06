@@ -337,12 +337,12 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return n.defaultPublicParamsFetcher.Fetch(n.Name(), n.Channel(), namespace)
 }
 
-func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
+func (n *Network) QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
 	return n.tokenQueryExecutor.QueryTokens(context, namespace, IDs)
 }
 
-func (n *Network) AreTokensSpent(c view.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
-	return n.spentTokenQueryExecutor.QuerySpentTokens(c, namespace, tokenIDs, meta)
+func (n *Network) AreTokensSpent(context context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
+	return n.spentTokenQueryExecutor.QuerySpentTokens(context, namespace, tokenIDs, meta)
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {

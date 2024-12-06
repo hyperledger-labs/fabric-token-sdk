@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
@@ -163,7 +163,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 		keyTranslator: r.keyTranslator,
 	}
 
-	runner := db.NewRetryRunner(5, time.Second, true)
+	runner := common2.NewRetryRunner(5, time.Second, true)
 
 	var envelopeRaw []byte
 	validateErr := runner.RunWithErrors(func() (bool, error) {

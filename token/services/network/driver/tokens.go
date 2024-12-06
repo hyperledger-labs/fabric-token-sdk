@@ -7,7 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"context"
+
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -17,7 +18,7 @@ type TokenQueryExecutorProvider interface {
 
 // TokenQueryExecutor queries the global state/ledger for tokens
 type TokenQueryExecutor interface {
-	QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error)
+	QueryTokens(context context.Context, namespace string, IDs []*token2.ID) ([][]byte, error)
 }
 
 type SpentTokenQueryExecutorProvider interface {
@@ -26,5 +27,5 @@ type SpentTokenQueryExecutorProvider interface {
 
 // SpentTokenQueryExecutor queries the global state/ledger for tokens
 type SpentTokenQueryExecutor interface {
-	QuerySpentTokens(context view.Context, namespace string, IDs []*token2.ID, meta []string) ([]bool, error)
+	QuerySpentTokens(context context.Context, namespace string, IDs []*token2.ID, meta []string) ([]bool, error)
 }
