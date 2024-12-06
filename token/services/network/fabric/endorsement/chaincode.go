@@ -11,8 +11,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 )
 
@@ -48,8 +46,4 @@ func (e *ChaincodeEndorsementService) Endorse(context view.Context, requestRaw [
 		return nil, err
 	}
 	return env, nil
-}
-
-func (e *ChaincodeEndorsementService) KeyTranslator() translator.KeyTranslator {
-	return &keys.Translator{}
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
@@ -36,7 +35,7 @@ type FSCService struct {
 }
 
 func NewFSCService(
-	nw *fabric.NetworkService,
+	fnsp *fabric.NetworkServiceProvider,
 	tmsID token.TMSID,
 	configuration tdriver.Configuration,
 	viewRegistry ViewRegistry,
@@ -45,6 +44,10 @@ func NewFSCService(
 	keyTranslator translator.KeyTranslator,
 	getTranslator TranslatorProviderFunc,
 ) (*FSCService, error) {
+	nw, err := fnsp.FabricNetworkService(tmsID.Network)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting fabric network service for [%s]", tmsID.Network)
+	}
 	ch, err := nw.Channel(tmsID.Channel)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting channel [%s]", tmsID.Channel)
@@ -122,8 +125,4 @@ func (e *FSCService) Endorse(context view.Context, requestRaw []byte, signer vie
 		return nil, errors.Errorf("expected driver.Envelope, got [%T]", envBoxed)
 	}
 	return env, nil
-}
-
-func (e *FSCService) KeyTranslator() translator.KeyTranslator {
-	return &keys.Translator{}
 }

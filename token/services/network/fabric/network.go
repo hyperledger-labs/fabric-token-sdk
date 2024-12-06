@@ -118,6 +118,10 @@ type ViewRegistry interface {
 	RegisterResponder(responder view.View, initiatedBy interface{}) error
 }
 
+type EndorsementService = endorsement.Service
+
+type EndorsementServiceProvider = lazy.Provider[token2.TMSID, EndorsementService]
+
 type Network struct {
 	n              *fabric.NetworkService
 	ch             *fabric.Channel
@@ -135,7 +139,7 @@ type Network struct {
 	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
 	tokenQueryExecutor         driver.TokenQueryExecutor
 	spentTokenQueryExecutor    driver.SpentTokenQueryExecutor
-	endorsementServiceProvider *endorsement.ServiceProvider
+	endorsementServiceProvider EndorsementServiceProvider
 	keyTranslator              translator.KeyTranslator
 }
 
@@ -148,7 +152,7 @@ func NewNetwork(
 	tokensProvider *tokens2.Manager,
 	viewManager ViewManager,
 	tmsProvider *token2.ManagementServiceProvider,
-	endorsementServiceProvider *endorsement.ServiceProvider,
+	endorsementServiceProvider EndorsementServiceProvider,
 	tokenQueryExecutor driver.TokenQueryExecutor,
 	tracerProvider trace.TracerProvider,
 	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher,
@@ -256,12 +260,10 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 	}
 
 	// Let the endorsement service initialize itself, if needed
-	es, err := n.endorsementServiceProvider.Get(tmsID)
+	_, err = n.endorsementServiceProvider.Get(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get endorsement service at [%s]", tmsID)
 	}
-	n.keyTranslator = es.KeyTranslator()
-	n.flm.SetKeyTranslator(n.keyTranslator)
 	return nil, nil
 }
 
