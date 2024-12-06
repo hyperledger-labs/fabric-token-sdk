@@ -12,12 +12,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -165,53 +163,4 @@ func (c *CheckIfExistsInVaultViewFactory) NewView(in []byte) (view.View, error) 
 	assert.NoError(err, "failed unmarshalling input")
 
 	return f, nil
-}
-
-type TransactionRecord struct {
-	TxID   string
-	Status driver.TxStatus
-}
-
-type AuditDBTransactionIterator struct {
-	*auditdb.TransactionIterator
-}
-
-func (t *AuditDBTransactionIterator) Close() {
-	t.TransactionIterator.Close()
-}
-
-func (t *AuditDBTransactionIterator) Next() (*TransactionRecord, error) {
-	next, err := t.TransactionIterator.Next()
-	if err != nil {
-		return nil, err
-	}
-	if next == nil {
-		return nil, nil
-	}
-	return &TransactionRecord{
-		TxID:   next.TxID,
-		Status: next.Status,
-	}, nil
-}
-
-type TTXDBTransactionIterator struct {
-	*ttxdb.TransactionIterator
-}
-
-func (t *TTXDBTransactionIterator) Close() {
-	t.TransactionIterator.Close()
-}
-
-func (t *TTXDBTransactionIterator) Next() (*TransactionRecord, error) {
-	next, err := t.TransactionIterator.Next()
-	if err != nil {
-		return nil, err
-	}
-	if next == nil {
-		return nil, nil
-	}
-	return &TransactionRecord{
-		TxID:   next.TxID,
-		Status: next.Status,
-	}, nil
 }
