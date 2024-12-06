@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -33,13 +32,18 @@ type TokenDBProvider interface {
 	Tokens(id token.TMSID) (*tokens.Tokens, error)
 }
 
+type CheckServiceProvider interface {
+	CheckService(id token.TMSID, adb *auditdb.DB, tdb *tokens.Tokens) (CheckService, error)
+}
+
 // Manager handles the databases
 type Manager struct {
-	networkProvider NetworkProvider
-	auditDBProvider AuditDBProvider
-	tokenDBProvider TokenDBProvider
-	tmsProvider     TokenManagementServiceProvider
-	tracerProvider  trace.TracerProvider
+	networkProvider      NetworkProvider
+	auditDBProvider      AuditDBProvider
+	tokenDBProvider      TokenDBProvider
+	tmsProvider          TokenManagementServiceProvider
+	tracerProvider       trace.TracerProvider
+	checkServiceProvider CheckServiceProvider
 
 	mutex    sync.Mutex
 	auditors map[string]*Auditor
@@ -52,14 +56,16 @@ func NewManager(
 	tokenDBProvider TokenDBProvider,
 	tmsProvider TokenManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
+	checkServiceProvider CheckServiceProvider,
 ) *Manager {
 	return &Manager{
-		networkProvider: networkProvider,
-		auditDBProvider: auditDBProvider,
-		tokenDBProvider: tokenDBProvider,
-		tmsProvider:     tmsProvider,
-		tracerProvider:  tracerProvider,
-		auditors:        map[string]*Auditor{},
+		networkProvider:      networkProvider,
+		auditDBProvider:      auditDBProvider,
+		tokenDBProvider:      tokenDBProvider,
+		tmsProvider:          tmsProvider,
+		tracerProvider:       tracerProvider,
+		auditors:             map[string]*Auditor{},
+		checkServiceProvider: checkServiceProvider,
 	}
 }
 
@@ -109,6 +115,10 @@ func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
 	}
+	checkService, err := cm.checkServiceProvider.CheckService(tmsID, auditDB, tokenDB)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get checkservice for [%s]", tmsID)
+	}
 
 	auditor := &Auditor{
 		networkProvider: cm.networkProvider,
@@ -120,7 +130,7 @@ func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
 			Namespace:  "tokensdk",
 			LabelNames: []tracing.LabelName{txIdLabel},
 		})),
-		checkService: common2.NewChecksService(common2.NewDefaultCheckers(cm.tmsProvider, cm.networkProvider, auditDB, tokenDB, tmsID)),
+		checkService: checkService,
 	}
 	return auditor, nil
 }
