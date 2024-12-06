@@ -19,12 +19,14 @@ import (
 type committerBasedFLMProvider struct {
 	fnsp           *fabric.NetworkServiceProvider
 	tracerProvider trace.TracerProvider
+	keyTranslator  translator.KeyTranslator
 }
 
-func NewCommitterBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider) *committerBasedFLMProvider {
+func NewCommitterBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator) *committerBasedFLMProvider {
 	return &committerBasedFLMProvider{
 		fnsp:           fnsp,
 		tracerProvider: tracerProvider,
+		keyTranslator:  keyTranslator,
 	}
 }
 
@@ -44,6 +46,7 @@ func (p *committerBasedFLMProvider) NewManager(network, channel string) (Finalit
 		tracer: p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace: network,
 		})),
+		keyTranslator: p.keyTranslator,
 	}, nil
 }
 
@@ -55,14 +58,7 @@ type committerBasedFLM struct {
 	keyTranslator translator.KeyTranslator
 }
 
-func (m *committerBasedFLM) SetKeyTranslator(keyTranslator translator.KeyTranslator) {
-	m.keyTranslator = keyTranslator
-}
-
 func (m *committerBasedFLM) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
-	if m.keyTranslator == nil {
-		return errors.New("no key translator set")
-	}
 	wrapper := &FinalityListener{
 		root:          listener,
 		flm:           m,
