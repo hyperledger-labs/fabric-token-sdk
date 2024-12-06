@@ -31,10 +31,7 @@ type FinalityListenerManagerProvider interface {
 	NewManager(network, channel string) (FinalityListenerManager, error)
 }
 
-type FinalityListenerManager interface {
-	driver.FinalityListenerManager
-	SetKeyTranslator(keyTranslator translator.KeyTranslator)
-}
+type FinalityListenerManager = driver.FinalityListenerManager
 
 type Driver struct {
 	fnsProvider                     *fabric.NetworkServiceProvider
@@ -53,6 +50,7 @@ type Driver struct {
 	supportedDrivers                []string
 	keyTranslator                   translator.KeyTranslator
 	flmProvider                     FinalityListenerManagerProvider
+	EndorsementServiceProvider      EndorsementServiceProvider
 }
 
 func NewGenericDriver(
@@ -84,6 +82,7 @@ func NewGenericDriver(
 		NewSpentTokenExecutorProvider(keyTranslator),
 		keyTranslator,
 		NewCommitterBasedFLMProvider(fnsProvider, tracerProvider),
+		endorsement.NewServiceProvider(fnsProvider, configService, viewManager, viewRegistry, identityProvider, keyTranslator),
 		config2.GenericDriver,
 	)
 }
@@ -104,6 +103,7 @@ func NewDriver(
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
 	keyTranslator translator.KeyTranslator,
 	flmProvider FinalityListenerManagerProvider,
+	endorsementServiceProvider EndorsementServiceProvider,
 	supportedDrivers ...string,
 ) *Driver {
 	return &Driver{
@@ -123,6 +123,7 @@ func NewDriver(
 		supportedDrivers:                supportedDrivers,
 		keyTranslator:                   keyTranslator,
 		flmProvider:                     flmProvider,
+		EndorsementServiceProvider:      endorsementServiceProvider,
 	}
 }
 
@@ -161,7 +162,7 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		d.tokensManager,
 		d.viewManager,
 		d.tmsProvider,
-		endorsement.NewServiceProvider(fns, d.configService, d.viewManager, d.viewRegistry, d.identityProvider),
+		d.EndorsementServiceProvider,
 		tokenQueryExecutor,
 		d.tracerProvider,
 		d.defaultPublicParamsFetcher,
