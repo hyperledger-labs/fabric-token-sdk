@@ -10,7 +10,7 @@ import (
 )
 
 type TokensService struct {
-	DeobfuscateStub        func([]byte, []byte) (*token.Token, view.Identity, error)
+	DeobfuscateStub        func([]byte, []byte) (*token.Token, view.Identity, string, error)
 	deobfuscateMutex       sync.RWMutex
 	deobfuscateArgsForCall []struct {
 		arg1 []byte
@@ -19,12 +19,14 @@ type TokensService struct {
 	deobfuscateReturns struct {
 		result1 *token.Token
 		result2 view.Identity
-		result3 error
+		result3 string
+		result4 error
 	}
 	deobfuscateReturnsOnCall map[int]struct {
 		result1 *token.Token
 		result2 view.Identity
-		result3 error
+		result3 string
+		result4 error
 	}
 	ExtractMetadataStub        func(*driver.TokenRequestMetadata, []byte) ([]byte, error)
 	extractMetadataMutex       sync.RWMutex
@@ -56,7 +58,7 @@ type TokensService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, view.Identity, error) {
+func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, view.Identity, string, error) {
 	var arg1Copy []byte
 	if arg1 != nil {
 		arg1Copy = make([]byte, len(arg1))
@@ -81,9 +83,9 @@ func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, 
 		return stub(arg1, arg2)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
+		return ret.result1, ret.result2, ret.result3, ret.result4
 	}
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3, fakeReturns.result4
 }
 
 func (fake *TokensService) DeobfuscateCallCount() int {
@@ -92,7 +94,7 @@ func (fake *TokensService) DeobfuscateCallCount() int {
 	return len(fake.deobfuscateArgsForCall)
 }
 
-func (fake *TokensService) DeobfuscateCalls(stub func([]byte, []byte) (*token.Token, view.Identity, error)) {
+func (fake *TokensService) DeobfuscateCalls(stub func([]byte, []byte) (*token.Token, view.Identity, string, error)) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = stub
@@ -105,18 +107,19 @@ func (fake *TokensService) DeobfuscateArgsForCall(i int) ([]byte, []byte) {
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *TokensService) DeobfuscateReturns(result1 *token.Token, result2 view.Identity, result3 error) {
+func (fake *TokensService) DeobfuscateReturns(result1 *token.Token, result2 view.Identity, result3 string, result4 error) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = nil
 	fake.deobfuscateReturns = struct {
 		result1 *token.Token
 		result2 view.Identity
-		result3 error
-	}{result1, result2, result3}
+		result3 string
+		result4 error
+	}{result1, result2, result3, result4}
 }
 
-func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token, result2 view.Identity, result3 error) {
+func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token, result2 view.Identity, result3 string, result4 error) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = nil
@@ -124,14 +127,16 @@ func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token,
 		fake.deobfuscateReturnsOnCall = make(map[int]struct {
 			result1 *token.Token
 			result2 view.Identity
-			result3 error
+			result3 string
+			result4 error
 		})
 	}
 	fake.deobfuscateReturnsOnCall[i] = struct {
 		result1 *token.Token
 		result2 view.Identity
-		result3 error
-	}{result1, result2, result3}
+		result3 string
+		result4 error
+	}{result1, result2, result3, result4}
 }
 
 func (fake *TokensService) ExtractMetadata(arg1 *driver.TokenRequestMetadata, arg2 []byte) ([]byte, error) {

@@ -27,7 +27,7 @@ func (m *Metadata) GetToken(raw []byte) (*token.Token, Identity, []byte, error) 
 	if err != nil {
 		return nil, nil, nil, errors.WithMessagef(err, "metadata for [%s] not found", Hashable(raw).String())
 	}
-	tok, id, err := m.TokenService.Deobfuscate(raw, tokenInfoRaw)
+	tok, id, _, err := m.TokenService.Deobfuscate(raw, tokenInfoRaw)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed getting token in the clear")
 	}

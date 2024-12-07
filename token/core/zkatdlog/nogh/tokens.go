@@ -28,12 +28,12 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 // Deobfuscate unmarshals a token and token info from raw bytes
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer
-func (s *TokensService) Deobfuscate(outputRaw []byte, metadataRaw []byte) (*token.Token, driver.Identity, error) {
-	_, metadata, tok, err := s.deserializeToken(outputRaw, metadataRaw, false)
+func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, driver.Identity, string, error) {
+	_, metadata, tok, err := s.deserializeToken(output, outputMetadata, false)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
-	return tok, metadata.Issuer, nil
+	return tok, metadata.Issuer, "", nil
 }
 
 func (s *TokensService) IsSpendable(outputRaw []byte, metadataRaw []byte) error {

@@ -810,6 +810,7 @@ func (db *TokenDB) GetSchema() string {
 			owner_identity BYTEA NOT NULL,
 			owner_wallet_id TEXT, 
 			ledger BYTEA NOT NULL,
+            ledger_type TEXT NOT NULL,
 			ledger_metadata BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
 			is_deleted BOOL NOT NULL DEFAULT false,
@@ -963,7 +964,7 @@ func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) er
 
 	// Store token
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)", t.db.table.Tokens)
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_type, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)", t.db.table.Tokens)
 	logger.Debug(query,
 		tr.TxID,
 		tr.Index,
@@ -973,6 +974,7 @@ func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) er
 		len(tr.OwnerIdentity),
 		tr.OwnerWalletID,
 		len(tr.Ledger),
+		tr.LedgerType,
 		len(tr.LedgerMetadata),
 		tr.Type,
 		tr.Quantity,
@@ -991,6 +993,7 @@ func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) er
 		tr.OwnerIdentity,
 		tr.OwnerWalletID,
 		tr.Ledger,
+		tr.LedgerType,
 		tr.LedgerMetadata,
 		tr.Type,
 		tr.Quantity,

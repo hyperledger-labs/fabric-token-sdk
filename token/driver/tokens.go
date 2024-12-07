@@ -14,8 +14,8 @@ type TokensService interface {
 	// IsSpendable returns no error if the output and its metadata are recognized as well-formed and spendable by this driver
 	IsSpendable(output []byte, outputMetadata []byte) error
 
-	// Deobfuscate processes the passed output and metadata to derive a token.Token and its issuer (if any).
-	Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, error)
+	// Deobfuscate processes the passed output and metadata to derive a token.Token, its issuer (if any), and its token type tag
+	Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, string, error)
 
 	// ExtractMetadata extracts from the given token request metadata the metadata to the given target
 	ExtractMetadata(meta *TokenRequestMetadata, target []byte) ([]byte, error)

@@ -22,21 +22,21 @@ func NewTokensService() *TokensService {
 }
 
 // Deobfuscate returns a deserialized token and the identity of its issuer
-func (s *TokensService) Deobfuscate(outputRaw []byte, tokenInfoRaw []byte) (*token2.Token, driver.Identity, error) {
+func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, driver.Identity, string, error) {
 	tok := &Output{}
-	if err := tok.Deserialize(outputRaw); err != nil {
-		return nil, nil, errors.Wrap(err, "failed unmarshalling token")
+	if err := tok.Deserialize(output); err != nil {
+		return nil, nil, "", errors.Wrap(err, "failed unmarshalling token")
 	}
 
 	metadata := &OutputMetadata{}
-	if err := metadata.Deserialize(tokenInfoRaw); err != nil {
-		return nil, nil, errors.Wrap(err, "failed unmarshalling token information")
+	if err := metadata.Deserialize(outputMetadata); err != nil {
+		return nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
 	}
 	return &token2.Token{
 		Owner:    tok.Owner,
 		Type:     tok.Type,
 		Quantity: tok.Quantity,
-	}, metadata.Issuer, nil
+	}, metadata.Issuer, "", nil
 }
 
 func (s *TokensService) IsSpendable(output []byte, outputMetadata []byte) error {

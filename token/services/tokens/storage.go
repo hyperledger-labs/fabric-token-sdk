@@ -64,6 +64,7 @@ type TokenToAppend struct {
 	txID                  string
 	index                 uint64
 	tok                   *token2.Token
+	tokenOnLedgerType     string
 	tokenOnLedger         []byte
 	tokenOnLedgerMetadata []byte
 	ownerType             string
@@ -145,6 +146,7 @@ func (t *transaction) AppendToken(tta TokenToAppend) error {
 		OwnerIdentity:  tta.ownerIdentity,
 		OwnerWalletID:  tta.ownerWalletID,
 		Ledger:         tta.tokenOnLedger,
+		LedgerType:     tta.tokenOnLedgerType,
 		LedgerMetadata: tta.tokenOnLedgerMetadata,
 		Quantity:       tta.tok.Quantity,
 		Type:           tta.tok.Type,

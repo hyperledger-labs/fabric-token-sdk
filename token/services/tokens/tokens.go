@@ -215,8 +215,9 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 	}
 
 	logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
-	graphHiding := tms.PublicParametersManager().PublicParameters().GraphHiding()
-	precision := tms.PublicParametersManager().PublicParameters().Precision()
+	pp := tms.PublicParametersManager().PublicParameters()
+	graphHiding := pp.GraphHiding()
+	precision := pp.Precision()
 	auth := tms.Authorization()
 	auditorFlag := auth.AmIAnAuditor()
 	if auditorFlag {
@@ -237,7 +238,16 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 }
 
 // parse returns the tokens to store and spend as the result of a transaction
-func (t *Tokens) parse(auth driver.Authorization, txID string, md MetaData, is *token.InputStream, os *token.OutputStream, auditorFlag bool, precision uint64, graphHiding bool) (toSpend []*token2.ID, toAppend []TokenToAppend) {
+func (t *Tokens) parse(
+	auth driver.Authorization,
+	txID string,
+	md MetaData,
+	is *token.InputStream,
+	os *token.OutputStream,
+	auditorFlag bool,
+	precision uint64,
+	graphHiding bool,
+) (toSpend []*token2.ID, toAppend []TokenToAppend) {
 	if graphHiding {
 		ids := md.SpentTokenID()
 		logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
@@ -304,6 +314,7 @@ func (t *Tokens) parse(auth driver.Authorization, txID string, md MetaData, is *
 			index:                 output.Index,
 			tok:                   tok,
 			tokenOnLedger:         output.LedgerOutput,
+			tokenOnLedgerType:     output.LedgerOutputType,
 			tokenOnLedgerMetadata: tokenOnLedgerMetadata,
 			ownerType:             ownerType,
 			ownerIdentity:         ownerIdentity,
