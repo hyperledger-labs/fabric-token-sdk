@@ -810,7 +810,7 @@ func (db *TokenDB) GetSchema() string {
 			owner_identity BYTEA NOT NULL,
 			owner_wallet_id TEXT, 
 			ledger BYTEA NOT NULL,
-            ledger_type TEXT NOT NULL,
+            ledger_type TEXT,
 			ledger_metadata BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
 			is_deleted BOOL NOT NULL DEFAULT false,
