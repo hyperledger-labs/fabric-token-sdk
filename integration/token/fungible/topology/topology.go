@@ -208,6 +208,7 @@ func Topology(opts common.Opts) []api.Topology {
 	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 	alice.RegisterViewFactory("MaliciousTransfer", &views.MaliciousTransferViewFactory{})
 	alice.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
+	alice.RegisterViewFactory("SetSpendableFlag", &views.SetSpendableFlagViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -361,7 +362,7 @@ func Topology(opts common.Opts) []api.Topology {
 	}
 	if opts.Monitoring {
 		monitoringTopology := monitoring.NewTopology()
-		//monitoringTopology.EnableHyperledgerExplorer()
+		// monitoringTopology.EnableHyperledgerExplorer()
 		monitoringTopology.EnablePrometheusGrafana()
 		return []api.Topology{
 			backendNetwork, tokenTopology, fscTopology,
