@@ -19,11 +19,15 @@ import (
 
 type TokensService struct {
 	*common.TokensService
-	pp *PublicParams
+	TokenTypes []string
 }
 
-func NewTokensService(pp *PublicParams) *TokensService {
-	return &TokensService{TokensService: common.NewTokensService(), pp: pp}
+func NewTokensService(pp *PublicParams) (*TokensService, error) {
+	supportedTokens, err := SupportedTokenTypes(pp.QuantityPrecision)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting supported token types")
+	}
+	return &TokensService{TokensService: common.NewTokensService(), TokenTypes: supportedTokens}, nil
 }
 
 // Deobfuscate returns a deserialized token and the identity of its issuer
@@ -44,18 +48,22 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 	}, metadata.Issuer, "", nil
 }
 
-func (s *TokensService) SupportedTokenTypes() ([]string, error) {
-	// The token type is derived by combining the following elements:
-	// fabtoken.Type (token type)
-	// X509Identity
-	// pp's QuantityPrecision
-	hasher := common.NewSHA256Hasher()
-	if err := errors2.Join(
-		hasher.AddInt32(fabtoken.Type),
-		hasher.AddString(msp.X509Identity),
-		hasher.AddUInt64(s.pp.QuantityPrecision),
-	); err != nil {
-		return nil, err
+func (s *TokensService) SupportedTokenTypes() []string {
+	return s.TokenTypes
+}
+
+func SupportedTokenTypes(precisions ...uint64) ([]string, error) {
+	result := make([]string, len(precisions))
+	for i, precision := range precisions {
+		hasher := common.NewSHA256Hasher()
+		if err := errors2.Join(
+			hasher.AddInt32(fabtoken.Type),
+			hasher.AddString(msp.X509Identity),
+			hasher.AddUInt64(precision),
+		); err != nil {
+			return nil, errors.Wrapf(err, "failed to generator token type")
+		}
+		result[i] = hasher.HexDigest()
 	}
-	return []string{hasher.HexDigest()}, nil
+	return result, nil
 }

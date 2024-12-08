@@ -12,7 +12,7 @@ import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 
 type TokensService interface {
 	// SupportedTokenTypes returns the supported token types
-	SupportedTokenTypes() ([]string, error)
+	SupportedTokenTypes() []string
 
 	// Deobfuscate processes the passed output and metadata to derive a token.Token, its issuer (if any), and its token type tag
 	Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, string, error)

@@ -7,11 +7,15 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	errors2 "errors"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/math"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -19,10 +23,27 @@ import (
 type TokensService struct {
 	*common.TokensService
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
+	TokenTypes              []string
 }
 
-func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams]) *TokensService {
-	return &TokensService{TokensService: common.NewTokensService(), PublicParametersManager: publicParametersManager}
+func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams]) (*TokensService, error) {
+	// compute supported tokens
+	// fabtoken
+	fabtokenTokenTypes, err := fabtoken.SupportedTokenTypes(32, 64)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed computing fabtoken token types")
+	}
+	// dlog without graph hiding
+	commTokenTypes, err := SupportedTokenTypes(publicParametersManager.PublicParams())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed computing comm token types")
+	}
+
+	return &TokensService{
+		TokensService:           common.NewTokensService(),
+		PublicParametersManager: publicParametersManager,
+		TokenTypes:              append(fabtokenTokenTypes, commTokenTypes...),
+	}, nil
 }
 
 // Deobfuscate unmarshals a token and token info from raw bytes
@@ -36,8 +57,8 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 	return tok, metadata.Issuer, "", nil
 }
 
-func (s *TokensService) SupportedTokenTypes() ([]string, error) {
-	return nil, nil
+func (s *TokensService) SupportedTokenTypes() []string {
+	return s.TokenTypes
 }
 
 func (s *TokensService) DeserializeToken(outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
@@ -76,7 +97,7 @@ func (s *TokensService) deserializeToken(outputRaw []byte, metadataRaw []byte, c
 	}
 	pp := s.PublicParametersManager.PublicParams()
 
-	tok, err := output.GetTokenInTheClear(metadata, pp)
+	tok, err := output.ToClear(metadata, pp)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to deserialize token")
 	}
@@ -95,4 +116,18 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 		return nil, errors.Wrap(err, "data in invalid in output")
 	}
 	return output, nil
+}
+
+func SupportedTokenTypes(pp *crypto.PublicParams) ([]string, error) {
+	hasher := common.NewSHA256Hasher()
+	if err := errors2.Join(
+		hasher.AddInt32(comm.Type),
+		hasher.AddInt(int(pp.Curve)),
+		hasher.AddG1s(pp.PedersenGenerators),
+		hasher.AddInt(int(pp.IdemixCurveID)),
+		hasher.AddBytes(pp.IdemixIssuerPK),
+	); err != nil {
+		return nil, errors.Wrapf(err, "failed to generator token type")
+	}
+	return []string{hasher.HexDigest()}, nil
 }

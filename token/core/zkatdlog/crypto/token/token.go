@@ -54,8 +54,8 @@ func (t *Token) GetCommitment() *math.G1 {
 	return t.Data
 }
 
-// GetTokenInTheClear returns Token in the clear
-func (t *Token) GetTokenInTheClear(meta *Metadata, pp *crypto.PublicParams) (*token2.Token, error) {
+// ToClear returns Token in the clear
+func (t *Token) ToClear(meta *Metadata, pp *crypto.PublicParams) (*token2.Token, error) {
 	com, err := commit([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedersenGenerators, math.Curves[pp.Curve])
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve token in the clear: failed to check token data")

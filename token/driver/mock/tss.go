@@ -42,17 +42,15 @@ type TokensService struct {
 		result1 []byte
 		result2 error
 	}
-	SupportedTokenTypesStub        func() ([]string, error)
+	SupportedTokenTypesStub        func() []string
 	supportedTokenTypesMutex       sync.RWMutex
 	supportedTokenTypesArgsForCall []struct {
 	}
 	supportedTokenTypesReturns struct {
 		result1 []string
-		result2 error
 	}
 	supportedTokenTypesReturnsOnCall map[int]struct {
 		result1 []string
-		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -209,7 +207,7 @@ func (fake *TokensService) ExtractMetadataReturnsOnCall(i int, result1 []byte, r
 	}{result1, result2}
 }
 
-func (fake *TokensService) SupportedTokenTypes() ([]string, error) {
+func (fake *TokensService) SupportedTokenTypes() []string {
 	fake.supportedTokenTypesMutex.Lock()
 	ret, specificReturn := fake.supportedTokenTypesReturnsOnCall[len(fake.supportedTokenTypesArgsForCall)]
 	fake.supportedTokenTypesArgsForCall = append(fake.supportedTokenTypesArgsForCall, struct {
@@ -222,9 +220,9 @@ func (fake *TokensService) SupportedTokenTypes() ([]string, error) {
 		return stub()
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1
 	}
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1
 }
 
 func (fake *TokensService) SupportedTokenTypesCallCount() int {
@@ -233,36 +231,33 @@ func (fake *TokensService) SupportedTokenTypesCallCount() int {
 	return len(fake.supportedTokenTypesArgsForCall)
 }
 
-func (fake *TokensService) SupportedTokenTypesCalls(stub func() ([]string, error)) {
+func (fake *TokensService) SupportedTokenTypesCalls(stub func() []string) {
 	fake.supportedTokenTypesMutex.Lock()
 	defer fake.supportedTokenTypesMutex.Unlock()
 	fake.SupportedTokenTypesStub = stub
 }
 
-func (fake *TokensService) SupportedTokenTypesReturns(result1 []string, result2 error) {
+func (fake *TokensService) SupportedTokenTypesReturns(result1 []string) {
 	fake.supportedTokenTypesMutex.Lock()
 	defer fake.supportedTokenTypesMutex.Unlock()
 	fake.SupportedTokenTypesStub = nil
 	fake.supportedTokenTypesReturns = struct {
 		result1 []string
-		result2 error
-	}{result1, result2}
+	}{result1}
 }
 
-func (fake *TokensService) SupportedTokenTypesReturnsOnCall(i int, result1 []string, result2 error) {
+func (fake *TokensService) SupportedTokenTypesReturnsOnCall(i int, result1 []string) {
 	fake.supportedTokenTypesMutex.Lock()
 	defer fake.supportedTokenTypesMutex.Unlock()
 	fake.SupportedTokenTypesStub = nil
 	if fake.supportedTokenTypesReturnsOnCall == nil {
 		fake.supportedTokenTypesReturnsOnCall = make(map[int]struct {
 			result1 []string
-			result2 error
 		})
 	}
 	fake.supportedTokenTypesReturnsOnCall[i] = struct {
 		result1 []string
-		result2 error
-	}{result1, result2}
+	}{result1}
 }
 
 func (fake *TokensService) Invocations() map[string][][]interface{} {

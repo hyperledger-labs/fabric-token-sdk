@@ -12,6 +12,9 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"hash"
+
+	math "github.com/IBM/mathlib"
+	"github.com/pkg/errors"
 )
 
 type Hashable []byte
@@ -47,8 +50,17 @@ func (h *Hasher) AddInt32(i int32) error {
 	return binary.Write(h.h, binary.LittleEndian, i)
 }
 
+func (h *Hasher) AddInt(i int) error {
+	return binary.Write(h.h, binary.LittleEndian, i)
+}
+
 func (h *Hasher) AddUInt64(i uint64) error {
 	return binary.Write(h.h, binary.LittleEndian, i)
+}
+
+func (h *Hasher) AddBytes(b []byte) error {
+	_, err := h.h.Write(b)
+	return err
 }
 
 func (h *Hasher) AddString(s string) error {
@@ -73,4 +85,13 @@ func (h *Hasher) Digest() []byte {
 
 func (h *Hasher) HexDigest() string {
 	return hex.EncodeToString(h.h.Sum(nil))
+}
+
+func (h *Hasher) AddG1s(generators []*math.G1) error {
+	for _, g := range generators {
+		if err := h.AddBytes(g.Bytes()); err != nil {
+			return errors.WithMessage(err, "failed to add g1 element")
+		}
+	}
+	return nil
 }

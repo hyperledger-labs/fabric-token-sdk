@@ -229,7 +229,7 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMe
 		}
 
 		// check that token info matches output. If so, return token in cleartext. Else return an error.
-		tok, err := tr.OutputTokens[i].GetTokenInTheClear(metadata, pp)
+		tok, err := tr.OutputTokens[i].ToClear(metadata, pp)
 		if err != nil {
 			return errors.Wrap(err, "failed getting token in the clear")
 		}
