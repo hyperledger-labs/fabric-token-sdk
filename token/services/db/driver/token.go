@@ -123,6 +123,9 @@ type TokenDBTransaction interface {
 	StoreToken(tr TokenRecord, owners []string) error
 	// SetSpendable updates the spendable flag of the passed token
 	SetSpendable(txID string, index uint64, spendable bool) error
+	// SupportedTokens set to the spendable flag to true for all the tokens having one of the passed token type.
+	// The spendable flag is set to false for the other tokens
+	SupportedTokens(supportedTokenTypes []string) error
 	// Commit commits this transaction
 	Commit() error
 	// Rollback rollbacks this transaction
@@ -158,7 +161,7 @@ type TokenDB interface {
 	GetTokenInfos(ids []*token.ID) ([][]byte, error)
 	// GetTokenInfoAndOutputs returns both value and metadata of the tokens for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
-	GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error)
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error)
 	// GetAllTokenInfos returns the token metadata for the passed ids
 	GetAllTokenInfos(ids []*token.ID) ([][]byte, error)
 	// GetTokens returns the owned tokens and their identifier keys for the passed ids.

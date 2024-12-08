@@ -11,8 +11,8 @@ import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 //go:generate counterfeiter -o mock/tss.go -fake-name TokensService . TokensService
 
 type TokensService interface {
-	// IsSpendable returns no error if the output and its metadata are recognized as well-formed and spendable by this driver
-	IsSpendable(output []byte, outputMetadata []byte) error
+	// SupportedTokenTypes returns the supported token types
+	SupportedTokenTypes() ([]string, error)
 
 	// Deobfuscate processes the passed output and metadata to derive a token.Token, its issuer (if any), and its token type tag
 	Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, string, error)

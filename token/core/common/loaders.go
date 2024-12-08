@@ -132,7 +132,7 @@ func NewVaultLedgerTokenAndMetadataLoader[T any, M any](tokenVault TokenVault, d
 func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context, ids []*token.ID) ([]T, []M, error) {
 	span := trace.SpanFromContext(ctx)
 	// return token outputs and the corresponding opening
-	comms, infos, err := s.TokenVault.GetTokenInfoAndOutputs(ctx, ids)
+	outputs, metadata, err := s.TokenVault.GetTokenOutputsAndMeta(ctx, ids)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -141,19 +141,19 @@ func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context
 	tokens := make([]T, len(ids))
 	meta := make([]M, len(ids))
 	for i, id := range ids {
-		if len(comms[i]) == 0 {
+		if len(outputs[i]) == 0 {
 			return nil, nil, errors.Errorf("failed getting state for id [%v], nil comm value", id)
 		}
-		if len(infos[i]) == 0 {
+		if len(metadata[i]) == 0 {
 			return nil, nil, errors.Errorf("failed getting state for id [%v], nil info value", id)
 		}
 		span.AddEvent("deserialize_token")
-		tok, err := s.Deserializer.DeserializeToken(comms[i])
+		tok, err := s.Deserializer.DeserializeToken(outputs[i])
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(comms[i]))
+			return nil, nil, errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(outputs[i]))
 		}
 		span.AddEvent("deserialize_metadata")
-		ti, err := s.Deserializer.DeserializeMetadata(infos[i])
+		ti, err := s.Deserializer.DeserializeMetadata(metadata[i])
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
 		}

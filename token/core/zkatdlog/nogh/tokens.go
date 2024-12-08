@@ -36,9 +36,8 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 	return tok, metadata.Issuer, "", nil
 }
 
-func (s *TokensService) IsSpendable(outputRaw []byte, metadataRaw []byte) error {
-	_, _, _, err := s.deserializeToken(outputRaw, metadataRaw, true)
-	return err
+func (s *TokensService) SupportedTokenTypes() ([]string, error) {
+	return nil, nil
 }
 
 func (s *TokensService) DeserializeToken(outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {

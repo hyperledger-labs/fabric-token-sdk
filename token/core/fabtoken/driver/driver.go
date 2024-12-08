@@ -130,7 +130,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 			fabtoken.NewAuditorService(),
 			observables.NewAudit(tracerProvider),
 		),
-		fabtoken.NewTokensService(),
+		fabtoken.NewTokensService(publicParamsManager.PublicParams()),
 		authorization,
 	)
 	if err != nil {

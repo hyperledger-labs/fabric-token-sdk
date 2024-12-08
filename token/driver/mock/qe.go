@@ -346,7 +346,7 @@ func (fake *QueryEngine) GetStatusReturnsOnCall(i int, result1 int, result2 stri
 	}{result1, result2, result3}
 }
 
-func (fake *QueryEngine) GetTokenInfoAndOutputs(arg1 context.Context, arg2 []*token.ID) ([][]byte, [][]byte, error) {
+func (fake *QueryEngine) GetTokenOutputsAndMeta(arg1 context.Context, arg2 []*token.ID) ([][]byte, [][]byte, error) {
 	var arg2Copy []*token.ID
 	if arg2 != nil {
 		arg2Copy = make([]*token.ID, len(arg2))

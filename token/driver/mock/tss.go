@@ -42,17 +42,17 @@ type TokensService struct {
 		result1 []byte
 		result2 error
 	}
-	IsSpendableStub        func([]byte, []byte) error
-	isSpendableMutex       sync.RWMutex
-	isSpendableArgsForCall []struct {
-		arg1 []byte
-		arg2 []byte
+	SupportedTokenTypesStub        func() ([]string, error)
+	supportedTokenTypesMutex       sync.RWMutex
+	supportedTokenTypesArgsForCall []struct {
 	}
-	isSpendableReturns struct {
-		result1 error
+	supportedTokenTypesReturns struct {
+		result1 []string
+		result2 error
 	}
-	isSpendableReturnsOnCall map[int]struct {
-		result1 error
+	supportedTokenTypesReturnsOnCall map[int]struct {
+		result1 []string
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -209,76 +209,60 @@ func (fake *TokensService) ExtractMetadataReturnsOnCall(i int, result1 []byte, r
 	}{result1, result2}
 }
 
-func (fake *TokensService) IsSpendable(arg1 []byte, arg2 []byte) error {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
-	}
-	fake.isSpendableMutex.Lock()
-	ret, specificReturn := fake.isSpendableReturnsOnCall[len(fake.isSpendableArgsForCall)]
-	fake.isSpendableArgsForCall = append(fake.isSpendableArgsForCall, struct {
-		arg1 []byte
-		arg2 []byte
-	}{arg1Copy, arg2Copy})
-	stub := fake.IsSpendableStub
-	fakeReturns := fake.isSpendableReturns
-	fake.recordInvocation("IsSpendable", []interface{}{arg1Copy, arg2Copy})
-	fake.isSpendableMutex.Unlock()
+func (fake *TokensService) SupportedTokenTypes() ([]string, error) {
+	fake.supportedTokenTypesMutex.Lock()
+	ret, specificReturn := fake.supportedTokenTypesReturnsOnCall[len(fake.supportedTokenTypesArgsForCall)]
+	fake.supportedTokenTypesArgsForCall = append(fake.supportedTokenTypesArgsForCall, struct {
+	}{})
+	stub := fake.SupportedTokenTypesStub
+	fakeReturns := fake.supportedTokenTypesReturns
+	fake.recordInvocation("SupportedTokenTypes", []interface{}{})
+	fake.supportedTokenTypesMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub()
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fakeReturns.result1
+	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *TokensService) IsSpendableCallCount() int {
-	fake.isSpendableMutex.RLock()
-	defer fake.isSpendableMutex.RUnlock()
-	return len(fake.isSpendableArgsForCall)
+func (fake *TokensService) SupportedTokenTypesCallCount() int {
+	fake.supportedTokenTypesMutex.RLock()
+	defer fake.supportedTokenTypesMutex.RUnlock()
+	return len(fake.supportedTokenTypesArgsForCall)
 }
 
-func (fake *TokensService) IsSpendableCalls(stub func([]byte, []byte) error) {
-	fake.isSpendableMutex.Lock()
-	defer fake.isSpendableMutex.Unlock()
-	fake.IsSpendableStub = stub
+func (fake *TokensService) SupportedTokenTypesCalls(stub func() ([]string, error)) {
+	fake.supportedTokenTypesMutex.Lock()
+	defer fake.supportedTokenTypesMutex.Unlock()
+	fake.SupportedTokenTypesStub = stub
 }
 
-func (fake *TokensService) IsSpendableArgsForCall(i int) ([]byte, []byte) {
-	fake.isSpendableMutex.RLock()
-	defer fake.isSpendableMutex.RUnlock()
-	argsForCall := fake.isSpendableArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+func (fake *TokensService) SupportedTokenTypesReturns(result1 []string, result2 error) {
+	fake.supportedTokenTypesMutex.Lock()
+	defer fake.supportedTokenTypesMutex.Unlock()
+	fake.SupportedTokenTypesStub = nil
+	fake.supportedTokenTypesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *TokensService) IsSpendableReturns(result1 error) {
-	fake.isSpendableMutex.Lock()
-	defer fake.isSpendableMutex.Unlock()
-	fake.IsSpendableStub = nil
-	fake.isSpendableReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *TokensService) IsSpendableReturnsOnCall(i int, result1 error) {
-	fake.isSpendableMutex.Lock()
-	defer fake.isSpendableMutex.Unlock()
-	fake.IsSpendableStub = nil
-	if fake.isSpendableReturnsOnCall == nil {
-		fake.isSpendableReturnsOnCall = make(map[int]struct {
-			result1 error
+func (fake *TokensService) SupportedTokenTypesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.supportedTokenTypesMutex.Lock()
+	defer fake.supportedTokenTypesMutex.Unlock()
+	fake.SupportedTokenTypesStub = nil
+	if fake.supportedTokenTypesReturnsOnCall == nil {
+		fake.supportedTokenTypesReturnsOnCall = make(map[int]struct {
+			result1 []string
+			result2 error
 		})
 	}
-	fake.isSpendableReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
+	fake.supportedTokenTypesReturnsOnCall[i] = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *TokensService) Invocations() map[string][][]interface{} {
@@ -288,8 +272,8 @@ func (fake *TokensService) Invocations() map[string][][]interface{} {
 	defer fake.deobfuscateMutex.RUnlock()
 	fake.extractMetadataMutex.RLock()
 	defer fake.extractMetadataMutex.RUnlock()
-	fake.isSpendableMutex.RLock()
-	defer fake.isSpendableMutex.RUnlock()
+	fake.supportedTokenTypesMutex.RLock()
+	defer fake.supportedTokenTypesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
