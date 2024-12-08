@@ -51,7 +51,7 @@ func (h *Hasher) AddInt32(i int32) error {
 }
 
 func (h *Hasher) AddInt(i int) error {
-	return binary.Write(h.h, binary.LittleEndian, i)
+	return binary.Write(h.h, binary.LittleEndian, int64(i))
 }
 
 func (h *Hasher) AddUInt64(i uint64) error {
