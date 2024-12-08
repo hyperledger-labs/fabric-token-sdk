@@ -174,7 +174,7 @@ func NewVaultTokenInfoLoader[M any](tokenVault driver.QueryEngine, deserializer 
 }
 
 func (s *VaultTokenInfoLoader[M]) GetTokenInfos(ids []*token.ID) ([]M, error) {
-	infos, err := s.TokenVault.GetTokenInfos(ids)
+	infos, err := s.TokenVault.GetTokenMetadata(ids)
 	if err != nil {
 		return nil, err
 	}

@@ -360,7 +360,7 @@ func (fake *QueryEngine) GetTokenOutputsAndMeta(arg1 context.Context, arg2 []*to
 	}{arg1, arg2Copy})
 	stub := fake.GetTokenInfoAndOutputsStub
 	fakeReturns := fake.getTokenInfoAndOutputsReturns
-	fake.recordInvocation("GetTokenInfoAndOutputs", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("GetTokenOutputsAndMeta", []interface{}{arg1, arg2Copy})
 	fake.getTokenInfoAndOutputsMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
@@ -419,7 +419,7 @@ func (fake *QueryEngine) GetTokenInfoAndOutputsReturnsOnCall(i int, result1 [][]
 	}{result1, result2, result3}
 }
 
-func (fake *QueryEngine) GetTokenInfos(arg1 []*token.ID) ([][]byte, error) {
+func (fake *QueryEngine) GetTokenMetadata(arg1 []*token.ID) ([][]byte, error) {
 	var arg1Copy []*token.ID
 	if arg1 != nil {
 		arg1Copy = make([]*token.ID, len(arg1))
@@ -432,7 +432,7 @@ func (fake *QueryEngine) GetTokenInfos(arg1 []*token.ID) ([][]byte, error) {
 	}{arg1Copy})
 	stub := fake.GetTokenInfosStub
 	fakeReturns := fake.getTokenInfosReturns
-	fake.recordInvocation("GetTokenInfos", []interface{}{arg1Copy})
+	fake.recordInvocation("GetTokenMetadata", []interface{}{arg1Copy})
 	fake.getTokenInfosMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)

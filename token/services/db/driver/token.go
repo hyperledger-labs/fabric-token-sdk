@@ -156,14 +156,12 @@ type TokenDB interface {
 	// GetTokenOutputs returns the value of the tokens as they appear on the ledger for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
 	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
-	// GetTokenInfos returns the metadata of the tokens for the passed ids.
+	// GetTokenMetadata returns the metadata of the tokens for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
-	GetTokenInfos(ids []*token.ID) ([][]byte, error)
-	// GetTokenInfoAndOutputs returns both value and metadata of the tokens for the passed ids.
+	GetTokenMetadata(ids []*token.ID) ([][]byte, error)
+	// GetTokenOutputsAndMeta returns both value and metadata of the tokens for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
 	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error)
-	// GetAllTokenInfos returns the token metadata for the passed ids
-	GetAllTokenInfos(ids []*token.ID) ([][]byte, error)
 	// GetTokens returns the owned tokens and their identifier keys for the passed ids.
 	GetTokens(inputs ...*token.ID) ([]*token.Token, error)
 	// WhoDeletedTokens for each id, the function return if it was deleted and by who as per the Delete function

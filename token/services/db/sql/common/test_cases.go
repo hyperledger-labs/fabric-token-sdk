@@ -110,7 +110,7 @@ var TokensCases = []struct {
 	{"Transaction", TTransaction},
 	{"SaveAndGetToken", TSaveAndGetToken},
 	{"DeleteAndMine", TDeleteAndMine},
-	{"GetTokenInfos", TGetTokenInfos},
+	{"GetTokenMetadata", TGetTokenInfos},
 	{"ListAuditTokens", TListAuditTokens},
 	{"ListIssuedTokens", TListIssuedTokens},
 	{"DeleteMultiple", TDeleteMultiple},
@@ -568,7 +568,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 	}
 }
 
-// GetTokenInfos retrieves the token information for the passed ids.
+// GetTokenMetadata retrieves the token information for the passed ids.
 // For each id, the callback is invoked to unmarshal the token information
 func TGetTokenInfos(t *testing.T, db *TokenDB) {
 	tr := driver.TokenRecord{
@@ -645,7 +645,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		{TxId: "tx101", Index: 0},
 		{TxId: "non existent", Index: 0},
 	}
-	_, err = db.GetTokenInfos(ids)
+	_, err = db.GetTokenMetadata(ids)
 	assert.Error(t, err)
 
 	ids = []*token.ID{
@@ -653,14 +653,14 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		{TxId: "tx102", Index: 0},
 		{TxId: "tx101", Index: 0},
 	}
-	infos, err = db.GetTokenInfos(ids)
+	infos, err = db.GetTokenMetadata(ids)
 	assert.NoError(t, err)
 	assert.Equal(t, "tx102", string(infos[0]))
 	assert.Equal(t, "tx102", string(infos[1]))
 	assert.Equal(t, "tx101", string(infos[2]))
 
 	// infos and outputs
-	toks, infos, err := db.GetTokenInfoAndOutputs(context.TODO(), ids)
+	toks, infos, err := db.GetTokenOutputsAndMeta(context.TODO(), ids)
 	assert.NoError(t, err)
 	assert.Len(t, infos, 3)
 	assert.Equal(t, "tx102", string(infos[0]))

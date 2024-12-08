@@ -346,14 +346,14 @@ func (db *TokenDB) GetTokenOutputs(ids []*token.ID, callback tdriver.QueryCallba
 	return nil
 }
 
-// GetTokenInfos retrieves the token metadata for the passed ids.
+// GetTokenMetadata retrieves the token metadata for the passed ids.
 // For each id, the callback is invoked to unmarshal the token metadata
-func (db *TokenDB) GetTokenInfos(ids []*token.ID) ([][]byte, error) {
+func (db *TokenDB) GetTokenMetadata(ids []*token.ID) ([][]byte, error) {
 	return db.GetAllTokenInfos(ids)
 }
 
-// GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
-func (db *TokenDB) GetTokenInfoAndOutputs(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error) {
+// GetTokenOutputsAndMeta retrieves both the token output and information for the passed ids.
+func (db *TokenDB) GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent("get_ledger_token_meta")
 	tokens, metas, err := db.getLedgerTokenAndMeta(ctx, ids)
