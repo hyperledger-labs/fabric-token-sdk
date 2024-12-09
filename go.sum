@@ -1070,8 +1070,8 @@ github.com/hidal-go/hidalgo v0.0.0-20201109092204-05749a6d73df/go.mod h1:bPkrxDl
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huin/goupnp v1.3.0 h1:UvLUlWDNpoUdYzb2TCn+MuTWtcjXKSza2n6CBdQ0xXc=
 github.com/huin/goupnp v1.3.0/go.mod h1:gnGPsThkYa7bFi/KWmEysQRf48l2dvR5bxr2OFckNX8=
-github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20241128141925-28bbdc3ed225 h1:wVSR9i5l77d2AFx44Cl/Ox5nzPx/9YUvW24W6Xx2Rvg=
-github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20241128141925-28bbdc3ed225/go.mod h1:vZLAiVznnEdHyx1OV5nIqf34apnfdhonwJL+qEYniIQ=
+github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20241209101049-814081013de6 h1:kD/BhQWfKwWiD9H8LsGVwflaI5hysGxHLBOoNw+knas=
+github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20241209101049-814081013de6/go.mod h1:0VgOFKFW455VmInYqpqAH7FpLHd3YZcTpujdkFe9wCA=
 github.com/hyperledger-labs/orion-sdk-go v0.2.10 h1:lFgWgxyvngIhWnIqymYGBmtmq9D6uC5d0uLG9cbyh5s=
 github.com/hyperledger-labs/orion-sdk-go v0.2.10/go.mod h1:iN2xZB964AqwVJwL+EnwPOs8z1EkMEbbIg/qYeC7gDY=
 github.com/hyperledger-labs/orion-server v0.2.10 h1:G4zbQEL5Egk0Oj+TwHCZWdTOLDBHOjaAEvYOT4G7ozw=
@@ -1086,8 +1086,6 @@ github.com/hyperledger/fabric-config v0.1.0 h1:TsR3y5xEoUmXWfp8tcDycjJhVvXEHiV5k
 github.com/hyperledger/fabric-config v0.1.0/go.mod h1:aeDZ0moG/qKvwLjddcqYr8+58/oNaJy3HE0tI01546c=
 github.com/hyperledger/fabric-lib-go v1.1.2 h1:3eHwudGZC5Ex7go5UAzVKhpF34gypPZGfSZksBKLWvE=
 github.com/hyperledger/fabric-lib-go v1.1.2/go.mod h1:SHNCq8AB0VpHAmvJEtdbzabv6NNV1F48JdmDihasBjc=
-github.com/hyperledger/fabric-private-chaincode v1.0.0-rc3.0.20231026135044-67a19b0fcda0 h1:TLVkWq6aTVttBJ5WiHMeh/gufo+lPnYN9rVuEb8qXRs=
-github.com/hyperledger/fabric-private-chaincode v1.0.0-rc3.0.20231026135044-67a19b0fcda0/go.mod h1:Q7jUjJfkL/5ZmO6c0DL0DKjN63Yp7ULe9tun+9G76eY=
 github.com/hyperledger/fabric-protos-go v0.3.3 h1:0nssqz8QWJNVNBVQz+IIfAd2j1ku7QPKFSM/1anKizI=
 github.com/hyperledger/fabric-protos-go v0.3.3/go.mod h1:BPXse9gIOQwyAePQrwQVUcc44bTW4bB5V3tujuvyArk=
 github.com/iancoleman/strcase v0.2.0/go.mod h1:iwCmte+B7n89clKwxIoIXy/HfoL7AsD47ZCWhYzw7ho=
