@@ -9,8 +9,8 @@ package sql
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
@@ -22,8 +22,8 @@ const (
 	EnvVarKey = "TOKENDB_DATASOURCE"
 )
 
-func NewDBDriver() *db.SQLDriver[dbdriver.TokenDB] {
-	return db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
+func NewDBDriver() *sql2.Driver[dbdriver.TokenDB] {
+	return sql2.NewDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenDB, error) {
 		sqlDB, opts, err := common.NewSQLDBOpener(OptsKey, EnvVarKey).OpenWithOpts(cp, tmsID)
 		if err != nil {
 			return nil, err
@@ -39,7 +39,7 @@ func NewDBDriver() *db.SQLDriver[dbdriver.TokenDB] {
 }
 
 func NewNotifierDriver() dbdriver.TokenNotifierDriver {
-	return db.NewSQLDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNotifier, error) {
+	return sql2.NewDriver(func(cp dbdriver.ConfigProvider, tmsID token.TMSID) (dbdriver.TokenNotifier, error) {
 		sqlDB, opts, err := common.NewSQLDBOpener(OptsKey, EnvVarKey).OpenWithOpts(cp, tmsID)
 		if err != nil {
 			return nil, err

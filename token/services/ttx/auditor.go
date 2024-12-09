@@ -88,6 +88,10 @@ func (a *TxAuditor) GetTokenRequest(txID string) ([]byte, error) {
 	return a.auditor.GetTokenRequest(txID)
 }
 
+func (a *TxAuditor) Check(context context.Context) ([]string, error) {
+	return a.auditor.Check(context)
+}
+
 type RegisterAuditorView struct {
 	TMSID     token.TMSID
 	AuditView view.View
@@ -115,7 +119,7 @@ func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Errorf("cannot find tms for [%s]", r.TMSID)
 	}
 	net := network.GetInstance(context, tms.Network(), tms.Channel())
-	if tms == nil {
+	if net == nil {
 		return nil, errors.Errorf("cannot find network for [%s]", tms.ID())
 	}
 	if err := net.ProcessNamespace(tms.Namespace()); err != nil {

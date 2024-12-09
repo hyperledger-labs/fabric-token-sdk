@@ -7,30 +7,34 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"context"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-func NewTokenExecutorProvider() *tokenFetcherProvider {
-	return &tokenFetcherProvider{}
+func NewTokenExecutorProvider(viewManager *view2.Manager) *tokenFetcherProvider {
+	return &tokenFetcherProvider{viewManager: viewManager}
 }
 
-type tokenFetcherProvider struct{}
+type tokenFetcherProvider struct {
+	viewManager *view2.Manager
+}
 
 func (p *tokenFetcherProvider) GetExecutor(network, _ string) (driver2.TokenQueryExecutor, error) {
-	return &tokenFetcher{network: network}, nil
+	return &tokenFetcher{viewManager: p.viewManager, network: network}, nil
 }
 
 type tokenFetcher struct {
-	network string
+	network     string
+	viewManager *view2.Manager
 }
 
-func (f *tokenFetcher) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
-	resBoxed, err := view2.GetManager(context).InitiateView(NewRequestQueryTokensView(f.network, namespace, IDs), context.Context())
+func (f *tokenFetcher) QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
+	resBoxed, err := f.viewManager.InitiateView(NewRequestQueryTokensView(f.network, namespace, IDs), context)
 	if err != nil {
 		return nil, err
 	}
@@ -38,11 +42,12 @@ func (f *tokenFetcher) QueryTokens(context view.Context, namespace string, IDs [
 }
 
 type spentTokenFetcherProvider struct {
+	viewManager   *view2.Manager
 	keyTranslator translator.KeyTranslator
 }
 
-func NewSpentTokenExecutorProvider(keyTranslator translator.KeyTranslator) *spentTokenFetcherProvider {
-	return &spentTokenFetcherProvider{keyTranslator: keyTranslator}
+func NewSpentTokenExecutorProvider(viewManager *view2.Manager, keyTranslator translator.KeyTranslator) *spentTokenFetcherProvider {
+	return &spentTokenFetcherProvider{viewManager: viewManager, keyTranslator: keyTranslator}
 }
 
 func (p *spentTokenFetcherProvider) GetSpentExecutor(network, channel string) (driver2.SpentTokenQueryExecutor, error) {
@@ -50,6 +55,7 @@ func (p *spentTokenFetcherProvider) GetSpentExecutor(network, channel string) (d
 		network:       network,
 		channel:       channel,
 		keyTranslator: p.keyTranslator,
+		viewManager:   p.viewManager,
 	}, nil
 }
 
@@ -57,9 +63,10 @@ type spentTokenFetcher struct {
 	network       string
 	channel       string
 	keyTranslator translator.KeyTranslator
+	viewManager   *view2.Manager
 }
 
-func (f *spentTokenFetcher) QuerySpentTokens(context view.Context, namespace string, IDs []*token.ID, meta []string) ([]bool, error) {
+func (f *spentTokenFetcher) QuerySpentTokens(context context.Context, namespace string, IDs []*token.ID, meta []string) ([]bool, error) {
 	sIDs := make([]string, len(IDs))
 	var err error
 	for i, id := range IDs {
@@ -69,7 +76,7 @@ func (f *spentTokenFetcher) QuerySpentTokens(context view.Context, namespace str
 		}
 	}
 
-	resBoxed, err := view2.GetManager(context).InitiateView(NewRequestSpentTokensView(f.network, namespace, sIDs), context.Context())
+	resBoxed, err := f.viewManager.InitiateView(NewRequestSpentTokensView(f.network, namespace, sIDs), context)
 	if err != nil {
 		return nil, err
 	}
