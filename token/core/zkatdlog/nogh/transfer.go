@@ -24,8 +24,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+type LoadedToken = common.LoadedToken[[]byte, []byte]
+
 type TokenLoader interface {
-	LoadTokens(ctx context.Context, ids []*token2.ID) ([][]byte, [][]byte, error)
+	LoadTokens(ctx context.Context, ids []*token2.ID) ([]LoadedToken, error)
 }
 
 type TokenDeserializer interface {
@@ -76,11 +78,11 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driv
 	s.Logger.Debugf("Prepare Transfer Action [%s,%v]", txID, tokenIDs)
 	// load tokens with the passed token identifiers
 	span.AddEvent("load_tokens")
-	tokensRaws, metadataRaws, err := s.TokenLoader.LoadTokens(newCtx, tokenIDs)
+	loadedTokens, err := s.TokenLoader.LoadTokens(newCtx, tokenIDs)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
-	tokens, metas, senders, err := s.prepareInputs(tokensRaws, metadataRaws)
+	tokens, metas, senders, err := s.prepareInputs(loadedTokens)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to prepare inputs")
 	}
@@ -250,14 +252,14 @@ func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.Transfer
 	return transferAction, nil
 }
 
-func (s *TransferService) prepareInputs(tokenRaws [][]byte, metadataRaws [][]byte) ([]*token.Token, []*token.Metadata, []driver.Identity, error) {
-	tokens := make([]*token.Token, len(tokenRaws))
-	metadata := make([]*token.Metadata, len(metadataRaws))
-	signers := make([]driver.Identity, len(tokenRaws))
-	for i, tokenRaw := range tokenRaws {
-		tok, meta, _, err := s.TokenDeserializer.DeserializeToken(tokenRaw, metadataRaws[i])
+func (s *TransferService) prepareInputs(loadedTokens []LoadedToken) ([]*token.Token, []*token.Metadata, []driver.Identity, error) {
+	tokens := make([]*token.Token, len(loadedTokens))
+	metadata := make([]*token.Metadata, len(loadedTokens))
+	signers := make([]driver.Identity, len(loadedTokens))
+	for i, loadedToken := range loadedTokens {
+		tok, meta, _, err := s.TokenDeserializer.DeserializeToken(loadedToken.Token, loadedToken.Metadata)
 		if err != nil {
-			return nil, nil, nil, errors.Wrapf(err, "failed deserializing token [%s]", string(tokenRaw))
+			return nil, nil, nil, errors.Wrapf(err, "failed deserializing token [%s]", string(loadedToken.Token))
 		}
 		tokens[i] = tok
 		metadata[i] = meta

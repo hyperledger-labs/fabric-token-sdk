@@ -12,11 +12,10 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
-	"go.opentelemetry.io/otel/trace"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type LedgerToken interface {
@@ -116,6 +115,12 @@ func (s *VaultLedgerTokenLoader[T]) isAnyPending(ids ...*token.ID) (anyPending b
 	return false, nil
 }
 
+type LoadedToken[T any, M any] struct {
+	TokenType string
+	Token     T
+	Metadata  M
+}
+
 type VaultLedgerTokenAndMetadataLoader[T any, M any] struct {
 	TokenVault   TokenVault
 	Deserializer TokenAndMetadataDeserializer[T, M]
@@ -129,39 +134,41 @@ func NewVaultLedgerTokenAndMetadataLoader[T any, M any](tokenVault TokenVault, d
 // matching the token identifiers, the corresponding zkatdlog tokens, the information of the
 // tokens in clear text and the identities of their owners
 // LoadToken returns an error in case of failure
-func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context, ids []*token.ID) ([]T, []M, error) {
+func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context, ids []*token.ID) ([]LoadedToken[T, M], error) {
 	span := trace.SpanFromContext(ctx)
 	// return token outputs and the corresponding opening
 	outputs, metadata, err := s.TokenVault.GetTokenOutputsAndMeta(ctx, ids)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	span.AddEvent("iterate_tokens")
-	tokens := make([]T, len(ids))
-	meta := make([]M, len(ids))
+	result := make([]LoadedToken[T, M], len(ids))
 	for i, id := range ids {
 		if len(outputs[i]) == 0 {
-			return nil, nil, errors.Errorf("failed getting state for id [%v], nil comm value", id)
+			return nil, errors.Errorf("failed getting state for id [%v], nil comm value", id)
 		}
 		if len(metadata[i]) == 0 {
-			return nil, nil, errors.Errorf("failed getting state for id [%v], nil info value", id)
+			return nil, errors.Errorf("failed getting state for id [%v], nil info value", id)
 		}
 		span.AddEvent("deserialize_token")
 		tok, err := s.Deserializer.DeserializeToken(outputs[i])
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(outputs[i]))
+			return nil, errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(outputs[i]))
 		}
 		span.AddEvent("deserialize_metadata")
-		ti, err := s.Deserializer.DeserializeMetadata(metadata[i])
+		meta, err := s.Deserializer.DeserializeMetadata(metadata[i])
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
+			return nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
 		}
-		tokens[i] = tok
-		meta[i] = ti
+		result[i] = LoadedToken[T, M]{
+			TokenType: "",
+			Token:     tok,
+			Metadata:  meta,
+		}
 	}
 
-	return tokens, meta, nil
+	return result, nil
 }
 
 type VaultTokenInfoLoader[M any] struct {

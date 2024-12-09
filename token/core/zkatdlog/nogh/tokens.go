@@ -10,7 +10,6 @@ import (
 	errors2 "errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/math"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -29,11 +28,6 @@ type TokensService struct {
 
 func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams]) (*TokensService, error) {
 	// compute supported tokens
-	// fabtoken
-	fabtokenTokenTypes, err := fabtoken.SupportedTokenTypes(32, 64)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed computing fabtoken token types")
-	}
 	// dlog without graph hiding
 	commTokenTypes, err := SupportedTokenTypes(publicParametersManager.PublicParams())
 	if err != nil {
@@ -43,7 +37,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	return &TokensService{
 		TokensService:           common.NewTokensService(),
 		PublicParametersManager: publicParametersManager,
-		TokenTypes:              append(fabtokenTokenTypes, commTokenTypes...),
+		TokenTypes:              commTokenTypes,
 		OutputTokenType:         commTokenTypes[0],
 	}, nil
 }
@@ -109,7 +103,7 @@ func (s *TokensService) deserializeToken(outputRaw []byte, metadataRaw []byte, c
 func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.Token, error) {
 	output := &token2.Token{}
 	if err := output.Deserialize(outputRaw); err != nil {
-		return nil, errors.Wrap(err, "failed to deserialize oken")
+		return nil, errors.Wrap(err, "failed to deserialize token")
 	}
 	if checkOwner && len(output.Owner) == 0 {
 		return nil, errors.Errorf("token owner not found in output")
