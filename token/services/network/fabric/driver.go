@@ -81,7 +81,7 @@ func NewGenericDriver(
 		NewTokenExecutorProvider(fnsProvider),
 		NewSpentTokenExecutorProvider(fnsProvider, keyTranslator),
 		keyTranslator,
-		NewCommitterBasedFLMProvider(fnsProvider, tracerProvider, keyTranslator),
+		NewDeliveryBasedFLMProvider(fnsProvider, tracerProvider, keyTranslator),
 		endorsement.NewServiceProvider(fnsProvider, configService, viewManager, viewRegistry, identityProvider, keyTranslator),
 		config2.GenericDriver,
 	)
