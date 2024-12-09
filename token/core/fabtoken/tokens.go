@@ -45,7 +45,7 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 		Owner:    tok.Owner,
 		Type:     tok.Type,
 		Quantity: tok.Quantity,
-	}, metadata.Issuer, "", nil
+	}, metadata.Issuer, s.TokenTypes[0], nil
 }
 
 func (s *TokensService) SupportedTokenTypes() []string {

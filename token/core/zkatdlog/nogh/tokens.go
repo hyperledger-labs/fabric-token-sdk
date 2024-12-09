@@ -24,6 +24,7 @@ type TokensService struct {
 	*common.TokensService
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
 	TokenTypes              []string
+	OutputTokenType         string
 }
 
 func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams]) (*TokensService, error) {
@@ -43,6 +44,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 		TokensService:           common.NewTokensService(),
 		PublicParametersManager: publicParametersManager,
 		TokenTypes:              append(fabtokenTokenTypes, commTokenTypes...),
+		OutputTokenType:         commTokenTypes[0],
 	}, nil
 }
 
@@ -54,7 +56,7 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 	if err != nil {
 		return nil, nil, "", err
 	}
-	return tok, metadata.Issuer, "", nil
+	return tok, metadata.Issuer, s.OutputTokenType, nil
 }
 
 func (s *TokensService) SupportedTokenTypes() []string {
