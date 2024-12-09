@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package sig
 
 import (
@@ -6,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs/mock"
-	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
@@ -41,7 +47,7 @@ func BenchmarkRegisterSigner(b *testing.B) {
 		Name:    "hw",
 		ConnStr: pgConnStr,
 	}
-	registry := registry2.New()
+	registry := registry.New()
 	cp := &mock.ConfigProvider{}
 	backend, err := kvs.NewWithConfig(d, "", cp)
 	assert.NoError(b, err)
