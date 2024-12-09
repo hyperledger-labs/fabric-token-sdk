@@ -9,7 +9,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20241205165152-c29ab14d2320
+	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20241209084149-15b7cd1af28f
 	github.com/hyperledger-labs/orion-sdk-go v0.2.10
 	github.com/hyperledger-labs/orion-server v0.2.10
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
@@ -44,8 +44,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	modernc.org/sqlite v1.33.1
 )
-
-replace github.com/hyperledger-labs/fabric-smart-client => ../fabric-smart-client
 
 require (
 	cloud.google.com/go v0.115.0 // indirect
