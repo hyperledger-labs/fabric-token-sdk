@@ -137,7 +137,7 @@ func NewVaultLedgerTokenAndMetadataLoader[T any, M any](tokenVault TokenVault, d
 func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context, ids []*token.ID) ([]LoadedToken[T, M], error) {
 	span := trace.SpanFromContext(ctx)
 	// return token outputs and the corresponding opening
-	outputs, metadata, err := s.TokenVault.GetTokenOutputsAndMeta(ctx, ids)
+	outputs, metadata, types, err := s.TokenVault.GetTokenOutputsAndMeta(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context
 			return nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
 		}
 		result[i] = LoadedToken[T, M]{
-			TokenType: "",
+			TokenType: types[i],
 			Token:     tok,
 			Metadata:  meta,
 		}

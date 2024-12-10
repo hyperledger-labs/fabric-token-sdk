@@ -157,11 +157,9 @@ type TokenDB interface {
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
 	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
 	// GetTokenMetadata returns the metadata of the tokens for the passed ids.
-	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
 	GetTokenMetadata(ids []*token.ID) ([][]byte, error)
-	// GetTokenOutputsAndMeta returns both value and metadata of the tokens for the passed ids.
-	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
-	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, error)
+	// GetTokenOutputsAndMeta retrieves both the token output, metadata, and type for the passed ids.
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []string, error)
 	// GetTokens returns the owned tokens and their identifier keys for the passed ids.
 	GetTokens(inputs ...*token.ID) ([]*token.Token, error)
 	// WhoDeletedTokens for each id, the function return if it was deleted and by who as per the Delete function

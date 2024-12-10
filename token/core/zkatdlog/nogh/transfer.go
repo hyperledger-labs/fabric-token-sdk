@@ -31,7 +31,7 @@ type TokenLoader interface {
 }
 
 type TokenDeserializer interface {
-	DeserializeToken(outputRaw []byte, metadataRaw []byte) (*token.Token, *token.Metadata, *token.ConversionWitness, error)
+	DeserializeToken(outputType string, outputRaw []byte, metadataRaw []byte) (*token.Token, *token.Metadata, *token.ConversionWitness, error)
 }
 
 type TransferService struct {
@@ -257,7 +257,7 @@ func (s *TransferService) prepareInputs(loadedTokens []LoadedToken) ([]*token.To
 	metadata := make([]*token.Metadata, len(loadedTokens))
 	signers := make([]driver.Identity, len(loadedTokens))
 	for i, loadedToken := range loadedTokens {
-		tok, meta, _, err := s.TokenDeserializer.DeserializeToken(loadedToken.Token, loadedToken.Metadata)
+		tok, meta, _, err := s.TokenDeserializer.DeserializeToken(loadedToken.TokenType, loadedToken.Token, loadedToken.Metadata)
 		if err != nil {
 			return nil, nil, nil, errors.Wrapf(err, "failed deserializing token [%s]", string(loadedToken.Token))
 		}

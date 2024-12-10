@@ -57,10 +57,13 @@ func (s *TokensService) SupportedTokenTypes() []string {
 	return s.TokenTypes
 }
 
-func (s *TokensService) DeserializeToken(outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
+func (s *TokensService) DeserializeToken(outputType string, outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
 	// Here we have to check if what we get in input is already as expected.
 	// If not, we need to check if a conversion is possible.
 	// If not, a failure is to be returned
+	if outputType != s.OutputTokenType {
+		return nil, nil, nil, errors.Errorf("invalid token type [%s], expected [%s]", outputType, s.OutputTokenType)
+	}
 
 	// get zkatdlog token
 	output, err := s.getOutput(outputRaw, false)

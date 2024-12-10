@@ -660,7 +660,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 	assert.Equal(t, "tx101", string(infos[2]))
 
 	// infos and outputs
-	toks, infos, err := db.GetTokenOutputsAndMeta(context.TODO(), ids)
+	toks, infos, _, err := db.GetTokenOutputsAndMeta(context.TODO(), ids)
 	assert.NoError(t, err)
 	assert.Len(t, infos, 3)
 	assert.Equal(t, "tx102", string(infos[0]))
