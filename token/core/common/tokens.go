@@ -17,7 +17,7 @@ func NewTokensService() *TokensService {
 	return &TokensService{}
 }
 
-func (s *TokensService) GetTokenInfo(meta *driver.TokenRequestMetadata, target []byte) ([]byte, error) {
+func (s *TokensService) ExtractMetadata(meta *driver.TokenRequestMetadata, target []byte) ([]byte, error) {
 	tokenInfoRaw := meta.GetTokenInfo(target)
 	if len(tokenInfoRaw) == 0 {
 		return nil, errors.Errorf("metadata for [%s] not found", Hashable(target))

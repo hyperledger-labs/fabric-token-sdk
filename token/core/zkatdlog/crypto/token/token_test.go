@@ -42,7 +42,7 @@ var _ = Describe("Token", func() {
 	Describe("get token in the clear", func() {
 		When("token is computed correctly", func() {
 			It("succeeds", func() {
-				t, err := token.GetTokenInTheClear(inf, pp)
+				t, err := token.ToClear(inf, pp)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(t.Type).To(Equal("ABC"))
 				Expect(t.Quantity).To(Equal("0x" + inf.Value.String()))
