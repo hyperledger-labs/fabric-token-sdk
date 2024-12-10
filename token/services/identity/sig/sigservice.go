@@ -43,8 +43,8 @@ type Service struct {
 	sync      sync.RWMutex
 	signers   map[string]SignerEntry
 	verifiers map[string]VerifierEntry
-	storage   Storage
 
+	storage      Storage
 	deserializer idriver.Deserializer
 }
 
@@ -96,9 +96,7 @@ func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer,
 	// store, if a failure happens then remove the entry
 	if o.storage != nil {
 		if err := o.storage.StoreSignerInfo(identity, signerInfo); err != nil {
-			o.sync.Lock()
-			defer o.sync.Unlock()
-			delete(o.signers, idHash)
+			o.deleteSigner(idHash)
 			return errors.Wrap(err, "failed to store entry in storage for the passed signer")
 		}
 	}
@@ -106,9 +104,7 @@ func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer,
 	if verifier != nil {
 		// store verifier
 		if err := o.RegisterVerifier(identity, verifier); err != nil {
-			o.sync.Lock()
-			defer o.sync.Unlock()
-			delete(o.signers, idHash)
+			o.deleteSigner(idHash)
 			return err
 		}
 	}
@@ -126,9 +122,9 @@ func (o *Service) RegisterVerifier(identity driver.Identity, verifier driver.Ver
 
 	// First check with read lock
 	idHash := identity.UniqueID()
-	o.sync.Lock()
+	o.sync.RLock()
 	v, ok := o.verifiers[idHash]
-	o.sync.Unlock()
+	o.sync.RUnlock()
 	if ok {
 		logger.Warnf("another verifier bound to [%s]:[%s][%s] from [%s]", idHash, GetIdentifier(v), GetIdentifier(verifier), string(v.DebugStack))
 		return nil
@@ -192,18 +188,6 @@ func (o *Service) IsMe(identity driver.Identity) bool {
 		}
 	}
 
-	// last chance, deserialize
-	// signer, err := o.GetSigner(identity)
-	// if err != nil {
-	//	if logger.IsEnabledFor(zapcore.DebugLevel) {
-	//		logger.Debugf("is me [%s]? no", identity)
-	//	}
-	//	return false
-	// }
-	// if logger.IsEnabledFor(zapcore.DebugLevel) {
-	//	logger.Debugf("is me [%s]? %v", identity, signer != nil)
-	// }
-	// return signer != nil
 	return false
 }
 
@@ -324,6 +308,12 @@ func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error)
 	}
 	o.verifiers[idHash] = entry
 	return verifier, nil
+}
+
+func (o *Service) deleteSigner(id string) {
+	o.sync.Lock()
+	defer o.sync.Unlock()
+	delete(o.signers, id)
 }
 
 func GetIdentifier(f any) string {
