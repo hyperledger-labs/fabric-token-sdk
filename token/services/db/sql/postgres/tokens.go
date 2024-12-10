@@ -29,7 +29,7 @@ func NewTokenNotifier(db *sql.DB, opts common.NewDBOpts) (driver.TokenNotifier, 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
-	notifier := postgres.NewNotifier(db, tables.Tokens, opts.DataSource, postgres.AllOperations, "tx_id", "idx")
+	notifier := postgres.NewNotifier(db, tables.Tokens, opts.DataSource, postgres.AllOperations, *postgres.NewSimplePrimaryKey("tx_id"), *postgres.NewSimplePrimaryKey("idx"))
 	if opts.CreateSchema {
 		if err = common2.InitSchema(db, notifier.GetSchema()); err != nil {
 			return nil, err
