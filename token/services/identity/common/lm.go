@@ -164,9 +164,11 @@ func (l *LocalMembership) Load(identities []*config.Identity) error {
 	for _, identityConfig := range identities {
 		l.logger.Debugf("load wallet for identity [%+v]", identityConfig)
 		if err := l.registerIdentity(*identityConfig); err != nil {
-			return errors.WithMessage(err, "failed to load identity")
+			// we log the error so the user can fix it but it shouldn't stop the loading of the service.
+			l.logger.Errorf("failed loading identity: %s", err.Error())
+		} else {
+			l.logger.Debugf("load wallet for identity [%+v] done.", identityConfig)
 		}
-		l.logger.Debugf("load wallet for identity [%+v] done.", identityConfig)
 	}
 
 	// load identities from storage
@@ -251,8 +253,7 @@ func (l *LocalMembership) registerIdentityConfiguration(identity *driver.Identit
 		l.logger.Warnf("failed to load local identity at [%s]:[%s]", identity.URL, err)
 		// Does path correspond to a folder containing multiple identities?
 		if err := l.registerLocalIdentities(identity); err != nil {
-			// we don't return the error so that the token manager can still load
-			l.logger.Errorf("failed to register local identity from folder: %s", err.Error())
+			return errors.WithMessage(err, "failed to register local identity")
 		}
 	}
 	return nil
@@ -361,6 +362,8 @@ func (l *LocalMembership) loadFromStorage() error {
 		items = append(items, item)
 	}
 	it.Close()
+	noDefault := len(l.getDefaultIdentifier()) == 0
+
 	for _, entry := range items {
 		id := entry.ID
 		if l.getLocalIdentity(id) != nil {
@@ -368,13 +371,15 @@ func (l *LocalMembership) loadFromStorage() error {
 			continue
 		}
 		l.logger.Debugf("from storage: id [%s] does no exist, register it", id)
-		if err := l.registerIdentityConfiguration(&driver.IdentityConfiguration{
+		conf := &driver.IdentityConfiguration{
 			ID:     entry.ID,
 			URL:    entry.URL,
 			Config: entry.Config,
 			Raw:    entry.Raw,
-		}, l.getDefaultIdentifier() == ""); err != nil {
-			return err
+		}
+		if err := l.registerIdentityConfiguration(conf, noDefault); err != nil {
+			// failing to load an identity should not break the flow.
+			l.logger.Errorf("failed registering identity from %s: %s", conf.URL, err.Error())
 		}
 	}
 	return nil
