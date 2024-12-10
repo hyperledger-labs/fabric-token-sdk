@@ -54,8 +54,8 @@ func NewManager(drivers []db.NamedDriver[driver.IdentityDBDriver], cp driver.Con
 		identityDrivers[i] = db.NamedDriver[*identityDBDriver]{Name: driver.Name, Driver: &identityDBDriver{IdentityDBDriver: driver.Driver}}
 		walletDrivers[i] = db.NamedDriver[*walletDBDriver]{Name: driver.Name, Driver: &walletDBDriver{IdentityDBDriver: driver.Driver}}
 	}
-	identityHolder := db.NewDriverHolder[driver.IdentityDB, driver.IdentityDB, *identityDBDriver](utils.IdentityFunc[driver.IdentityDB](), identityDrivers...)
-	walletHolder := db.NewDriverHolder[driver.WalletDB, driver.WalletDB, *walletDBDriver](utils.IdentityFunc[driver.WalletDB](), walletDrivers...)
+	identityHolder := db.NewDriverHolder(utils.IdentityFunc[driver.IdentityDB](), identityDrivers...)
+	walletHolder := db.NewDriverHolder(utils.IdentityFunc[driver.WalletDB](), walletDrivers...)
 	return &Manager{
 		identityManager: identityHolder.NewManager(cp, config),
 		walletManager:   walletHolder.NewManager(cp, config),
