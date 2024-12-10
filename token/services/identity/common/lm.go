@@ -251,7 +251,8 @@ func (l *LocalMembership) registerIdentityConfiguration(identity *driver.Identit
 		l.logger.Warnf("failed to load local identity at [%s]:[%s]", identity.URL, err)
 		// Does path correspond to a folder containing multiple identities?
 		if err := l.registerLocalIdentities(identity); err != nil {
-			return errors.WithMessage(err, "failed to register local identity")
+			// we don't return the error so that the token manager can still load
+			l.logger.Errorf("failed to register local identity from folder: %s", err.Error())
 		}
 	}
 	return nil
