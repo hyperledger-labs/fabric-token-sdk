@@ -105,13 +105,13 @@ func (t *Tokens) Append(ctx context.Context, tmsID token.TMSID, txID string, req
 	}()
 	span.AddEvent("append_tokens")
 	for _, tta := range toAppend {
-		err = ts.AppendToken(ctx, tta)
+		err = ts.AppendToken(tta)
 		if err != nil {
 			return errors.WithMessagef(err, "transaction [%s], failed to append token", txID)
 		}
 	}
 	span.AddEvent("delete_tokens")
-	err = ts.DeleteTokens(ctx, txID, toSpend)
+	err = ts.DeleteTokens(txID, toSpend)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 	}
@@ -184,6 +184,37 @@ func (t *Tokens) DeleteToken(deletedBy string, ids ...*token2.ID) (err error) {
 	return t.Storage.tokenDB.DeleteTokens(deletedBy, ids...)
 }
 
+func (t *Tokens) SetSpendableFlag(value bool, ids ...*token2.ID) error {
+	tx, err := t.Storage.NewTransaction(context.TODO())
+	if err != nil {
+		return errors.Wrapf(err, "failed initiating transaction")
+	}
+	if err := tx.SetSpendableFlag(value, ids); err != nil {
+		if err2 := tx.Rollback(); err2 != nil {
+			logger.Errorf("failed rolling back transaction that set spendable flag [%s]", err2)
+		}
+		return errors.Wrapf(err, "failed setting spendable flag")
+	}
+	return tx.Commit()
+}
+
+func (t *Tokens) SetSupportedTokens(types []string) error {
+	tx, err := t.Storage.NewTransaction(context.TODO())
+	if err != nil {
+		return errors.WithMessagef(err, "error creating new transaction")
+	}
+	if err := tx.SetSupportedTokens(types); err != nil {
+		if err2 := tx.Rollback(); err2 != nil {
+			logger.Errorf("error rolling back transaction: %v", err2)
+		}
+		return errors.WithMessagef(err, "error setting supported tokens")
+	}
+	if err := tx.Commit(); err != nil {
+		return errors.WithMessagef(err, "error committing transaction")
+	}
+	return nil
+}
+
 func (t *Tokens) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
 	// check the cache first
 	entry, ok := t.RequestsCache.Get(txID)
@@ -201,8 +232,9 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 	}
 
 	logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
-	graphHiding := tms.PublicParametersManager().PublicParameters().GraphHiding()
-	precision := tms.PublicParametersManager().PublicParameters().Precision()
+	pp := tms.PublicParametersManager().PublicParameters()
+	graphHiding := pp.GraphHiding()
+	precision := pp.Precision()
 	auth := tms.Authorization()
 	auditorFlag := auth.AmIAnAuditor()
 	if auditorFlag {
@@ -223,7 +255,16 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 }
 
 // parse returns the tokens to store and spend as the result of a transaction
-func (t *Tokens) parse(auth driver.Authorization, txID string, md MetaData, is *token.InputStream, os *token.OutputStream, auditorFlag bool, precision uint64, graphHiding bool) (toSpend []*token2.ID, toAppend []TokenToAppend) {
+func (t *Tokens) parse(
+	auth driver.Authorization,
+	txID string,
+	md MetaData,
+	is *token.InputStream,
+	os *token.OutputStream,
+	auditorFlag bool,
+	precision uint64,
+	graphHiding bool,
+) (toSpend []*token2.ID, toAppend []TokenToAppend) {
 	if graphHiding {
 		ids := md.SpentTokenID()
 		logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
@@ -290,6 +331,7 @@ func (t *Tokens) parse(auth driver.Authorization, txID string, md MetaData, is *
 			index:                 output.Index,
 			tok:                   tok,
 			tokenOnLedger:         output.LedgerOutput,
+			tokenOnLedgerType:     output.LedgerOutputType,
 			tokenOnLedgerMetadata: tokenOnLedgerMetadata,
 			ownerType:             ownerType,
 			ownerIdentity:         ownerIdentity,

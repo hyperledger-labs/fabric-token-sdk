@@ -12,6 +12,8 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -42,6 +44,31 @@ func AssertTokens(sp token.ServiceProvider, tx *ttx.Transaction, outputs *token.
 	}
 }
 
+// ServiceOpts creates a new array of token.ServiceOption containing token.WithTMSID and any additional token.ServiceOption passed to this function
+func ServiceOpts(tmsId *token.TMSID, opts ...token.ServiceOption) []token.ServiceOption {
+	var serviceOpts []token.ServiceOption
+	if tmsId != nil {
+		serviceOpts = append(serviceOpts, token.WithTMSID(*tmsId))
+	}
+	return append(serviceOpts, opts...)
+}
+
+func TxOpts(tmsId *token.TMSID) []ttx.TxOption {
+	var txOpts []ttx.TxOption
+	if tmsId != nil {
+		txOpts = append(txOpts, ttx.WithTMSID(*tmsId))
+	}
+	return txOpts
+}
+
+func GetKVS(sp view2.ServiceProvider) *kvs.KVS {
+	kvss, err := sp.GetService(&kvs.KVS{})
+	if err != nil {
+		panic(err)
+	}
+	return kvss.(*kvs.KVS)
+}
+
 type KVSEntry struct {
 	Key   string
 	Value string
@@ -66,27 +93,38 @@ func (p *SetKVSEntryViewFactory) NewView(in []byte) (view.View, error) {
 	return f, nil
 }
 
-// ServiceOpts creates a new array of token.ServiceOption containing token.WithTMSID and any additional token.ServiceOption passed to this function
-func ServiceOpts(tmsId *token.TMSID, opts ...token.ServiceOption) []token.ServiceOption {
-	var serviceOpts []token.ServiceOption
-	if tmsId != nil {
-		serviceOpts = append(serviceOpts, token.WithTMSID(*tmsId))
-	}
-	return append(serviceOpts, opts...)
+type SetSpendableFlag struct {
+	TMSID     token.TMSID
+	TokenID   token2.ID
+	Spendable bool
 }
 
-func TxOpts(tmsId *token.TMSID) []ttx.TxOption {
-	var txOpts []ttx.TxOption
-	if tmsId != nil {
-		txOpts = append(txOpts, ttx.WithTMSID(*tmsId))
-	}
-	return txOpts
+type SetSpendableFlagView struct {
+	*SetSpendableFlag
 }
 
-func GetKVS(sp view2.ServiceProvider) *kvs.KVS {
-	kvss, err := sp.GetService(&kvs.KVS{})
-	if err != nil {
-		panic(err)
-	}
-	return kvss.(*kvs.KVS)
+func (s *SetSpendableFlagView) Call(context view.Context) (interface{}, error) {
+	tms := token.GetManagementService(context, token.WithTMSID(s.TMSID))
+	assert.NotNil(tms, "failed getting token management service [%s]", s.TMSID)
+
+	tokensProvider, err := tokens.GetProvider(context)
+	assert.NoError(err, "failed getting tokens provider")
+
+	tokens, err := tokensProvider.Tokens(tms.ID())
+	assert.NoError(err, "failed getting tokens")
+
+	err = tokens.SetSpendableFlag(s.Spendable, &s.TokenID)
+	assert.NoError(err, "failed setting spendable flag")
+
+	return nil, nil
+}
+
+type SetSpendableFlagViewFactory struct{}
+
+func (p *SetSpendableFlagViewFactory) NewView(in []byte) (view.View, error) {
+	f := &SetSpendableFlagView{SetSpendableFlag: &SetSpendableFlag{}}
+	err := json.Unmarshal(in, f.SetSpendableFlag)
+	assert.NoError(err, "failed unmarshalling input")
+
+	return f, nil
 }

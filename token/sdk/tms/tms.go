@@ -17,7 +17,6 @@ import (
 )
 
 type PostInitializer struct {
-	tmsProvider    *token3.ManagementServiceProvider
 	tokensProvider *tokens2.Manager
 
 	networkProvider *network.Provider
@@ -25,9 +24,8 @@ type PostInitializer struct {
 	auditorManager  *auditor.Manager
 }
 
-func NewPostInitializer(tmsProvider *token3.ManagementServiceProvider, tokensProvider *tokens2.Manager, networkProvider *network.Provider, ownerManager *ttx.Manager, auditorManager *auditor.Manager) (*PostInitializer, error) {
+func NewPostInitializer(tokensProvider *tokens2.Manager, networkProvider *network.Provider, ownerManager *ttx.Manager, auditorManager *auditor.Manager) (*PostInitializer, error) {
 	return &PostInitializer{
-		tmsProvider:     tmsProvider,
 		tokensProvider:  tokensProvider,
 		networkProvider: networkProvider,
 		ownerManager:    ownerManager,
@@ -41,13 +39,26 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 		Channel:   channel,
 		Namespace: namespace,
 	}
+
 	// restore owner db
 	if err := p.ownerManager.RestoreTMS(tmsID); err != nil {
 		return errors.WithMessagef(err, "failed to restore onwer dbs for [%s]", tmsID)
 	}
+
 	// restore auditor db
 	if err := p.auditorManager.RestoreTMS(tmsID); err != nil {
 		return errors.WithMessagef(err, "failed to restore auditor dbs for [%s]", tmsID)
 	}
+
+	// set supported tokens
+	tokens, err := p.tokensProvider.Tokens(tmsID)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get tokens for [%s]", tmsID)
+	}
+	supportedTokens := tms.TokensService().SupportedTokenTypes()
+	if err := tokens.SetSupportedTokens(supportedTokens); err != nil {
+		return errors.WithMessagef(err, "failed to set supported tokens for [%s] to [%s]", tmsID, supportedTokens)
+	}
+
 	return nil
 }
