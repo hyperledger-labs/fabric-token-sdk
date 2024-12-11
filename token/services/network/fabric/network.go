@@ -289,8 +289,8 @@ func (n *Network) TokenVault(namespace string) (driver.TokenVault, error) {
 	return n.tokenVaultLazyCache.Get(namespace)
 }
 
-func (n *Network) Broadcast(context context.Context, blob interface{}) error {
-	return n.n.Ordering().Broadcast(context, blob)
+func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
+	return n.n.Ordering().Broadcast(ctx, blob)
 }
 
 func (n *Network) NewEnvelope() driver.Envelope {
@@ -337,12 +337,12 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return n.defaultPublicParamsFetcher.Fetch(n.Name(), n.Channel(), namespace)
 }
 
-func (n *Network) QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
-	return n.tokenQueryExecutor.QueryTokens(context, namespace, IDs)
+func (n *Network) QueryTokens(ctx context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
+	return n.tokenQueryExecutor.QueryTokens(ctx, namespace, IDs)
 }
 
-func (n *Network) AreTokensSpent(context context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
-	return n.spentTokenQueryExecutor.QuerySpentTokens(context, namespace, tokenIDs, meta)
+func (n *Network) AreTokensSpent(ctx context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
+	return n.spentTokenQueryExecutor.QuerySpentTokens(ctx, namespace, tokenIDs, meta)
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {

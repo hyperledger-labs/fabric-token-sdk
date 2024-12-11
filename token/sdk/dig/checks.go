@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package db
+package sdk
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
