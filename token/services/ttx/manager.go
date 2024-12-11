@@ -32,13 +32,18 @@ type TMSProvider interface {
 	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
 }
 
+type CheckServiceProvider interface {
+	CheckService(id token.TMSID, adb *ttxdb.DB, tdb *tokens.Tokens) (CheckService, error)
+}
+
 // Manager handles the databases
 type Manager struct {
-	networkProvider NetworkProvider
-	tmsProvider     TMSProvider
-	ttxDBProvider   DBProvider
-	tokensProvider  TokensProvider
-	tracerProvider  trace.TracerProvider
+	networkProvider      NetworkProvider
+	tmsProvider          TMSProvider
+	ttxDBProvider        DBProvider
+	tokensProvider       TokensProvider
+	tracerProvider       trace.TracerProvider
+	checkServiceProvider CheckServiceProvider
 
 	mutex sync.Mutex
 	dbs   map[string]*DB
@@ -51,14 +56,16 @@ func NewManager(
 	ttxDBProvider DBProvider,
 	tokensBProvider TokensProvider,
 	tracerProvider trace.TracerProvider,
+	CheckServiceProvider CheckServiceProvider,
 ) *Manager {
 	return &Manager{
-		networkProvider: np,
-		tmsProvider:     tmsProvider,
-		ttxDBProvider:   ttxDBProvider,
-		tokensProvider:  tokensBProvider,
-		tracerProvider:  tracerProvider,
-		dbs:             map[string]*DB{},
+		networkProvider:      np,
+		tmsProvider:          tmsProvider,
+		ttxDBProvider:        ttxDBProvider,
+		tokensProvider:       tokensBProvider,
+		tracerProvider:       tracerProvider,
+		checkServiceProvider: CheckServiceProvider,
+		dbs:                  map[string]*DB{},
 	}
 }
 
@@ -90,6 +97,10 @@ func (m *Manager) newDB(tmsID token.TMSID) (*DB, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
 	}
+	checkService, err := m.checkServiceProvider.CheckService(tmsID, ttxDB, tokenDB)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get checkservice for [%s]", tmsID)
+	}
 	wrapper := &DB{
 		networkProvider: m.networkProvider,
 		tmsID:           tmsID,
@@ -100,6 +111,7 @@ func (m *Manager) newDB(tmsID token.TMSID) (*DB, error) {
 			Namespace:  "tokensdk",
 			LabelNames: []tracing.LabelName{txIdLabel},
 		})),
+		checkService: checkService,
 	}
 	_, err = m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
@@ -108,7 +120,7 @@ func (m *Manager) newDB(tmsID token.TMSID) (*DB, error) {
 	return wrapper, nil
 }
 
-// RestoreTMS restores the auditdb corresponding to the passed TMS ID.
+// RestoreTMS restores the ttxdb corresponding to the passed TMS ID.
 func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
 	net, err := m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {

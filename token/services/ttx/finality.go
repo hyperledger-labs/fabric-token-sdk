@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -23,8 +23,8 @@ import (
 const finalityTimeout = 10 * time.Minute
 
 type finalityDB interface {
-	AddStatusListener(txID string, ch chan db.StatusEvent)
-	DeleteStatusListener(txID string, ch chan db.StatusEvent)
+	AddStatusListener(txID string, ch chan common.StatusEvent)
+	DeleteStatusListener(txID string, ch chan common.StatusEvent)
 	GetStatus(txID string) (TxStatus, string, error)
 }
 
@@ -130,7 +130,7 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 	span := trace.SpanFromContext(c)
 	// notice that adding the listener can happen after the event we are looking for has already happened
 	// therefore we need to check more often before the timeout happens
-	dbChannel := make(chan db.StatusEvent, 200)
+	dbChannel := make(chan common.StatusEvent, 200)
 	span.AddEvent("start_add_status_listener")
 	finalityDB.AddStatusListener(txID, dbChannel)
 	span.AddEvent("end_add_status_listener")
