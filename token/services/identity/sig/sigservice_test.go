@@ -39,7 +39,9 @@ func (v *Verifier) Verify(message, sigma []byte) error {
 }
 
 func BenchmarkRegisterSigner(b *testing.B) {
+	// the timer starts by default on calling this function, we stop it to initialize
 	b.StopTimer()
+
 	terminate, pgConnStr, err := postgres.StartPostgres(b, false)
 	assert.NoError(b, err)
 	defer terminate()
@@ -54,17 +56,16 @@ func BenchmarkRegisterSigner(b *testing.B) {
 	err = registry.RegisterService(backend)
 	assert.NoError(b, err)
 	sigService := NewService(NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
-	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		// Code to be benchmarked
-		b.StopTimer()
 		nonce, err := htlc.CreateNonce()
 		assert.NoError(b, err)
 		signer := &Signer{ID: string(nonce)}
 		verifier := &Verifier{ID: string(nonce)}
-		b.StartTimer()
 
+		b.StartTimer()
+		// Code to be benchmarked
 		assert.NoError(b, sigService.RegisterSigner(nonce, signer, verifier, nil))
+		b.StopTimer()
 	}
 }
