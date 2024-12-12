@@ -21,7 +21,7 @@ type TokenLockDB struct {
 }
 
 func OpenTokenLockDB(k common.Opts) (driver.TokenLockDB, error) {
-	db, err := postgres.OpenDB(k.DataSource, k.MaxOpenConns)
+	db, err := postgres.OpenDB(k.DataSource, k.MaxOpenConns, k.MaxIdleConns, k.MaxIdleTime)
 	if err != nil {
 		return nil, err
 	}

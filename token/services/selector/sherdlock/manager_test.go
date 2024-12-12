@@ -76,7 +76,7 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 }
 
 func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
-	db, err := postgres2.OpenDB(pgConnStr, 10)
+	db, err := postgres2.OpenDB(pgConnStr, 10, 2, time.Minute)
 	if err != nil {
 		return nil, err
 	}

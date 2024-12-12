@@ -15,7 +15,7 @@ import (
 )
 
 func OpenWalletDB(k common.Opts) (driver.WalletDB, error) {
-	db, err := sqlite.OpenDB(k.DataSource, k.MaxOpenConns, k.SkipPragmas)
+	db, err := sqlite.OpenDB(k.DataSource, k.MaxOpenConns, k.MaxIdleConns, k.MaxIdleTime, k.SkipPragmas)
 	if err != nil {
 		return nil, err
 	}

@@ -44,9 +44,7 @@ token:
         persistence:
           type: sql
           opts:
-            createSchema: true 
             driver: sqlite    
-            maxOpenConns: 10
             dataSource: /some/path/tokendb
 ```
 
@@ -65,11 +63,11 @@ token:
           # configuration for the unity db driver. It uses sql as backend
           type: unity
           opts:
-            createSchema: true
             driver: sqlite
-            maxOpenConns: 10
             dataSource: /some/path/unitydb
 ```
 
 The specific driver used by the application will ultimately determine the available deployment options.
 Don't forget to import the driver that you are ultimately using with a blank import in your executable.  
+
+For the list of options to configure sql datasources, refer to the [Fabric Smart Client documentation](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/core-fabric.md).

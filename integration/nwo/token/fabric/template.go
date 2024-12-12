@@ -41,7 +41,6 @@ token:
         persistence:
           type: unity
           opts:
-            createSchema: true 
             driver: {{ SQLDriver }}    
             maxOpenConns: 200
             dataSource: {{ SQLDataSource }}
@@ -50,7 +49,6 @@ token:
         persistence:
           type: sql
           opts:
-            createSchema: true 
             tablePrefix: tokens  
             driver: {{ TokensSQLDriver }}    
             maxOpenConns: 200

@@ -15,7 +15,7 @@ import (
 )
 
 func OpenAuditTransactionDB(k common.Opts) (driver.AuditTransactionDB, error) {
-	db, err := postgres.OpenDB(k.DataSource, k.MaxOpenConns)
+	db, err := postgres.OpenDB(k.DataSource, k.MaxOpenConns, k.MaxIdleConns, k.MaxIdleTime)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func NewAuditTransactionDB(db *sql.DB, opts common.NewDBOpts) (driver.AuditTrans
 }
 
 func OpenTransactionDB(k common.Opts) (driver.TokenTransactionDB, error) {
-	db, err := postgres.OpenDB(k.DataSource, k.MaxOpenConns)
+	db, err := postgres.OpenDB(k.DataSource, k.MaxOpenConns, k.MaxIdleConns, k.MaxIdleTime)
 	if err != nil {
 		return nil, err
 	}
