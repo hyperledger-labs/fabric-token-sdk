@@ -9,6 +9,7 @@ package db
 import (
 	"crypto/sha256"
 	"fmt"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
@@ -39,6 +40,8 @@ func (d *MemoryDriver[D]) Open(_ driver.ConfigProvider, tmsID token.TMSID) (D, e
 		SkipCreateTable: false,
 		SkipPragmas:     false,
 		MaxOpenConns:    10,
+		MaxIdleConns:    10,
+		MaxIdleTime:     time.Minute,
 	}
 	return d.dbOpener(opts)
 }

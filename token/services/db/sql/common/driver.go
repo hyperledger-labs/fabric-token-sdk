@@ -8,6 +8,7 @@ package common
 
 import (
 	"database/sql"
+	"time"
 
 	utils2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
@@ -68,11 +69,13 @@ func NewOpener[V any](optsKey, envVarKey string, constructors OpenDBFunc[V]) *Op
 }
 
 func NewSQLDBOpener(optsKey, envVarKey string) *DBOpener {
-	return NewOpenerFromMap[*sql.DB](optsKey, envVarKey, map[common.SQLDriverType]OpenDBFunc[*sql.DB]{
+	return NewOpenerFromMap(optsKey, envVarKey, map[common.SQLDriverType]OpenDBFunc[*sql.DB]{
 		sql2.SQLite: func(k Opts) (*sql.DB, error) {
-			return sqlite.OpenDB(k.DataSource, k.MaxOpenConns, k.SkipPragmas)
+			return sqlite.OpenDB(k.DataSource, k.MaxOpenConns, k.MaxIdleConns, k.MaxIdleTime, k.SkipPragmas)
 		},
-		sql2.Postgres: func(k Opts) (*sql.DB, error) { return postgres.OpenDB(k.DataSource, k.MaxOpenConns) },
+		sql2.Postgres: func(k Opts) (*sql.DB, error) {
+			return postgres.OpenDB(k.DataSource, k.MaxOpenConns, k.MaxIdleConns, k.MaxIdleTime)
+		},
 	})
 }
 
@@ -109,7 +112,7 @@ func (d *Opener[V]) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*O
 func (d *Opener[V]) OpenSQLDB(driverName common.SQLDriverType, dataSourceName string, maxOpenConns int, skipPragmas bool) (V, error) {
 	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
 
-	return d.dbCache.Get(Opts{Driver: driverName, DataSource: dataSourceName, MaxOpenConns: maxOpenConns, SkipPragmas: skipPragmas})
+	return d.dbCache.Get(Opts{Driver: driverName, DataSource: dataSourceName, MaxOpenConns: maxOpenConns, MaxIdleConns: 2, MaxIdleTime: time.Minute, SkipPragmas: skipPragmas})
 }
 
 func key(k Opts) string {

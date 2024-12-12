@@ -39,7 +39,7 @@ func (db *TokenLockDB) Cleanup(leaseExpiry time.Duration) error {
 }
 
 func OpenTokenLockDB(k common.Opts) (driver.TokenLockDB, error) {
-	db, err := sqlite.OpenDB(k.DataSource, k.MaxOpenConns, k.SkipPragmas)
+	db, err := sqlite.OpenDB(k.DataSource, k.MaxOpenConns, k.MaxIdleConns, k.MaxIdleTime, k.SkipPragmas)
 	if err != nil {
 		return nil, err
 	}

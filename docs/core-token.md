@@ -48,20 +48,20 @@ token:
       # shared db configuration. The `unity` driver is used as provider.  
       db:
         persistence:
-          # configuration for the unity db driver. It uses sql as backend
+          # configuration for the unity db driver. It uses sql as backend. See also https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/core-fabric.md
           type: unity
           opts:
-            createSchema: true
             driver: sqlite
-            maxOpenConns: 10
+            maxOpenConns: 20  # optional: max open read connections to the database. Defaults to unlimited. See https://go.dev/doc/database/manage-connections.
+            maxIdleConns: 20  # optional: max idle read connections to the database. Defaults to 2.
+            maxIdleTime: 30s  # optional: max duration a connection can be idle before it is closed. Defaults to 1 minute.
             dataSource: /some/path/unitydb
+      # optional separate configuration for ttxdb, tokendb, auditdb, and identitydb
       tokendb:
         persistence:
           type: sql
           opts:
-            createSchema: true 
-            driver: sqlite    
-            maxOpenConns: 10
+            driver: sqlite
             dataSource: /some/path/tokendb
 
       services:
