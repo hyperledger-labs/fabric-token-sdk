@@ -73,7 +73,9 @@ func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams
 	if params.OnlySpendable {
 		conds = append(conds, common.ConstCondition("spendable = true"))
 	}
-
+	if len(params.LedgerTokenTypes) > 0 {
+		conds = append(conds, c.InStrings("ledger_type", params.LedgerTokenTypes))
+	}
 	return c.And(conds...)
 }
 

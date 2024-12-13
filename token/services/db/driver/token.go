@@ -97,6 +97,8 @@ type QueryTokenDetailsParams struct {
 	OnlyNonSpendable bool
 	// OnlySpendable determines whether to include only spendable tokens. It defaults to false
 	OnlySpendable bool
+
+	LedgerTokenTypes []string
 }
 
 // CertificationDB defines a database to manager token certifications
@@ -123,9 +125,9 @@ type TokenDBTransaction interface {
 	StoreToken(tr TokenRecord, owners []string) error
 	// SetSpendable updates the spendable flag of the passed token
 	SetSpendable(txID string, index uint64, spendable bool) error
-	// SetSupportedTokens sets the spendable flag to true for all the tokens having one of the passed token type.
+	// SetSpendableBySupportedTokenTypes sets the spendable flag to true for all the tokens having one of the passed token type.
 	// The spendable flag is set to false for the other tokens
-	SetSupportedTokens(supportedTokenTypes []string) error
+	SetSpendableBySupportedTokenTypes(supportedTokenTypes []string) error
 	// Commit commits this transaction
 	Commit() error
 	// Rollback rollbacks this transaction
@@ -181,6 +183,8 @@ type TokenDB interface {
 	QueryTokenDetails(params QueryTokenDetailsParams) ([]TokenDetails, error)
 	// Balance returns the sun of the amounts of the tokens with type and EID equal to those passed as arguments.
 	Balance(ownerEID, typ string) (uint64, error)
+	// SetSupportedTokenTypes sets the supported token types
+	SetSupportedTokenTypes(supportedTokenTypes []string) error
 }
 
 // TokenDBDriver is the interface for a token database driver
