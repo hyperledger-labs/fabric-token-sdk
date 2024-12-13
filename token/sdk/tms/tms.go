@@ -56,7 +56,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 		return errors.WithMessagef(err, "failed to get tokens for [%s]", tmsID)
 	}
 	supportedTokens := tms.TokensService().SupportedTokenTypes()
-	if err := tokens.SetSupportedTokens(supportedTokens); err != nil {
+	if err := tokens.SetSupportedTokenTypes(supportedTokens); err != nil {
 		return errors.WithMessagef(err, "failed to set supported tokens for [%s] to [%s]", tmsID, supportedTokens)
 	}
 
