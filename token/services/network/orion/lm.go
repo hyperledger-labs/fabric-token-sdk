@@ -20,6 +20,6 @@ func (n *lm) DefaultIdentity() view.Identity {
 	return n.ip.DefaultIdentity()
 }
 
-func (n *lm) AnonymousIdentity() view.Identity {
-	return view.Identity(n.lm.Me())
+func (n *lm) AnonymousIdentity() (view.Identity, error) {
+	return view.Identity(n.lm.Me()), nil
 }

@@ -48,11 +48,16 @@ func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transacti
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed compiling tx options")
 	}
-	return NewTransaction(
-		context,
-		network.GetInstance(context, txOpts.TMSID.Network, txOpts.TMSID.Channel).AnonymousIdentity(),
-		opts...,
-	)
+	net := network.GetInstance(context, txOpts.TMSID.Network, txOpts.TMSID.Channel)
+	if net == nil {
+		return nil, errors.New("failed to get network")
+	}
+	id, err := net.AnonymousIdentity()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed getting anonymous identity for transaction")
+	}
+
+	return NewTransaction(context, id, opts...)
 }
 
 // NewTransaction returns a new token transaction customized with the passed opts that will be signed by the passed signer.

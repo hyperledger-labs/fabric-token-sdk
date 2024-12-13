@@ -16,5 +16,5 @@ type LocalMembership interface {
 	DefaultIdentity() view.Identity
 
 	// AnonymousIdentity returns a fresh anonymous identity
-	AnonymousIdentity() view.Identity
+	AnonymousIdentity() (view.Identity, error)
 }
