@@ -54,7 +54,7 @@ func (n *lm) DefaultIdentity() view.Identity {
 	return n.lm.DefaultIdentity()
 }
 
-func (n *lm) AnonymousIdentity() view.Identity {
+func (n *lm) AnonymousIdentity() (view.Identity, error) {
 	return n.lm.AnonymousIdentity()
 }
 

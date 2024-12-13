@@ -248,7 +248,7 @@ func (l *LocalMembership) DefaultIdentity() view.Identity {
 	return l.lm.DefaultIdentity()
 }
 
-func (l *LocalMembership) AnonymousIdentity() view.Identity {
+func (l *LocalMembership) AnonymousIdentity() (view.Identity, error) {
 	return l.lm.AnonymousIdentity()
 }
 
@@ -308,7 +308,7 @@ func (n *Network) Broadcast(context context.Context, blob interface{}) error {
 }
 
 // AnonymousIdentity returns a fresh anonymous identity
-func (n *Network) AnonymousIdentity() view.Identity {
+func (n *Network) AnonymousIdentity() (view.Identity, error) {
 	return n.n.LocalMembership().AnonymousIdentity()
 }
 
