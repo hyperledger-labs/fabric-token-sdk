@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -57,6 +58,9 @@ type TokenDB struct {
 	db    *sql.DB
 	table tokenTables
 	ci    TokenInterpreter
+
+	sttMutex            sync.RWMutex
+	supportedTokenTypes []string
 }
 
 func newTokenDB(db *sql.DB, tables tokenTables, ci TokenInterpreter) *TokenDB {
@@ -162,9 +166,10 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenT
 func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.SpendableTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
-		WalletID:      walletID,
-		TokenType:     typ,
-		OnlySpendable: true,
+		WalletID:         walletID,
+		TokenType:        typ,
+		OnlySpendable:    true,
+		LedgerTokenTypes: db.getSupportedTokenTypes(),
 	}, ""))
 
 	query, err := NewSelect("tx_id, idx, token_type, quantity, owner_wallet_id").From(db.table.Tokens).Where(where).Compile()
@@ -942,6 +947,20 @@ func (db *TokenDB) NewTokenDBTransaction(ctx context.Context) (driver.TokenDBTra
 	return &TokenTransaction{db: db, tx: tx, ctx: ctx}, nil
 }
 
+func (db *TokenDB) SetSupportedTokenTypes(supportedTokenTypes []string) error {
+	db.sttMutex.Lock()
+	db.supportedTokenTypes = supportedTokenTypes
+	db.sttMutex.Unlock()
+	return nil
+}
+
+func (db *TokenDB) getSupportedTokenTypes() []string {
+	db.sttMutex.RLock()
+	supportedTokenTypes := db.supportedTokenTypes
+	db.sttMutex.RUnlock()
+	return supportedTokenTypes
+}
+
 type TokenTransaction struct {
 	db  *TokenDB
 	tx  *sql.Tx
@@ -1111,7 +1130,7 @@ func (t *TokenTransaction) SetSpendable(txID string, index uint64, spendable boo
 
 }
 
-func (t *TokenTransaction) SetSupportedTokens(supportedTokenTypes []string) error {
+func (t *TokenTransaction) SetSpendableBySupportedTokenTypes(supportedTokenTypes []string) error {
 	span := trace.SpanFromContext(t.ctx)
 
 	// first set all spendable flags to false

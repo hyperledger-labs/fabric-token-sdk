@@ -207,8 +207,8 @@ func (t *transaction) SetSpendableFlag(value bool, ids []*token2.ID) error {
 	return nil
 }
 
-func (t *transaction) SetSupportedTokens(supportedTokens []string) error {
-	return t.tx.SetSupportedTokens(supportedTokens)
+func (t *transaction) SetSpendableBySupportedTokenTypes(supportedTokens []string) error {
+	return t.tx.SetSpendableBySupportedTokenTypes(supportedTokens)
 }
 
 type TokenProcessorEvent struct {

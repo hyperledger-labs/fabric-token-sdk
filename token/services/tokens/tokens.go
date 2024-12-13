@@ -198,12 +198,12 @@ func (t *Tokens) SetSpendableFlag(value bool, ids ...*token2.ID) error {
 	return tx.Commit()
 }
 
-func (t *Tokens) SetSupportedTokens(types []string) error {
+func (t *Tokens) SetSpendableBySupportedTokenTypes(types []string) error {
 	tx, err := t.Storage.NewTransaction(context.TODO())
 	if err != nil {
 		return errors.WithMessagef(err, "error creating new transaction")
 	}
-	if err := tx.SetSupportedTokens(types); err != nil {
+	if err := tx.SetSpendableBySupportedTokenTypes(types); err != nil {
 		if err2 := tx.Rollback(); err2 != nil {
 			logger.Errorf("error rolling back transaction: %v", err2)
 		}
@@ -213,6 +213,10 @@ func (t *Tokens) SetSupportedTokens(types []string) error {
 		return errors.WithMessagef(err, "error committing transaction")
 	}
 	return nil
+}
+
+func (t *Tokens) SetSupportedTokenTypes(tokenTypes []string) error {
+	return t.Storage.tokenDB.SetSupportedTokenTypes(tokenTypes)
 }
 
 func (t *Tokens) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
