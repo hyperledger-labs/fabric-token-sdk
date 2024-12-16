@@ -90,11 +90,15 @@ func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 		return nil
 	}
 	cond := db.ci.HasTokens("tx_id", "idx", ids...)
-	args := append([]any{deletedBy, time.Now().UTC()}, cond.Params()...)
-	offset := 3
+	args := append([]any{true, deletedBy, time.Now().UTC()}, cond.Params()...)
+	offset := 4
 	where := cond.ToString(&offset)
 
-	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE %s", db.table.Tokens, where)
+	query, err := NewUpdate(db.table.Tokens).Set("is_deleted, spent_by, spent_at").Where(where).Compile()
+	if err != nil {
+		return errors.Wrapf(err, "failed to update tokens")
+	}
+	// query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE %s", db.table.Tokens, where)
 	logger.Debug(query, args)
 	if _, err := db.db.Exec(query, args...); err != nil {
 		return errors.Wrapf(err, "error setting tokens to deleted [%v]", ids)
@@ -105,7 +109,13 @@ func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 // IsMine just checks if the token is in the local storage and not deleted
 func (db *TokenDB) IsMine(txID string, index uint64) (bool, error) {
 	id := ""
-	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id = $1 AND idx = $2 AND is_deleted = false AND owner = true LIMIT 1;", db.table.Tokens)
+	query, err := NewSelect("tx_id").
+		From(db.table.Tokens).
+		Where("tx_id = $1 AND idx = $2 AND is_deleted = false AND owner = true LIMIT 1").
+		Compile()
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, txID, index)
 
 	row := db.db.QueryRow(query, txID, index)
@@ -133,9 +143,12 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenT
 	}, db.table.Tokens))
 	join := joinOnTokenID(db.table.Tokens, db.table.Ownership)
 
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_raw, token_type, quantity FROM %s %s %s",
-		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
-
+	query, err := NewSelect(
+		fmt.Sprintf("%s.tx_id, %s.idx, owner_raw, token_type, quantity", db.table.Tokens, db.table.Tokens),
+	).From(db.table.Tokens, join).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	rows, err := db.db.Query(query, args...)
@@ -144,18 +157,18 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenT
 	return &UnspentTokensIterator{txs: rows}, err
 }
 
-// UnspentTokensInWalletIterator returns the minimum information about the tokens needed for the selector
+// SpendableTokensIteratorBy returns the minimum information about the tokens needed for the selector
 func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.SpendableTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
 	}, ""))
-	query := fmt.Sprintf(
-		"SELECT tx_id, idx, token_type, quantity, owner_wallet_id FROM %s %s",
-		db.table.Tokens, where,
-	)
 
+	query, err := NewSelect("tx_id, idx, token_type, quantity, owner_wallet_id").From(db.table.Tokens).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	rows, err := db.db.Query(query, args...)
@@ -173,7 +186,10 @@ func (db *TokenDB) Balance(walletID, typ string) (uint64, error) {
 		TokenType: typ,
 	}, db.table.Tokens))
 	join := joinOnTokenID(db.table.Tokens, db.table.Ownership)
-	query := fmt.Sprintf("SELECT SUM(amount) FROM %s %s %s", db.table.Tokens, join, where)
+	query, err := NewSelect("SUM(amount)").From(db.table.Tokens, join).Where(where).Compile()
+	if err != nil {
+		return 0, errors.Wrapf(err, "failed to compile query")
+	}
 
 	logger.Debug(query, args)
 	row := db.db.QueryRow(query, args...)
@@ -246,13 +262,16 @@ func (db *TokenDB) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
 		common.ConstCondition("auditor = true"),
 	))
 
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s %s", db.table.Tokens, where)
+	query, err := NewSelect("tx_id, idx, owner_raw, token_type, quantity").From(db.table.Tokens).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer Close(rows)
 
 	tokens := make([]*token.Token, len(ids))
 	counter := 0
@@ -300,15 +319,18 @@ func (db *TokenDB) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
 
 // ListHistoryIssuedTokens returns the list of issued tokens
 func (db *TokenDB) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity, issuer_raw FROM %s WHERE issuer = true", db.table.Tokens)
+	query, err := NewSelect("tx_id, idx, owner_raw, token_type, quantity, issuer_raw").From(db.table.Tokens).Where("issuer = true").Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query)
 	rows, err := db.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer Close(rows)
 
-	tokens := []*token.IssuedToken{}
+	var tokens []*token.IssuedToken
 	for rows.Next() {
 		tok := token.IssuedToken{
 			Id: &token.ID{
@@ -375,13 +397,16 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 	}
 	where, args := common.Where(db.ci.HasTokens("tx_id", "idx", ids...))
 
-	query := fmt.Sprintf("SELECT tx_id, idx, ledger FROM %s %s", db.table.Tokens, where)
+	query, err := NewSelect("tx_id, idx, ledger").From(db.table.Tokens).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer Close(rows)
 
 	tokenMap := make(map[string][]byte, len(ids))
 	for rows.Next() {
@@ -417,14 +442,17 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 	}
 	where, args := common.Where(db.ci.HasTokens("tx_id", "idx", ids...))
 
-	query := fmt.Sprintf("SELECT tx_id, idx, ledger, ledger_metadata FROM %s %s", db.table.Tokens, where)
+	query, err := NewSelect("tx_id, idx, ledger, ledger_metadata").From(db.table.Tokens).Where(where).Compile()
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to compile query")
+	}
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer rows.Close()
+	defer Close(rows)
 
 	span.AddEvent("start_scan_rows")
 	infoMap := make(map[string][2][]byte, len(ids))
@@ -467,13 +495,16 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 		common.ConstCondition("owner = true"),
 	))
 
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s %s", db.table.Tokens, where)
+	query, err := NewSelect("tx_id, idx, owner_raw, token_type, quantity").From(db.table.Tokens).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer Close(rows)
 
 	tokens := make([]*token.Token, len(inputs))
 	counter := 0
@@ -538,16 +569,19 @@ func (db *TokenDB) QueryTokenDetails(params driver.QueryTokenDetailsParams) ([]d
 	where, args := common.Where(db.ci.HasTokenDetails(params, db.table.Tokens))
 	join := joinOnTokenID(db.table.Tokens, db.table.Ownership)
 
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_identity, owner_type, wallet_id, token_type, amount, is_deleted, spent_by, stored_at FROM %s %s %s",
-		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
+	query, err := NewSelect(fmt.Sprintf("%s.tx_id, %s.idx, owner_identity, owner_type, wallet_id, token_type, amount, is_deleted, spent_by, stored_at", db.table.Tokens, db.table.Tokens)).
+		From(db.table.Tokens, join).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer Close(rows)
 
-	deets := []driver.TokenDetails{}
+	var deets []driver.TokenDetails
 	for rows.Next() {
 		td := driver.TokenDetails{}
 		if err := rows.Scan(
@@ -581,13 +615,16 @@ func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, erro
 	}
 	where, args := common.Where(db.ci.HasTokens("tx_id", "idx", inputs...))
 
-	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_deleted FROM %s %s", db.table.Tokens, where)
+	query, err := NewSelect("tx_id, idx, spent_by, is_deleted").From(db.table.Tokens).Where(where).Compile()
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer rows.Close()
+	defer Close(rows)
 
 	spentBy := make([]string, len(inputs))
 	isSpent := make([]bool, len(inputs))
@@ -633,7 +670,10 @@ func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, erro
 
 func (db *TokenDB) TransactionExists(ctx context.Context, id string) (bool, error) {
 	span := trace.SpanFromContext(ctx)
-	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id=$1 LIMIT 1;", db.table.Tokens)
+	query, err := NewSelect("tx_id").From(db.table.Tokens).Where("tx_id=$1 LIMIT 1").Compile()
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, id)
 
 	span.AddEvent("query", trace.WithAttributes(tracing.String(QueryLabel, query)))
@@ -660,7 +700,10 @@ func (db *TokenDB) StorePublicParams(raw []byte) error {
 	}
 
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (raw, raw_hash, stored_at) VALUES ($1, $2, $3)", db.table.PublicParams)
+	query, err := NewInsertInto(db.table.PublicParams).Rows("raw, raw_hash, stored_at").Compile()
+	if err != nil {
+		return errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debugf(query, fmt.Sprintf("store public parameters (%d bytes) [%v], hash [%s]", len(raw), now, base64.StdEncoding.EncodeToString(rawHash)))
 	_, err = db.db.Exec(query, raw, rawHash, now)
 	return err
@@ -668,11 +711,14 @@ func (db *TokenDB) StorePublicParams(raw []byte) error {
 
 func (db *TokenDB) PublicParams() ([]byte, error) {
 	var params []byte
-	query := fmt.Sprintf("SELECT raw FROM %s ORDER BY stored_at DESC LIMIT 1;", db.table.PublicParams)
+	query, err := NewSelect("raw").From(db.table.PublicParams).OrderBy("stored_at DESC LIMIT 1").Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query)
 
 	row := db.db.QueryRow(query)
-	err := row.Scan(&params)
+	err = row.Scan(&params)
 	if err != nil {
 		if errors.HasCause(err, sql.ErrNoRows) {
 			return nil, nil
@@ -684,11 +730,14 @@ func (db *TokenDB) PublicParams() ([]byte, error) {
 
 func (db *TokenDB) PublicParamsByHash(rawHash tdriver.PPHash) ([]byte, error) {
 	var params []byte
-	query := fmt.Sprintf("SELECT raw FROM %s WHERE raw_hash = $1;", db.table.PublicParams)
+	query, err := NewSelect("raw").From(db.table.PublicParams).Where("raw_hash = $1").Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query)
 
 	row := db.db.QueryRow(query, rawHash)
-	err := row.Scan(&params)
+	err = row.Scan(&params)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
@@ -697,7 +746,10 @@ func (db *TokenDB) PublicParamsByHash(rawHash tdriver.PPHash) ([]byte, error) {
 
 func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) (err error) {
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, certification, stored_at) VALUES ($1, $2, $3, $4)", db.table.Certifications)
+	query, err := NewInsertInto(db.table.Certifications).Rows("tx_id, idx, certification, stored_at").Compile()
+	if err != nil {
+		return errors.Wrapf(err, "failed to compile query")
+	}
 
 	tx, err := db.db.Begin()
 	if err != nil {
@@ -732,7 +784,10 @@ func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {
 	}
 	where, args := common.Where(db.ci.HasTokens("tx_id", "idx", tokenID))
 
-	query := fmt.Sprintf("SELECT certification FROM %s %s", db.table.Certifications, where)
+	query, err := NewSelect("certification").From(db.table.Certifications).Where(where).Compile()
+	if err != nil {
+		return false
+	}
 	logger.Debug(query, args)
 	row := db.db.QueryRow(query, args...)
 
@@ -756,13 +811,17 @@ func (db *TokenDB) GetCertifications(ids []*token.ID) ([][]byte, error) {
 		return nil, nil
 	}
 	where, args := common.Where(db.ci.HasTokens("tx_id", "idx", ids...))
-	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s %s ", db.table.Certifications, where)
+
+	query, err := NewSelect("tx_id, idx, certification").From(db.table.Certifications).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query")
 	}
-	defer rows.Close()
+	defer Close(rows)
 
 	certificationMap := make(map[string][]byte, len(ids))
 	for rows.Next() {
@@ -855,7 +914,7 @@ func (db *TokenDB) GetSchema() string {
 }
 
 func (db *TokenDB) Close() {
-	db.db.Close()
+	Close(db.db)
 }
 
 func (db *TokenDB) NewTokenDBTransaction(ctx context.Context) (driver.TokenDBTransaction, error) {
@@ -882,20 +941,25 @@ func (t *TokenTransaction) GetToken(ctx context.Context, txID string, index uint
 	}, t.db.table.Tokens))
 	join := joinOnTokenID(t.db.table.Tokens, t.db.table.Ownership)
 
-	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, %s.wallet_id, owner_wallet_id FROM %s %s %s", t.db.table.Ownership, t.db.table.Tokens, join, where)
+	query, err := NewSelect(
+		fmt.Sprintf("owner_raw, token_type, quantity, %s.wallet_id, owner_wallet_id", t.db.table.Ownership),
+	).From(t.db.table.Tokens, join).Where(where).Compile()
+	if err != nil {
+		return nil, nil, errors.Errorf("failed building query")
+	}
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
 	rows, err := t.tx.Query(query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer rows.Close()
+	defer Close(rows)
 
 	span.AddEvent("start_scan_rows")
 	var raw []byte
 	var tokenType string
 	var quantity string
-	owners := []string{}
+	var owners []string
 	var walletID *string
 	for rows.Next() {
 		var tempOwner *string
@@ -932,10 +996,13 @@ func (t *TokenTransaction) Delete(ctx context.Context, txID string, index uint64
 	// logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
-	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE tx_id = $3 AND idx = $4;", t.db.table.Tokens)
-	logger.Debugf(query, deletedBy, now, txID, index)
+	query, err := NewUpdate(t.db.table.Tokens).Set("is_deleted, spent_by, spent_at").Where("tx_id, idx").Compile()
+	if err != nil {
+		return errors.Wrapf(err, "failed building query")
+	}
+	logger.Debugf(query, true, deletedBy, now, txID, index)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query, deletedBy, now, txID, index); err != nil {
+	if _, err := t.tx.Exec(query, true, deletedBy, now, txID, index); err != nil {
 		span.RecordError(err)
 		return errors.Wrapf(err, "error setting token to deleted [%s]", txID)
 	}
@@ -953,7 +1020,10 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 	// Store token
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)", t.db.table.Tokens)
+	query, err := NewInsertInto(t.db.table.Tokens).Rows("tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer").Compile()
+	if err != nil {
+		return errors.Wrapf(err, "failed building insert")
+	}
 	logger.Debug(query,
 		tr.TxID,
 		tr.Index,
@@ -996,7 +1066,10 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 	// Store ownership
 	span.AddEvent("store_ownerships")
 	for _, eid := range owners {
-		query = fmt.Sprintf("INSERT INTO %s (tx_id, idx, wallet_id) VALUES ($1, $2, $3)", t.db.table.Ownership)
+		query, err := NewInsertInto(t.db.table.Ownership).Rows("tx_id, idx, wallet_id").Compile()
+		if err != nil {
+			return errors.Wrapf(err, "failed building insert")
+		}
 		logger.Debug(query, tr.TxID, tr.Index, eid)
 		span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 		if _, err := t.tx.Exec(query, tr.TxID, tr.Index, eid); err != nil {
@@ -1020,7 +1093,7 @@ type UnspentTokensInWalletIterator struct {
 }
 
 func (u *UnspentTokensInWalletIterator) Close() {
-	u.txs.Close()
+	Close(u.txs)
 }
 
 func (u *UnspentTokensInWalletIterator) Next() (*token.UnspentTokenInWallet, error) {
@@ -1045,7 +1118,7 @@ type UnspentTokensIterator struct {
 }
 
 func (u *UnspentTokensIterator) Close() {
-	u.txs.Close()
+	Close(u.txs)
 }
 
 func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {

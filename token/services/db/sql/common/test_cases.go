@@ -182,7 +182,7 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	tok, owners, err = tx.GetToken(context.TODO(), "tx1", 0, false)
 	assert.NoError(t, err)
 	assert.Nil(t, tok)
-	assert.Equal(t, []string{}, owners)
+	assert.Equal(t, []string(nil), owners)
 	assert.NoError(t, tx.Commit())
 }
 
