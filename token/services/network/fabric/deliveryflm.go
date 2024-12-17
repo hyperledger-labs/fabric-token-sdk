@@ -60,6 +60,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Finality
 			Namespace: network,
 		})),
 		listeners: make(map[translator.TxID][]listenerEntry),
+		txInfos:   make(map[translator.TxID]txInfo),
 	}
 	logger.Infof("Starting delivery service for [%s:%s]", network, channel)
 	go func() {
@@ -78,6 +79,7 @@ type deliveryBasedFLM struct {
 
 	mu        sync.RWMutex
 	listeners map[translator.TxID][]listenerEntry
+	txInfos   map[translator.TxID]txInfo
 }
 
 func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) error {
@@ -116,6 +118,14 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 	logger.Infof("Invoked listeners for %d TxIDs: [%v]. Removing listeners...", len(invokedTxIDs), invokedTxIDs)
 
 	m.mu.Lock()
+	for _, txInfos := range txs {
+		for ns, info := range txInfos {
+			logger.Warnf("Mapping for ns [%s]", ns)
+			m.txInfos[info.txID] = info // TODO
+		}
+	}
+	logger.Infof("Current size of cache: %d", len(m.txInfos))
+
 	for _, txID := range invokedTxIDs {
 		delete(m.listeners, txID)
 	}
@@ -128,6 +138,13 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 }
 
 func (m *deliveryBasedFLM) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
+	m.mu.RLock()
+	if txInfo, ok := m.txInfos[txID]; ok {
+		logger.Infof("Found tx [%s]. Invoking listener directly", txID)
+		listener.OnStatus(context.TODO(), txInfo.txID, txInfo.status, txInfo.message, txInfo.requestHash)
+		return nil
+	}
+	m.mu.RUnlock()
 	logger.Infof("Add finality listener for [%s]", txID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
