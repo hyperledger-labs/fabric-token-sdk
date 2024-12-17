@@ -9,6 +9,8 @@ package views
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -68,20 +70,21 @@ func (p *TxFinalityViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type finalityListener struct {
-	errs   chan error
-	cancel func() bool
+	success func()
 }
 
 func newFinalityListener(timeout time.Duration, errs chan error) *finalityListener {
-	cancel := func() bool { return true }
+	var once sync.Once
+
 	if timeout > 0 {
-		cancel = time.AfterFunc(timeout, func() { errs <- errors.New("timeout exceeded") }).Stop
+		time.AfterFunc(timeout, func() { once.Do(func() { errs <- errors.New("timeout exceeded") }) })
 	}
-	return &finalityListener{errs: errs, cancel: cancel}
+	return &finalityListener{
+		success: func() { once.Do(func() { errs <- nil }) },
+	}
 }
 
 func (l *finalityListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
-	//fmt.Printf("Received finality from network for TX [%s][%d]", txID, status)
-	defer l.cancel()
-	l.errs <- nil
+	fmt.Printf("Received finality from network for TX [%s][%d]", txID, status)
+	l.success()
 }
