@@ -6,7 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package rp_test
 
 import (
-	math2 "math"
 	"strconv"
 
 	math "github.com/IBM/mathlib"
@@ -22,7 +21,7 @@ var _ = Describe("Inner Product Argument", func() {
 			It("Succeeds", func() {
 				curve := math.Curves[0]
 				nr := uint64(6)
-				l := uint64(math2.Pow(2, float64(nr)))
+				l := uint64(1 << nr)
 				leftGens := make([]*math.G1, l)
 				rightGens := make([]*math.G1, l)
 				left := make([]*math.Zr, l)
