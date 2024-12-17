@@ -19,7 +19,7 @@ type restUserProvider struct {
 	users map[model.UserAlias]*restUser
 }
 
-func NewRestUserProvider(config model.UserProviderConfig, metrics *metrics.Metrics, logger logging.ILogger) user.Provider {
+func NewRestUserProvider(config model.UserProviderConfig, metrics *metrics.Metrics, logger logging.Logger) user.Provider {
 	users := make(map[model.UserAlias]*restUser, len(config.Users))
 	for _, user := range config.Users {
 		users[user.Name] = newRestUser(user, metrics, newHttpClient(config.HttpClient), logger)

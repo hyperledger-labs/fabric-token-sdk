@@ -10,10 +10,10 @@ import (
 	"os"
 	"path"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.integration.token.common")
+var logger = logging.MustGetLogger("token-sdk.integration.token.common")
 
 const (
 	FabricBinsPathEnvKey = "FAB_BINS"

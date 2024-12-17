@@ -33,7 +33,7 @@ type TestCaseSettings struct {
 	UseExistingFunds bool
 }
 
-func NewTestCaseRunner(intermediary *user.IntermediaryClient, logger logging.ILogger) *TestCaseRunner {
+func NewTestCaseRunner(intermediary *user.IntermediaryClient, logger logging.Logger) *TestCaseRunner {
 	return &TestCaseRunner{
 		logger:       logger,
 		intermediary: intermediary,
@@ -41,7 +41,7 @@ func NewTestCaseRunner(intermediary *user.IntermediaryClient, logger logging.ILo
 }
 
 type TestCaseRunner struct {
-	logger       logging.ILogger
+	logger       logging.Logger
 	intermediary *user.IntermediaryClient
 }
 

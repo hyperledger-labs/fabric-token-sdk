@@ -22,11 +22,11 @@ import (
 // RestRunner enhances the BaseRunner by adding a REST server to accept new suites
 type RestRunner struct {
 	SuiteRunner
-	logger  logging.ILogger
+	logger  logging.Logger
 	address string
 }
 
-func NewRest(runner SuiteRunner, config model.ServerConfig, logger logging.ILogger) *RestRunner {
+func NewRest(runner SuiteRunner, config model.ServerConfig, logger logging.Logger) *RestRunner {
 	return &RestRunner{
 		logger:      logger,
 		SuiteRunner: runner,

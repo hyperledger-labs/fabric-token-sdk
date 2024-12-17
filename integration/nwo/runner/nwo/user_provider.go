@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func newUserProvider(nw *integration.Infrastructure, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.ILogger, auditor model.Username) (*runner2.ViewUserProvider, error) {
+func newUserProvider(nw *integration.Infrastructure, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.Logger, auditor model.Username) (*runner2.ViewUserProvider, error) {
 	fscTopology, err := getFscTopology(nw.Topologies)
 	if err != nil {
 		return nil, err

@@ -55,7 +55,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 			return &operations.Options{Metrics: operations.MetricsOptions{Provider: config.Monitoring.MetricsProviderType}}
 		}),
 		s.C.Provide(web.NewOperationsLogger),
-		s.C.Provide(func(logger logging.ILogger) *web2.Server {
+		s.C.Provide(func(logger logging.Logger) *web2.Server {
 			return web2.NewServer(web2.Options{ListenAddress: config.Monitoring.MetricsEndpoint, Logger: logger})
 		}),
 		s.C.Provide(digutils.Identity[*web2.Server](), dig.As(new(operations.Server))),
@@ -82,7 +82,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 
 	err = errors.Join(
 		s.C.Decorate(func(_ user.Provider, p *runner2.ViewUserProvider) user.Provider { return p }),
-		s.C.Decorate(func(_ runner3.SuiteRunner, runner *runner3.RestRunner, userProvider *runner2.ViewUserProvider, logger logging.ILogger) runner3.SuiteRunner {
+		s.C.Decorate(func(_ runner3.SuiteRunner, runner *runner3.RestRunner, userProvider *runner2.ViewUserProvider, logger logging.Logger) runner3.SuiteRunner {
 			return runner2.NewViewRunner(runner, userProvider, logger, config.Auditors[0].Name, config.Issuers[0].Name)
 		}),
 		s.C.Decorate(func(_ metrics2.Provider, mp metrics.Provider) metrics2.Provider {

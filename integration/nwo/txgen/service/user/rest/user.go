@@ -31,7 +31,7 @@ var operationTypeMap = map[c.ApiRequestType]metrics.OperationType{
 	c.WithdrawRequest:          metrics.Withdraw,
 }
 
-func newRestUser(user model.UserConfig, metrics *metrics.Metrics, httpClient *http.Client, logger logging.ILogger) *restUser {
+func newRestUser(user model.UserConfig, metrics *metrics.Metrics, httpClient *http.Client, logger logging.Logger) *restUser {
 	return &restUser{
 		logger:     logger,
 		httpClient: httpClient,
@@ -43,7 +43,7 @@ func newRestUser(user model.UserConfig, metrics *metrics.Metrics, httpClient *ht
 }
 
 type restUser struct {
-	logger         logging.ILogger
+	logger         logging.Logger
 	httpClient     *http.Client
 	accessTokenExp time.Time
 	username       model.Username

@@ -72,7 +72,7 @@ const (
 	GRPC ConnectionType = "GRPC"
 )
 
-func newUserProvider(c UserProviderConfig, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
+func newUserProvider(c UserProviderConfig, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.Logger) (*runner2.ViewUserProvider, error) {
 	users := make(map[model.UserAlias][]user.User, len(c.Users))
 	for _, uc := range append(append(c.Users, c.Auditors...), c.Issuers...) {
 		u, err := newUser(uc.CorePath, uc.Host, c.ConnectionType, metrics, tracerProvider, logger, c.Auditors[0].Name)
@@ -84,7 +84,7 @@ func newUserProvider(c UserProviderConfig, metrics *metrics.Metrics, tracerProvi
 	return runner2.NewViewUserProvider(users), nil
 }
 
-func newUser(corePath string, host string, connType ConnectionType, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.ILogger, auditor model.Username) (user.User, error) {
+func newUser(corePath string, host string, connType ConnectionType, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.Logger, auditor model.Username) (user.User, error) {
 	cfg, cli, err := newClient(corePath, host, connType)
 	if err != nil {
 		return nil, err

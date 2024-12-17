@@ -6,6 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 
 package views
 
-import "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+import "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 
-var logger = flogging.MustGetLogger("token-sdk.fungible.views")
+var logger = logging.MustGetLogger("token-sdk.fungible.views")

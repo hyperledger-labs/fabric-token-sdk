@@ -17,12 +17,12 @@ import (
 )
 
 type IntermediaryClient struct {
-	logger                 logging.ILogger
+	logger                 logging.Logger
 	userProvider           Provider
 	delayAfterTransferInit time.Duration
 }
 
-func NewIntermediaryClient(userProvider Provider, logger logging.ILogger, config model.IntermediaryConfig) *IntermediaryClient {
+func NewIntermediaryClient(userProvider Provider, logger logging.Logger, config model.IntermediaryConfig) *IntermediaryClient {
 	return &IntermediaryClient{
 		logger:                 logger,
 		userProvider:           userProvider,
