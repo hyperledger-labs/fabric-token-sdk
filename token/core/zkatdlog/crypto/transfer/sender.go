@@ -69,7 +69,11 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 			return nil, nil, errors.New("cannot generate transfer: invalid value")
 		}
 
-		intw[i] = &token.TokenDataWitness{Value: uint64(v), Type: s.InputInformation[i].Type, BlindingFactor: s.InputInformation[i].BlindingFactor}
+		intw[i] = &token.TokenDataWitness{
+			Value:          uint64(v),
+			Type:           s.InputInformation[i].Type,
+			BlindingFactor: s.InputInformation[i].BlindingFactor,
+		}
 	}
 	span.AddEvent("get_tokens_with_witness")
 	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.PedersenGenerators, math.Curves[s.PublicParams.Curve])
@@ -96,7 +100,7 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 	for i := 0; i < len(inf); i++ {
 		inf[i] = &token.Metadata{
 			Type:           s.InputInformation[0].Type,
-			Value:          math.Curves[s.PublicParams.Curve].NewZrFromInt(int64(outtw[i].Value)),
+			Value:          math.Curves[s.PublicParams.Curve].NewZrFromUint64(outtw[i].Value),
 			BlindingFactor: outtw[i].BlindingFactor,
 			Owner:          owners[i],
 		}

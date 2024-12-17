@@ -28,8 +28,8 @@ type RangeProofParams struct {
 	RightGenerators []*mathlib.G1
 	P               *mathlib.G1
 	Q               *mathlib.G1
-	BitLength       int
-	NumberOfRounds  int
+	BitLength       uint64
+	NumberOfRounds  uint64
 }
 
 func (rpp *RangeProofParams) Validate() error {
@@ -39,13 +39,13 @@ func (rpp *RangeProofParams) Validate() error {
 	if rpp.NumberOfRounds == 0 {
 		return errors.New("invalid range proof parameters: number of rounds is zero")
 	}
-	if rpp.BitLength != int(math.Pow(2, float64(rpp.NumberOfRounds))) {
+	if rpp.BitLength != uint64(math.Pow(2, float64(rpp.NumberOfRounds))) {
 		return errors.Errorf("invalid range proof parameters: bit length should be %d\n", int(math.Pow(2, float64(rpp.NumberOfRounds))))
 	}
 	if len(rpp.LeftGenerators) != len(rpp.RightGenerators) {
 		return errors.Errorf("invalid range proof parameters: the size of the left generators does not match the size of the right generators [%d vs, %d]", len(rpp.LeftGenerators), len(rpp.RightGenerators))
 	}
-	if len(rpp.LeftGenerators) != rpp.BitLength {
+	if uint64(len(rpp.LeftGenerators)) != rpp.BitLength {
 		return errors.Errorf("invalid range proof parameters: the size of the generators does not match the provided bit length [%d vs %d]", len(rpp.LeftGenerators), rpp.BitLength)
 	}
 	if rpp.Q == nil {
@@ -100,11 +100,11 @@ type PublicParams struct {
 	QuantityPrecision uint64
 }
 
-func Setup(bitLength int, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
 	return SetupWithCustomLabel(bitLength, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
 }
 
-func SetupWithCustomLabel(bitLength int, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+func SetupWithCustomLabel(bitLength uint64, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
 	pp := &PublicParams{Curve: mathlib.BN254}
 	pp.Label = label
 	if err := pp.GeneratePedersenParameters(); err != nil {
@@ -116,7 +116,7 @@ func SetupWithCustomLabel(bitLength int, idemixIssuerPK []byte, label string, id
 	pp.IdemixIssuerPK = idemixIssuerPK
 	pp.IdemixCurveID = idemixCurveID
 	pp.RangeProofParams.BitLength = bitLength
-	pp.RangeProofParams.NumberOfRounds = int(math.Log2(float64(bitLength)))
+	pp.RangeProofParams.NumberOfRounds = uint64(math.Log2(float64(bitLength)))
 	pp.QuantityPrecision = DefaultPrecision
 	pp.MaxToken = pp.ComputeMaxTokenValue()
 	return pp, nil
@@ -200,21 +200,21 @@ func (pp *PublicParams) GeneratePedersenParameters() error {
 	return nil
 }
 
-func (pp *PublicParams) GenerateRangeProofParameters(bitLength int) error {
+func (pp *PublicParams) GenerateRangeProofParameters(bitLength uint64) error {
 	curve := mathlib.Curves[pp.Curve]
 
 	pp.RangeProofParams = &RangeProofParams{
 		P:              curve.HashToG1([]byte(strconv.Itoa(0))),
 		Q:              curve.HashToG1([]byte(strconv.Itoa(1))),
 		BitLength:      bitLength,
-		NumberOfRounds: int(math.Log2(float64(bitLength))),
+		NumberOfRounds: uint64(math.Log2(float64(bitLength))),
 	}
 	pp.RangeProofParams.LeftGenerators = make([]*mathlib.G1, bitLength)
 	pp.RangeProofParams.RightGenerators = make([]*mathlib.G1, bitLength)
 
-	for i := 0; i < bitLength; i++ {
-		pp.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.Itoa(2*(i+1))))
-		pp.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.Itoa(2*(i+1)+1)))
+	for i := uint64(0); i < bitLength; i++ {
+		pp.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.FormatUint(2*(i+1), 10)))
+		pp.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.FormatUint(2*(i+1)+1, 10)))
 	}
 
 	return nil
@@ -248,7 +248,7 @@ func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
 	// We can't use math.Pow because it uses float64 which does not lead to the same results
 	// across architectures (see: https://go.dev/play/p/jwqAHvIXvRI; the same code returns
 	// 9223372036854775808 on x86 and 18446744073709551615 on arm).
-	var i, e = big.NewInt(2), big.NewInt(int64(pp.RangeProofParams.BitLength))
+	var i, e = big.NewInt(2), (&big.Int{}).SetUint64(pp.RangeProofParams.BitLength)
 	i.Exp(i, e, nil)
 	return i.Sub(i, big.NewInt(1)).Uint64()
 }
@@ -293,8 +293,8 @@ func (pp *PublicParams) Validate() error {
 	if maxToken != pp.MaxToken {
 		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, pp.MaxToken)
 	}
-	//if len(pp.Issuers) == 0 {
+	// if len(pp.Issuers) == 0 {
 	//	return errors.New("invalid public parameters: empty list of issuers")
-	//}
+	// }
 	return nil
 }

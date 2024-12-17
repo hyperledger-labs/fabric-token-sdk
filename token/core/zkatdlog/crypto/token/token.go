@@ -69,7 +69,7 @@ func computeTokens(tw []*TokenDataWitness, pp []*math.G1, c *math.Curve) ([]*mat
 	var err error
 	for i := 0; i < len(tw); i++ {
 		hash := c.HashToZr([]byte(tw[i].Type))
-		tokens[i], err = commit([]*math.Zr{hash, c.NewZrFromInt(int64(tw[i].Value)), tw[i].BlindingFactor}, pp, c)
+		tokens[i], err = commit([]*math.Zr{hash, c.NewZrFromUint64(tw[i].Value), tw[i].BlindingFactor}, pp, c)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to compute token [%d]", i)
 		}

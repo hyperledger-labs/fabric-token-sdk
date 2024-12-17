@@ -73,7 +73,7 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*IssueAction
 	for j := 0; j < len(inf); j++ {
 		inf[j] = &token.Metadata{
 			Type:           i.Type,
-			Value:          math.Curves[i.PublicParams.Curve].NewZrFromInt(int64(tw[j].Value)),
+			Value:          math.Curves[i.PublicParams.Curve].NewZrFromUint64(tw[j].Value),
 			BlindingFactor: tw[j].BlindingFactor,
 			Owner:          owners[j],
 			Issuer:         signerRaw,
