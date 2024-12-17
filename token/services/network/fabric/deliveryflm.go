@@ -103,7 +103,7 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 			}
 			for _, entry := range listeners {
 				logger.Infof("Invoking %d listeners for [%s]", len(listeners), info.txID)
-				if entry.namespace == ns {
+				if len(entry.namespace) == 0 || len(ns) == 0 || entry.namespace == ns {
 					entry.listener.OnStatus(ctx, info.txID, info.status, info.message, info.requestHash)
 				}
 			}
