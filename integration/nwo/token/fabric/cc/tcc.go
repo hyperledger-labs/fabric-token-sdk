@@ -19,10 +19,10 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	topology3 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	. "github.com/onsi/gomega"
 )
 
@@ -31,7 +31,7 @@ const (
 	DefaultTokenChaincodeParamsReplaceSuffix = "/token/services/network/fabric/tcc/params.go"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.integration.token.fabric.cc")
+var logger = logging.MustGetLogger("token-sdk.integration.token.fabric.cc")
 
 type fabricPlatform interface {
 	Topology() *topology.Topology

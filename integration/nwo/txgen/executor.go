@@ -30,13 +30,13 @@ func NewSuiteExecutor(userProviderConfig model.UserProviderConfig, intermediaryC
 	c := dig.New()
 
 	err := errors.Join(
-		c.Provide(func() logging.ILogger { return logging.MustGetLogger("client") }),
+		c.Provide(func() logging.Logger { return logging.MustGetLogger("client") }),
 		c.Provide(func() model.IntermediaryConfig { return intermediaryConfig }),
 		c.Provide(func() model.UserProviderConfig { return userProviderConfig }),
 		c.Provide(metrics.NewProvider),
 		c.Provide(rest.NewRestUserProvider),
 		c.Provide(runner.NewBase),
-		c.Provide(func(r *runner.BaseRunner, config model.ServerConfig, logger logging.ILogger) *runner.RestRunner {
+		c.Provide(func(r *runner.BaseRunner, config model.ServerConfig, logger logging.Logger) *runner.RestRunner {
 			return runner.NewRest(r, config, logger)
 		}),
 		c.Provide(func(r *runner.RestRunner) runner.SuiteRunner { return r }),

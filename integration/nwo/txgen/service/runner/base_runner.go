@@ -32,7 +32,7 @@ type SuiteRunner interface {
 
 // BaseRunner runs sequentially the suites passed using PushSuites
 type BaseRunner struct {
-	logger          logging.ILogger
+	logger          logging.Logger
 	intermediary    *user.IntermediaryClient
 	testCaseRunner  *TestCaseRunner
 	metricsReporter metrics.Reporter
@@ -42,7 +42,7 @@ type BaseRunner struct {
 	done            chan struct{}
 }
 
-func NewBase(testCaseRunner *TestCaseRunner, intermediary *user.IntermediaryClient, metricsReporter metrics.Reporter, logger logging.ILogger) *BaseRunner {
+func NewBase(testCaseRunner *TestCaseRunner, intermediary *user.IntermediaryClient, metricsReporter metrics.Reporter, logger logging.Logger) *BaseRunner {
 	return &BaseRunner{
 		logger:          logger,
 		intermediary:    intermediary,
@@ -130,9 +130,9 @@ func (r *BaseRunner) initCustomerState(suiteConfig model.SuiteConfig) txgen.Erro
 		if err != nil {
 			return err
 		}
-		//if _, ok := r.customers[u]; !ok {
+		// if _, ok := r.customers[u]; !ok {
 		r.customers[u] = &customerState{Name: u, StartingAmount: balance}
-		//}
+		// }
 	}
 	return nil
 }

@@ -20,12 +20,12 @@ import (
 type viewRunner struct {
 	runner.SuiteRunner
 	viewUserProvider *ViewUserProvider
-	logger           logging.ILogger
+	logger           logging.Logger
 	auditorId        model.Username
 	issuerIds        []model.Username
 }
 
-func NewViewRunner(runner runner.SuiteRunner, userProvider *ViewUserProvider, logger logging.ILogger, auditorId model.Username, issuerIds ...model.Username) *viewRunner {
+func NewViewRunner(runner runner.SuiteRunner, userProvider *ViewUserProvider, logger logging.Logger, auditorId model.Username, issuerIds ...model.Username) *viewRunner {
 	return &viewRunner{
 		SuiteRunner:      runner,
 		viewUserProvider: userProvider,

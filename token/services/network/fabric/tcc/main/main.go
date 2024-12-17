@@ -10,7 +10,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/IBM/idemix/common/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"

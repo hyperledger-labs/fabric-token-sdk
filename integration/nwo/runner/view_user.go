@@ -59,7 +59,7 @@ type idResolver interface {
 	Identity(model.Username) view.Identity
 }
 
-func NewViewUser(username model.Username, auditor model.Username, client api2.ViewClient, idResolver idResolver, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.ILogger) *viewUser {
+func NewViewUser(username model.Username, auditor model.Username, client api2.ViewClient, idResolver idResolver, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.Logger) *viewUser {
 	return &viewUser{
 		username:   username,
 		anonymous:  false,
@@ -82,7 +82,7 @@ type viewUser struct {
 	client     api2.ViewClient
 	idResolver idResolver
 	metrics    *metrics.Metrics
-	logger     logging.ILogger
+	logger     logging.Logger
 	tracer     trace.Tracer
 }
 

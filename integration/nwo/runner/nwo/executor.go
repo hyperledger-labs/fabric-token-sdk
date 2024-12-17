@@ -48,7 +48,7 @@ func NewSuiteExecutor(nw *integration.Infrastructure, auditor, issuer model.User
 				Otpl:     tracing.OtplConfig{Address: fmt.Sprintf(":%d", optl.JaegerCollectorPort)},
 			})
 		}),
-		s.C.Provide(func(nw *integration.Infrastructure, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.ILogger) (*runner2.ViewUserProvider, error) {
+		s.C.Provide(func(nw *integration.Infrastructure, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.Logger) (*runner2.ViewUserProvider, error) {
 			return newUserProvider(nw, metrics, tracerProvider, logger, auditor)
 		}),
 	)
@@ -58,7 +58,7 @@ func NewSuiteExecutor(nw *integration.Infrastructure, auditor, issuer model.User
 
 	err = errors.Join(
 		s.C.Decorate(func(_ user.Provider, p *runner2.ViewUserProvider) user.Provider { return p }),
-		s.C.Decorate(func(_ runner.SuiteRunner, runner *runner.BaseRunner, userProvider *runner2.ViewUserProvider, logger logging.ILogger) runner.SuiteRunner {
+		s.C.Decorate(func(_ runner.SuiteRunner, runner *runner.BaseRunner, userProvider *runner2.ViewUserProvider, logger logging.Logger) runner.SuiteRunner {
 			return runner2.NewViewRunner(runner, userProvider, logger, auditor, issuer)
 		}),
 	)
