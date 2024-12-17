@@ -140,6 +140,7 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 func (m *deliveryBasedFLM) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
 	m.mu.RLock()
 	if txInfo, ok := m.txInfos[txID]; ok {
+		defer m.mu.RUnlock()
 		logger.Infof("Found tx [%s]. Invoking listener directly", txID)
 		go listener.OnStatus(context.TODO(), txInfo.txID, txInfo.status, txInfo.message, txInfo.requestHash)
 		return nil
