@@ -81,7 +81,7 @@ type deliveryBasedFLM struct {
 }
 
 func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) error {
-	logger.Debugf("New block with %d txs detected [%d]", len(block.Data.Data), block.Header.Number)
+	logger.Infof("New block with %d txs detected [%d]", len(block.Data.Data), block.Header.Number)
 
 	txs, err := m.mapper.Map(ctx, block)
 	if err != nil {
@@ -102,7 +102,7 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 				invokedTxIDs = append(invokedTxIDs, info.txID)
 			}
 			for _, entry := range listeners {
-				logger.Debugf("Invoking %d listeners for [%s]", len(listeners), info.txID)
+				logger.Infof("Invoking %d listeners for [%s]", len(listeners), info.txID)
 				if entry.namespace == ns {
 					entry.listener.OnStatus(ctx, info.txID, info.status, info.message, info.requestHash)
 				}
@@ -119,13 +119,14 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 	}
 	m.mu.Unlock()
 
-	logger.Debugf("Removed listeners for %d invoked TxIDs", len(invokedTxIDs))
+	logger.Infof("Removed listeners for %d invoked TxIDs", len(invokedTxIDs))
 
 	return nil
 
 }
 
 func (m *deliveryBasedFLM) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
+	logger.Infof("Add finality listener for [%s]", txID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.listeners[txID] = append(m.listeners[txID], listenerEntry{namespace, listener})
@@ -166,6 +167,7 @@ func NewParallelResponseMapper(cap int, network string, keyTranslator translator
 }
 
 func (m *parallelBlockMapper) Map(ctx context.Context, block *common.Block) ([]map[driver2.Namespace]txInfo, error) {
+	logger.Infof("Mapping block [%d]", block.Header.Number)
 	eg := errgroup.Group{}
 	eg.SetLimit(m.cap)
 	results := make([]map[driver2.Namespace]txInfo, len(block.Data.Data))
