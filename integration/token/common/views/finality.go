@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/pkg/errors"
 )
 
 type TxFinality struct {
@@ -41,7 +42,7 @@ func (r *TxFinalityView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(tms)
 	nw := network.GetInstance(context, tms.Network(), tms.Channel())
 	assert.NotNil(nw)
-	assert.NoError(nw.AddFinalityListener(tms.Namespace(), r.TxID, &finalityListener{errs: errs}))
+	assert.NoError(nw.AddFinalityListener(tms.Namespace(), r.TxID, newFinalityListener(r.Timeout, errs)))
 
 	// Listen for finality from DBs
 	go func() {
@@ -67,10 +68,20 @@ func (p *TxFinalityViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type finalityListener struct {
-	errs chan error
+	errs   chan error
+	cancel func() bool
+}
+
+func newFinalityListener(timeout time.Duration, errs chan error) *finalityListener {
+	cancel := func() bool { return true }
+	if timeout > 0 {
+		cancel = time.AfterFunc(timeout, func() { errs <- errors.New("timeout exceeded") }).Stop
+	}
+	return &finalityListener{errs: errs, cancel: cancel}
 }
 
 func (l *finalityListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
 	//fmt.Printf("Received finality from network for TX [%s][%d]", txID, status)
+	defer l.cancel()
 	l.errs <- nil
 }
