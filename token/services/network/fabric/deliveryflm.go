@@ -179,6 +179,7 @@ func (m *parallelBlockMapper) Map(ctx context.Context, block *common.Block) ([]m
 				return err
 			}
 			results[i] = event
+			logger.Infof("Put tx [%d:%d]: [%v]", block.Header.Number, i, event)
 			return nil
 		})
 	}
