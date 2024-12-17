@@ -39,8 +39,11 @@ func (rpp *RangeProofParams) Validate() error {
 	if rpp.NumberOfRounds == 0 {
 		return errors.New("invalid range proof parameters: number of rounds is zero")
 	}
-	if rpp.BitLength != uint64(math.Pow(2, float64(rpp.NumberOfRounds))) {
-		return errors.Errorf("invalid range proof parameters: bit length should be %d\n", int(math.Pow(2, float64(rpp.NumberOfRounds))))
+	if rpp.NumberOfRounds > 64 {
+		return errors.New("invalid range proof parameters: number of rounds must be smaller or equal to 64")
+	}
+	if rpp.BitLength != uint64(1<<rpp.NumberOfRounds) {
+		return errors.Errorf("invalid range proof parameters: bit length should be %d\n", uint64(1<<rpp.NumberOfRounds))
 	}
 	if len(rpp.LeftGenerators) != len(rpp.RightGenerators) {
 		return errors.Errorf("invalid range proof parameters: the size of the left generators does not match the size of the right generators [%d vs, %d]", len(rpp.LeftGenerators), len(rpp.RightGenerators))
