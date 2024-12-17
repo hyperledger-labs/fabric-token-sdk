@@ -94,6 +94,7 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 
 	for _, txInfos := range txs {
 		for ns, info := range txInfos {
+			logger.Infof("Look for listeners of [%s:%s]", ns, info.txID)
 			// We expect there to be only one namespace.
 			// The complexity is better with a listenerEntry slice (because of the write operations)
 			// If more namespaces are expected, it is worth switching to a map.
