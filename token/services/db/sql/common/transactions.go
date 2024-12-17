@@ -76,11 +76,14 @@ func NewTransactionDB(db *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.T
 
 func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
 	var tokenrequest []byte
-	query := fmt.Sprintf("SELECT request FROM %s WHERE tx_id=$1;", db.table.Requests)
+	query, err := NewSelect("request").From(db.table.Requests).Where("tx_id=$1").Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, txID)
 
 	row := db.db.QueryRow(query, txID)
-	err := row.Scan(&tokenrequest)
+	err = row.Scan(&tokenrequest)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -93,10 +96,12 @@ func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
 func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
 	where, args := common.Where(db.ci.HasMovementsParams(params))
 	conditions := where + movementConditionsSql(params)
-	query := fmt.Sprintf("SELECT %s.tx_id, enrollment_id, token_type, amount, %s.status FROM %s %s %s",
-		db.table.Movements, db.table.Requests,
-		db.table.Movements, joinOnTxID(db.table.Movements, db.table.Requests), conditions)
-
+	query, err := NewSelect(
+		fmt.Sprintf("%s.tx_id, enrollment_id, token_type, amount, %s.status", db.table.Movements, db.table.Requests),
+	).From(db.table.Movements, joinOnTxID(db.table.Movements, db.table.Requests)).Where(conditions).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -133,14 +138,15 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 
 func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
 	conditions, args := common.Where(db.ci.HasTransactionParams(params, db.table.Transactions))
-	conditions = conditions + movementConditionsSql(driver.QueryMovementsParams{
+	orderBy := movementConditionsSql(driver.QueryMovementsParams{
 		SearchDirection: driver.FromBeginning,
 	})
-	query := fmt.Sprintf(
-		"SELECT %s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, %s.application_metadata, stored_at FROM %s %s %s",
-		db.table.Transactions, db.table.Requests, db.table.Requests,
-		db.table.Transactions, joinOnTxID(db.table.Transactions, db.table.Requests), conditions)
-
+	query, err := NewSelect(
+		fmt.Sprintf("%s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, %s.application_metadata, stored_at", db.table.Transactions, db.table.Requests, db.table.Requests),
+	).From(db.table.Transactions, joinOnTxID(db.table.Transactions, db.table.Requests)).Where(conditions).OrderBy(orderBy).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -153,7 +159,10 @@ func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams
 func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error) {
 	var status driver.TxStatus
 	var statusMessage string
-	query := fmt.Sprintf("SELECT status, status_message FROM %s WHERE tx_id=$1;", db.table.Requests)
+	query, err := NewSelect("status, status_message").From(db.table.Requests).Where("tx_id=$1").Compile()
+	if err != nil {
+		return driver.Unknown, "", errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, txID)
 
 	row := db.db.QueryRow(query, txID)
@@ -169,10 +178,13 @@ func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error)
 
 func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
 	conditions, args := common.Where(db.ci.HasValidationParams(params))
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.request, metadata, %s.status, %s.stored_at FROM %s %s %s",
-		db.table.Validations, db.table.Requests, db.table.Requests, db.table.Validations,
-		db.table.Validations, joinOnTxID(db.table.Validations, db.table.Requests), conditions)
-
+	query, err := NewSelect(
+		fmt.Sprintf("%s.tx_id, %s.request, metadata, %s.status, %s.stored_at",
+			db.table.Validations, db.table.Requests, db.table.Requests, db.table.Validations),
+	).From(db.table.Validations, joinOnTxID(db.table.Validations, db.table.Requests)).Where(conditions).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {

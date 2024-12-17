@@ -16,6 +16,7 @@ const (
 	SelectDistinctStatement = `SELECT DISTINCT`
 	InsertStatement         = `INSERT INTO`
 	UpdateStatement         = `UPDATE`
+	DeleteStatement         = `DELETE FROM`
 )
 
 type Select struct {
@@ -70,7 +71,7 @@ func (s *Select) Compile() (string, error) {
 		sb.WriteString(s.where)
 	}
 	if len(s.orderBy) > 0 {
-		if !strings.HasPrefix(s.orderBy, "ORDER BY") {
+		if !strings.HasPrefix(strings.TrimSpace(s.orderBy), "ORDER BY") {
 			sb.WriteString(" ORDER BY ")
 		}
 		sb.WriteString(s.orderBy)
@@ -134,6 +135,13 @@ type Update struct {
 	where string
 }
 
+func NewUpdate(table string) *Update {
+	return &Update{
+		stmt:  UpdateStatement,
+		table: table,
+	}
+}
+
 func (u *Update) Set(rows string) *Update {
 	u.rows = rows
 	return u
@@ -182,9 +190,34 @@ func (u *Update) Compile() (string, error) {
 	return sb.String(), nil
 }
 
-func NewUpdate(table string) *Update {
-	return &Update{
-		stmt:  UpdateStatement,
+type Delete struct {
+	stmt  string
+	table string
+	where string
+}
+
+func NewDeleteFrom(table string) *Delete {
+	return &Delete{
+		stmt:  DeleteStatement,
 		table: table,
 	}
+}
+
+func (s *Delete) Where(where string) *Delete {
+	s.where = where
+	return s
+}
+
+func (s *Delete) Compile() (string, error) {
+	sb := new(strings.Builder)
+	sb.WriteString(s.stmt)
+	sb.WriteString(" ")
+	sb.WriteString(s.table)
+	if len(s.where) > 0 {
+		if !strings.HasPrefix(s.where, "WHERE") {
+			sb.WriteString(" WHERE ")
+		}
+		sb.WriteString(s.where)
+	}
+	return sb.String(), nil
 }
