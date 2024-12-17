@@ -141,7 +141,7 @@ func (m *deliveryBasedFLM) AddFinalityListener(namespace string, txID string, li
 	m.mu.RLock()
 	if txInfo, ok := m.txInfos[txID]; ok {
 		logger.Infof("Found tx [%s]. Invoking listener directly", txID)
-		listener.OnStatus(context.TODO(), txInfo.txID, txInfo.status, txInfo.message, txInfo.requestHash)
+		go listener.OnStatus(context.TODO(), txInfo.txID, txInfo.status, txInfo.message, txInfo.requestHash)
 		return nil
 	}
 	m.mu.RUnlock()
