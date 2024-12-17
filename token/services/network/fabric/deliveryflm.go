@@ -213,7 +213,9 @@ func (m *parallelBlockMapper) mapTxInfo(ctx context.Context, tx []byte, block *c
 	}
 
 	txInfos := make(map[driver2.Namespace]txInfo, len(rwSet.WriteSet.Writes))
+	logger.Infof("TX [%s] has %d namespaces", chdr.TxId, len(rwSet.WriteSet.Writes))
 	for ns, write := range rwSet.WriteSet.Writes {
+		logger.Infof("TX [%s:%s] has %d writes", chdr.TxId, ns, len(write))
 		if requestHash, ok := write[key]; ok {
 			txInfos[ns] = txInfo{
 				txID:        chdr.TxId,
@@ -221,6 +223,8 @@ func (m *parallelBlockMapper) mapTxInfo(ctx context.Context, tx []byte, block *c
 				message:     finalityEvent.ValidationMessage,
 				requestHash: requestHash,
 			}
+		} else {
+			logger.Warnf("TX [%s:%s] did not have key [%s]. Found: %v", chdr.TxId, ns, key, write.Keys())
 		}
 	}
 	return txInfos, nil
