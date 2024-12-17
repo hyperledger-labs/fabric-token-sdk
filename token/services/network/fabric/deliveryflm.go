@@ -85,6 +85,7 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 
 	txs, err := m.mapper.Map(ctx, block)
 	if err != nil {
+		logger.Errorf("failed to process block [%d]: %v", block.Header.Number, err)
 		return errors.Wrapf(err, "failed to process block [%d]", block.Header.Number)
 	}
 
