@@ -9,6 +9,7 @@ package views
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -18,8 +19,9 @@ import (
 )
 
 type TxFinality struct {
-	TxID  string
-	TMSID *token.TMSID
+	TxID    string
+	TMSID   *token.TMSID
+	Timeout time.Duration
 }
 
 type TxFinalityView struct {
@@ -43,7 +45,7 @@ func (r *TxFinalityView) Call(context view.Context) (interface{}, error) {
 
 	// Listen for finality from DBs
 	go func() {
-		_, err := context.RunView(ttx.NewFinalityWithOpts(ttx.WithTxID(r.TxID), ttx.WithTMSID(tms.ID())))
+		_, err := context.RunView(ttx.NewFinalityWithOpts(ttx.WithTxID(r.TxID), ttx.WithTMSID(tms.ID()), ttx.WithTimeout(r.Timeout)))
 		errs <- err
 	}()
 

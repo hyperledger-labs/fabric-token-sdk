@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
@@ -21,8 +23,9 @@ func CheckFinality(network *integration.Infrastructure, id *token2.NodeReference
 		return
 	}
 	_, err := network.Client(id.ReplicaName()).CallView("TxFinality", common.JSONMarshall(&views.TxFinality{
-		TxID:  txID,
-		TMSID: tmsID,
+		TxID:    txID,
+		TMSID:   tmsID,
+		Timeout: 30 * time.Second,
 	}))
 	if fail {
 		Expect(err).To(HaveOccurred())
