@@ -69,11 +69,11 @@ func NewTypeAndSumWitness(bf *math.Zr, in, out []*token.TokenDataWitness, c *mat
 	inBF := make([]*math.Zr, len(in))
 	outBF := make([]*math.Zr, len(out))
 	for i := 0; i < len(in); i++ {
-		inValues[i] = c.NewZrFromInt(int64(in[i].Value))
+		inValues[i] = c.NewZrFromUint64(in[i].Value)
 		inBF[i] = in[i].BlindingFactor
 	}
 	for i := 0; i < len(out); i++ {
-		outValues[i] = c.NewZrFromInt(int64(out[i].Value))
+		outValues[i] = c.NewZrFromUint64(out[i].Value)
 		outBF[i] = out[i].BlindingFactor
 	}
 	return &TypeAndSumWitness{inValues: inValues, outValues: outValues, Type: c.HashToZr([]byte(in[0].Type)), inBlindingFactors: inBF, outBlindingFactors: outBF, typeBlindingFactor: bf}

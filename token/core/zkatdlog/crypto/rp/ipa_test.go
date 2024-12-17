@@ -21,8 +21,8 @@ var _ = Describe("Inner Product Argument", func() {
 		Context("If IPA is generated correctly", func() {
 			It("Succeeds", func() {
 				curve := math.Curves[0]
-				nr := 6
-				l := int(math2.Pow(2, float64(nr)))
+				nr := uint64(6)
+				l := uint64(math2.Pow(2, float64(nr)))
 				leftGens := make([]*math.G1, l)
 				rightGens := make([]*math.G1, l)
 				left := make([]*math.Zr, l)
