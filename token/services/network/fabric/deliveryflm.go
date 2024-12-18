@@ -95,6 +95,7 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 
 	m.mu.RLock()
 
+	invokedListeners := 0
 	for _, txInfos := range txs {
 		for ns, info := range txInfos {
 			logger.Infof("Look for listeners of [%s:%s]", ns, info.txID)
@@ -108,6 +109,7 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 			for _, entry := range listeners {
 				logger.Infof("Invoking %d listeners for [%s]", len(listeners), info.txID)
 				if len(entry.namespace) == 0 || len(ns) == 0 || entry.namespace == ns {
+					invokedListeners++
 					go entry.listener.OnStatus(ctx, info.txID, info.status, info.message, info.requestHash)
 				}
 			}
@@ -115,9 +117,10 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 	}
 	m.mu.RUnlock()
 
-	logger.Infof("Invoked listeners for %d TxIDs: [%v]. Removing listeners...", len(invokedTxIDs), invokedTxIDs)
+	logger.Infof("Invoked %d listeners for %d TxIDs: [%v]. Removing listeners...", invokedListeners, len(invokedTxIDs), invokedTxIDs)
 
 	m.mu.Lock()
+	defer m.mu.Unlock()
 	for _, txInfos := range txs {
 		for ns, info := range txInfos {
 			logger.Warnf("Mapping for ns [%s]", ns)
@@ -129,9 +132,8 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 	for _, txID := range invokedTxIDs {
 		delete(m.listeners, txID)
 	}
-	m.mu.Unlock()
 
-	logger.Infof("Removed listeners for %d invoked TxIDs", len(invokedTxIDs))
+	logger.Infof("Removed listeners for %d invoked TxIDs: %v", len(invokedTxIDs), invokedTxIDs)
 
 	return nil
 
