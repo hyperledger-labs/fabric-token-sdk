@@ -60,7 +60,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Finality
 			Namespace: network,
 		})),
 		listeners: make(map[translator.TxID][]listenerEntry),
-		txInfos:   make(map[translator.TxID]txInfo),
+		txInfos:   NewMapCache[translator.TxID, txInfo](),
 	}
 	logger.Infof("Starting delivery service for [%s:%s]", network, channel)
 	go func() {
@@ -79,7 +79,7 @@ type deliveryBasedFLM struct {
 
 	mu        sync.RWMutex
 	listeners map[translator.TxID][]listenerEntry
-	txInfos   map[translator.TxID]txInfo
+	txInfos   CacheMap[translator.TxID, txInfo]
 }
 
 func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) error {
@@ -93,7 +93,8 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 
 	invokedTxIDs := make([]translator.TxID, 0)
 
-	m.mu.RLock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	invokedListeners := 0
 	for _, txInfos := range txs {
@@ -106,8 +107,8 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 			if ok {
 				invokedTxIDs = append(invokedTxIDs, info.txID)
 			}
+			logger.Infof("Invoking %d listeners for [%s]", len(listeners), info.txID)
 			for _, entry := range listeners {
-				logger.Infof("Invoking %d listeners for [%s]", len(listeners), info.txID)
 				if len(entry.namespace) == 0 || len(ns) == 0 || entry.namespace == ns {
 					invokedListeners++
 					go entry.listener.OnStatus(ctx, info.txID, info.status, info.message, info.requestHash)
@@ -115,19 +116,19 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 			}
 		}
 	}
-	m.mu.RUnlock()
+	//m.mu.RUnlock()
 
 	logger.Infof("Invoked %d listeners for %d TxIDs: [%v]. Removing listeners...", invokedListeners, len(invokedTxIDs), invokedTxIDs)
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	//m.mu.Lock()
+	//defer m.mu.Unlock()
 	for _, txInfos := range txs {
 		for ns, info := range txInfos {
 			logger.Warnf("Mapping for ns [%s]", ns)
-			m.txInfos[info.txID] = info // TODO
+			m.txInfos.Put(info.txID, info)
 		}
 	}
-	logger.Infof("Current size of cache: %d", len(m.txInfos))
+	logger.Infof("Current size of cache: %d", m.txInfos.Len())
 
 	for _, txID := range invokedTxIDs {
 		delete(m.listeners, txID)
@@ -141,21 +142,22 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 
 func (m *deliveryBasedFLM) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
 	m.mu.RLock()
-	if txInfo, ok := m.txInfos[txID]; ok {
+	if txInfo, ok := m.txInfos.Get(txID); ok {
 		defer m.mu.RUnlock()
 		logger.Infof("Found tx [%s]. Invoking listener directly", txID)
 		go listener.OnStatus(context.TODO(), txInfo.txID, txInfo.status, txInfo.message, txInfo.requestHash)
 		return nil
 	}
 	m.mu.RUnlock()
-	logger.Infof("Add finality listener for [%s]", txID)
 	m.mu.Lock()
+	logger.Infof("Checking if value has been added meanwhile for [%s]", txID)
 	defer m.mu.Unlock()
-	if txInfo, ok := m.txInfos[txID]; ok {
+	if txInfo, ok := m.txInfos.Get(txID); ok {
 		logger.Infof("Found tx [%s]! Invoking listener directly", txID)
 		go listener.OnStatus(context.TODO(), txInfo.txID, txInfo.status, txInfo.message, txInfo.requestHash)
 		return nil
 	}
+	logger.Infof("Adding listener for [%d] to existing %d listeners", txID, len(m.listeners[txID]))
 	m.listeners[txID] = append(m.listeners[txID], listenerEntry{namespace, listener})
 	return nil
 }
