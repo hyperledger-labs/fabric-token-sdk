@@ -9,6 +9,8 @@ package common
 import (
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -51,6 +53,11 @@ func (s *Select) Where(where string) *Select {
 	return s
 }
 
+func (s *Select) OrderBy(orderBy string) *Select {
+	s.orderBy = orderBy
+	return s
+}
+
 func (s *Select) Compile() (string, error) {
 	sb := new(strings.Builder)
 	sb.WriteString(s.stmt)
@@ -58,15 +65,20 @@ func (s *Select) Compile() (string, error) {
 	if len(s.columns) > 0 {
 		sb.WriteString(strings.Join(s.columns, ","))
 		sb.WriteString(" ")
+	} else {
+		sb.WriteString("* ")
 	}
-	if len(s.from) > 0 {
-		sb.WriteString("FROM ")
-		sb.WriteString(strings.Join(s.from, " "))
-		sb.WriteString(" ")
+	if len(s.from) == 0 {
+		return "", errors.New("no from specified")
 	}
+	sb.WriteString("FROM ")
+	sb.WriteString(strings.TrimSpace(strings.Join(s.from, " ")))
+
 	if len(s.where) > 0 {
 		if !strings.HasPrefix(s.where, "WHERE") {
 			sb.WriteString(" WHERE ")
+		} else {
+			sb.WriteString(" ")
 		}
 		sb.WriteString(s.where)
 	}
@@ -77,11 +89,6 @@ func (s *Select) Compile() (string, error) {
 		sb.WriteString(s.orderBy)
 	}
 	return sb.String(), nil
-}
-
-func (s *Select) OrderBy(orderBy string) *Select {
-	s.orderBy = orderBy
-	return s
 }
 
 type Insert struct {
@@ -108,6 +115,9 @@ func (i *Insert) Compile() (string, error) {
 	sb.WriteString(" ")
 	sb.WriteString(i.table)
 	sb.WriteString(" ")
+	if len(i.rows) == 0 {
+		return "", errors.New("no rows in insert statement")
+	}
 	if !strings.HasPrefix(i.rows, "(") {
 		sb.WriteString("(")
 	}
@@ -157,17 +167,20 @@ func (u *Update) Compile() (string, error) {
 	sb := new(strings.Builder)
 	sb.WriteString(u.stmt)
 	sb.WriteString(" ")
+	if len(u.table) == 0 {
+		return "", errors.New("no table specified")
+	}
 	sb.WriteString(u.table)
 	sb.WriteString(" SET ")
 	splitRows := strings.Split(u.rows, ",")
 	for i, row := range splitRows {
-		sb.WriteString(fmt.Sprintf("%s = $%d", row, counter))
+		sb.WriteString(fmt.Sprintf("%s = $%d", strings.TrimSpace(row), counter))
 		if i < len(splitRows)-1 {
 			sb.WriteString(", ")
 		}
 		counter++
 	}
-	sb.WriteString(" ")
+	// sb.WriteString(" ")
 
 	if len(u.where) > 0 {
 		if !strings.HasPrefix(u.where, "WHERE") {
@@ -182,7 +195,6 @@ func (u *Update) Compile() (string, error) {
 				}
 				counter++
 			}
-			sb.WriteString(" ")
 		} else {
 			sb.WriteString(u.where)
 		}
@@ -212,6 +224,9 @@ func (s *Delete) Compile() (string, error) {
 	sb := new(strings.Builder)
 	sb.WriteString(s.stmt)
 	sb.WriteString(" ")
+	if len(s.table) == 0 {
+		return "", errors.New("no table specified")
+	}
 	sb.WriteString(s.table)
 	if len(s.where) > 0 {
 		if !strings.HasPrefix(s.where, "WHERE") {
