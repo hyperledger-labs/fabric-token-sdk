@@ -59,7 +59,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Finality
 		tracer: p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace: network,
 		})),
-		listeners: make(map[translator.TxID][]listenerEntry),
+		listeners: NewMapCache[translator.TxID, []listenerEntry](),
 		txInfos:   NewMapCache[translator.TxID, txInfo](),
 	}
 	logger.Infof("Starting delivery service for [%s:%s]", network, channel)
@@ -78,7 +78,7 @@ type deliveryBasedFLM struct {
 	mapper *parallelBlockMapper
 
 	mu        sync.RWMutex
-	listeners map[translator.TxID][]listenerEntry
+	listeners CacheMap[translator.TxID, []listenerEntry]
 	txInfos   CacheMap[translator.TxID, txInfo]
 }
 
@@ -103,7 +103,7 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 			// We expect there to be only one namespace.
 			// The complexity is better with a listenerEntry slice (because of the write operations)
 			// If more namespaces are expected, it is worth switching to a map.
-			listeners, ok := m.listeners[info.txID]
+			listeners, ok := m.listeners.Get(info.txID)
 			if ok {
 				invokedTxIDs = append(invokedTxIDs, info.txID)
 			}
@@ -130,9 +130,7 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 	}
 	logger.Infof("Current size of cache: %d", m.txInfos.Len())
 
-	for _, txID := range invokedTxIDs {
-		delete(m.listeners, txID)
-	}
+	m.listeners.Delete(invokedTxIDs...)
 
 	logger.Infof("Removed listeners for %d invoked TxIDs: %v", len(invokedTxIDs), invokedTxIDs)
 
@@ -157,8 +155,9 @@ func (m *deliveryBasedFLM) AddFinalityListener(namespace string, txID string, li
 		go listener.OnStatus(context.TODO(), txInfo.txID, txInfo.status, txInfo.message, txInfo.requestHash)
 		return nil
 	}
-	logger.Infof("Adding listener for [%d] to existing %d listeners", txID, len(m.listeners[txID]))
-	m.listeners[txID] = append(m.listeners[txID], listenerEntry{namespace, listener})
+	m.listeners.Update(txID, func(_ bool, listeners []listenerEntry) (bool, []listenerEntry) {
+		return true, append(listeners, listenerEntry{namespace, listener})
+	})
 	return nil
 }
 
@@ -166,14 +165,16 @@ func (m *deliveryBasedFLM) RemoveFinalityListener(txID string, listener driver.F
 	logger.Infof("Manually invoked listener removal for [%s]", txID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for i, entry := range m.listeners[txID] {
-		if entry.listener == listener {
-			m.listeners[txID] = append(m.listeners[txID][:i], m.listeners[txID][i+1:]...)
-			if len(m.listeners[txID]) == 0 {
-				delete(m.listeners, txID)
+	ok := m.listeners.Update(txID, func(_ bool, listeners []listenerEntry) (bool, []listenerEntry) {
+		for i, entry := range listeners {
+			if entry.listener == listener {
+				listeners = append(listeners[:i], listeners[i+1:]...)
 			}
-			return nil
 		}
+		return len(listeners) > 0, listeners
+	})
+	if ok {
+		return nil
 	}
 	return errors.Errorf("could not find listener [%v] in txid [%s]", listener, txID)
 }

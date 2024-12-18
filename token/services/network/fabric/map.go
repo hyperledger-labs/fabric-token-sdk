@@ -21,8 +21,8 @@ type rwLock interface {
 type CacheMap[K comparable, V any] interface {
 	Get(K) (V, bool)
 	Put(K, V)
-	Update(K, func(bool, V) V)
-	Delete(K)
+	Update(K, func(bool, V) (bool, V)) bool
+	Delete(...K)
 	Len() int
 }
 
@@ -34,19 +34,19 @@ func (l *noLock) RLock()   {}
 func (l *noLock) RUnlock() {}
 
 // NewLRUCache creates a cache with limited size with LRU eviction policy
-func NewLRUCache[K comparable, V any](size, buffer int, onEvict func(map[K]V)) *lruCache[K, V] {
+func NewLRUCache[K comparable, V any](size, buffer int, onEvict func(map[K]V)) *evictionCache[K, V] {
 	m := map[K]V{}
-	return &lruCache[K, V]{
+	return &evictionCache[K, V]{
 		m:              m,
 		l:              &noLock{},
 		evictionPolicy: NewLRUEviction(size, buffer, func(keys []K) { evict(keys, m, onEvict) }),
 	}
 }
 
-func NewTimeoutCache[K comparable, V any](evictionTimeout time.Duration, onEvict func(map[K]V)) *lruCache[K, V] {
+func NewTimeoutCache[K comparable, V any](evictionTimeout time.Duration, onEvict func(map[K]V)) *evictionCache[K, V] {
 	m := map[K]V{}
-	l := &noLock{}
-	return &lruCache[K, V]{
+	l := &sync.RWMutex{}
+	return &evictionCache[K, V]{
 		m: m,
 		l: l,
 		evictionPolicy: NewTimeoutEviction(evictionTimeout, func(keys []K) {
@@ -70,7 +70,7 @@ func evict[K comparable, V any](keys []K, m map[K]V, onEvict func(map[K]V)) {
 	onEvict(evicted)
 }
 
-type lruCache[K comparable, V any] struct {
+type evictionCache[K comparable, V any] struct {
 	m              map[K]V
 	l              rwLock
 	evictionPolicy EvictionPolicy[K]
@@ -81,14 +81,14 @@ type EvictionPolicy[K comparable] interface {
 	Push(K)
 }
 
-func (c *lruCache[K, V]) Get(key K) (V, bool) {
+func (c *evictionCache[K, V]) Get(key K) (V, bool) {
 	c.l.RLock()
 	defer c.l.RUnlock()
 	v, ok := c.m[key]
 	return v, ok
 }
 
-func (c *lruCache[K, V]) Put(key K, value V) {
+func (c *evictionCache[K, V]) Put(key K, value V) {
 	c.l.Lock()
 	defer c.l.Unlock()
 	c.m[key] = value
@@ -98,23 +98,31 @@ func (c *lruCache[K, V]) Put(key K, value V) {
 	c.evictionPolicy.Push(key)
 }
 
-func (c *lruCache[K, V]) Update(key K, f func(bool, V) V) {
+func (c *evictionCache[K, V]) Update(key K, f func(bool, V) (bool, V)) bool {
 	c.l.Lock()
 	defer c.l.Unlock()
 	v, ok := c.m[key]
-	if !ok {
+	keep, newValue := f(ok, v)
+	if !keep {
+		delete(c.m, key)
+	} else {
+		c.m[key] = newValue
+	}
+	if !ok && keep {
 		c.evictionPolicy.Push(key)
 	}
-	c.m[key] = f(ok, v)
+	return ok
 }
 
-func (c *lruCache[K, V]) Delete(key K) {
+func (c *evictionCache[K, V]) Delete(keys ...K) {
 	c.l.Lock()
 	defer c.l.Unlock()
-	delete(c.m, key)
+	for _, key := range keys {
+		delete(c.m, key)
+	}
 }
 
-func (c *lruCache[K, V]) Len() int {
+func (c *evictionCache[K, V]) Len() int {
 	return len(c.m)
 }
 
@@ -185,9 +193,12 @@ type lruEviction[K comparable] struct {
 	keys []K
 	// evict is called when we evict
 	evict func([]K)
+	mu    sync.Mutex
 }
 
 func (c *lruEviction[K]) Push(key K) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.keys = append(c.keys, key)
 	if len(c.keys) <= c.cap {
 		return
@@ -223,17 +234,25 @@ func (c *mapCache[K, V]) Put(key K, value V) {
 	c.m[key] = value
 }
 
-func (c *mapCache[K, V]) Delete(key K) {
+func (c *mapCache[K, V]) Delete(keys ...K) {
 	c.l.Lock()
 	defer c.l.Unlock()
-	delete(c.m, key)
+	for _, key := range keys {
+		delete(c.m, key)
+	}
 }
 
-func (c *mapCache[K, V]) Update(key K, f func(bool, V) V) {
+func (c *mapCache[K, V]) Update(key K, f func(bool, V) (bool, V)) bool {
 	c.l.Lock()
 	defer c.l.Unlock()
 	v, ok := c.m[key]
-	c.m[key] = f(ok, v)
+	keep, newValue := f(ok, v)
+	if !keep {
+		delete(c.m, key)
+	} else {
+		c.m[key] = newValue
+	}
+	return ok
 }
 
 func (c *mapCache[K, V]) Len() int {
