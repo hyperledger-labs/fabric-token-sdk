@@ -108,7 +108,7 @@ func (m *deliveryBasedFLM) onBlock(ctx context.Context, block *common.Block) err
 			for _, entry := range listeners {
 				logger.Infof("Invoking %d listeners for [%s]", len(listeners), info.txID)
 				if len(entry.namespace) == 0 || len(ns) == 0 || entry.namespace == ns {
-					entry.listener.OnStatus(ctx, info.txID, info.status, info.message, info.requestHash)
+					go entry.listener.OnStatus(ctx, info.txID, info.status, info.message, info.requestHash)
 				}
 			}
 		}
@@ -149,6 +149,11 @@ func (m *deliveryBasedFLM) AddFinalityListener(namespace string, txID string, li
 	logger.Infof("Add finality listener for [%s]", txID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if txInfo, ok := m.txInfos[txID]; ok {
+		logger.Infof("Found tx [%s]! Invoking listener directly", txID)
+		go listener.OnStatus(context.TODO(), txInfo.txID, txInfo.status, txInfo.message, txInfo.requestHash)
+		return nil
+	}
 	m.listeners[txID] = append(m.listeners[txID], listenerEntry{namespace, listener})
 	return nil
 }
