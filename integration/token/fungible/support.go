@@ -30,6 +30,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	"github.com/prometheus/common/model"
 )
 
@@ -915,44 +916,12 @@ func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReferen
 	return exists
 }
 
-func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, ids ...*token3.NodeReference) {
-	for _, id := range ids {
-		for _, replicaName := range id.AllNames() {
-			errorMessagesBoxed, err := network.Client(replicaName).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{}))
-			Expect(err).NotTo(HaveOccurred())
-			var errorMessages []string
-			common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-
-			Expect(len(errorMessages)).To(Equal(len(expectedErrors)), "expected %d error messages from [%s], got [% v]", len(expectedErrors), replicaName, errorMessages)
-			for _, expectedError := range expectedErrors {
-				found := false
-				for _, message := range errorMessages {
-					if message == expectedError {
-						found = true
-						break
-					}
-				}
-				Expect(found).To(BeTrue(), "cannot find error message [%s] in [% v]", expectedError, errorMessages)
-			}
-		}
-	}
+func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []types.GomegaMatcher, ids ...*token3.NodeReference) {
+	common2.CheckTTXDB(network, false, token2.TMSID{}, expectedErrors, ids...)
 }
 
-func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
-	errorMessagesBoxed, err := network.Client(auditor.ReplicaName()).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
-		Auditor:         true,
-		AuditorWalletID: walletID,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	if errorCheck != nil {
-		var errorMessages []string
-		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-		Expect(errorCheck(errorMessages)).NotTo(HaveOccurred(), "failed to check errors")
-	} else {
-		var errorMessages []string
-		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-		Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
-	}
+func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeReference) {
+	common2.CheckTTXDB(network, true, token2.TMSID{}, []types.GomegaMatcher{}, auditor)
 }
 
 func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...*token3.NodeReference) {

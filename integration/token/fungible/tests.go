@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 )
 
 const (
@@ -485,7 +486,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, issuer, "issuer.owner", "EUR", 10, auditor)
 
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckAuditorDB(network, auditor)
 
 	// Check double spending
 	txIDPine := IssueCash(network, "", "PINE", 55, alice, auditor, true, issuer)
@@ -505,9 +506,9 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckHolding(network, bob, "", "PINE", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 20, auditor)
 	CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
-	CheckOwnerDB(network, []string{
-		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Pending]", txID1),
-		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Pending]", txID2),
+	CheckOwnerDB(network, []types.GomegaMatcher{
+		Equal(fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Pending]", txID1)),
+		Equal(fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Pending]", txID2)),
 	}, bob)
 	fmt.Printf("prepared transactions [%s:%s]", txID1, txID2)
 	Restart(network, true, onRestart, bob)
@@ -530,7 +531,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, alice, "", "PINE", 0, auditor)
 	CheckBalanceAndHolding(network, bob, "", "PINE", 55, auditor)
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckAuditorDB(network, auditor)
 
 	// Test Auditor ability to override transaction state
 	txID3, tx3 := PrepareTransferCash(network, bob, "", "PINE", 10, alice, auditor, nil)
@@ -548,11 +549,11 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// Restart
 	CheckOwnerDB(network, nil, alice, bob)
 	CheckOwnerDB(network, nil, issuer, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckAuditorDB(network, auditor)
 	Restart(network, false, onRestart, alice, bob, charlie, manager)
 	CheckOwnerDB(network, nil, alice, bob)
 	CheckOwnerDB(network, nil, issuer, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckAuditorDB(network, auditor)
 
 	// Addition transfers
 	TransferCash(network, issuer, "", "USD", 50, issuer, auditor)
@@ -765,7 +766,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// Check consistency
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 	CheckOwnerDB(network, nil, issuer, auditor, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckAuditorDB(network, auditor)
 	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
 
 	for _, ref := range []*token3.NodeReference{alice, bob, charlie, manager} {
@@ -791,7 +792,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, alice, "", "Pineapples", 6, auditor)
 	CheckBalanceAndHolding(network, bob, "", "Pineapples", 0, auditor)
 	CheckBalanceAndHolding(network, charlie, "", "Pineapples", 0, auditor)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckAuditorDB(network, auditor)
 }
 
 func TestSelector(network *integration.Infrastructure, auditorId string, sel *token3.ReplicaSelector) {
