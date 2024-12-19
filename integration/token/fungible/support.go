@@ -948,7 +948,6 @@ func checkTTXDB(client api.GRPCClient, auditor bool, expectedErrors []string) er
 }
 
 func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
-	checkTTXDB(network.Client("repl"), false, []string{})
 	Eventually(checkTTXDB).WithArguments(network.Client(auditor.ReplicaName()), true, []string{}).
 		WithTimeout(10 * time.Second).
 		ProbeEvery(1 * time.Second).
