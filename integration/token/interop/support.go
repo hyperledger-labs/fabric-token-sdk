@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onsi/gomega/types"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -180,11 +181,11 @@ func CheckPublicParams(network *integration.Infrastructure, tmsID token.TMSID, i
 	}
 }
 
-func CheckOwnerDB(network *integration.Infrastructure, tmsID token.TMSID, expectedErrors []string, ids ...*token3.NodeReference) {
-	common2.CheckTTXDB(network, false, tmsID, expectedErrors, ids...)
+func CheckOwnerDB(network *integration.Infrastructure, tmsID token.TMSID, ids ...*token3.NodeReference) {
+	common2.CheckTTXDB(network, false, tmsID, []types.GomegaMatcher{}, ids...)
 }
 
-func CheckAuditorDB(network *integration.Infrastructure, tmsID token.TMSID, auditor *token3.NodeReference, walletID string, errorSubstrings []string) {
+func CheckAuditorDB(network *integration.Infrastructure, tmsID token.TMSID, auditor *token3.NodeReference, errorSubstrings []types.GomegaMatcher) {
 	common2.CheckTTXDB(network, true, tmsID, errorSubstrings, auditor)
 }
 

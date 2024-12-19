@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 )
 
 var logger = logging.MustGetLogger("token-sdk.common")
@@ -38,7 +39,7 @@ func CheckFinality(network *integration.Infrastructure, id *token2.NodeReference
 	}
 }
 
-func CheckTTXDB(network *integration.Infrastructure, auditor bool, tmsID token.TMSID, expectedErrors []string, ids ...*token2.NodeReference) {
+func CheckTTXDB(network *integration.Infrastructure, auditor bool, tmsID token.TMSID, expectedErrors []types.GomegaMatcher, ids ...*token2.NodeReference) {
 	time.Sleep(10 * time.Second) // TODO: Remove
 	for _, id := range ids {
 		for _, replicaName := range id.AllNames() {
@@ -51,7 +52,7 @@ func CheckTTXDB(network *integration.Infrastructure, auditor bool, tmsID token.T
 	}
 }
 
-func checkTTXDB(network *integration.Infrastructure, replicaName string, auditor bool, tmsID token.TMSID, expectedErrors []string) error {
+func checkTTXDB(network *integration.Infrastructure, replicaName string, auditor bool, tmsID token.TMSID, expectedErrors []types.GomegaMatcher) error {
 	logger.Infof("Calling CheckTTDB for client [%s]", replicaName)
 	errorMessagesBoxed, err := network.Client(replicaName).CallView("CheckTTXDB", common.JSONMarshall(&views2.CheckTTXDB{
 		Auditor: auditor,
@@ -67,7 +68,7 @@ func checkTTXDB(network *integration.Infrastructure, replicaName string, auditor
 
 	elements := make([]any, len(expectedErrors))
 	for i, errorMessage := range expectedErrors {
-		elements[i] = ContainSubstring(errorMessage)
+		elements[i] = errorMessage
 	}
 	Expect(errorMessages).To(ContainElements(elements...), "cannot find all error messages [%v] in [%v]", expectedErrors, errorMessages)
 	return nil

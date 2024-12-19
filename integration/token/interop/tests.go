@@ -20,6 +20,7 @@ import (
 	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 )
 
 func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.ReplicaSelector) {
@@ -117,8 +118,8 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 
 	CheckPublicParams(network, defaultTMSID, issuer, auditor, alice, bob)
 	<-time.After(30 * time.Second)
-	CheckOwnerDB(network, defaultTMSID, nil, issuer, alice, bob)
-	CheckAuditorDB(network, defaultTMSID, auditor, "", []string{lockTxID})
+	CheckOwnerDB(network, defaultTMSID, issuer, alice, bob)
+	CheckAuditorDB(network, defaultTMSID, auditor, []types.GomegaMatcher{Not(ContainSubstring(lockTxID))})
 
 	// lock two times with the same hash, the second lock should fail
 	_, _, hash := HTLCLock(network, defaultTMSID, alice, "", "USD", 1, bob, auditor, 1*time.Hour, nil, crypto.SHA3_256)
@@ -131,16 +132,16 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 	HTLCLock(network, defaultTMSID, alice, "", "USD", 1, bob, auditor, 1*time.Hour, nil, crypto.SHA3_256)
 
 	CheckPublicParams(network, defaultTMSID, issuer, auditor, alice, bob)
-	CheckOwnerDB(network, defaultTMSID, nil, issuer, auditor, alice, bob)
+	CheckOwnerDB(network, defaultTMSID, issuer, auditor, alice, bob)
 
-	CheckAuditorDB(network, defaultTMSID, auditor, "", []string{
+	CheckAuditorDB(network, defaultTMSID, auditor, []types.GomegaMatcher{
 		// We should get here 3 errors:
 		// - One from before;
 		// - Two for failedLockTXID (one entry for the lock to Bob, the other relative to the rest to Alice)
-		lockTxID,
-		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, auditor2.TxStatusMessage[auditor2.Pending]),
-		failedLockTXID},
-	)
+		Not(ContainSubstring(lockTxID)),
+		Equal(fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, auditor2.TxStatusMessage[auditor2.Pending])),
+		ContainSubstring(failedLockTXID),
+	})
 	PruneInvalidUnspentTokens(network, defaultTMSID, issuer, auditor, alice, bob)
 	for _, name := range []*token2.NodeReference{alice, bob} {
 		IDs := ListVaultUnspentTokens(network, defaultTMSID, name)
@@ -201,10 +202,10 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure, sel *token2.Replic
 
 	CheckPublicParams(network, alpha, issuer, auditor, alice, bob)
 	CheckPublicParams(network, beta, issuer, auditor, alice, bob)
-	CheckOwnerDB(network, alpha, nil, issuer, auditor, alice, bob)
-	CheckOwnerDB(network, beta, nil, issuer, auditor, alice, bob)
-	CheckAuditorDB(network, alpha, sel.Get("auditor"), "", nil)
-	CheckAuditorDB(network, beta, sel.Get("auditor"), "", nil)
+	CheckOwnerDB(network, alpha, issuer, auditor, alice, bob)
+	CheckOwnerDB(network, beta, issuer, auditor, alice, bob)
+	CheckAuditorDB(network, alpha, sel.Get("auditor"), nil)
+	CheckAuditorDB(network, beta, sel.Get("auditor"), nil)
 	PruneInvalidUnspentTokens(network, alpha, issuer, auditor, alice, bob)
 	PruneInvalidUnspentTokens(network, beta, issuer, auditor, alice, bob)
 	for _, name := range []*token2.NodeReference{alice, bob} {
@@ -284,11 +285,11 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure, sel *t
 	CheckPublicParams(network, token.TMSID{}, alice, bob)
 	CheckPublicParams(network, alpha, issuer, auditor)
 	CheckPublicParams(network, beta, issuer, auditor)
-	CheckOwnerDB(network, token.TMSID{}, nil, auditor, alice, bob)
-	CheckOwnerDB(network, alpha, nil, issuer)
-	CheckOwnerDB(network, beta, nil, issuer)
-	CheckAuditorDB(network, alpha, auditor, "", nil)
-	CheckAuditorDB(network, beta, auditor, "", nil)
+	CheckOwnerDB(network, token.TMSID{}, auditor, alice, bob)
+	CheckOwnerDB(network, alpha, issuer)
+	CheckOwnerDB(network, beta, issuer)
+	CheckAuditorDB(network, alpha, auditor, nil)
+	CheckAuditorDB(network, beta, auditor, nil)
 	PruneInvalidUnspentTokens(network, alpha, issuer, auditor)
 	PruneInvalidUnspentTokens(network, beta, issuer, auditor)
 

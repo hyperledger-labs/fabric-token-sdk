@@ -30,6 +30,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	"github.com/prometheus/common/model"
 )
 
@@ -915,12 +916,12 @@ func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReferen
 	return exists
 }
 
-func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, ids ...*token3.NodeReference) {
+func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []types.GomegaMatcher, ids ...*token3.NodeReference) {
 	common2.CheckTTXDB(network, false, token2.TMSID{}, expectedErrors, ids...)
 }
 
-func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
-	common2.CheckTTXDB(network, true, token2.TMSID{}, []string{}, auditor)
+func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeReference) {
+	common2.CheckTTXDB(network, true, token2.TMSID{}, []types.GomegaMatcher{}, auditor)
 }
 
 func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...*token3.NodeReference) {
