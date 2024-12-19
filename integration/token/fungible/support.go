@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	topology2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -919,7 +918,7 @@ func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReferen
 func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, ids ...*token3.NodeReference) {
 	for _, id := range ids {
 		for _, replicaName := range id.AllNames() {
-			Eventually(checkTTXDB).WithArguments(network.Client(replicaName), false, expectedErrors).
+			Eventually(checkTTXDB).WithArguments(network, replicaName, false, expectedErrors).
 				WithTimeout(10 * time.Second).
 				ProbeEvery(1 * time.Second).
 				Should(Succeed())
@@ -927,8 +926,9 @@ func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, 
 	}
 }
 
-func checkTTXDB(client api.GRPCClient, auditor bool, expectedErrors []string) error {
-	errorMessagesBoxed, err := client.CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
+func checkTTXDB(network *integration.Infrastructure, replicaName string, auditor bool, expectedErrors []string) error {
+	logger.Infof("Calling CheckTTDB for client [%s]", replicaName)
+	errorMessagesBoxed, err := network.Client(replicaName).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
 		Auditor: auditor,
 	}))
 	Expect(err).ToNot(HaveOccurred())
@@ -948,7 +948,7 @@ func checkTTXDB(client api.GRPCClient, auditor bool, expectedErrors []string) er
 }
 
 func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
-	Eventually(checkTTXDB).WithArguments(network.Client(auditor.ReplicaName()), true, []string{}).
+	Eventually(checkTTXDB).WithArguments(network, auditor.ReplicaName(), true, []string{}).
 		WithTimeout(10 * time.Second).
 		ProbeEvery(1 * time.Second).
 		Should(Succeed())
