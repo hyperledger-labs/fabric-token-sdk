@@ -21,7 +21,7 @@ func IssueValidate(ctx *Context) error {
 		return errors.Errorf("there is no output")
 	}
 	for _, output := range action.GetOutputs() {
-		out := output.(*Output).Output
+		out := output.(*Output)
 		q, err := token.ToQuantity(out.Quantity, ctx.PP.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)

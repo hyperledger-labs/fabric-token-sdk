@@ -12,11 +12,10 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
-	"go.opentelemetry.io/otel/trace"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type LedgerToken interface {
@@ -31,7 +30,7 @@ type MetadataDeserializer[M any] interface {
 	DeserializeMetadata([]byte) (M, error)
 }
 
-type TokenAndMetadataDeserializer[T LedgerToken, M any] interface {
+type TokenAndMetadataDeserializer[T any, M any] interface {
 	TokenDeserializer[T]
 	MetadataDeserializer[M]
 }
@@ -116,12 +115,18 @@ func (s *VaultLedgerTokenLoader[T]) isAnyPending(ids ...*token.ID) (anyPending b
 	return false, nil
 }
 
-type VaultLedgerTokenAndMetadataLoader[T LedgerToken, M any] struct {
+type LoadedToken[T any, M any] struct {
+	TokenType string
+	Token     T
+	Metadata  M
+}
+
+type VaultLedgerTokenAndMetadataLoader[T any, M any] struct {
 	TokenVault   TokenVault
 	Deserializer TokenAndMetadataDeserializer[T, M]
 }
 
-func NewVaultLedgerTokenAndMetadataLoader[T LedgerToken, M any](tokenVault TokenVault, deserializer TokenAndMetadataDeserializer[T, M]) *VaultLedgerTokenAndMetadataLoader[T, M] {
+func NewVaultLedgerTokenAndMetadataLoader[T any, M any](tokenVault TokenVault, deserializer TokenAndMetadataDeserializer[T, M]) *VaultLedgerTokenAndMetadataLoader[T, M] {
 	return &VaultLedgerTokenAndMetadataLoader[T, M]{TokenVault: tokenVault, Deserializer: deserializer}
 }
 
@@ -129,41 +134,41 @@ func NewVaultLedgerTokenAndMetadataLoader[T LedgerToken, M any](tokenVault Token
 // matching the token identifiers, the corresponding zkatdlog tokens, the information of the
 // tokens in clear text and the identities of their owners
 // LoadToken returns an error in case of failure
-func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context, ids []*token.ID) ([]T, []M, []driver.Identity, error) {
+func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context, ids []*token.ID) ([]LoadedToken[T, M], error) {
 	span := trace.SpanFromContext(ctx)
 	// return token outputs and the corresponding opening
-	comms, infos, err := s.TokenVault.GetTokenInfoAndOutputs(ctx, ids)
+	outputs, metadata, types, err := s.TokenVault.GetTokenOutputsAndMeta(ctx, ids)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	span.AddEvent("iterate_tokens")
-	tokens := make([]T, len(ids))
-	inputInf := make([]M, len(ids))
-	signerIds := make([]driver.Identity, len(ids))
+	result := make([]LoadedToken[T, M], len(ids))
 	for i, id := range ids {
-		if len(comms[i]) == 0 {
-			return nil, nil, nil, errors.Errorf("failed getting state for id [%v], nil comm value", id)
+		if len(outputs[i]) == 0 {
+			return nil, errors.Errorf("failed getting state for id [%v], nil comm value", id)
 		}
-		if len(infos[i]) == 0 {
-			return nil, nil, nil, errors.Errorf("failed getting state for id [%v], nil info value", id)
+		if len(metadata[i]) == 0 {
+			return nil, errors.Errorf("failed getting state for id [%v], nil info value", id)
 		}
 		span.AddEvent("deserialize_token")
-		tok, err := s.Deserializer.DeserializeToken(comms[i])
+		tok, err := s.Deserializer.DeserializeToken(outputs[i])
 		if err != nil {
-			return nil, nil, nil, errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(comms[i]))
+			return nil, errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(outputs[i]))
 		}
 		span.AddEvent("deserialize_metadata")
-		ti, err := s.Deserializer.DeserializeMetadata(infos[i])
+		meta, err := s.Deserializer.DeserializeMetadata(metadata[i])
 		if err != nil {
-			return nil, nil, nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
+			return nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
 		}
-		tokens[i] = tok
-		inputInf[i] = ti
-		signerIds[i] = tok.GetOwner()
+		result[i] = LoadedToken[T, M]{
+			TokenType: types[i],
+			Token:     tok,
+			Metadata:  meta,
+		}
 	}
 
-	return tokens, inputInf, signerIds, nil
+	return result, nil
 }
 
 type VaultTokenInfoLoader[M any] struct {
@@ -176,7 +181,7 @@ func NewVaultTokenInfoLoader[M any](tokenVault driver.QueryEngine, deserializer 
 }
 
 func (s *VaultTokenInfoLoader[M]) GetTokenInfos(ids []*token.ID) ([]M, error) {
-	infos, err := s.TokenVault.GetTokenInfos(ids)
+	infos, err := s.TokenVault.GetTokenMetadata(ids)
 	if err != nil {
 		return nil, err
 	}
@@ -216,4 +221,14 @@ type VaultTokenCertificationLoader struct {
 
 func (s *VaultTokenCertificationLoader) GetCertifications(ids []*token.ID) ([][]byte, error) {
 	return s.TokenCertificationStorage.GetCertifications(ids)
+}
+
+type IdentityTokenAndMetadataDeserializer struct{}
+
+func (i IdentityTokenAndMetadataDeserializer) DeserializeToken(bytes []byte) ([]byte, error) {
+	return bytes, nil
+}
+
+func (i IdentityTokenAndMetadataDeserializer) DeserializeMetadata(bytes []byte) ([]byte, error) {
+	return bytes, nil
 }

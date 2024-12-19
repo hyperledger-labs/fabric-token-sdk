@@ -10,40 +10,65 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 // OutputMetadata contains a serialization of the issuer of the token.
 // type, value and owner of token can be derived from the token itself.
-type OutputMetadata struct {
-	Issuer []byte
-}
+type OutputMetadata fabtoken.Metadata
 
-// Deserialize un-marshals OutputMetadata
+// Deserialize un-marshals Metadata
 func (m *OutputMetadata) Deserialize(b []byte) error {
-	return json.Unmarshal(b, m)
+	typed, err := fabtoken.UnmarshalTypedToken(b)
+	if err != nil {
+		return errors.Wrapf(err, "failed deserializing metadata")
+	}
+	return json.Unmarshal(typed.Token, m)
 }
 
-// Serialize marshals OutputMetadata
+// Serialize un-marshals Metadata
 func (m *OutputMetadata) Serialize() ([]byte, error) {
-	return json.Marshal(m)
+	raw, err := json.Marshal(m)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed serializing token")
+	}
+	return fabtoken.WrapMetadataWithType(raw)
 }
 
 // Output carries the output of an action
-type Output struct {
-	Output token.Token
-}
+type Output fabtoken.Token
 
-// Serialize marshals a Output
+// Serialize marshals a Token
 func (t *Output) Serialize() ([]byte, error) {
-	return json.Marshal(t.Output)
+	raw, err := json.Marshal(t)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed serializing token")
+	}
+	return fabtoken.WrapTokenWithType(raw)
 }
 
-// IsRedeem returns true if the owner of a Output is empty
-// todo update interface to account for nil t.Output.Owner and nil t.Output
+// Deserialize unmarshals Token
+func (t *Output) Deserialize(bytes []byte) error {
+	typed, err := fabtoken.UnmarshalTypedToken(bytes)
+	if err != nil {
+		return errors.Wrapf(err, "failed deserializing token")
+	}
+	if typed.Type != fabtoken.Type {
+		return errors.Errorf("invalid token type [%v]", typed.Type)
+	}
+	return json.Unmarshal(typed.Token, t)
+}
+
+// IsRedeem returns true if the owner of a Token is empty
+// todo update interface to account for nil t.Token.Owner and nil t.Token
 func (t *Output) IsRedeem() bool {
-	return len(t.Output.Owner) == 0
+	return len(t.Owner) == 0
+}
+
+func (t *Output) GetOwner() []byte {
+	return t.Owner
 }
 
 // IssueAction encodes a fabtoken Issue
@@ -122,7 +147,7 @@ type TransferAction struct {
 	// identifier of token to be transferred
 	Inputs []*token.ID
 	// InputTokens are the inputs transferred by this action
-	InputTokens []*token.Token
+	InputTokens []*Output
 	// outputs to be created as a result of the transfer
 	Outputs []*Output
 	// Metadata contains the transfer action's metadata
@@ -194,7 +219,7 @@ func (t *TransferAction) GetInputs() []*token.ID {
 func (t *TransferAction) GetSerializedInputs() ([][]byte, error) {
 	var res [][]byte
 	for _, token := range t.InputTokens {
-		r, err := json.Marshal(token)
+		r, err := token.Serialize()
 		if err != nil {
 			return nil, err
 		}
@@ -215,43 +240,4 @@ func (t *TransferAction) Deserialize(raw []byte) error {
 // GetMetadata returns the transfer action's metadata
 func (t *TransferAction) GetMetadata() map[string][]byte {
 	return t.Metadata
-}
-
-// UnmarshalIssueTransferActions returns the deserialized issue and transfer actions contained in the passed TokenRequest
-func UnmarshalIssueTransferActions(tr *driver.TokenRequest) ([]*IssueAction, []*TransferAction, error) {
-	ia, err := UnmarshalIssueActions(tr.Issues)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to unmarshal issue actions")
-	}
-	ta, err := UnmarshalTransferActions(tr.Transfers)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to unmarshal transfer actions")
-	}
-	return ia, ta, nil
-}
-
-// UnmarshalTransferActions returns an array of deserialized TransferAction from raw bytes
-func UnmarshalTransferActions(raw [][]byte) ([]*TransferAction, error) {
-	res := make([]*TransferAction, len(raw))
-	for i := 0; i < len(raw); i++ {
-		ta := &TransferAction{}
-		if err := ta.Deserialize(raw[i]); err != nil {
-			return nil, err
-		}
-		res[i] = ta
-	}
-	return res, nil
-}
-
-// UnmarshalIssueActions returns an array of deserialized IssueAction from raw bytes
-func UnmarshalIssueActions(raw [][]byte) ([]*IssueAction, error) {
-	res := make([]*IssueAction, len(raw))
-	for i := 0; i < len(raw); i++ {
-		ia := &IssueAction{}
-		if err := ia.Deserialize(raw[i]); err != nil {
-			return nil, err
-		}
-		res[i] = ia
-	}
-	return res, nil
 }
