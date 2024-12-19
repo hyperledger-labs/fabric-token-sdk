@@ -93,10 +93,6 @@ func (a *DefaultCheckers) checkTransactions(context context.Context) ([]string, 
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network [%s]", tms.ID())
 	}
-	v, err := net.Vault(tms.Namespace())
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get vault [%s]", tms.ID())
-	}
 	l, err := net.Ledger()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get ledger [%s]", tms.ID())
@@ -116,29 +112,6 @@ func (a *DefaultCheckers) checkTransactions(context context.Context) ([]string, 
 			break
 		}
 
-		// compare the status in the vault with the status of the record
-		vc, _, err := v.Status(transactionRecord.TxID)
-		if err != nil {
-			errorMessages = append(errorMessages, fmt.Sprintf("failed to get vault status transaction record [%s]: [%s]", transactionRecord.TxID, err))
-			continue
-		}
-		switch {
-		case vc == network.Unknown:
-			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", transactionRecord.TxID, driver.TxStatusMessage[transactionRecord.Status]))
-		case vc == network.Valid && transactionRecord.Status == driver.Pending:
-			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is valid for vault but pending for the db", transactionRecord.TxID))
-		case vc == network.Valid && transactionRecord.Status == driver.Deleted:
-			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is valid for vault but deleted for the db", transactionRecord.TxID))
-		case vc == network.Invalid && transactionRecord.Status == driver.Confirmed:
-			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is invalid for vault but confirmed for the db", transactionRecord.TxID))
-		case vc == network.Invalid && transactionRecord.Status == driver.Pending:
-			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is invalid for vault but pending for the db", transactionRecord.TxID))
-		case vc == network.Busy && transactionRecord.Status == driver.Confirmed:
-			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is busy for vault but confirmed for the db", transactionRecord.TxID))
-		case vc == network.Busy && transactionRecord.Status == driver.Deleted:
-			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is busy for vault but deleted for the db", transactionRecord.TxID))
-		}
-
 		tokenRequest, err := a.db.GetTokenRequest(transactionRecord.TxID)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed getting token request [%s]", transactionRecord.TxID)
@@ -153,23 +126,23 @@ func (a *DefaultCheckers) checkTransactions(context context.Context) ([]string, 
 			lVC = network.Unknown
 		}
 		switch {
-		case vc == network.Valid && lVC != network.Valid:
+		case transactionRecord.Status == driver.Confirmed && lVC != network.Valid:
 			if err != nil {
 				errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]: [%s]", transactionRecord.TxID, err))
 			}
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is valid for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
-		case vc == network.Invalid && lVC != network.Invalid:
+		case transactionRecord.Status == driver.Deleted && lVC != network.Invalid:
 			if lVC != network.Unknown || transactionRecord.Status != driver.Deleted {
 				if err != nil {
 					errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]: [%s]", transactionRecord.TxID, err))
 				}
 				errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is invalid for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
 			}
-		case vc == network.Unknown && lVC != network.Unknown:
+		case transactionRecord.Status == driver.Unknown && lVC != network.Unknown:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is unknown for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
-		case vc == network.Busy && lVC == network.Busy:
+		case transactionRecord.Status == driver.Pending && lVC == network.Busy:
 			// this is fine, let's continue
-		case vc == network.Busy && lVC != network.Unknown:
+		case transactionRecord.Status == driver.Pending && lVC != network.Unknown:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is busy for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
 		}
 	}
