@@ -81,6 +81,9 @@ type ledger struct {
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	tx, err := l.l.GetTransactionByID(id)
 	if err != nil {
+		if strings.Contains(err.Error(), fmt.Sprintf("no such transaction ID [%s] in index", id)) {
+			return driver.Unknown, nil
+		}
 		return driver.Unknown, errors.Wrapf(err, "failed to get transaction [%s]", id)
 	}
 	logger.Debugf("ledger status of [%s] is [%d]", id, tx.ValidationCode())
