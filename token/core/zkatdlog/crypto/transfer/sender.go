@@ -64,13 +64,13 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 		if s.InputInformation[0].Type != s.InputInformation[i].Type {
 			return nil, nil, errors.New("cannot generate transfer: please choose inputs of the same token type")
 		}
-		v, err := s.InputInformation[i].Value.Int()
+		v, err := s.InputInformation[i].Value.Uint()
 		if err != nil {
 			return nil, nil, errors.New("cannot generate transfer: invalid value")
 		}
 
 		intw[i] = &token.TokenDataWitness{
-			Value:          uint64(v),
+			Value:          v,
 			Type:           s.InputInformation[i].Type,
 			BlindingFactor: s.InputInformation[i].BlindingFactor,
 		}
