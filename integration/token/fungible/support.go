@@ -916,42 +916,11 @@ func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReferen
 }
 
 func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, ids ...*token3.NodeReference) {
-	for _, id := range ids {
-		for _, replicaName := range id.AllNames() {
-			Eventually(checkTTXDB).WithArguments(network, replicaName, false, expectedErrors).
-				WithTimeout(20 * time.Second).
-				ProbeEvery(1 * time.Second).
-				Should(Succeed())
-		}
-	}
-}
-
-func checkTTXDB(network *integration.Infrastructure, replicaName string, auditor bool, expectedErrors []string) error {
-	logger.Infof("Calling CheckTTDB for client [%s]", replicaName)
-	errorMessagesBoxed, err := network.Client(replicaName).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
-		Auditor: auditor,
-	}))
-	Expect(err).ToNot(HaveOccurred())
-	var errorMessages []string
-	common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-	Expect(errorMessages).To(HaveLen(len(expectedErrors)))
-	if len(expectedErrors) == 0 {
-		return nil
-	}
-
-	elements := make([]any, len(expectedErrors))
-	for i, errorMessage := range expectedErrors {
-		elements[i] = errorMessage
-	}
-	Expect(errorMessages).To(ContainElements(elements...), "cannot find all error messages [%v] in [%v]", expectedErrors, errorMessages)
-	return nil
+	common2.CheckTTXDB(network, false, token2.TMSID{}, expectedErrors, ids...)
 }
 
 func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
-	Eventually(checkTTXDB).WithArguments(network, auditor.ReplicaName(), true, []string{}).
-		WithTimeout(20 * time.Second).
-		ProbeEvery(1 * time.Second).
-		Should(Succeed())
+	common2.CheckTTXDB(network, true, token2.TMSID{}, []string{}, auditor)
 }
 
 func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...*token3.NodeReference) {
