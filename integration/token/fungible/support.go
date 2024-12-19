@@ -927,7 +927,7 @@ func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, 
 	}
 }
 
-func checkTTXDB(client api.GRPCClient, auditor bool, expectedErrors []string) {
+func checkTTXDB(client api.GRPCClient, auditor bool, expectedErrors []string) error {
 	errorMessagesBoxed, err := client.CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
 		Auditor: auditor,
 	}))
@@ -936,7 +936,7 @@ func checkTTXDB(client api.GRPCClient, auditor bool, expectedErrors []string) {
 	common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
 	Expect(errorMessages).To(HaveLen(len(expectedErrors)))
 	if len(expectedErrors) == 0 {
-		return
+		return nil
 	}
 
 	elements := make([]any, len(expectedErrors))
@@ -944,9 +944,11 @@ func checkTTXDB(client api.GRPCClient, auditor bool, expectedErrors []string) {
 		elements[i] = errorMessage
 	}
 	Expect(errorMessages).To(ContainElements(elements...), "cannot find all error messages [%v] in [%v]", expectedErrors, errorMessages)
+	return nil
 }
 
 func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
+	checkTTXDB(network.Client("repl"), false, []string{})
 	Eventually(checkTTXDB).WithArguments(network.Client(auditor.ReplicaName()), true, []string{}).
 		WithTimeout(10 * time.Second).
 		ProbeEvery(1 * time.Second).
