@@ -51,7 +51,7 @@ type ipaProver struct {
 	Commitment *mathlib.G1
 	// NumberOfRounds is the number of rounds in the reduction protocol.
 	// It corresponds to log_2(len(rightVector)) = log_2(len(leftVector))
-	NumberOfRounds int
+	NumberOfRounds uint64
 	// Curve is the curve over which the computations are performed
 	Curve *mathlib.Curve
 }
@@ -63,7 +63,7 @@ func NewIPAProver(
 	Q *mathlib.G1,
 	leftGens, rightGens []*mathlib.G1,
 	Commitment *mathlib.G1,
-	rounds int,
+	rounds uint64,
 	c *mathlib.Curve,
 ) *ipaProver {
 	return &ipaProver{
@@ -94,13 +94,20 @@ type ipaVerifier struct {
 	Commitment *mathlib.G1
 	// NumberOfRounds is the number of rounds in the reduction protocol.
 	// It corresponds to log_2(len(rightVector)) = log_2(len(leftVector))
-	NumberOfRounds int
+	NumberOfRounds uint64
 	// Curve is the curve over which the computations are performed
 	Curve *mathlib.Curve
 }
 
 // NewIPAVerifier returns an ipaVerifier as a function of the passed arguments
-func NewIPAVerifier(innerProduct *mathlib.Zr, Q *mathlib.G1, leftGens, rightGens []*mathlib.G1, Commitment *mathlib.G1, rounds int, c *mathlib.Curve) *ipaVerifier {
+func NewIPAVerifier(
+	innerProduct *mathlib.Zr,
+	Q *mathlib.G1,
+	leftGens, rightGens []*mathlib.G1,
+	Commitment *mathlib.G1,
+	rounds uint64,
+	c *mathlib.Curve,
+) *ipaVerifier {
 	return &ipaVerifier{
 		InnerProduct:    innerProduct,
 		RightGenerators: rightGens,
@@ -150,7 +157,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 	if proof.Left == nil || proof.Right == nil {
 		return errors.New("invalid IPA proof: nil elements")
 	}
-	if len(proof.L) != len(proof.R) || len(proof.L) != int(v.NumberOfRounds) {
+	if len(proof.L) != len(proof.R) || uint64(len(proof.L)) != v.NumberOfRounds {
 
 		return errors.New("invalid IPA proof")
 	}
@@ -179,7 +186,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 	var rightGen []*mathlib.G1
 	leftGen = v.LeftGenerators
 	rightGen = v.RightGenerators
-	for i := 0; i < int(v.NumberOfRounds); i++ {
+	for i := uint64(0); i < v.NumberOfRounds; i++ {
 		// check well-formedness
 		if proof.L[i] == nil || proof.R[i] == nil {
 			return errors.New("invalid IPA proof: nil elements")
@@ -234,7 +241,7 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 
 	LArray := make([]*mathlib.G1, p.NumberOfRounds)
 	RArray := make([]*mathlib.G1, p.NumberOfRounds)
-	for i := 0; i < p.NumberOfRounds; i++ {
+	for i := uint64(0); i < p.NumberOfRounds; i++ {
 		// in each round the size of the vector is reduced by 2
 		n := len(leftGen) / 2
 		leftIP := innerProduct(left[:n], right[n:], p.Curve)

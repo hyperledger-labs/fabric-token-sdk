@@ -6,7 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package rp_test
 
 import (
-	math2 "math"
 	"strconv"
 
 	math "github.com/IBM/mathlib"
@@ -21,8 +20,8 @@ var _ = Describe("Inner Product Argument", func() {
 		Context("If IPA is generated correctly", func() {
 			It("Succeeds", func() {
 				curve := math.Curves[0]
-				nr := 6
-				l := int(math2.Pow(2, float64(nr)))
+				nr := uint64(6)
+				l := uint64(1 << nr)
 				leftGens := make([]*math.G1, l)
 				rightGens := make([]*math.G1, l)
 				left := make([]*math.Zr, l)
