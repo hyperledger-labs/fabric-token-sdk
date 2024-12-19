@@ -37,6 +37,9 @@ func (r *StatusFetcher) FetchStatus(network, namespace string, txID driver.TxID)
 	if err != nil {
 		return nil, err
 	}
+	if code == driver2.Unknown || code == driver2.Invalid {
+		return &TxStatusResponse{Status: code}, nil
+	}
 
 	// fetch token request reference
 	key, err := r.keyTranslator.CreateTokenRequestKey(txID)
