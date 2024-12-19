@@ -18,7 +18,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
@@ -157,9 +156,9 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 				return errors.Errorf("[%s] does not contain [%s]", err, lockTxID)
 			}
 		}
-		firstError := fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, auditor2.TxStatusMessage[auditor2.Pending])
+		firstError := fmt.Sprintf("transaction record [%s] is pending for db but not for the ledger [4]", failedLockTXID)
 		if errs[1] != firstError {
-			return errors.Errorf("expected first error to be [%s], got [%s]", firstError, errs[0])
+			return errors.Errorf("expected first error to be [%s], got [%s]", firstError, errs[1])
 		}
 		for _, err := range errs[1:] {
 			if !strings.Contains(err, failedLockTXID) {

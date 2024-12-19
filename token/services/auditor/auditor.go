@@ -53,14 +53,19 @@ type NetworkProvider interface {
 	GetNetwork(network string, channel string) (*network.Network, error)
 }
 
+type CheckService interface {
+	Check(context context.Context) ([]string, error)
+}
+
 // Auditor is the interface for the auditor service
 type Auditor struct {
-	np             NetworkProvider
-	tmsID          token.TMSID
-	auditDB        *auditdb.DB
-	tokenDB        *tokens.Tokens
-	tmsProvider    TokenManagementServiceProvider
-	finalityTracer trace.Tracer
+	networkProvider NetworkProvider
+	tmsID           token.TMSID
+	auditDB         *auditdb.DB
+	tokenDB         *tokens.Tokens
+	tmsProvider     TokenManagementServiceProvider
+	finalityTracer  trace.Tracer
+	checkService    CheckService
 }
 
 // Validate validates the passed token request
@@ -102,7 +107,7 @@ func (a *Auditor) Append(tx Transaction) error {
 	}
 
 	// lister to events
-	net, err := a.np.GetNetwork(tx.Network(), tx.Channel())
+	net, err := a.networkProvider.GetNetwork(tx.Network(), tx.Channel())
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
@@ -136,4 +141,8 @@ func (a *Auditor) GetStatus(txID string) (TxStatus, string, error) {
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
 func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
 	return a.auditDB.GetTokenRequest(txID)
+}
+
+func (a *Auditor) Check(context context.Context) ([]string, error) {
+	return a.checkService.Check(context)
 }

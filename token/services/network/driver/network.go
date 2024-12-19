@@ -46,10 +46,6 @@ type Network interface {
 
 	Connect(ns string) ([]token2.ServiceOption, error)
 
-	// Vault returns the vault for the passed namespace. If namespaces are not supported,
-	// the argument is ignored.
-	Vault(namespace string) (Vault, error)
-
 	TokenVault(namespace string) (TokenVault, error)
 
 	// Broadcast sends the passed blob to the network
@@ -69,10 +65,10 @@ type Network interface {
 	FetchPublicParameters(namespace string) ([]byte, error)
 
 	// QueryTokens retrieves the token content for the passed token ids
-	QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error)
+	QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error)
 
 	// AreTokensSpent retrieves the spent flag for the passed ids
-	AreTokensSpent(context view.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error)
+	AreTokensSpent(context context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error)
 
 	// LocalMembership returns the local membership
 	LocalMembership() LocalMembership

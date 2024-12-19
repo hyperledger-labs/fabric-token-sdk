@@ -8,6 +8,7 @@ package orion
 
 import (
 	errors2 "errors"
+	"strings"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
@@ -93,10 +94,15 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 	span.AddEvent("process_tx_status_request")
 	response, err := r.process(context, request)
 	if err != nil {
-		if err2 := session.SendError(err.Error()); err2 != nil {
-			return nil, errors.Wrapf(errors2.Join(err, err2), "failed to process request")
+		if strings.Contains(err.Error(), "data doesn't exist") || strings.Contains(err.Error(), "status code: 404") {
+			response = &TxStatusResponse{}
+			response.Status = driver.Unknown
+		} else {
+			if err2 := session.SendError(err.Error()); err2 != nil {
+				return nil, errors.Wrapf(errors2.Join(err, err2), "failed to process request")
+			}
+			return nil, errors.Wrapf(err, "failed to process request")
 		}
-		return nil, errors.Wrapf(err, "failed to process request")
 	}
 	if response.Status == driver.Valid && len(response.TokenRequestReference) == 0 {
 		panic("invalid result for [" + request.TxID + "]")
