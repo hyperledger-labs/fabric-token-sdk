@@ -279,15 +279,6 @@ func (n *Network) Channel() string {
 	return n.n.Channel()
 }
 
-// Vault returns the vault for the given namespace
-func (n *Network) Vault(namespace string) (*Vault, error) {
-	v, err := n.n.Vault(namespace)
-	if err != nil {
-		return nil, err
-	}
-	return &Vault{v: v}, nil
-}
-
 // TokenVault returns the token vault for the given namespace
 func (n *Network) TokenVault(namespace string) (*TokenVault, error) {
 	v, err := n.n.TokenVault(namespace)
