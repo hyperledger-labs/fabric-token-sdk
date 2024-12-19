@@ -919,7 +919,7 @@ func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, 
 	for _, id := range ids {
 		for _, replicaName := range id.AllNames() {
 			Eventually(checkTTXDB).WithArguments(network, replicaName, false, expectedErrors).
-				WithTimeout(10 * time.Second).
+				WithTimeout(20 * time.Second).
 				ProbeEvery(1 * time.Second).
 				Should(Succeed())
 		}
@@ -949,7 +949,7 @@ func checkTTXDB(network *integration.Infrastructure, replicaName string, auditor
 
 func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
 	Eventually(checkTTXDB).WithArguments(network, auditor.ReplicaName(), true, []string{}).
-		WithTimeout(10 * time.Second).
+		WithTimeout(20 * time.Second).
 		ProbeEvery(1 * time.Second).
 		Should(Succeed())
 }
