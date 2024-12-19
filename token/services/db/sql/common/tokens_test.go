@@ -33,7 +33,7 @@ func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix st
 }
 
 //
-//func initTokenNDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenNotifier, error) {
+// func initTokenNDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenNotifier, error) {
 //	d := NewSQLDBOpener("", "")
 //	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 //	if err != nil {
@@ -48,9 +48,9 @@ func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix st
 //		return nil, err
 //	}
 //	return tokenDB.(*TokenNotifier), err
-//}
+// }
 //
-//func initDB[T any](constructor func(db *sql.DB, opts NewDBOpts) (T, error), driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (T, error) {
+// func initDB[T any](constructor func(db *sql.DB, opts NewDBOpts) (T, error), driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (T, error) {
 //	d := NewSQLDBOpener("", "")
 //	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 //	if err != nil {
@@ -65,7 +65,7 @@ func initTokenDB(driverName common.SQLDriverType, dataSourceName, tablePrefix st
 //		return utils.Zero[T](), err
 //	}
 //	return tokenDB, err
-//}
+// }
 
 func TestTokensSqlite(t *testing.T) {
 	tempDir := t.TempDir()
@@ -79,16 +79,16 @@ func TestTokensSqlite(t *testing.T) {
 			c.Fn(xt, db)
 		})
 	}
-	//for _, c := range TokenNotifierCases {
+	// for _, c := range TokenNotifierCases {
 	//	db, err := initTokenNDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
 	//	if err != nil {
 	//		t.Fatal(err)
 	//	}
 	//	t.Run(c.Name, func(xt *testing.T) {
-	//		defer db.Close()
+	//		defer Close(db)
 	//		c.Fn(xt, db)
 	//	})
-	//}
+	// }
 }
 
 func TestTokensSqliteMemory(t *testing.T) {
@@ -102,16 +102,16 @@ func TestTokensSqliteMemory(t *testing.T) {
 			c.Fn(xt, db)
 		})
 	}
-	//for _, c := range TokenNotifierCases {
+	// for _, c := range TokenNotifierCases {
 	//	db, err := initTokenNDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)&mode=memory&cache=shared", c.Name, 10)
 	//	if err != nil {
 	//		t.Fatal(err)
 	//	}
 	//	t.Run(c.Name, func(xt *testing.T) {
-	//		defer db.Close()
+	//		defer Close(db)
 	//		c.Fn(xt, db)
 	//	})
-	//}
+	// }
 }
 
 func TestTokensPostgres(t *testing.T) {
@@ -128,14 +128,14 @@ func TestTokensPostgres(t *testing.T) {
 			c.Fn(xt, db)
 		})
 	}
-	//for _, c := range TokenNotifierCases {
+	// for _, c := range TokenNotifierCases {
 	//	db, err := initTokenNDB(sql2.Postgres, pgConnStr, c.Name, 10)
 	//	if err != nil {
 	//		t.Fatal(err)
 	//	}
 	//	t.Run(c.Name, func(xt *testing.T) {
-	//		defer db.Close()
+	//		defer Close(db)
 	//		c.Fn(xt, db)
 	//	})
-	//}
+	// }
 }

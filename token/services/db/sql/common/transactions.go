@@ -76,11 +76,14 @@ func NewTransactionDB(db *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.T
 
 func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
 	var tokenrequest []byte
-	query := fmt.Sprintf("SELECT request FROM %s WHERE tx_id=$1;", db.table.Requests)
+	query, err := NewSelect("request").From(db.table.Requests).Where("tx_id=$1").Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, txID)
 
 	row := db.db.QueryRow(query, txID)
-	err := row.Scan(&tokenrequest)
+	err = row.Scan(&tokenrequest)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -93,16 +96,18 @@ func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
 func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
 	where, args := common.Where(db.ci.HasMovementsParams(params))
 	conditions := where + movementConditionsSql(params)
-	query := fmt.Sprintf("SELECT %s.tx_id, enrollment_id, token_type, amount, %s.status FROM %s %s %s",
-		db.table.Movements, db.table.Requests,
-		db.table.Movements, joinOnTxID(db.table.Movements, db.table.Requests), conditions)
-
+	query, err := NewSelect(
+		fmt.Sprintf("%s.tx_id, enrollment_id, token_type, amount, %s.status", db.table.Movements, db.table.Requests),
+	).From(db.table.Movements, joinOnTxID(db.table.Movements, db.table.Requests)).Where(conditions).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer Close(rows)
 
 	// Loop through rows, using Scan to assign column data to struct fields.
 	for rows.Next() {
@@ -133,14 +138,15 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 
 func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
 	conditions, args := common.Where(db.ci.HasTransactionParams(params, db.table.Transactions))
-	conditions = conditions + movementConditionsSql(driver.QueryMovementsParams{
+	orderBy := movementConditionsSql(driver.QueryMovementsParams{
 		SearchDirection: driver.FromBeginning,
 	})
-	query := fmt.Sprintf(
-		"SELECT %s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, %s.application_metadata, stored_at FROM %s %s %s",
-		db.table.Transactions, db.table.Requests, db.table.Requests,
-		db.table.Transactions, joinOnTxID(db.table.Transactions, db.table.Requests), conditions)
-
+	query, err := NewSelect(
+		fmt.Sprintf("%s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, %s.application_metadata, stored_at", db.table.Transactions, db.table.Requests, db.table.Requests),
+	).From(db.table.Transactions, joinOnTxID(db.table.Transactions, db.table.Requests)).Where(conditions).OrderBy(orderBy).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -153,7 +159,10 @@ func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams
 func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error) {
 	var status driver.TxStatus
 	var statusMessage string
-	query := fmt.Sprintf("SELECT status, status_message FROM %s WHERE tx_id=$1;", db.table.Requests)
+	query, err := NewSelect("status, status_message").From(db.table.Requests).Where("tx_id=$1").Compile()
+	if err != nil {
+		return driver.Unknown, "", errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, txID)
 
 	row := db.db.QueryRow(query, txID)
@@ -169,10 +178,13 @@ func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error)
 
 func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
 	conditions, args := common.Where(db.ci.HasValidationParams(params))
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.request, metadata, %s.status, %s.stored_at FROM %s %s %s",
-		db.table.Validations, db.table.Requests, db.table.Requests, db.table.Validations,
-		db.table.Validations, joinOnTxID(db.table.Validations, db.table.Requests), conditions)
-
+	query, err := NewSelect(
+		fmt.Sprintf("%s.tx_id, %s.request, metadata, %s.status, %s.stored_at",
+			db.table.Validations, db.table.Requests, db.table.Requests, db.table.Validations),
+	).From(db.table.Validations, joinOnTxID(db.table.Validations, db.table.Requests)).Where(conditions).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -184,9 +196,12 @@ func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsPa
 
 // QueryTokenRequests returns an iterator over the token requests matching the passed params
 func (db *TransactionDB) QueryTokenRequests(params driver.QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
-	conditions, args := common.Where(db.ci.InInts("status", params.Statuses))
+	where, args := common.Where(db.ci.InInts("status", params.Statuses))
 
-	query := fmt.Sprintf("SELECT tx_id, request, status FROM %s %s", db.table.Requests, conditions)
+	query, err := NewSelect("tx_id, request, status").From(db.table.Requests).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "error compiling query")
+	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -199,7 +214,10 @@ func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser toke
 	logger.Debugf("adding transaction endorse ack record [%s]", txID)
 
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, endorser, sigma, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.TransactionEndorseAck)
+	query, err := NewInsertInto(db.table.TransactionEndorseAck).Rows("id, tx_id, endorser, sigma, stored_at").Compile()
+	if err != nil {
+		return errors.Wrapf(err, "error compiling query")
+	}
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(endorser)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
 	id, err := uuid.GenerateUUID()
 	if err != nil {
@@ -212,14 +230,17 @@ func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser toke
 }
 
 func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
-	query := fmt.Sprintf("SELECT endorser, sigma FROM %s WHERE tx_id=$1;", db.table.TransactionEndorseAck)
+	query, err := NewSelect("endorser, sigma").From(db.table.TransactionEndorseAck).Where("tx_id=$1").Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed compiling query")
+	}
 	logger.Debug(query, txID)
 
 	rows, err := db.db.Query(query, txID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query")
 	}
-	defer rows.Close()
+	defer Close(rows)
 	acks := make(map[string][]byte)
 	for rows.Next() {
 		var endorser []byte
@@ -348,7 +369,7 @@ type TransactionIterator struct {
 }
 
 func (t *TransactionIterator) Close() {
-	t.txs.Close()
+	Close(t.txs)
 }
 
 func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
@@ -393,7 +414,7 @@ type ValidationRecordsIterator struct {
 }
 
 func (t *ValidationRecordsIterator) Close() {
-	t.txs.Close()
+	Close(t.txs)
 }
 
 func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
@@ -441,7 +462,7 @@ type TokenRequestIterator struct {
 }
 
 func (t *TokenRequestIterator) Close() {
-	t.txs.Close()
+	Close(t.txs)
 }
 
 func (t *TokenRequestIterator) Next() (*driver.TokenRequestRecord, error) {
@@ -518,7 +539,10 @@ func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 		return errors.Wrapf(err, "error generating uuid")
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, stored_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);", w.db.table.Transactions)
+	query, err := NewInsertInto(w.db.table.Transactions).Rows("id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, stored_at").Compile()
+	if err != nil {
+		return errors.Wrapf(err, "error compiling insert")
+	}
 	args := []any{id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Timestamp.UTC()}
 	logger.Debug(query, args)
 	_, err = w.txn.Exec(query, args...)
@@ -539,7 +563,10 @@ func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadat
 		return errors.New("error marshaling application metadata")
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, request, status, status_message, application_metadata, pp_hash) VALUES ($1, $2, $3, $4, $5, $6)", w.db.table.Requests)
+	query, err := NewInsertInto(w.db.table.Requests).Rows("tx_id, request, status, status_message, application_metadata, pp_hash").Compile()
+	if err != nil {
+		return errors.Wrapf(err, "error compiling query")
+	}
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(ppHash))
 
 	_, err = w.txn.Exec(query, txID, tr, driver.Pending, "", j, ppHash)
@@ -562,7 +589,10 @@ func (w *AtomicWrite) AddMovement(r *driver.MovementRecord) error {
 	}
 	now := time.Now().UTC()
 
-	query := fmt.Sprintf(`INSERT INTO %s (id, tx_id, enrollment_id, token_type, amount, stored_at) VALUES ($1, $2, $3, $4, $5, $6);`, w.db.table.Movements)
+	query, err := NewInsertInto(w.db.table.Movements).Rows("id, tx_id, enrollment_id, token_type, amount, stored_at").Compile()
+	if err != nil {
+		return errors.Wrapf(err, "error compiling query")
+	}
 	args := []any{id, r.TxID, r.EnrollmentID, r.TokenType, amount, now}
 	logger.Debug(query, args)
 	_, err = w.txn.Exec(query, args...)
@@ -581,7 +611,10 @@ func (w *AtomicWrite) AddValidationRecord(txID string, meta map[string][]byte) e
 	}
 	now := time.Now().UTC()
 
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, metadata, stored_at) VALUES ($1, $2, $3)", w.db.table.Validations)
+	query, err := NewInsertInto(w.db.table.Validations).Rows("tx_id, metadata, stored_at").Compile()
+	if err != nil {
+		return errors.Wrapf(err, "failed to compile query")
+	}
 	logger.Debug(query, txID, len(md), now)
 
 	_, err = w.txn.Exec(query, txID, md, now)

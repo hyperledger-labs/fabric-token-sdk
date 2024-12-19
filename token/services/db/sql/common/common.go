@@ -28,3 +28,16 @@ func QueryUnique[T any](db *sql.DB, query string, args ...any) (T, error) {
 	}
 	return result, err
 }
+
+type Closer interface {
+	Close() error
+}
+
+func Close(closer Closer) {
+	if closer == nil {
+		return
+	}
+	if err := closer.Close(); err != nil {
+		logger.Errorf("failed closing connection: %s", err)
+	}
+}
