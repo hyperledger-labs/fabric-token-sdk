@@ -294,7 +294,7 @@ type ledger struct {
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	boxed, err := l.viewManager.InitiateView(NewRequestTxStatusView(l.network, "", id, l.dbManager), context.TODO())
 	if err != nil {
-		return driver.Unknown, errors.Errorf("failed to get status for [%s]", id)
+		return driver.Unknown, errors.Wrapf(err, "failed to get status for [%s]", id)
 	}
 	return boxed.(*TxStatusResponse).Status, nil
 }
