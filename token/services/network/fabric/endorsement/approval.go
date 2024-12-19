@@ -297,3 +297,7 @@ func (rwset *RWSWrapper) GetState(namespace string, key string) ([]byte, error) 
 func (rwset *RWSWrapper) DeleteState(namespace string, key string) error {
 	return rwset.Stub.DeleteState(namespace, key)
 }
+
+func (rwset *RWSWrapper) AddReadAt(namespace string, key string, version []byte) error {
+	return rwset.Stub.AddReadAt(namespace, key, version)
+}
