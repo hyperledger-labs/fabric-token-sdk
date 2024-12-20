@@ -170,7 +170,7 @@ func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, pp *crypto.Publi
 		if tw[i] == nil || tw[i].BlindingFactor == nil {
 			return nil, errors.New("invalid token witness")
 		}
-		//tw[i] = tw[i].Clone()
+		// tw[i] = tw[i].Clone()
 		values[i] = tw[i].Value
 		blindingFactors[i] = c.ModSub(tw[i].BlindingFactor, p.SameType.blindingFactor, c.GroupOrder)
 	}
@@ -180,7 +180,19 @@ func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, pp *crypto.Publi
 		coms[i].Sub(commitmentToType)
 	}
 	// range prover takes commitments tokens[i]/commitmentToType
-	p.RangeCorrectness = rp.NewRangeCorrectnessProver(coms, values, blindingFactors, pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
+	p.RangeCorrectness = rp.NewRangeCorrectnessProver(
+		coms,
+		values,
+		blindingFactors,
+		pp.PedersenGenerators[1:],
+		pp.RangeProofParams.LeftGenerators,
+		pp.RangeProofParams.RightGenerators,
+		pp.RangeProofParams.P,
+		pp.RangeProofParams.Q,
+		pp.RangeProofParams.BitLength,
+		pp.RangeProofParams.NumberOfRounds,
+		math.Curves[pp.Curve],
+	)
 
 	return p, nil
 }

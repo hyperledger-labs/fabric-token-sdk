@@ -57,9 +57,9 @@ type rangeProver struct {
 	Q *math.G1
 	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
 	// number of rounds of the reduction protocol
-	NumberOfRounds int
+	NumberOfRounds uint64
 	// BitLength is the size of the binary representation of value
-	BitLength int
+	BitLength uint64
 	// Curve is the curve over which the computation is performed
 	Curve *math.Curve
 }
@@ -73,7 +73,7 @@ func NewRangeProver(
 	leftGen []*math.G1,
 	rightGen []*math.G1,
 	P, Q *math.G1,
-	numberOfRounds, bitLength int,
+	numberOfRounds, bitLength uint64,
 	curve *math.Curve,
 ) *rangeProver {
 	return &rangeProver{
@@ -109,9 +109,9 @@ type rangeVerifier struct {
 	Q *math.G1
 	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
 	// number of rounds of the reduction protocol
-	NumberOfRounds int
+	NumberOfRounds uint64
 	// BitLength is the size of the binary representation of value
-	BitLength int
+	BitLength uint64
 	// Curve is the curve over which the computation is performed
 	Curve *math.Curve
 }
@@ -123,7 +123,7 @@ func NewRangeVerifier(
 	leftGen []*math.G1,
 	rightGen []*math.G1,
 	P, Q *math.G1,
-	numberOfRounds, bitLength int,
+	numberOfRounds, bitLength uint64,
 	curve *math.Curve,
 ) *rangeVerifier {
 	return &rangeVerifier{
@@ -281,13 +281,13 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 	rho := p.Curve.NewRandomZr(rand)
 	eta := p.Curve.NewRandomZr(rand)
-	for i := 0; i < p.BitLength; i++ {
-		b := 1 << uint(i) & p.value
+	for i := uint64(0); i < p.BitLength; i++ {
+		b := 1 << i & p.value
 		if b > 0 {
 			b = 1
 		}
 		// this is an array of the bits b_i of p.value
-		left[i] = p.Curve.NewZrFromInt(int64(b))
+		left[i] = p.Curve.NewZrFromUint64(b)
 		// this is an array of b_i - 1
 		right[i] = p.Curve.ModSub(left[i], p.Curve.NewZrFromInt(1), p.Curve.GroupOrder)
 		// these are randomly generated arrays
@@ -426,7 +426,15 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 	com.Sub(v.P.Mul(rp.Delta))
 
 	// run the IPA verifier
-	ipv := NewIPAVerifier(rp.InnerProduct, v.Q, v.LeftGenerators, rightGeneratorsPrime, com, v.NumberOfRounds, v.Curve)
+	ipv := NewIPAVerifier(
+		rp.InnerProduct,
+		v.Q,
+		v.LeftGenerators,
+		rightGeneratorsPrime,
+		com,
+		v.NumberOfRounds,
+		v.Curve,
+	)
 	err := ipv.Verify(rp.IPA)
 	if err != nil {
 		return err
