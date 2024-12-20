@@ -189,7 +189,7 @@ func PemDecodeKey(keyBytes []byte) (interface{}, error) {
 	return key, nil
 }
 
-// IsLow checks that s is a low-S
+// IsLowS checks that s is a low-S
 func IsLowS(k *ecdsa.PublicKey, s *big.Int) (bool, error) {
 	halfOrder, ok := curveHalfOrders[k.Curve]
 	if !ok {
