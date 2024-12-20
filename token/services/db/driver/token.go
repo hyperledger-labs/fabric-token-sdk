@@ -172,7 +172,7 @@ type TokenDB interface {
 	NewTokenDBTransaction(ctx context.Context) (TokenDBTransaction, error)
 	// QueryTokenDetails provides detailed information about tokens
 	QueryTokenDetails(params QueryTokenDetailsParams) ([]TokenDetails, error)
-	// Balance64 returns the sun of the amounts of the tokens with type and EID equal to those passed as arguments.
+	// Balance returns the sun of the amounts of the tokens with type and EID equal to those passed as arguments.
 	Balance(ownerEID, typ string) (uint64, error)
 }
 
