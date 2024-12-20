@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package db
+package memory
 
 import (
 	"crypto/sha256"
@@ -18,16 +18,16 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
-type MemoryDriver[D any] struct {
+type Driver[D any] struct {
 	dbOpener func(opts common.Opts) (D, error)
 }
 
-func NewMemoryDriver[D any](dbOpener func(opts common.Opts) (D, error)) *MemoryDriver[D] {
-	return &MemoryDriver[D]{dbOpener: dbOpener}
+func NewDriver[D any](dbOpener func(opts common.Opts) (D, error)) *Driver[D] {
+	return &Driver[D]{dbOpener: dbOpener}
 }
 
 // Open returns a pure go sqlite implementation in memory for testing purposes.
-func (d *MemoryDriver[D]) Open(_ driver.ConfigProvider, tmsID token.TMSID) (D, error) {
+func (d *Driver[D]) Open(_ driver.ConfigProvider, tmsID token.TMSID) (D, error) {
 	h := sha256.New()
 	if _, err := h.Write([]byte(tmsID.String())); err != nil {
 		return utils.Zero[D](), err

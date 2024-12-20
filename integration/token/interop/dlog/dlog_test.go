@@ -80,6 +80,7 @@ func newTestSuiteSingleOrion(commType fsc.P2PCommunicationType, factor int, name
 		ReplicationOpts: opts,
 		TokenSDKDriver:  "dlog",
 		SDKs:            []api2.SDK{&odlog.SDK{}},
+		FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:view-sdk=debug:info",
 	}))
 	return ts, selector
 }

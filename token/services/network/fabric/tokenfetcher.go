@@ -7,53 +7,59 @@ SPDX-License-Identifier: Apache-2.0
 package fabric
 
 import (
+	"context"
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-func NewTokenExecutorProvider() *tokenFetcherProvider {
-	return &tokenFetcherProvider{}
+func NewTokenExecutorProvider(fnsProvider *fabric.NetworkServiceProvider) *tokenFetcherProvider {
+	return &tokenFetcherProvider{fnsProvider: fnsProvider}
 }
 
-type tokenFetcherProvider struct{}
+type tokenFetcherProvider struct {
+	fnsProvider *fabric.NetworkServiceProvider
+}
 
 func (p *tokenFetcherProvider) GetExecutor(network, channel string) (driver2.TokenQueryExecutor, error) {
-	return &tokenFetcher{network: network, channel: channel}, nil
+	return &tokenFetcher{fnsProvider: p.fnsProvider, network: network, channel: channel}, nil
 }
 
 type tokenFetcher struct {
-	network string
-	channel string
+	fnsProvider *fabric.NetworkServiceProvider
+	network     string
+	channel     string
 }
 
-func (f *tokenFetcher) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
+func (f *tokenFetcher) QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
 	idsRaw, err := json.Marshal(IDs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling ids")
 	}
 
-	payloadBoxed, err := context.RunView(chaincode.NewQueryView(
-		namespace,
-		QueryTokensFunctions,
-		idsRaw,
-	).WithNetwork(f.network).WithChannel(f.channel))
+	fns, err := f.fnsProvider.FabricNetworkService(f.network)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to query the token chaincode for tokens")
+		return nil, errors.Wrapf(err, "failed getting fabric network service for network [%s]", f.network)
+	}
+
+	channel, err := fns.Channel(f.channel)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting channel [%s:%s]", f.network, f.channel)
+	}
+	stdChannelChaincode := channel.Chaincode(namespace)
+	query := stdChannelChaincode.Query(QueryTokensFunctions, idsRaw)
+	payloadBoxed, err := query.Call()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to query the token chaincode for query tokens")
 	}
 
 	// Unbox
-	raw, ok := payloadBoxed.([]byte)
-	if !ok {
-		return nil, errors.Errorf("expected []byte from TCC, got [%T]", payloadBoxed)
-	}
 	var tokens [][]byte
-	if err := json.Unmarshal(raw, &tokens); err != nil {
+	if err := json.Unmarshal(payloadBoxed, &tokens); err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal response")
 	}
 
@@ -61,15 +67,17 @@ func (f *tokenFetcher) QueryTokens(context view.Context, namespace string, IDs [
 }
 
 type spentTokenFetcherProvider struct {
+	fnsProvider   *fabric.NetworkServiceProvider
 	keyTranslator translator.KeyTranslator
 }
 
-func NewSpentTokenExecutorProvider(keyTranslator translator.KeyTranslator) *spentTokenFetcherProvider {
-	return &spentTokenFetcherProvider{keyTranslator: keyTranslator}
+func NewSpentTokenExecutorProvider(fnsProvider *fabric.NetworkServiceProvider, keyTranslator translator.KeyTranslator) *spentTokenFetcherProvider {
+	return &spentTokenFetcherProvider{fnsProvider: fnsProvider, keyTranslator: keyTranslator}
 }
 
 func (p *spentTokenFetcherProvider) GetSpentExecutor(network, channel string) (driver2.SpentTokenQueryExecutor, error) {
 	return &spentTokenFetcher{
+		fnsProvider:   p.fnsProvider,
 		network:       network,
 		channel:       channel,
 		keyTranslator: p.keyTranslator,
@@ -77,12 +85,13 @@ func (p *spentTokenFetcherProvider) GetSpentExecutor(network, channel string) (d
 }
 
 type spentTokenFetcher struct {
+	fnsProvider   *fabric.NetworkServiceProvider
 	network       string
 	channel       string
 	keyTranslator translator.KeyTranslator
 }
 
-func (f *spentTokenFetcher) QuerySpentTokens(context view.Context, namespace string, IDs []*token.ID, meta []string) ([]bool, error) {
+func (f *spentTokenFetcher) QuerySpentTokens(context context.Context, namespace string, IDs []*token.ID, meta []string) ([]bool, error) {
 	sIDs := make([]string, len(IDs))
 	var err error
 	for i, id := range IDs {
@@ -97,22 +106,25 @@ func (f *spentTokenFetcher) QuerySpentTokens(context view.Context, namespace str
 		return nil, errors.Wrapf(err, "failed marshalling ids")
 	}
 
-	payloadBoxed, err := context.RunView(chaincode.NewQueryView(
-		namespace,
-		AreTokensSpent,
-		idsRaw,
-	).WithNetwork(f.network).WithChannel(f.channel))
+	fns, err := f.fnsProvider.FabricNetworkService(f.network)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting fabric network service for network [%s]", f.network)
+	}
+
+	channel, err := fns.Channel(f.channel)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting channel [%s:%s]", f.network, f.channel)
+	}
+	stdChannelChaincode := channel.Chaincode(namespace)
+	query := stdChannelChaincode.Query(AreTokensSpent, idsRaw)
+	payloadBoxed, err := query.Call()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to query the token chaincode for tokens spent")
 	}
 
 	// Unbox
-	raw, ok := payloadBoxed.([]byte)
-	if !ok {
-		return nil, errors.Errorf("expected []byte from TCC, got [%T]", payloadBoxed)
-	}
 	var spent []bool
-	if err := json.Unmarshal(raw, &spent); err != nil {
+	if err := json.Unmarshal(payloadBoxed, &spent); err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal esponse")
 	}
 

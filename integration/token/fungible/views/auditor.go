@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/pkg/errors"
 )
@@ -156,7 +155,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	for _, rID := range inputs.RevocationHandles() {
 		rh := hash.Hashable(rID).String()
-		//logger.Infof("input RH [%s]", rh)
+		// logger.Infof("input RH [%s]", rh)
 		assert.NotNil(rID, "found an input with empty RH")
 		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
 		if kvsInstance.Exists(k) {
@@ -166,7 +165,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	for _, rID := range outputs.RevocationHandles() {
 		rh := hash.Hashable(rID).String()
-		//logger.Infof("output RH [%s]", rh)
+		// logger.Infof("output RH [%s]", rh)
 		assert.NotNil(rID, "found an output with empty RH")
 		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
 		if kvsInstance.Exists(k) {
@@ -301,16 +300,6 @@ func (r *SetTransactionAuditStatusView) Call(context view.Context) (interface{},
 	auditor, err := ttx.NewAuditor(context, w)
 	assert.NoError(err, "failed to get auditor instance")
 	assert.NoError(auditor.SetStatus(context.Context(), r.TxID, r.Status, r.Message), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
-
-	if r.Status == ttx.Deleted {
-		tms := token.GetManagementService(context)
-		assert.NotNil(tms, "failed to get default tms")
-		net := network.GetInstance(context, tms.Network(), tms.Channel())
-		assert.NotNil(net, "failed to get network [%s:%s]", tms.Network(), tms.Channel())
-		v, err := net.Vault(tms.Namespace())
-		assert.NoError(err)
-		assert.NoError(v.DiscardTx(r.TxID), "failed to discard tx [%s:%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace(), r.TxID)
-	}
 
 	return nil, nil
 }
