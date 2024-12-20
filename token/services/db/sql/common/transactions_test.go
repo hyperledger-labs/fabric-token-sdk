@@ -42,7 +42,7 @@ func TestTransactionsSqlite(t *testing.T) {
 		}
 
 		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
+			defer Close(db)
 			c.Fn(xt, db)
 		})
 	}
@@ -55,7 +55,7 @@ func TestTransactionsSqliteMemory(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
+			defer Close(db)
 			c.Fn(xt, db)
 		})
 	}
@@ -71,7 +71,7 @@ func TestTransactionsPostgres(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
+			defer Close(db)
 			c.Fn(xt, db)
 		})
 	}
