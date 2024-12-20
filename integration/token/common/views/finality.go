@@ -9,17 +9,22 @@ package views
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"sync"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/pkg/errors"
 )
 
 type TxFinality struct {
-	TxID  string
-	TMSID *token.TMSID
+	TxID    string
+	TMSID   *token.TMSID
+	Timeout time.Duration
 }
 
 type TxFinalityView struct {
@@ -39,11 +44,11 @@ func (r *TxFinalityView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(tms)
 	nw := network.GetInstance(context, tms.Network(), tms.Channel())
 	assert.NotNil(nw)
-	assert.NoError(nw.AddFinalityListener(tms.Namespace(), r.TxID, &finalityListener{errs: errs}))
+	assert.NoError(nw.AddFinalityListener(tms.Namespace(), r.TxID, newFinalityListener(r.Timeout, errs)))
 
 	// Listen for finality from DBs
 	go func() {
-		_, err := context.RunView(ttx.NewFinalityWithOpts(ttx.WithTxID(r.TxID), ttx.WithTMSID(tms.ID())))
+		_, err := context.RunView(ttx.NewFinalityWithOpts(ttx.WithTxID(r.TxID), ttx.WithTMSID(tms.ID()), ttx.WithTimeout(r.Timeout)))
 		errs <- err
 	}()
 
@@ -65,10 +70,21 @@ func (p *TxFinalityViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type finalityListener struct {
-	errs chan error
+	success func()
+}
+
+func newFinalityListener(timeout time.Duration, errs chan error) *finalityListener {
+	var once sync.Once
+
+	if timeout > 0 {
+		time.AfterFunc(timeout, func() { once.Do(func() { errs <- errors.New("timeout exceeded") }) })
+	}
+	return &finalityListener{
+		success: func() { once.Do(func() { errs <- nil }) },
+	}
 }
 
 func (l *finalityListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
-	//fmt.Printf("Received finality from network for TX [%s][%d]", txID, status)
-	l.errs <- nil
+	fmt.Printf("Received finality from network for TX [%s][%d]", txID, status)
+	l.success()
 }

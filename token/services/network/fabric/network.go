@@ -352,6 +352,7 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 }
 
 func (n *Network) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
+	logger.Infof("Add finality listener [%T] for [%s]", n.flm, txID)
 	return n.flm.AddFinalityListener(namespace, txID, listener)
 }
 
