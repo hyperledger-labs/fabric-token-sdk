@@ -24,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
@@ -141,10 +142,10 @@ func (p *SDK) Install() error {
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(NewAuditorCheckServiceProvider),
-		p.Container().Provide(digutils.Identity[*AuditorCheckServiceProvider](), dig.As(new(auditor.CheckServiceProvider))),
+		p.Container().Provide(digutils.Identity[*db.AuditorCheckServiceProvider](), dig.As(new(auditor.CheckServiceProvider))),
 		p.Container().Provide(auditor.NewManager),
 		p.Container().Provide(NewOwnerCheckServiceProvider),
-		p.Container().Provide(digutils.Identity[*OwnerCheckServiceProvider](), dig.As(new(ttx.CheckServiceProvider))),
+		p.Container().Provide(digutils.Identity[*db.OwnerCheckServiceProvider](), dig.As(new(ttx.CheckServiceProvider))),
 		p.Container().Provide(ttx.NewManager),
 		p.Container().Provide(tokens.NewManager),
 		p.Container().Provide(digutils.Identity[*tokens.Manager](), dig.As(new(ttx.TokensProvider), new(auditor.TokenDBProvider))),
