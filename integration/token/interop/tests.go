@@ -10,7 +10,6 @@ import (
 	"crypto"
 	"fmt"
 	"math/big"
-	"strings"
 	"sync"
 	"time"
 
@@ -18,10 +17,8 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 )
 
 func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.ReplicaSelector) {
@@ -111,7 +108,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 	CheckBalanceWithLockedAndHolding(network, bob, "", "USD", 20, 0, 0, -1)
 
 	// payment limit reached
-	lockTxID, _, _ := HTLCLock(network, defaultTMSID, alice, "", "USD", uint64(views.Limit+10), bob, auditor, 1*time.Hour, nil, crypto.SHA3_256, "payment limit reached")
+	_, _, _ = HTLCLock(network, defaultTMSID, alice, "", "USD", uint64(views.Limit+10), bob, auditor, 1*time.Hour, nil, crypto.SHA3_256, "payment limit reached")
 	CheckBalanceWithLockedAndHolding(network, alice, "", "USD", 100, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, alice, "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, bob, "", "EUR", 30, 0, 0, -1)
@@ -120,21 +117,11 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 	CheckPublicParams(network, defaultTMSID, issuer, auditor, alice, bob)
 	<-time.After(30 * time.Second)
 	CheckOwnerDB(network, defaultTMSID, nil, issuer, alice, bob)
-	CheckAuditorDB(network, defaultTMSID, auditor, "", func(errs []string) error {
-		if len(errs) != 1 {
-			return errors.Errorf("expected 1 errors, got [%d][%v][%s]", len(errs), errs, lockTxID)
-		}
-		for _, err := range errs {
-			if strings.Contains(err, lockTxID) {
-				return errors.Errorf("[%s] does not contain [%s]", err, lockTxID)
-			}
-		}
-		return nil
-	})
+	CheckAuditorDB(network, defaultTMSID, auditor, "", nil)
 
 	// lock two times with the same hash, the second lock should fail
 	_, _, hash := HTLCLock(network, defaultTMSID, alice, "", "USD", 1, bob, auditor, 1*time.Hour, nil, crypto.SHA3_256)
-	failedLockTXID, _, _ := HTLCLock(network, defaultTMSID, alice, "", "USD", 1, bob, auditor, 1*time.Hour, hash, crypto.SHA3_256,
+	_, _, _ = HTLCLock(network, defaultTMSID, alice, "", "USD", 1, bob, auditor, 1*time.Hour, hash, crypto.SHA3_256,
 		fmt.Sprintf(
 			"entry with transfer metadata key [%s] is already occupied",
 			htlc.LockKey(hash),
@@ -144,30 +131,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 
 	CheckPublicParams(network, defaultTMSID, issuer, auditor, alice, bob)
 	CheckOwnerDB(network, defaultTMSID, nil, issuer, auditor, alice, bob)
-	CheckAuditorDB(network, defaultTMSID, auditor, "", func(errs []string) error {
-		// We should get here 3 errors:
-		// - One from before;
-		// - Two for failedLockTXID (one entry for the lock to Bob, the other relative to the rest to Alice)
-		fmt.Printf("Got errors [%v]", errs)
-		if len(errs) != 3 {
-			return errors.Errorf("expected 3 errors, got [%d][%v][%s]", len(errs), errs, lockTxID)
-		}
-		for _, err := range errs[:1] {
-			if strings.Contains(err, lockTxID) {
-				return errors.Errorf("[%s] does not contain [%s]", err, lockTxID)
-			}
-		}
-		firstError := fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, auditor2.TxStatusMessage[auditor2.Pending])
-		if errs[1] != firstError {
-			return errors.Errorf("expected first error to be [%s], got [%s]", firstError, errs[0])
-		}
-		for _, err := range errs[1:] {
-			if !strings.Contains(err, failedLockTXID) {
-				return errors.Errorf("[%s] does not contain [%s]", err, failedLockTXID)
-			}
-		}
-		return nil
-	})
+	CheckAuditorDB(network, defaultTMSID, auditor, "", nil)
 	PruneInvalidUnspentTokens(network, defaultTMSID, issuer, auditor, alice, bob)
 	for _, name := range []*token2.NodeReference{alice, bob} {
 		IDs := ListVaultUnspentTokens(network, defaultTMSID, name)
