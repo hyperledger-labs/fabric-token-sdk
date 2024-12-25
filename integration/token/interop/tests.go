@@ -129,7 +129,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 				return errors.Errorf("[%s] does not contain [%s]", err, lockTxID)
 			}
 		}
-		return nil
+		panic(errs[0])
 	})
 
 	// lock two times with the same hash, the second lock should fail
