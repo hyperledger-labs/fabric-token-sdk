@@ -59,18 +59,23 @@ func NewTokenLockDB(db *sql.DB, opts NewDBOpts) (*TokenLockDB, error) {
 }
 
 func (db *TokenLockDB) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
-	query := fmt.Sprintf("INSERT INTO %s (consumer_tx_id, tx_id, idx, created_at) VALUES ($1, $2, $3, $4)", db.Table.TokenLocks)
+	query, err := NewInsertInto(db.Table.TokenLocks).Rows("consumer_tx_id, tx_id, idx, created_at").Compile()
+	if err != nil {
+		return errors.Wrap(err, "failed compiling query")
+	}
 	logger.Debug(query, tokenID, consumerTxID)
-
-	_, err := db.DB.Exec(query, consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC())
+	_, err = db.DB.Exec(query, consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC())
 	return err
 }
 
 func (db *TokenLockDB) UnlockByTxID(consumerTxID transaction.ID) error {
-	query := fmt.Sprintf("DELETE FROM %s WHERE consumer_tx_id = $1", db.Table.TokenLocks)
+	query, err := NewDeleteFrom(db.Table.TokenLocks).Where("consumer_tx_id = $1").Compile()
+	if err != nil {
+		return errors.Wrap(err, "failed compiling query")
+	}
 	logger.Debug(query, consumerTxID)
 
-	_, err := db.DB.Exec(query, consumerTxID)
+	_, err = db.DB.Exec(query, consumerTxID)
 	return err
 }
 

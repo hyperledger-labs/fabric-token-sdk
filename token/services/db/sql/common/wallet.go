@@ -62,7 +62,10 @@ func (db *WalletDB) GetWalletID(identity token.Identity, roleID int) (driver.Wal
 }
 
 func (db *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
-	query := fmt.Sprintf("SELECT DISTINCT wallet_id FROM %s WHERE role_id = $1", db.table.Wallets)
+	query, err := NewSelectDistinct("wallet_id").From(db.table.Wallets).Where("role_id = $1").Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed compiling query")
+	}
 	logger.Debug(query)
 	rows, err := db.db.Query(query, roleID)
 	if err != nil {
@@ -89,11 +92,14 @@ func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID drive
 		return nil
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (identity_hash, meta, wallet_id, role_id, created_at, enrollment_id) VALUES ($1, $2, $3, $4, $5, $6)", db.table.Wallets)
+	query, err := NewInsertInto(db.table.Wallets).Rows("identity_hash, meta, wallet_id, role_id, created_at, enrollment_id").Compile()
+	if err != nil {
+		return errors.Wrapf(err, "failed compiling query")
+	}
 	logger.Debug(query)
 
 	idHash := identity.UniqueID()
-	_, err := db.db.Exec(query, idHash, meta, wID, roleID, time.Now().UTC(), eID)
+	_, err = db.db.Exec(query, idHash, meta, wID, roleID, time.Now().UTC(), eID)
 	if err != nil {
 		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%v]", wID, idHash)
 	}
