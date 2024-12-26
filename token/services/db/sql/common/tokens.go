@@ -1054,7 +1054,8 @@ func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) er
 
 	// Store token
 	now := time.Now().UTC()
-	query, err := NewInsertInto(t.db.table.Tokens).Rows("tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer").Compile()
+	query, err := NewInsertInto(t.db.table.Tokens).Rows(
+		"tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_type, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer").Compile()
 	if err != nil {
 		return errors.Wrapf(err, "failed building insert")
 	}
