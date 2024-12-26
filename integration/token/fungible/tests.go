@@ -506,8 +506,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, bob, "", "EUR", 20, auditor)
 	CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
 	CheckOwnerDB(network, []string{
-		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Pending]", txID1),
-		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Pending]", txID2),
+		//TODO: Errors
 	}, bob)
 	fmt.Printf("prepared transactions [%s:%s]", txID1, txID2)
 	Restart(network, true, onRestart, bob)

@@ -29,6 +29,10 @@ type NetworkProvider interface {
 	GetNetwork(network string, channel string) (*network.Network, error)
 }
 
+type CheckService interface {
+	Check(context context.Context) ([]string, error)
+}
+
 // DB is the interface for the owner service
 type DB struct {
 	networkProvider NetworkProvider
@@ -37,6 +41,7 @@ type DB struct {
 	tokenDB         *tokens.Tokens
 	tmsProvider     TMSProvider
 	finalityTracer  trace.Tracer
+	checkService    CheckService
 }
 
 // Append adds the passed transaction to the database
@@ -86,4 +91,8 @@ func (a *DB) AppendTransactionEndorseAck(txID string, id view.Identity, sigma []
 
 func (a *DB) GetTransactionEndorsementAcks(id string) (map[string][]byte, error) {
 	return a.ttxDB.GetTransactionEndorsementAcks(id)
+}
+
+func (a *DB) Check(context context.Context) ([]string, error) {
+	return a.checkService.Check(context)
 }

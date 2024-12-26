@@ -24,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
@@ -33,6 +34,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
@@ -91,7 +93,15 @@ func (p *SDK) Install() error {
 		p.Container().Provide(common.NewAcceptTxInDBFilterProvider),
 		p.Container().Provide(network.NewProvider),
 		p.Container().Provide(newTokenDriverService),
-		p.Container().Provide(digutils.Identity[*network.Provider](), dig.As(new(ttx.NetworkProvider), new(token.Normalizer), new(auditor.NetworkProvider))),
+		p.Container().Provide(
+			digutils.Identity[*network.Provider](),
+			dig.As(
+				new(ttx.NetworkProvider),
+				new(token.Normalizer),
+				new(auditor.NetworkProvider),
+				new(common2.NetworkProvider),
+			),
+		),
 		p.Container().Provide(func(networkProvider *network.Provider) *vault.PublicParamsProvider {
 			return &vault.PublicParamsProvider{Provider: networkProvider}
 		}, dig.As(new(core2.Vault))),
@@ -111,7 +121,15 @@ func (p *SDK) Install() error {
 		}, dig.As(new(token.VaultProvider))),
 		p.Container().Provide(token.NewManagementServiceProvider),
 		p.Container().Provide(token.NewTMSNormalizer, dig.As(new(token.TMSNormalizer))),
-		p.Container().Provide(digutils.Identity[*token.ManagementServiceProvider](), dig.As(new(ttx.TMSProvider), new(tokens.TMSProvider), new(auditor.TokenManagementServiceProvider))),
+		p.Container().Provide(
+			digutils.Identity[*token.ManagementServiceProvider](),
+			dig.As(
+				new(ttx.TMSProvider),
+				new(tokens.TMSProvider),
+				new(auditor.TokenManagementServiceProvider),
+				new(common2.TokenManagementServiceProvider),
+			),
+		),
 		p.Container().Provide(NewTTXDBManager),
 		p.Container().Provide(digutils.Identity[*ttxdb.Manager](), dig.As(new(ttx.DBProvider), new(network2.TTXDBProvider))),
 		p.Container().Provide(NewTokenManagers),
@@ -123,7 +141,11 @@ func (p *SDK) Install() error {
 		p.Container().Provide(digutils.Identity[*kvs.KVS](), dig.As(new(kvs2.KVS))),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
+		p.Container().Provide(NewAuditorCheckServiceProvider),
+		p.Container().Provide(digutils.Identity[*db.AuditorCheckServiceProvider](), dig.As(new(auditor.CheckServiceProvider))),
 		p.Container().Provide(auditor.NewManager),
+		p.Container().Provide(NewOwnerCheckServiceProvider),
+		p.Container().Provide(digutils.Identity[*db.OwnerCheckServiceProvider](), dig.As(new(ttx.CheckServiceProvider))),
 		p.Container().Provide(ttx.NewManager),
 		p.Container().Provide(tokens.NewManager),
 		p.Container().Provide(digutils.Identity[*tokens.Manager](), dig.As(new(ttx.TokensProvider), new(auditor.TokenDBProvider))),

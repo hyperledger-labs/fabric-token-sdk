@@ -32,13 +32,18 @@ type TokenDBProvider interface {
 	Tokens(id token.TMSID) (*tokens.Tokens, error)
 }
 
+type CheckServiceProvider interface {
+	CheckService(id token.TMSID, adb *auditdb.DB, tdb *tokens.Tokens) (CheckService, error)
+}
+
 // Manager handles the databases
 type Manager struct {
-	networkProvider NetworkProvider
-	auditDBProvider AuditDBProvider
-	tokenDBProvider TokenDBProvider
-	tmsProvider     TokenManagementServiceProvider
-	tracerProvider  trace.TracerProvider
+	networkProvider      NetworkProvider
+	auditDBProvider      AuditDBProvider
+	tokenDBProvider      TokenDBProvider
+	tmsProvider          TokenManagementServiceProvider
+	tracerProvider       trace.TracerProvider
+	checkServiceProvider CheckServiceProvider
 
 	mutex    sync.Mutex
 	auditors map[string]*Auditor
@@ -51,14 +56,16 @@ func NewManager(
 	tokenDBProvider TokenDBProvider,
 	tmsProvider TokenManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
+	checkServiceProvider CheckServiceProvider,
 ) *Manager {
 	return &Manager{
-		networkProvider: networkProvider,
-		auditDBProvider: auditDBProvider,
-		tokenDBProvider: tokenDBProvider,
-		tmsProvider:     tmsProvider,
-		tracerProvider:  tracerProvider,
-		auditors:        map[string]*Auditor{},
+		networkProvider:      networkProvider,
+		auditDBProvider:      auditDBProvider,
+		tokenDBProvider:      tokenDBProvider,
+		tmsProvider:          tmsProvider,
+		tracerProvider:       tracerProvider,
+		auditors:             map[string]*Auditor{},
+		checkServiceProvider: checkServiceProvider,
 	}
 }
 
@@ -108,16 +115,22 @@ func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
 	}
+	checkService, err := cm.checkServiceProvider.CheckService(tmsID, auditDB, tokenDB)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get checkservice for [%s]", tmsID)
+	}
+
 	auditor := &Auditor{
-		np:          cm.networkProvider,
-		tmsID:       tmsID,
-		auditDB:     auditDB,
-		tokenDB:     tokenDB,
-		tmsProvider: cm.tmsProvider,
+		networkProvider: cm.networkProvider,
+		tmsID:           tmsID,
+		auditDB:         auditDB,
+		tokenDB:         tokenDB,
+		tmsProvider:     cm.tmsProvider,
 		finalityTracer: cm.tracerProvider.Tracer("auditor", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "tokensdk",
 			LabelNames: []tracing.LabelName{txIdLabel},
 		})),
+		checkService: checkService,
 	}
 	return auditor, nil
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -130,7 +131,7 @@ type Wallet interface {
 
 // DB is a database that stores token transactions related information
 type DB struct {
-	*db.StatusSupport
+	*common.StatusSupport
 	db        driver.AuditTransactionDB
 	eIDsLocks sync.Map
 
@@ -140,7 +141,7 @@ type DB struct {
 
 func newDB(p driver.AuditTransactionDB) *DB {
 	return &DB{
-		StatusSupport: db.NewStatusSupport(),
+		StatusSupport: common.NewStatusSupport(),
 		db:            p,
 		eIDsLocks:     sync.Map{},
 		pendingTXs:    make([]string, 0, 10000),
@@ -237,7 +238,7 @@ func (d *DB) SetStatus(ctx context.Context, txID string, status driver.TxStatus,
 	}
 
 	// notify the listeners
-	d.Notify(db.StatusEvent{
+	d.Notify(common.StatusEvent{
 		Ctx:            ctx,
 		TxID:           txID,
 		ValidationCode: status,

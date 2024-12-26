@@ -60,6 +60,10 @@ func (a *TxOwner) GetTokenRequest(txID string) ([]byte, error) {
 	return a.owner.GetTokenRequest(txID)
 }
 
+func (a *TxOwner) Check(context context.Context) ([]string, error) {
+	return a.owner.Check(context)
+}
+
 func (a *TxOwner) appendTransactionEndorseAck(tx *Transaction, id view.Identity, sigma []byte) error {
 	return a.owner.AppendTransactionEndorseAck(tx.ID(), id, sigma)
 }

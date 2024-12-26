@@ -182,7 +182,7 @@ func (v *TokenVault) PruneInvalidUnspentTokens(context view.Context) ([]*token2.
 		}
 		buffer = append(buffer, tok)
 		if len(buffer) > bufferSize {
-			newDeleted, err := v.deleteTokens(context, tms, buffer)
+			newDeleted, err := v.deleteTokens(context.Context(), tms, buffer)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
 			}
@@ -190,7 +190,7 @@ func (v *TokenVault) PruneInvalidUnspentTokens(context view.Context) ([]*token2.
 			buffer = nil
 		}
 	}
-	newDeleted, err := v.deleteTokens(context, tms, buffer)
+	newDeleted, err := v.deleteTokens(context.Context(), tms, buffer)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
 	}
@@ -203,7 +203,7 @@ func (v *TokenVault) DeleteTokens(ids ...*token2.ID) error {
 	return v.v.DeleteTokens(ids...)
 }
 
-func (v *TokenVault) deleteTokens(context view.Context, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
+func (v *TokenVault) deleteTokens(context context.Context, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
 	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
 	if len(tokens) == 0 {
 		return nil, nil
@@ -279,15 +279,6 @@ func (n *Network) Channel() string {
 	return n.n.Channel()
 }
 
-// Vault returns the vault for the given namespace
-func (n *Network) Vault(namespace string) (*Vault, error) {
-	v, err := n.n.Vault(namespace)
-	if err != nil {
-		return nil, err
-	}
-	return &Vault{v: v}, nil
-}
-
 // TokenVault returns the token vault for the given namespace
 func (n *Network) TokenVault(namespace string) (*TokenVault, error) {
 	v, err := n.n.TokenVault(namespace)
@@ -347,12 +338,12 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 }
 
 // QueryTokens returns the tokens corresponding to the given token ids int the given namespace
-func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
+func (n *Network) QueryTokens(context context.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
 	return n.n.QueryTokens(context, namespace, IDs)
 }
 
 // AreTokensSpent retrieves the spent flag for the passed ids
-func (n *Network) AreTokensSpent(context view.Context, namespace string, tokenIDs []*token2.ID, meta []string) ([]bool, error) {
+func (n *Network) AreTokensSpent(context context.Context, namespace string, tokenIDs []*token2.ID, meta []string) ([]bool, error) {
 	return n.n.AreTokensSpent(context, namespace, tokenIDs, meta)
 }
 

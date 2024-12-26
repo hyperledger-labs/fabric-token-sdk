@@ -58,24 +58,6 @@ func (n *lm) AnonymousIdentity() (view.Identity, error) {
 	return n.lm.AnonymousIdentity()
 }
 
-type nv struct {
-	v  *fabric.Vault
-	ns string
-}
-
-func (v *nv) Status(id string) (driver.ValidationCode, string, error) {
-	vc, message, err := v.v.Status(id)
-	return vc, message, err
-}
-
-func (v *nv) GetLastTxID() (string, error) {
-	return v.v.GetLastTxID()
-}
-
-func (v *nv) DiscardTx(id string, message string) error {
-	return v.v.DiscardTx(id, message)
-}
-
 type tokenVault struct {
 	tokenVault driver.TokenVault
 }
@@ -133,7 +115,6 @@ type Network struct {
 	tokensProvider *tokens2.Manager
 	finalityTracer trace.Tracer
 
-	vaultLazyCache             lazy.Provider[string, driver.Vault]
 	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
 	flm                        FinalityListenerManager
 	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
@@ -175,7 +156,6 @@ func NewNetwork(
 		configuration:              configuration,
 		filterProvider:             filterProvider,
 		tokensProvider:             tokensProvider,
-		vaultLazyCache:             lazy.NewProvider(loader.loadVault),
 		tokenVaultLazyCache:        lazy.NewProvider(loader.loadTokenVault),
 		flm:                        flm,
 		defaultPublicParamsFetcher: defaultPublicParamsFetcher,
@@ -267,17 +247,6 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 	return nil, nil
 }
 
-func (n *Network) Vault(namespace string) (driver.Vault, error) {
-	if len(namespace) == 0 {
-		tms, err := n.tmsProvider.GetManagementService(token2.WithNetwork(n.n.Name()), token2.WithChannel(n.ch.Name()))
-		if tms == nil || err != nil {
-			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s:%s]: %v", n.n.Name(), n.ch.Name(), err)
-		}
-		namespace = tms.Namespace()
-	}
-	return n.vaultLazyCache.Get(namespace)
-}
-
 func (n *Network) TokenVault(namespace string) (driver.TokenVault, error) {
 	if len(namespace) == 0 {
 		tms, err := n.tmsProvider.GetManagementService(token2.WithNetwork(n.n.Name()), token2.WithChannel(n.ch.Name()))
@@ -289,28 +258,12 @@ func (n *Network) TokenVault(namespace string) (driver.TokenVault, error) {
 	return n.tokenVaultLazyCache.Get(namespace)
 }
 
-func (n *Network) Broadcast(context context.Context, blob interface{}) error {
-	return n.n.Ordering().Broadcast(context, blob)
+func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
+	return n.n.Ordering().Broadcast(ctx, blob)
 }
 
 func (n *Network) NewEnvelope() driver.Envelope {
 	return n.n.TransactionManager().NewEnvelope()
-}
-
-func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
-	return n.ch.Vault().StoreTransient(id, transient)
-}
-
-func (n *Network) TransientExists(id string) bool {
-	return n.ch.MetadataService().Exists(id)
-}
-
-func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
-	tm, err := n.ch.MetadataService().LoadTransient(id)
-	if err != nil {
-		return nil, err
-	}
-	return tm, nil
 }
 
 func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
@@ -337,12 +290,12 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return n.defaultPublicParamsFetcher.Fetch(n.Name(), n.Channel(), namespace)
 }
 
-func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
-	return n.tokenQueryExecutor.QueryTokens(context, namespace, IDs)
+func (n *Network) QueryTokens(ctx context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
+	return n.tokenQueryExecutor.QueryTokens(ctx, namespace, IDs)
 }
 
-func (n *Network) AreTokensSpent(c view.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
-	return n.spentTokenQueryExecutor.QuerySpentTokens(c, namespace, tokenIDs, meta)
+func (n *Network) AreTokensSpent(ctx context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
+	return n.spentTokenQueryExecutor.QuerySpentTokens(ctx, namespace, tokenIDs, meta)
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {
@@ -502,10 +455,6 @@ type loader struct {
 	name     string
 	channel  string
 	vault    *fabric.Vault
-}
-
-func (l *loader) loadVault(namespace string) (driver.Vault, error) {
-	return &nv{v: l.vault, ns: namespace}, nil
 }
 
 func (l *loader) loadTokenVault(namespace string) (driver.TokenVault, error) {

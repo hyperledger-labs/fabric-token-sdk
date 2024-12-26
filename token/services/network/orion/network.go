@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -44,7 +44,6 @@ type Network struct {
 	tokenQueryExecutor      driver.TokenQueryExecutor
 	spentTokenQueryExecutor driver.SpentTokenQueryExecutor
 
-	vaultLazyCache      lazy.Provider[string, driver.Vault]
 	tokenVaultLazyCache lazy.Provider[string, driver.TokenVault]
 	dbManager           *DBManager
 	flm                 FinalityListenerManager
@@ -79,7 +78,6 @@ func NewNetwork(
 		n:                   n,
 		viewManager:         viewManager,
 		tmsProvider:         tmsProvider,
-		vaultLazyCache:      lazy.NewProvider(loader.loadVault),
 		tokenVaultLazyCache: lazy.NewProvider(loader.loadTokenVault),
 		ledger:              &ledger{network: n.Name(), viewManager: viewManager, dbManager: dbManager},
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
@@ -142,18 +140,6 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 		return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
 	}
 	return nil, nil
-}
-
-func (n *Network) Vault(namespace string) (driver.Vault, error) {
-	if len(namespace) == 0 {
-		tms, err := n.tmsProvider.GetManagementService(token2.WithNetwork(n.n.Name()))
-		if tms == nil || err != nil {
-			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s]: %v", n.n.Name(), err)
-		}
-		namespace = tms.Namespace()
-	}
-
-	return n.vaultLazyCache.Get(namespace)
 }
 
 func (n *Network) TokenVault(namespace string) (driver.TokenVault, error) {
@@ -231,11 +217,11 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return pp.([]byte), nil
 }
 
-func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
+func (n *Network) QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
 	return n.tokenQueryExecutor.QueryTokens(context, namespace, IDs)
 }
 
-func (n *Network) AreTokensSpent(context view.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
+func (n *Network) AreTokensSpent(context context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
 	return n.spentTokenQueryExecutor.QuerySpentTokens(context, namespace, tokenIDs, meta)
 }
 
@@ -283,22 +269,6 @@ func (n *Network) ProcessNamespace(namespace string) error {
 	return nil
 }
 
-type nv struct {
-	v orion.Vault
-}
-
-func (v *nv) GetLastTxID() (string, error) {
-	return v.v.GetLastTxID()
-}
-
-func (v *nv) Status(id string) (driver.ValidationCode, string, error) {
-	return v.v.Status(id)
-}
-
-func (v *nv) DiscardTx(id string, message string) error {
-	return v.v.DiscardTx(id, message)
-}
-
 type tokenVault struct {
 	tokenVault driver.TokenVault
 }
@@ -334,7 +304,7 @@ type FinalityListener struct {
 	network     string
 	namespace   string
 	tracer      trace.Tracer
-	retryRunner db.RetryRunner
+	retryRunner common.RetryRunner
 	viewManager *view2.Manager
 	dbManager   *DBManager
 }
@@ -388,10 +358,6 @@ type loader struct {
 	name     string
 	channel  string
 	vault    orion.Vault
-}
-
-func (l *loader) loadVault(namespace string) (driver.Vault, error) {
-	return &nv{v: l.vault}, nil
 }
 
 func (l *loader) loadTokenVault(namespace string) (driver.TokenVault, error) {
