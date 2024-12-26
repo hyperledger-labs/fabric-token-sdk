@@ -110,6 +110,10 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 		common.NewTMSAuthorization(logger, publicParamsManager.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
 	)
+	tokensService, err := fabtoken.NewTokensService(publicParamsManager.PublicParams())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", networkID, namespace)
+	}
 	service, err := fabtoken.NewService(
 		logger,
 		ws,
@@ -130,7 +134,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 			fabtoken.NewAuditorService(),
 			observables.NewAudit(tracerProvider),
 		),
-		fabtoken.NewTokensService(),
+		tokensService,
 		authorization,
 	)
 	if err != nil {

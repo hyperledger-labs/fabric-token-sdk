@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	mathlib "github.com/IBM/mathlib"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -32,7 +33,7 @@ type RangeProofParams struct {
 	NumberOfRounds  uint64
 }
 
-func (rpp *RangeProofParams) Validate() error {
+func (rpp *RangeProofParams) Validate(curveID mathlib.CurveID) error {
 	if rpp.BitLength == 0 {
 		return errors.New("invalid range proof parameters: bit length is zero")
 	}
@@ -48,23 +49,17 @@ func (rpp *RangeProofParams) Validate() error {
 	if len(rpp.LeftGenerators) != len(rpp.RightGenerators) {
 		return errors.Errorf("invalid range proof parameters: the size of the left generators does not match the size of the right generators [%d vs, %d]", len(rpp.LeftGenerators), len(rpp.RightGenerators))
 	}
-	if uint64(len(rpp.LeftGenerators)) != rpp.BitLength {
-		return errors.Errorf("invalid range proof parameters: the size of the generators does not match the provided bit length [%d vs %d]", len(rpp.LeftGenerators), rpp.BitLength)
+	if err := math2.CheckElement(rpp.Q, curveID); err != nil {
+		return errors.Wrapf(err, "invalid range proof parameters: generator Q is invalid")
 	}
-	if rpp.Q == nil {
-		return errors.New("invalid range proof parameters: generator Q is nil")
+	if err := math2.CheckElement(rpp.P, curveID); err != nil {
+		return errors.Wrapf(err, "invalid range proof parameters: generator P is invalid")
 	}
-	if rpp.P == nil {
-		return errors.New("invalid range proof parameters: generator P is nil")
+	if err := math2.CheckElements(rpp.LeftGenerators, curveID, rpp.BitLength); err != nil {
+		return errors.Wrap(err, "invalid range proof parameters, left generators is invalid")
 	}
-
-	for i := 0; i < len(rpp.LeftGenerators); i++ {
-		if rpp.LeftGenerators[i] == nil {
-			return errors.Errorf("invalid range proof parameters: left generator at index %d is nil", i)
-		}
-		if rpp.RightGenerators[i] == nil {
-			return errors.Errorf("invalid range proof parameters: right generator at index %d is nil", i)
-		}
+	if err := math2.CheckElements(rpp.RightGenerators, curveID, rpp.BitLength); err != nil {
+		return errors.Wrap(err, "invalid range proof parameters, right generators is invalid")
 	}
 
 	return nil
@@ -271,18 +266,13 @@ func (pp *PublicParams) Validate() error {
 	if int(pp.IdemixCurveID) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid idemix curveID [%d > %d]", int(pp.Curve), len(mathlib.Curves)-1)
 	}
-	if len(pp.PedersenGenerators) != 3 {
-		return errors.Errorf("invalid public parameters: length mismatch in Pedersen parameters [%d vs. 3]", len(pp.PedersenGenerators))
-	}
-	for i := 0; i < len(pp.PedersenGenerators); i++ {
-		if pp.PedersenGenerators[i] == nil {
-			return errors.Errorf("invalid public parameters: nil Pedersen parameter at index %d", i)
-		}
+	if err := math2.CheckElements(pp.PedersenGenerators, pp.Curve, 3); err != nil {
+		return errors.Wrapf(err, "invalid pedersen generators")
 	}
 	if pp.RangeProofParams == nil {
 		return errors.New("invalid public parameters: nil range proof parameters")
 	}
-	err := pp.RangeProofParams.Validate()
+	err := pp.RangeProofParams.Validate(pp.Curve)
 	if err != nil {
 		return errors.Wrap(err, "invalid public parameters")
 	}

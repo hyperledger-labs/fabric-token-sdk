@@ -121,12 +121,12 @@ var _ = Describe("Auditor", func() {
 
 func createTransfer(pp *crypto.PublicParams) (*transfer2.Action, driver.TransferMetadata, [][]*token.Token) {
 	id, auditInfo := getIdemixInfo("./testdata/idemix")
-	transfer, inf, inputs := prepareTransfer(pp, id)
+	transfer, meta, inputs := prepareTransfer(pp, id)
 
-	marshalledInfo := make([][]byte, len(inf))
+	marshalledMeta := make([][]byte, len(meta))
 	var err error
-	for i := 0; i < len(inf); i++ {
-		marshalledInfo[i], err = json.Marshal(inf[i])
+	for i := 0; i < len(meta); i++ {
+		marshalledMeta[i], err = meta[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 	}
 	metadata := driver.TransferMetadata{}
@@ -136,7 +136,7 @@ func createTransfer(pp *crypto.PublicParams) (*transfer2.Action, driver.Transfer
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	metadata.OutputsMetadata = marshalledInfo
+	metadata.OutputsMetadata = marshalledMeta
 	metadata.Outputs = make([][]byte, len(transfer.OutputTokens))
 	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
 	metadata.OutputAuditInfos = make([][]byte, len(transfer.OutputTokens))
