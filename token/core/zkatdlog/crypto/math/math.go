@@ -18,8 +18,8 @@ type Element interface {
 	CurveID() math.CurveID
 }
 
-func CheckElements[E Element](elements []E, curveID math.CurveID, length int) error {
-	if len(elements) != length {
+func CheckElements[E Element](elements []E, curveID math.CurveID, length uint64) error {
+	if uint64(len(elements)) != length {
 		return errors.Errorf("length of elements does not match length of curveID")
 	}
 	for _, g1 := range elements {

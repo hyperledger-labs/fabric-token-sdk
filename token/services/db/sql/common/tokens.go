@@ -455,7 +455,7 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 
 	query, err := NewSelect("tx_id, idx, ledger, ledger_type, ledger_metadata  ").From(db.table.Tokens).Where(where).Compile()
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to compile query")
+		return nil, nil, nil, errors.Wrapf(err, "failed to compile query")
 	}
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
