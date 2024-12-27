@@ -5,9 +5,20 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type IssueAction struct {
+	GetInputsStub        func() []*token.ID
+	getInputsMutex       sync.RWMutex
+	getInputsArgsForCall []struct {
+	}
+	getInputsReturns struct {
+		result1 []*token.ID
+	}
+	getInputsReturnsOnCall map[int]struct {
+		result1 []*token.ID
+	}
 	GetIssuerStub        func() []byte
 	getIssuerMutex       sync.RWMutex
 	getIssuerArgsForCall []struct {
@@ -37,6 +48,28 @@ type IssueAction struct {
 	}
 	getOutputsReturnsOnCall map[int]struct {
 		result1 []driver.Output
+	}
+	GetSerialNumbersStub        func() []string
+	getSerialNumbersMutex       sync.RWMutex
+	getSerialNumbersArgsForCall []struct {
+	}
+	getSerialNumbersReturns struct {
+		result1 []string
+	}
+	getSerialNumbersReturnsOnCall map[int]struct {
+		result1 []string
+	}
+	GetSerializedInputsStub        func() ([][]byte, error)
+	getSerializedInputsMutex       sync.RWMutex
+	getSerializedInputsArgsForCall []struct {
+	}
+	getSerializedInputsReturns struct {
+		result1 [][]byte
+		result2 error
+	}
+	getSerializedInputsReturnsOnCall map[int]struct {
+		result1 [][]byte
+		result2 error
 	}
 	GetSerializedOutputsStub        func() ([][]byte, error)
 	getSerializedOutputsMutex       sync.RWMutex
@@ -94,6 +127,59 @@ type IssueAction struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *IssueAction) GetInputs() []*token.ID {
+	fake.getInputsMutex.Lock()
+	ret, specificReturn := fake.getInputsReturnsOnCall[len(fake.getInputsArgsForCall)]
+	fake.getInputsArgsForCall = append(fake.getInputsArgsForCall, struct {
+	}{})
+	stub := fake.GetInputsStub
+	fakeReturns := fake.getInputsReturns
+	fake.recordInvocation("GetInputs", []interface{}{})
+	fake.getInputsMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *IssueAction) GetInputsCallCount() int {
+	fake.getInputsMutex.RLock()
+	defer fake.getInputsMutex.RUnlock()
+	return len(fake.getInputsArgsForCall)
+}
+
+func (fake *IssueAction) GetInputsCalls(stub func() []*token.ID) {
+	fake.getInputsMutex.Lock()
+	defer fake.getInputsMutex.Unlock()
+	fake.GetInputsStub = stub
+}
+
+func (fake *IssueAction) GetInputsReturns(result1 []*token.ID) {
+	fake.getInputsMutex.Lock()
+	defer fake.getInputsMutex.Unlock()
+	fake.GetInputsStub = nil
+	fake.getInputsReturns = struct {
+		result1 []*token.ID
+	}{result1}
+}
+
+func (fake *IssueAction) GetInputsReturnsOnCall(i int, result1 []*token.ID) {
+	fake.getInputsMutex.Lock()
+	defer fake.getInputsMutex.Unlock()
+	fake.GetInputsStub = nil
+	if fake.getInputsReturnsOnCall == nil {
+		fake.getInputsReturnsOnCall = make(map[int]struct {
+			result1 []*token.ID
+		})
+	}
+	fake.getInputsReturnsOnCall[i] = struct {
+		result1 []*token.ID
+	}{result1}
 }
 
 func (fake *IssueAction) GetIssuer() []byte {
@@ -253,6 +339,115 @@ func (fake *IssueAction) GetOutputsReturnsOnCall(i int, result1 []driver.Output)
 	fake.getOutputsReturnsOnCall[i] = struct {
 		result1 []driver.Output
 	}{result1}
+}
+
+func (fake *IssueAction) GetSerialNumbers() []string {
+	fake.getSerialNumbersMutex.Lock()
+	ret, specificReturn := fake.getSerialNumbersReturnsOnCall[len(fake.getSerialNumbersArgsForCall)]
+	fake.getSerialNumbersArgsForCall = append(fake.getSerialNumbersArgsForCall, struct {
+	}{})
+	stub := fake.GetSerialNumbersStub
+	fakeReturns := fake.getSerialNumbersReturns
+	fake.recordInvocation("GetSerialNumbers", []interface{}{})
+	fake.getSerialNumbersMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *IssueAction) GetSerialNumbersCallCount() int {
+	fake.getSerialNumbersMutex.RLock()
+	defer fake.getSerialNumbersMutex.RUnlock()
+	return len(fake.getSerialNumbersArgsForCall)
+}
+
+func (fake *IssueAction) GetSerialNumbersCalls(stub func() []string) {
+	fake.getSerialNumbersMutex.Lock()
+	defer fake.getSerialNumbersMutex.Unlock()
+	fake.GetSerialNumbersStub = stub
+}
+
+func (fake *IssueAction) GetSerialNumbersReturns(result1 []string) {
+	fake.getSerialNumbersMutex.Lock()
+	defer fake.getSerialNumbersMutex.Unlock()
+	fake.GetSerialNumbersStub = nil
+	fake.getSerialNumbersReturns = struct {
+		result1 []string
+	}{result1}
+}
+
+func (fake *IssueAction) GetSerialNumbersReturnsOnCall(i int, result1 []string) {
+	fake.getSerialNumbersMutex.Lock()
+	defer fake.getSerialNumbersMutex.Unlock()
+	fake.GetSerialNumbersStub = nil
+	if fake.getSerialNumbersReturnsOnCall == nil {
+		fake.getSerialNumbersReturnsOnCall = make(map[int]struct {
+			result1 []string
+		})
+	}
+	fake.getSerialNumbersReturnsOnCall[i] = struct {
+		result1 []string
+	}{result1}
+}
+
+func (fake *IssueAction) GetSerializedInputs() ([][]byte, error) {
+	fake.getSerializedInputsMutex.Lock()
+	ret, specificReturn := fake.getSerializedInputsReturnsOnCall[len(fake.getSerializedInputsArgsForCall)]
+	fake.getSerializedInputsArgsForCall = append(fake.getSerializedInputsArgsForCall, struct {
+	}{})
+	stub := fake.GetSerializedInputsStub
+	fakeReturns := fake.getSerializedInputsReturns
+	fake.recordInvocation("GetSerializedInputs", []interface{}{})
+	fake.getSerializedInputsMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *IssueAction) GetSerializedInputsCallCount() int {
+	fake.getSerializedInputsMutex.RLock()
+	defer fake.getSerializedInputsMutex.RUnlock()
+	return len(fake.getSerializedInputsArgsForCall)
+}
+
+func (fake *IssueAction) GetSerializedInputsCalls(stub func() ([][]byte, error)) {
+	fake.getSerializedInputsMutex.Lock()
+	defer fake.getSerializedInputsMutex.Unlock()
+	fake.GetSerializedInputsStub = stub
+}
+
+func (fake *IssueAction) GetSerializedInputsReturns(result1 [][]byte, result2 error) {
+	fake.getSerializedInputsMutex.Lock()
+	defer fake.getSerializedInputsMutex.Unlock()
+	fake.GetSerializedInputsStub = nil
+	fake.getSerializedInputsReturns = struct {
+		result1 [][]byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *IssueAction) GetSerializedInputsReturnsOnCall(i int, result1 [][]byte, result2 error) {
+	fake.getSerializedInputsMutex.Lock()
+	defer fake.getSerializedInputsMutex.Unlock()
+	fake.GetSerializedInputsStub = nil
+	if fake.getSerializedInputsReturnsOnCall == nil {
+		fake.getSerializedInputsReturnsOnCall = make(map[int]struct {
+			result1 [][]byte
+			result2 error
+		})
+	}
+	fake.getSerializedInputsReturnsOnCall[i] = struct {
+		result1 [][]byte
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *IssueAction) GetSerializedOutputs() ([][]byte, error) {
@@ -529,12 +724,18 @@ func (fake *IssueAction) SerializeReturnsOnCall(i int, result1 []byte, result2 e
 func (fake *IssueAction) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.getInputsMutex.RLock()
+	defer fake.getInputsMutex.RUnlock()
 	fake.getIssuerMutex.RLock()
 	defer fake.getIssuerMutex.RUnlock()
 	fake.getMetadataMutex.RLock()
 	defer fake.getMetadataMutex.RUnlock()
 	fake.getOutputsMutex.RLock()
 	defer fake.getOutputsMutex.RUnlock()
+	fake.getSerialNumbersMutex.RLock()
+	defer fake.getSerialNumbersMutex.RUnlock()
+	fake.getSerializedInputsMutex.RLock()
+	defer fake.getSerializedInputsMutex.RUnlock()
 	fake.getSerializedOutputsMutex.RLock()
 	defer fake.getSerializedOutputsMutex.RUnlock()
 	fake.isAnonymousMutex.RLock()
