@@ -343,7 +343,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 	}
 	outputs := make([][]*AuditableToken, len(issues))
 	for k, md := range metadata {
-		ia := &issue.IssueAction{}
+		ia := &issue.Action{}
 		err := json.Unmarshal(issues[k], ia)
 		if err != nil {
 			return nil, err

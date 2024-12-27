@@ -78,6 +78,18 @@ type IssueAction struct {
 	Metadata map[string][]byte
 }
 
+func (i *IssueAction) GetInputs() []*token.ID {
+	return nil
+}
+
+func (i *IssueAction) GetSerializedInputs() ([][]byte, error) {
+	return nil, nil
+}
+
+func (i *IssueAction) GetSerialNumbers() []string {
+	return nil
+}
+
 // Serialize marshals IssueAction
 func (i *IssueAction) Serialize() ([]byte, error) {
 	return json.Marshal(i)

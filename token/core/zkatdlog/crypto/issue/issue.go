@@ -14,11 +14,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-// IssueAction specifies an issue of one or more tokens
-type IssueAction struct {
+// Action specifies an issue of one or more tokens
+type Action struct {
 	// Issuer is the identity of issuer
 	Issuer []byte
 	// OutputTokens are the newly issued tokens
@@ -29,33 +30,45 @@ type IssueAction struct {
 	Metadata map[string][]byte
 }
 
+func (i *Action) GetInputs() []*token2.ID {
+	return nil
+}
+
+func (i *Action) GetSerializedInputs() ([][]byte, error) {
+	return nil, nil
+}
+
+func (i *Action) GetSerialNumbers() []string {
+	return nil
+}
+
 // GetProof returns IssueAction ZKP
-func (i *IssueAction) GetProof() []byte {
+func (i *Action) GetProof() []byte {
 	return i.Proof
 }
 
 // GetMetadata returns IssueAction metadata if there is any.
-func (i *IssueAction) GetMetadata() map[string][]byte {
+func (i *Action) GetMetadata() map[string][]byte {
 	return i.Metadata
 }
 
 // IsAnonymous returns a Boolean. True if IssueAction is anonymous, and False otherwise.
-func (i *IssueAction) IsAnonymous() bool {
+func (i *Action) IsAnonymous() bool {
 	return false
 }
 
 // Serialize marshal IssueAction
-func (i *IssueAction) Serialize() ([]byte, error) {
+func (i *Action) Serialize() ([]byte, error) {
 	return json.Marshal(i)
 }
 
 // NumOutputs returns the number of outputs in IssueAction
-func (i *IssueAction) NumOutputs() int {
+func (i *Action) NumOutputs() int {
 	return len(i.OutputTokens)
 }
 
 // GetOutputs returns the OutputTokens in IssueAction
-func (i *IssueAction) GetOutputs() []driver.Output {
+func (i *Action) GetOutputs() []driver.Output {
 	res := make([]driver.Output, len(i.OutputTokens))
 	for i, token := range i.OutputTokens {
 		res[i] = token
@@ -64,7 +77,7 @@ func (i *IssueAction) GetOutputs() []driver.Output {
 }
 
 // GetSerializedOutputs returns the serialization of OutputTokens
-func (i *IssueAction) GetSerializedOutputs() ([][]byte, error) {
+func (i *Action) GetSerializedOutputs() ([][]byte, error) {
 	res := make([][]byte, len(i.OutputTokens))
 	for i, token := range i.OutputTokens {
 		if token == nil {
@@ -80,17 +93,17 @@ func (i *IssueAction) GetSerializedOutputs() ([][]byte, error) {
 }
 
 // GetIssuer returns the Issuer of IssueAction
-func (i *IssueAction) GetIssuer() []byte {
+func (i *Action) GetIssuer() []byte {
 	return i.Issuer
 }
 
 // Deserialize un-marshals IssueAction
-func (i *IssueAction) Deserialize(raw []byte) error {
+func (i *Action) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, i)
 }
 
 // GetCommitments return the Pedersen commitment of (type, value) in the OutputTokens
-func (i *IssueAction) GetCommitments() ([]*math.G1, error) {
+func (i *Action) GetCommitments() ([]*math.G1, error) {
 	com := make([]*math.G1, len(i.OutputTokens))
 	for j := 0; j < len(com); j++ {
 		if i.OutputTokens[j] == nil {
@@ -102,7 +115,7 @@ func (i *IssueAction) GetCommitments() ([]*math.G1, error) {
 }
 
 // IsGraphHiding returns false, indicating that fabtoken does not hide the transaction graph
-func (i *IssueAction) IsGraphHiding() bool {
+func (i *Action) IsGraphHiding() bool {
 	return false
 }
 
@@ -111,7 +124,7 @@ func (i *IssueAction) ExtraSigners() []driver.Identity {
 }
 
 // NewIssue instantiates an IssueAction given the passed arguments
-func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte) (*IssueAction, error) {
+func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
 	if len(owners) != len(coms) {
 		return nil, errors.New("number of owners does not match number of tokens")
 	}
@@ -121,7 +134,7 @@ func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte) (*I
 		outputs[i] = &token.Token{Owner: owners[i], Data: c}
 	}
 
-	return &IssueAction{
+	return &Action{
 		Issuer:       issuer,
 		OutputTokens: outputs,
 		Proof:        proof,
