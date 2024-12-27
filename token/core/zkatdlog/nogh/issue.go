@@ -110,7 +110,7 @@ func (s *IssueService) VerifyIssue(ia driver.IssueAction, outputsMetadata [][]by
 	if ia == nil {
 		return errors.New("failed to verify issue: nil issue action")
 	}
-	action, ok := ia.(*issue.IssueAction)
+	action, ok := ia.(*issue.Action)
 	if !ok {
 		return errors.New("failed to verify issue: expected *zkatdlog.IssueAction")
 	}
@@ -127,7 +127,7 @@ func (s *IssueService) VerifyIssue(ia driver.IssueAction, outputsMetadata [][]by
 
 // DeserializeIssueAction un-marshals raw bytes into a zkatdlog IssueAction
 func (s *IssueService) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
-	issue := &issue.IssueAction{}
+	issue := &issue.Action{}
 	err := issue.Deserialize(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize issue action")

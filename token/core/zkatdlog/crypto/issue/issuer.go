@@ -36,7 +36,7 @@ func (i *Issuer) New(ttype token2.Type, signer common.SigningIdentity, pp *crypt
 	i.PublicParams = pp
 }
 
-func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*IssueAction, []*token.Metadata, error) {
+func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*Action, []*token.Metadata, error) {
 	if i.PublicParams == nil {
 		return nil, nil, errors.New("failed to generate ZK Issue: nil public parameters")
 	}
