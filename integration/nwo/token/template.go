@@ -12,4 +12,11 @@ token:
   enabled: true
   selector:
     driver: {{ TokenSelector }}
+  finality:
+    type: delivery
+    delivery:
+      mapperParallelism: 10
+      lruSize: 100
+      lruBuffer: 50
+      listenerTimeout: 30s
 `
