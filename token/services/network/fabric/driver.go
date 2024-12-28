@@ -22,16 +22,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
-
-type FinalityListenerManagerProvider interface {
-	NewManager(network, channel string) (FinalityListenerManager, error)
-}
-
-type FinalityListenerManager = driver.FinalityListenerManager
 
 type Driver struct {
 	fnsProvider                     *fabric.NetworkServiceProvider
@@ -49,7 +44,7 @@ type Driver struct {
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider
 	supportedDrivers                []string
 	keyTranslator                   translator.KeyTranslator
-	flmProvider                     FinalityListenerManagerProvider
+	flmProvider                     finality.ListenerManagerProvider
 	EndorsementServiceProvider      EndorsementServiceProvider
 }
 
@@ -57,20 +52,21 @@ func NewGenericDriver(
 	fnsProvider *fabric.NetworkServiceProvider,
 	vaultProvider *vault2.Provider,
 	tokensManager *tokens.Manager,
-	configService *config.Service,
+	configProvider *config.Service,
 	viewManager *view.Manager,
 	viewRegistry driver2.Registry,
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
 	identityProvider driver2.IdentityProvider,
+	configService driver2.ConfigService,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
 	return NewDriver(
 		fnsProvider,
 		vaultProvider,
 		tokensManager,
-		configService,
+		configProvider,
 		viewManager,
 		viewRegistry,
 		filterProvider,
@@ -81,8 +77,8 @@ func NewGenericDriver(
 		NewTokenExecutorProvider(fnsProvider),
 		NewSpentTokenExecutorProvider(fnsProvider, keyTranslator),
 		keyTranslator,
-		NewDeliveryBasedFLMProvider(fnsProvider, tracerProvider, keyTranslator),
-		endorsement.NewServiceProvider(fnsProvider, configService, viewManager, viewRegistry, identityProvider, keyTranslator),
+		finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, finality.NewListenerManagerConfig(configService)),
+		endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator),
 		config2.GenericDriver,
 	)
 }
@@ -102,7 +98,7 @@ func NewDriver(
 	tokenQueryExecutorProvider driver.TokenQueryExecutorProvider,
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
 	keyTranslator translator.KeyTranslator,
-	flmProvider FinalityListenerManagerProvider,
+	flmProvider finality.ListenerManagerProvider,
 	endorsementServiceProvider EndorsementServiceProvider,
 	supportedDrivers ...string,
 ) *Driver {
