@@ -1,0 +1,140 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+package finality
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
+)
+
+type committerBasedFLMProvider struct {
+	fnsp              *fabric.NetworkServiceProvider
+	tracerProvider    trace.TracerProvider
+	keyTranslator     translator.KeyTranslator
+	maxRetries        int
+	retryWaitDuration time.Duration
+}
+
+func (p *committerBasedFLMProvider) NewManager(network, channel string) (ListenerManager, error) {
+	net, err := p.fnsp.FabricNetworkService(network)
+	if err != nil {
+		return nil, err
+	}
+	ch, err := net.Channel(channel)
+	if err != nil {
+		return nil, err
+	}
+	return &committerBasedFLM{
+		network:     network,
+		channel:     ch,
+		subscribers: events.NewSubscribers(),
+		tracer: p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{
+			Namespace: network,
+		})),
+		keyTranslator:     p.keyTranslator,
+		maxRetries:        p.maxRetries,
+		retryWaitDuration: p.retryWaitDuration,
+	}, nil
+}
+
+type committerBasedFLM struct {
+	network           string
+	channel           *fabric.Channel
+	tracer            trace.Tracer
+	subscribers       *events.Subscribers
+	keyTranslator     translator.KeyTranslator
+	maxRetries        int
+	retryWaitDuration time.Duration
+}
+
+func (m *committerBasedFLM) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
+	wrapper := &FinalityListener{
+		root:              listener,
+		flm:               m,
+		network:           m.network,
+		ch:                m.channel,
+		namespace:         namespace,
+		tracer:            m.tracer,
+		keyTranslator:     m.keyTranslator,
+		maxRetries:        m.maxRetries,
+		retryWaitDuration: m.retryWaitDuration,
+	}
+	m.subscribers.Set(txID, listener, wrapper)
+	return m.channel.Committer().AddFinalityListener(txID, wrapper)
+}
+
+func (m *committerBasedFLM) RemoveFinalityListener(txID string, listener driver.FinalityListener) error {
+	wrapper, ok := m.subscribers.Get(txID, listener)
+	if !ok {
+		return errors.Errorf("listener was not registered")
+	}
+	return m.channel.Committer().RemoveFinalityListener(txID, wrapper.(*FinalityListener))
+}
+
+type FinalityListener struct {
+	flm               driver.FinalityListenerManager
+	root              driver.FinalityListener
+	network           string
+	ch                *fabric.Channel
+	namespace         string
+	tracer            trace.Tracer
+	keyTranslator     translator.KeyTranslator
+	maxRetries        int
+	retryWaitDuration time.Duration
+}
+
+func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string) {
+	newCtx, span := t.tracer.Start(ctx, "on_status")
+	defer span.End()
+	defer func() {
+		if e := recover(); e != nil {
+			span.RecordError(fmt.Errorf("recovered from panic: %v", e))
+			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
+			if err := t.flm.AddFinalityListener(txID, t.namespace, t.root); err != nil {
+				panic(err)
+			}
+			logger.Debugf("added finality listener for tx [%s]...done", txID)
+		}
+	}()
+
+	key, err := t.keyTranslator.CreateTokenRequestKey(txID)
+	if err != nil {
+		panic(fmt.Sprintf("can't create for token request [%s]", txID))
+	}
+
+	v := t.ch.Vault()
+	qe, err := v.NewQueryExecutor()
+	if err != nil {
+		panic(fmt.Sprintf("can't get query executor [%s]", txID))
+	}
+
+	// Fetch the token request hash. Retry in case some other replica committed it shortly before
+	span.AddEvent("fetch_request_hash")
+	var tokenRequestHash []byte
+	var retries int
+	for tokenRequestHash, err = qe.GetState(t.namespace, key); err == nil && len(tokenRequestHash) == 0 && retries < t.maxRetries; tokenRequestHash, err = qe.GetState(t.namespace, key) {
+		span.AddEvent("retry_fetch_request_hash")
+		logger.Debugf("did not find token request [%s]. retrying...", txID)
+		retries++
+		time.Sleep(t.retryWaitDuration)
+	}
+	qe.Done()
+	if err != nil {
+		panic(fmt.Sprintf("can't get state [%s][%s]", txID, key))
+	}
+	span.AddEvent("call_root_listener")
+	t.root.OnStatus(newCtx, txID, status, message, tokenRequestHash)
+}
