@@ -225,6 +225,11 @@ func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ token2.Type, value u
 	return t.TokenRequest.Redeem(t.Context, wallet, typ, value, opts...)
 }
 
+func (t *Transaction) Convert(wallet *token.IssuerWallet, receiver view.Identity, tokens []token2.UnspendableTokenInWallet, opts ...token.IssueOption) error {
+	_, err := t.TokenRequest.Convert(t.Context, wallet, receiver, tokens, opts...)
+	return err
+}
+
 func (t *Transaction) Outputs() (*token.OutputStream, error) {
 	return t.TokenRequest.Outputs()
 }

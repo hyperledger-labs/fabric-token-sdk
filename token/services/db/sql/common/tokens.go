@@ -186,6 +186,28 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 	return &UnspentTokensInWalletIterator{txs: rows}, nil
 }
 
+// UnspendableTokensIteratorBy returns the minimum information for conversion about the tokens that cannot be spent
+func (db *TokenDB) UnspendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.UnspendableTokensIterator, error) {
+	span := trace.SpanFromContext(ctx)
+	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
+		WalletID:  walletID,
+		TokenType: typ,
+	}, ""))
+
+	query, err := NewSelect("tx_id, idx, token_type, quantity, owner_wallet_id").From(db.table.Tokens).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
+	logger.Debug(query, args)
+	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	rows, err := db.db.Query(query, args...)
+	span.AddEvent("end_query")
+	if err != nil {
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	return &UnspendableTokensInWalletIterator{txs: rows}, nil
+}
+
 // Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
 func (db *TokenDB) Balance(walletID string, typ token.Type) (uint64, error) {
 	return db.balance(driver.QueryTokenDetailsParams{
@@ -1240,4 +1262,26 @@ func tokenDBError(err error) error {
 		return driver.ErrTokenDoesNotExist
 	}
 	return err
+}
+
+type UnspendableTokensInWalletIterator struct {
+	txs *sql.Rows
+}
+
+func (u *UnspendableTokensInWalletIterator) Close() {
+	Close(u.txs)
+}
+
+func (u *UnspendableTokensInWalletIterator) Next() (*token.UnspendableTokenInWallet, error) {
+	if !u.txs.Next() {
+		return nil, nil
+	}
+
+	tok := &token.UnspendableTokenInWallet{
+		Id: token.ID{},
+	}
+	if err := u.txs.Scan(&tok.Id.TxId, &tok.Id.Index); err != nil {
+		return nil, err
+	}
+	return tok, nil
 }

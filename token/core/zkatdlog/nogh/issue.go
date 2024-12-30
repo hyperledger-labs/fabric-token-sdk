@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -24,6 +25,7 @@ type IssueService struct {
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
 	Metrics                 *Metrics
+	TokensService           *TokensService
 }
 
 func NewIssueService(
@@ -31,12 +33,14 @@ func NewIssueService(
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
 	metrics *Metrics,
+	tokensService *TokensService,
 ) *IssueService {
 	return &IssueService{
 		PublicParametersManager: publicParametersManager,
 		WalletService:           walletService,
 		Deserializer:            deserializer,
 		Metrics:                 metrics,
+		TokensService:           tokensService,
 	}
 }
 
@@ -92,6 +96,21 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owners[0], s.WalletService)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	// prepare inputs to redeem, if any
+	if opts != nil {
+		if len(opts.UnspendableTokens) != 0 {
+			// verify the tokens
+			s.TokensService.CheckUnspendableTokens(opts.UnspendableTokens)
+
+			action.Inputs = make([]*token2.ID, len(opts.UnspendableTokens))
+			action.InputTokens = make([][]byte, len(opts.UnspendableTokens))
+			for i, unspendableToken := range opts.UnspendableTokens {
+				action.Inputs[i] = &unspendableToken.Id
+				action.InputTokens[i] = unspendableToken.Token
+			}
+		}
 	}
 
 	meta := &driver.IssueMetadata{

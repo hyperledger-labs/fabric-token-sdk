@@ -22,6 +22,10 @@ import (
 type Action struct {
 	// Issuer is the identity of issuer
 	Issuer []byte
+	// Inputs specify the identifiers in of the tokens to redeem
+	Inputs []*token2.ID
+	// InputTokens are the tokens to redeem
+	InputTokens [][]byte
 	// OutputTokens are the newly issued tokens
 	OutputTokens []*token.Token `protobuf:"bytes,1,rep,name=outputs,proto3" json:"outputs,omitempty"`
 	// Proof carries the ZKP of IssueAction validity
@@ -31,11 +35,11 @@ type Action struct {
 }
 
 func (i *Action) GetInputs() []*token2.ID {
-	return nil
+	return i.Inputs
 }
 
 func (i *Action) GetSerializedInputs() ([][]byte, error) {
-	return nil, nil
+	return i.InputTokens, nil
 }
 
 func (i *Action) GetSerialNumbers() []string {
