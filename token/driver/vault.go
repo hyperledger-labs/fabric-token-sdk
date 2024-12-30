@@ -42,6 +42,11 @@ type SpendableTokensIterator interface {
 	Next() (*token.UnspentTokenInWallet, error)
 }
 
+type UnspendableTokensIterator interface {
+	Close()
+	Next() (*token.UnspendableTokenInWallet, error)
+}
+
 type Vault interface {
 	QueryEngine() QueryEngine
 	CertificationStorage() CertificationStorage

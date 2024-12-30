@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -222,6 +223,11 @@ func (t *Transaction) Transfer(wallet *token.OwnerWallet, typ string, values []u
 
 func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ string, value uint64, opts ...token.TransferOption) error {
 	return t.TokenRequest.Redeem(t.Context, wallet, typ, value, opts...)
+}
+
+func (t *Transaction) Convert(wallet *token.IssuerWallet, receiver view.Identity, tokens []token2.UnspendableTokenInWallet, opts ...token.IssueOption) error {
+	_, err := t.TokenRequest.Convert(t.Context, wallet, receiver, tokens, opts...)
+	return err
 }
 
 func (t *Transaction) Outputs() (*token.OutputStream, error) {
