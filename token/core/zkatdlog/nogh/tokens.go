@@ -146,3 +146,7 @@ func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
 	}
 	return token.Format(hasher.HexDigest()), nil
 }
+
+func (s *TokensService) CheckUnspendableTokens(tokens []token.UnspendableTokenInWallet) {
+
+}

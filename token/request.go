@@ -380,6 +380,47 @@ func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Typ
 	return nil
 }
 
+func (r *Request) Convert(ctx context.Context, wallet *IssuerWallet, receiver Identity, unspendableTokens []token.UnspendableTokenInWallet, opts ...IssueOption) (*IssueAction, error) {
+	if wallet == nil {
+		return nil, errors.Errorf("wallet is nil")
+	}
+	if len(unspendableTokens) == 0 {
+		return nil, errors.Errorf("unspendableTokens is empty")
+	}
+
+	opt, err := compileIssueOptions(opts...)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
+	}
+
+	// Compute Issue
+	action, meta, err := r.TokenService.tms.IssueService().Issue(
+		ctx,
+		nil,
+		"",
+		nil,
+		[][]byte{receiver},
+		&driver.IssueOptions{
+			Attributes:        opt.Attributes,
+			UnspendableTokens: unspendableTokens,
+			Wallet:            wallet.w,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Append
+	raw, err := action.Serialize()
+	if err != nil {
+		return nil, err
+	}
+	r.Actions.Issues = append(r.Actions.Issues, raw)
+	r.Metadata.Issues = append(r.Metadata.Issues, *meta)
+
+	return &IssueAction{a: action}, nil
+}
+
 // Outputs returns the sequence of outputs of the request supporting sequential and parallel aggregate operations.
 func (r *Request) Outputs() (*OutputStream, error) {
 	return r.outputs(false)

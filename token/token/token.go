@@ -103,6 +103,13 @@ type UnspentTokenInWallet struct {
 	Quantity string
 }
 
+type UnspendableTokenInWallet struct {
+	// Id is used to uniquely identify the token in the ledger
+	Id            ID
+	Token         []byte
+	TokenMetadata []byte
+}
+
 // UnspentToken models an unspent token
 type UnspentToken struct {
 	// Id is used to uniquely identify the token in the ledger

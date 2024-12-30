@@ -69,6 +69,13 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, err
 	}
 
+	// prepare inputs to redeem, if any
+	if opts != nil {
+		if len(opts.UnspendableTokens) != 0 {
+			return nil, nil, errors.Errorf("redeem during issue is not supported")
+		}
+	}
+
 	meta := &driver.IssueMetadata{
 		Issuer:              issuerIdentity,
 		OutputsMetadata:     outputsMetadata,

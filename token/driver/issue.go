@@ -15,7 +15,9 @@ import (
 // IssueOptions models the options that can be passed to the issue command
 type IssueOptions struct {
 	// Attributes is a container of generic options that might be driver specific
-	Attributes map[interface{}]interface{}
+	Attributes        map[interface{}]interface{}
+	UnspendableTokens []token.UnspendableTokenInWallet
+	Wallet            IssuerWallet
 }
 
 // IssueService models the token issue service

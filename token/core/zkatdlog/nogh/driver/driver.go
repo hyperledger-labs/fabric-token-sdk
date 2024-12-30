@@ -126,7 +126,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		deserializer,
 		tmsConfig,
 		observables.NewObservableIssueService(
-			zkatdlog.NewIssueService(ppm, ws, deserializer, driverMetrics),
+			zkatdlog.NewIssueService(ppm, ws, deserializer, driverMetrics, tokensService),
 			observables.NewIssue(tracerProvider),
 		),
 		observables.NewObservableTransferService(
