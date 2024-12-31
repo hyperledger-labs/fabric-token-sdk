@@ -29,6 +29,8 @@ type MetaData interface {
 
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 
+type UnspendableTokensIterator = driver.UnspendableTokensIterator
+
 // Transaction models a token transaction
 type Transaction interface {
 	ID() string
@@ -182,6 +184,10 @@ func (t *Tokens) StorePublicParams(raw []byte) error {
 // The deletion is attributed to the passed deletedBy argument.
 func (t *Tokens) DeleteToken(deletedBy string, ids ...*token2.ID) (err error) {
 	return t.Storage.tokenDB.DeleteTokens(deletedBy, ids...)
+}
+
+func (t *Tokens) UnspendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (driver.UnspendableTokensIterator, error) {
+	return t.Storage.tokenDB.UnspendableTokensIteratorBy(ctx, walletID, typ)
 }
 
 func (t *Tokens) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
