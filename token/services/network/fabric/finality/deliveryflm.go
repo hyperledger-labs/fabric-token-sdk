@@ -126,8 +126,10 @@ func (m *txInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.B
 }
 
 func (m *txInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]txInfo, error) {
+	logger.Infof("Map processed tx [%s] with results", tx.TxID(), len(tx.Results()))
 	status, message := committer.MapValidationCode(tx.ValidationCode())
 	rwSet, err := vault.NewPopulator().Populate(tx.Results())
+	logger.Infof("RWSet for [%s]: %v", tx.TxID(), rwSet)
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +137,7 @@ func (m *txInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]txInfo
 	if err != nil {
 		return nil, err
 	}
+	logger.Infof("Return infos: [%v]", infos)
 	return collections.Values(infos), nil
 }
 
