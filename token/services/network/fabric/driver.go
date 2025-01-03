@@ -8,6 +8,7 @@ package fabric
 
 import (
 	"slices"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	config2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/config"
@@ -35,9 +36,9 @@ var listenerManagerConfig = finality.ListenerManagerConfig{
 	//CommitterRetryWaitDuration: 5 * time.Second,
 
 	DeliveryMapperParallelism: 10,
-	//DeliveryListenerTimeout:   10 * time.Second,
-	//DeliveryLRUSize:           100,
-	//DeliveryLRUBuffer:         50,
+	DeliveryListenerTimeout:   10 * time.Second,
+	DeliveryLRUSize:           100,
+	DeliveryLRUBuffer:         50,
 }
 
 type Driver struct {
