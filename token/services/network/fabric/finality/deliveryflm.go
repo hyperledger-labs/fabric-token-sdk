@@ -126,8 +126,11 @@ func (m *txInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.B
 }
 
 func (m *txInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]txInfo, error) {
-	logger.Infof("Map processed tx [%s] with results", tx.TxID(), len(tx.Results()))
+	logger.Infof("Map processed tx [%s] with results of status [%v] and length [%d]", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
 	status, message := committer.MapValidationCode(tx.ValidationCode())
+	if status == driver.Invalid {
+		return []txInfo{{txID: tx.TxID(), status: status, message: message}}, nil
+	}
 	rwSet, err := vault.NewPopulator().Populate(tx.Results())
 	logger.Infof("RWSet for [%s]: %v", tx.TxID(), rwSet)
 	if err != nil {
