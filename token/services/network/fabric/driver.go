@@ -36,7 +36,7 @@ var listenerManagerConfig = finality.ListenerManagerConfig{
 	//CommitterRetryWaitDuration: 5 * time.Second,
 
 	DeliveryMapperParallelism: 10,
-	DeliveryListenerTimeout:   10 * time.Second,
+	DeliveryListenerTimeout:   30 * time.Second,
 	DeliveryLRUSize:           100,
 	DeliveryLRUBuffer:         50,
 }

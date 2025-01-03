@@ -54,8 +54,8 @@ func NewListenerManagerProvider(fnsp *fabric.NetworkServiceProvider, tracerProvi
 			config: finality.DeliveryListenerManagerConfig{
 				MapperParallelism: config.DeliveryMapperParallelism,
 				ListenerTimeout:   config.DeliveryListenerTimeout,
-				//LRUSize:           config.DeliveryLRUSize,
-				//LRUBuffer:         config.DeliveryLRUBuffer,
+				LRUSize:           config.DeliveryLRUSize,
+				LRUBuffer:         config.DeliveryLRUBuffer,
 			},
 		}
 	case Committer:
