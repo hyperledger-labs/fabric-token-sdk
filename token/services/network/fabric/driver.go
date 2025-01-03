@@ -22,16 +22,23 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
 
-type FinalityListenerManagerProvider interface {
-	NewManager(network, channel string) (FinalityListenerManager, error)
-}
+var listenerManagerConfig = finality.ListenerManagerConfig{
+	Type: finality.Delivery,
 
-type FinalityListenerManager = driver.FinalityListenerManager
+	//CommitterMaxRetries:        3,
+	//CommitterRetryWaitDuration: 5 * time.Second,
+
+	DeliveryMapperParallelism: 10,
+	//DeliveryListenerTimeout:   30 * time.Second,
+	DeliveryLRUSize:   100,
+	DeliveryLRUBuffer: 50,
+}
 
 type Driver struct {
 	fnsProvider                     *fabric.NetworkServiceProvider
@@ -49,7 +56,7 @@ type Driver struct {
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider
 	supportedDrivers                []string
 	keyTranslator                   translator.KeyTranslator
-	flmProvider                     FinalityListenerManagerProvider
+	flmProvider                     finality.ListenerManagerProvider
 	EndorsementServiceProvider      EndorsementServiceProvider
 }
 
@@ -81,7 +88,7 @@ func NewGenericDriver(
 		NewTokenExecutorProvider(fnsProvider),
 		NewSpentTokenExecutorProvider(fnsProvider, keyTranslator),
 		keyTranslator,
-		NewDeliveryBasedFLMProvider(fnsProvider, tracerProvider, keyTranslator),
+		finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, listenerManagerConfig),
 		endorsement.NewServiceProvider(fnsProvider, configService, viewManager, viewRegistry, identityProvider, keyTranslator),
 		config2.GenericDriver,
 	)
@@ -102,7 +109,7 @@ func NewDriver(
 	tokenQueryExecutorProvider driver.TokenQueryExecutorProvider,
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
 	keyTranslator translator.KeyTranslator,
-	flmProvider FinalityListenerManagerProvider,
+	flmProvider finality.ListenerManagerProvider,
 	endorsementServiceProvider EndorsementServiceProvider,
 	supportedDrivers ...string,
 ) *Driver {

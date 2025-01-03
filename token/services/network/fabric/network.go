@@ -9,7 +9,6 @@ package fabric
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"strings"
 	"time"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -38,8 +38,6 @@ const (
 	QueryPublicParamsFunction = "queryPublicParams"
 	QueryTokensFunctions      = "queryTokens"
 	AreTokensSpent            = "areTokensSpent"
-	maxRetries                = 3
-	retryWaitDuration         = 1 * time.Second
 )
 
 var logger = logging.MustGetLogger("token-sdk.network.fabric")
@@ -116,7 +114,7 @@ type Network struct {
 	finalityTracer trace.Tracer
 
 	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
-	flm                        FinalityListenerManager
+	flm                        finality.ListenerManager
 	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
 	tokenQueryExecutor         driver.TokenQueryExecutor
 	spentTokenQueryExecutor    driver.SpentTokenQueryExecutor
@@ -139,7 +137,7 @@ func NewNetwork(
 	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher,
 	spentTokenQueryExecutor driver.SpentTokenQueryExecutor,
 	keyTranslator translator.KeyTranslator,
-	flm FinalityListenerManager,
+	flm finality.ListenerManager,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -395,59 +393,6 @@ func (n *Network) ProcessNamespace(namespace string) error {
 		return errors.WithMessagef(err, "failed to register processing of namespace [%s]", namespace)
 	}
 	return nil
-}
-
-type FinalityListener struct {
-	flm           driver.FinalityListenerManager
-	root          driver.FinalityListener
-	network       string
-	ch            *fabric.Channel
-	namespace     string
-	tracer        trace.Tracer
-	keyTranslator translator.KeyTranslator
-}
-
-func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string) {
-	newCtx, span := t.tracer.Start(ctx, "on_status")
-	defer span.End()
-	defer func() {
-		if e := recover(); e != nil {
-			span.RecordError(fmt.Errorf("recovered from panic: %v", e))
-			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
-			if err := t.flm.AddFinalityListener(txID, t.namespace, t.root); err != nil {
-				panic(err)
-			}
-			logger.Debugf("added finality listener for tx [%s]...done", txID)
-		}
-	}()
-
-	key, err := t.keyTranslator.CreateTokenRequestKey(txID)
-	if err != nil {
-		panic(fmt.Sprintf("can't create for token request [%s]", txID))
-	}
-
-	v := t.ch.Vault()
-	qe, err := v.NewQueryExecutor()
-	if err != nil {
-		panic(fmt.Sprintf("can't get query executor [%s]", txID))
-	}
-
-	// Fetch the token request hash. Retry in case some other replica committed it shortly before
-	span.AddEvent("fetch_request_hash")
-	var tokenRequestHash []byte
-	var retries int
-	for tokenRequestHash, err = qe.GetState(t.namespace, key); err == nil && len(tokenRequestHash) == 0 && retries < maxRetries; tokenRequestHash, err = qe.GetState(t.namespace, key) {
-		span.AddEvent("retry_fetch_request_hash")
-		logger.Debugf("did not find token request [%s]. retrying...", txID)
-		retries++
-		time.Sleep(retryWaitDuration)
-	}
-	qe.Done()
-	if err != nil {
-		panic(fmt.Sprintf("can't get state [%s][%s]", txID, key))
-	}
-	span.AddEvent("call_root_listener")
-	t.root.OnStatus(newCtx, txID, status, message, tokenRequestHash)
 }
 
 type loader struct {
