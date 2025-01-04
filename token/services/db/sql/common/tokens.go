@@ -168,7 +168,7 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		WalletID:         walletID,
 		TokenType:        typ,
-		OnlySpendable:    true,
+		Spendable:        driver.SpendableOnly,
 		LedgerTokenTypes: db.getSupportedTokenTypes(),
 	}, ""))
 
