@@ -25,7 +25,7 @@ func (id ID) String() string {
 	return fmt.Sprintf("[%s:%d]", id.TxId, id.Index)
 }
 
-type TokenType = string
+type TokenType string
 
 // Token is the result of issue and transfer transactions
 type Token struct {

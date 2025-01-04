@@ -21,6 +21,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const (
+	USD = token2.TokenType("USD")
+)
+
 func TestAll(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
 	cashIssuer := sel.Get("cash_issuer")
 	buyer := sel.Get("buyer")
@@ -33,16 +37,16 @@ func TestAll(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
 	// Ready to go
 	registerAuditor(network)
 	issueCash(network, cashIssuer, buyer)
-	checkBalance(network, buyer, "", "USD", 10)
-	checkBalance(network, seller, "", "USD", 0)
+	checkBalance(network, buyer, "", USD, 10)
+	checkBalance(network, seller, "", USD, 0)
 	houseID := issueHouse(network, 4, houseIssuer, seller)
 	queryHouse(network, seller, houseID, "5th Avenue")
 	queryHouse(network, buyer, houseID, "5th Avenue", "failed loading house with id")
 	sellHouse(network, houseID, seller, buyer)
 	queryHouse(network, buyer, houseID, "5th Avenue")
 	queryHouse(network, seller, houseID, "5th Avenue", "failed loading house with id")
-	checkBalance(network, buyer, "", "USD", 6)
-	checkBalance(network, seller, "", "USD", 4)
+	checkBalance(network, buyer, "", USD, 6)
+	checkBalance(network, seller, "", USD, 4)
 }
 
 func registerAuditor(network *integration.Infrastructure) {
@@ -53,7 +57,7 @@ func registerAuditor(network *integration.Infrastructure) {
 func issueCash(network *integration.Infrastructure, issuer *token3.NodeReference, buyer *token3.NodeReference) {
 	_, err := network.Client(issuer.ReplicaName()).CallView("issue_cash", common.JSONMarshall(cash.IssueCash{
 		IssuerWallet: "",
-		TokenType:    "USD",
+		TokenType:    USD,
 		Quantity:     10,
 		Recipient:    buyer.Id(),
 	}))
