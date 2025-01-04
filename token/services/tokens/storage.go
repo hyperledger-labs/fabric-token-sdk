@@ -207,7 +207,7 @@ func (t *transaction) SetSpendableFlag(value bool, ids []*token2.ID) error {
 	return nil
 }
 
-func (t *transaction) SetSpendableBySupportedTokenTypes(supportedTokens []string) error {
+func (t *transaction) SetSpendableBySupportedTokenTypes(supportedTokens []token2.TokenType) error {
 	return t.tx.SetSpendableBySupportedTokenTypes(supportedTokens)
 }
 

@@ -17,7 +17,7 @@ import (
 type TokenInterpreter interface {
 	common.Interpreter
 	HasTokens(colTxID, colIdx common.FieldName, ids ...*token.ID) common.Condition
-	HasTokenTypes(colTokenType common.FieldName, tokenTypes ...string) common.Condition
+	HasTokenTypes(colTokenType common.FieldName, tokenTypes ...token.TokenType) common.Condition
 	HasTokenDetails(params driver.QueryTokenDetailsParams, tokenTable string) common.Condition
 	HasMovementsParams(params driver.QueryMovementsParams) common.Condition
 	HasValidationParams(params driver.QueryValidationRecordsParams) common.Condition
@@ -44,18 +44,22 @@ func (c *tokenInterpreter) HasTokens(colTxID, colIdx common.FieldName, ids ...*t
 	return c.InTuple([]common.FieldName{colTxID, colIdx}, vals)
 }
 
-func (c *tokenInterpreter) HasTokenTypes(colTokenType common.FieldName, tokenTypes ...string) common.Condition {
+func (c *tokenInterpreter) HasTokenTypes(colTokenType common.FieldName, tokenTypes ...token.TokenType) common.Condition {
 	if len(tokenTypes) == 0 {
 		return common.EmptyCondition
 	}
-	return c.InStrings(colTokenType, tokenTypes)
+	types := make([]string, len(tokenTypes))
+	for i, typ := range tokenTypes {
+		types[i] = string(typ)
+	}
+	return c.InStrings(colTokenType, types)
 }
 
 func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams, tokenTable string) common.Condition {
 	conds := []common.Condition{
 		common.ConstCondition("owner = true"),
 		c.Cmp("owner_type", "=", params.OwnerType),
-		c.Cmp("token_type", "=", params.TokenType),
+		c.Cmp("token_type", "=", string(params.TokenType)),
 		c.InStrings(common.JoinCol(tokenTable, "tx_id"), params.TransactionIDs),
 		c.HasTokens(common.JoinCol(tokenTable, "tx_id"), common.JoinCol(tokenTable, "idx"), params.IDs...),
 	}
@@ -74,23 +78,15 @@ func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams
 		conds = append(conds, common.ConstCondition("spendable = true"))
 	}
 	if len(params.LedgerTokenTypes) > 0 {
-		types := make([]string, len(params.LedgerTokenTypes))
-		for i, typ := range params.LedgerTokenTypes {
-			types[i] = string(typ)
-		}
-		conds = append(conds, c.InStrings("ledger_type", types))
+		conds = append(conds, c.HasTokenTypes("ledger_type", params.LedgerTokenTypes...))
 	}
 	return c.And(conds...)
 }
 
 func (c *tokenInterpreter) HasMovementsParams(params driver.QueryMovementsParams) common.Condition {
-	tokenTypes := make([]string, len(params.TokenTypes))
-	for i, typ := range params.TokenTypes {
-		tokenTypes[i] = string(typ)
-	}
 	conds := []common.Condition{
 		c.InStrings("enrollment_id", params.EnrollmentIDs),
-		c.InStrings("token_type", tokenTypes),
+		c.HasTokenTypes("token_type", params.TokenTypes...),
 		c.InInts("status", params.TxStatuses),
 	}
 
