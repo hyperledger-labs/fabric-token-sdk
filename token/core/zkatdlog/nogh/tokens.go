@@ -22,14 +22,13 @@ import (
 type TokensService struct {
 	*common.TokensService
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
-	TokenTypes              []token.TokenType
 	OutputTokenType         token.TokenType
 }
 
 func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams]) (*TokensService, error) {
 	// compute supported tokens
 	// dlog without graph hiding
-	commTokenTypes, err := SupportedTokenTypes(publicParametersManager.PublicParams())
+	commTokenTypes, err := supportedTokenTypes(publicParametersManager.PublicParams())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed computing comm token types")
 	}
@@ -37,8 +36,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	return &TokensService{
 		TokensService:           common.NewTokensService(),
 		PublicParametersManager: publicParametersManager,
-		TokenTypes:              commTokenTypes,
-		OutputTokenType:         commTokenTypes[0],
+		OutputTokenType:         commTokenTypes,
 	}, nil
 }
 
@@ -54,7 +52,7 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 }
 
 func (s *TokensService) SupportedTokenTypes() []token.TokenType {
-	return s.TokenTypes
+	return []token.TokenType{s.OutputTokenType}
 }
 
 func (s *TokensService) DeserializeToken(outputType token.TokenType, outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
@@ -117,7 +115,7 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 	return output, nil
 }
 
-func SupportedTokenTypes(pp *crypto.PublicParams) ([]token.TokenType, error) {
+func supportedTokenTypes(pp *crypto.PublicParams) (token.TokenType, error) {
 	hasher := common.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
@@ -126,7 +124,7 @@ func SupportedTokenTypes(pp *crypto.PublicParams) ([]token.TokenType, error) {
 		hasher.AddInt(int(pp.IdemixCurveID)),
 		hasher.AddBytes(pp.IdemixIssuerPK),
 	); err != nil {
-		return nil, errors.Wrapf(err, "failed to generator token type")
+		return "", errors.Wrapf(err, "failed to generator token type")
 	}
-	return []token.TokenType{token.TokenType(hasher.HexDigest())}, nil
+	return token.TokenType(hasher.HexDigest()), nil
 }
