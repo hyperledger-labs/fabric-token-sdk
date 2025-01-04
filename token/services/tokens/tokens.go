@@ -198,7 +198,7 @@ func (t *Tokens) SetSpendableFlag(value bool, ids ...*token2.ID) error {
 	return tx.Commit()
 }
 
-func (t *Tokens) SetSpendableBySupportedTokenTypes(types []string) error {
+func (t *Tokens) SetSpendableBySupportedTokenTypes(types []token2.TokenType) error {
 	tx, err := t.Storage.NewTransaction(context.TODO())
 	if err != nil {
 		return errors.WithMessagef(err, "error creating new transaction")

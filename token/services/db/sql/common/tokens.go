@@ -176,7 +176,7 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
-	logger.Debug(query, args)
+	logger.Warn(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	rows, err := db.db.Query(query, args...)
 	span.AddEvent("end_query")
@@ -1132,7 +1132,7 @@ func (t *TokenTransaction) SetSpendable(txID string, index uint64, spendable boo
 
 }
 
-func (t *TokenTransaction) SetSpendableBySupportedTokenTypes(supportedTokenTypes []string) error {
+func (t *TokenTransaction) SetSpendableBySupportedTokenTypes(supportedTokenTypes []token.TokenType) error {
 	span := trace.SpanFromContext(t.ctx)
 
 	// first set all spendable flags to false

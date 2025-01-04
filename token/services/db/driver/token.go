@@ -127,7 +127,7 @@ type TokenDBTransaction interface {
 	SetSpendable(txID string, index uint64, spendable bool) error
 	// SetSpendableBySupportedTokenTypes sets the spendable flag to true for all the tokens having one of the passed token type.
 	// The spendable flag is set to false for the other tokens
-	SetSpendableBySupportedTokenTypes(supportedTokenTypes []string) error
+	SetSpendableBySupportedTokenTypes(supportedTokenTypes []token.TokenType) error
 	// Commit commits this transaction
 	Commit() error
 	// Rollback rollbacks this transaction
