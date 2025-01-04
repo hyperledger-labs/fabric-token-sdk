@@ -124,16 +124,16 @@ type CertificationDB interface {
 
 type TokenDBTransaction interface {
 	// GetToken returns the owned tokens and their identifier keys for the passed ids.
-	GetToken(tokenID token.ID, includeDeleted bool) (*token.Token, []string, error)
+	GetToken(ctx context.Context, tokenID token.ID, includeDeleted bool) (*token.Token, []string, error)
 	// Delete marks the passed token as deleted by a given identifier (idempotent)
-	Delete(tokenID token.ID, deletedBy string) error
+	Delete(ctx context.Context, tokenID token.ID, deletedBy string) error
 	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
-	StoreToken(tr TokenRecord, owners []string) error
+	StoreToken(ctx context.Context, tr TokenRecord, owners []string) error
 	// SetSpendable updates the spendable flag of the passed token
-	SetSpendable(tokenID token.ID, spendable bool) error
+	SetSpendable(ctx context.Context, tokenID token.ID, spendable bool) error
 	// SetSpendableBySupportedTokenTypes sets the spendable flag to true for all the tokens having one of the passed token type.
 	// The spendable flag is set to false for the other tokens
-	SetSpendableBySupportedTokenTypes(supportedTokenTypes []token.TokenType) error
+	SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokenTypes []token.TokenType) error
 	// Commit commits this transaction
 	Commit() error
 	// Rollback rollbacks this transaction
@@ -184,7 +184,7 @@ type TokenDB interface {
 	// If not public parameters are available for that hash, it returns an error
 	PublicParamsByHash(rawHash driver.PPHash) ([]byte, error)
 	// NewTokenDBTransaction returns a new Transaction to commit atomically multiple operations
-	NewTokenDBTransaction(ctx context.Context) (TokenDBTransaction, error)
+	NewTokenDBTransaction() (TokenDBTransaction, error)
 	// QueryTokenDetails provides detailed information about tokens
 	QueryTokenDetails(params QueryTokenDetailsParams) ([]TokenDetails, error)
 	// Balance returns the sun of the amounts of the tokens with type and EID equal to those passed as arguments.

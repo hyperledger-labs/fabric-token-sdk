@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package tokendb
 
 import (
-	"context"
 	"reflect"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -61,8 +60,8 @@ type DB struct {
 	driver.TokenDB
 }
 
-func (d *DB) NewTransaction(ctx context.Context) (*Transaction, error) {
-	tx, err := d.TokenDB.NewTokenDBTransaction(ctx)
+func (d *DB) NewTransaction() (*Transaction, error) {
+	tx, err := d.TokenDB.NewTokenDBTransaction()
 	if err != nil {
 		return nil, err
 	}
