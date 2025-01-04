@@ -22,7 +22,10 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
-const TST = token.TokenType("TST")
+const (
+	TST = token.TokenType("TST")
+	ABC = token.TokenType("ABC")
+)
 
 var TokenNotifierCases = []struct {
 	Name string
@@ -256,7 +259,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         2,
 		Owner:          true,
 		Auditor:        false,
@@ -278,17 +281,17 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 	assert.NoError(t, err)
 	assert.Len(t, tokens, 22, "unspentTokensIteratorBy: expected only Alice tokens to be returned")
 
-	tokens = getTokensBy(t, db, "", "ABC")
+	tokens = getTokensBy(t, db, "", ABC)
 	assert.Len(t, tokens, 1, "unspentTokensIteratorBy: expected only ABC tokens to be returned")
 
-	tokens = getTokensBy(t, db, "alice", "ABC")
+	tokens = getTokensBy(t, db, "alice", ABC)
 	assert.Len(t, tokens, 1, "unspentTokensIteratorBy: expected only Alice ABC tokens to be returned")
 
 	unsp, err := db.GetTokens(&token.ID{TxId: "tx101", Index: 0})
 	assert.NoError(t, err)
 	assert.Len(t, unsp, 1)
 	assert.Equal(t, "0x02", unsp[0].Quantity)
-	assert.Equal(t, "ABC", unsp[0].Type)
+	assert.Equal(t, ABC, unsp[0].Type)
 
 	tr = driver.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 2000),
@@ -301,7 +304,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         2,
 		Owner:          true,
 		Auditor:        false,
@@ -349,7 +352,7 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         0,
 		Owner:          true,
 		Auditor:        false,
@@ -366,7 +369,7 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         0,
 		Owner:          true,
 		Auditor:        false,
@@ -383,7 +386,7 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         0,
 		Owner:          true,
 		Auditor:        false,
@@ -428,7 +431,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         0,
 		Owner:          false,
 		Auditor:        true,
@@ -445,7 +448,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         0,
 		Owner:          false,
 		Auditor:        true,
@@ -462,7 +465,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x03",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         0,
 		Owner:          false,
 		Auditor:        true,
@@ -501,7 +504,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         0,
 		Owner:          false,
 		Auditor:        false,
@@ -519,7 +522,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         0,
 		Owner:          false,
 		Auditor:        false,
@@ -585,7 +588,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("tx101l"),
 		LedgerMetadata: []byte("tx101"),
 		Quantity:       "0x01",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         0,
 		Owner:          true,
 		Auditor:        false,
@@ -602,7 +605,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("tx102l"),
 		LedgerMetadata: []byte("tx102"),
 		Quantity:       "0x01",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         0,
 		Owner:          true,
 		Auditor:        false,
@@ -619,7 +622,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("tx102l"),
 		LedgerMetadata: []byte("tx102"),
 		Quantity:       "0x01",
-		Type:           "ABC",
+		Type:           ABC,
 		Amount:         0,
 		Owner:          true,
 		Auditor:        false,
@@ -686,7 +689,7 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
-		Type:           "ABC",
+		Type:           ABC,
 		Owner:          true,
 	}
 	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
@@ -699,7 +702,7 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
-		Type:           "ABC",
+		Type:           ABC,
 		Owner:          true,
 	}
 	assert.NoError(t, db.StoreToken(tr, []string{"bob"}))
@@ -712,7 +715,7 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
-		Type:           "ABC",
+		Type:           ABC,
 		Owner:          true,
 	}
 	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
@@ -784,7 +787,7 @@ func TCertification(t *testing.T, db *TokenDB) {
 				Quantity:       "0x01",
 				Ledger:         []byte("ledger"),
 				LedgerMetadata: []byte{},
-				Type:           "ABC",
+				Type:           ABC,
 				Owner:          true,
 			}, []string{"alice"})
 			if err != nil {
