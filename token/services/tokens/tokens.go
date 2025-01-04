@@ -88,7 +88,7 @@ func (t *Tokens) Append(ctx context.Context, tmsID token.TMSID, txID string, req
 
 	logger.Debugf("transaction [%s] start db transaction", txID)
 	span.AddEvent("create_new_tx")
-	ts, err := t.Storage.NewTransaction(ctx)
+	ts, err := t.Storage.NewTransaction()
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to start db transaction", txID)
 	}
@@ -105,13 +105,13 @@ func (t *Tokens) Append(ctx context.Context, tmsID token.TMSID, txID string, req
 	}()
 	span.AddEvent("append_tokens")
 	for _, tta := range toAppend {
-		err = ts.AppendToken(tta)
+		err = ts.AppendToken(context.TODO(), tta)
 		if err != nil {
 			return errors.WithMessagef(err, "transaction [%s], failed to append token", txID)
 		}
 	}
 	span.AddEvent("delete_tokens")
-	err = ts.DeleteTokens(txID, toSpend)
+	err = ts.DeleteTokens(context.TODO(), txID, toSpend)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 	}
@@ -185,11 +185,11 @@ func (t *Tokens) DeleteToken(deletedBy string, ids ...*token2.ID) (err error) {
 }
 
 func (t *Tokens) SetSpendableFlag(value bool, ids ...*token2.ID) error {
-	tx, err := t.Storage.NewTransaction(context.TODO())
+	tx, err := t.Storage.NewTransaction()
 	if err != nil {
 		return errors.Wrapf(err, "failed initiating transaction")
 	}
-	if err := tx.SetSpendableFlag(value, ids); err != nil {
+	if err := tx.SetSpendableFlag(context.TODO(), value, ids); err != nil {
 		if err2 := tx.Rollback(); err2 != nil {
 			logger.Errorf("failed rolling back transaction that set spendable flag [%s]", err2)
 		}
@@ -199,11 +199,11 @@ func (t *Tokens) SetSpendableFlag(value bool, ids ...*token2.ID) error {
 }
 
 func (t *Tokens) SetSpendableBySupportedTokenTypes(types []token2.TokenType) error {
-	tx, err := t.Storage.NewTransaction(context.TODO())
+	tx, err := t.Storage.NewTransaction()
 	if err != nil {
 		return errors.WithMessagef(err, "error creating new transaction")
 	}
-	if err := tx.SetSpendableBySupportedTokenTypes(types); err != nil {
+	if err := tx.SetSpendableBySupportedTokenTypes(context.TODO(), types); err != nil {
 		if err2 := tx.Rollback(); err2 != nil {
 			logger.Errorf("error rolling back transaction: %v", err2)
 		}

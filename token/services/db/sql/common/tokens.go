@@ -72,11 +72,11 @@ func newTokenDB(db *sql.DB, tables tokenTables, ci TokenInterpreter) *TokenDB {
 }
 
 func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error) {
-	tx, err := db.NewTokenDBTransaction(context.TODO())
+	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
 		return
 	}
-	if err = tx.StoreToken(tr, owners); err != nil {
+	if err = tx.StoreToken(context.TODO(), tr, owners); err != nil {
 		if err1 := tx.Rollback(); err1 != nil {
 			logger.Errorf("error rolling back: %s", err1.Error())
 		}
@@ -934,18 +934,12 @@ func (db *TokenDB) Close() {
 	Close(db.db)
 }
 
-func (db *TokenDB) NewTokenDBTransaction(ctx context.Context) (driver.TokenDBTransaction, error) {
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent("start_begin_tx")
+func (db *TokenDB) NewTokenDBTransaction() (driver.TokenDBTransaction, error) {
 	tx, err := db.db.Begin()
-	span.AddEvent("end_begin_tx")
 	if err != nil {
 		return nil, errors.Errorf("failed starting a db transaction")
 	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	return &TokenTransaction{db: db, tx: tx, ctx: ctx}, nil
+	return &TokenTransaction{db: db, tx: tx}, nil
 }
 
 func (db *TokenDB) SetSupportedTokenTypes(supportedTokenTypes []token.TokenType) error {
@@ -963,13 +957,12 @@ func (db *TokenDB) getSupportedTokenTypes() []token.TokenType {
 }
 
 type TokenTransaction struct {
-	db  *TokenDB
-	tx  *sql.Tx
-	ctx context.Context
+	db *TokenDB
+	tx *sql.Tx
 }
 
-func (t *TokenTransaction) GetToken(tokenID token.ID, includeDeleted bool) (*token.Token, []string, error) {
-	span := trace.SpanFromContext(t.ctx)
+func (t *TokenTransaction) GetToken(ctx context.Context, tokenID token.ID, includeDeleted bool) (*token.Token, []string, error) {
+	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(t.db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		IDs:            []*token.ID{&tokenID},
 		IncludeDeleted: includeDeleted,
@@ -1026,8 +1019,8 @@ func (t *TokenTransaction) GetToken(tokenID token.ID, includeDeleted bool) (*tok
 	}, owners, nil
 }
 
-func (t *TokenTransaction) Delete(tokenID token.ID, deletedBy string) error {
-	span := trace.SpanFromContext(t.ctx)
+func (t *TokenTransaction) Delete(ctx context.Context, tokenID token.ID, deletedBy string) error {
+	span := trace.SpanFromContext(ctx)
 	// logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
@@ -1045,12 +1038,12 @@ func (t *TokenTransaction) Delete(tokenID token.ID, deletedBy string) error {
 	return nil
 }
 
-func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) error {
+func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord, owners []string) error {
 	if len(tr.OwnerWalletID) == 0 && len(owners) == 0 && tr.Owner {
 		return errors.Errorf("no owners specified [%s]", string(debug.Stack()))
 	}
 
-	span := trace.SpanFromContext(t.ctx)
+	span := trace.SpanFromContext(ctx)
 	// logger.Debugf("store record [%s:%d,%v] in table [%s]", tr.TxID, tr.Index, owners, t.db.table.Tokens)
 
 	// Store token
@@ -1118,8 +1111,8 @@ func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) er
 	return nil
 }
 
-func (t *TokenTransaction) SetSpendable(tokenID token.ID, spendable bool) error {
-	span := trace.SpanFromContext(t.ctx)
+func (t *TokenTransaction) SetSpendable(ctx context.Context, tokenID token.ID, spendable bool) error {
+	span := trace.SpanFromContext(ctx)
 	query := fmt.Sprintf("UPDATE %s SET spendable = $1 WHERE tx_id = $2 AND idx = $3;", t.db.table.Tokens)
 	logger.Infof(query, spendable, tokenID.TxId, tokenID.Index)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
@@ -1132,8 +1125,8 @@ func (t *TokenTransaction) SetSpendable(tokenID token.ID, spendable bool) error 
 
 }
 
-func (t *TokenTransaction) SetSpendableBySupportedTokenTypes(supportedTokenTypes []token.TokenType) error {
-	span := trace.SpanFromContext(t.ctx)
+func (t *TokenTransaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokenTypes []token.TokenType) error {
+	span := trace.SpanFromContext(ctx)
 
 	// first set all spendable flags to false
 	query := fmt.Sprintf("UPDATE %s SET spendable = $1;", t.db.table.Tokens)

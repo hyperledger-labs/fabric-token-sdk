@@ -44,12 +44,12 @@ func NewDBStorage(notifier events.Publisher, tokenDB *tokendb.DB, tmsID token.TM
 	}, nil
 }
 
-func (d *DBStorage) NewTransaction(ctx context.Context) (*transaction, error) {
-	tx, err := d.tokenDB.NewTransaction(ctx)
+func (d *DBStorage) NewTransaction() (*transaction, error) {
+	tx, err := d.tokenDB.NewTransaction()
 	if err != nil {
 		return nil, err
 	}
-	return NewTransaction(ctx, d.notifier, tx, d.tmsID)
+	return NewTransaction(d.notifier, tx, d.tmsID)
 }
 
 func (d *DBStorage) TransactionExists(ctx context.Context, id string) (bool, error) {
@@ -77,30 +77,28 @@ type TokenToAppend struct {
 }
 
 type transaction struct {
-	ctx      context.Context
 	notifier events.Publisher
 	tx       *tokendb.Transaction
 	tmsID    token.TMSID
 }
 
-func NewTransaction(ctx context.Context, notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
+func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
 	return &transaction{
-		ctx:      ctx,
 		notifier: notifier,
 		tx:       tx,
 		tmsID:    tmsID,
 	}, nil
 }
 
-func (t *transaction) DeleteToken(tokenID token2.ID, deletedBy string) error {
-	span := trace.SpanFromContext(t.ctx)
+func (t *transaction) DeleteToken(ctx context.Context, tokenID token2.ID, deletedBy string) error {
+	span := trace.SpanFromContext(ctx)
 	span.AddEvent("get_token")
-	tok, owners, err := t.tx.GetToken(tokenID, true)
+	tok, owners, err := t.tx.GetToken(ctx, tokenID, true)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token [%s]", tokenID)
 	}
 	span.AddEvent("delete_token")
-	err = t.tx.Delete(tokenID, deletedBy)
+	err = t.tx.Delete(ctx, tokenID, deletedBy)
 	if err != nil {
 		if tok == nil {
 			logger.Debugf("nothing further to delete for [%s]", tokenID)
@@ -120,24 +118,24 @@ func (t *transaction) DeleteToken(tokenID token2.ID, deletedBy string) error {
 	return nil
 }
 
-func (t *transaction) DeleteTokens(deletedBy string, ids []*token2.ID) error {
+func (t *transaction) DeleteTokens(ctx context.Context, deletedBy string, ids []*token2.ID) error {
 	for _, id := range ids {
-		if err := t.DeleteToken(*id, deletedBy); err != nil {
+		if err := t.DeleteToken(ctx, *id, deletedBy); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (t *transaction) AppendToken(tta TokenToAppend) error {
-	span := trace.SpanFromContext(t.ctx)
+func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error {
+	span := trace.SpanFromContext(ctx)
 	q, err := token2.ToQuantity(tta.tok.Quantity, tta.precision)
 	if err != nil {
 		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tta.tok.Quantity, tta.precision)
 	}
 
 	span.AddEvent("store_token")
-	err = t.tx.StoreToken(tokendb.TokenRecord{
+	err = t.tx.StoreToken(ctx, tokendb.TokenRecord{
 		TxID:           tta.txID,
 		Index:          tta.index,
 		IssuerRaw:      tta.issuer,
@@ -196,10 +194,10 @@ func (t *transaction) Commit() error {
 	return t.tx.Commit()
 }
 
-func (t *transaction) SetSpendableFlag(value bool, ids []*token2.ID) error {
+func (t *transaction) SetSpendableFlag(ctx context.Context, value bool, ids []*token2.ID) error {
 	var err error
 	for _, id := range ids {
-		err = t.tx.SetSpendable(*id, value)
+		err = t.tx.SetSpendable(ctx, *id, value)
 		if err != nil {
 			return err
 		}
@@ -207,8 +205,8 @@ func (t *transaction) SetSpendableFlag(value bool, ids []*token2.ID) error {
 	return nil
 }
 
-func (t *transaction) SetSpendableBySupportedTokenTypes(supportedTokens []token2.TokenType) error {
-	return t.tx.SetSpendableBySupportedTokenTypes(supportedTokens)
+func (t *transaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokens []token2.TokenType) error {
+	return t.tx.SetSpendableBySupportedTokenTypes(ctx, supportedTokens)
 }
 
 type TokenProcessorEvent struct {
