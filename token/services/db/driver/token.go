@@ -93,13 +93,19 @@ type QueryTokenDetailsParams struct {
 	TransactionIDs []string
 	// IncludeDeleted determines whether to include spent tokens. It defaults to false.
 	IncludeDeleted bool
-	// OnlyNonSpendable determines whether to include only non-spendable tokens. It defaults to false
-	OnlyNonSpendable bool
-	// OnlySpendable determines whether to include only spendable tokens. It defaults to false
-	OnlySpendable bool
+	// Spendable determines whether to include only spendable/non-spendable or any tokens. It defaults to nil (any tokens)
+	Spendable SpendableFilter
 
 	LedgerTokenTypes []token.TokenType
 }
+
+type SpendableFilter int
+
+const (
+	Any SpendableFilter = iota
+	SpendableOnly
+	NonSpendableOnly
+)
 
 // CertificationDB defines a database to manager token certifications
 type CertificationDB interface {
