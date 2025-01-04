@@ -22,6 +22,8 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
+const TST = token.TokenType("TST")
+
 var TokenNotifierCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.TokenDB, driver.TokenNotifier)
@@ -136,7 +138,7 @@ func TTransaction(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
-		Type:           "TST",
+		Type:           TST,
 		Amount:         2,
 		Owner:          true,
 		Auditor:        false,
@@ -200,7 +202,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 			Ledger:         []byte("ledger"),
 			LedgerMetadata: []byte{},
 			Quantity:       "0x02",
-			Type:           "TST",
+			Type:           TST,
 			Amount:         2,
 			Owner:          true,
 			Auditor:        false,
@@ -218,7 +220,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
-		Type:           "TST",
+		Type:           TST,
 		Amount:         2,
 		Owner:          true,
 		Auditor:        false,
@@ -236,7 +238,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
-		Type:           "TST",
+		Type:           TST,
 		Amount:         2,
 		Owner:          true,
 		Auditor:        false,
@@ -266,7 +268,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 	assert.NoError(t, err)
 	assert.Len(t, tok.Tokens, 24, "unspentTokensIterator: expected all tokens to be returned (2 for the one owned by alice and bob)")
 	assert.Equal(t, "48", tok.Sum(64).Decimal(), "expect sum to be 2*22")
-	assert.Len(t, tok.ByType("TST").Tokens, 23, "expect filter on type to work")
+	assert.Len(t, tok.ByType(TST).Tokens, 23, "expect filter on type to work")
 	for _, token := range tok.Tokens {
 		assert.NotNil(t, token.Owner, "expected owner to not be nil")
 		assert.NotEmpty(t, token.Owner, "expected owner raw to not be empty")
@@ -868,7 +870,7 @@ func TQueryTokenDetails(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
-		Type:           "TST",
+		Type:           TST,
 		Amount:         2,
 		Owner:          true,
 		Auditor:        false,
@@ -884,7 +886,7 @@ func TQueryTokenDetails(t *testing.T, db *TokenDB) {
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
-		Type:           "TST",
+		Type:           TST,
 		Amount:         2,
 		Owner:          true,
 		Auditor:        false,
@@ -936,20 +938,20 @@ func TQueryTokenDetails(t *testing.T, db *TokenDB) {
 	assert.Equal(t, res[0].Amount, balance)
 
 	// alice TST
-	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{WalletID: "alice", TokenType: "TST"})
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{WalletID: "alice", TokenType: TST})
 	assert.NoError(t, err)
 	assert.Len(t, res, 1)
 	assertEqual(t, tx2, res[0])
-	balance, err = db.Balance("alice", "TST")
+	balance, err = db.Balance("alice", TST)
 	assert.NoError(t, err)
 	assert.Equal(t, res[0].Amount, balance)
 
 	// bob TST
-	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{WalletID: "bob", TokenType: "TST"})
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{WalletID: "bob", TokenType: TST})
 	assert.NoError(t, err)
 	assert.Len(t, res, 1)
 	assertEqual(t, tx21, res[0])
-	balance, err = db.Balance("bob", "TST")
+	balance, err = db.Balance("bob", TST)
 	assert.NoError(t, err)
 	assert.Equal(t, res[0].Amount, balance)
 
@@ -991,7 +993,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 		LedgerType:     "CLEAR",
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
-		Type:           "TST",
+		Type:           TST,
 		Amount:         2,
 		Owner:          true,
 		Auditor:        false,
@@ -1018,9 +1020,9 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	assert.NoError(t, tx.StoreToken(tx2, []string{"alice"}))
 	assert.NoError(t, tx.Commit())
 
-	it, err := db.SpendableTokensIteratorBy(context.TODO(), "", "TST")
+	it, err := db.SpendableTokensIteratorBy(context.TODO(), "", TST)
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, "TST", 1)
+	consumeSpendableTokensIterator(t, it, TST, 1)
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST1")
 	assert.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, "TST1", 1)
@@ -1031,9 +1033,9 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes([]token.TokenType{"htlc"}))
 	assert.NoError(t, tx.Commit())
 
-	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST")
+	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, "TST", 0)
+	consumeSpendableTokensIterator(t, it, TST, 0)
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST1")
 	assert.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, "TST1", 0)
@@ -1044,9 +1046,9 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes([]token.TokenType{"CLEAR"}))
 	assert.NoError(t, tx.Commit())
 
-	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST")
+	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, "TST", 1)
+	consumeSpendableTokensIterator(t, it, TST, 1)
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST1")
 	assert.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, "TST1", 0)
@@ -1057,9 +1059,9 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes([]token.TokenType{"CLEAR1"}))
 	assert.NoError(t, tx.Commit())
 
-	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST")
+	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, "TST", 0)
+	consumeSpendableTokensIterator(t, it, TST, 0)
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST1")
 	assert.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, "TST1", 1)
@@ -1070,15 +1072,15 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes([]token.TokenType{"CLEAR", "CLEAR1"}))
 	assert.NoError(t, tx.Commit())
 
-	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST")
+	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, "TST", 1)
+	consumeSpendableTokensIterator(t, it, TST, 1)
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST1")
 	assert.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, "TST1", 1)
 }
 
-func consumeSpendableTokensIterator(t *testing.T, it driver3.SpendableTokensIterator, tokenType string, count int) {
+func consumeSpendableTokensIterator(t *testing.T, it driver3.SpendableTokensIterator, tokenType token.TokenType, count int) {
 	defer it.Close()
 	for i := 0; i < count; i++ {
 		tok, err := it.Next()
