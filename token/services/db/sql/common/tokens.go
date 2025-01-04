@@ -968,10 +968,10 @@ type TokenTransaction struct {
 	ctx context.Context
 }
 
-func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error) {
+func (t *TokenTransaction) GetToken(tokenID token.ID, includeDeleted bool) (*token.Token, []string, error) {
 	span := trace.SpanFromContext(t.ctx)
 	where, args := common.Where(t.db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
-		IDs:            []*token.ID{{TxId: txID, Index: index}},
+		IDs:            []*token.ID{&tokenID},
 		IncludeDeleted: includeDeleted,
 	}, t.db.table.Tokens))
 	join := joinOnTokenID(t.db.table.Tokens, t.db.table.Ownership)
@@ -1026,7 +1026,7 @@ func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bo
 	}, owners, nil
 }
 
-func (t *TokenTransaction) Delete(txID string, index uint64, deletedBy string) error {
+func (t *TokenTransaction) Delete(tokenID token.ID, deletedBy string) error {
 	span := trace.SpanFromContext(t.ctx)
 	// logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
@@ -1035,11 +1035,11 @@ func (t *TokenTransaction) Delete(txID string, index uint64, deletedBy string) e
 	if err != nil {
 		return errors.Wrapf(err, "failed building query")
 	}
-	logger.Debugf(query, true, deletedBy, now, txID, index)
+	logger.Debugf(query, true, deletedBy, now, tokenID.TxId, tokenID.Index)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query, true, deletedBy, now, txID, index); err != nil {
+	if _, err := t.tx.Exec(query, true, deletedBy, now, tokenID.TxId, tokenID.Index); err != nil {
 		span.RecordError(err)
-		return errors.Wrapf(err, "error setting token to deleted [%s]", txID)
+		return errors.Wrapf(err, "error setting token to deleted [%s]", tokenID.TxId)
 	}
 	span.AddEvent("end_query")
 	return nil
@@ -1118,14 +1118,14 @@ func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) er
 	return nil
 }
 
-func (t *TokenTransaction) SetSpendable(txID string, index uint64, spendable bool) error {
+func (t *TokenTransaction) SetSpendable(tokenID token.ID, spendable bool) error {
 	span := trace.SpanFromContext(t.ctx)
 	query := fmt.Sprintf("UPDATE %s SET spendable = $1 WHERE tx_id = $2 AND idx = $3;", t.db.table.Tokens)
-	logger.Infof(query, spendable, txID, index)
+	logger.Infof(query, spendable, tokenID.TxId, tokenID.Index)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query, spendable, txID, index); err != nil {
+	if _, err := t.tx.Exec(query, spendable, tokenID.TxId, tokenID.Index); err != nil {
 		span.RecordError(err)
-		return errors.Wrapf(err, "error setting spendable flag to [%v] for [%s]", spendable, txID)
+		return errors.Wrapf(err, "error setting spendable flag to [%v] for [%s]", spendable, tokenID.TxId)
 	}
 	span.AddEvent("end_query")
 	return nil

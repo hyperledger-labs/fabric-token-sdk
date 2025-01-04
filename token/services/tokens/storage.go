@@ -92,37 +92,37 @@ func NewTransaction(ctx context.Context, notifier events.Publisher, tx *tokendb.
 	}, nil
 }
 
-func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) error {
+func (t *transaction) DeleteToken(tokenID token2.ID, deletedBy string) error {
 	span := trace.SpanFromContext(t.ctx)
 	span.AddEvent("get_token")
-	tok, owners, err := t.tx.GetToken(txID, index, true)
+	tok, owners, err := t.tx.GetToken(tokenID, true)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to get token [%s:%d]", txID, index)
+		return errors.WithMessagef(err, "failed to get token [%s]", tokenID)
 	}
 	span.AddEvent("delete_token")
-	err = t.tx.Delete(txID, index, deletedBy)
+	err = t.tx.Delete(tokenID, deletedBy)
 	if err != nil {
 		if tok == nil {
-			logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
+			logger.Debugf("nothing further to delete for [%s]", tokenID)
 			return nil
 		}
-		return errors.WithMessagef(err, "failed to delete token [%s:%d]", txID, index)
+		return errors.WithMessagef(err, "failed to delete token [%s]", tokenID)
 	}
 	if tok == nil {
-		logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
+		logger.Debugf("nothing further to delete for [%s]", tokenID)
 		return nil
 	}
 	span.AddEvent("notify_owners")
 	for _, owner := range owners {
-		logger.Debugf("post new delete-token event [%s:%s:%s]", txID, index, owner)
-		t.Notify(DeleteToken, t.tmsID, owner, tok.Type, txID, index)
+		logger.Debugf("post new delete-token event [%s:%s]", tokenID, owner)
+		t.Notify(DeleteToken, t.tmsID, owner, tok.Type, tokenID.TxId, tokenID.Index)
 	}
 	return nil
 }
 
 func (t *transaction) DeleteTokens(deletedBy string, ids []*token2.ID) error {
 	for _, id := range ids {
-		if err := t.DeleteToken(id.TxId, id.Index, deletedBy); err != nil {
+		if err := t.DeleteToken(*id, deletedBy); err != nil {
 			return err
 		}
 	}
@@ -199,7 +199,7 @@ func (t *transaction) Commit() error {
 func (t *transaction) SetSpendableFlag(value bool, ids []*token2.ID) error {
 	var err error
 	for _, id := range ids {
-		err = t.tx.SetSpendable(id.TxId, id.Index, value)
+		err = t.tx.SetSpendable(*id, value)
 		if err != nil {
 			return err
 		}

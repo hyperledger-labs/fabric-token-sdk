@@ -72,7 +72,7 @@ func NewTransferService(
 
 // Transfer returns a TransferActionMetadata as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *TransferService) Transfer(ctx context.Context, txID string, wallet driver.OwnerWallet, tokenIDs []*token2.ID, outputTokens []*token2.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.OwnerWallet, tokenIDs []*token2.ID, outputTokens []*token2.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	newCtx, span := s.tracer.Start(ctx, "transfer")
 	defer span.End()
 	s.Logger.Debugf("Prepare Transfer Action [%s,%v]", txID, tokenIDs)
