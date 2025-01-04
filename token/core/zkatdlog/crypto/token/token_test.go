@@ -10,6 +10,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -44,7 +45,7 @@ var _ = Describe("Token", func() {
 			It("succeeds", func() {
 				t, err := token.ToClear(inf, pp)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(t.Type).To(Equal("ABC"))
+				Expect(t.Type).To(Equal(token3.TokenType("ABC")))
 				Expect(t.Quantity).To(Equal("0x" + inf.Value.String()))
 			})
 		})
