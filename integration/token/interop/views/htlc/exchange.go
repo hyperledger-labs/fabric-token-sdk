@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // FastExchange contains the input information to fast exchange tokens
@@ -26,12 +27,12 @@ type FastExchange struct {
 	// TMSID identifies the TMS to use to perform the token operation
 	TMSID1 token.TMSID
 	// Type of tokens to transfer
-	Type1 string
+	Type1 token2.TokenType
 	// Amount to transfer
 	Amount1 uint64
 
 	TMSID2  token.TMSID
-	Type2   string
+	Type2   token2.TokenType
 	Amount2 uint64
 
 	// ReclamationDeadline is the time after which we can reclaim the funds in case they were not transferred

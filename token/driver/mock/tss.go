@@ -10,7 +10,7 @@ import (
 )
 
 type TokensService struct {
-	DeobfuscateStub        func([]byte, []byte) (*token.Token, view.Identity, string, error)
+	DeobfuscateStub        func([]byte, []byte) (*token.Token, view.Identity, token.TokenType, error)
 	deobfuscateMutex       sync.RWMutex
 	deobfuscateArgsForCall []struct {
 		arg1 []byte
@@ -19,13 +19,13 @@ type TokensService struct {
 	deobfuscateReturns struct {
 		result1 *token.Token
 		result2 view.Identity
-		result3 string
+		result3 token.TokenType
 		result4 error
 	}
 	deobfuscateReturnsOnCall map[int]struct {
 		result1 *token.Token
 		result2 view.Identity
-		result3 string
+		result3 token.TokenType
 		result4 error
 	}
 	ExtractMetadataStub        func(*driver.TokenRequestMetadata, []byte) ([]byte, error)
@@ -42,21 +42,21 @@ type TokensService struct {
 		result1 []byte
 		result2 error
 	}
-	SupportedTokenTypesStub        func() []string
+	SupportedTokenTypesStub        func() []token.TokenType
 	supportedTokenTypesMutex       sync.RWMutex
 	supportedTokenTypesArgsForCall []struct {
 	}
 	supportedTokenTypesReturns struct {
-		result1 []string
+		result1 []token.TokenType
 	}
 	supportedTokenTypesReturnsOnCall map[int]struct {
-		result1 []string
+		result1 []token.TokenType
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, view.Identity, string, error) {
+func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, view.Identity, token.TokenType, error) {
 	var arg1Copy []byte
 	if arg1 != nil {
 		arg1Copy = make([]byte, len(arg1))
@@ -92,7 +92,7 @@ func (fake *TokensService) DeobfuscateCallCount() int {
 	return len(fake.deobfuscateArgsForCall)
 }
 
-func (fake *TokensService) DeobfuscateCalls(stub func([]byte, []byte) (*token.Token, view.Identity, string, error)) {
+func (fake *TokensService) DeobfuscateCalls(stub func([]byte, []byte) (*token.Token, view.Identity, token.TokenType, error)) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = stub
@@ -105,19 +105,19 @@ func (fake *TokensService) DeobfuscateArgsForCall(i int) ([]byte, []byte) {
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *TokensService) DeobfuscateReturns(result1 *token.Token, result2 view.Identity, result3 string, result4 error) {
+func (fake *TokensService) DeobfuscateReturns(result1 *token.Token, result2 view.Identity, result3 token.TokenType, result4 error) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = nil
 	fake.deobfuscateReturns = struct {
 		result1 *token.Token
 		result2 view.Identity
-		result3 string
+		result3 token.TokenType
 		result4 error
 	}{result1, result2, result3, result4}
 }
 
-func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token, result2 view.Identity, result3 string, result4 error) {
+func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token, result2 view.Identity, result3 token.TokenType, result4 error) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = nil
@@ -125,14 +125,14 @@ func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token,
 		fake.deobfuscateReturnsOnCall = make(map[int]struct {
 			result1 *token.Token
 			result2 view.Identity
-			result3 string
+			result3 token.TokenType
 			result4 error
 		})
 	}
 	fake.deobfuscateReturnsOnCall[i] = struct {
 		result1 *token.Token
 		result2 view.Identity
-		result3 string
+		result3 token.TokenType
 		result4 error
 	}{result1, result2, result3, result4}
 }
@@ -207,7 +207,7 @@ func (fake *TokensService) ExtractMetadataReturnsOnCall(i int, result1 []byte, r
 	}{result1, result2}
 }
 
-func (fake *TokensService) SupportedTokenTypes() []string {
+func (fake *TokensService) SupportedTokenTypes() []token.TokenType {
 	fake.supportedTokenTypesMutex.Lock()
 	ret, specificReturn := fake.supportedTokenTypesReturnsOnCall[len(fake.supportedTokenTypesArgsForCall)]
 	fake.supportedTokenTypesArgsForCall = append(fake.supportedTokenTypesArgsForCall, struct {
@@ -231,32 +231,32 @@ func (fake *TokensService) SupportedTokenTypesCallCount() int {
 	return len(fake.supportedTokenTypesArgsForCall)
 }
 
-func (fake *TokensService) SupportedTokenTypesCalls(stub func() []string) {
+func (fake *TokensService) SupportedTokenTypesCalls(stub func() []token.TokenType) {
 	fake.supportedTokenTypesMutex.Lock()
 	defer fake.supportedTokenTypesMutex.Unlock()
 	fake.SupportedTokenTypesStub = stub
 }
 
-func (fake *TokensService) SupportedTokenTypesReturns(result1 []string) {
+func (fake *TokensService) SupportedTokenTypesReturns(result1 []token.TokenType) {
 	fake.supportedTokenTypesMutex.Lock()
 	defer fake.supportedTokenTypesMutex.Unlock()
 	fake.SupportedTokenTypesStub = nil
 	fake.supportedTokenTypesReturns = struct {
-		result1 []string
+		result1 []token.TokenType
 	}{result1}
 }
 
-func (fake *TokensService) SupportedTokenTypesReturnsOnCall(i int, result1 []string) {
+func (fake *TokensService) SupportedTokenTypesReturnsOnCall(i int, result1 []token.TokenType) {
 	fake.supportedTokenTypesMutex.Lock()
 	defer fake.supportedTokenTypesMutex.Unlock()
 	fake.SupportedTokenTypesStub = nil
 	if fake.supportedTokenTypesReturnsOnCall == nil {
 		fake.supportedTokenTypesReturnsOnCall = make(map[int]struct {
-			result1 []string
+			result1 []token.TokenType
 		})
 	}
 	fake.supportedTokenTypesReturnsOnCall[i] = struct {
-		result1 []string
+		result1 []token.TokenType
 	}{result1}
 }
 

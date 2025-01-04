@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -30,7 +31,7 @@ type Lock struct {
 	// Wallet is the identifier of the wallet that owns the tokens to transfer
 	Wallet string
 	// Type of tokens to transfer
-	Type string
+	Type token2.TokenType
 	// Amount to transfer
 	Amount uint64
 	// Recipient is the identity of the recipient's FSC node

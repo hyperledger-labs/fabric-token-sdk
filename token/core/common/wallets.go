@@ -16,8 +16,8 @@ import (
 )
 
 type OwnerTokenVault interface {
-	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
-	Balance(id, tokenType string) (uint64, error)
+	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.TokenType) (driver.UnspentTokensIterator, error)
+	Balance(id string, tokenType token.TokenType) (uint64, error)
 }
 
 type AuditorWallet struct {
@@ -91,7 +91,7 @@ func (w *IssuerWallet) ContainsToken(token *token.UnspentToken) bool {
 	return w.Contains(token.Owner)
 }
 
-func (w *IssuerWallet) GetIssuerIdentity(tokenType string) (driver.Identity, error) {
+func (w *IssuerWallet) GetIssuerIdentity(tokenType token.TokenType) (driver.Identity, error) {
 	return w.IssuerIdentity, nil
 }
 

@@ -74,15 +74,23 @@ func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams
 		conds = append(conds, common.ConstCondition("spendable = true"))
 	}
 	if len(params.LedgerTokenTypes) > 0 {
-		conds = append(conds, c.InStrings("ledger_type", params.LedgerTokenTypes))
+		types := make([]string, len(params.LedgerTokenTypes))
+		for i, typ := range params.LedgerTokenTypes {
+			types[i] = string(typ)
+		}
+		conds = append(conds, c.InStrings("ledger_type", types))
 	}
 	return c.And(conds...)
 }
 
 func (c *tokenInterpreter) HasMovementsParams(params driver.QueryMovementsParams) common.Condition {
+	tokenTypes := make([]string, len(params.TokenTypes))
+	for i, typ := range params.TokenTypes {
+		tokenTypes[i] = string(typ)
+	}
 	conds := []common.Condition{
 		c.InStrings("enrollment_id", params.EnrollmentIDs),
-		c.InStrings("token_type", params.TokenTypes),
+		c.InStrings("token_type", tokenTypes),
 		c.InInts("status", params.TxStatuses),
 	}
 

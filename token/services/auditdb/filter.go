@@ -10,6 +10,7 @@ import (
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // PaymentsFilter is a filter for payments.
@@ -25,7 +26,7 @@ func (f *PaymentsFilter) ByEnrollmentId(id string) *PaymentsFilter {
 	return f
 }
 
-func (f *PaymentsFilter) ByType(tokenType string) *PaymentsFilter {
+func (f *PaymentsFilter) ByType(tokenType token.TokenType) *PaymentsFilter {
 	f.params.TokenTypes = append(f.params.TokenTypes, tokenType)
 	return f
 }
@@ -67,7 +68,7 @@ func (f *HoldingsFilter) ByEnrollmentId(id string) *HoldingsFilter {
 	return f
 }
 
-func (f *HoldingsFilter) ByType(tokenType string) *HoldingsFilter {
+func (f *HoldingsFilter) ByType(tokenType token.TokenType) *HoldingsFilter {
 	f.params.TokenTypes = append(f.params.TokenTypes, tokenType)
 	return f
 }

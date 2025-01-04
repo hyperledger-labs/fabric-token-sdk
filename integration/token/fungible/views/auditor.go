@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -207,7 +208,7 @@ func (p *RegisterAuditorViewFactory) NewView(in []byte) (view.View, error) {
 
 type CurrentHolding struct {
 	EnrollmentID string
-	TokenType    string
+	TokenType    token2.TokenType
 	TMSID        token.TMSID
 }
 
@@ -246,9 +247,9 @@ func (p *CurrentHoldingViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type CurrentSpending struct {
-	EnrollmentID string       `json:"enrollment_id"`
-	TokenType    string       `json:"token_type"`
-	TMSID        *token.TMSID `json:"tmsid"`
+	EnrollmentID string           `json:"enrollment_id"`
+	TokenType    token2.TokenType `json:"token_type"`
+	TMSID        *token.TMSID     `json:"tmsid"`
 }
 
 // CurrentSpendingView is used to retrieve the current spending of token type of the passed enrollment id

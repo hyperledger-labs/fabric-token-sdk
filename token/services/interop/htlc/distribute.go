@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -20,10 +21,10 @@ import (
 type Terms struct {
 	ReclamationDeadline time.Duration
 	TMSID1              token.TMSID
-	Type1               string
+	Type1               token2.TokenType
 	Amount1             uint64
 	TMSID2              token.TMSID
-	Type2               string
+	Type2               token2.TokenType
 	Amount2             uint64
 }
 

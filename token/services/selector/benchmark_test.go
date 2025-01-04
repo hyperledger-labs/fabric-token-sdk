@@ -36,7 +36,7 @@ type extendedSelector struct {
 	Lock     Locker
 }
 
-func (s *extendedSelector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error) {
+func (s *extendedSelector) Select(ownerFilter token.OwnerFilter, q string, tokenType token2.TokenType) ([]*token2.ID, token2.Quantity, error) {
 	return s.Selector.Select(ownerFilter, q, tokenType)
 }
 func (s *extendedSelector) Close() error { return s.Selector.Close() }

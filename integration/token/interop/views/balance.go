@@ -14,16 +14,17 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type Balance struct {
 	TMSID  token.TMSID
 	Wallet string
-	Type   string
+	Type   token2.TokenType
 }
 
 type BalanceResult struct {
-	Type     string
+	Type     token2.TokenType
 	Quantity string
 	Locked   string
 	Expired  string

@@ -31,7 +31,7 @@ func TestJsonFilter(t *testing.T) {
 	raw, err := json.Marshal(h)
 	assert.NoError(t, err, "json marshal failed")
 	tok := &token2.UnspentToken{
-		Type: base64.StdEncoding.EncodeToString(raw),
+		Type: token2.TokenType(base64.StdEncoding.EncodeToString(raw)),
 	}
 
 	// hit

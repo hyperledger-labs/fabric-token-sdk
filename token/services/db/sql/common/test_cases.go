@@ -317,7 +317,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 	assert.NoError(t, tx.Rollback())
 }
 
-func getTokensBy(t *testing.T, db *TokenDB, ownerEID, typ string) []*token.UnspentToken {
+func getTokensBy(t *testing.T, db *TokenDB, ownerEID string, typ token.TokenType) []*token.UnspentToken {
 	it, err := db.UnspentTokensIteratorBy(context.TODO(), ownerEID, typ)
 	assert.NoError(t, err)
 	defer it.Close()

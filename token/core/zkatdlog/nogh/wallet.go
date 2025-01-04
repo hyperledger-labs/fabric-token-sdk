@@ -18,9 +18,9 @@ import (
 
 type TokenVault interface {
 	IsPending(id *token.ID) (bool, error)
-	UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.TokenType) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
-	Balance(id, tokenType string) (uint64, error)
+	Balance(id string, tokenType token.TokenType) (uint64, error)
 }
 
 type WalletsConfiguration interface {

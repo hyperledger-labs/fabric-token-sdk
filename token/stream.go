@@ -33,13 +33,13 @@ type Output struct {
 	// RevocationHandler is the revocation handler of the owner of this output
 	RevocationHandler string
 	// Type is the type of token
-	Type string
+	Type token.TokenType
 	// Quantity is the quantity of tokens
 	Quantity token.Quantity
 	// LedgerOutput contains the output as it appears on the ledger
 	LedgerOutput []byte
 	// LedgerOutputType is the output type
-	LedgerOutputType string
+	LedgerOutputType token.TokenType
 }
 
 func (o Output) ID(txID string) *token.ID {
@@ -76,7 +76,7 @@ func (o *OutputStream) ByRecipient(id Identity) *OutputStream {
 }
 
 // ByType filters the OutputStream to only include outputs that match the passed type.
-func (o *OutputStream) ByType(typ string) *OutputStream {
+func (o *OutputStream) ByType(typ token.TokenType) *OutputStream {
 	return o.Filter(func(t *Output) bool {
 		return t.Type == typ
 	})
@@ -130,9 +130,9 @@ func (o *OutputStream) EnrollmentIDs() []string {
 }
 
 // TokenTypes returns the token types of the outputs in the OutputStream.
-func (o *OutputStream) TokenTypes() []string {
-	duplicates := map[string]interface{}{}
-	var types []string
+func (o *OutputStream) TokenTypes() []token.TokenType {
+	duplicates := map[token.TokenType]interface{}{}
+	var types []token.TokenType
 	for _, output := range o.outputs {
 		if _, ok := duplicates[output.Type]; !ok {
 			types = append(types, output.Type)
@@ -174,7 +174,7 @@ type Input struct {
 	OwnerAuditInfo    []byte
 	EnrollmentID      string
 	RevocationHandler string
-	Type              string
+	Type              token.TokenType
 	Quantity          token.Quantity
 }
 
@@ -294,9 +294,9 @@ func (is *InputStream) RevocationHandles() []string {
 }
 
 // TokenTypes returns the token types of the inputs.
-func (is *InputStream) TokenTypes() []string {
-	duplicates := map[string]interface{}{}
-	var types []string
+func (is *InputStream) TokenTypes() []token.TokenType {
+	duplicates := map[token.TokenType]interface{}{}
+	var types []token.TokenType
 	for _, input := range is.inputs {
 		_, ok := duplicates[input.Type]
 		if !ok {
@@ -315,7 +315,7 @@ func (is *InputStream) ByEnrollmentID(id string) *InputStream {
 }
 
 // ByType filters by token type.
-func (is *InputStream) ByType(tokenType string) *InputStream {
+func (is *InputStream) ByType(tokenType token.TokenType) *InputStream {
 	return is.Filter(func(t *Input) bool {
 		return t.Type == tokenType
 	})

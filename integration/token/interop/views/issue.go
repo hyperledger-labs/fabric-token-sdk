@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // IssueCash contains the input information to issue a token
@@ -23,7 +24,7 @@ type IssueCash struct {
 	// IssuerWallet is the issuer's wallet to use
 	IssuerWallet string
 	// TokenType is the type of token to issue
-	TokenType string
+	TokenType token2.TokenType
 	// Quantity represents the number of units of a certain token type to issue
 	Quantity uint64
 	// Recipient is the identity of the recipient's FSC node

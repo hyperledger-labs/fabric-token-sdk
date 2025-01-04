@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -25,11 +26,11 @@ type SigningIdentity interface {
 type Issuer struct {
 	Signer       SigningIdentity
 	PublicParams *crypto.PublicParams
-	Type         string
+	Type         token2.TokenType
 }
 
 // New returns an Issuer as a function of the passed parameters
-func (i *Issuer) New(ttype string, signer common.SigningIdentity, pp *crypto.PublicParams) {
+func (i *Issuer) New(ttype token2.TokenType, signer common.SigningIdentity, pp *crypto.PublicParams) {
 	i.Signer = signer
 	i.Type = ttype
 	i.PublicParams = pp

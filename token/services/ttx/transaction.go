@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -209,18 +210,18 @@ func (t *Transaction) Bytes(eIDs ...string) ([]byte, error) {
 }
 
 // Issue appends a new Issue operation to the TokenRequest inside this transaction
-func (t *Transaction) Issue(wallet *token.IssuerWallet, receiver view.Identity, typ string, q uint64, opts ...token.IssueOption) error {
+func (t *Transaction) Issue(wallet *token.IssuerWallet, receiver view.Identity, typ token2.TokenType, q uint64, opts ...token.IssueOption) error {
 	_, err := t.TokenRequest.Issue(t.Context, wallet, receiver, typ, q, opts...)
 	return err
 }
 
 // Transfer appends a new Transfer operation to the TokenRequest inside this transaction
-func (t *Transaction) Transfer(wallet *token.OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...token.TransferOption) error {
+func (t *Transaction) Transfer(wallet *token.OwnerWallet, typ token2.TokenType, values []uint64, owners []view.Identity, opts ...token.TransferOption) error {
 	_, err := t.TokenRequest.Transfer(t.Context, wallet, typ, values, owners, opts...)
 	return err
 }
 
-func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ string, value uint64, opts ...token.TransferOption) error {
+func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ token2.TokenType, value uint64, opts ...token.TransferOption) error {
 	return t.TokenRequest.Redeem(t.Context, wallet, typ, value, opts...)
 }
 

@@ -82,7 +82,7 @@ func sellHouse(network *integration.Infrastructure, houseID string, seller *toke
 	common2.CheckFinality(network, buyer, common.JSONUnmarshalString(txIDBoxed), nil, false)
 }
 
-func checkBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ string, expected uint64) {
+func checkBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token2.TokenType, expected uint64) {
 	res, err := network.Client(ref.ReplicaName()).CallView("balance", common.JSONMarshall(&views2.BalanceQuery{
 		Wallet: wallet,
 		Type:   typ,

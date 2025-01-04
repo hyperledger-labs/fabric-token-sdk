@@ -26,7 +26,7 @@ type Redeem struct {
 	// TokenIDs contains a list of token ids to redeem. If empty, tokens are selected on the spot.
 	TokenIDs []*token.ID
 	// Type of tokens to redeem
-	Type string
+	Type token.TokenType
 	// Amount to redeem
 	Amount uint64
 	// The TMS to pick in case of multiple TMSIDs

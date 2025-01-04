@@ -343,7 +343,7 @@ func TestInputStream_ByEnrollmentID(t *testing.T) {
 }
 
 func TestInputStream_ByType(t *testing.T) {
-	tokenType := "type1"
+	tokenType := token.TokenType("type1")
 	input1 := &Input{Type: tokenType}
 	input2 := &Input{Type: "type2"}
 	input3 := &Input{Type: tokenType}

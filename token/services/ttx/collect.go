@@ -10,6 +10,7 @@ import (
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 
 	"go.uber.org/zap/zapcore"
 
@@ -31,7 +32,7 @@ type ActionTransfer struct {
 	// From is the sender
 	From view.Identity
 	// Type of tokens to transfer
-	Type string
+	Type token2.TokenType
 	// Amount to transfer
 	Amount uint64
 	// Recipient is the recipient of the transfer

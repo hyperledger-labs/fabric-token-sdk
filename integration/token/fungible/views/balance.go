@@ -21,11 +21,11 @@ type BalanceQuery struct {
 	TMSID     *token.TMSID
 	SkipCheck bool
 	Wallet    string
-	Type      string
+	Type      token2.TokenType
 }
 
 type Balance struct {
-	Type     string
+	Type     token2.TokenType
 	Quantity string
 }
 

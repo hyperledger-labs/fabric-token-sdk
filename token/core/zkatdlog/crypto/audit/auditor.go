@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -56,7 +57,7 @@ type AuditableToken struct {
 	Owner *OwnerOpening
 }
 
-func NewAuditableToken(token *token.Token, ownerInfo []byte, tokenType string, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
+func NewAuditableToken(token *token.Token, ownerInfo []byte, tokenType token2.TokenType, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
 	return &AuditableToken{
 		Token: token,
 		Owner: &OwnerOpening{
@@ -73,7 +74,7 @@ func NewAuditableToken(token *token.Token, ownerInfo []byte, tokenType string, v
 // TokenDataOpening contains the opening of the TokenData.
 // TokenData is a Pedersen commitment to token type and Value.
 type TokenDataOpening struct {
-	TokenType string
+	TokenType token2.TokenType
 	Value     *math.Zr
 	BF        *math.Zr
 }

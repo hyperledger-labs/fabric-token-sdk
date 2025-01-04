@@ -27,7 +27,7 @@ type RecipientData struct {
 // ListTokensOptions contains options that can be used to list tokens from a wallet
 type ListTokensOptions struct {
 	// TokenType is the type of token to list
-	TokenType string
+	TokenType token.TokenType
 	// Context is used to track the operation
 	Context context.Context
 }
@@ -93,7 +93,7 @@ type IssuerWallet interface {
 
 	// GetIssuerIdentity returns an issuer identity for the passed token type.
 	// Depending on the underlying wallet implementation, this can be a long-term or ephemeral identity.
-	GetIssuerIdentity(tokenType string) (Identity, error)
+	GetIssuerIdentity(tokenType token.TokenType) (Identity, error)
 
 	// HistoryTokens returns the list of tokens issued by this wallet filtered using the passed options.
 	HistoryTokens(opts *ListTokensOptions) (*token.IssuedTokens, error)

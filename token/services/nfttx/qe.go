@@ -72,7 +72,7 @@ func (s *QueryExecutor) QueryByKey(state interface{}, key string, value string) 
 		}
 		if q.Cmp(token2.NewOneQuantity(s.precision)) == 0 {
 			// this is the token
-			decoded, err := base64.StdEncoding.DecodeString(t.Type)
+			decoded, err := base64.StdEncoding.DecodeString(string(t.Type))
 			if err != nil {
 				return errors.Wrap(err, "failed to decode type")
 			}
@@ -90,7 +90,7 @@ type jsonFilter struct {
 }
 
 func (j *jsonFilter) ContainsToken(token *token2.UnspentToken) bool {
-	decoded, err := base64.StdEncoding.DecodeString(token.Type)
+	decoded, err := base64.StdEncoding.DecodeString(string(token.Type))
 	if err != nil {
 		logger.Debugf("failed to decode token type [%s]", token.Type)
 		return false

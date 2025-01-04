@@ -184,7 +184,7 @@ func TestMovementConditions(t *testing.T) {
 			params: driver.QueryMovementsParams{
 				EnrollmentIDs:     []string{"alice"},
 				TxStatuses:        []driver.TxStatus{driver.Confirmed},
-				TokenTypes:        []string{"ABC", "XYZ"},
+				TokenTypes:        []token.TokenType{"ABC", "XYZ"},
 				MovementDirection: driver.All,
 			},
 			expectedSql:  "WHERE (enrollment_id = $1 AND (token_type) IN (($2), ($3)) AND status = $4) ORDER BY stored_at DESC",
@@ -195,7 +195,7 @@ func TestMovementConditions(t *testing.T) {
 			params: driver.QueryMovementsParams{
 				EnrollmentIDs:     []string{"alice"},
 				TxStatuses:        []driver.TxStatus{driver.Confirmed},
-				TokenTypes:        []string{"ABC", "XYZ"},
+				TokenTypes:        []token.TokenType{"ABC", "XYZ"},
 				NumRecords:        5,
 				MovementDirection: driver.All,
 			},
@@ -206,7 +206,7 @@ func TestMovementConditions(t *testing.T) {
 			name: "Sent XYZ from alice",
 			params: driver.QueryMovementsParams{
 				EnrollmentIDs:     []string{"alice"},
-				TokenTypes:        []string{"XYZ"},
+				TokenTypes:        []token.TokenType{"XYZ"},
 				MovementDirection: driver.Sent,
 			},
 			expectedSql:  "WHERE (enrollment_id = $1 AND token_type = $2 AND status != 3 AND amount < 0) ORDER BY stored_at DESC",
@@ -290,7 +290,7 @@ func TestTokenSql(t *testing.T) {
 		{
 			name: "owner and type and id",
 			params: driver.QueryTokenDetailsParams{
-				TokenType: "tok",
+				TokenType: token.TokenType("tok"),
 				WalletID:  "me",
 				IDs:       []*token.ID{{TxId: "a", Index: 1}},
 			},
@@ -300,7 +300,7 @@ func TestTokenSql(t *testing.T) {
 		{
 			name: "type and ids",
 			params: driver.QueryTokenDetailsParams{
-				TokenType:      "tok",
+				TokenType:      token.TokenType("tok"),
 				IDs:            []*token.ID{{TxId: "a", Index: 1}, {TxId: "b", Index: 2}},
 				IncludeDeleted: true,
 			},

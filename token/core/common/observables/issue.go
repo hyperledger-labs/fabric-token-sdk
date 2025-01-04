@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -38,8 +39,8 @@ func NewObservableIssueService(issueService driver.IssueService, metrics *issueM
 	return &ObservableIssueService{IssueService: issueService, Metrics: metrics}
 }
 
-func (o *ObservableIssueService) Issue(ctx context.Context, issuerIdentity driver.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
-	newContext, span := o.Metrics.issueTracer.Start(ctx, "issue", trace.WithAttributes(attribute.String(TokenTypeLabel, tokenType)))
+func (o *ObservableIssueService) Issue(ctx context.Context, issuerIdentity driver.Identity, tokenType token.TokenType, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
+	newContext, span := o.Metrics.issueTracer.Start(ctx, "issue", trace.WithAttributes(attribute.String(TokenTypeLabel, string(tokenType))))
 	defer span.End()
 
 	action, meta, err := o.IssueService.Issue(newContext, issuerIdentity, tokenType, values, owners, opts)

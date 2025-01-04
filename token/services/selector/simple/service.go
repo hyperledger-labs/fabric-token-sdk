@@ -68,7 +68,7 @@ func (q *queryService) UnspentTokensIterator() (*token.UnspentTokensIterator, er
 	return q.qe.UnspentTokensIterator()
 }
 
-func (q *queryService) UnspentTokensIteratorBy(ctx context.Context, id, tokenType string) (driver.UnspentTokensIterator, error) {
+func (q *queryService) UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.TokenType) (driver.UnspentTokensIterator, error) {
 	return q.qe.UnspentTokensIteratorBy(ctx, id, tokenType)
 }
 
