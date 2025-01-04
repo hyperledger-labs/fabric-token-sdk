@@ -17,6 +17,11 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+const (
+	type1 = token.TokenType("type1")
+	type2 = token.TokenType("type2")
+)
+
 type MockQueryService struct {
 	mock.Mock
 }
@@ -120,12 +125,12 @@ func TestOutputStream_ByRecipient(t *testing.T) {
 }
 
 func TestOutputStream_ByType(t *testing.T) {
-	output1 := &Output{Type: "type1"}
-	output2 := &Output{Type: "type2"}
-	output3 := &Output{Type: "type1"}
+	output1 := &Output{Type: type1}
+	output2 := &Output{Type: type2}
+	output3 := &Output{Type: type1}
 	stream := NewOutputStream([]*Output{output1, output2, output3}, 0)
 
-	filtered := stream.ByType("type1")
+	filtered := stream.ByType(type1)
 
 	assert.Equal(t, 2, filtered.Count())
 	assert.Equal(t, []*Output{output1, output3}, filtered.Outputs())
@@ -219,14 +224,14 @@ func TestOwnerStream_Count(t *testing.T) {
 }
 
 func TestOutputStream_TokenTypes(t *testing.T) {
-	output1 := &Output{Type: "type1"}
-	output2 := &Output{Type: "type2"}
-	output3 := &Output{Type: "type1"}
+	output1 := &Output{Type: type1}
+	output2 := &Output{Type: type2}
+	output3 := &Output{Type: type1}
 	stream := NewOutputStream([]*Output{output1, output2, output3}, 0)
 
 	tokenTypes := stream.TokenTypes()
 
-	assert.ElementsMatch(t, []string{"type1", "type2"}, tokenTypes)
+	assert.ElementsMatch(t, []token.TokenType{type1, type2}, tokenTypes)
 }
 
 func TestInputStream_Owners(t *testing.T) {
@@ -267,14 +272,14 @@ func TestInputStream_RevocationHandles(t *testing.T) {
 }
 
 func TestInputStream_TokenTypes(t *testing.T) {
-	input1 := &Input{Type: "type1"}
-	input2 := &Input{Type: "type2"}
-	input3 := &Input{Type: "type1"}
+	input1 := &Input{Type: type1}
+	input2 := &Input{Type: type2}
+	input3 := &Input{Type: type1}
 	stream := NewInputStream(nil, []*Input{input1, input2, input3}, 0)
 
 	tokenTypes := stream.TokenTypes()
 
-	assert.ElementsMatch(t, []string{"type1", "type2"}, tokenTypes)
+	assert.ElementsMatch(t, []token.TokenType{type1, type2}, tokenTypes)
 }
 
 func TestInputStream_Count(t *testing.T) {
@@ -343,9 +348,9 @@ func TestInputStream_ByEnrollmentID(t *testing.T) {
 }
 
 func TestInputStream_ByType(t *testing.T) {
-	tokenType := token.TokenType("type1")
+	tokenType := type1
 	input1 := &Input{Type: tokenType}
-	input2 := &Input{Type: "type2"}
+	input2 := &Input{Type: type2}
 	input3 := &Input{Type: tokenType}
 	stream := NewInputStream(nil, []*Input{input1, input2, input3}, 0)
 
