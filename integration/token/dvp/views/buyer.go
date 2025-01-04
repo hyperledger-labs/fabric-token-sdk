@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/house"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type BuyHouseView struct{}
@@ -45,7 +46,7 @@ func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 	// check action
 	assert.Equal(otherCash, action.Recipient, "recipient mismatch")
 	assert.True(action.Amount > 0, "amount must be greater than 0")
-	assert.Equal("USD", action.Type, "currency must be USD")
+	assert.Equal(token2.TokenType("USD"), action.Type, "currency must be USD")
 	assert.Equal(meCash, action.From, "sender mismatch")
 
 	// check house and action match
