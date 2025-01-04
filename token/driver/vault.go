@@ -67,7 +67,7 @@ type QueryEngine interface {
 	UnspentTokensIterator() (UnspentTokensIterator, error)
 	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 	// The token type can be empty. In that case, tokens of any type are returned.
-	UnspentTokensIteratorBy(ctx context.Context, walletID, tokenType string) (UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.TokenType) (UnspentTokensIterator, error)
 	// ListUnspentTokens returns the list of unspent tokens
 	ListUnspentTokens() (*token.UnspentTokens, error)
 	// ListAuditTokens returns the audited tokens associated to the passed ids
@@ -83,12 +83,12 @@ type QueryEngine interface {
 	// For each id, the callback is invoked to unmarshal the output
 	GetTokenOutputs(ids []*token.ID, callback QueryCallbackFunc) error
 	// GetTokenOutputsAndMeta retrieves both the token output and information for the passed ids.
-	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []string, error)
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenType, error)
 	// GetTokens returns the list of tokens with their respective vault keys
 	GetTokens(inputs ...*token.ID) ([]*token.Token, error)
 	// WhoDeletedTokens returns info about who deleted the passed tokens.
 	// The bool array is an indicator used to tell if the token at a given position has been deleted or not
 	WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
 	// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-	Balance(id, tokenType string) (uint64, error)
+	Balance(id string, tokenType token.TokenType) (uint64, error)
 }

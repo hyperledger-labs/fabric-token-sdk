@@ -14,6 +14,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // ActionType is the type of transaction
@@ -85,7 +86,7 @@ type MovementRecord struct {
 	// EnrollmentID is the enrollment ID of the account that is receiving or sending
 	EnrollmentID string
 	// TokenType is the type of token
-	TokenType string
+	TokenType token2.TokenType
 	// Amount is positive if tokens are received. Negative otherwise
 	Amount *big.Int
 	// Timestamp is the time the transaction was submitted to the db
@@ -109,7 +110,7 @@ type TransactionRecord struct {
 	// RecipientEID is the enrollment ID of the account that is receiving tokens
 	RecipientEID string
 	// TokenType is the type of token
-	TokenType string
+	TokenType token2.TokenType
 	// Amount is positive if tokens are received. Negative otherwise
 	Amount *big.Int
 	// Timestamp is the time the transaction was submitted to the db
@@ -132,7 +133,7 @@ func (t *TransactionRecord) String() string {
 	s.WriteString(" ")
 	s.WriteString(t.RecipientEID)
 	s.WriteString(" ")
-	s.WriteString(t.TokenType)
+	s.WriteString(string(t.TokenType))
 	s.WriteString(" ")
 	s.WriteString(t.Amount.String())
 	s.WriteString(" ")
@@ -184,7 +185,7 @@ type QueryMovementsParams struct {
 	// EnrollmentIDs is the enrollment IDs of the accounts to query
 	EnrollmentIDs []string
 	// TokenTypes is the token types to query
-	TokenTypes []string
+	TokenTypes []token2.TokenType
 	// TxStatuses is the statuses of the transactions to query
 	TxStatuses []TxStatus
 	// SearchDirection is the direction of the search

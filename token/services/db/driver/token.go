@@ -37,14 +37,14 @@ type TokenRecord struct {
 	// Ledger is the raw token as stored on the ledger
 	Ledger []byte
 	// LedgerType is the type of the raw token as stored on the ledger
-	LedgerType string
+	LedgerType token.TokenType
 	// LedgerMetadata is the metadata associated to the content of Ledger
 	LedgerMetadata []byte
 	// Quantity is the number of units of Type carried in the token.
 	// It is encoded as a string containing a number in base 16. The string has prefix ``0x''.
 	Quantity string
 	// Type is the type of token
-	Type string
+	Type token.TokenType
 	// Amount is the Quantity converted to decimal
 	Amount uint64
 	// Owner is used to mark the token as owned by this node
@@ -86,7 +86,7 @@ type QueryTokenDetailsParams struct {
 	// OwnerType is the type of owner, for instance 'idemix' or 'htlc'
 	OwnerType string
 	// TokenType (optional) is the type of token
-	TokenType string
+	TokenType token.TokenType
 	// IDs is an optional list of specific token ids to return
 	IDs []*token.ID
 	// TransactionIDs selects tokens that are the output of the provided transaction ids.
@@ -98,7 +98,7 @@ type QueryTokenDetailsParams struct {
 	// OnlySpendable determines whether to include only spendable tokens. It defaults to false
 	OnlySpendable bool
 
-	LedgerTokenTypes []string
+	LedgerTokenTypes []token.TokenType
 }
 
 // CertificationDB defines a database to manager token certifications
@@ -144,11 +144,11 @@ type TokenDB interface {
 	// UnspentTokensIterator returns an iterator over all owned tokens
 	UnspentTokensIterator() (driver.UnspentTokensIterator, error)
 	// UnspentTokensIteratorBy returns an iterator over all tokens owned by the passed wallet identifier and of a given type
-	UnspentTokensIteratorBy(ctx context.Context, walletID, tokenType string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.TokenType) (driver.UnspentTokensIterator, error)
 	// SpendableTokensIteratorBy returns an iterator over all tokens owned solely by the passed wallet identifier and of a given type
-	SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (driver.SpendableTokensIterator, error)
+	SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token.TokenType) (driver.SpendableTokensIterator, error)
 	// ListUnspentTokensBy returns the list of all tokens owned by the passed identifier of a given type
-	ListUnspentTokensBy(walletID, typ string) (*token.UnspentTokens, error)
+	ListUnspentTokensBy(walletID string, typ token.TokenType) (*token.UnspentTokens, error)
 	// ListUnspentTokens returns the list of all owned tokens
 	ListUnspentTokens() (*token.UnspentTokens, error)
 	// ListAuditTokens returns the audited tokens for the passed ids
@@ -161,7 +161,7 @@ type TokenDB interface {
 	// GetTokenMetadata returns the metadata of the tokens for the passed ids.
 	GetTokenMetadata(ids []*token.ID) ([][]byte, error)
 	// GetTokenOutputsAndMeta retrieves both the token output, metadata, and type for the passed ids.
-	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []string, error)
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenType, error)
 	// GetTokens returns the owned tokens and their identifier keys for the passed ids.
 	GetTokens(inputs ...*token.ID) ([]*token.Token, error)
 	// WhoDeletedTokens for each id, the function return if it was deleted and by who as per the Delete function
@@ -182,9 +182,9 @@ type TokenDB interface {
 	// QueryTokenDetails provides detailed information about tokens
 	QueryTokenDetails(params QueryTokenDetailsParams) ([]TokenDetails, error)
 	// Balance returns the sun of the amounts of the tokens with type and EID equal to those passed as arguments.
-	Balance(ownerEID, typ string) (uint64, error)
+	Balance(ownerEID string, typ token.TokenType) (uint64, error)
 	// SetSupportedTokenTypes sets the supported token types
-	SetSupportedTokenTypes(supportedTokenTypes []string) error
+	SetSupportedTokenTypes(supportedTokenTypes []token.TokenType) error
 }
 
 // TokenDBDriver is the interface for a token database driver

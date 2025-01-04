@@ -215,7 +215,7 @@ func (t *Tokens) SetSpendableBySupportedTokenTypes(types []string) error {
 	return nil
 }
 
-func (t *Tokens) SetSupportedTokenTypes(tokenTypes []string) error {
+func (t *Tokens) SetSupportedTokenTypes(tokenTypes []token2.TokenType) error {
 	return t.Storage.tokenDB.SetSupportedTokenTypes(tokenTypes)
 }
 

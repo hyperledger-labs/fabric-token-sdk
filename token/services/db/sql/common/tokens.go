@@ -60,7 +60,7 @@ type TokenDB struct {
 	ci    TokenInterpreter
 
 	sttMutex            sync.RWMutex
-	supportedTokenTypes []string
+	supportedTokenTypes []token.TokenType
 }
 
 func newTokenDB(db *sql.DB, tables tokenTables, ci TokenInterpreter) *TokenDB {
@@ -140,7 +140,7 @@ func (db *TokenDB) UnspentTokensIterator() (tdriver.UnspentTokensIterator, error
 
 // UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 // The token type can be empty. In that case, tokens of any type are returned.
-func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenType string) (tdriver.UnspentTokensIterator, error) {
+func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.TokenType) (tdriver.UnspentTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
@@ -163,7 +163,7 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID, tokenT
 }
 
 // SpendableTokensIteratorBy returns the minimum information about the tokens needed for the selector
-func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.SpendableTokensIterator, error) {
+func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token.TokenType) (tdriver.SpendableTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		WalletID:         walletID,
@@ -187,7 +187,7 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 }
 
 // Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-func (db *TokenDB) Balance(walletID, typ string) (uint64, error) {
+func (db *TokenDB) Balance(walletID string, typ token.TokenType) (uint64, error) {
 	return db.balance(driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
@@ -218,7 +218,7 @@ func (db *TokenDB) balance(opts driver.QueryTokenDetailsParams) (uint64, error) 
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
-func (db *TokenDB) ListUnspentTokensBy(walletID, typ string) (*token.UnspentTokens, error) {
+func (db *TokenDB) ListUnspentTokensBy(walletID string, typ token.TokenType) (*token.UnspentTokens, error) {
 	logger.Debugf("list unspent token by [%s,%s]", walletID, typ)
 	it, err := db.UnspentTokensIteratorBy(context.TODO(), walletID, typ)
 	if err != nil {
@@ -381,7 +381,7 @@ func (db *TokenDB) GetTokenMetadata(ids []*token.ID) ([][]byte, error) {
 }
 
 // GetTokenOutputsAndMeta retrieves both the token output, metadata, and type for the passed ids.
-func (db *TokenDB) GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []string, error) {
+func (db *TokenDB) GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenType, error) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent("get_ledger_token_meta")
 	tokens, metas, types, err := db.getLedgerTokenAndMeta(ctx, ids)
@@ -446,7 +446,7 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 	return tokens, nil
 }
 
-func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []string, error) {
+func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenType, error) {
 	span := trace.SpanFromContext(ctx)
 	if len(ids) == 0 {
 		return nil, nil, nil, nil
@@ -485,14 +485,14 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 	span.AddEvent("combine_results")
 	tokens := make([][]byte, len(ids))
 	metas := make([][]byte, len(ids))
-	types := make([]string, len(ids))
+	types := make([]token.TokenType, len(ids))
 	for i, id := range ids {
 		if info, ok := infoMap[id.String()]; !ok {
 			return nil, nil, nil, errors.Errorf("token/metadata not found for [%s]", id)
 		} else {
 			tokens[i] = info[0]
 			metas[i] = info[1]
-			types[i] = string(info[2])
+			types[i] = token.TokenType(info[2])
 		}
 	}
 	return tokens, metas, types, nil
@@ -524,7 +524,8 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 	counter := 0
 	for rows.Next() {
 		tokID := token.ID{}
-		var typ, quantity string
+		var typ token.TokenType
+		var quantity string
 		var ownerRaw []byte
 		err := rows.Scan(
 			&tokID.TxId,
@@ -947,14 +948,14 @@ func (db *TokenDB) NewTokenDBTransaction(ctx context.Context) (driver.TokenDBTra
 	return &TokenTransaction{db: db, tx: tx, ctx: ctx}, nil
 }
 
-func (db *TokenDB) SetSupportedTokenTypes(supportedTokenTypes []string) error {
+func (db *TokenDB) SetSupportedTokenTypes(supportedTokenTypes []token.TokenType) error {
 	db.sttMutex.Lock()
 	db.supportedTokenTypes = supportedTokenTypes
 	db.sttMutex.Unlock()
 	return nil
 }
 
-func (db *TokenDB) getSupportedTokenTypes() []string {
+func (db *TokenDB) getSupportedTokenTypes() []token.TokenType {
 	db.sttMutex.RLock()
 	supportedTokenTypes := db.supportedTokenTypes
 	db.sttMutex.RUnlock()
@@ -991,7 +992,7 @@ func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bo
 
 	span.AddEvent("start_scan_rows")
 	var raw []byte
-	var tokenType string
+	var tokenType token.TokenType
 	var quantity string
 	var owners []string
 	var walletID *string
@@ -1212,7 +1213,8 @@ func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
 		return nil, nil
 	}
 
-	var typ, quantity string
+	var typ token.TokenType
+	var quantity string
 	var owner []byte
 	var id token.ID
 	// tx_id, idx, owner_raw, token_type, quantity

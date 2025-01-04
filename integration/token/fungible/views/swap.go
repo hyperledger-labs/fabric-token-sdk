@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // Swap contains the input information for a swap
@@ -23,11 +24,11 @@ type Swap struct {
 	// AliceWallet is the wallet Alice will use
 	AliceWallet string
 	// FromAliceType is the token type Alice will transfer
-	FromAliceType string
+	FromAliceType token.TokenType
 	// FromAliceAmount is the amount Alice will transfer
 	FromAliceAmount uint64
 	// FromBobType is the token type Bob will transfer
-	FromBobType string
+	FromBobType token.TokenType
 	// FromBobAmount is the amount Bob will transfer
 	FromBobAmount uint64
 	// Bob is the identity of the Bob's FSC node

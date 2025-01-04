@@ -40,7 +40,7 @@ type Selector interface {
 	// Quantity is a string in decimal format
 	// Notice that, the quantity selected might exceed the quantity requested due to the amounts
 	// stored in each token.
-	Select(ownerFilter OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error)
+	Select(ownerFilter OwnerFilter, q string, tokenType token2.TokenType) ([]*token2.ID, token2.Quantity, error)
 	// Close closes the selector and releases its memory/cpu resources
 	Close() error
 }

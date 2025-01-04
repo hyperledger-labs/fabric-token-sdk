@@ -10,11 +10,11 @@ import (
 )
 
 type QueryEngine struct {
-	BalanceStub        func(string, string) (uint64, error)
+	BalanceStub        func(string, token.TokenType) (uint64, error)
 	balanceMutex       sync.RWMutex
 	balanceArgsForCall []struct {
 		arg1 string
-		arg2 string
+		arg2 token.TokenType
 	}
 	balanceReturns struct {
 		result1 uint64
@@ -64,7 +64,7 @@ type QueryEngine struct {
 	getTokenOutputsReturnsOnCall map[int]struct {
 		result1 error
 	}
-	GetTokenOutputsAndMetaStub        func(context.Context, []*token.ID) ([][]byte, [][]byte, []string, error)
+	GetTokenOutputsAndMetaStub        func(context.Context, []*token.ID) ([][]byte, [][]byte, []token.TokenType, error)
 	getTokenOutputsAndMetaMutex       sync.RWMutex
 	getTokenOutputsAndMetaArgsForCall []struct {
 		arg1 context.Context
@@ -73,13 +73,13 @@ type QueryEngine struct {
 	getTokenOutputsAndMetaReturns struct {
 		result1 [][]byte
 		result2 [][]byte
-		result3 []string
+		result3 []token.TokenType
 		result4 error
 	}
 	getTokenOutputsAndMetaReturnsOnCall map[int]struct {
 		result1 [][]byte
 		result2 [][]byte
-		result3 []string
+		result3 []token.TokenType
 		result4 error
 	}
 	GetTokensStub        func(...*token.ID) ([]*token.Token, error)
@@ -182,12 +182,12 @@ type QueryEngine struct {
 		result1 driver.UnspentTokensIterator
 		result2 error
 	}
-	UnspentTokensIteratorByStub        func(context.Context, string, string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorByStub        func(context.Context, string, token.TokenType) (driver.UnspentTokensIterator, error)
 	unspentTokensIteratorByMutex       sync.RWMutex
 	unspentTokensIteratorByArgsForCall []struct {
 		arg1 context.Context
 		arg2 string
-		arg3 string
+		arg3 token.TokenType
 	}
 	unspentTokensIteratorByReturns struct {
 		result1 driver.UnspentTokensIterator
@@ -216,12 +216,12 @@ type QueryEngine struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *QueryEngine) Balance(arg1 string, arg2 string) (uint64, error) {
+func (fake *QueryEngine) Balance(arg1 string, arg2 token.TokenType) (uint64, error) {
 	fake.balanceMutex.Lock()
 	ret, specificReturn := fake.balanceReturnsOnCall[len(fake.balanceArgsForCall)]
 	fake.balanceArgsForCall = append(fake.balanceArgsForCall, struct {
 		arg1 string
-		arg2 string
+		arg2 token.TokenType
 	}{arg1, arg2})
 	stub := fake.BalanceStub
 	fakeReturns := fake.balanceReturns
@@ -242,13 +242,13 @@ func (fake *QueryEngine) BalanceCallCount() int {
 	return len(fake.balanceArgsForCall)
 }
 
-func (fake *QueryEngine) BalanceCalls(stub func(string, string) (uint64, error)) {
+func (fake *QueryEngine) BalanceCalls(stub func(string, token.TokenType) (uint64, error)) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = stub
 }
 
-func (fake *QueryEngine) BalanceArgsForCall(i int) (string, string) {
+func (fake *QueryEngine) BalanceArgsForCall(i int) (string, token.TokenType) {
 	fake.balanceMutex.RLock()
 	defer fake.balanceMutex.RUnlock()
 	argsForCall := fake.balanceArgsForCall[i]
@@ -484,7 +484,7 @@ func (fake *QueryEngine) GetTokenOutputsReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *QueryEngine) GetTokenOutputsAndMeta(arg1 context.Context, arg2 []*token.ID) ([][]byte, [][]byte, []string, error) {
+func (fake *QueryEngine) GetTokenOutputsAndMeta(arg1 context.Context, arg2 []*token.ID) ([][]byte, [][]byte, []token.TokenType, error) {
 	var arg2Copy []*token.ID
 	if arg2 != nil {
 		arg2Copy = make([]*token.ID, len(arg2))
@@ -515,7 +515,7 @@ func (fake *QueryEngine) GetTokenOutputsAndMetaCallCount() int {
 	return len(fake.getTokenOutputsAndMetaArgsForCall)
 }
 
-func (fake *QueryEngine) GetTokenOutputsAndMetaCalls(stub func(context.Context, []*token.ID) ([][]byte, [][]byte, []string, error)) {
+func (fake *QueryEngine) GetTokenOutputsAndMetaCalls(stub func(context.Context, []*token.ID) ([][]byte, [][]byte, []token.TokenType, error)) {
 	fake.getTokenOutputsAndMetaMutex.Lock()
 	defer fake.getTokenOutputsAndMetaMutex.Unlock()
 	fake.GetTokenOutputsAndMetaStub = stub
@@ -528,19 +528,19 @@ func (fake *QueryEngine) GetTokenOutputsAndMetaArgsForCall(i int) (context.Conte
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *QueryEngine) GetTokenOutputsAndMetaReturns(result1 [][]byte, result2 [][]byte, result3 []string, result4 error) {
+func (fake *QueryEngine) GetTokenOutputsAndMetaReturns(result1 [][]byte, result2 [][]byte, result3 []token.TokenType, result4 error) {
 	fake.getTokenOutputsAndMetaMutex.Lock()
 	defer fake.getTokenOutputsAndMetaMutex.Unlock()
 	fake.GetTokenOutputsAndMetaStub = nil
 	fake.getTokenOutputsAndMetaReturns = struct {
 		result1 [][]byte
 		result2 [][]byte
-		result3 []string
+		result3 []token.TokenType
 		result4 error
 	}{result1, result2, result3, result4}
 }
 
-func (fake *QueryEngine) GetTokenOutputsAndMetaReturnsOnCall(i int, result1 [][]byte, result2 [][]byte, result3 []string, result4 error) {
+func (fake *QueryEngine) GetTokenOutputsAndMetaReturnsOnCall(i int, result1 [][]byte, result2 [][]byte, result3 []token.TokenType, result4 error) {
 	fake.getTokenOutputsAndMetaMutex.Lock()
 	defer fake.getTokenOutputsAndMetaMutex.Unlock()
 	fake.GetTokenOutputsAndMetaStub = nil
@@ -548,14 +548,14 @@ func (fake *QueryEngine) GetTokenOutputsAndMetaReturnsOnCall(i int, result1 [][]
 		fake.getTokenOutputsAndMetaReturnsOnCall = make(map[int]struct {
 			result1 [][]byte
 			result2 [][]byte
-			result3 []string
+			result3 []token.TokenType
 			result4 error
 		})
 	}
 	fake.getTokenOutputsAndMetaReturnsOnCall[i] = struct {
 		result1 [][]byte
 		result2 [][]byte
-		result3 []string
+		result3 []token.TokenType
 		result4 error
 	}{result1, result2, result3, result4}
 }
@@ -1040,13 +1040,13 @@ func (fake *QueryEngine) UnspentTokensIteratorReturnsOnCall(i int, result1 drive
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) UnspentTokensIteratorBy(arg1 context.Context, arg2 string, arg3 string) (driver.UnspentTokensIterator, error) {
+func (fake *QueryEngine) UnspentTokensIteratorBy(arg1 context.Context, arg2 string, arg3 token.TokenType) (driver.UnspentTokensIterator, error) {
 	fake.unspentTokensIteratorByMutex.Lock()
 	ret, specificReturn := fake.unspentTokensIteratorByReturnsOnCall[len(fake.unspentTokensIteratorByArgsForCall)]
 	fake.unspentTokensIteratorByArgsForCall = append(fake.unspentTokensIteratorByArgsForCall, struct {
 		arg1 context.Context
 		arg2 string
-		arg3 string
+		arg3 token.TokenType
 	}{arg1, arg2, arg3})
 	stub := fake.UnspentTokensIteratorByStub
 	fakeReturns := fake.unspentTokensIteratorByReturns
@@ -1067,13 +1067,13 @@ func (fake *QueryEngine) UnspentTokensIteratorByCallCount() int {
 	return len(fake.unspentTokensIteratorByArgsForCall)
 }
 
-func (fake *QueryEngine) UnspentTokensIteratorByCalls(stub func(context.Context, string, string) (driver.UnspentTokensIterator, error)) {
+func (fake *QueryEngine) UnspentTokensIteratorByCalls(stub func(context.Context, string, token.TokenType) (driver.UnspentTokensIterator, error)) {
 	fake.unspentTokensIteratorByMutex.Lock()
 	defer fake.unspentTokensIteratorByMutex.Unlock()
 	fake.UnspentTokensIteratorByStub = stub
 }
 
-func (fake *QueryEngine) UnspentTokensIteratorByArgsForCall(i int) (context.Context, string, string) {
+func (fake *QueryEngine) UnspentTokensIteratorByArgsForCall(i int) (context.Context, string, token.TokenType) {
 	fake.unspentTokensIteratorByMutex.RLock()
 	defer fake.unspentTokensIteratorByMutex.RUnlock()
 	argsForCall := fake.unspentTokensIteratorByArgsForCall[i]

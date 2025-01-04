@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
@@ -20,7 +21,7 @@ type ListIssuedTokens struct {
 	// Wallet whose identities own the token
 	Wallet string
 	// TokenType is the token type to select
-	TokenType string
+	TokenType token2.TokenType
 }
 
 type ListIssuedTokensView struct {

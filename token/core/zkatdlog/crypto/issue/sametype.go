@@ -11,6 +11,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -53,7 +54,7 @@ type SameTypeProver struct {
 	PedParams []*math.G1
 	Curve     *math.Curve
 	// tokenType is the type of the tokens to be issued
-	tokenType string
+	tokenType token2.TokenType
 	// blindingFactor is the blinding factor in the CommitmentToType
 	blindingFactor *math.Zr
 	// CommitmentToType is a commitment to tokenType using blindingFactor
@@ -65,7 +66,7 @@ type SameTypeProver struct {
 }
 
 // NewSameTypeProver returns a SameTypeProver for the passed parameters
-func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, pp []*math.G1, c *math.Curve) *SameTypeProver {
+func NewSameTypeProver(ttype token2.TokenType, bf *math.Zr, com *math.G1, pp []*math.G1, c *math.Curve) *SameTypeProver {
 
 	return &SameTypeProver{
 		tokenType:        ttype,

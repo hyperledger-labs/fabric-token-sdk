@@ -29,7 +29,7 @@ func (o *OutputStream) ByRecipient(id view.Identity) *OutputStream {
 	return &OutputStream{OutputStream: o.OutputStream.ByRecipient(id)}
 }
 
-func (o *OutputStream) ByType(typ string) *OutputStream {
+func (o *OutputStream) ByType(typ token2.TokenType) *OutputStream {
 	return &OutputStream{OutputStream: o.OutputStream.ByType(typ)}
 }
 
@@ -39,7 +39,7 @@ func (o *OutputStream) ByEnrollmentID(id string) *OutputStream {
 
 func (o *OutputStream) StateAt(index int, state interface{}) error {
 	output := o.OutputStream.At(index)
-	decoded, err := base64.StdEncoding.DecodeString(output.Type)
+	decoded, err := base64.StdEncoding.DecodeString(string(output.Type))
 	if err != nil {
 		return errors.Wrap(err, "failed to decode type")
 	}

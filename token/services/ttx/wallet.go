@@ -9,11 +9,12 @@ package ttx
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // WithType returns a list token option that filter by the passed token type.
 // If the passed token type is the empty string, all token types are selected.
-func WithType(tokenType string) token.ListTokensOption {
+func WithType(tokenType token2.TokenType) token.ListTokensOption {
 	return func(o *token.ListTokensOptions) error {
 		o.TokenType = tokenType
 		return nil

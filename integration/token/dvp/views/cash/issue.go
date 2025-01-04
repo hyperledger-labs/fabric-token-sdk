@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // IssueCash contains the input information to issue a token
@@ -20,7 +21,7 @@ type IssueCash struct {
 	// IssuerWallet is the issuer's wallet to use
 	IssuerWallet string
 	// TokenType is the type of token to issue
-	TokenType string
+	TokenType token.TokenType
 	// Quantity represent the number of units of a certain token type stored in the token
 	Quantity uint64
 	// Recipient is an identifier of the recipient identity

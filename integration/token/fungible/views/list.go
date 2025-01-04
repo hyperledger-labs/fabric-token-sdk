@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -21,7 +22,7 @@ type ListUnspentTokens struct {
 	// Wallet whose identities own the token
 	Wallet string
 	// TokenType is the token type to select
-	TokenType string
+	TokenType token2.TokenType
 	// The TMS to pick in case of multiple TMSIDs
 	TMSID *token.TMSID
 }

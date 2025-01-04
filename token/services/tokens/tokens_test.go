@@ -54,7 +54,7 @@ func (md mdMock) GetToken(raw []byte) (*token2.Token, token.Identity, []byte, er
 	}
 	return &token2.Token{
 		Owner:    []byte(parsed[0]),
-		Type:     parsed[1],
+		Type:     token2.TokenType(parsed[1]),
 		Quantity: parsed[2],
 	}, []byte{}, []byte{}, nil
 }

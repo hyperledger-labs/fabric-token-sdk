@@ -25,12 +25,14 @@ func (id ID) String() string {
 	return fmt.Sprintf("[%s:%d]", id.TxId, id.Index)
 }
 
+type TokenType string
+
 // Token is the result of issue and transfer transactions
 type Token struct {
 	// Owner is the token owner
 	Owner []byte `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	// Type is the type of the token
-	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Type TokenType `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 	// Quantity is the number of units of Type carried in the token.
 	// It is encoded as a string containing a number in base 16. The string has prefix ``0x''.
 	Quantity string `protobuf:"bytes,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
@@ -42,7 +44,7 @@ type IssuedToken struct {
 	// Owner is the token owner
 	Owner []byte `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	// Type is the type of the token
-	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Type TokenType `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 	// Quantity represents the number of units of Type that this unspent token holds.
 	// It is formatted in decimal representation
 	Quantity string `protobuf:"bytes,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
@@ -67,7 +69,7 @@ func (it *IssuedTokens) Sum(precision uint64) Quantity {
 	return sum
 }
 
-func (it *IssuedTokens) ByType(typ string) *IssuedTokens {
+func (it *IssuedTokens) ByType(typ TokenType) *IssuedTokens {
 	res := &IssuedTokens{Tokens: []*IssuedToken{}}
 	for _, token := range it.Tokens {
 		if token.Type == typ {
@@ -88,7 +90,7 @@ type UnspentTokenInWallet struct {
 	// WalletID is the ID of the wallet owning this token
 	WalletID string
 	// Type is the type of the token
-	Type string
+	Type TokenType
 	// Quantity represents the number of units of Type that this unspent token holds.
 	Quantity string
 }
@@ -100,7 +102,7 @@ type UnspentToken struct {
 	// Owner is the token owner
 	Owner []byte
 	// Type is the type of the token
-	Type string
+	Type TokenType
 	// Quantity represents the number of units of Type that this unspent token holds.
 	Quantity string
 }
@@ -127,7 +129,7 @@ func (it *UnspentTokens) Sum(precision uint64) Quantity {
 	return sum
 }
 
-func (it *UnspentTokens) ByType(typ string) *UnspentTokens {
+func (it *UnspentTokens) ByType(typ TokenType) *UnspentTokens {
 	res := &UnspentTokens{Tokens: []*UnspentToken{}}
 	for _, token := range it.Tokens {
 		if token.Type == typ {

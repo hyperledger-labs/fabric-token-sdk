@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 const (
@@ -28,7 +29,7 @@ type Token struct {
 // Metadata contains the metadata of a token
 type Metadata struct {
 	// Type is the type of the token
-	Type string
+	Type token2.TokenType
 	// Value is the quantity of the token
 	Value *math.Zr
 	// BlindingFactor is the blinding factor used to commit type and value

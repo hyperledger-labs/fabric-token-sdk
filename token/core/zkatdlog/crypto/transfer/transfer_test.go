@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -137,7 +138,7 @@ func prepareInputsForZKTransfer(pp *crypto.PublicParams) ([]*token.TokenDataWitn
 	for i := 0; i < 2; i++ {
 		outBF[i] = c.NewRandomZr(rand)
 	}
-	ttype := "ABC"
+	ttype := token2.TokenType("ABC")
 	inValues[0] = 220
 	inValues[1] = 60
 	outValues[0] = 260
@@ -172,7 +173,7 @@ func prepareInvalidInputsForZKTransfer(pp *crypto.PublicParams) ([]*token.TokenD
 	for i := 0; i < 2; i++ {
 		outBF[i] = c.NewRandomZr(rand)
 	}
-	ttype := "ABC"
+	ttype := token2.TokenType("ABC")
 	inValues[0] = 90
 	inValues[1] = 60
 	outValues[0] = 110

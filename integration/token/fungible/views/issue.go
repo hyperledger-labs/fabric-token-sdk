@@ -29,7 +29,7 @@ type IssueCash struct {
 	// IssuerWallet is the issuer's wallet to use
 	IssuerWallet string
 	// TokenType is the type of token to issue
-	TokenType string
+	TokenType token2.TokenType
 	// Quantity represent the number of units of a certain token type stored in the token
 	Quantity uint64
 	// Recipient is the identity of the recipient's FSC node

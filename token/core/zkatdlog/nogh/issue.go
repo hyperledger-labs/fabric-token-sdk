@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -42,7 +43,7 @@ func NewIssueService(
 // Issue returns an IssueAction as a function of the passed arguments
 // Issue also returns a serialization TokenInformation associated with issued tokens
 // and the identity of the issuer
-func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
+func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity, tokenType token.TokenType, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
 	for _, owner := range owners {
 		// a recipient cannot be empty
 		if len(owner) == 0 {
