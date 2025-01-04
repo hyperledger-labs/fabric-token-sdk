@@ -124,13 +124,13 @@ type CertificationDB interface {
 
 type TokenDBTransaction interface {
 	// GetToken returns the owned tokens and their identifier keys for the passed ids.
-	GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error)
+	GetToken(tokenID token.ID, includeDeleted bool) (*token.Token, []string, error)
 	// Delete marks the passed token as deleted by a given identifier (idempotent)
-	Delete(txID string, index uint64, deletedBy string) error
+	Delete(tokenID token.ID, deletedBy string) error
 	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
 	StoreToken(tr TokenRecord, owners []string) error
 	// SetSpendable updates the spendable flag of the passed token
-	SetSpendable(txID string, index uint64, spendable bool) error
+	SetSpendable(tokenID token.ID, spendable bool) error
 	// SetSpendableBySupportedTokenTypes sets the spendable flag to true for all the tokens having one of the passed token type.
 	// The spendable flag is set to false for the other tokens
 	SetSpendableBySupportedTokenTypes(supportedTokenTypes []token.TokenType) error

@@ -79,7 +79,7 @@ func TSubscribeStoreDelete(t *testing.T, db driver.TokenDB, notifier driver.Toke
 	assert.NoError(t, err)
 	assert.NoError(t, tx.StoreToken(driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
 	assert.NoError(t, tx.StoreToken(driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
-	assert.NoError(t, tx.Delete("tx1", 1, "alice"))
+	assert.NoError(t, tx.Delete(token.ID{TxId: "tx1", Index: 1}, "alice"))
 	assert.NoError(t, tx.Commit())
 
 	assert2.Eventually(t, func() bool { return len(*result) == 3 }, time.Second, 20*time.Millisecond)
@@ -102,7 +102,7 @@ func TSubscribeRead(t *testing.T, db driver.TokenDB, notifier driver.TokenNotifi
 	tx, err := db.NewTokenDBTransaction(context.TODO())
 	assert.NoError(t, err)
 	// assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	_, _, err = tx.GetToken("tx1", 0, true)
+	_, _, err = tx.GetToken(token.ID{TxId: "tx1"}, true)
 	assert.NoError(t, err)
 	assert.NoError(t, tx.Commit())
 
@@ -154,18 +154,18 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tok, owners, err := tx.GetToken("tx1", 0, false)
+	tok, owners, err := tx.GetToken(token.ID{TxId: "tx1"}, false)
 	assert.NoError(t, err, "get token")
 	assert.Equal(t, "0x02", tok.Quantity)
 	assert.Equal(t, []string{"alice"}, owners)
 
-	assert.NoError(t, tx.Delete("tx1", 0, "me"))
-	tok, owners, err = tx.GetToken("tx1", 0, false)
+	assert.NoError(t, tx.Delete(token.ID{TxId: "tx1"}, "me"))
+	tok, owners, err = tx.GetToken(token.ID{TxId: "tx1"}, false)
 	assert.NoError(t, err)
 	assert.Nil(t, tok)
 	assert.Len(t, owners, 0)
 
-	tok, _, err = tx.GetToken("tx1", 0, true) // include deleted
+	tok, _, err = tx.GetToken(token.ID{TxId: "tx1"}, true) // include deleted
 	assert.NoError(t, err)
 	assert.Equal(t, "0x02", tok.Quantity)
 	assert.NoError(t, tx.Rollback())
@@ -174,19 +174,19 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tok, owners, err = tx.GetToken("tx1", 0, false)
+	tok, owners, err = tx.GetToken(token.ID{TxId: "tx1"}, false)
 	assert.NoError(t, err)
 	assert.NotNil(t, tok)
 	assert.Equal(t, "0x02", tok.Quantity)
 	assert.Equal(t, []string{"alice"}, owners)
-	assert.NoError(t, tx.Delete("tx1", 0, "me"))
+	assert.NoError(t, tx.Delete(token.ID{TxId: "tx1"}, "me"))
 	assert.NoError(t, tx.Commit())
 
 	tx, err = db.NewTokenDBTransaction(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}
-	tok, owners, err = tx.GetToken("tx1", 0, false)
+	tok, owners, err = tx.GetToken(token.ID{TxId: "tx1"}, false)
 	assert.NoError(t, err)
 	assert.Nil(t, tok)
 	assert.Equal(t, []string(nil), owners)
@@ -311,12 +311,12 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Issuer:         false,
 	}
 	assert.NoError(t, db.StoreToken(tr, nil))
-	_, err = db.GetTokens(&token.ID{TxId: fmt.Sprintf("tx%d", 2000), Index: 0})
+	_, err = db.GetTokens(&token.ID{TxId: fmt.Sprintf("tx%d", 2000)})
 	assert.NoError(t, err)
 
 	tx, err := db.NewTokenDBTransaction(context.TODO())
 	assert.NoError(t, err)
-	_, owners, err := tx.GetToken(fmt.Sprintf("tx%d", 2000), 0, true)
+	_, owners, err := tx.GetToken(token.ID{TxId: fmt.Sprintf("tx%d", 2000)}, true)
 	assert.NoError(t, err)
 	assert.Len(t, owners, 1)
 	assert.NoError(t, tx.Rollback())
