@@ -1173,3 +1173,6 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	charlieTransferPool.Wait()
 
 }
+
+func TestUpdatability(network *integration.Infrastructure, onRestart OnRestartFunc, selector *token3.ReplicaSelector) {
+}
