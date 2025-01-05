@@ -55,9 +55,6 @@ func (t *Output) Deserialize(bytes []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed deserializing token")
 	}
-	if typed.Type != fabtoken.Type {
-		return errors.Errorf("invalid token type [%v]", typed.Type)
-	}
 	return json.Unmarshal(typed.Token, t)
 }
 
