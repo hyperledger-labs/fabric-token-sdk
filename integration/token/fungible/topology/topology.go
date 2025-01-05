@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
@@ -372,5 +373,16 @@ func Topology(opts common.Opts) []api.Topology {
 			monitoringTopology,
 		}
 	}
+
+	// any extra TMS
+	for _, tmsOpts := range opts.ExtraTMSs {
+		tms := tokenTopology.AddTMS(nil, backendNetwork, backendChannel, tmsOpts.TokenSDKDriver)
+		tms.SetNamespace("token-chaincode")
+		if tmsOpts.Aries {
+			dlog.WithAries(tms)
+		}
+		tms.SetTokenGenPublicParams(tmsOpts.PublicParamsGenArgs...)
+	}
+
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}
 }

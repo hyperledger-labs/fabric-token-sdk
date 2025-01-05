@@ -19,6 +19,12 @@ type replicationOpts interface {
 	For(name string) []node.Option
 }
 
+type TMSOpts struct {
+	TokenSDKDriver      string
+	PublicParamsGenArgs []string
+	Aries               bool
+}
+
 type Opts struct {
 	CommType            fsc.P2PCommunicationType
 	ReplicationOpts     replicationOpts
@@ -35,6 +41,7 @@ type Opts struct {
 	TokenSelector       string
 	OnlyUnity           bool
 	FSCBasedEndorsement bool
+	ExtraTMSs           []TMSOpts
 }
 
 func SetDefaultParams(tokenSDKDriver string, tms *topology.TMS, aries bool) {
