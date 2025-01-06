@@ -143,13 +143,13 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	return service, nil
 }
 
-func (d *Driver) NewValidator(tmsID driver.TMSID, params driver.PublicParameters) (driver.Validator, error) {
+func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Validator, error) {
 	pp, ok := params.(*fabtoken.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	metricsProvider := metrics.NewTMSProvider(tmsID, d.metricsProvider)
+	metricsProvider := metrics.NewTMSProvider(driver.TMSID{}, d.metricsProvider)
 	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
 	defaultValidator, err := d.DefaultValidator(pp)
 	if err != nil {
