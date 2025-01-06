@@ -20,6 +20,7 @@ type replicationOpts interface {
 }
 
 type TMSOpts struct {
+	Alias               string
 	TokenSDKDriver      string
 	PublicParamsGenArgs []string
 	Aries               bool

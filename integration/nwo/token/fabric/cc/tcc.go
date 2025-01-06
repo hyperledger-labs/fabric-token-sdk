@@ -61,7 +61,11 @@ func NewGenericBackend(tokenChaincodePath string, tokenChaincodeParamsReplaceSuf
 }
 
 func (p *GenericBackend) PrepareNamespace(tms *topology3.TMS) {
-	orgs := tms.BackendParams["fabric.orgs"].([]string)
+	if tms.Transient {
+		return
+	}
+	orgs, ok := tms.BackendParams["fabric.orgs"].([]string)
+	Expect(ok).To(BeTrue(), "missing orgs for tms [%s:%s:%s:%s:%s]", tms.Network, tms.Channel, tms.Namespace, tms.Driver, tms.Alias)
 
 	// Standard Chaincode
 	policy := "AND ("

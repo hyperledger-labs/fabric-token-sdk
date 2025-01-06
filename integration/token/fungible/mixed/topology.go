@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
@@ -195,16 +194,6 @@ func Topology(opts common.Opts) []api.Topology {
 
 	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
-	}
-
-	// any extra TMS
-	for _, tmsOpts := range opts.ExtraTMSs {
-		tms := tokenTopology.AddTMS(nil, backendNetwork, backendChannel, tmsOpts.TokenSDKDriver)
-		tms.SetNamespace("token-chaincode")
-		if tmsOpts.Aries {
-			dlog.WithAries(tms)
-		}
-		tms.SetTokenGenPublicParams(tmsOpts.PublicParamsGenArgs...)
 	}
 
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}

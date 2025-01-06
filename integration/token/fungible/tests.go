@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 	"time"
 
@@ -832,7 +833,7 @@ func TestSelector(network *integration.Infrastructure, auditorId string, sel *to
 
 func TestPublicParamsUpdate(network *integration.Infrastructure, auditorId string, ppBytes []byte, networkName string, issuerAsAuditor bool, sel *token3.ReplicaSelector) {
 	newAuditor := sel.Get(auditorId)
-	tms := GetTMS(network, networkName)
+	tms := GetTMSByNetworkName(network, networkName)
 	newIssuer := sel.Get("newIssuer")
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
@@ -1174,5 +1175,45 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 
 }
 
-func TestUpdatability(network *integration.Infrastructure, onRestart OnRestartFunc, selector *token3.ReplicaSelector) {
+func TestUpdatability(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, sel *token3.ReplicaSelector) {
+	// we start with fabtoken 16bits, performs a few operation, and then switch
+	auditor := sel.Get(auditorId)
+	issuer := sel.Get("issuer")
+	alice := sel.Get("alice")
+	bob := sel.Get("bob")
+	charlie := sel.Get("charlie")
+	manager := sel.Get("manager")
+	endorsers := GetEndorsers(network, sel)
+	RegisterAuditor(network, auditor)
+	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
+	Expect(ok).To(BeTrue())
+
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditor.Id())
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+
+	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	IssueSuccessfulCash(network, "", "FT16", 110, alice, auditor, true, issuer, endorsers...)
+	CheckBalanceAndHolding(network, alice, "", "FT16", 110, auditor)
+
+	// switch to fabtoken 32bits, perform a few operations, convert tokens, perform operation again, and then switch
+	tms := GetTMSByNetworkName(network, "fabtoken-32bits")
+	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
+	Expect(err).NotTo(HaveOccurred())
+	Expect(ppBytes).NotTo(BeNil())
+	UpdatePublicParams(network, ppBytes, tms)
+	IssueSuccessfulCash(network, "", "FT32", 110, alice, auditor, true, issuer, endorsers...)
+	CheckBalanceAndHolding(network, alice, "", "FT32", 110, auditor)
+
+	// switch to dlog 32bits, perform a few operations
+	// tms = GetTMSByNetworkName(network, "dlog-32bits")
+	// ppBytes, err = os.ReadFile(tokenPlatform.PublicParametersFile(tms))
+	// Expect(err).NotTo(HaveOccurred())
+	// Expect(ppBytes).NotTo(BeNil())
+	// UpdatePublicParams(network, ppBytes, tms)
 }

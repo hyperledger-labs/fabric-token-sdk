@@ -192,6 +192,7 @@ func (db *TokenDB) UnspendableTokensIteratorBy(ctx context.Context, walletID str
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: tokenType,
+		Spendable: driver.NonSpendableOnly,
 	}, ""))
 
 	query, err := NewSelect("tx_id, idx, token_type, quantity, owner_wallet_id").From(db.table.Tokens).Where(where).Compile()
