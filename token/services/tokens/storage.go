@@ -64,7 +64,7 @@ type TokenToAppend struct {
 	txID                  string
 	index                 uint64
 	tok                   *token2.Token
-	tokenOnLedgerType     token2.TokenType
+	tokenOnLedgerType     token2.TokenFormat
 	tokenOnLedger         []byte
 	tokenOnLedgerMetadata []byte
 	ownerType             string
@@ -205,7 +205,7 @@ func (t *transaction) SetSpendableFlag(ctx context.Context, value bool, ids []*t
 	return nil
 }
 
-func (t *transaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokens []token2.TokenType) error {
+func (t *transaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokens []token2.TokenFormat) error {
 	return t.tx.SetSpendableBySupportedTokenTypes(ctx, supportedTokens)
 }
 

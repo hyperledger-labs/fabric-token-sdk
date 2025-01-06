@@ -31,7 +31,7 @@ type TokenLoader interface {
 }
 
 type TokenDeserializer interface {
-	DeserializeToken(outputType token2.TokenType, outputRaw []byte, metadataRaw []byte) (*token.Token, *token.Metadata, *token.ConversionWitness, error)
+	DeserializeToken(outputType token2.TokenFormat, outputRaw []byte, metadataRaw []byte) (*token.Token, *token.Metadata, *token.ConversionWitness, error)
 }
 
 type TransferService struct {

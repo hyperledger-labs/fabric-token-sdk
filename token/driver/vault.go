@@ -83,7 +83,7 @@ type QueryEngine interface {
 	// For each id, the callback is invoked to unmarshal the output
 	GetTokenOutputs(ids []*token.ID, callback QueryCallbackFunc) error
 	// GetTokenOutputsAndMeta retrieves both the token output and information for the passed ids.
-	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenType, error)
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenFormat, error)
 	// GetTokens returns the list of tokens with their respective vault keys
 	GetTokens(inputs ...*token.ID) ([]*token.Token, error)
 	// WhoDeletedTokens returns info about who deleted the passed tokens.

@@ -18,6 +18,7 @@ type TokenInterpreter interface {
 	common.Interpreter
 	HasTokens(colTxID, colIdx common.FieldName, ids ...*token.ID) common.Condition
 	HasTokenTypes(colTokenType common.FieldName, tokenTypes ...token.TokenType) common.Condition
+	HasTokenFormats(colTokenType common.FieldName, tokenTypes ...token.TokenFormat) common.Condition
 	HasTokenDetails(params driver.QueryTokenDetailsParams, tokenTable string) common.Condition
 	HasMovementsParams(params driver.QueryMovementsParams) common.Condition
 	HasValidationParams(params driver.QueryValidationRecordsParams) common.Condition
@@ -55,6 +56,17 @@ func (c *tokenInterpreter) HasTokenTypes(colTokenType common.FieldName, tokenTyp
 	return c.InStrings(colTokenType, types)
 }
 
+func (c *tokenInterpreter) HasTokenFormats(colTokenType common.FieldName, tokenTypes ...token.TokenFormat) common.Condition {
+	if len(tokenTypes) == 0 {
+		return common.EmptyCondition
+	}
+	types := make([]string, len(tokenTypes))
+	for i, typ := range tokenTypes {
+		types[i] = string(typ)
+	}
+	return c.InStrings(colTokenType, types)
+}
+
 func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams, tokenTable string) common.Condition {
 	conds := []common.Condition{
 		common.ConstCondition("owner = true"),
@@ -77,7 +89,7 @@ func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams
 		conds = append(conds, common.ConstCondition("spendable = true"))
 	}
 	if len(params.LedgerTokenTypes) > 0 {
-		conds = append(conds, c.HasTokenTypes("ledger_type", params.LedgerTokenTypes...))
+		conds = append(conds, c.HasTokenFormats("ledger_type", params.LedgerTokenTypes...))
 	}
 	return c.And(conds...)
 }

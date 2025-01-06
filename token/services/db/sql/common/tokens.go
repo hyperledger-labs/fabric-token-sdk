@@ -60,7 +60,7 @@ type TokenDB struct {
 	ci    TokenInterpreter
 
 	sttMutex            sync.RWMutex
-	supportedTokenTypes []token.TokenType
+	supportedTokenTypes []token.TokenFormat
 }
 
 func newTokenDB(db *sql.DB, tables tokenTables, ci TokenInterpreter) *TokenDB {
@@ -381,7 +381,7 @@ func (db *TokenDB) GetTokenMetadata(ids []*token.ID) ([][]byte, error) {
 }
 
 // GetTokenOutputsAndMeta retrieves both the token output, metadata, and type for the passed ids.
-func (db *TokenDB) GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenType, error) {
+func (db *TokenDB) GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenFormat, error) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent("get_ledger_token_meta")
 	tokens, metas, types, err := db.getLedgerTokenAndMeta(ctx, ids)
@@ -446,7 +446,7 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 	return tokens, nil
 }
 
-func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenType, error) {
+func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenFormat, error) {
 	span := trace.SpanFromContext(ctx)
 	if len(ids) == 0 {
 		return nil, nil, nil, nil
@@ -485,14 +485,14 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 	span.AddEvent("combine_results")
 	tokens := make([][]byte, len(ids))
 	metas := make([][]byte, len(ids))
-	types := make([]token.TokenType, len(ids))
+	types := make([]token.TokenFormat, len(ids))
 	for i, id := range ids {
 		if info, ok := infoMap[id.String()]; !ok {
 			return nil, nil, nil, errors.Errorf("token/metadata not found for [%s]", id)
 		} else {
 			tokens[i] = info[0]
 			metas[i] = info[1]
-			types[i] = token.TokenType(info[2])
+			types[i] = token.TokenFormat(info[2])
 		}
 	}
 	return tokens, metas, types, nil
@@ -942,14 +942,14 @@ func (db *TokenDB) NewTokenDBTransaction() (driver.TokenDBTransaction, error) {
 	return &TokenTransaction{db: db, tx: tx}, nil
 }
 
-func (db *TokenDB) SetSupportedTokenTypes(supportedTokenTypes []token.TokenType) error {
+func (db *TokenDB) SetSupportedTokenTypes(supportedTokenTypes []token.TokenFormat) error {
 	db.sttMutex.Lock()
 	db.supportedTokenTypes = supportedTokenTypes
 	db.sttMutex.Unlock()
 	return nil
 }
 
-func (db *TokenDB) getSupportedTokenTypes() []token.TokenType {
+func (db *TokenDB) getSupportedTokenTypes() []token.TokenFormat {
 	db.sttMutex.RLock()
 	supportedTokenTypes := db.supportedTokenTypes
 	db.sttMutex.RUnlock()
@@ -1125,7 +1125,7 @@ func (t *TokenTransaction) SetSpendable(ctx context.Context, tokenID token.ID, s
 
 }
 
-func (t *TokenTransaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokenTypes []token.TokenType) error {
+func (t *TokenTransaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokenTypes []token.TokenFormat) error {
 	span := trace.SpanFromContext(ctx)
 
 	// first set all spendable flags to false
@@ -1139,7 +1139,8 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenTypes(ctx context.Context
 	span.AddEvent("end_query")
 
 	// then set the spendable flags to true only for the supported token types
-	cond := t.db.ci.HasTokenTypes("ledger_type", supportedTokenTypes...)
+
+	cond := t.db.ci.HasTokenFormats("ledger_type", supportedTokenTypes...)
 	args := append([]any{true}, cond.Params()...)
 	offset := 2
 	where := cond.ToString(&offset)

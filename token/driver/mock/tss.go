@@ -4,13 +4,13 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type TokensService struct {
-	DeobfuscateStub        func([]byte, []byte) (*token.Token, view.Identity, token.TokenType, error)
+	DeobfuscateStub        func([]byte, []byte) (*token.Token, identity.Identity, token.TokenFormat, error)
 	deobfuscateMutex       sync.RWMutex
 	deobfuscateArgsForCall []struct {
 		arg1 []byte
@@ -18,14 +18,14 @@ type TokensService struct {
 	}
 	deobfuscateReturns struct {
 		result1 *token.Token
-		result2 view.Identity
-		result3 token.TokenType
+		result2 identity.Identity
+		result3 token.TokenFormat
 		result4 error
 	}
 	deobfuscateReturnsOnCall map[int]struct {
 		result1 *token.Token
-		result2 view.Identity
-		result3 token.TokenType
+		result2 identity.Identity
+		result3 token.TokenFormat
 		result4 error
 	}
 	ExtractMetadataStub        func(*driver.TokenRequestMetadata, []byte) ([]byte, error)
@@ -42,21 +42,21 @@ type TokensService struct {
 		result1 []byte
 		result2 error
 	}
-	SupportedTokenTypesStub        func() []token.TokenType
+	SupportedTokenTypesStub        func() []token.TokenFormat
 	supportedTokenTypesMutex       sync.RWMutex
 	supportedTokenTypesArgsForCall []struct {
 	}
 	supportedTokenTypesReturns struct {
-		result1 []token.TokenType
+		result1 []token.TokenFormat
 	}
 	supportedTokenTypesReturnsOnCall map[int]struct {
-		result1 []token.TokenType
+		result1 []token.TokenFormat
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, view.Identity, token.TokenType, error) {
+func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, identity.Identity, token.TokenFormat, error) {
 	var arg1Copy []byte
 	if arg1 != nil {
 		arg1Copy = make([]byte, len(arg1))
@@ -92,7 +92,7 @@ func (fake *TokensService) DeobfuscateCallCount() int {
 	return len(fake.deobfuscateArgsForCall)
 }
 
-func (fake *TokensService) DeobfuscateCalls(stub func([]byte, []byte) (*token.Token, view.Identity, token.TokenType, error)) {
+func (fake *TokensService) DeobfuscateCalls(stub func([]byte, []byte) (*token.Token, identity.Identity, token.TokenFormat, error)) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = stub
@@ -105,34 +105,34 @@ func (fake *TokensService) DeobfuscateArgsForCall(i int) ([]byte, []byte) {
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *TokensService) DeobfuscateReturns(result1 *token.Token, result2 view.Identity, result3 token.TokenType, result4 error) {
+func (fake *TokensService) DeobfuscateReturns(result1 *token.Token, result2 identity.Identity, result3 token.TokenFormat, result4 error) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = nil
 	fake.deobfuscateReturns = struct {
 		result1 *token.Token
-		result2 view.Identity
-		result3 token.TokenType
+		result2 identity.Identity
+		result3 token.TokenFormat
 		result4 error
 	}{result1, result2, result3, result4}
 }
 
-func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token, result2 view.Identity, result3 token.TokenType, result4 error) {
+func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token, result2 identity.Identity, result3 token.TokenFormat, result4 error) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = nil
 	if fake.deobfuscateReturnsOnCall == nil {
 		fake.deobfuscateReturnsOnCall = make(map[int]struct {
 			result1 *token.Token
-			result2 view.Identity
-			result3 token.TokenType
+			result2 identity.Identity
+			result3 token.TokenFormat
 			result4 error
 		})
 	}
 	fake.deobfuscateReturnsOnCall[i] = struct {
 		result1 *token.Token
-		result2 view.Identity
-		result3 token.TokenType
+		result2 identity.Identity
+		result3 token.TokenFormat
 		result4 error
 	}{result1, result2, result3, result4}
 }
@@ -207,7 +207,7 @@ func (fake *TokensService) ExtractMetadataReturnsOnCall(i int, result1 []byte, r
 	}{result1, result2}
 }
 
-func (fake *TokensService) SupportedTokenTypes() []token.TokenType {
+func (fake *TokensService) SupportedTokenTypes() []token.TokenFormat {
 	fake.supportedTokenTypesMutex.Lock()
 	ret, specificReturn := fake.supportedTokenTypesReturnsOnCall[len(fake.supportedTokenTypesArgsForCall)]
 	fake.supportedTokenTypesArgsForCall = append(fake.supportedTokenTypesArgsForCall, struct {
@@ -231,32 +231,32 @@ func (fake *TokensService) SupportedTokenTypesCallCount() int {
 	return len(fake.supportedTokenTypesArgsForCall)
 }
 
-func (fake *TokensService) SupportedTokenTypesCalls(stub func() []token.TokenType) {
+func (fake *TokensService) SupportedTokenTypesCalls(stub func() []token.TokenFormat) {
 	fake.supportedTokenTypesMutex.Lock()
 	defer fake.supportedTokenTypesMutex.Unlock()
 	fake.SupportedTokenTypesStub = stub
 }
 
-func (fake *TokensService) SupportedTokenTypesReturns(result1 []token.TokenType) {
+func (fake *TokensService) SupportedTokenTypesReturns(result1 []token.TokenFormat) {
 	fake.supportedTokenTypesMutex.Lock()
 	defer fake.supportedTokenTypesMutex.Unlock()
 	fake.SupportedTokenTypesStub = nil
 	fake.supportedTokenTypesReturns = struct {
-		result1 []token.TokenType
+		result1 []token.TokenFormat
 	}{result1}
 }
 
-func (fake *TokensService) SupportedTokenTypesReturnsOnCall(i int, result1 []token.TokenType) {
+func (fake *TokensService) SupportedTokenTypesReturnsOnCall(i int, result1 []token.TokenFormat) {
 	fake.supportedTokenTypesMutex.Lock()
 	defer fake.supportedTokenTypesMutex.Unlock()
 	fake.SupportedTokenTypesStub = nil
 	if fake.supportedTokenTypesReturnsOnCall == nil {
 		fake.supportedTokenTypesReturnsOnCall = make(map[int]struct {
-			result1 []token.TokenType
+			result1 []token.TokenFormat
 		})
 	}
 	fake.supportedTokenTypesReturnsOnCall[i] = struct {
-		result1 []token.TokenType
+		result1 []token.TokenFormat
 	}{result1}
 }
 

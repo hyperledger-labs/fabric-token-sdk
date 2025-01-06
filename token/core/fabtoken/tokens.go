@@ -19,19 +19,19 @@ import (
 
 type TokensService struct {
 	*common.TokensService
-	OutputTokenType token2.TokenType
+	OutputTokenFormat token2.TokenFormat
 }
 
 func NewTokensService(pp *PublicParams) (*TokensService, error) {
-	supportedTokens, err := supportedTokenTypes(pp.QuantityPrecision)
+	supportedTokens, err := supportedTokenFormat(pp.QuantityPrecision)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting supported token types")
 	}
-	return &TokensService{TokensService: common.NewTokensService(), OutputTokenType: supportedTokens}, nil
+	return &TokensService{TokensService: common.NewTokensService(), OutputTokenFormat: supportedTokens}, nil
 }
 
 // Deobfuscate returns a deserialized token and the identity of its issuer
-func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, driver.Identity, token2.TokenType, error) {
+func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, driver.Identity, token2.TokenFormat, error) {
 	tok := &Output{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, nil, "", errors.Wrap(err, "failed unmarshalling token")
@@ -45,14 +45,14 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 		Owner:    tok.Owner,
 		Type:     tok.Type,
 		Quantity: tok.Quantity,
-	}, metadata.Issuer, s.OutputTokenType, nil
+	}, metadata.Issuer, s.OutputTokenFormat, nil
 }
 
-func (s *TokensService) SupportedTokenTypes() []token2.TokenType {
-	return []token2.TokenType{s.OutputTokenType}
+func (s *TokensService) SupportedTokenTypes() []token2.TokenFormat {
+	return []token2.TokenFormat{s.OutputTokenFormat}
 }
 
-func supportedTokenTypes(precision uint64) (token2.TokenType, error) {
+func supportedTokenFormat(precision uint64) (token2.TokenFormat, error) {
 	hasher := common.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(fabtoken.Type),
@@ -61,5 +61,5 @@ func supportedTokenTypes(precision uint64) (token2.TokenType, error) {
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}
-	return token2.TokenType(hasher.HexDigest()), nil
+	return token2.TokenFormat(hasher.HexDigest()), nil
 }
