@@ -48,7 +48,7 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 	}, metadata.Issuer, s.OutputTokenFormat, nil
 }
 
-func (s *TokensService) SupportedTokenTypes() []token2.Format {
+func (s *TokensService) SupportedTokenFormats() []token2.Format {
 	return []token2.Format{s.OutputTokenFormat}
 }
 

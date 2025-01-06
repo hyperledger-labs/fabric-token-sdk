@@ -116,9 +116,9 @@ func (s *VaultLedgerTokenLoader[T]) isAnyPending(ids ...*token.ID) (anyPending b
 }
 
 type LoadedToken[T any, M any] struct {
-	TokenType token.Format
-	Token     T
-	Metadata  M
+	TokenFormat token.Format
+	Token       T
+	Metadata    M
 }
 
 type VaultLedgerTokenAndMetadataLoader[T any, M any] struct {
@@ -162,9 +162,9 @@ func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context
 			return nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
 		}
 		result[i] = LoadedToken[T, M]{
-			TokenType: types[i],
-			Token:     tok,
-			Metadata:  meta,
+			TokenFormat: types[i],
+			Token:       tok,
+			Metadata:    meta,
 		}
 	}
 

@@ -993,7 +993,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 		OwnerType:      "idemix",
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
-		LedgerType:     "CLEAR",
+		LedgerFormat:   "CLEAR",
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           TST,
@@ -1010,7 +1010,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 		OwnerType:      "htlc",
 		OwnerIdentity:  []byte("{}"),
 		Ledger:         []byte("ledger"),
-		LedgerType:     "CLEAR1",
+		LedgerFormat:   "CLEAR1",
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "TST1",
@@ -1033,7 +1033,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	// make all non-spendable
 	tx, err = db.NewTokenDBTransaction()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.Format{"htlc"}))
+	assert.NoError(t, tx.SetSpendableBySupportedTokenFormats(context.TODO(), []token.Format{"htlc"}))
 	assert.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
@@ -1046,7 +1046,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	// make TST spendable
 	tx, err = db.NewTokenDBTransaction()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.Format{"CLEAR"}))
+	assert.NoError(t, tx.SetSpendableBySupportedTokenFormats(context.TODO(), []token.Format{"CLEAR"}))
 	assert.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
@@ -1059,7 +1059,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	// make TST1 spendable
 	tx, err = db.NewTokenDBTransaction()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.Format{"CLEAR1"}))
+	assert.NoError(t, tx.SetSpendableBySupportedTokenFormats(context.TODO(), []token.Format{"CLEAR1"}))
 	assert.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
@@ -1072,7 +1072,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	// make both spendable
 	tx, err = db.NewTokenDBTransaction()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.Format{"CLEAR", "CLEAR1"}))
+	assert.NoError(t, tx.SetSpendableBySupportedTokenFormats(context.TODO(), []token.Format{"CLEAR", "CLEAR1"}))
 	assert.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)

@@ -216,7 +216,7 @@ func (t *Tokens) SetSpendableBySupportedTokenTypes(types []token2.Format) error 
 }
 
 func (t *Tokens) SetSupportedTokenTypes(tokenTypes []token2.Format) error {
-	return t.Storage.tokenDB.SetSupportedTokenTypes(tokenTypes)
+	return t.Storage.tokenDB.SetSupportedTokenFormats(tokenTypes)
 }
 
 func (t *Tokens) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
@@ -335,7 +335,7 @@ func (t *Tokens) parse(
 			index:                 output.Index,
 			tok:                   tok,
 			tokenOnLedger:         output.LedgerOutput,
-			tokenOnLedgerType:     output.LedgerOutputType,
+			tokenOnLedgerFormat:   output.LedgerOutputFormat,
 			tokenOnLedgerMetadata: tokenOnLedgerMetadata,
 			ownerType:             ownerType,
 			ownerIdentity:         ownerIdentity,

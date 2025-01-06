@@ -177,7 +177,7 @@ type ValidationRecordsIterator = collections.Iterator[*ValidationRecord]
 type TokenRequestIterator = collections.Iterator[*TokenRequestRecord]
 
 // QueryMovementsParams defines the parameters for querying movements.
-// Movement records will be filtered by EnrollmentID, TokenType, and Status.
+// Movement records will be filtered by EnrollmentID, TokenFormat, and Status.
 // SearchDirection tells if the search should start from the oldest to the newest records or vice versa.
 // MovementDirection which amounts to consider. Sent correspond to a negative amount,
 // Received to a positive amount, and All to both.

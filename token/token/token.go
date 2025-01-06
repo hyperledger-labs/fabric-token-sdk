@@ -28,7 +28,7 @@ func (id ID) String() string {
 type (
 	// Type is the currency, e.g. USD
 	Type string
-	// Format is the encoding of a token, e.g. fabtoken, comm.
+	// Format is the encoding of a token on the ledger, e.g. fabtoken, comm.
 	// It is a many-to-many relationship with the token driver,
 	// i.e. a token driver can support multiple formats (e.g. fabtoken1, fabtoken2),
 	// but a format can also be supported by multiple drivers (e.g. zkat, zkatlog).

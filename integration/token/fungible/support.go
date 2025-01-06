@@ -207,7 +207,7 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id *token3.N
 
 func matchTransactionRecord(tx *ttxdb.TransactionRecord, txExpected TransactionRecord, i int) error {
 	if tx.TokenType != txExpected.TokenType {
-		return errors.Errorf("tx [%d] tx.TokenType: %s, txExpected.TokenType: %s", i, tx.TokenType, txExpected.TokenType)
+		return errors.Errorf("tx [%d] tx.TokenFormat: %s, txExpected.TokenFormat: %s", i, tx.TokenType, txExpected.TokenType)
 	}
 	if !strings.HasPrefix(tx.SenderEID, txExpected.SenderEID) {
 		return errors.Errorf("tx [%d] tx.SenderEID: %s, txExpected.SenderEID: %s", i, tx.SenderEID, txExpected.SenderEID)

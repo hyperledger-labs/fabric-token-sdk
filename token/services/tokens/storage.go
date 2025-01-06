@@ -64,7 +64,7 @@ type TokenToAppend struct {
 	txID                  string
 	index                 uint64
 	tok                   *token2.Token
-	tokenOnLedgerType     token2.Format
+	tokenOnLedgerFormat   token2.Format
 	tokenOnLedger         []byte
 	tokenOnLedgerMetadata []byte
 	ownerType             string
@@ -144,7 +144,7 @@ func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error 
 		OwnerIdentity:  tta.ownerIdentity,
 		OwnerWalletID:  tta.ownerWalletID,
 		Ledger:         tta.tokenOnLedger,
-		LedgerType:     tta.tokenOnLedgerType,
+		LedgerFormat:   tta.tokenOnLedgerFormat,
 		LedgerMetadata: tta.tokenOnLedgerMetadata,
 		Quantity:       tta.tok.Quantity,
 		Type:           tta.tok.Type,
@@ -206,7 +206,7 @@ func (t *transaction) SetSpendableFlag(ctx context.Context, value bool, ids []*t
 }
 
 func (t *transaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokens []token2.Format) error {
-	return t.tx.SetSpendableBySupportedTokenTypes(ctx, supportedTokens)
+	return t.tx.SetSpendableBySupportedTokenFormats(ctx, supportedTokens)
 }
 
 type TokenProcessorEvent struct {

@@ -18,7 +18,7 @@ type TokenInterpreter interface {
 	common.Interpreter
 	HasTokens(colTxID, colIdx common.FieldName, ids ...*token.ID) common.Condition
 	HasTokenTypes(colTokenType common.FieldName, tokenTypes ...token.Type) common.Condition
-	HasTokenFormats(colTokenType common.FieldName, tokenTypes ...token.Format) common.Condition
+	HasTokenFormats(colTokenType common.FieldName, formats ...token.Format) common.Condition
 	HasTokenDetails(params driver.QueryTokenDetailsParams, tokenTable string) common.Condition
 	HasMovementsParams(params driver.QueryMovementsParams) common.Condition
 	HasValidationParams(params driver.QueryValidationRecordsParams) common.Condition
@@ -56,12 +56,12 @@ func (c *tokenInterpreter) HasTokenTypes(colTokenType common.FieldName, tokenTyp
 	return c.InStrings(colTokenType, types)
 }
 
-func (c *tokenInterpreter) HasTokenFormats(colTokenType common.FieldName, tokenTypes ...token.Format) common.Condition {
-	if len(tokenTypes) == 0 {
+func (c *tokenInterpreter) HasTokenFormats(colTokenType common.FieldName, formats ...token.Format) common.Condition {
+	if len(formats) == 0 {
 		return common.EmptyCondition
 	}
-	types := make([]string, len(tokenTypes))
-	for i, typ := range tokenTypes {
+	types := make([]string, len(formats))
+	for i, typ := range formats {
 		types[i] = string(typ)
 	}
 	return c.InStrings(colTokenType, types)
@@ -88,8 +88,8 @@ func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams
 	} else if params.Spendable == driver.SpendableOnly {
 		conds = append(conds, common.ConstCondition("spendable = true"))
 	}
-	if len(params.LedgerTokenTypes) > 0 {
-		conds = append(conds, c.HasTokenFormats("ledger_type", params.LedgerTokenTypes...))
+	if len(params.LedgerTokenFormats) > 0 {
+		conds = append(conds, c.HasTokenFormats("ledger_type", params.LedgerTokenFormats...))
 	}
 	return c.And(conds...)
 }

@@ -51,16 +51,16 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 	return tok, metadata.Issuer, s.OutputTokenFormat, nil
 }
 
-func (s *TokensService) SupportedTokenTypes() []token.Format {
+func (s *TokensService) SupportedTokenFormats() []token.Format {
 	return []token.Format{s.OutputTokenFormat}
 }
 
-func (s *TokensService) DeserializeToken(outputType token.Format, outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
+func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
 	// Here we have to check if what we get in input is already as expected.
 	// If not, we need to check if a conversion is possible.
 	// If not, a failure is to be returned
-	if outputType != s.OutputTokenFormat {
-		return nil, nil, nil, errors.Errorf("invalid token type [%s], expected [%s]", outputType, s.OutputTokenFormat)
+	if outputFormat != s.OutputTokenFormat {
+		return nil, nil, nil, errors.Errorf("invalid token type [%s], expected [%s]", outputFormat, s.OutputTokenFormat)
 	}
 
 	// get zkatdlog token
