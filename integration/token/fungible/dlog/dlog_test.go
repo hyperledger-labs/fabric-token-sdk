@@ -98,7 +98,7 @@ var _ = Describe("EndToEnd", func() {
 })
 
 func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, networkName string) []byte {
-	tms := fungible.GetTMS(network, networkName)
+	tms := fungible.GetTMSByNetworkName(network, networkName)
 	auditorId := fungible.GetAuditorIdentity(network, auditor)
 	issuerId := fungible.GetIssuerIdentity(network, "newIssuer.id1")
 	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)

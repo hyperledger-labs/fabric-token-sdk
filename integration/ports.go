@@ -99,4 +99,6 @@ const (
 	ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
 
 	Mixed
+
+	Updatability
 )

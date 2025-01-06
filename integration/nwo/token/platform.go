@@ -197,12 +197,16 @@ func (p *Platform) PublicParametersDir() string {
 }
 
 func (p *Platform) PublicParametersFile(tms *topology2.TMS) string {
+	filename := fmt.Sprintf("%s_%s_%s_%s", tms.Network, tms.Channel, tms.Namespace, tms.Driver)
+	if len(tms.Alias) != 0 {
+		filename = fmt.Sprintf("%s_%s", filename, tms.Alias)
+	}
 	return filepath.Join(
 		p.Context.RootDir(),
 		"token",
 		"crypto",
 		"pp",
-		fmt.Sprintf("%s_%s_%s_%s", tms.Network, tms.Channel, tms.Namespace, tms.Driver),
+		filename,
 	)
 }
 

@@ -49,10 +49,12 @@ type TMS struct {
 	Channel             string
 	Namespace           string
 	Driver              string
+	Alias               string
 	PublicParamsGenArgs []string
 	Auditors            []string
 	Certifiers          []string
 	Issuers             []string
+	Transient           bool
 
 	TokenTopology   TokenTopology  `yaml:"-"`
 	FSCNodes        []*node.Node   `yaml:"-"`
@@ -89,6 +91,10 @@ func (t *TMS) ID() string {
 	if len(t.Namespace) != 0 {
 		b.WriteRune('-')
 		b.WriteString(t.Namespace)
+	}
+	if len(t.Alias) != 0 {
+		b.WriteRune('-')
+		b.WriteString(t.Alias)
 	}
 	return b.String()
 }

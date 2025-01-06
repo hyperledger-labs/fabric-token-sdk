@@ -364,6 +364,19 @@ func Topology(opts common.Opts) []api.Topology {
 	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
+
+	// any extra TMS
+	for _, tmsOpts := range opts.ExtraTMSs {
+		tms := tokenTopology.AddTMS(nil, backendNetwork, backendChannel, tmsOpts.TokenSDKDriver)
+		tms.Alias = tmsOpts.Alias
+		tms.Namespace = "token-chaincode"
+		tms.Transient = true
+		if tmsOpts.Aries {
+			dlog.WithAries(tms)
+		}
+		tms.SetTokenGenPublicParams(tmsOpts.PublicParamsGenArgs...)
+	}
+
 	if opts.Monitoring {
 		monitoringTopology := monitoring.NewTopology()
 		// monitoringTopology.EnableHyperledgerExplorer()
@@ -372,16 +385,6 @@ func Topology(opts common.Opts) []api.Topology {
 			backendNetwork, tokenTopology, fscTopology,
 			monitoringTopology,
 		}
-	}
-
-	// any extra TMS
-	for _, tmsOpts := range opts.ExtraTMSs {
-		tms := tokenTopology.AddTMS(nil, backendNetwork, backendChannel, tmsOpts.TokenSDKDriver)
-		tms.SetNamespace("token-chaincode")
-		if tmsOpts.Aries {
-			dlog.WithAries(tms)
-		}
-		tms.SetTokenGenPublicParams(tmsOpts.PublicParamsGenArgs...)
 	}
 
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}

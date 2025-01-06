@@ -870,12 +870,26 @@ func CheckPublicParamsMatch(network *integration.Infrastructure, tmsId *token2.T
 	return true
 }
 
-func GetTMS(network *integration.Infrastructure, networkName string) *topology.TMS {
+func GetTMSByNetworkName(network *integration.Infrastructure, networkName string) *topology.TMS {
 	tp := tplatform.GetPlatform(network.Ctx, "token")
 	Expect(tp).NotTo(BeNil())
 	var tms *topology.TMS
 	for _, TMS := range tp.GetTopology().TMSs {
 		if TMS.Network == networkName {
+			tms = TMS
+			break
+		}
+	}
+	Expect(tms).NotTo(BeNil())
+	return tms
+}
+
+func GetTMSByAlias(network *integration.Infrastructure, alias string) *topology.TMS {
+	tp := tplatform.GetPlatform(network.Ctx, "token")
+	Expect(tp).NotTo(BeNil())
+	var tms *topology.TMS
+	for _, TMS := range tp.GetTopology().TMSs {
+		if TMS.Alias == alias {
 			tms = TMS
 			break
 		}
