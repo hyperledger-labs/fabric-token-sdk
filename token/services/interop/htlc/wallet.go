@@ -26,7 +26,7 @@ type Vault interface {
 
 type QueryEngine interface {
 	// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id. Type can be empty
-	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.TokenType) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type) (driver.UnspentTokensIterator, error)
 }
 
 type TokenVault interface {
@@ -269,7 +269,7 @@ func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.Unspen
 	return nil
 }
 
-func (w *OwnerWallet) filter(tokenType token2.TokenType, sender bool, selector SelectFunction) (*token2.UnspentTokens, error) {
+func (w *OwnerWallet) filter(tokenType token2.Type, sender bool, selector SelectFunction) (*token2.UnspentTokens, error) {
 	it, err := w.filterIterator(tokenType, sender, selector)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
@@ -291,7 +291,7 @@ func (w *OwnerWallet) filter(tokenType token2.TokenType, sender bool, selector S
 	return &token2.UnspentTokens{Tokens: tokens}, nil
 }
 
-func (w *OwnerWallet) filterIterator(tokenType token2.TokenType, sender bool, selector SelectFunction) (*FilteredIterator, error) {
+func (w *OwnerWallet) filterIterator(tokenType token2.Type, sender bool, selector SelectFunction) (*FilteredIterator, error) {
 	var walletID string
 	if sender {
 		walletID = senderWallet(w.wallet)

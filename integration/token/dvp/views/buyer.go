@@ -46,7 +46,7 @@ func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 	// check action
 	assert.Equal(otherCash, action.Recipient, "recipient mismatch")
 	assert.True(action.Amount > 0, "amount must be greater than 0")
-	assert.Equal(token2.TokenType("USD"), action.Type, "currency must be USD")
+	assert.Equal(token2.Type("USD"), action.Type, "currency must be USD")
 	assert.Equal(meCash, action.From, "sender mismatch")
 
 	// check house and action match

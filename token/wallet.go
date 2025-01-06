@@ -28,7 +28,7 @@ type ListTokensOption func(*ListTokensOptions) error
 
 // WithType returns a list token option that filter by the passed token type.
 // If the passed token type is the empty string, all token types are selected.
-func WithType(tokenType token.TokenType) ListTokensOption {
+func WithType(tokenType token.Type) ListTokensOption {
 	return func(o *ListTokensOptions) error {
 		o.TokenType = tokenType
 		return nil
@@ -331,7 +331,7 @@ type IssuerWallet struct {
 
 // GetIssuerIdentity returns the issuer identity. This can be a long term identity or a pseudonym depending
 // on the underlying token driver.
-func (i *IssuerWallet) GetIssuerIdentity(tokenType token.TokenType) (Identity, error) {
+func (i *IssuerWallet) GetIssuerIdentity(tokenType token.Type) (Identity, error) {
 	return i.w.GetIssuerIdentity(tokenType)
 }
 

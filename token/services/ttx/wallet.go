@@ -14,7 +14,7 @@ import (
 
 // WithType returns a list token option that filter by the passed token type.
 // If the passed token type is the empty string, all token types are selected.
-func WithType(tokenType token2.TokenType) token.ListTokensOption {
+func WithType(tokenType token2.Type) token.ListTokensOption {
 	return func(o *token.ListTokensOptions) error {
 		o.TokenType = tokenType
 		return nil

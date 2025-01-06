@@ -57,7 +57,7 @@ type AuditableToken struct {
 	Owner *OwnerOpening
 }
 
-func NewAuditableToken(token *token.Token, ownerInfo []byte, tokenType token2.TokenType, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
+func NewAuditableToken(token *token.Token, ownerInfo []byte, tokenType token2.Type, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
 	return &AuditableToken{
 		Token: token,
 		Owner: &OwnerOpening{
@@ -74,7 +74,7 @@ func NewAuditableToken(token *token.Token, ownerInfo []byte, tokenType token2.To
 // TokenDataOpening contains the opening of the TokenData.
 // TokenData is a Pedersen commitment to token type and Value.
 type TokenDataOpening struct {
-	TokenType token2.TokenType
+	TokenType token2.Type
 	Value     *math.Zr
 	BF        *math.Zr
 }

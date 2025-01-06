@@ -138,7 +138,7 @@ func prepareInputsForZKTransfer(pp *crypto.PublicParams) ([]*token.TokenDataWitn
 	for i := 0; i < 2; i++ {
 		outBF[i] = c.NewRandomZr(rand)
 	}
-	ttype := token2.TokenType("ABC")
+	ttype := token2.Type("ABC")
 	inValues[0] = 220
 	inValues[1] = 60
 	outValues[0] = 260
@@ -173,7 +173,7 @@ func prepareInvalidInputsForZKTransfer(pp *crypto.PublicParams) ([]*token.TokenD
 	for i := 0; i < 2; i++ {
 		outBF[i] = c.NewRandomZr(rand)
 	}
-	ttype := token2.TokenType("ABC")
+	ttype := token2.Type("ABC")
 	inValues[0] = 90
 	inValues[1] = 60
 	outValues[0] = 110

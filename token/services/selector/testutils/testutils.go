@@ -126,7 +126,7 @@ func (q *MockQueryService) UnspentTokensIterator() (*token.UnspentTokensIterator
 	return &token.UnspentTokensIterator{UnspentTokensIterator: &MockIterator{q, q.allKeys, 0}}, nil
 }
 
-func (q *MockQueryService) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token2.TokenType) (driver.SpendableTokensIterator, error) {
+func (q *MockQueryService) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.SpendableTokensIterator, error) {
 	it, err := q.UnspentTokensIteratorBy(ctx, walletID, typ)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (q *MockQueryService) SpendableTokensIteratorBy(ctx context.Context, wallet
 	}), nil
 }
 
-func (q *MockQueryService) UnspentTokensIteratorBy(_ context.Context, walletID string, _ token2.TokenType) (driver.UnspentTokensIterator, error) {
+func (q *MockQueryService) UnspentTokensIteratorBy(_ context.Context, walletID string, _ token2.Type) (driver.UnspentTokensIterator, error) {
 	return &token.UnspentTokensIterator{UnspentTokensIterator: &MockIterator{q, q.cache[walletID], 0}}, nil
 }
 

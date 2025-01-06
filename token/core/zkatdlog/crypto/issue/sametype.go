@@ -54,7 +54,7 @@ type SameTypeProver struct {
 	PedParams []*math.G1
 	Curve     *math.Curve
 	// tokenType is the type of the tokens to be issued
-	tokenType token2.TokenType
+	tokenType token2.Type
 	// blindingFactor is the blinding factor in the CommitmentToType
 	blindingFactor *math.Zr
 	// CommitmentToType is a commitment to tokenType using blindingFactor
@@ -66,7 +66,7 @@ type SameTypeProver struct {
 }
 
 // NewSameTypeProver returns a SameTypeProver for the passed parameters
-func NewSameTypeProver(ttype token2.TokenType, bf *math.Zr, com *math.G1, pp []*math.G1, c *math.Curve) *SameTypeProver {
+func NewSameTypeProver(ttype token2.Type, bf *math.Zr, com *math.G1, pp []*math.G1, c *math.Curve) *SameTypeProver {
 
 	return &SameTypeProver{
 		tokenType:        ttype,

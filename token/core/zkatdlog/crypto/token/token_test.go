@@ -45,7 +45,7 @@ var _ = Describe("Token", func() {
 			It("succeeds", func() {
 				t, err := token.ToClear(inf, pp)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(t.Type).To(Equal(token3.TokenType("ABC")))
+				Expect(t.Type).To(Equal(token3.Type("ABC")))
 				Expect(t.Quantity).To(Equal("0x" + inf.Value.String()))
 			})
 		})

@@ -19,11 +19,11 @@ import (
 type BalanceQuery struct {
 	TMSID  token.TMSID
 	Wallet string
-	Type   token2.TokenType
+	Type   token2.Type
 }
 
 type Balance struct {
-	Type     token2.TokenType
+	Type     token2.Type
 	Quantity string
 }
 

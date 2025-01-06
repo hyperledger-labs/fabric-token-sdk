@@ -86,7 +86,7 @@ type MovementRecord struct {
 	// EnrollmentID is the enrollment ID of the account that is receiving or sending
 	EnrollmentID string
 	// TokenType is the type of token
-	TokenType token2.TokenType
+	TokenType token2.Type
 	// Amount is positive if tokens are received. Negative otherwise
 	Amount *big.Int
 	// Timestamp is the time the transaction was submitted to the db
@@ -110,7 +110,7 @@ type TransactionRecord struct {
 	// RecipientEID is the enrollment ID of the account that is receiving tokens
 	RecipientEID string
 	// TokenType is the type of token
-	TokenType token2.TokenType
+	TokenType token2.Type
 	// Amount is positive if tokens are received. Negative otherwise
 	Amount *big.Int
 	// Timestamp is the time the transaction was submitted to the db
@@ -185,7 +185,7 @@ type QueryMovementsParams struct {
 	// EnrollmentIDs is the enrollment IDs of the accounts to query
 	EnrollmentIDs []string
 	// TokenTypes is the token types to query
-	TokenTypes []token2.TokenType
+	TokenTypes []token2.Type
 	// TxStatuses is the statuses of the transactions to query
 	TxStatuses []TxStatus
 	// SearchDirection is the direction of the search

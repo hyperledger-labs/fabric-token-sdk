@@ -19,7 +19,7 @@ import (
 
 type QueryService interface {
 	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
-	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.TokenType) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type) (driver.UnspentTokensIterator, error)
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
@@ -44,7 +44,7 @@ type selector struct {
 }
 
 // Select selects tokens to be spent based on ownership, quantity, and type
-func (s *selector) Select(ownerFilter token.OwnerFilter, q string, tokenType token2.TokenType) ([]*token2.ID, token2.Quantity, error) {
+func (s *selector) Select(ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	if ownerFilter == nil || len(ownerFilter.ID()) == 0 {
 		return nil, nil, errors.Errorf("no owner filter specified")
 	}
@@ -58,7 +58,7 @@ func (s *selector) concurrencyCheck(ids []*token2.ID) error {
 	return err
 }
 
-func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType token2.TokenType) ([]*token2.ID, token2.Quantity, error) {
+func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	var toBeSpent []*token2.ID
 	var sum token2.Quantity
 	var potentialSumWithLocked token2.Quantity

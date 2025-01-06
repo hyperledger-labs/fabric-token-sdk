@@ -29,7 +29,7 @@ type Token struct {
 // Metadata contains the metadata of a token
 type Metadata struct {
 	// Type is the type of the token
-	Type token2.TokenType
+	Type token2.Type
 	// Value is the quantity of the token
 	Value *math.Zr
 	// BlindingFactor is the blinding factor used to commit type and value

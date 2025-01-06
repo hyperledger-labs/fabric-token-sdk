@@ -116,7 +116,7 @@ func (s *VaultLedgerTokenLoader[T]) isAnyPending(ids ...*token.ID) (anyPending b
 }
 
 type LoadedToken[T any, M any] struct {
-	TokenType token.TokenFormat
+	TokenType token.Format
 	Token     T
 	Metadata  M
 }

@@ -21,7 +21,7 @@ type ListIssuedTokens struct {
 	// Wallet whose identities own the token
 	Wallet string
 	// TokenType is the token type to select
-	TokenType token2.TokenType
+	TokenType token2.Type
 }
 
 type ListIssuedTokensView struct {

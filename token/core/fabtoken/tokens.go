@@ -19,7 +19,7 @@ import (
 
 type TokensService struct {
 	*common.TokensService
-	OutputTokenFormat token2.TokenFormat
+	OutputTokenFormat token2.Format
 }
 
 func NewTokensService(pp *PublicParams) (*TokensService, error) {
@@ -31,7 +31,7 @@ func NewTokensService(pp *PublicParams) (*TokensService, error) {
 }
 
 // Deobfuscate returns a deserialized token and the identity of its issuer
-func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, driver.Identity, token2.TokenFormat, error) {
+func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, driver.Identity, token2.Format, error) {
 	tok := &Output{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, nil, "", errors.Wrap(err, "failed unmarshalling token")
@@ -48,11 +48,11 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 	}, metadata.Issuer, s.OutputTokenFormat, nil
 }
 
-func (s *TokensService) SupportedTokenTypes() []token2.TokenFormat {
-	return []token2.TokenFormat{s.OutputTokenFormat}
+func (s *TokensService) SupportedTokenTypes() []token2.Format {
+	return []token2.Format{s.OutputTokenFormat}
 }
 
-func supportedTokenFormat(precision uint64) (token2.TokenFormat, error) {
+func supportedTokenFormat(precision uint64) (token2.Format, error) {
 	hasher := common.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(fabtoken.Type),
@@ -61,5 +61,5 @@ func supportedTokenFormat(precision uint64) (token2.TokenFormat, error) {
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}
-	return token2.TokenFormat(hasher.HexDigest()), nil
+	return token2.Format(hasher.HexDigest()), nil
 }

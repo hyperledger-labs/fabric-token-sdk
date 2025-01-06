@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	EUR = token3.TokenType("EUR")
-	USD = token3.TokenType("USD")
+	EUR = token3.Type("EUR")
+	USD = token3.Type("USD")
 )
 
 func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.ReplicaSelector) {

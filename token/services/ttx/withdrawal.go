@@ -22,7 +22,7 @@ import (
 type WithdrawalRequest struct {
 	TMSID         token.TMSID
 	RecipientData RecipientData
-	TokenType     token2.TokenType
+	TokenType     token2.Type
 	Amount        uint64
 	NotAnonymous  bool
 }
@@ -31,7 +31,7 @@ type WithdrawalRequest struct {
 // The view prepares an instance of WithdrawalRequest and send it to the issuer.
 type RequestWithdrawalView struct {
 	Issuer       view.Identity
-	TokenType    token2.TokenType
+	TokenType    token2.Type
 	Amount       uint64
 	TMSID        token.TMSID
 	Wallet       string
@@ -40,19 +40,19 @@ type RequestWithdrawalView struct {
 	RecipientData *RecipientData
 }
 
-func NewRequestWithdrawalView(issuer view.Identity, tokenType token2.TokenType, amount uint64, notAnonymous bool) *RequestWithdrawalView {
+func NewRequestWithdrawalView(issuer view.Identity, tokenType token2.Type, amount uint64, notAnonymous bool) *RequestWithdrawalView {
 	return &RequestWithdrawalView{Issuer: issuer, TokenType: tokenType, Amount: amount, NotAnonymous: notAnonymous}
 }
 
 // RequestWithdrawal runs RequestWithdrawalView with the passed arguments.
 // The view will generate a recipient identity and pass it to the issuer.
-func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string, tokenType token2.TokenType, amount uint64, notAnonymous bool, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string, tokenType token2.Type, amount uint64, notAnonymous bool, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
 	return RequestWithdrawalForRecipient(context, issuer, wallet, tokenType, amount, notAnonymous, nil, opts...)
 }
 
 // RequestWithdrawalForRecipient runs RequestWithdrawalView with the passed arguments.
 // The view will send the passed recipient data to the issuer.
-func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, wallet string, tokenType token2.TokenType, amount uint64, notAnonymous bool, recipientData *RecipientData, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, wallet string, tokenType token2.Type, amount uint64, notAnonymous bool, recipientData *RecipientData, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
 	options, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to compile options")

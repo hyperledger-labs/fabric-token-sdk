@@ -219,7 +219,7 @@ func (r *Request) ID() string {
 // Issue appends an issue action to the request. The action will be prepared using the provided issuer wallet.
 // The action issues to the receiver a token of the passed type and quantity.
 // Additional options can be passed to customize the action.
-func (r *Request) Issue(ctx context.Context, wallet *IssuerWallet, receiver Identity, typ token.TokenType, q uint64, opts ...IssueOption) (*IssueAction, error) {
+func (r *Request) Issue(ctx context.Context, wallet *IssuerWallet, receiver Identity, typ token.Type, q uint64, opts ...IssueOption) (*IssueAction, error) {
 	if wallet == nil {
 		return nil, errors.Errorf("wallet is nil")
 	}
@@ -278,7 +278,7 @@ func (r *Request) Issue(ctx context.Context, wallet *IssuerWallet, receiver Iden
 // The action transfers tokens of the passed types to the receivers for the passed quantities.
 // In other words, owners[0] will receives values[0], and so on.
 // Additional options can be passed to customize the action.
-func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.TokenType, values []uint64, owners []Identity, opts ...TransferOption) (*TransferAction, error) {
+func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.Type, values []uint64, owners []Identity, opts ...TransferOption) (*TransferAction, error) {
 	for _, v := range values {
 		if v == 0 {
 			return nil, errors.Errorf("value is zero")
@@ -332,7 +332,7 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 // Redeem appends a redeem action to the request. The action will be prepared using the provided owner wallet.
 // The action redeems tokens of the passed type for a total amount matching the passed value.
 // Additional options can be passed to customize the action.
-func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.TokenType, value uint64, opts ...TransferOption) error {
+func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Type, value uint64, opts ...TransferOption) error {
 	opt, err := compileTransferOptions(opts...)
 	if err != nil {
 		return errors.WithMessagef(err, "failed compiling options [%v]", opts)
@@ -1078,12 +1078,12 @@ func (r *Request) GetMetadata() (*Metadata, error) {
 	}, nil
 }
 
-func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity, token.TokenType, error) {
+func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity, token.Type, error) {
 	inputTokens, err := r.TokenService.Vault().NewQueryEngine().GetTokens(inputs...)
 	if err != nil {
 		return nil, nil, "", errors.WithMessagef(err, "failed querying tokens ids")
 	}
-	var typ token.TokenType
+	var typ token.Type
 	pp := r.TokenService.tms.PublicParamsManager().PublicParameters()
 	if pp == nil {
 		return nil, nil, "", errors.Errorf("public paramenters not set")
@@ -1107,7 +1107,7 @@ func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 	return inputs, sum, typ, nil
 }
 
-func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType token.TokenType, values []uint64, owners []Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
+func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType token.Type, values []uint64, owners []Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
 	for _, owner := range owners {
 		if redeem {
 			if !owner.IsNone() {
@@ -1209,7 +1209,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType to
 	return tokenIDs, outputTokens, nil
 }
 
-func (r *Request) genOutputs(values []uint64, owners []Identity, tokenType token.TokenType) ([]*token.Token, token.Quantity, error) {
+func (r *Request) genOutputs(values []uint64, owners []Identity, tokenType token.Type) ([]*token.Token, token.Quantity, error) {
 	pp := r.TokenService.PublicParametersManager().PublicParameters()
 	precision := pp.Precision()
 	maxTokenValue := pp.MaxTokenValue()
