@@ -26,11 +26,11 @@ const (
 )
 
 type tokenFetcher interface {
-	UnspentTokensIteratorBy(walletID string, currency token2.TokenType) (iterator[*token2.UnspentTokenInWallet], error)
+	UnspentTokensIteratorBy(walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error)
 }
 
 type TokenDB interface {
-	SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token2.TokenType) (driver.SpendableTokensIterator, error)
+	SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.SpendableTokensIterator, error)
 }
 
 type enhancedIterator[T any] interface {
@@ -115,7 +115,7 @@ func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
 	}
 }
 
-func (f *mixedFetcher) UnspentTokensIteratorBy(walletID string, currency token2.TokenType) (iterator[*token2.UnspentTokenInWallet], error) {
+func (f *mixedFetcher) UnspentTokensIteratorBy(walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
 	logger.Debugf("call unspent tokens iterator")
 	it, err := f.eagerFetcher.UnspentTokensIteratorBy(walletID, currency)
 	logger.Debugf("fetched eager iterator")
@@ -139,7 +139,7 @@ func NewLazyFetcher(tokenDB TokenDB) *lazyFetcher {
 	return &lazyFetcher{tokenDB: tokenDB}
 }
 
-func (f *lazyFetcher) UnspentTokensIteratorBy(walletID string, currency token2.TokenType) (iterator[*token2.UnspentTokenInWallet], error) {
+func (f *lazyFetcher) UnspentTokensIteratorBy(walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
 	logger.Debugf("Query the DB for new tokens")
 	it, err := f.tokenDB.SpendableTokensIteratorBy(context.TODO(), walletID, currency)
 	if err != nil {
@@ -203,7 +203,7 @@ func (f *cachedFetcher) update() {
 	atomic.StoreUint32(&f.queriesResponded, 0)
 }
 
-func (f *cachedFetcher) UnspentTokensIteratorBy(walletID string, currency token2.TokenType) (iterator[*token2.UnspentTokenInWallet], error) {
+func (f *cachedFetcher) UnspentTokensIteratorBy(walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
 	defer atomic.AddUint32(&f.queriesResponded, 1)
 	if f.isCacheOverused() {
 		logger.Debugf("Overused data. Soft refresh (in the background)...")

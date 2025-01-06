@@ -26,7 +26,7 @@ type Withdrawal struct {
 	// Amount represent the number of units of a certain token type stored in the token
 	Amount uint64
 	// TokenType is the type of token to issue
-	TokenType token2.TokenType
+	TokenType token2.Type
 	// Issuer identifies the issuer
 	Issuer string
 	// Recipient information

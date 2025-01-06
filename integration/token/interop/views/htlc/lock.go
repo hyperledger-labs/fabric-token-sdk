@@ -31,7 +31,7 @@ type Lock struct {
 	// Wallet is the identifier of the wallet that owns the tokens to transfer
 	Wallet string
 	// Type of tokens to transfer
-	Type token2.TokenType
+	Type token2.Type
 	// Amount to transfer
 	Amount uint64
 	// Recipient is the identity of the recipient's FSC node

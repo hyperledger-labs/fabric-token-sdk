@@ -21,10 +21,10 @@ import (
 type Terms struct {
 	ReclamationDeadline time.Duration
 	TMSID1              token.TMSID
-	Type1               token2.TokenType
+	Type1               token2.Type
 	Amount1             uint64
 	TMSID2              token.TMSID
-	Type2               token2.TokenType
+	Type2               token2.Type
 	Amount2             uint64
 }
 

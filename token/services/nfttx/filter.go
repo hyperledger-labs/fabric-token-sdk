@@ -26,7 +26,7 @@ type Filter interface {
 
 type QueryService interface {
 	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
-	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.TokenType) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type) (driver.UnspentTokensIterator, error)
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 

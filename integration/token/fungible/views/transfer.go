@@ -40,7 +40,7 @@ type Transfer struct {
 	// TokenIDs contains a list of token ids to transfer. If empty, tokens are selected on the spot.
 	TokenIDs []*token.ID
 	// Type of tokens to transfer
-	Type token.TokenType
+	Type token.Type
 	// Amount to transfer
 	Amount uint64
 	// Recipient is the identity of the recipient's FSC node

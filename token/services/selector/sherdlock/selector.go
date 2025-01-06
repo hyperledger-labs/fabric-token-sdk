@@ -58,7 +58,7 @@ type stubbornSelector struct {
 	maxRetriesAfterBackoff int
 }
 
-func (m *stubbornSelector) Select(owner token.OwnerFilter, q string, currency token2.TokenType) ([]*token2.ID, token2.Quantity, error) {
+func (m *stubbornSelector) Select(owner token.OwnerFilter, q string, currency token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	for retriesAfterBackoff := 0; retriesAfterBackoff <= m.maxRetriesAfterBackoff; retriesAfterBackoff++ {
 		if tokens, quantity, err := m.selector.Select(owner, q, currency); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
 			return tokens, quantity, err
@@ -89,7 +89,7 @@ func NewSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker
 	}
 }
 
-func (s *selector) Select(owner token.OwnerFilter, q string, currency token2.TokenType) ([]*token2.ID, token2.Quantity, error) {
+func (s *selector) Select(owner token.OwnerFilter, q string, currency token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	if s.isClosed() {
 		return nil, nil, errors.Errorf("selector is already closed")
 	}
@@ -172,7 +172,7 @@ func (s *selector) UnlockAll() error {
 	return s.locker.UnlockAll()
 }
 
-func tokenKey(walletID string, typ token2.TokenType) string {
+func tokenKey(walletID string, typ token2.Type) string {
 	return fmt.Sprintf("%s.%s", walletID, typ)
 }
 

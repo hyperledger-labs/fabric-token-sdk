@@ -26,7 +26,7 @@ func (f *PaymentsFilter) ByEnrollmentId(id string) *PaymentsFilter {
 	return f
 }
 
-func (f *PaymentsFilter) ByType(tokenType token.TokenType) *PaymentsFilter {
+func (f *PaymentsFilter) ByType(tokenType token.Type) *PaymentsFilter {
 	f.params.TokenTypes = append(f.params.TokenTypes, tokenType)
 	return f
 }
@@ -68,7 +68,7 @@ func (f *HoldingsFilter) ByEnrollmentId(id string) *HoldingsFilter {
 	return f
 }
 
-func (f *HoldingsFilter) ByType(tokenType token.TokenType) *HoldingsFilter {
+func (f *HoldingsFilter) ByType(tokenType token.Type) *HoldingsFilter {
 	f.params.TokenTypes = append(f.params.TokenTypes, tokenType)
 	return f
 }

@@ -27,7 +27,7 @@ func NewIssueService(publicParamsManager driver.PublicParamsManager, walletServi
 // Issue returns an IssueAction as a function of the passed arguments
 // Issue also returns a serialization OutputMetadata associated with issued tokens
 // and the identity of the issuer
-func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity, tokenType token2.TokenType, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
+func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity, tokenType token2.Type, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
 	for _, owner := range owners {
 		// a recipient cannot be empty
 		if len(owner) == 0 {

@@ -22,7 +22,7 @@ import (
 type TokensService struct {
 	*common.TokensService
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
-	OutputTokenFormat       token.TokenFormat
+	OutputTokenFormat       token.Format
 }
 
 func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams]) (*TokensService, error) {
@@ -43,7 +43,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 // Deobfuscate unmarshals a token and token info from raw bytes
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer
-func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, driver.Identity, token.TokenFormat, error) {
+func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, driver.Identity, token.Format, error) {
 	_, metadata, tok, err := s.deserializeToken(output, outputMetadata, false)
 	if err != nil {
 		return nil, nil, "", err
@@ -51,11 +51,11 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 	return tok, metadata.Issuer, s.OutputTokenFormat, nil
 }
 
-func (s *TokensService) SupportedTokenTypes() []token.TokenFormat {
-	return []token.TokenFormat{s.OutputTokenFormat}
+func (s *TokensService) SupportedTokenTypes() []token.Format {
+	return []token.Format{s.OutputTokenFormat}
 }
 
-func (s *TokensService) DeserializeToken(outputType token.TokenFormat, outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
+func (s *TokensService) DeserializeToken(outputType token.Format, outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
 	// Here we have to check if what we get in input is already as expected.
 	// If not, we need to check if a conversion is possible.
 	// If not, a failure is to be returned
@@ -115,7 +115,7 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 	return output, nil
 }
 
-func supportedTokenFormat(pp *crypto.PublicParams) (token.TokenFormat, error) {
+func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
 	hasher := common.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
@@ -126,5 +126,5 @@ func supportedTokenFormat(pp *crypto.PublicParams) (token.TokenFormat, error) {
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}
-	return token.TokenFormat(hasher.HexDigest()), nil
+	return token.Format(hasher.HexDigest()), nil
 }

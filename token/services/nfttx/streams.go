@@ -29,7 +29,7 @@ func (o *OutputStream) ByRecipient(id view.Identity) *OutputStream {
 	return &OutputStream{OutputStream: o.OutputStream.ByRecipient(id)}
 }
 
-func (o *OutputStream) ByType(typ token2.TokenType) *OutputStream {
+func (o *OutputStream) ByType(typ token2.Type) *OutputStream {
 	return &OutputStream{OutputStream: o.OutputStream.ByType(typ)}
 }
 

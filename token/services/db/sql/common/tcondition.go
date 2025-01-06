@@ -17,8 +17,8 @@ import (
 type TokenInterpreter interface {
 	common.Interpreter
 	HasTokens(colTxID, colIdx common.FieldName, ids ...*token.ID) common.Condition
-	HasTokenTypes(colTokenType common.FieldName, tokenTypes ...token.TokenType) common.Condition
-	HasTokenFormats(colTokenType common.FieldName, tokenTypes ...token.TokenFormat) common.Condition
+	HasTokenTypes(colTokenType common.FieldName, tokenTypes ...token.Type) common.Condition
+	HasTokenFormats(colTokenType common.FieldName, tokenTypes ...token.Format) common.Condition
 	HasTokenDetails(params driver.QueryTokenDetailsParams, tokenTable string) common.Condition
 	HasMovementsParams(params driver.QueryMovementsParams) common.Condition
 	HasValidationParams(params driver.QueryValidationRecordsParams) common.Condition
@@ -45,7 +45,7 @@ func (c *tokenInterpreter) HasTokens(colTxID, colIdx common.FieldName, ids ...*t
 	return c.InTuple([]common.FieldName{colTxID, colIdx}, vals)
 }
 
-func (c *tokenInterpreter) HasTokenTypes(colTokenType common.FieldName, tokenTypes ...token.TokenType) common.Condition {
+func (c *tokenInterpreter) HasTokenTypes(colTokenType common.FieldName, tokenTypes ...token.Type) common.Condition {
 	if len(tokenTypes) == 0 {
 		return common.EmptyCondition
 	}
@@ -56,7 +56,7 @@ func (c *tokenInterpreter) HasTokenTypes(colTokenType common.FieldName, tokenTyp
 	return c.InStrings(colTokenType, types)
 }
 
-func (c *tokenInterpreter) HasTokenFormats(colTokenType common.FieldName, tokenTypes ...token.TokenFormat) common.Condition {
+func (c *tokenInterpreter) HasTokenFormats(colTokenType common.FieldName, tokenTypes ...token.Format) common.Condition {
 	if len(tokenTypes) == 0 {
 		return common.EmptyCondition
 	}

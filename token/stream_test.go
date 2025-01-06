@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	type1 = token.TokenType("type1")
-	type2 = token.TokenType("type2")
+	type1 = token.Type("type1")
+	type2 = token.Type("type2")
 )
 
 type MockQueryService struct {
@@ -231,7 +231,7 @@ func TestOutputStream_TokenTypes(t *testing.T) {
 
 	tokenTypes := stream.TokenTypes()
 
-	assert.ElementsMatch(t, []token.TokenType{type1, type2}, tokenTypes)
+	assert.ElementsMatch(t, []token.Type{type1, type2}, tokenTypes)
 }
 
 func TestInputStream_Owners(t *testing.T) {
@@ -279,7 +279,7 @@ func TestInputStream_TokenTypes(t *testing.T) {
 
 	tokenTypes := stream.TokenTypes()
 
-	assert.ElementsMatch(t, []token.TokenType{type1, type2}, tokenTypes)
+	assert.ElementsMatch(t, []token.Type{type1, type2}, tokenTypes)
 }
 
 func TestInputStream_Count(t *testing.T) {

@@ -343,7 +343,7 @@ func TestMetadata_GetToken(t *testing.T) {
 	mockTokenService.ExtractMetadataStub = func(metadata *driver.TokenRequestMetadata, raw []byte) ([]byte, error) {
 		return expectedTokenInfoRaw, nil
 	}
-	mockTokenService.DeobfuscateStub = func(raw []byte, tokenInfoRaw []byte) (*token2.Token, token.Identity, token2.TokenFormat, error) {
+	mockTokenService.DeobfuscateStub = func(raw []byte, tokenInfoRaw []byte) (*token2.Token, token.Identity, token2.Format, error) {
 		return expectedToken, expectedIdentity, "", nil
 	}
 

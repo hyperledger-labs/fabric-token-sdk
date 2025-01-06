@@ -198,7 +198,7 @@ func (t *Tokens) SetSpendableFlag(value bool, ids ...*token2.ID) error {
 	return tx.Commit()
 }
 
-func (t *Tokens) SetSpendableBySupportedTokenTypes(types []token2.TokenFormat) error {
+func (t *Tokens) SetSpendableBySupportedTokenTypes(types []token2.Format) error {
 	tx, err := t.Storage.NewTransaction()
 	if err != nil {
 		return errors.WithMessagef(err, "error creating new transaction")
@@ -215,7 +215,7 @@ func (t *Tokens) SetSpendableBySupportedTokenTypes(types []token2.TokenFormat) e
 	return nil
 }
 
-func (t *Tokens) SetSupportedTokenTypes(tokenTypes []token2.TokenFormat) error {
+func (t *Tokens) SetSupportedTokenTypes(tokenTypes []token2.Format) error {
 	return t.Storage.tokenDB.SetSupportedTokenTypes(tokenTypes)
 }
 

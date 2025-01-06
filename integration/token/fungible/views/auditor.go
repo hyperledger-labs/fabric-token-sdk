@@ -208,7 +208,7 @@ func (p *RegisterAuditorViewFactory) NewView(in []byte) (view.View, error) {
 
 type CurrentHolding struct {
 	EnrollmentID string
-	TokenType    token2.TokenType
+	TokenType    token2.Type
 	TMSID        token.TMSID
 }
 
@@ -247,9 +247,9 @@ func (p *CurrentHoldingViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type CurrentSpending struct {
-	EnrollmentID string           `json:"enrollment_id"`
-	TokenType    token2.TokenType `json:"token_type"`
-	TMSID        *token.TMSID     `json:"tmsid"`
+	EnrollmentID string       `json:"enrollment_id"`
+	TokenType    token2.Type  `json:"token_type"`
+	TMSID        *token.TMSID `json:"tmsid"`
 }
 
 // CurrentSpendingView is used to retrieve the current spending of token type of the passed enrollment id

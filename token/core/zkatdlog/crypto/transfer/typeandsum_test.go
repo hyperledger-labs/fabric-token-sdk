@@ -171,7 +171,7 @@ func prepareIOCProver(pp []*math.G1, c *math.Curve) (*transfer.TypeAndSumWitness
 	for i := 0; i < 3; i++ {
 		outBF[i] = c.NewRandomZr(rand)
 	}
-	ttype := token2.TokenType("ABC")
+	ttype := token2.Type("ABC")
 	inValues[0] = 100
 	inValues[1] = 50
 	outValues[0] = 75
@@ -196,7 +196,7 @@ func prepareIOCProver(pp []*math.G1, c *math.Curve) (*transfer.TypeAndSumWitness
 	return transfer.NewTypeAndSumWitness(typeBlindingFactor, intw, outtw, c), in, out, inBF, outBF, commitmentToType
 }
 
-func prepareInputsOutputs(inValues, outValues []uint64, inBF, outBF []*math.Zr, ttype token2.TokenType, pp []*math.G1, c *math.Curve) ([]*math.G1, []*math.G1) {
+func prepareInputsOutputs(inValues, outValues []uint64, inBF, outBF []*math.Zr, ttype token2.Type, pp []*math.G1, c *math.Curve) ([]*math.G1, []*math.G1) {
 	inputs := make([]*math.G1, len(inValues))
 	outputs := make([]*math.G1, len(outValues))
 

@@ -85,7 +85,7 @@ func computeTokens(tw []*TokenDataWitness, pp []*math.G1, c *math.Curve) ([]*mat
 	return tokens, nil
 }
 
-func GetTokensWithWitness(values []uint64, ttype token2.TokenType, pp []*math.G1, c *math.Curve) ([]*math.G1, []*TokenDataWitness, error) {
+func GetTokensWithWitness(values []uint64, ttype token2.Type, pp []*math.G1, c *math.Curve) ([]*math.G1, []*TokenDataWitness, error) {
 	if c == nil {
 		return nil, nil, errors.New("cannot get tokens with witness: please initialize curve")
 	}
@@ -131,7 +131,7 @@ func (m *Metadata) Serialize() ([]byte, error) {
 
 // TokenDataWitness contains the opening of Data in Token
 type TokenDataWitness struct {
-	Type           token2.TokenType
+	Type           token2.Type
 	Value          uint64
 	BlindingFactor *math.Zr
 }
@@ -146,7 +146,7 @@ func (tdw *TokenDataWitness) Clone() *TokenDataWitness {
 }
 
 // NewTokenDataWitness returns an array of TokenDataWitness that corresponds to the passed arguments
-func NewTokenDataWitness(ttype token2.TokenType, values []uint64, bfs []*math.Zr) []*TokenDataWitness {
+func NewTokenDataWitness(ttype token2.Type, values []uint64, bfs []*math.Zr) []*TokenDataWitness {
 	witness := make([]*TokenDataWitness, len(values))
 	for i, v := range values {
 		witness[i] = &TokenDataWitness{Value: v, BlindingFactor: bfs[i]}

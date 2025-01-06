@@ -32,7 +32,7 @@ type ActionTransfer struct {
 	// From is the sender
 	From view.Identity
 	// Type of tokens to transfer
-	Type token2.TokenType
+	Type token2.Type
 	// Amount to transfer
 	Amount uint64
 	// Recipient is the recipient of the transfer

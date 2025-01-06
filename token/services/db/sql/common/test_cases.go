@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	TST = token.TokenType("TST")
-	ABC = token.TokenType("ABC")
+	TST = token.Type("TST")
+	ABC = token.Type("ABC")
 )
 
 var TokenNotifierCases = []struct {
@@ -322,7 +322,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 	assert.NoError(t, tx.Rollback())
 }
 
-func getTokensBy(t *testing.T, db *TokenDB, ownerEID string, typ token.TokenType) []*token.UnspentToken {
+func getTokensBy(t *testing.T, db *TokenDB, ownerEID string, typ token.Type) []*token.UnspentToken {
 	it, err := db.UnspentTokensIteratorBy(context.TODO(), ownerEID, typ)
 	assert.NoError(t, err)
 	defer it.Close()
@@ -1033,7 +1033,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	// make all non-spendable
 	tx, err = db.NewTokenDBTransaction()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.TokenFormat{"htlc"}))
+	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.Format{"htlc"}))
 	assert.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
@@ -1046,7 +1046,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	// make TST spendable
 	tx, err = db.NewTokenDBTransaction()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.TokenFormat{"CLEAR"}))
+	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.Format{"CLEAR"}))
 	assert.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
@@ -1059,7 +1059,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	// make TST1 spendable
 	tx, err = db.NewTokenDBTransaction()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.TokenFormat{"CLEAR1"}))
+	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.Format{"CLEAR1"}))
 	assert.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
@@ -1072,7 +1072,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	// make both spendable
 	tx, err = db.NewTokenDBTransaction()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.TokenFormat{"CLEAR", "CLEAR1"}))
+	assert.NoError(t, tx.SetSpendableBySupportedTokenTypes(context.TODO(), []token.Format{"CLEAR", "CLEAR1"}))
 	assert.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
@@ -1083,7 +1083,7 @@ func TTokenTypes(t *testing.T, db *TokenDB) {
 	consumeSpendableTokensIterator(t, it, "TST1", 1)
 }
 
-func consumeSpendableTokensIterator(t *testing.T, it driver3.SpendableTokensIterator, tokenType token.TokenType, count int) {
+func consumeSpendableTokensIterator(t *testing.T, it driver3.SpendableTokensIterator, tokenType token.Type, count int) {
 	defer it.Close()
 	for i := 0; i < count; i++ {
 		tok, err := it.Next()

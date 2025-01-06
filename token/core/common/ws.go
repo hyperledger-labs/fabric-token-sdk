@@ -24,12 +24,12 @@ var (
 
 type TokenVault interface {
 	IsPending(id *token.ID) (bool, error)
-	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenFormat, error)
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error)
 	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
-	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.TokenType) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
 	PublicParams() ([]byte, error)
-	Balance(id string, tokenType token.TokenType) (uint64, error)
+	Balance(id string, tokenType token.Type) (uint64, error)
 }
 
 type WalletRegistry interface {

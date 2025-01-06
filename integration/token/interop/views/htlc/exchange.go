@@ -27,12 +27,12 @@ type FastExchange struct {
 	// TMSID identifies the TMS to use to perform the token operation
 	TMSID1 token.TMSID
 	// Type of tokens to transfer
-	Type1 token2.TokenType
+	Type1 token2.Type
 	// Amount to transfer
 	Amount1 uint64
 
 	TMSID2  token.TMSID
-	Type2   token2.TokenType
+	Type2   token2.Type
 	Amount2 uint64
 
 	// ReclamationDeadline is the time after which we can reclaim the funds in case they were not transferred

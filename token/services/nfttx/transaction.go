@@ -88,7 +88,7 @@ func (t *Transaction) Issue(wallet *token.IssuerWallet, state interface{}, recip
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal state")
 	}
-	stateJSONStr := token2.TokenType(base64.StdEncoding.EncodeToString(stateJSON))
+	stateJSONStr := token2.Type(base64.StdEncoding.EncodeToString(stateJSON))
 
 	// Issue
 	return t.Transaction.Issue(wallet, recipient, stateJSONStr, 1, opts...)
@@ -100,7 +100,7 @@ func (t *Transaction) Transfer(wallet *OwnerWallet, state interface{}, recipient
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal state")
 	}
-	stateJSONStr := token2.TokenType(base64.StdEncoding.EncodeToString(stateJSON))
+	stateJSONStr := token2.Type(base64.StdEncoding.EncodeToString(stateJSON))
 
 	return t.Transaction.Transfer(wallet.OwnerWallet, stateJSONStr, []uint64{1}, []view.Identity{recipient}, opts...)
 }

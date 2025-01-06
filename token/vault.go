@@ -60,7 +60,7 @@ func (q *QueryEngine) UnspentTokensIterator() (*UnspentTokensIterator, error) {
 }
 
 // UnspentTokensIteratorBy is an iterator over all unspent tokens in this vault owned by passed wallet id and whose token type matches the passed token type
-func (q *QueryEngine) UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.TokenType) (driver.UnspentTokensIterator, error) {
+func (q *QueryEngine) UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error) {
 	it, err := q.qe.UnspentTokensIteratorBy(ctx, id, tokenType)
 	if err != nil {
 		return nil, err

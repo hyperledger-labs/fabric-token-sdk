@@ -24,11 +24,11 @@ type Swap struct {
 	// AliceWallet is the wallet Alice will use
 	AliceWallet string
 	// FromAliceType is the token type Alice will transfer
-	FromAliceType token.TokenType
+	FromAliceType token.Type
 	// FromAliceAmount is the amount Alice will transfer
 	FromAliceAmount uint64
 	// FromBobType is the token type Bob will transfer
-	FromBobType token.TokenType
+	FromBobType token.Type
 	// FromBobAmount is the amount Bob will transfer
 	FromBobAmount uint64
 	// Bob is the identity of the Bob's FSC node

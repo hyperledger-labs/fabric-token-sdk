@@ -64,7 +64,7 @@ type TokenToAppend struct {
 	txID                  string
 	index                 uint64
 	tok                   *token2.Token
-	tokenOnLedgerType     token2.TokenFormat
+	tokenOnLedgerType     token2.Format
 	tokenOnLedger         []byte
 	tokenOnLedgerMetadata []byte
 	ownerType             string
@@ -168,7 +168,7 @@ func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error 
 	return nil
 }
 
-func (t *transaction) Notify(topic string, tmsID token.TMSID, walletID string, tokenType token2.TokenType, txID string, index uint64) {
+func (t *transaction) Notify(topic string, tmsID token.TMSID, walletID string, tokenType token2.Type, txID string, index uint64) {
 	if t.notifier == nil {
 		logger.Warnf("cannot notify others!")
 		return
@@ -205,7 +205,7 @@ func (t *transaction) SetSpendableFlag(ctx context.Context, value bool, ids []*t
 	return nil
 }
 
-func (t *transaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokens []token2.TokenFormat) error {
+func (t *transaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokens []token2.Format) error {
 	return t.tx.SetSpendableBySupportedTokenTypes(ctx, supportedTokens)
 }
 
@@ -224,7 +224,7 @@ func NewTokenProcessorEvent(topic string, message *TokenMessage) *TokenProcessor
 type TokenMessage struct {
 	TMSID     token.TMSID
 	WalletID  string
-	TokenType token2.TokenType
+	TokenType token2.Type
 	TxID      string
 	Index     uint64
 }
