@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type Conversion struct {
@@ -27,7 +28,7 @@ type Conversion struct {
 	// Amount represent the number of units of a certain token type stored in the token
 	Amount uint64
 	// TokenType is the type of token to issue
-	TokenType string
+	TokenType token2.Type
 	// Issuer identifies the issuer
 	Issuer string
 	// Recipient information
