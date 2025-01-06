@@ -216,11 +216,11 @@ func (t *Tokens) SetSpendableBySupportedTokenTypes(types []token2.Format) error 
 	return nil
 }
 
-func (t *Tokens) SetSupportedTokenTypes(tokenTypes []token2.Format) error {
+func (t *Tokens) SetSupportedTokenFormats(tokenTypes []token2.Format) error {
 	return t.Storage.tokenDB.SetSupportedTokenFormats(tokenTypes)
 }
 
-func (t *Tokens) UnspendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (driver.UnspendableTokensIterator, error) {
+func (t *Tokens) UnspendableTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.UnspendableTokensIterator, error) {
 	return t.Storage.tokenDB.UnspendableTokensIteratorBy(ctx, walletID, typ)
 }
 

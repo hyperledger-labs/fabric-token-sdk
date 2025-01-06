@@ -187,11 +187,11 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 }
 
 // UnspendableTokensIteratorBy returns the minimum information for conversion about the tokens that cannot be spent
-func (db *TokenDB) UnspendableTokensIteratorBy(ctx context.Context, walletID string, typ string) (tdriver.UnspendableTokensIterator, error) {
+func (db *TokenDB) UnspendableTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (tdriver.UnspendableTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
-		TokenType: typ,
+		TokenType: tokenType,
 	}, ""))
 
 	query, err := NewSelect("tx_id, idx, token_type, quantity, owner_wallet_id").From(db.table.Tokens).Where(where).Compile()

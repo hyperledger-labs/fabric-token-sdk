@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -104,7 +103,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 			// verify the tokens
 			s.TokensService.CheckUnspendableTokens(opts.UnspendableTokens)
 
-			action.Inputs = make([]*token2.ID, len(opts.UnspendableTokens))
+			action.Inputs = make([]*token.ID, len(opts.UnspendableTokens))
 			action.InputTokens = make([][]byte, len(opts.UnspendableTokens))
 			for i, unspendableToken := range opts.UnspendableTokens {
 				action.Inputs[i] = &unspendableToken.Id
