@@ -38,8 +38,8 @@ type Output struct {
 	Quantity token.Quantity
 	// LedgerOutput contains the output as it appears on the ledger
 	LedgerOutput []byte
-	// LedgerOutputType is the output type
-	LedgerOutputType token.Format
+	// LedgerOutputFormat is the output type
+	LedgerOutputFormat token.Format
 }
 
 func (o Output) ID(txID string) *token.ID {

@@ -36,8 +36,8 @@ type TokenRecord struct {
 	OwnerWalletID string
 	// Ledger is the raw token as stored on the ledger
 	Ledger []byte
-	// LedgerType is the type of the raw token as stored on the ledger
-	LedgerType token.Format
+	// LedgerFormat is the type of the raw token as stored on the ledger
+	LedgerFormat token.Format
 	// LedgerMetadata is the metadata associated to the content of Ledger
 	LedgerMetadata []byte
 	// Quantity is the number of units of Type carried in the token.
@@ -95,8 +95,8 @@ type QueryTokenDetailsParams struct {
 	IncludeDeleted bool
 	// Spendable determines whether to include only spendable/non-spendable or any tokens. It defaults to nil (any tokens)
 	Spendable SpendableFilter
-
-	LedgerTokenTypes []token.Format
+	// LedgerTokenFormats selects tokens whose output on the ledger has a format in the list
+	LedgerTokenFormats []token.Format
 }
 
 type SpendableFilter int
@@ -131,9 +131,9 @@ type TokenDBTransaction interface {
 	StoreToken(ctx context.Context, tr TokenRecord, owners []string) error
 	// SetSpendable updates the spendable flag of the passed token
 	SetSpendable(ctx context.Context, tokenID token.ID, spendable bool) error
-	// SetSpendableBySupportedTokenTypes sets the spendable flag to true for all the tokens having one of the passed token type.
+	// SetSpendableBySupportedTokenFormats sets the spendable flag to true for all the tokens having one of the passed token type.
 	// The spendable flag is set to false for the other tokens
-	SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokenTypes []token.Format) error
+	SetSpendableBySupportedTokenFormats(ctx context.Context, formats []token.Format) error
 	// Commit commits this transaction
 	Commit() error
 	// Rollback rollbacks this transaction
@@ -189,8 +189,8 @@ type TokenDB interface {
 	QueryTokenDetails(params QueryTokenDetailsParams) ([]TokenDetails, error)
 	// Balance returns the sun of the amounts of the tokens with type and EID equal to those passed as arguments.
 	Balance(ownerEID string, typ token.Type) (uint64, error)
-	// SetSupportedTokenTypes sets the supported token types
-	SetSupportedTokenTypes(supportedTokenTypes []token.Format) error
+	// SetSupportedTokenFormats sets the supported token formats
+	SetSupportedTokenFormats(formats []token.Format) error
 }
 
 // TokenDBDriver is the interface for a token database driver

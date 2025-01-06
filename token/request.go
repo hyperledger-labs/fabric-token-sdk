@@ -482,7 +482,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if len(issueAction.GetOutputs()) != len(issueMeta.OutputsMetadata) || len(issueMeta.ReceiversAuditInfos) != len(issueAction.GetOutputs()) {
 			return nil, 0, errors.Wrapf(err, "failed matching issue action with its metadata [%d]: invalid metadata", i)
 		}
-		tok, _, tokType, err := tms.TokensService().Deobfuscate(raw, issueMeta.OutputsMetadata[j])
+		tok, _, format, err := tms.TokensService().Deobfuscate(raw, issueMeta.OutputsMetadata[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
@@ -496,16 +496,16 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		}
 
 		outputs = append(outputs, &Output{
-			ActionIndex:       i,
-			Index:             counter,
-			Owner:             tok.Owner,
-			OwnerAuditInfo:    issueMeta.ReceiversAuditInfos[j],
-			EnrollmentID:      eID,
-			RevocationHandler: rID,
-			Type:              tok.Type,
-			Quantity:          q,
-			LedgerOutput:      raw,
-			LedgerOutputType:  tokType,
+			ActionIndex:        i,
+			Index:              counter,
+			Owner:              tok.Owner,
+			OwnerAuditInfo:     issueMeta.ReceiversAuditInfos[j],
+			EnrollmentID:       eID,
+			RevocationHandler:  rID,
+			Type:               tok.Type,
+			Quantity:           q,
+			LedgerOutput:       raw,
+			LedgerOutputFormat: format,
 		})
 		counter++
 
@@ -564,16 +564,16 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		}
 		r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
 		outputs = append(outputs, &Output{
-			ActionIndex:       i,
-			Index:             counter,
-			Owner:             tok.Owner,
-			OwnerAuditInfo:    receiverAuditInfo,
-			EnrollmentID:      eID,
-			RevocationHandler: rID,
-			Type:              tok.Type,
-			Quantity:          q,
-			LedgerOutput:      ledgerOutput,
-			LedgerOutputType:  tokType,
+			ActionIndex:        i,
+			Index:              counter,
+			Owner:              tok.Owner,
+			OwnerAuditInfo:     receiverAuditInfo,
+			EnrollmentID:       eID,
+			RevocationHandler:  rID,
+			Type:               tok.Type,
+			Quantity:           q,
+			LedgerOutput:       ledgerOutput,
+			LedgerOutputFormat: tokType,
 		})
 		counter++
 	}

@@ -42,14 +42,14 @@ type TokensService struct {
 		result1 []byte
 		result2 error
 	}
-	SupportedTokenTypesStub        func() []token.Format
-	supportedTokenTypesMutex       sync.RWMutex
-	supportedTokenTypesArgsForCall []struct {
+	SupportedTokenFormatsStub        func() []token.Format
+	supportedTokenFormatsMutex       sync.RWMutex
+	supportedTokenFormatsArgsForCall []struct {
 	}
-	supportedTokenTypesReturns struct {
+	supportedTokenFormatsReturns struct {
 		result1 []token.Format
 	}
-	supportedTokenTypesReturnsOnCall map[int]struct {
+	supportedTokenFormatsReturnsOnCall map[int]struct {
 		result1 []token.Format
 	}
 	invocations      map[string][][]interface{}
@@ -207,15 +207,15 @@ func (fake *TokensService) ExtractMetadataReturnsOnCall(i int, result1 []byte, r
 	}{result1, result2}
 }
 
-func (fake *TokensService) SupportedTokenTypes() []token.Format {
-	fake.supportedTokenTypesMutex.Lock()
-	ret, specificReturn := fake.supportedTokenTypesReturnsOnCall[len(fake.supportedTokenTypesArgsForCall)]
-	fake.supportedTokenTypesArgsForCall = append(fake.supportedTokenTypesArgsForCall, struct {
+func (fake *TokensService) SupportedTokenFormats() []token.Format {
+	fake.supportedTokenFormatsMutex.Lock()
+	ret, specificReturn := fake.supportedTokenFormatsReturnsOnCall[len(fake.supportedTokenFormatsArgsForCall)]
+	fake.supportedTokenFormatsArgsForCall = append(fake.supportedTokenFormatsArgsForCall, struct {
 	}{})
-	stub := fake.SupportedTokenTypesStub
-	fakeReturns := fake.supportedTokenTypesReturns
-	fake.recordInvocation("SupportedTokenTypes", []interface{}{})
-	fake.supportedTokenTypesMutex.Unlock()
+	stub := fake.SupportedTokenFormatsStub
+	fakeReturns := fake.supportedTokenFormatsReturns
+	fake.recordInvocation("SupportedTokenFormats", []interface{}{})
+	fake.supportedTokenFormatsMutex.Unlock()
 	if stub != nil {
 		return stub()
 	}
@@ -225,37 +225,37 @@ func (fake *TokensService) SupportedTokenTypes() []token.Format {
 	return fakeReturns.result1
 }
 
-func (fake *TokensService) SupportedTokenTypesCallCount() int {
-	fake.supportedTokenTypesMutex.RLock()
-	defer fake.supportedTokenTypesMutex.RUnlock()
-	return len(fake.supportedTokenTypesArgsForCall)
+func (fake *TokensService) SupportedTokenFormatsCallCount() int {
+	fake.supportedTokenFormatsMutex.RLock()
+	defer fake.supportedTokenFormatsMutex.RUnlock()
+	return len(fake.supportedTokenFormatsArgsForCall)
 }
 
-func (fake *TokensService) SupportedTokenTypesCalls(stub func() []token.Format) {
-	fake.supportedTokenTypesMutex.Lock()
-	defer fake.supportedTokenTypesMutex.Unlock()
-	fake.SupportedTokenTypesStub = stub
+func (fake *TokensService) SupportedTokenFormatsCalls(stub func() []token.Format) {
+	fake.supportedTokenFormatsMutex.Lock()
+	defer fake.supportedTokenFormatsMutex.Unlock()
+	fake.SupportedTokenFormatsStub = stub
 }
 
-func (fake *TokensService) SupportedTokenTypesReturns(result1 []token.Format) {
-	fake.supportedTokenTypesMutex.Lock()
-	defer fake.supportedTokenTypesMutex.Unlock()
-	fake.SupportedTokenTypesStub = nil
-	fake.supportedTokenTypesReturns = struct {
+func (fake *TokensService) SupportedTokenFormatsReturns(result1 []token.Format) {
+	fake.supportedTokenFormatsMutex.Lock()
+	defer fake.supportedTokenFormatsMutex.Unlock()
+	fake.SupportedTokenFormatsStub = nil
+	fake.supportedTokenFormatsReturns = struct {
 		result1 []token.Format
 	}{result1}
 }
 
-func (fake *TokensService) SupportedTokenTypesReturnsOnCall(i int, result1 []token.Format) {
-	fake.supportedTokenTypesMutex.Lock()
-	defer fake.supportedTokenTypesMutex.Unlock()
-	fake.SupportedTokenTypesStub = nil
-	if fake.supportedTokenTypesReturnsOnCall == nil {
-		fake.supportedTokenTypesReturnsOnCall = make(map[int]struct {
+func (fake *TokensService) SupportedTokenFormatsReturnsOnCall(i int, result1 []token.Format) {
+	fake.supportedTokenFormatsMutex.Lock()
+	defer fake.supportedTokenFormatsMutex.Unlock()
+	fake.SupportedTokenFormatsStub = nil
+	if fake.supportedTokenFormatsReturnsOnCall == nil {
+		fake.supportedTokenFormatsReturnsOnCall = make(map[int]struct {
 			result1 []token.Format
 		})
 	}
-	fake.supportedTokenTypesReturnsOnCall[i] = struct {
+	fake.supportedTokenFormatsReturnsOnCall[i] = struct {
 		result1 []token.Format
 	}{result1}
 }
@@ -267,8 +267,8 @@ func (fake *TokensService) Invocations() map[string][][]interface{} {
 	defer fake.deobfuscateMutex.RUnlock()
 	fake.extractMetadataMutex.RLock()
 	defer fake.extractMetadataMutex.RUnlock()
-	fake.supportedTokenTypesMutex.RLock()
-	defer fake.supportedTokenTypesMutex.RUnlock()
+	fake.supportedTokenFormatsMutex.RLock()
+	defer fake.supportedTokenFormatsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

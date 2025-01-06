@@ -59,8 +59,8 @@ type TokenDB struct {
 	table tokenTables
 	ci    TokenInterpreter
 
-	sttMutex            sync.RWMutex
-	supportedTokenTypes []token.Format
+	sttMutex              sync.RWMutex
+	supportedTokenFormats []token.Format
 }
 
 func newTokenDB(db *sql.DB, tables tokenTables, ci TokenInterpreter) *TokenDB {
@@ -166,10 +166,10 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID string,
 func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token.Type) (tdriver.SpendableTokensIterator, error) {
 	span := trace.SpanFromContext(ctx)
 	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
-		WalletID:         walletID,
-		TokenType:        typ,
-		Spendable:        driver.SpendableOnly,
-		LedgerTokenTypes: db.getSupportedTokenTypes(),
+		WalletID:           walletID,
+		TokenType:          typ,
+		Spendable:          driver.SpendableOnly,
+		LedgerTokenFormats: db.getSupportedTokenTypes(),
 	}, ""))
 
 	query, err := NewSelect("tx_id, idx, token_type, quantity, owner_wallet_id").From(db.table.Tokens).Where(where).Compile()
@@ -942,16 +942,16 @@ func (db *TokenDB) NewTokenDBTransaction() (driver.TokenDBTransaction, error) {
 	return &TokenTransaction{db: db, tx: tx}, nil
 }
 
-func (db *TokenDB) SetSupportedTokenTypes(supportedTokenTypes []token.Format) error {
+func (db *TokenDB) SetSupportedTokenFormats(formats []token.Format) error {
 	db.sttMutex.Lock()
-	db.supportedTokenTypes = supportedTokenTypes
+	db.supportedTokenFormats = formats
 	db.sttMutex.Unlock()
 	return nil
 }
 
 func (db *TokenDB) getSupportedTokenTypes() []token.Format {
 	db.sttMutex.RLock()
-	supportedTokenTypes := db.supportedTokenTypes
+	supportedTokenTypes := db.supportedTokenFormats
 	db.sttMutex.RUnlock()
 	return supportedTokenTypes
 }
@@ -1062,7 +1062,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		len(tr.OwnerIdentity),
 		tr.OwnerWalletID,
 		len(tr.Ledger),
-		tr.LedgerType,
+		tr.LedgerFormat,
 		len(tr.LedgerMetadata),
 		tr.Type,
 		tr.Quantity,
@@ -1081,7 +1081,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		tr.OwnerIdentity,
 		tr.OwnerWalletID,
 		tr.Ledger,
-		tr.LedgerType,
+		tr.LedgerFormat,
 		tr.LedgerMetadata,
 		tr.Type,
 		tr.Quantity,
@@ -1125,7 +1125,7 @@ func (t *TokenTransaction) SetSpendable(ctx context.Context, tokenID token.ID, s
 
 }
 
-func (t *TokenTransaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokenTypes []token.Format) error {
+func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Context, formats []token.Format) error {
 	span := trace.SpanFromContext(ctx)
 
 	// first set all spendable flags to false
@@ -1140,7 +1140,7 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenTypes(ctx context.Context
 
 	// then set the spendable flags to true only for the supported token types
 
-	cond := t.db.ci.HasTokenFormats("ledger_type", supportedTokenTypes...)
+	cond := t.db.ci.HasTokenFormats("ledger_type", formats...)
 	args := append([]any{true}, cond.Params()...)
 	offset := 2
 	where := cond.ToString(&offset)
@@ -1151,7 +1151,7 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenTypes(ctx context.Context
 	res, err := t.tx.Exec(query, args...)
 	if err != nil {
 		span.RecordError(err)
-		return errors.Wrapf(err, "error setting spendable flag to true for token types [%v]", supportedTokenTypes)
+		return errors.Wrapf(err, "error setting spendable flag to true for token types [%v]", formats)
 	} else {
 		rows, _ := res.RowsAffected()
 		logger.Infof("row affected [%d]", rows)
