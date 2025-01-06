@@ -25,7 +25,15 @@ func (id ID) String() string {
 	return fmt.Sprintf("[%s:%d]", id.TxId, id.Index)
 }
 
-type TokenType string
+type (
+	// TokenType is the currency, e.g. USD
+	TokenType string
+	// TokenFormat is the encoding of a token, e.g. fabtoken, comm.
+	// It is a many-to-many relationship with the token driver,
+	// i.e. a token driver can support multiple formats (e.g. fabtoken1, fabtoken2),
+	// but a format can also be supported by multiple drivers (e.g. zkat, zkatlog).
+	TokenFormat string
+)
 
 // Token is the result of issue and transfer transactions
 type Token struct {

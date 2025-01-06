@@ -37,7 +37,7 @@ type TokenRecord struct {
 	// Ledger is the raw token as stored on the ledger
 	Ledger []byte
 	// LedgerType is the type of the raw token as stored on the ledger
-	LedgerType token.TokenType
+	LedgerType token.TokenFormat
 	// LedgerMetadata is the metadata associated to the content of Ledger
 	LedgerMetadata []byte
 	// Quantity is the number of units of Type carried in the token.
@@ -96,7 +96,7 @@ type QueryTokenDetailsParams struct {
 	// Spendable determines whether to include only spendable/non-spendable or any tokens. It defaults to nil (any tokens)
 	Spendable SpendableFilter
 
-	LedgerTokenTypes []token.TokenType
+	LedgerTokenTypes []token.TokenFormat
 }
 
 type SpendableFilter int
@@ -133,7 +133,7 @@ type TokenDBTransaction interface {
 	SetSpendable(ctx context.Context, tokenID token.ID, spendable bool) error
 	// SetSpendableBySupportedTokenTypes sets the spendable flag to true for all the tokens having one of the passed token type.
 	// The spendable flag is set to false for the other tokens
-	SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokenTypes []token.TokenType) error
+	SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokenTypes []token.TokenFormat) error
 	// Commit commits this transaction
 	Commit() error
 	// Rollback rollbacks this transaction
@@ -167,7 +167,7 @@ type TokenDB interface {
 	// GetTokenMetadata returns the metadata of the tokens for the passed ids.
 	GetTokenMetadata(ids []*token.ID) ([][]byte, error)
 	// GetTokenOutputsAndMeta retrieves both the token output, metadata, and type for the passed ids.
-	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenType, error)
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenFormat, error)
 	// GetTokens returns the owned tokens and their identifier keys for the passed ids.
 	GetTokens(inputs ...*token.ID) ([]*token.Token, error)
 	// WhoDeletedTokens for each id, the function return if it was deleted and by who as per the Delete function
@@ -190,7 +190,7 @@ type TokenDB interface {
 	// Balance returns the sun of the amounts of the tokens with type and EID equal to those passed as arguments.
 	Balance(ownerEID string, typ token.TokenType) (uint64, error)
 	// SetSupportedTokenTypes sets the supported token types
-	SetSupportedTokenTypes(supportedTokenTypes []token.TokenType) error
+	SetSupportedTokenTypes(supportedTokenTypes []token.TokenFormat) error
 }
 
 // TokenDBDriver is the interface for a token database driver

@@ -22,13 +22,13 @@ import (
 type TokensService struct {
 	*common.TokensService
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
-	OutputTokenType         token.TokenType
+	OutputTokenFormat       token.TokenFormat
 }
 
 func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams]) (*TokensService, error) {
 	// compute supported tokens
 	// dlog without graph hiding
-	commTokenTypes, err := supportedTokenTypes(publicParametersManager.PublicParams())
+	commTokenTypes, err := supportedTokenFormat(publicParametersManager.PublicParams())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed computing comm token types")
 	}
@@ -36,31 +36,31 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	return &TokensService{
 		TokensService:           common.NewTokensService(),
 		PublicParametersManager: publicParametersManager,
-		OutputTokenType:         commTokenTypes,
+		OutputTokenFormat:       commTokenTypes,
 	}, nil
 }
 
 // Deobfuscate unmarshals a token and token info from raw bytes
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer
-func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, driver.Identity, token.TokenType, error) {
+func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, driver.Identity, token.TokenFormat, error) {
 	_, metadata, tok, err := s.deserializeToken(output, outputMetadata, false)
 	if err != nil {
 		return nil, nil, "", err
 	}
-	return tok, metadata.Issuer, s.OutputTokenType, nil
+	return tok, metadata.Issuer, s.OutputTokenFormat, nil
 }
 
-func (s *TokensService) SupportedTokenTypes() []token.TokenType {
-	return []token.TokenType{s.OutputTokenType}
+func (s *TokensService) SupportedTokenTypes() []token.TokenFormat {
+	return []token.TokenFormat{s.OutputTokenFormat}
 }
 
-func (s *TokensService) DeserializeToken(outputType token.TokenType, outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
+func (s *TokensService) DeserializeToken(outputType token.TokenFormat, outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
 	// Here we have to check if what we get in input is already as expected.
 	// If not, we need to check if a conversion is possible.
 	// If not, a failure is to be returned
-	if outputType != s.OutputTokenType {
-		return nil, nil, nil, errors.Errorf("invalid token type [%s], expected [%s]", outputType, s.OutputTokenType)
+	if outputType != s.OutputTokenFormat {
+		return nil, nil, nil, errors.Errorf("invalid token type [%s], expected [%s]", outputType, s.OutputTokenFormat)
 	}
 
 	// get zkatdlog token
@@ -115,7 +115,7 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 	return output, nil
 }
 
-func supportedTokenTypes(pp *crypto.PublicParams) (token.TokenType, error) {
+func supportedTokenFormat(pp *crypto.PublicParams) (token.TokenFormat, error) {
 	hasher := common.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
@@ -126,5 +126,5 @@ func supportedTokenTypes(pp *crypto.PublicParams) (token.TokenType, error) {
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}
-	return token.TokenType(hasher.HexDigest()), nil
+	return token.TokenFormat(hasher.HexDigest()), nil
 }

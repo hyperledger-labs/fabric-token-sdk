@@ -24,7 +24,7 @@ var (
 
 type TokenVault interface {
 	IsPending(id *token.ID) (bool, error)
-	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenType, error)
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.TokenFormat, error)
 	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.TokenType) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
