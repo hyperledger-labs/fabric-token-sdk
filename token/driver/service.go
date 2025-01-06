@@ -113,9 +113,9 @@ func (s *TokenDriverService) NewTokenService(tmsID TMSID, publicParams []byte) (
 	return nil, errors.Errorf("no token driver named '%s' found", TokenDriverName(pp.Identifier()))
 }
 
-func (s *TokenDriverService) NewValidator(tmsID TMSID, pp PublicParameters) (Validator, error) {
+func (s *TokenDriverService) NewDefaultValidator(pp PublicParameters) (Validator, error) {
 	if driver, ok := s.factories[TokenDriverName(pp.Identifier())]; ok {
-		return driver.NewValidator(tmsID, pp)
+		return driver.NewDefaultValidator(pp)
 	}
 	return nil, errors.Errorf("no validator found for token driver [%s]", pp.Identifier())
 }

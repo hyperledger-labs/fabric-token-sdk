@@ -151,7 +151,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get public parameters for network [%s]", request.Network)
 	}
-	validator, err := ds.NewValidator(token.TMSID{Network: request.Network, Namespace: request.Namespace}, pp)
+	validator, err := ds.NewDefaultValidator(pp)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create validator")
 	}

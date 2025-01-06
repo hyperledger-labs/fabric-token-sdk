@@ -45,6 +45,6 @@ type Driver interface {
 	PPReader
 	// NewTokenService returns a new TokenManagerService instance.
 	NewTokenService(tmsID TMSID, publicParams []byte) (TokenManagerService, error)
-	// NewValidator returns a new Validator instance from the passed public parameters
-	NewValidator(tmsID TMSID, pp PublicParameters) (Validator, error)
+	// NewDefaultValidator returns a new Validator instance from the passed public parameters
+	NewDefaultValidator(pp PublicParameters) (Validator, error)
 }
