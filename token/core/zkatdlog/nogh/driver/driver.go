@@ -62,30 +62,30 @@ func NewDriver(
 	}
 }
 
-func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (driver.TokenManagerService, error) {
-	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", networkID, channel, namespace)
+func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (driver.TokenManagerService, error) {
+	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
 	logger.Debugf("creating new token service with public parameters [%s]", hash.Hashable(publicParams))
 
 	if len(publicParams) == 0 {
 		return nil, errors.Errorf("empty public parameters")
 	}
-	n, err := d.networkProvider.GetNetwork(networkID, channel)
+	n, err := d.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get network [%s]", networkID)
+		return nil, errors.Wrapf(err, "failed to get network [%s]", tmsID.Network)
 	}
 	if n == nil {
-		return nil, errors.Errorf("network [%s] does not exists", networkID)
+		return nil, errors.Errorf("network [%s] does not exists", tmsID.Network)
 	}
 	networkLocalMembership := n.LocalMembership()
-	v, err := n.TokenVault(namespace)
+	v, err := n.TokenVault(tmsID.Namespace)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", networkID, namespace)
+		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", tmsID.Network, tmsID.Namespace)
 	}
 
-	tmsConfig, err := d.configService.ConfigurationFor(networkID, channel, namespace)
+	tmsConfig, err := d.configService.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", networkID, channel, namespace)
+		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	}
 
 	ppm, err := common.NewPublicParamsManager[*crypto.PublicParams](
@@ -100,7 +100,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	qe := v.QueryEngine()
 	ws, err := d.newWalletService(tmsConfig, d.endpointService, d.storageProvider, qe, logger, d.identityProvider.DefaultIdentity(), networkLocalMembership.DefaultIdentity(), ppm.PublicParams(), false)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to initiliaze wallet service for [%s:%s]", networkID, namespace)
+		return nil, errors.Wrapf(err, "failed to initiliaze wallet service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
 	deserializer := ws.Deserializer
 	ip := ws.IdentityProvider
@@ -115,7 +115,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
 	tokensService, err := zkatdlog.NewTokensService(ppm)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", networkID, namespace)
+		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
 	service, err := zkatdlog.NewTokenService(
 		logger,
@@ -163,7 +163,7 @@ func (d *Driver) NewTokenService(_ driver.ServiceProvider, networkID string, cha
 	return service, err
 }
 
-func (d *Driver) NewValidator(_ driver.ServiceProvider, tmsID driver.TMSID, params driver.PublicParameters) (driver.Validator, error) {
+func (d *Driver) NewValidator(tmsID driver.TMSID, params driver.PublicParameters) (driver.Validator, error) {
 	pp, ok := params.(*crypto.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)

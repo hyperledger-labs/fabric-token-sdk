@@ -44,7 +44,7 @@ type WalletServiceFactory interface {
 type Driver interface {
 	PPReader
 	// NewTokenService returns a new TokenManagerService instance.
-	NewTokenService(sp ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (TokenManagerService, error)
+	NewTokenService(tmsID TMSID, publicParams []byte) (TokenManagerService, error)
 	// NewValidator returns a new Validator instance from the passed public parameters
-	NewValidator(sp ServiceProvider, tmsID TMSID, pp PublicParameters) (Validator, error)
+	NewValidator(tmsID TMSID, pp PublicParameters) (Validator, error)
 }
