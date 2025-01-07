@@ -1216,7 +1216,7 @@ func TestUpdatability(network *integration.Infrastructure, auditorId string, onR
 
 	// holding fails
 	// CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
-	TransferCash(network, alice, "", "EUR", 110, bob, auditor, "insufficient funds, only [0] tokens of type [EUR] are available, but [111] were requested and no other process has any tokens locked")
+	TransferCash(network, alice, "", "EUR", 110, bob, auditor, "insufficient funds, only [0] tokens of type [EUR] are available, but [110] were requested and no other process has any tokens locked")
 	Conversion(network, nil, alice, "", "EUR", auditor, issuer)
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
 }
