@@ -138,9 +138,6 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	// prepare inputs to redeem, if any
 	if opts != nil {
 		if len(opts.UnspendableTokens) != 0 {
-			// verify the tokens
-			s.TokensService.CheckUnspendableTokens(opts.UnspendableTokens)
-
 			action.Inputs = make([]*token.ID, len(opts.UnspendableTokens))
 			action.InputTokens = make([][]byte, len(opts.UnspendableTokens))
 			for i, unspendableToken := range opts.UnspendableTokens {
