@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -88,7 +88,7 @@ func Update(args *UpdateArgs) error {
 		pp.Auditor = []byte{}
 	}
 	if len(args.Issuers) > 0 {
-		pp.Issuers = [][]byte{}
+		pp.IssuerIDs = []driver.Identity{}
 	}
 	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
 		return err

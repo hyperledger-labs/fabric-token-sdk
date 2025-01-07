@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -113,7 +114,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 
 	// Update publicParameters
 	pp.Auditor = auditorId
-	pp.Issuers = [][]byte{issuerId}
+	pp.IssuerIDs = []driver.Identity{issuerId}
 
 	// Serialize
 	ppBytes, err = pp.Serialize()

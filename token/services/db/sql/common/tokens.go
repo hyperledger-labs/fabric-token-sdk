@@ -169,7 +169,7 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 		WalletID:           walletID,
 		TokenType:          typ,
 		Spendable:          driver.SpendableOnly,
-		LedgerTokenFormats: db.getSupportedTokenTypes(),
+		LedgerTokenFormats: db.getSupportedTokenFormats(),
 	}, ""))
 
 	query, err := NewSelect("tx_id, idx, token_type, quantity, owner_wallet_id").From(db.table.Tokens).Where(where).Compile()
@@ -188,14 +188,22 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 
 // UnspendableTokensIteratorBy returns the minimum information for conversion about the tokens that cannot be spent
 func (db *TokenDB) UnspendableTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (tdriver.UnspendableTokensIterator, error) {
-	span := trace.SpanFromContext(ctx)
-	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
-		WalletID:  walletID,
-		TokenType: tokenType,
-		Spendable: driver.NonSpendableOnly,
-	}, ""))
+	// first select all the distinct ledger types
+	includeFormats, err := db.unspendableTokenFormats(ctx, walletID, tokenType)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get unspendable token formats")
+	}
+	logger.Debugf("after filtering we have [%v]", includeFormats)
 
-	query, err := NewSelect("tx_id, idx, token_type, quantity, owner_wallet_id").From(db.table.Tokens).Where(where).Compile()
+	span := trace.SpanFromContext(ctx)
+	// now, select the tokens with the list of ledger tokens
+	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
+		WalletID:           walletID,
+		TokenType:          tokenType,
+		Spendable:          driver.Any,
+		LedgerTokenFormats: includeFormats,
+	}, ""))
+	query, err := NewSelect("tx_id, idx, ledger, ledger_metadata").From(db.table.Tokens).Where(where).Compile()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
@@ -972,11 +980,66 @@ func (db *TokenDB) SetSupportedTokenFormats(formats []token.Format) error {
 	return nil
 }
 
-func (db *TokenDB) getSupportedTokenTypes() []token.Format {
+func (db *TokenDB) getSupportedTokenFormats() []token.Format {
 	db.sttMutex.RLock()
 	supportedTokenTypes := db.supportedTokenFormats
 	db.sttMutex.RUnlock()
 	return supportedTokenTypes
+}
+
+func (db *TokenDB) unspendableTokenFormats(ctx context.Context, walletID string, tokenType token.Type) ([]token.Format, error) {
+	span := trace.SpanFromContext(ctx)
+	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
+		WalletID:  walletID,
+		TokenType: tokenType,
+		Spendable: driver.Any,
+	}, ""))
+	query, err := NewSelectDistinct("ledger_type").From(db.table.Tokens).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
+	logger.Debug(query, args)
+	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	rows, err := db.db.Query(query, args...)
+	span.AddEvent("end_query")
+	if err != nil {
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	if err := rows.Err(); err != nil {
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	defer rows.Close()
+	// read the types from the query result and remove discard those in db.getSupportedTokenFormats()
+	supportedFormats := db.getSupportedTokenFormats()
+	logger.Debugf("supported token formats are [%v]", supportedFormats)
+	includeFormats := make([]token.Format, 0)
+	for rows.Next() {
+		var tmp string
+		if err := rows.Scan(&tmp); err != nil {
+			return nil, errors.Wrapf(err, "failed to scan row")
+		}
+
+		logger.Debugf("format from db [%s]", tmp)
+
+		// include tmp only if it is not in supportedFormats
+		format := token.Format(tmp)
+		found := false
+		for _, t := range supportedFormats {
+			if t == format {
+				found = true
+				break
+			}
+		}
+		if !found {
+			includeFormats = append(includeFormats, format)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	logger.Debugf("after filtering we have [%v]", includeFormats)
+
+	return includeFormats, nil
 }
 
 type TokenTransaction struct {
@@ -1279,9 +1342,11 @@ func (u *UnspendableTokensInWalletIterator) Next() (*token.UnspendableTokenInWal
 	}
 
 	tok := &token.UnspendableTokenInWallet{
-		Id: token.ID{},
+		Id:            token.ID{},
+		Token:         nil,
+		TokenMetadata: nil,
 	}
-	if err := u.txs.Scan(&tok.Id.TxId, &tok.Id.Index); err != nil {
+	if err := u.txs.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Token, &tok.TokenMetadata); err != nil {
 		return nil, err
 	}
 	return tok, nil

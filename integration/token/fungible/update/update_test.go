@@ -37,7 +37,7 @@ var _ = Describe("EndToEnd", func() {
 
 func newTestSuite(commType fsc.P2PCommunicationType, extraTMSs []common.TMSOpts, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewLocalTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(common.Opts{
+	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(common.Opts{
 		Backend:         "fabric",
 		CommType:        commType,
 		SDKs:            []api.SDK{&fall.SDK{}},
@@ -45,6 +45,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, extraTMSs []common.TMSOpts,
 		TokenSDKDriver:  "fabtoken",
 		OnlyUnity:       true,
 		ExtraTMSs:       extraTMSs,
+		FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 	}))
 	return ts, selector
 }

@@ -1198,22 +1198,25 @@ func TestUpdatability(network *integration.Infrastructure, auditorId string, onR
 	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	IssueSuccessfulCash(network, "", "FT16", 110, alice, auditor, true, issuer, endorsers...)
-	CheckBalanceAndHolding(network, alice, "", "FT16", 110, auditor)
+	IssueSuccessfulCash(network, "", "EUR", 110, alice, auditor, true, issuer, endorsers...)
+	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 
-	// switch to fabtoken 32bits, perform a few operations, convert tokens, perform operation again, and then switch
-	tms := GetTMSByNetworkName(network, "fabtoken-32bits")
+	// switch to dlog 32bits, perform a few operations
+	tms := GetTMSByAlias(network, "dlog-32bits")
 	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(ppBytes).NotTo(BeNil())
 	UpdatePublicParams(network, ppBytes, tms)
-	IssueSuccessfulCash(network, "", "FT32", 110, alice, auditor, true, issuer, endorsers...)
-	CheckBalanceAndHolding(network, alice, "", "FT32", 110, auditor)
 
-	// switch to dlog 32bits, perform a few operations
-	// tms = GetTMSByNetworkName(network, "dlog-32bits")
-	// ppBytes, err = os.ReadFile(tokenPlatform.PublicParametersFile(tms))
-	// Expect(err).NotTo(HaveOccurred())
-	// Expect(ppBytes).NotTo(BeNil())
-	// UpdatePublicParams(network, ppBytes, tms)
+	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+
+	// holding fails
+	// CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+	TransferCash(network, alice, "", "EUR", 110, bob, auditor, "insufficient funds, only [0] tokens of type [EUR] are available, but [111] were requested and no other process has any tokens locked")
+	Conversion(network, nil, alice, "", "EUR", auditor, issuer)
+	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
 }

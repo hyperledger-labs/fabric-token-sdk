@@ -90,12 +90,12 @@ func (d *base) newWalletService(
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
 	roles.Register(driver.OwnerRole, role)
-	role, err = roleFactory.NewX509(driver.IssuerRole)
+	role, err = roleFactory.NewX509(driver.IssuerRole, pp.Issuers()...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create issuer role")
 	}
 	roles.Register(driver.IssuerRole, role)
-	role, err = roleFactory.NewX509(driver.AuditorRole)
+	role, err = roleFactory.NewX509(driver.AuditorRole, pp.Auditors()...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create auditor role")
 	}

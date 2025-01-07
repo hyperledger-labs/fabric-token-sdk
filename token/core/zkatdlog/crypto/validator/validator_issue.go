@@ -31,7 +31,7 @@ func IssueValidate(ctx *Context) error {
 		return err
 	}
 
-	issuers := ctx.PP.Issuers
+	issuers := ctx.PP.IssuerIDs
 	if len(issuers) != 0 {
 		// Check the issuer is among those known
 		found := false

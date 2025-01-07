@@ -97,7 +97,17 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
 
-	ws, err := d.newWalletService(tmsConfig, d.endpointService, d.storageProvider, qe, logger, d.identityProvider.DefaultIdentity(), networkLocalMembership.DefaultIdentity(), nil, false)
+	ws, err := d.newWalletService(
+		tmsConfig,
+		d.endpointService,
+		d.storageProvider,
+		qe,
+		logger,
+		d.identityProvider.DefaultIdentity(),
+		networkLocalMembership.DefaultIdentity(),
+		publicParamsManager.PublicParams(),
+		false,
+	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze wallet service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}

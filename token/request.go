@@ -790,6 +790,12 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 			}
 		}
 
+		// extractedInputs, err := r.extractInputs(i, issueMeta, failOnMissing)
+		// if err != nil {
+		// 	return nil, nil, err
+		// }
+		// inputs = append(inputs, extractedInputs...)
+
 		extractedOutputs, newCounter, err := r.extractIssueOutputs(i, counter, issueAction, issueMeta, failOnMissing)
 		if err != nil {
 			return nil, nil, err

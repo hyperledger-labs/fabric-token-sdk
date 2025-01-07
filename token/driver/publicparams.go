@@ -60,6 +60,8 @@ type PublicParameters interface {
 	Bytes() ([]byte, error)
 	// Auditors returns the list of auditors.
 	Auditors() []Identity
+	// Issuers returns the list of issuers.
+	Issuers() []Identity
 	// Precision returns the precision used to represent the token value.
 	Precision() uint64
 	// String returns a readable version of the public parameters

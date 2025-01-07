@@ -131,7 +131,7 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	}
 
 	t, err := template.New("peer").Funcs(template.FuncMap{
-		"TMSID":               func() string { return tms.ID() },
+		"TMSID":               func() string { return tms.TmsID() },
 		"TMS":                 func() *topology2.TMS { return tms },
 		"Wallets":             func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
 		"SQLDriver":           func() string { return string(persistence.DriverType) },
@@ -318,13 +318,13 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 }
 
 func (p *NetworkHandler) GetEntry(tms *topology2.TMS) *Entry {
-	entry, ok := p.Entries[tms.Network+tms.Channel+tms.Namespace]
+	entry, ok := p.Entries[tms.Network+tms.Channel+tms.Namespace+tms.Alias]
 	if !ok {
 		entry = &Entry{
 			TMS:     tms,
 			Wallets: map[string]*generators.Wallets{},
 		}
-		p.Entries[tms.Network+tms.Channel+tms.Namespace] = entry
+		p.Entries[tms.Network+tms.Channel+tms.Namespace+tms.Alias] = entry
 	}
 	return entry
 }

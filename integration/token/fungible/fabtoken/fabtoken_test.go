@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -45,7 +46,7 @@ func UpdatePublicParams(network *integration.Infrastructure, selector *token2.Re
 		Label:             "fabtoken",
 		QuantityPrecision: uint64(64),
 		Auditor:           auditorId,
-		Issuers:           [][]byte{issuerId},
+		IssuerIDs:         []driver.Identity{issuerId},
 		MaxToken:          math.MaxUint64,
 	}
 	ppBytes, err := publicParam.Serialize()

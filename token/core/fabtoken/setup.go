@@ -30,7 +30,7 @@ type PublicParams struct {
 	// This is set when audit is enabled
 	Auditor []byte
 	// This encodes the list of authorized issuers
-	Issuers [][]byte
+	IssuerIDs []driver.Identity
 	// MaxToken is the maximum quantity a token can hold
 	MaxToken uint64
 }
@@ -116,7 +116,7 @@ func (pp *PublicParams) AddAuditor(auditor driver.Identity) {
 
 // AddIssuer adds the passed issuer to the array of Issuers in PublicParams
 func (pp *PublicParams) AddIssuer(issuer driver.Identity) {
-	pp.Issuers = append(pp.Issuers, issuer)
+	pp.IssuerIDs = append(pp.IssuerIDs, issuer)
 }
 
 // Auditors returns the list of authorized auditors
@@ -126,6 +126,11 @@ func (pp *PublicParams) Auditors() []driver.Identity {
 		return []driver.Identity{}
 	}
 	return []driver.Identity{pp.Auditor}
+}
+
+// Issuers returns the list of authorized issuers
+func (pp *PublicParams) Issuers() []driver.Identity {
+	return pp.IssuerIDs
 }
 
 // Precision returns the quantity precision encoded in PublicParams

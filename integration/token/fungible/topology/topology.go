@@ -339,6 +339,7 @@ func Topology(opts common.Opts) []api.Topology {
 		fabric2.WithFSCEndorsers(tms, "endorser-1", "endorser-2", "endorser-3")
 	}
 	fabric2.SetOrgs(tms, "Org1")
+	var nodeList []*node.Node
 	if opts.Backend == "orion" {
 		// we need to define the custodian
 		custodian := fscTopology.AddNodeByName("custodian")
@@ -351,7 +352,9 @@ func Topology(opts common.Opts) []api.Topology {
 		orionTopology := backendNetwork.(*orion.Topology)
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")
 		fscTopology.SetBootstrapNode(custodian)
+		nodeList = fscTopology.ListNodes()
 	} else {
+		nodeList = fscTopology.ListNodes()
 		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 	}
 	if !opts.NoAuditor {
@@ -367,7 +370,7 @@ func Topology(opts common.Opts) []api.Topology {
 
 	// any extra TMS
 	for _, tmsOpts := range opts.ExtraTMSs {
-		tms := tokenTopology.AddTMS(nil, backendNetwork, backendChannel, tmsOpts.TokenSDKDriver)
+		tms := tokenTopology.AddTMS(nodeList, backendNetwork, backendChannel, tmsOpts.TokenSDKDriver)
 		tms.Alias = tmsOpts.Alias
 		tms.Namespace = "token-chaincode"
 		tms.Transient = true
@@ -375,6 +378,9 @@ func Topology(opts common.Opts) []api.Topology {
 			dlog.WithAries(tms)
 		}
 		tms.SetTokenGenPublicParams(tmsOpts.PublicParamsGenArgs...)
+		if !opts.NoAuditor {
+			tms.AddAuditor(auditor)
+		}
 	}
 
 	if opts.Monitoring {

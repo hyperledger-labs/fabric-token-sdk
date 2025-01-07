@@ -12,6 +12,7 @@ import (
 	"time"
 
 	math3 "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,7 +49,7 @@ func TestSerialization(t *testing.T) {
 
 	assert.NoError(t, pp.Validate())
 
-	pp.Issuers = [][]byte{[]byte("issuer")}
+	pp.IssuerIDs = []driver.Identity{[]byte("issuer")}
 	assert.NoError(t, pp.Validate())
 
 }

@@ -42,6 +42,15 @@ type IssueMetadata struct {
 	// Issuer is the identity of the issuer
 	Issuer Identity
 
+	// // TokenIDs is the list of TokenIDs spent by this action
+	// TokenIDs []*token.ID
+	// // Senders is the list of senders
+	// Senders []Identity
+	// // SendersAuditInfos, for each sender we have audit info to recover the enrollment ID of the sender
+	// SenderAuditInfos [][]byte
+
+	// Outputs is the list of outputs issued
+	Outputs [][]byte
 	// OutputsMetadata, for each output we have a OutputsMetadata entry that contains secrets to de-obfuscate the output
 	OutputsMetadata [][]byte
 	// Receivers, for each output we have a receiver

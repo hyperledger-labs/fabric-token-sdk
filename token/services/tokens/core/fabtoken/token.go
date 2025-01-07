@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"encoding/json"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -54,4 +56,12 @@ func UnmarshalTypedMetadata(metadata driver.Metadata) (*tokens.TypedMetadata, er
 		return nil, errors.Errorf("invalid metadata type [%v]", tmetadata.Type)
 	}
 	return tmetadata, nil
+}
+
+func UnmarshalToken(raw []byte) (*Token, error) {
+	token := &Token{}
+	if err := json.Unmarshal(raw, &token); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling token")
+	}
+	return token, nil
 }
