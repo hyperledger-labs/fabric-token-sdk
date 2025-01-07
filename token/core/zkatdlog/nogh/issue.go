@@ -11,6 +11,7 @@ import (
 	"time"
 
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
@@ -20,6 +21,7 @@ import (
 )
 
 type IssueService struct {
+	Logger                  logging.Logger
 	PublicParametersManager common2.PublicParametersManager[*crypto.PublicParams]
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
@@ -28,6 +30,7 @@ type IssueService struct {
 }
 
 func NewIssueService(
+	logger logging.Logger,
 	publicParametersManager common2.PublicParametersManager[*crypto.PublicParams],
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
@@ -35,6 +38,7 @@ func NewIssueService(
 	tokensService *TokensService,
 ) *IssueService {
 	return &IssueService{
+		Logger:                  logger,
 		PublicParametersManager: publicParametersManager,
 		WalletService:           walletService,
 		Deserializer:            deserializer,
@@ -51,6 +55,40 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		// a recipient cannot be empty
 		if len(owner) == 0 {
 			return nil, nil, errors.Errorf("all recipients should be defined")
+		}
+	}
+
+	if issuerIdentity.IsNone() && len(tokenType) == 0 && values == nil {
+		// this is a special case where the issue contains also redemption
+		// we need to extract token types and values from the unspendable tokens
+		tokenTypes, tokenValues, err := s.TokensService.CheckUnspendableTokens(opts.UnspendableTokens)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to extract token types and values from unspendable tokens")
+		}
+
+		// check that token types are all the same
+		if len(tokenTypes) == 0 {
+			return nil, nil, errors.New("no token types found in unspendable tokens")
+		}
+		tokenType = tokenTypes[0]
+		for _, t := range tokenTypes {
+			if t != tokenType {
+				return nil, nil, errors.New("all token types should be the same")
+			}
+		}
+		// sum the token values
+		var totalValue uint64
+		for _, v := range tokenValues {
+			totalValue += v
+		}
+		values = []uint64{totalValue}
+
+		s.Logger.Debugf("conversion: extracted token type [%s] and value [%d] from unspendable tokens", tokenType, totalValue)
+
+		// fetch issuer identity
+		issuerIdentity, err = opts.Wallet.GetIssuerIdentity(tokenType)
+		if err != nil {
+			return nil, nil, errors.WithMessagef(err, "failed getting issuer identity for type [%s]", tokenType)
 		}
 	}
 

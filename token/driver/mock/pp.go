@@ -4,20 +4,20 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type PublicParameters struct {
-	AuditorsStub        func() []view.Identity
+	AuditorsStub        func() []identity.Identity
 	auditorsMutex       sync.RWMutex
 	auditorsArgsForCall []struct {
 	}
 	auditorsReturns struct {
-		result1 []view.Identity
+		result1 []identity.Identity
 	}
 	auditorsReturnsOnCall map[int]struct {
-		result1 []view.Identity
+		result1 []identity.Identity
 	}
 	BytesStub        func() ([]byte, error)
 	bytesMutex       sync.RWMutex
@@ -60,6 +60,16 @@ type PublicParameters struct {
 	}
 	identifierReturnsOnCall map[int]struct {
 		result1 string
+	}
+	IssuersStub        func() []identity.Identity
+	issuersMutex       sync.RWMutex
+	issuersArgsForCall []struct {
+	}
+	issuersReturns struct {
+		result1 []identity.Identity
+	}
+	issuersReturnsOnCall map[int]struct {
+		result1 []identity.Identity
 	}
 	MaxTokenValueStub        func() uint64
 	maxTokenValueMutex       sync.RWMutex
@@ -127,7 +137,7 @@ type PublicParameters struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *PublicParameters) Auditors() []view.Identity {
+func (fake *PublicParameters) Auditors() []identity.Identity {
 	fake.auditorsMutex.Lock()
 	ret, specificReturn := fake.auditorsReturnsOnCall[len(fake.auditorsArgsForCall)]
 	fake.auditorsArgsForCall = append(fake.auditorsArgsForCall, struct {
@@ -151,32 +161,32 @@ func (fake *PublicParameters) AuditorsCallCount() int {
 	return len(fake.auditorsArgsForCall)
 }
 
-func (fake *PublicParameters) AuditorsCalls(stub func() []view.Identity) {
+func (fake *PublicParameters) AuditorsCalls(stub func() []identity.Identity) {
 	fake.auditorsMutex.Lock()
 	defer fake.auditorsMutex.Unlock()
 	fake.AuditorsStub = stub
 }
 
-func (fake *PublicParameters) AuditorsReturns(result1 []view.Identity) {
+func (fake *PublicParameters) AuditorsReturns(result1 []identity.Identity) {
 	fake.auditorsMutex.Lock()
 	defer fake.auditorsMutex.Unlock()
 	fake.AuditorsStub = nil
 	fake.auditorsReturns = struct {
-		result1 []view.Identity
+		result1 []identity.Identity
 	}{result1}
 }
 
-func (fake *PublicParameters) AuditorsReturnsOnCall(i int, result1 []view.Identity) {
+func (fake *PublicParameters) AuditorsReturnsOnCall(i int, result1 []identity.Identity) {
 	fake.auditorsMutex.Lock()
 	defer fake.auditorsMutex.Unlock()
 	fake.AuditorsStub = nil
 	if fake.auditorsReturnsOnCall == nil {
 		fake.auditorsReturnsOnCall = make(map[int]struct {
-			result1 []view.Identity
+			result1 []identity.Identity
 		})
 	}
 	fake.auditorsReturnsOnCall[i] = struct {
-		result1 []view.Identity
+		result1 []identity.Identity
 	}{result1}
 }
 
@@ -392,6 +402,59 @@ func (fake *PublicParameters) IdentifierReturnsOnCall(i int, result1 string) {
 	}
 	fake.identifierReturnsOnCall[i] = struct {
 		result1 string
+	}{result1}
+}
+
+func (fake *PublicParameters) Issuers() []identity.Identity {
+	fake.issuersMutex.Lock()
+	ret, specificReturn := fake.issuersReturnsOnCall[len(fake.issuersArgsForCall)]
+	fake.issuersArgsForCall = append(fake.issuersArgsForCall, struct {
+	}{})
+	stub := fake.IssuersStub
+	fakeReturns := fake.issuersReturns
+	fake.recordInvocation("Issuers", []interface{}{})
+	fake.issuersMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *PublicParameters) IssuersCallCount() int {
+	fake.issuersMutex.RLock()
+	defer fake.issuersMutex.RUnlock()
+	return len(fake.issuersArgsForCall)
+}
+
+func (fake *PublicParameters) IssuersCalls(stub func() []identity.Identity) {
+	fake.issuersMutex.Lock()
+	defer fake.issuersMutex.Unlock()
+	fake.IssuersStub = stub
+}
+
+func (fake *PublicParameters) IssuersReturns(result1 []identity.Identity) {
+	fake.issuersMutex.Lock()
+	defer fake.issuersMutex.Unlock()
+	fake.IssuersStub = nil
+	fake.issuersReturns = struct {
+		result1 []identity.Identity
+	}{result1}
+}
+
+func (fake *PublicParameters) IssuersReturnsOnCall(i int, result1 []identity.Identity) {
+	fake.issuersMutex.Lock()
+	defer fake.issuersMutex.Unlock()
+	fake.IssuersStub = nil
+	if fake.issuersReturnsOnCall == nil {
+		fake.issuersReturnsOnCall = make(map[int]struct {
+			result1 []identity.Identity
+		})
+	}
+	fake.issuersReturnsOnCall[i] = struct {
+		result1 []identity.Identity
 	}{result1}
 }
 
@@ -729,6 +792,8 @@ func (fake *PublicParameters) Invocations() map[string][][]interface{} {
 	defer fake.graphHidingMutex.RUnlock()
 	fake.identifierMutex.RLock()
 	defer fake.identifierMutex.RUnlock()
+	fake.issuersMutex.RLock()
+	defer fake.issuersMutex.RUnlock()
 	fake.maxTokenValueMutex.RLock()
 	defer fake.maxTokenValueMutex.RUnlock()
 	fake.precisionMutex.RLock()

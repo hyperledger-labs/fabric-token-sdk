@@ -14,7 +14,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/math"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -147,6 +149,35 @@ func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
 	return token.Format(hasher.HexDigest()), nil
 }
 
-func (s *TokensService) CheckUnspendableTokens(tokens []token.UnspendableTokenInWallet) {
+func (s *TokensService) CheckUnspendableTokens(tokens []token.UnspendableTokenInWallet) ([]token.Type, []uint64, error) {
+	var tokenTypes []token.Type
+	var tokenValue []uint64
+	for _, tok := range tokens {
+		typedToken, err := tokens2.UnmarshalTypedToken(tok.Token)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to unmarshal typed token")
+		}
 
+		// which types do we recognize?
+		// fabtoken16Type, err := fabtoken.SupportedTokenFormat(16)
+		// if err != nil {
+		// 	return nil, nil, errors.Wrap(err, "failed to get fabtoken type")
+		// }
+
+		switch typedToken.Type {
+		case fabtoken.Type:
+			fabToken, err := fabtoken.UnmarshalToken(typedToken.Token)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "failed to unmarshal fabtoken")
+			}
+			tokenTypes = append(tokenTypes, fabToken.Type)
+
+			q, err := token.NewUBigQuantity(fabToken.Quantity, 64)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "failed to create quantity")
+			}
+			tokenValue = append(tokenValue, q.Uint64())
+		}
+	}
+	return tokenTypes, tokenValue, nil
 }

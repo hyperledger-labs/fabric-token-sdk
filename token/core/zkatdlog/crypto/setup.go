@@ -89,9 +89,9 @@ type PublicParams struct {
 	// IdemixIssuerPK is the public key of the issuer of the idemix scheme.
 	IdemixIssuerPK []byte
 	// Auditor is the public key of the auditor.
-	Auditor []byte
-	// Issuers is a list of public keys of the entities that can issue tokens.
-	Issuers [][]byte
+	Auditor driver.Identity
+	// IssuerIDs is a list of public keys of the entities that can issue tokens.
+	IssuerIDs []driver.Identity
 	// MaxToken is the maximum quantity a token can hold
 	MaxToken uint64
 	// QuantityPrecision is the precision used to represent quantities
@@ -153,6 +153,11 @@ func (pp *PublicParams) Auditors() []driver.Identity {
 		return []driver.Identity{}
 	}
 	return []driver.Identity{pp.Auditor}
+}
+
+// Issuers returns the list of authorized issuers
+func (pp *PublicParams) Issuers() []driver.Identity {
+	return pp.IssuerIDs
 }
 
 func (pp *PublicParams) Serialize() ([]byte, error) {
@@ -223,7 +228,7 @@ func (pp *PublicParams) AddAuditor(auditor driver.Identity) {
 }
 
 func (pp *PublicParams) AddIssuer(id driver.Identity) {
-	pp.Issuers = append(pp.Issuers, id)
+	pp.IssuerIDs = append(pp.IssuerIDs, id)
 }
 
 func (pp *PublicParams) ComputeHash() ([]byte, error) {

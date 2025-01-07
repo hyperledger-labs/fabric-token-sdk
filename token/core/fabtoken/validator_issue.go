@@ -32,7 +32,7 @@ func IssueValidate(ctx *Context) error {
 		}
 	}
 
-	issuers := ctx.PP.Issuers
+	issuers := ctx.PP.IssuerIDs
 	if len(issuers) != 0 {
 		// check that issuer of this issue action is authorized
 		found := false

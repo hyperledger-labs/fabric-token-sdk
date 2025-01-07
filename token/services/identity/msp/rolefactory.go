@@ -126,7 +126,7 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	if err := lm.Load(identities); err != nil {
+	if err := lm.Load(identities, nil); err != nil {
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
 	return &WrappingBindingRole{
@@ -139,15 +139,15 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 }
 
 // NewX509 creates a new X509-based role
-func (f *RoleFactory) NewX509(role driver.IdentityRole) (identity.Role, error) {
-	return f.newX509WithType(role, "", false)
+func (f *RoleFactory) NewX509(role driver.IdentityRole, targets ...driver.Identity) (identity.Role, error) {
+	return f.newX509WithType(role, "", false, targets...)
 }
 
 func (f *RoleFactory) NewWrappedX509(role driver.IdentityRole, ignoreRemote bool) (identity.Role, error) {
 	return f.newX509WithType(role, X509Identity, ignoreRemote)
 }
 
-func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType string, ignoreRemote bool) (identity.Role, error) {
+func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType string, ignoreRemote bool, targets ...driver.Identity) (identity.Role, error) {
 	f.Logger.Debugf("create x509 role for [%s]", driver.IdentityRoleStrings[role])
 
 	kmp := x5092.NewKeyManagerProvider(f.Config, RoleToMSPID[role], f.SignerService, ignoreRemote)
@@ -171,7 +171,7 @@ func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType str
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	if err := lm.Load(identities); err != nil {
+	if err := lm.Load(identities, targets); err != nil {
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
 

@@ -26,8 +26,18 @@ func NewWalletServiceFactory(storageProvider identity.StorageProvider) driver.Na
 	}
 }
 
-func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Config, _ driver.PublicParameters) (driver.WalletService, error) {
+func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Config, pp driver.PublicParameters) (driver.WalletService, error) {
 	tmsID := tmsConfig.ID()
 	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
-	return d.base.newWalletService(tmsConfig, nil, d.storageProvider, nil, logger, nil, nil, nil, true)
+	return d.base.newWalletService(
+		tmsConfig,
+		nil,
+		d.storageProvider,
+		nil,
+		logger,
+		nil,
+		nil,
+		pp,
+		true,
+	)
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
@@ -51,6 +52,7 @@ type LocalMembership struct {
 	localIdentitiesByName         map[string]*LocalIdentity
 	localIdentitiesByEnrollmentID map[string]*LocalIdentity
 	localIdentitiesByIdentity     map[string]*LocalIdentity
+	targetIdentities              []view.Identity
 }
 
 func NewLocalMembership(
@@ -149,11 +151,13 @@ func (l *LocalMembership) IDs() ([]string, error) {
 	return ids, nil
 }
 
-func (l *LocalMembership) Load(identities []*config.Identity) error {
+func (l *LocalMembership) Load(identities []*config.Identity, targets []view.Identity) error {
 	l.localIdentitiesMutex.Lock()
 	defer l.localIdentitiesMutex.Unlock()
 
 	l.logger.Debugf("load identities [%+q]", identities)
+
+	l.targetIdentities = targets
 
 	// cleanup tables
 	l.localIdentities = make([]*LocalIdentity, 0)
@@ -288,8 +292,29 @@ func (l *LocalMembership) registerLocalIdentities(configuration *driver.Identity
 }
 
 func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration, keyManager KeyManager, defaultID bool) error {
-	eID := keyManager.EnrollmentID()
+	// check for duplicates
 	name := config.ID
+	_, ok := l.localIdentitiesByName[name]
+	if ok && !keyManager.Anonymous() && len(l.targetIdentities) > 0 {
+		// is the identity in the target identities? If no, ignore it.
+		identity, _, err := keyManager.Identity(nil)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to get wallet identity from [%s]", name)
+		}
+		found := false
+		for _, id := range l.targetIdentities {
+			if id.Equal(identity) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			l.logger.Debugf("identity [%s] not in target identities, ignore it", name)
+			return nil
+		}
+	}
+
+	eID := keyManager.EnrollmentID()
 	localIdentity := &LocalIdentity{
 		Name:         name,
 		Default:      defaultID,

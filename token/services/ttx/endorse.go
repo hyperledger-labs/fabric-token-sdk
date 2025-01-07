@@ -345,11 +345,16 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 }
 
 func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Identity, error) {
+	auditors := c.tx.TokenService().PublicParametersManager().PublicParameters().Auditors()
+	logger.Debugf("# auditors in public parameters [%d]", len(auditors))
 	if len(c.tx.TokenService().PublicParametersManager().PublicParameters().Auditors()) == 0 {
 		return nil, nil
 	}
 
 	if !c.tx.Opts.Auditor.IsNone() {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("ask auditing to [%s]", c.tx.Opts.Auditor)
+		}
 		local := view2.GetSigService(context).IsMe(c.tx.Opts.Auditor)
 		sessionBoxed, err := context.RunView(newAuditingViewInitiator(c.tx, local))
 		if err != nil {
@@ -357,6 +362,8 @@ func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Ide
 		}
 		c.sessions[c.tx.Opts.Auditor.String()] = sessionBoxed.(view.Session)
 		return []view.Identity{c.tx.Opts.Auditor}, nil
+	} else {
+		logger.Warnf("no auditor specified, skip auditing, but # auditors in public parameters is [%d]", len(auditors))
 	}
 	return nil, nil
 }

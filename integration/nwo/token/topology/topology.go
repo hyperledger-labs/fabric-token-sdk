@@ -99,6 +99,20 @@ func (t *TMS) ID() string {
 	return b.String()
 }
 
+func (t *TMS) TmsID() string {
+	b := strings.Builder{}
+	b.WriteString(t.Network)
+	if len(t.Channel) != 0 {
+		b.WriteRune('-')
+		b.WriteString(t.Channel)
+	}
+	if len(t.Namespace) != 0 {
+		b.WriteRune('-')
+		b.WriteString(t.Namespace)
+	}
+	return b.String()
+}
+
 // SetNamespace sets the namespace of the TMS
 func (t *TMS) SetNamespace(namespace string) *TMS {
 	// Check if namespace is valid
