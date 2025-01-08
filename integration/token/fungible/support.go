@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -1097,6 +1098,17 @@ func Restart(network *integration.Infrastructure, deleteVault bool, onRestart On
 	}
 }
 
+func CopyDBsTo(network *integration.Infrastructure, to string, ids ...*token3.NodeReference) {
+	tokenPlatform := tplatform.GetPlatform(network.Ctx, "token")
+	Expect(tokenPlatform).ToNot(BeNil(), "cannot find token platform in context")
+
+	for _, id := range ids {
+		for _, tms := range tokenPlatform.GetTopology().TMSs {
+			tokenPlatform.CopyDBsTo(tms, id.Id(), filepath.Join(to, tms.ID(), id.Id()))
+		}
+	}
+}
+
 func RegisterIssuerIdentity(network *integration.Infrastructure, id *token3.NodeReference, walletID, walletPath string) {
 	_, err := network.Client(id.ReplicaName()).CallView("RegisterIssuerIdentity", common.JSONMarshall(&views.RegisterIssuerWallet{
 		ID:   walletID,
@@ -1263,6 +1275,7 @@ func Conversion(network *integration.Infrastructure, wpm *WalletManagerProvider,
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
 		txID := common.JSONUnmarshalString(txid)
+		fmt.Printf("Conversion txID [%s]\n", txID)
 		common2.CheckFinality(network, user, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
 		common2.CheckFinality(network, issuer, txID, nil, false)

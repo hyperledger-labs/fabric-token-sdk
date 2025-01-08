@@ -349,7 +349,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 			return nil, err
 		}
 
-		if len(ia.OutputTokens) != len(md.ReceiversAuditInfos) || len(ia.OutputTokens) != len(md.OutputsMetadata) {
+		if len(ia.Outputs) != len(md.ReceiversAuditInfos) || len(ia.Outputs) != len(md.OutputsMetadata) {
 			return nil, errors.Errorf("number of output does not match number of provided metadata")
 		}
 		outputs[k] = make([]*AuditableToken, len(md.ReceiversAuditInfos))
@@ -359,13 +359,13 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 			if err != nil {
 				return nil, err
 			}
-			if ia.OutputTokens[i] == nil {
+			if ia.Outputs[i] == nil {
 				return nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
-			if ia.OutputTokens[i].IsRedeem() {
+			if ia.Outputs[i].IsRedeem() {
 				return nil, errors.Errorf("issue cannot redeem tokens")
 			}
-			outputs[k][i], err = NewAuditableToken(ia.OutputTokens[i], md.ReceiversAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
+			outputs[k][i], err = NewAuditableToken(ia.Outputs[i], md.ReceiversAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, err
 			}

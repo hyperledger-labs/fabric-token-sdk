@@ -46,6 +46,7 @@ type Validator = common.Validator[*PublicParams, *Output, *TransferAction, *Issu
 
 func NewValidator(logger logging.Logger, pp *PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
 	transferValidators := []ValidateTransferFunc{
+		TransferActionValidate,
 		TransferSignatureValidate,
 		TransferBalanceValidate,
 		TransferHTLCValidate,

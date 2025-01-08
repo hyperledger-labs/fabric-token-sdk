@@ -24,6 +24,9 @@ type Metadata struct {
 // SpentTokenID returns the token IDs of the tokens that were spent by the Token Request this metadata is associated with.
 func (m *Metadata) SpentTokenID() []*token.ID {
 	var res []*token.ID
+	for _, issue := range m.TokenRequestMetadata.Issues {
+		res = append(res, issue.TokenIDs...)
+	}
 	for _, transfer := range m.TokenRequestMetadata.Transfers {
 		res = append(res, transfer.TokenIDs...)
 	}
@@ -51,6 +54,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 	for _, issue := range m.TokenRequestMetadata.Issues {
 		issueRes := driver.IssueMetadata{
 			Issuer:       issue.Issuer,
+			TokenIDs:     issue.TokenIDs,
 			ExtraSigners: issue.ExtraSigners,
 		}
 
@@ -169,11 +173,20 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	if action == nil {
 		return errors.New("can't match issue metadata to issue action: nil issue action")
 	}
-	if m.Issuer.IsNone() {
-		return errors.New("expected issuer but got none")
+
+	// validate action
+	if err := action.Validate(); err != nil {
+		return errors.Wrap(err, "failed validating issue action")
 	}
-	if len(m.OutputsMetadata) != 1 {
-		return errors.Errorf("expected one output, got [%d]", len(m.OutputsMetadata))
+
+	// check inputs
+	if len(m.TokenIDs) != action.NumInputs() {
+		return errors.Errorf("expected [%d] inputs but got [%d]", len(m.TokenIDs), action.NumInputs())
+	}
+
+	// check outputs
+	if len(m.Outputs) != 1 {
+		return errors.Errorf("expected one output, got [%d]", len(m.Outputs))
 	}
 	if len(m.OutputsMetadata) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.OutputsMetadata), action.NumOutputs())
@@ -209,6 +222,12 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	if action == nil {
 		return errors.New("can't match transfer metadata to transfer action: nil issue action")
 	}
+
+	// validate action
+	if err := action.Validate(); err != nil {
+		return errors.Wrap(err, "failed validating issue action")
+	}
+
 	if len(m.TokenIDs) != 0 && len(m.Senders) != len(m.TokenIDs) {
 		return errors.Errorf("expected [%d] token IDs and senders but got [%d]", len(m.TokenIDs), len(m.Senders))
 	}

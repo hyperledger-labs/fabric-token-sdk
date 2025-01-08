@@ -8,6 +8,7 @@ package driver
 
 import (
 	"encoding/asn1"
+	"fmt"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -42,12 +43,8 @@ type IssueMetadata struct {
 	// Issuer is the identity of the issuer
 	Issuer Identity
 
-	// // TokenIDs is the list of TokenIDs spent by this action
-	// TokenIDs []*token.ID
-	// // Senders is the list of senders
-	// Senders []Identity
-	// // SendersAuditInfos, for each sender we have audit info to recover the enrollment ID of the sender
-	// SenderAuditInfos [][]byte
+	// TokenIDs is the list of TokenIDs spent by this action
+	TokenIDs []*token.ID
 
 	// Outputs is the list of outputs issued
 	Outputs [][]byte
@@ -113,11 +110,13 @@ type TokenRequestMetadata struct {
 }
 
 func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
+	// marshal application metadata
 	meta, err := MarshalMeta(m.Application)
 	if err != nil {
 		return nil, errors.New("cannot marshal token request metadata: failed to marshal application metadata")
 	}
 
+	// marshal transfers
 	transfers := make([]TransferMetadataSer, len(m.Transfers))
 	for i, transfer := range m.Transfers {
 		TokenIDs := make([]TokenIDSer, len(transfer.TokenIDs))
@@ -136,8 +135,28 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 			ExtraSigners:       transfer.ExtraSigners,
 		}
 	}
+
+	// marshal issues
+	issues := make([]IssueMetadataSer, len(m.Issues))
+	for i, issue := range m.Issues {
+		TokenIDs := make([]TokenIDSer, len(issue.TokenIDs))
+		for j, tokenID := range issue.TokenIDs {
+			TokenIDs[j].TxId = tokenID.TxId
+			TokenIDs[j].Index = int(tokenID.Index)
+		}
+		issues[i] = IssueMetadataSer{
+			Issuer:              issue.Issuer,
+			TokenIDs:            TokenIDs,
+			Outputs:             issue.Outputs,
+			OutputsMetadata:     issue.OutputsMetadata,
+			Receivers:           issue.Receivers,
+			ReceiversAuditInfos: issue.ReceiversAuditInfos,
+			ExtraSigners:        issue.ExtraSigners,
+		}
+	}
+
 	ser := tokenRequestMetadataSer{
-		Issues:      m.Issues,
+		Issues:      issues,
 		Transfers:   transfers,
 		Application: meta,
 	}
@@ -151,7 +170,7 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 		return errors.Wrap(err, "failed to unmarshal token request metadata")
 	}
 
-	m.Issues = ser.Issues
+	// unmarshal transfers
 	m.Transfers = make([]TransferMetadata, len(ser.Transfers))
 	for i, transfer := range ser.Transfers {
 		TokenIDs := make([]*token.ID, len(transfer.TokenIDs))
@@ -172,6 +191,30 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 			ExtraSigners:       transfer.ExtraSigners,
 		}
 	}
+
+	// unmarshal issues
+	m.Issues = make([]IssueMetadata, len(ser.Issues))
+	for i, issue := range ser.Issues {
+		TokenIDs := make([]*token.ID, len(issue.TokenIDs))
+		for j, tokenID := range issue.TokenIDs {
+			TokenIDs[j] = &token.ID{
+				TxId:  tokenID.TxId,
+				Index: uint64(tokenID.Index),
+			}
+		}
+		fmt.Printf("issue with [%d] inputs unmarshalled\n", len(issue.TokenIDs))
+		m.Issues[i] = IssueMetadata{
+			Issuer:              issue.Issuer,
+			TokenIDs:            TokenIDs,
+			Outputs:             issue.Outputs,
+			OutputsMetadata:     issue.OutputsMetadata,
+			Receivers:           issue.Receivers,
+			ReceiversAuditInfos: issue.ReceiversAuditInfos,
+			ExtraSigners:        issue.ExtraSigners,
+		}
+	}
+
+	// unmarshal application metadata
 	m.Application, err = UnmarshalMeta(ser.Application)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal token request metadata: cannot unmarshal application metadata")
@@ -196,8 +239,18 @@ type TransferMetadataSer struct {
 	ExtraSigners       []Identity
 }
 
+type IssueMetadataSer struct {
+	Issuer              Identity
+	TokenIDs            []TokenIDSer
+	Outputs             [][]byte
+	OutputsMetadata     [][]byte
+	Receivers           []Identity
+	ReceiversAuditInfos [][]byte
+	ExtraSigners        []Identity
+}
+
 type tokenRequestMetadataSer struct {
-	Issues      []IssueMetadata
+	Issues      []IssueMetadataSer
 	Transfers   []TransferMetadataSer
 	Application []byte
 }

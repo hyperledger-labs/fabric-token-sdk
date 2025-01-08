@@ -50,6 +50,7 @@ type Validator = common.Validator[*crypto.PublicParams, *token.Token, *transfer.
 
 func New(logger logging.Logger, pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
 	transferValidators := []ValidateTransferFunc{
+		TransferActionValidate,
 		TransferSignatureValidate,
 		TransferZKProofValidate,
 		TransferHTLCValidate,

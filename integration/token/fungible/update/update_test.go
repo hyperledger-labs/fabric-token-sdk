@@ -19,7 +19,7 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	for _, t := range integration.WebSocketNoReplicationOnly {
+	for _, t := range integration.AllTestTypes {
 		Describe("Updatability with Auditor ne Issuer", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, []common.TMSOpts{
 				{

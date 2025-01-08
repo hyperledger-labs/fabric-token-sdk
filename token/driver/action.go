@@ -17,6 +17,7 @@ type SetupAction interface {
 
 // IssueAction is the action used to issue tokens
 type IssueAction interface {
+	Action
 	ActionWithInputs
 	// Serialize returns the serialized version of the action
 	Serialize() ([]byte, error)
@@ -52,6 +53,7 @@ type Output interface {
 
 // TransferAction is the action used to transfer tokens
 type TransferAction interface {
+	Action
 	ActionWithInputs
 	// Serialize returns the serialized version of the action
 	Serialize() ([]byte, error)
@@ -75,6 +77,8 @@ type TransferAction interface {
 
 // ActionWithInputs models an action with inputs
 type ActionWithInputs interface {
+	// NumInputs returns the number of inputs in the action
+	NumInputs() int
 	// GetInputs returns the identifiers of the inputs in the action.
 	GetInputs() []*token.ID
 	// GetSerializedInputs returns the serialized inputs of the action
@@ -87,4 +91,8 @@ type ActionWithInputs interface {
 	GetMetadata() map[string][]byte
 	// ExtraSigners returns the extra signers of the action
 	ExtraSigners() []Identity
+}
+
+type Action interface {
+	Validate() error
 }

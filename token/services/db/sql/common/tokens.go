@@ -203,7 +203,7 @@ func (db *TokenDB) UnspendableTokensIteratorBy(ctx context.Context, walletID str
 		Spendable:          driver.Any,
 		LedgerTokenFormats: includeFormats,
 	}, ""))
-	query, err := NewSelect("tx_id, idx, ledger, ledger_metadata").From(db.table.Tokens).Where(where).Compile()
+	query, err := NewSelect("tx_id, idx, ledger, ledger_metadata, ledger_type").From(db.table.Tokens).Where(where).Compile()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
@@ -1341,12 +1341,8 @@ func (u *UnspendableTokensInWalletIterator) Next() (*token.UnspendableTokenInWal
 		return nil, nil
 	}
 
-	tok := &token.UnspendableTokenInWallet{
-		Id:            token.ID{},
-		Token:         nil,
-		TokenMetadata: nil,
-	}
-	if err := u.txs.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Token, &tok.TokenMetadata); err != nil {
+	tok := &token.UnspendableTokenInWallet{}
+	if err := u.txs.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Token, &tok.TokenMetadata, &tok.Format); err != nil {
 		return nil, err
 	}
 	return tok, nil

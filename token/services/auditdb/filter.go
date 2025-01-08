@@ -87,8 +87,10 @@ func (f *HoldingsFilter) Execute() (*HoldingsFilter, error) {
 
 func (f *HoldingsFilter) Sum() *big.Int {
 	sum := big.NewInt(0)
+	logger.Debugf("HoldingsFilter [%v], sum [%d] records", f.params, len(f.records))
 	for _, record := range f.records {
 		sum = sum.Add(sum, record.Amount)
 	}
+	logger.Debugf("HoldingsFilter [%v], sum of [%d] records = [%d]", f.params, len(f.records), sum.String())
 	return sum
 }

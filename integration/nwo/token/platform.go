@@ -44,6 +44,7 @@ type PF interface {
 	GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string
 	GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string, useCAIfAvailable bool) token.IdentityConfiguration
 	DeleteDBs(tms *topology2.TMS, id string)
+	CopyDBsTo(tms *topology2.TMS, id string, to string)
 }
 
 type NetworkHandler interface {
@@ -54,6 +55,7 @@ type NetworkHandler interface {
 	GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) token.IdentityConfiguration
 	UpdatePublicParams(tms *topology2.TMS, ppRaw []byte)
 	DeleteDBs(node *sfcnode.Node)
+	CopyDBsTo(node *sfcnode.Node, to string)
 	Cleanup()
 }
 
@@ -305,6 +307,18 @@ func (p *Platform) DeleteDBs(tms *topology2.TMS, id string) {
 			nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
 			// delete dbs
 			nh.DeleteDBs(node)
+		}
+	}
+}
+
+func (p *Platform) CopyDBsTo(tms *topology2.TMS, id string, to string) {
+	logger.Infof("delete dbs for [%s:%s]", tms.ID(), id)
+	for _, node := range tms.FSCNodes {
+		if node.Name == id {
+			// get the network handler for this TMS
+			nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
+			// delete dbs
+			nh.CopyDBsTo(node, to)
 		}
 	}
 }

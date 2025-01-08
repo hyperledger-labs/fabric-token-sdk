@@ -46,27 +46,20 @@ func (a *AuditMatcherDeserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal")
 	}
-	return &AuditInfoMatcher{CommonName: ai.EID}, nil
+	return &AuditInfoMatcher{EnrollmentID: ai.EID}, nil
 }
 
 type AuditInfoMatcher struct {
-	CommonName string
+	EnrollmentID string
 }
 
 func (a *AuditInfoMatcher) Match(id []byte) error {
-	si := &msp.SerializedIdentity{}
-	err := proto.Unmarshal(id, si)
+	eid, err := msp2.GetEnrollmentID(id)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
+		return errors.Wrap(err, "failed to get enrollment ID")
 	}
-
-	cert, err := msp2.PemDecodeCert(si.IdBytes)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode certificate")
-	}
-
-	if cert.Subject.CommonName != a.CommonName {
-		return errors.Errorf("expected [%s], got [%s]", a.CommonName, cert.Subject.CommonName)
+	if eid != a.EnrollmentID {
+		return errors.Errorf("expected [%s], got [%s]", a.EnrollmentID, eid)
 	}
 
 	return nil
