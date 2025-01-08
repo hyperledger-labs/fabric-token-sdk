@@ -8,7 +8,6 @@ package fabtoken
 
 import (
 	"encoding/json"
-	"math"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -33,6 +32,18 @@ type PublicParams struct {
 	IssuerIDs []driver.Identity
 	// MaxToken is the maximum quantity a token can hold
 	MaxToken uint64
+}
+
+// Setup initializes PublicParams
+func Setup(precision uint64) (*PublicParams, error) {
+	if precision > 64 {
+		return nil, errors.Errorf("invalid precision [%d], must be less than 64", precision)
+	}
+	return &PublicParams{
+		Label:             PublicParameters,
+		QuantityPrecision: precision,
+		MaxToken:          uint64(1<<precision) - 1,
+	}, nil
 }
 
 // NewPublicParamsFromBytes deserializes the raw bytes into public parameters
@@ -140,14 +151,14 @@ func (pp *PublicParams) Precision() uint64 {
 
 // Validate validates the public parameters
 func (pp *PublicParams) Validate() error {
-	if pp.MaxToken > pp.ComputeMaxTokenValue() {
-		return errors.Errorf("max token value is invalid [%d]>[%d]", pp.MaxToken, pp.ComputeMaxTokenValue())
+	if pp.QuantityPrecision > 64 {
+		return errors.Errorf("invalid precision [%d], must be less than 64", pp.QuantityPrecision)
+	}
+	maxTokenValue := uint64(1<<pp.Precision()) - 1
+	if pp.MaxToken > maxTokenValue {
+		return errors.Errorf("max token value is invalid [%d]>[%d]", pp.MaxToken, maxTokenValue)
 	}
 	return nil
-}
-
-func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
-	return 1<<pp.Precision() - 1
 }
 
 func (pp *PublicParams) String() string {
@@ -156,13 +167,4 @@ func (pp *PublicParams) String() string {
 		return err.Error()
 	}
 	return string(res)
-}
-
-// Setup initializes PublicParams
-func Setup() (*PublicParams, error) {
-	return &PublicParams{
-		Label:             PublicParameters,
-		QuantityPrecision: DefaultPrecision,
-		MaxToken:          math.MaxUint64,
-	}, nil
 }

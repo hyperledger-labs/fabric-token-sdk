@@ -30,22 +30,24 @@ func NewFabTokenPublicParamsGenerator() *FabTokenPublicParamsGenerator {
 }
 
 func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generators.Wallets, args ...interface{}) ([]byte, error) {
-	pp, err := fabtoken.Setup()
-	if err != nil {
-		return nil, err
-	}
+	precision := fabtoken.DefaultPrecision
 	if len(args) == 2 {
 		// First is empty
-		// Second is the max token value
-		maxTokenValueStr, ok := args[1].(string)
+
+		// Second is the `precision`.
+		precisionStr, ok := args[1].(string)
 		if !ok {
 			return nil, errors.Errorf("expected string as first argument")
 		}
-		maxTokenValue, err := strconv.ParseUint(maxTokenValueStr, 10, 64)
+		var err error
+		precision, err = strconv.ParseUint(precisionStr, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse max token value [%s] to uint64", maxTokenValueStr)
+			return nil, errors.Wrapf(err, "failed to parse max token value [%s] to uint64", precisionStr)
 		}
-		pp.MaxToken = maxTokenValue
+	}
+	pp, err := fabtoken.Setup(precision)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(tms.Auditors) != 0 {
