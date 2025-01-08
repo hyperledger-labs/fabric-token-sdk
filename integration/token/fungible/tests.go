@@ -757,7 +757,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// Test Max Token Value
 	IssueCash(network, "", "MAX", 65535, charlie, auditor, true, issuer)
 	IssueCash(network, "", "MAX", 65535, charlie, auditor, true, issuer)
-	TransferCash(network, charlie, "", "MAX", 65536, alice, auditor, "cannot create output with value [65536], max [65535]")
+	TransferCash(network, charlie, "", "MAX", 65536, alice, auditor, "failed to convert [65536] to quantity of precision [16]")
 	IssueCash(network, "", "MAX", 65536, charlie, auditor, true, issuer, "q is larger than max token value [65535]")
 
 	// Check consistency

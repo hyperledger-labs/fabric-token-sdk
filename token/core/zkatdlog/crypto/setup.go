@@ -9,8 +9,8 @@ package crypto
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"math"
 	"math/big"
+	"math/bits"
 	"strconv"
 
 	mathlib "github.com/IBM/mathlib"
@@ -114,8 +114,8 @@ func SetupWithCustomLabel(bitLength uint64, idemixIssuerPK []byte, label string,
 	pp.IdemixIssuerPK = idemixIssuerPK
 	pp.IdemixCurveID = idemixCurveID
 	pp.RangeProofParams.BitLength = bitLength
-	pp.RangeProofParams.NumberOfRounds = uint64(math.Log2(float64(bitLength)))
-	pp.QuantityPrecision = DefaultPrecision
+	pp.RangeProofParams.NumberOfRounds = log2(bitLength)
+	pp.QuantityPrecision = bitLength
 	pp.MaxToken = pp.ComputeMaxTokenValue()
 	return pp, nil
 }
@@ -210,7 +210,7 @@ func (pp *PublicParams) GenerateRangeProofParameters(bitLength uint64) error {
 		P:              curve.HashToG1([]byte(strconv.Itoa(0))),
 		Q:              curve.HashToG1([]byte(strconv.Itoa(1))),
 		BitLength:      bitLength,
-		NumberOfRounds: uint64(math.Log2(float64(bitLength))),
+		NumberOfRounds: log2(bitLength),
 	}
 	pp.RangeProofParams.LeftGenerators = make([]*mathlib.G1, bitLength)
 	pp.RangeProofParams.RightGenerators = make([]*mathlib.G1, bitLength)
@@ -295,4 +295,8 @@ func (pp *PublicParams) Validate() error {
 	//	return errors.New("invalid public parameters: empty list of issuers")
 	// }
 	return nil
+}
+
+func log2(x uint64) uint64 {
+	return 63 - uint64(bits.LeadingZeros64(x))
 }
