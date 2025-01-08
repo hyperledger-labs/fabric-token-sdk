@@ -193,6 +193,10 @@ func (s *TokensService) CheckUnspendableTokens(tokens []token.UnspendableTokenIn
 }
 
 func (s *TokensService) CheckUnspentTokens(tok *token.UnspendableTokenInWallet, precision uint64) (token.Type, uint64, error) {
+	if precision > 64 {
+		return "", 0, errors.Errorf("unsupported precision [%d]", precision)
+	}
+
 	typedToken, err := fabtoken.UnmarshalTypedToken(tok.Token)
 	if err != nil {
 		return "", 0, errors.Wrap(err, "failed to unmarshal typed token")
