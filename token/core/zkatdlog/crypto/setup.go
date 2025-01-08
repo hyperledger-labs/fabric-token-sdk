@@ -281,8 +281,8 @@ func (pp *PublicParams) Validate() error {
 	if err != nil {
 		return errors.Wrap(err, "invalid public parameters")
 	}
-	if pp.QuantityPrecision != DefaultPrecision {
-		return errors.Errorf("invalid public parameters: quantity precision should be %d instead it is %d", DefaultPrecision, pp.QuantityPrecision)
+	if pp.QuantityPrecision != pp.RangeProofParams.BitLength {
+		return errors.Errorf("invalid public parameters: quantity precision should be [%d] instead it is [%d]", pp.RangeProofParams.BitLength, pp.QuantityPrecision)
 	}
 	if len(pp.IdemixIssuerPK) == 0 {
 		return errors.New("invalid public parameters: empty idemix issuer")
