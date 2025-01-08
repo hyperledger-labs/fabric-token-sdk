@@ -87,7 +87,7 @@ type GeneratorArgs struct {
 // Gen generates the public parameters for the FabToken driver
 func Gen(args *GeneratorArgs) ([]byte, error) {
 	// Setup
-	pp, err := fabtoken.Setup()
+	pp, err := fabtoken.Setup(fabtoken.DefaultPrecision)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}

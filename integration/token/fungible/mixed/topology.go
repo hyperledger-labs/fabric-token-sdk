@@ -183,7 +183,7 @@ func Topology(opts common.Opts) []api.Topology {
 
 	fabTokenTms := tokenTopology.AddTMS([]*node.Node{issuer2, auditor2, alice, bob}, backendNetwork, backendChannel, FabtokenDriver)
 	fabTokenTms.SetNamespace(FabTokenNamespace)
-	fabTokenTms.SetTokenGenPublicParams("65535")
+	fabTokenTms.SetTokenGenPublicParams("16")
 	fabric2.SetOrgs(fabTokenTms, "Org2")
 
 	dlogTms.AddAuditor(auditor1)

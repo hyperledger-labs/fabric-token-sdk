@@ -54,7 +54,8 @@ func SetDefaultParams(tokenSDKDriver string, tms *topology.TMS, aries bool) {
 		// max token value is 2^16
 		tms.SetTokenGenPublicParams("16")
 	case "fabtoken":
-		tms.SetTokenGenPublicParams("65535")
+		// max token value is 2^16
+		tms.SetTokenGenPublicParams("16")
 	default:
 		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
 	}
