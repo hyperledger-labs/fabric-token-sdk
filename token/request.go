@@ -486,7 +486,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
-		eID, rID, err := tms.WalletService().GetEIDAndRH(issueMeta.Receivers[j], issueMeta.ReceiversAuditInfos[j])
+		eID, rID, err := tms.WalletService().GetEIDAndRH(tok.Owner, issueMeta.ReceiversAuditInfos[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
 		}
@@ -548,7 +548,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		var receiverAuditInfo []byte
 		if len(tok.Owner) != 0 {
 			receiverAuditInfo = transferMeta.ReceiverAuditInfos[j]
-			eID, rID, err = tms.WalletService().GetEIDAndRH(transferMeta.Receivers[j], receiverAuditInfo)
+			eID, rID, err = tms.WalletService().GetEIDAndRH(tok.Owner, receiverAuditInfo)
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
 			}
