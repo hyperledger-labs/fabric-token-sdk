@@ -9,7 +9,6 @@ package crypto
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"math/big"
 	"math/bits"
 	"strconv"
 
@@ -21,7 +20,6 @@ import (
 
 const (
 	DLogPublicParameters = "zkatdlog"
-	DefaultPrecision     = uint64(64)
 )
 
 type RangeProofParams struct {
@@ -103,6 +101,12 @@ func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveI
 }
 
 func SetupWithCustomLabel(bitLength uint64, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+	if bitLength > 64 {
+		return nil, errors.Errorf("invalid bit length [%d], should be smaller than 64", bitLength)
+	}
+	if bitLength == 0 {
+		return nil, errors.New("invalid bit length, should be greater than 0")
+	}
 	pp := &PublicParams{Curve: mathlib.BN254}
 	pp.Label = label
 	if err := pp.GeneratePedersenParameters(); err != nil {
@@ -248,12 +252,7 @@ func (pp *PublicParams) ComputeHash() ([]byte, error) {
 }
 
 func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
-	// We can't use math.Pow because it uses float64 which does not lead to the same results
-	// across architectures (see: https://go.dev/play/p/jwqAHvIXvRI; the same code returns
-	// 9223372036854775808 on x86 and 18446744073709551615 on arm).
-	var i, e = big.NewInt(2), (&big.Int{}).SetUint64(pp.RangeProofParams.BitLength)
-	i.Exp(i, e, nil)
-	return i.Sub(i, big.NewInt(1)).Uint64()
+	return 1<<pp.RangeProofParams.BitLength - 1
 }
 
 func (pp *PublicParams) String() string {
@@ -276,6 +275,13 @@ func (pp *PublicParams) Validate() error {
 	}
 	if pp.RangeProofParams == nil {
 		return errors.New("invalid public parameters: nil range proof parameters")
+	}
+	bitLength := pp.RangeProofParams.BitLength
+	if bitLength > 64 {
+		return errors.Errorf("invalid bit length [%d], should be smaller than 64", bitLength)
+	}
+	if bitLength == 0 {
+		return errors.New("invalid bit length, should be greater than 0")
 	}
 	err := pp.RangeProofParams.Validate(pp.Curve)
 	if err != nil {

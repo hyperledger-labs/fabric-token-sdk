@@ -37,7 +37,10 @@ type PublicParams struct {
 // Setup initializes PublicParams
 func Setup(precision uint64) (*PublicParams, error) {
 	if precision > 64 {
-		return nil, errors.Errorf("invalid precision [%d], must be less than 64", precision)
+		return nil, errors.Errorf("invalid precision [%d], should be smaller than 64", precision)
+	}
+	if precision == 0 {
+		return nil, errors.New("invalid precision, should be greater than 0")
 	}
 	return &PublicParams{
 		Label:             PublicParameters,
@@ -153,6 +156,9 @@ func (pp *PublicParams) Precision() uint64 {
 func (pp *PublicParams) Validate() error {
 	if pp.QuantityPrecision > 64 {
 		return errors.Errorf("invalid precision [%d], must be less than 64", pp.QuantityPrecision)
+	}
+	if pp.QuantityPrecision == 0 {
+		return errors.New("invalid precision, must be greater than 0")
 	}
 	maxTokenValue := uint64(1<<pp.Precision()) - 1
 	if pp.MaxToken > maxTokenValue {
