@@ -10,11 +10,11 @@ import (
 	errors2 "errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	fabtoken2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/math"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -152,32 +152,51 @@ func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
 func (s *TokensService) CheckUnspendableTokens(tokens []token.UnspendableTokenInWallet) ([]token.Type, []uint64, error) {
 	var tokenTypes []token.Type
 	var tokenValue []uint64
+
+	// which types do we recognize?
+	fabtoken16Type, err := fabtoken2.SupportedTokenFormat(16)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to get fabtoken type")
+	}
+	fabtoken32Type, err := fabtoken2.SupportedTokenFormat(32)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to get fabtoken type")
+	}
+
 	for _, tok := range tokens {
-		typedToken, err := tokens2.UnmarshalTypedToken(tok.Token)
+		var tokenType token.Type
+		var q uint64
+		var err error
+
+		switch tok.Format {
+		case fabtoken16Type:
+			tokenType, q, err = s.CheckUnspentTokens(&tok, 16)
+		case fabtoken32Type:
+			tokenType, q, err = s.CheckUnspentTokens(&tok, 32)
+		}
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to unmarshal typed token")
+			return nil, nil, errors.Wrap(err, "failed to check unspent tokens")
 		}
 
-		// which types do we recognize?
-		// fabtoken16Type, err := fabtoken.SupportedTokenFormat(16)
-		// if err != nil {
-		// 	return nil, nil, errors.Wrap(err, "failed to get fabtoken type")
-		// }
-
-		switch typedToken.Type {
-		case fabtoken.Type:
-			fabToken, err := fabtoken.UnmarshalToken(typedToken.Token)
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "failed to unmarshal fabtoken")
-			}
-			tokenTypes = append(tokenTypes, fabToken.Type)
-
-			q, err := token.NewUBigQuantity(fabToken.Quantity, 64)
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "failed to create quantity")
-			}
-			tokenValue = append(tokenValue, q.Uint64())
-		}
+		tokenTypes = append(tokenTypes, tokenType)
+		tokenValue = append(tokenValue, q)
 	}
 	return tokenTypes, tokenValue, nil
+}
+
+func (s *TokensService) CheckUnspentTokens(tok *token.UnspendableTokenInWallet, precision uint64) (token.Type, uint64, error) {
+	typedToken, err := fabtoken.UnmarshalTypedToken(tok.Token)
+	if err != nil {
+		return "", 0, errors.Wrap(err, "failed to unmarshal typed token")
+	}
+	fabToken, err := fabtoken.UnmarshalToken(typedToken.Token)
+	if err != nil {
+		return "", 0, errors.Wrap(err, "failed to unmarshal fabtoken")
+	}
+	q, err := token.NewUBigQuantity(fabToken.Quantity, precision)
+	if err != nil {
+		return "", 0, errors.Wrap(err, "failed to create quantity")
+	}
+
+	return fabToken.Type, q.Uint64(), nil
 }
