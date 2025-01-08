@@ -104,8 +104,8 @@ type UnspentTokenInWallet struct {
 }
 
 type UnspendableTokenInWallet struct {
-	// Id is used to uniquely identify the token in the ledger
-	Id            ID
+	// ID is used to uniquely identify the token in the ledger
+	ID            ID
 	Format        Format
 	Token         []byte
 	TokenMetadata []byte

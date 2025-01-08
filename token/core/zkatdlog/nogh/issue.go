@@ -141,7 +141,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 			action.Inputs = make([]*token.ID, len(opts.UnspendableTokens))
 			action.InputTokens = make([][]byte, len(opts.UnspendableTokens))
 			for i, unspendableToken := range opts.UnspendableTokens {
-				action.Inputs[i] = &unspendableToken.Id
+				action.Inputs[i] = &unspendableToken.ID
 				action.InputTokens[i] = unspendableToken.Token
 			}
 		}

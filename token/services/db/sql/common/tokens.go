@@ -1342,7 +1342,7 @@ func (u *UnspendableTokensInWalletIterator) Next() (*token.UnspendableTokenInWal
 	}
 
 	tok := &token.UnspendableTokenInWallet{}
-	if err := u.txs.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Token, &tok.TokenMetadata, &tok.Format); err != nil {
+	if err := u.txs.Scan(&tok.ID.TxId, &tok.ID.Index, &tok.Token, &tok.TokenMetadata, &tok.Format); err != nil {
 		return nil, err
 	}
 	return tok, nil
