@@ -137,7 +137,7 @@ clean:
 .PHONY: clean-fabric-peer-images
 clean-fabric-peer-images:
 	docker images -a | grep "_peer.org" | awk '{print $3}' | xargs docker rmi
-	docker images -a | grep "peer.org" | awk '{print $3}' | xargs docker rmi
+	docker images -a | grep "_peer_" | awk '{print $3}' | xargs docker rmi
 
 .PHONY: tokengen
 tokengen:
