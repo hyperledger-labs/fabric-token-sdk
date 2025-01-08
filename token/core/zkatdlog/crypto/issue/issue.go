@@ -21,17 +21,21 @@ import (
 // Action specifies an issue of one or more tokens
 type Action struct {
 	// Issuer is the identity of issuer
-	Issuer []byte
+	Issuer driver.Identity
 	// Inputs specify the identifiers in of the tokens to redeem
 	Inputs []*token2.ID
 	// InputTokens are the tokens to redeem
 	InputTokens [][]byte
-	// OutputTokens are the newly issued tokens
-	OutputTokens []*token.Token `protobuf:"bytes,1,rep,name=outputs,proto3" json:"outputs,omitempty"`
+	// Outputs are the newly issued tokens
+	Outputs []*token.Token `protobuf:"bytes,1,rep,name=outputs,proto3" json:"outputs,omitempty"`
 	// Proof carries the ZKP of IssueAction validity
 	Proof []byte
 	// Metadata of the issue action
 	Metadata map[string][]byte
+}
+
+func (i *Action) NumInputs() int {
+	return len(i.Inputs)
 }
 
 func (i *Action) GetInputs() []*token2.ID {
@@ -68,22 +72,22 @@ func (i *Action) Serialize() ([]byte, error) {
 
 // NumOutputs returns the number of outputs in IssueAction
 func (i *Action) NumOutputs() int {
-	return len(i.OutputTokens)
+	return len(i.Outputs)
 }
 
-// GetOutputs returns the OutputTokens in IssueAction
+// GetOutputs returns the Outputs in IssueAction
 func (i *Action) GetOutputs() []driver.Output {
-	res := make([]driver.Output, len(i.OutputTokens))
-	for i, token := range i.OutputTokens {
+	res := make([]driver.Output, len(i.Outputs))
+	for i, token := range i.Outputs {
 		res[i] = token
 	}
 	return res
 }
 
-// GetSerializedOutputs returns the serialization of OutputTokens
+// GetSerializedOutputs returns the serialization of Outputs
 func (i *Action) GetSerializedOutputs() ([][]byte, error) {
-	res := make([][]byte, len(i.OutputTokens))
-	for i, token := range i.OutputTokens {
+	res := make([][]byte, len(i.Outputs))
+	for i, token := range i.Outputs {
 		if token == nil {
 			return nil, errors.New("invalid issue: there is a nil output")
 		}
@@ -106,14 +110,14 @@ func (i *Action) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, i)
 }
 
-// GetCommitments return the Pedersen commitment of (type, value) in the OutputTokens
+// GetCommitments return the Pedersen commitment of (type, value) in the Outputs
 func (i *Action) GetCommitments() ([]*math.G1, error) {
-	com := make([]*math.G1, len(i.OutputTokens))
+	com := make([]*math.G1, len(i.Outputs))
 	for j := 0; j < len(com); j++ {
-		if i.OutputTokens[j] == nil {
+		if i.Outputs[j] == nil {
 			return nil, errors.New("invalid issue: there is a nil output")
 		}
-		com[j] = i.OutputTokens[j].Data
+		com[j] = i.Outputs[j].Data
 	}
 	return com, nil
 }
@@ -121,6 +125,32 @@ func (i *Action) GetCommitments() ([]*math.G1, error) {
 // IsGraphHiding returns false, indicating that fabtoken does not hide the transaction graph
 func (i *Action) IsGraphHiding() bool {
 	return false
+}
+
+func (i *Action) Validate() error {
+	if i.Issuer.IsNone() {
+		return errors.Errorf("issuer is not set")
+	}
+	if len(i.Inputs) != len(i.InputTokens) {
+		return errors.Errorf("number of inputs does not match number of input tokens")
+	}
+	for j, input := range i.Inputs {
+		if input == nil {
+			return errors.Errorf("nil input in issue action")
+		}
+		if i.InputTokens[j] == nil {
+			return errors.Errorf("nil input token in issue action")
+		}
+	}
+	if len(i.Outputs) == 0 {
+		return errors.Errorf("no outputs in issue action")
+	}
+	for _, output := range i.Outputs {
+		if output == nil {
+			return errors.Errorf("nil output in issue action")
+		}
+	}
+	return nil
 }
 
 func (i *IssueAction) ExtraSigners() []driver.Identity {
@@ -139,9 +169,9 @@ func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte) (*A
 	}
 
 	return &Action{
-		Issuer:       issuer,
-		OutputTokens: outputs,
-		Proof:        proof,
+		Issuer:  issuer,
+		Outputs: outputs,
+		Proof:   proof,
 	}, nil
 }
 

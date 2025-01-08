@@ -8,6 +8,7 @@ package msp
 
 import (
 	"crypto/x509"
+	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -25,7 +26,13 @@ func GetEnrollmentID(id []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return cert.Subject.CommonName, nil
+	cn := cert.Subject.CommonName
+	// if cn contains a @, then return only the left part of the string
+	index := strings.Index(cn, "@")
+	if index != -1 {
+		cn = cn[:index]
+	}
+	return cn, nil
 }
 
 func GetRevocationHandle(id []byte) ([]byte, error) {

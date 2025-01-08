@@ -51,6 +51,15 @@ func (i *IssueAction) IsGraphHiding() bool {
 	return i.a.IsGraphHiding()
 }
 
+// NumInputs returns the number of inputs in the action
+func (i *IssueAction) NumInputs() int {
+	return i.a.NumInputs()
+}
+
+func (i *IssueAction) Validate() error {
+	return i.a.Validate()
+}
+
 // TransferAction represents an action that transfers tokens.
 type TransferAction struct {
 	a driver.TransferAction
@@ -93,4 +102,8 @@ func (t *TransferAction) GetSerialNumbers() []string {
 // IsGraphHiding returns true if the action supports graph hiding.
 func (t *TransferAction) IsGraphHiding() bool {
 	return t.a.IsGraphHiding()
+}
+
+func (t *TransferAction) Validate() error {
+	return t.a.Validate()
 }

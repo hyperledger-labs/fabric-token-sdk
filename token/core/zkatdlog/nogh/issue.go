@@ -147,8 +147,12 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		}
 	}
 
+	s.Logger.Debugf("issue with [%d] inputs", len(action.Inputs))
+
 	meta := &driver.IssueMetadata{
 		Issuer:              issuerSerializedIdentity,
+		TokenIDs:            action.Inputs,
+		Outputs:             outputs,
 		OutputsMetadata:     outputsMetadata,
 		Receivers:           []driver.Identity{driver.Identity(owners[0])},
 		ReceiversAuditInfos: auditInfo,

@@ -189,8 +189,8 @@ func (i *IdemixCASupport) Stop() {
 }
 
 func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, err error) {
-	//fabric-ca-client register --caname ca-org1 --id.name owner1a --id.secret password --id.type client --enrollment.type idemix --idemix.curve gurvy.Bn254 --tls.certfiles "${CERT_FILES}"
-	//fabric-ca-client enroll -u https://owner1a:password@localhost:7054 --caname ca-org1  -M "${PWD}/keys/owner1/wallet/owner1a/msp" --enrollment.type idemix --idemix.curve gurvy.Bn254 --tls.certfiles "${CERT_FILES}"
+	// fabric-ca-client register --caname ca-org1 --id.name owner1a --id.secret password --id.type client --enrollment.type idemix --idemix.curve gurvy.Bn254 --tls.certfiles "${CERT_FILES}"
+	// fabric-ca-client enroll -u https://owner1a:password@localhost:7054 --caname ca-org1  -M "${PWD}/keys/owner1/wallet/owner1a/msp" --enrollment.type idemix --idemix.curve gurvy.Bn254 --tls.certfiles "${CERT_FILES}"
 
 	tmsID := i.TMS.ID()
 	logger.Debugf("Generating owner identity [%s] for [%s]", owner, tmsID)
@@ -321,24 +321,4 @@ func (i *IdemixCASupport) nextColor() string {
 
 	i.ColorIndex++
 	return fmt.Sprintf("%dm", color)
-}
-
-func CopyFile(src, dst string) error {
-	cleanSrc := filepath.Clean(src)
-	cleanDst := filepath.Clean(dst)
-	if cleanSrc == cleanDst {
-		return nil
-	}
-	sf, err := os.Open(cleanSrc)
-	if err != nil {
-		return err
-	}
-	defer sf.Close()
-	df, err := os.Create(cleanDst)
-	if err != nil {
-		return err
-	}
-	defer df.Close()
-	_, err = io.Copy(df, sf)
-	return err
 }

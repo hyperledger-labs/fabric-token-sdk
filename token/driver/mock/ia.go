@@ -114,6 +114,16 @@ type IssueAction struct {
 	isGraphHidingReturnsOnCall map[int]struct {
 		result1 bool
 	}
+	NumInputsStub        func() int
+	numInputsMutex       sync.RWMutex
+	numInputsArgsForCall []struct {
+	}
+	numInputsReturns struct {
+		result1 int
+	}
+	numInputsReturnsOnCall map[int]struct {
+		result1 int
+	}
 	NumOutputsStub        func() int
 	numOutputsMutex       sync.RWMutex
 	numOutputsArgsForCall []struct {
@@ -135,6 +145,16 @@ type IssueAction struct {
 	serializeReturnsOnCall map[int]struct {
 		result1 []byte
 		result2 error
+	}
+	ValidateStub        func() error
+	validateMutex       sync.RWMutex
+	validateArgsForCall []struct {
+	}
+	validateReturns struct {
+		result1 error
+	}
+	validateReturnsOnCall map[int]struct {
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -676,6 +696,59 @@ func (fake *IssueAction) IsGraphHidingReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
+func (fake *IssueAction) NumInputs() int {
+	fake.numInputsMutex.Lock()
+	ret, specificReturn := fake.numInputsReturnsOnCall[len(fake.numInputsArgsForCall)]
+	fake.numInputsArgsForCall = append(fake.numInputsArgsForCall, struct {
+	}{})
+	stub := fake.NumInputsStub
+	fakeReturns := fake.numInputsReturns
+	fake.recordInvocation("NumInputs", []interface{}{})
+	fake.numInputsMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *IssueAction) NumInputsCallCount() int {
+	fake.numInputsMutex.RLock()
+	defer fake.numInputsMutex.RUnlock()
+	return len(fake.numInputsArgsForCall)
+}
+
+func (fake *IssueAction) NumInputsCalls(stub func() int) {
+	fake.numInputsMutex.Lock()
+	defer fake.numInputsMutex.Unlock()
+	fake.NumInputsStub = stub
+}
+
+func (fake *IssueAction) NumInputsReturns(result1 int) {
+	fake.numInputsMutex.Lock()
+	defer fake.numInputsMutex.Unlock()
+	fake.NumInputsStub = nil
+	fake.numInputsReturns = struct {
+		result1 int
+	}{result1}
+}
+
+func (fake *IssueAction) NumInputsReturnsOnCall(i int, result1 int) {
+	fake.numInputsMutex.Lock()
+	defer fake.numInputsMutex.Unlock()
+	fake.NumInputsStub = nil
+	if fake.numInputsReturnsOnCall == nil {
+		fake.numInputsReturnsOnCall = make(map[int]struct {
+			result1 int
+		})
+	}
+	fake.numInputsReturnsOnCall[i] = struct {
+		result1 int
+	}{result1}
+}
+
 func (fake *IssueAction) NumOutputs() int {
 	fake.numOutputsMutex.Lock()
 	ret, specificReturn := fake.numOutputsReturnsOnCall[len(fake.numOutputsArgsForCall)]
@@ -785,6 +858,59 @@ func (fake *IssueAction) SerializeReturnsOnCall(i int, result1 []byte, result2 e
 	}{result1, result2}
 }
 
+func (fake *IssueAction) Validate() error {
+	fake.validateMutex.Lock()
+	ret, specificReturn := fake.validateReturnsOnCall[len(fake.validateArgsForCall)]
+	fake.validateArgsForCall = append(fake.validateArgsForCall, struct {
+	}{})
+	stub := fake.ValidateStub
+	fakeReturns := fake.validateReturns
+	fake.recordInvocation("Validate", []interface{}{})
+	fake.validateMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *IssueAction) ValidateCallCount() int {
+	fake.validateMutex.RLock()
+	defer fake.validateMutex.RUnlock()
+	return len(fake.validateArgsForCall)
+}
+
+func (fake *IssueAction) ValidateCalls(stub func() error) {
+	fake.validateMutex.Lock()
+	defer fake.validateMutex.Unlock()
+	fake.ValidateStub = stub
+}
+
+func (fake *IssueAction) ValidateReturns(result1 error) {
+	fake.validateMutex.Lock()
+	defer fake.validateMutex.Unlock()
+	fake.ValidateStub = nil
+	fake.validateReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *IssueAction) ValidateReturnsOnCall(i int, result1 error) {
+	fake.validateMutex.Lock()
+	defer fake.validateMutex.Unlock()
+	fake.ValidateStub = nil
+	if fake.validateReturnsOnCall == nil {
+		fake.validateReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.validateReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *IssueAction) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -808,10 +934,14 @@ func (fake *IssueAction) Invocations() map[string][][]interface{} {
 	defer fake.isAnonymousMutex.RUnlock()
 	fake.isGraphHidingMutex.RLock()
 	defer fake.isGraphHidingMutex.RUnlock()
+	fake.numInputsMutex.RLock()
+	defer fake.numInputsMutex.RUnlock()
 	fake.numOutputsMutex.RLock()
 	defer fake.numOutputsMutex.RUnlock()
 	fake.serializeMutex.RLock()
 	defer fake.serializeMutex.RUnlock()
+	fake.validateMutex.RLock()
+	defer fake.validateMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

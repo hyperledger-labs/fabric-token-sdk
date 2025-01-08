@@ -1200,6 +1200,8 @@ func TestUpdatability(network *integration.Infrastructure, auditorId string, onR
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	IssueSuccessfulCash(network, "", "EUR", 110, alice, auditor, true, issuer, endorsers...)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorDB(network, auditor, "", nil)
 
 	// switch to dlog 32bits, perform a few operations
 	tms := GetTMSByAlias(network, "dlog-32bits")
@@ -1214,9 +1216,14 @@ func TestUpdatability(network *integration.Infrastructure, auditorId string, onR
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 
-	// holding fails
-	// CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorDB(network, auditor, "", nil)
+	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor, "insufficient funds, only [0] tokens of type [EUR] are available, but [110] were requested and no other process has any tokens locked")
 	Conversion(network, nil, alice, "", "EUR", auditor, issuer)
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
+	CopyDBsTo(network, "./testdata", alice)
+	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorDB(network, auditor, "", nil)
 }

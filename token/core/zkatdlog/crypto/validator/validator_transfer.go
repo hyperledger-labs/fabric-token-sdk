@@ -20,6 +20,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TransferActionValidate validates the transfer action
+func TransferActionValidate(ctx *Context) error {
+	return ctx.TransferAction.Validate()
+}
+
 func TransferSignatureValidate(ctx *Context) error {
 	var signatures [][]byte
 

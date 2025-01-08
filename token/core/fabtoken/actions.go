@@ -78,6 +78,10 @@ type IssueAction struct {
 	Metadata map[string][]byte
 }
 
+func (i *IssueAction) NumInputs() int {
+	return 0
+}
+
 func (i *IssueAction) GetInputs() []*token.ID {
 	return nil
 }
@@ -151,6 +155,21 @@ func (i *IssueAction) IsGraphHiding() bool {
 	return false
 }
 
+func (i *IssueAction) Validate() error {
+	if i.Issuer.IsNone() {
+		return errors.Errorf("issuer is not set")
+	}
+	if len(i.Outputs) == 0 {
+		return errors.Errorf("no outputs in issue action")
+	}
+	for _, output := range i.Outputs {
+		if output == nil {
+			return errors.Errorf("nil output in issue action")
+		}
+	}
+	return nil
+}
+
 func (i *IssueAction) ExtraSigners() []driver.Identity {
 	return nil
 }
@@ -165,6 +184,10 @@ type TransferAction struct {
 	Outputs []*Output
 	// Metadata contains the transfer action's metadata
 	Metadata map[string][]byte
+}
+
+func (t *TransferAction) NumInputs() int {
+	return len(t.Inputs)
 }
 
 // Serialize marshals TransferAction
@@ -253,6 +276,10 @@ func (t *TransferAction) Deserialize(raw []byte) error {
 // GetMetadata returns the transfer action's metadata
 func (t *TransferAction) GetMetadata() map[string][]byte {
 	return t.Metadata
+}
+
+func (t *TransferAction) Validate() error {
+	return nil
 }
 
 func (t *TransferAction) ExtraSigners() []driver.Identity {

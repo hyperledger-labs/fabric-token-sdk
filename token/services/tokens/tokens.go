@@ -260,6 +260,7 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 		return nil, nil, errors.WithMessagef(err, "failed to get request's outputs")
 	}
 	toSpend, toAppend := t.parse(auth, txID, md, is, os, auditorFlag, precision, graphHiding)
+	logger.Debugf("transaction [%s] parsed [%d] inputs and [%d] outputs", txID, len(toSpend), len(toAppend))
 	return toSpend, toAppend, nil
 }
 

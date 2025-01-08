@@ -156,6 +156,10 @@ func NewTransfer(inputs []*token2.ID, inputToken []*token.Token, outputs []*math
 	}, nil
 }
 
+func (t *Action) NumInputs() int {
+	return len(t.Inputs)
+}
+
 // GetInputs returns the inputs in the Action
 func (t *Action) GetInputs() []*token2.ID {
 	return t.Inputs
@@ -247,6 +251,10 @@ func (t *Action) IsGraphHiding() bool {
 // GetMetadata returns metadata of the Action
 func (t *Action) GetMetadata() map[string][]byte {
 	return t.Metadata
+}
+
+func (t *Action) Validate() error {
+	return nil
 }
 
 func (t *Action) ExtraSigners() []driver.Identity {

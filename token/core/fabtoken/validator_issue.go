@@ -16,6 +16,10 @@ import (
 func IssueValidate(ctx *Context) error {
 	action := ctx.IssueAction
 
+	if err := action.Validate(); err != nil {
+		return errors.Wrapf(err, "failed validating issue action")
+	}
+
 	// verify that issue is valid
 	if action.NumOutputs() == 0 {
 		return errors.Errorf("there is no output")

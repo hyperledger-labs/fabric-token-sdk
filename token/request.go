@@ -711,7 +711,7 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 			return nil, errors.Errorf("missing token ids for transfer [%d]", i)
 		}
 
-		extractedInputs, err := r.extractInputs(i, transferMeta, failOnMissing)
+		extractedInputs, err := r.extractTransferInputs(i, transferMeta, failOnMissing)
 		if err != nil {
 			return nil, err
 		}
@@ -720,29 +720,40 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 	return NewInputStream(r.TokenService.Vault().NewQueryEngine(), inputs, tms.PublicParamsManager().PublicParameters().Precision()), nil
 }
 
-func (r *Request) extractInputs(i int, transferMeta *TransferMetadata, failOnMissing bool) ([]*Input, error) {
-	// Iterate over the transferMeta.SenderAuditInfos because we know that there will be at least one
+func (r *Request) extractIssueInputs(actionIndex int, metadata *IssueMetadata) ([]*Input, error) {
+	var inputs []*Input
+	for _, tokenID := range metadata.TokenIDs {
+		inputs = append(inputs, &Input{
+			ActionIndex: actionIndex,
+			Id:          tokenID,
+		})
+	}
+	return inputs, nil
+}
+
+func (r *Request) extractTransferInputs(actionIndex int, metadata *TransferMetadata, failOnMissing bool) ([]*Input, error) {
+	// Iterate over the metadata.SenderAuditInfos because we know that there will be at least one
 	// sender, but it might be that there are not token IDs due to filtering.
 	tms := r.TokenService.tms
 	var inputs []*Input
-	for j, senderAuditInfo := range transferMeta.SenderAuditInfos {
+	for j, senderAuditInfo := range metadata.SenderAuditInfos {
 		// The recipient might be missing because it has been filtered out. Skip in this case
-		if transferMeta.IsInputAbsent(j) {
+		if metadata.IsInputAbsent(j) {
 			if failOnMissing {
-				return nil, errors.Errorf("missing receiver for transfer [%d,%d]", i, j)
+				return nil, errors.Errorf("missing receiver for transfer [%d,%d]", actionIndex, j)
 			}
 			continue
 		}
 
-		eID, rID, err := tms.WalletService().GetEIDAndRH(transferMeta.Senders[j], senderAuditInfo)
+		eID, rID, err := tms.WalletService().GetEIDAndRH(metadata.Senders[j], senderAuditInfo)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
+			return nil, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", actionIndex, j)
 		}
 
 		inputs = append(inputs, &Input{
-			ActionIndex:       i,
-			Id:                transferMeta.TokenIDAt(j),
-			Owner:             transferMeta.Senders[j],
+			ActionIndex:       actionIndex,
+			Id:                metadata.TokenIDAt(j),
+			Owner:             metadata.Senders[j],
 			OwnerAuditInfo:    senderAuditInfo,
 			EnrollmentID:      eID,
 			RevocationHandler: rID,
@@ -790,11 +801,11 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 			}
 		}
 
-		// extractedInputs, err := r.extractInputs(i, issueMeta, failOnMissing)
-		// if err != nil {
-		// 	return nil, nil, err
-		// }
-		// inputs = append(inputs, extractedInputs...)
+		extractedInputs, err := r.extractIssueInputs(i, issueMeta)
+		if err != nil {
+			return nil, nil, err
+		}
+		inputs = append(inputs, extractedInputs...)
 
 		extractedOutputs, newCounter, err := r.extractIssueOutputs(i, counter, issueAction, issueMeta, failOnMissing)
 		if err != nil {
@@ -830,7 +841,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 			return nil, nil, errors.Errorf("missing token ids for transfer [%d]", i)
 		}
 
-		extractedInputs, err := r.extractInputs(i, transferMeta, failOnMissing)
+		extractedInputs, err := r.extractTransferInputs(i, transferMeta, failOnMissing)
 		if err != nil {
 			return nil, nil, err
 		}
