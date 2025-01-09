@@ -149,7 +149,13 @@ func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
 	return token.Format(hasher.HexDigest()), nil
 }
 
-func (s *TokensService) CheckUnspendableTokens(tokens []token.UnspendableTokenInWallet) ([]token.Type, []uint64, error) {
+func (s *TokensService) CheckUnspendableTokens(utp *driver.UnspendableTokenPackage) ([]token.Type, []uint64, error) {
+	if utp == nil {
+		return nil, nil, errors.New("unspendable token package is nil")
+	}
+
+	// TODO: verify witness
+
 	var tokenTypes []token.Type
 	var tokenValue []uint64
 
@@ -167,7 +173,7 @@ func (s *TokensService) CheckUnspendableTokens(tokens []token.UnspendableTokenIn
 		return nil, nil, errors.Wrap(err, "failed to get fabtoken type")
 	}
 
-	for _, tok := range tokens {
+	for _, tok := range utp.UnspendableTokens {
 		var tokenType token.Type
 		var q uint64
 		var err error

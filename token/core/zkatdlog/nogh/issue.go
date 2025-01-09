@@ -61,7 +61,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	if issuerIdentity.IsNone() && len(tokenType) == 0 && values == nil {
 		// this is a special case where the issue contains also redemption
 		// we need to extract token types and values from the unspendable tokens
-		tokenTypes, tokenValues, err := s.TokensService.CheckUnspendableTokens(opts.UnspendableTokens)
+		tokenTypes, tokenValues, err := s.TokensService.CheckUnspendableTokens(opts.UnspendableTokenPackage)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed to extract token types and values from unspendable tokens")
 		}
@@ -136,11 +136,12 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	}
 
 	// prepare inputs to redeem, if any
-	if opts != nil {
-		if len(opts.UnspendableTokens) != 0 {
-			action.Inputs = make([]*token.ID, len(opts.UnspendableTokens))
-			action.InputTokens = make([][]byte, len(opts.UnspendableTokens))
-			for i, unspendableToken := range opts.UnspendableTokens {
+	if opts != nil && opts.UnspendableTokenPackage != nil {
+		tokens := opts.UnspendableTokenPackage.UnspendableTokens
+		if len(tokens) != 0 {
+			action.Inputs = make([]*token.ID, len(tokens))
+			action.InputTokens = make([][]byte, len(tokens))
+			for i, unspendableToken := range tokens {
 				action.Inputs[i] = &unspendableToken.ID
 				action.InputTokens[i] = unspendableToken.Token
 			}
