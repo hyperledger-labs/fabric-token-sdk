@@ -24,7 +24,10 @@ var logger = logging.MustGetLogger("token-sdk.tokens")
 
 type MetaData interface {
 	SpentTokenID() []*token2.ID
-	GetToken(raw []byte) (*token2.Token, token.Identity, []byte, error)
+}
+
+type TokensService interface {
+	Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, token.Identity, token2.Format, error)
 }
 
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
@@ -254,7 +257,7 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get request's outputs")
 	}
-	toSpend, toAppend := t.parse(auth, txID, md, is, os, auditorFlag, precision, graphHiding)
+	toSpend, toAppend := t.parse(auth, txID, request.TokenService.TokensService(), md, is, os, auditorFlag, precision, graphHiding)
 	return toSpend, toAppend, nil
 }
 
@@ -262,6 +265,7 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 func (t *Tokens) parse(
 	auth driver.Authorization,
 	txID string,
+	tokensService TokensService,
 	md MetaData,
 	is *token.InputStream,
 	os *token.OutputStream,
@@ -290,7 +294,7 @@ func (t *Tokens) parse(
 	// parse the outputs
 	for _, output := range os.Outputs() {
 		// get token in the clear
-		tok, issuer, tokenOnLedgerMetadata, err := md.GetToken(output.LedgerOutput)
+		tok, issuer, _, err := tokensService.Deobfuscate(output.LedgerOutput, output.LedgerOutputMetadata)
 		if err != nil {
 			logger.Errorf("transaction [%s], found a token but failed getting the clear version, skipping it [%s]", txID, err)
 			continue
@@ -336,7 +340,7 @@ func (t *Tokens) parse(
 			tok:                   tok,
 			tokenOnLedger:         output.LedgerOutput,
 			tokenOnLedgerFormat:   output.LedgerOutputFormat,
-			tokenOnLedgerMetadata: tokenOnLedgerMetadata,
+			tokenOnLedgerMetadata: output.LedgerOutputMetadata,
 			ownerType:             ownerType,
 			ownerIdentity:         ownerIdentity,
 			ownerWalletID:         ownerWalletID,

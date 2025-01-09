@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"bytes"
 	"encoding/asn1"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -43,8 +42,6 @@ type IssueMetadata struct {
 	// Issuer is the identity of the issuer
 	Issuer Identity
 
-	// Outputs is the list of outputs issued
-	Outputs [][]byte
 	// OutputsMetadata, for each output we have a OutputsMetadata entry that contains secrets to de-obfuscate the output
 	OutputsMetadata [][]byte
 	// Receivers, for each output we have a receiver
@@ -107,25 +104,6 @@ type TokenRequestMetadata struct {
 	Transfers []TransferMetadata
 	// Application enables attaching more info to the TokenRequestMetadata
 	Application map[string][]byte
-}
-
-// GetTokenInfo returns the OutputsMetadata that matches the given token
-func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) []byte {
-	for _, issue := range m.Issues {
-		for i, output := range issue.Outputs {
-			if bytes.Equal(output, tokenRaw) {
-				return issue.OutputsMetadata[i]
-			}
-		}
-	}
-	for _, transfer := range m.Transfers {
-		for i, output := range transfer.Outputs {
-			if bytes.Equal(output, tokenRaw) {
-				return transfer.OutputsMetadata[i]
-			}
-		}
-	}
-	return nil
 }
 
 func (m *TokenRequestMetadata) Bytes() ([]byte, error) {

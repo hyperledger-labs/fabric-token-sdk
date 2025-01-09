@@ -28,20 +28,6 @@ type TokensService struct {
 		result3 token.Format
 		result4 error
 	}
-	ExtractMetadataStub        func(*driver.TokenRequestMetadata, []byte) ([]byte, error)
-	extractMetadataMutex       sync.RWMutex
-	extractMetadataArgsForCall []struct {
-		arg1 *driver.TokenRequestMetadata
-		arg2 []byte
-	}
-	extractMetadataReturns struct {
-		result1 []byte
-		result2 error
-	}
-	extractMetadataReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
 	SupportedTokenFormatsStub        func() []token.Format
 	supportedTokenFormatsMutex       sync.RWMutex
 	supportedTokenFormatsArgsForCall []struct {
@@ -137,76 +123,6 @@ func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token,
 	}{result1, result2, result3, result4}
 }
 
-func (fake *TokensService) ExtractMetadata(arg1 *driver.TokenRequestMetadata, arg2 []byte) ([]byte, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
-	}
-	fake.extractMetadataMutex.Lock()
-	ret, specificReturn := fake.extractMetadataReturnsOnCall[len(fake.extractMetadataArgsForCall)]
-	fake.extractMetadataArgsForCall = append(fake.extractMetadataArgsForCall, struct {
-		arg1 *driver.TokenRequestMetadata
-		arg2 []byte
-	}{arg1, arg2Copy})
-	stub := fake.ExtractMetadataStub
-	fakeReturns := fake.extractMetadataReturns
-	fake.recordInvocation("ExtractMetadata", []interface{}{arg1, arg2Copy})
-	fake.extractMetadataMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *TokensService) ExtractMetadataCallCount() int {
-	fake.extractMetadataMutex.RLock()
-	defer fake.extractMetadataMutex.RUnlock()
-	return len(fake.extractMetadataArgsForCall)
-}
-
-func (fake *TokensService) ExtractMetadataCalls(stub func(*driver.TokenRequestMetadata, []byte) ([]byte, error)) {
-	fake.extractMetadataMutex.Lock()
-	defer fake.extractMetadataMutex.Unlock()
-	fake.ExtractMetadataStub = stub
-}
-
-func (fake *TokensService) ExtractMetadataArgsForCall(i int) (*driver.TokenRequestMetadata, []byte) {
-	fake.extractMetadataMutex.RLock()
-	defer fake.extractMetadataMutex.RUnlock()
-	argsForCall := fake.extractMetadataArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *TokensService) ExtractMetadataReturns(result1 []byte, result2 error) {
-	fake.extractMetadataMutex.Lock()
-	defer fake.extractMetadataMutex.Unlock()
-	fake.ExtractMetadataStub = nil
-	fake.extractMetadataReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *TokensService) ExtractMetadataReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.extractMetadataMutex.Lock()
-	defer fake.extractMetadataMutex.Unlock()
-	fake.ExtractMetadataStub = nil
-	if fake.extractMetadataReturnsOnCall == nil {
-		fake.extractMetadataReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.extractMetadataReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *TokensService) SupportedTokenFormats() []token.Format {
 	fake.supportedTokenFormatsMutex.Lock()
 	ret, specificReturn := fake.supportedTokenFormatsReturnsOnCall[len(fake.supportedTokenFormatsArgsForCall)]
@@ -265,8 +181,6 @@ func (fake *TokensService) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.deobfuscateMutex.RLock()
 	defer fake.deobfuscateMutex.RUnlock()
-	fake.extractMetadataMutex.RLock()
-	defer fake.extractMetadataMutex.RUnlock()
 	fake.supportedTokenFormatsMutex.RLock()
 	defer fake.supportedTokenFormatsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

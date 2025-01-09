@@ -291,6 +291,10 @@ func (t *ManagementService) init() error {
 	return nil
 }
 
+func (t *ManagementService) TokensService() *TokensService {
+	return &TokensService{ts: t.tms.TokensService()}
+}
+
 // GetManagementService returns the management service for the passed options. If no options are passed,
 // the default management service is returned.
 // Options: WithNetwork, WithChannel, WithNamespace, WithPublicParameterFetcher, WithTMS, WithTMSID

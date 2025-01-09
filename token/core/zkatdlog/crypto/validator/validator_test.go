@@ -13,8 +13,6 @@ import (
 	"os"
 	"time"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -38,6 +36,7 @@ import (
 	msp3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	msp2 "github.com/hyperledger/fabric/msp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -428,11 +427,8 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer) (*driver.TokenR
 
 	metadata := driver.IssueMetadata{}
 	metadata.OutputsMetadata = marshalledinf
-	metadata.Outputs = make([][]byte, len(issue.OutputTokens))
 	metadata.ReceiversAuditInfos = make([][]byte, len(issue.OutputTokens))
 	for i := 0; i < len(issue.OutputTokens); i++ {
-		metadata.Outputs[i], err = json.Marshal(issue.OutputTokens[i].Data)
-		Expect(err).NotTo(HaveOccurred())
 		metadata.ReceiversAuditInfos[i], err = auditInfo.Bytes()
 		Expect(err).NotTo(HaveOccurred())
 	}

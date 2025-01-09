@@ -16,7 +16,4 @@ type TokensService interface {
 
 	// Deobfuscate processes the passed output and metadata to derive a token.Token, its issuer (if any), and its token format
 	Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, token.Format, error)
-
-	// ExtractMetadata extracts from the given token request metadata the metadata to the given target
-	ExtractMetadata(meta *TokenRequestMetadata, target []byte) ([]byte, error)
 }

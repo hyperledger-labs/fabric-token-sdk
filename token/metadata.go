@@ -21,19 +21,6 @@ type Metadata struct {
 	Logger               logging.Logger
 }
 
-// GetToken unmarshals the given bytes to extract the token and its issuer (if any).
-func (m *Metadata) GetToken(raw []byte) (*token.Token, Identity, []byte, error) {
-	metadata, err := m.TokenService.ExtractMetadata(m.TokenRequestMetadata, raw)
-	if err != nil {
-		return nil, nil, nil, errors.WithMessagef(err, "metadata for [%s] not found", Hashable(raw).String())
-	}
-	tok, id, _, err := m.TokenService.Deobfuscate(raw, metadata)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed getting token in the clear")
-	}
-	return tok, id, metadata, nil
-}
-
 // SpentTokenID returns the token IDs of the tokens that were spent by the Token Request this metadata is associated with.
 func (m *Metadata) SpentTokenID() []*token.ID {
 	var res []*token.ID
@@ -73,13 +60,11 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "failed getting enrollment ID")
 			}
-			var Outputs []byte
 			var OutputsMetadata []byte
 			var Receivers Identity
 			var ReceiverAuditInfos []byte
 
 			if search(eIDs, recipientEID) != -1 {
-				Outputs = issue.Outputs[i]
 				OutputsMetadata = issue.OutputsMetadata[i]
 				Receivers = issue.Receivers[i]
 				ReceiverAuditInfos = issue.ReceiversAuditInfos[i]
@@ -87,7 +72,6 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 				m.Logger.Debugf("skipping issue for [%s]", recipientEID)
 			}
 
-			issueRes.Outputs = append(issueRes.Outputs, Outputs)
 			issueRes.OutputsMetadata = append(issueRes.OutputsMetadata, OutputsMetadata)
 			issueRes.Receivers = append(issueRes.Receivers, Receivers)
 			issueRes.ReceiversAuditInfos = append(issueRes.ReceiversAuditInfos, ReceiverAuditInfos)
@@ -187,20 +171,17 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	if action == nil {
 		return errors.New("can't match issue metadata to issue action: nil issue action")
 	}
-	if len(m.Outputs) != 1 {
-		return errors.Errorf("expected one output, got [%d]", len(m.Outputs))
+	if len(m.OutputsMetadata) != 1 {
+		return errors.Errorf("expected one output, got [%d]", len(m.OutputsMetadata))
 	}
-	if len(m.Outputs) != action.NumOutputs() {
-		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.Outputs), action.NumOutputs())
+	if len(m.OutputsMetadata) != action.NumOutputs() {
+		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.OutputsMetadata), action.NumOutputs())
 	}
-	if len(m.Outputs) != len(m.OutputsMetadata) {
-		return errors.Errorf("expected [%d] token info but got [%d]", len(m.Outputs), len(m.OutputsMetadata))
+	if len(m.OutputsMetadata) != len(m.Receivers) {
+		return errors.Errorf("expected [%d] receivers but got [%d]", len(m.OutputsMetadata), len(m.Receivers))
 	}
-	if len(m.Outputs) != len(m.Receivers) {
-		return errors.Errorf("expected [%d] receivers but got [%d]", len(m.Outputs), len(m.Receivers))
-	}
-	if len(m.Outputs) != len(m.ReceiversAuditInfos) {
-		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.Outputs), len(m.ReceiversAuditInfos))
+	if len(m.OutputsMetadata) != len(m.ReceiversAuditInfos) {
+		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.OutputsMetadata), len(m.ReceiversAuditInfos))
 	}
 	return nil
 }

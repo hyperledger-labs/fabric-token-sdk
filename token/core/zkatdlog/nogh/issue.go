@@ -89,10 +89,6 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, err
 	}
 
-	outputs, err := action.GetSerializedOutputs()
-	if err != nil {
-		return nil, nil, err
-	}
 	auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owners[0], s.WalletService)
 	if err != nil {
 		return nil, nil, err
@@ -100,7 +96,6 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 
 	meta := &driver.IssueMetadata{
 		Issuer:              issuerSerializedIdentity,
-		Outputs:             outputs,
 		OutputsMetadata:     outputsMetadata,
 		Receivers:           []driver.Identity{driver.Identity(owners[0])},
 		ReceiversAuditInfos: auditInfo,

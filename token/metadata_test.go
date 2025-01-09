@@ -151,7 +151,6 @@ func testFilterByCase1(t *testing.T) {
 	// Alice's issue
 	aliceIssue := driver.IssueMetadata{
 		Issuer:              token.Identity("Issuer"),
-		Outputs:             [][]byte{[]byte("Alice's output")},
 		OutputsMetadata:     [][]byte{[]byte("Alice's output's token info")},
 		Receivers:           []token.Identity{token.Identity("Alice")},
 		ReceiversAuditInfos: [][]byte{[]byte("Alice")},
@@ -160,7 +159,6 @@ func testFilterByCase1(t *testing.T) {
 	// Bob's issue
 	bobIssue := driver.IssueMetadata{
 		Issuer:              token.Identity("Issuer"),
-		Outputs:             [][]byte{[]byte("Bob's output")},
 		OutputsMetadata:     [][]byte{[]byte("Bob's output's token info")},
 		Receivers:           []token.Identity{token.Identity("Bob")},
 		ReceiversAuditInfos: [][]byte{[]byte("Bob")},
@@ -246,7 +244,6 @@ func testFilterByCase1(t *testing.T) {
 
 func assertEqualIssueMetadata(t *testing.T, original, filtered *driver.IssueMetadata) {
 	assert.Equal(t, original.Issuer, filtered.Issuer)
-	assert.Equal(t, original.Outputs, filtered.Outputs)
 	assert.Equal(t, original.OutputsMetadata, filtered.OutputsMetadata)
 	assert.Equal(t, original.Receivers, filtered.Receivers)
 }
@@ -255,15 +252,10 @@ func assertEmptyIssueMetadata(t *testing.T, original, filtered *driver.IssueMeta
 	// check equal issuer
 	assert.Equal(t, original.Issuer, filtered.Issuer)
 	// assert that the lengths are the same
-	assert.Len(t, original.Outputs, len(filtered.Outputs))
 	assert.Len(t, original.OutputsMetadata, len(filtered.OutputsMetadata))
 	assert.Len(t, original.Receivers, len(filtered.Receivers))
 	assert.Len(t, original.ReceiversAuditInfos, len(filtered.ReceiversAuditInfos))
 
-	// assert that the outputs are empty
-	for i := 0; i < len(original.Outputs); i++ {
-		assert.Empty(t, filtered.Outputs[i])
-	}
 	// assert that the token info is empty
 	for i := 0; i < len(original.OutputsMetadata); i++ {
 		assert.Empty(t, filtered.OutputsMetadata[i])
@@ -320,39 +312,4 @@ func assertEqualTransferMetadata(t *testing.T, original, filtered *driver.Transf
 	assert.Equal(t, original.OutputsMetadata, filtered.OutputsMetadata)
 	assert.Equal(t, original.Receivers, filtered.Receivers)
 	assert.Equal(t, original.ReceiverAuditInfos, filtered.ReceiverAuditInfos)
-}
-
-func TestMetadata_GetToken(t *testing.T) {
-	// Create mock TokenService
-	mockTokenService := &mock.TokensService{}
-	// Create mock WalletService
-	mockWalletService := &mock.WalletService{}
-
-	metadata := &token.Metadata{
-		TokenService:         mockTokenService,
-		WalletService:        mockWalletService,
-		TokenRequestMetadata: &driver.TokenRequestMetadata{},
-		Logger:               logging.MustGetLogger("test"),
-	}
-
-	// Mocks and expectations
-	raw := []byte("some raw data")
-	expectedToken := &token2.Token{}
-	expectedIdentity := token.Identity("identity1")
-	expectedTokenInfoRaw := []byte("token info raw")
-	mockTokenService.ExtractMetadataStub = func(metadata *driver.TokenRequestMetadata, raw []byte) ([]byte, error) {
-		return expectedTokenInfoRaw, nil
-	}
-	mockTokenService.DeobfuscateStub = func(raw []byte, tokenInfoRaw []byte) (*token2.Token, token.Identity, token2.Format, error) {
-		return expectedToken, expectedIdentity, "", nil
-	}
-
-	// Test
-	tok, id, tokenInfoRaw, err := metadata.GetToken(raw)
-
-	// Assertions
-	assert.NoError(t, err)
-	assert.Equal(t, expectedToken, tok)
-	assert.Equal(t, expectedIdentity, id)
-	assert.Equal(t, expectedTokenInfoRaw, tokenInfoRaw)
 }
