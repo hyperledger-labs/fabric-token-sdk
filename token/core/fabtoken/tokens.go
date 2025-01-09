@@ -31,21 +31,21 @@ func NewTokensService(pp *PublicParams) (*TokensService, error) {
 }
 
 // Deobfuscate returns a deserialized token and the identity of its issuer
-func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, driver.Identity, token2.Format, error) {
+func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, driver.Identity, []driver.Identity, token2.Format, error) {
 	tok := &Output{}
 	if err := tok.Deserialize(output); err != nil {
-		return nil, nil, "", errors.Wrap(err, "failed unmarshalling token")
+		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token")
 	}
 
 	metadata := &OutputMetadata{}
 	if err := metadata.Deserialize(outputMetadata); err != nil {
-		return nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
+		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
 	}
 	return &token2.Token{
 		Owner:    tok.Owner,
 		Type:     tok.Type,
 		Quantity: tok.Quantity,
-	}, metadata.Issuer, s.OutputTokenFormat, nil
+	}, metadata.Issuer, nil, s.OutputTokenFormat, nil
 }
 
 func (s *TokensService) SupportedTokenFormats() []token2.Format {

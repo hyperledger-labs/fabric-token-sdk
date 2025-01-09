@@ -17,6 +17,6 @@ type TokensService struct {
 }
 
 // Deobfuscate processes the passed output and metadata to derive a token.Token, its issuer (if any), and its token format
-func (t *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, token.Format, error) {
+func (t *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, []Identity, token.Format, error) {
 	return t.ts.Deobfuscate(output, outputMetadata)
 }

@@ -113,7 +113,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
 	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
-	tokensService, err := zkatdlog.NewTokensService(ppm)
+	tokensService, err := zkatdlog.NewTokensService(ppm, deserializer)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}

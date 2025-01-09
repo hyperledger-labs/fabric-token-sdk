@@ -482,7 +482,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if len(issueAction.GetOutputs()) != len(issueMeta.OutputsMetadata) || len(issueMeta.ReceiversAuditInfos) != len(issueAction.GetOutputs()) {
 			return nil, 0, errors.Wrapf(err, "failed matching issue action with its metadata [%d]: invalid metadata", i)
 		}
-		tok, issuer, format, err := tms.TokensService().Deobfuscate(raw, issueMeta.OutputsMetadata[j])
+		tok, issuer, _, format, err := tms.TokensService().Deobfuscate(raw, issueMeta.OutputsMetadata[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
@@ -542,7 +542,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			continue
 		}
 
-		tok, issuer, tokType, err := tms.TokensService().Deobfuscate(raw, transferMeta.OutputsMetadata[j])
+		tok, issuer, _, tokType, err := tms.TokensService().Deobfuscate(raw, transferMeta.OutputsMetadata[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 		}

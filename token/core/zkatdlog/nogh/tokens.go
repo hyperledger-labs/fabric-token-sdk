@@ -23,9 +23,10 @@ type TokensService struct {
 	*common.TokensService
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
 	OutputTokenFormat       token.Format
+	IdentityDeserializer    driver.Deserializer
 }
 
-func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams]) (*TokensService, error) {
+func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
 	// compute supported tokens
 	// dlog without graph hiding
 	commTokenTypes, err := supportedTokenFormat(publicParametersManager.PublicParams())
@@ -36,6 +37,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	return &TokensService{
 		TokensService:           common.NewTokensService(),
 		PublicParametersManager: publicParametersManager,
+		IdentityDeserializer:    identityDeserializer,
 		OutputTokenFormat:       commTokenTypes,
 	}, nil
 }
@@ -43,12 +45,16 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 // Deobfuscate unmarshals a token and token info from raw bytes
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer
-func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, driver.Identity, token.Format, error) {
+func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
 	_, metadata, tok, err := s.deserializeToken(output, outputMetadata, false)
 	if err != nil {
-		return nil, nil, "", err
+		return nil, nil, nil, "", errors.Wrapf(err, "failed to deobfuscate token")
 	}
-	return tok, metadata.Issuer, s.OutputTokenFormat, nil
+	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	if err != nil {
+		return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
+	}
+	return tok, metadata.Issuer, recipients, s.OutputTokenFormat, nil
 }
 
 func (s *TokensService) SupportedTokenFormats() []token.Format {

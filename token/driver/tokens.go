@@ -14,6 +14,10 @@ type TokensService interface {
 	// SupportedTokenFormats returns the supported token formats
 	SupportedTokenFormats() []token.Format
 
-	// Deobfuscate processes the passed output and metadata to derive a token.Token, its issuer (if any), and its token format
-	Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, token.Format, error)
+	// Deobfuscate processes the passed output and metadata to derive the following:
+	// - a token.Token,
+	// - its issuer (if any),
+	// - the recipients defined by Token.Owner,
+	// = and the output format
+	Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, []Identity, token.Format, error)
 }
