@@ -23,7 +23,7 @@ func TestSetup_InvalidPrecision(t *testing.T) {
 	pp, err := Setup(65)
 	assert.Error(t, err)
 	assert.Nil(t, pp)
-	assert.Equal(t, "invalid precision [65], must be less than 64", err.Error())
+	assert.Equal(t, "invalid precision [65], must be smaller or equal than 64", err.Error())
 }
 
 func TestNewPublicParamsFromBytes_Valid(t *testing.T) {
