@@ -487,6 +487,9 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
+		if !issuer.Equal(issueAction.GetIssuer()) {
+			return nil, 0, errors.Errorf("invalid issuer [%d,%d]", i, j)
+		}
 		for _, recipient := range recipients {
 			eID, rID, err := tms.WalletService().GetEIDAndRH(recipient, issueMeta.ReceiversAuditInfos[recipientCounter])
 			if err != nil {
