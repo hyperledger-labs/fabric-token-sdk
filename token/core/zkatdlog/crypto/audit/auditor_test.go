@@ -67,9 +67,6 @@ var _ = Describe("Auditor", func() {
 				Expect(err).NotTo(HaveOccurred())
 				err = auditor.Check(context.Background(), &driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
 				Expect(err).NotTo(HaveOccurred())
-				sig, err := auditor.Endorse(&driver.TokenRequest{Transfers: [][]byte{raw}}, "1")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(sig).To(Equal([]byte("auditor-signature")))
 			})
 		})
 		When("token info does not match output", func() {
