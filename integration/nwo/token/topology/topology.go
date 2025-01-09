@@ -15,6 +15,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+type (
+	// TMSAlias represents a TMS alias
+	TMSAlias string
+)
+
 var (
 	nsRegexp = regexp.MustCompile("^[a-zA-Z0-9._-]{1,120}$")
 )
@@ -49,7 +54,7 @@ type TMS struct {
 	Channel             string
 	Namespace           string
 	Driver              string
-	Alias               string
+	Alias               TMSAlias
 	PublicParamsGenArgs []string
 	Auditors            []string
 	Certifiers          []string
@@ -94,7 +99,7 @@ func (t *TMS) ID() string {
 	}
 	if len(t.Alias) != 0 {
 		b.WriteRune('-')
-		b.WriteString(t.Alias)
+		b.WriteString(string(t.Alias))
 	}
 	return b.String()
 }

@@ -318,13 +318,14 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 }
 
 func (p *NetworkHandler) GetEntry(tms *topology2.TMS) *Entry {
-	entry, ok := p.Entries[tms.Network+tms.Channel+tms.Namespace+tms.Alias]
+	k := tms.Network + tms.Channel + tms.Namespace + string(tms.Alias)
+	entry, ok := p.Entries[k]
 	if !ok {
 		entry = &Entry{
 			TMS:     tms,
 			Wallets: map[string]*generators.Wallets{},
 		}
-		p.Entries[tms.Network+tms.Channel+tms.Namespace+tms.Alias] = entry
+		p.Entries[k] = entry
 	}
 	return entry
 }
