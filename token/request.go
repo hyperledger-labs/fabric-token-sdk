@@ -564,16 +564,17 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		}
 		r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
 		outputs = append(outputs, &Output{
-			ActionIndex:        i,
-			Index:              counter,
-			Owner:              tok.Owner,
-			OwnerAuditInfo:     receiverAuditInfo,
-			EnrollmentID:       eID,
-			RevocationHandler:  rID,
-			Type:               tok.Type,
-			Quantity:           q,
-			LedgerOutput:       ledgerOutput,
-			LedgerOutputFormat: tokType,
+			ActionIndex:          i,
+			Index:                counter,
+			Owner:                tok.Owner,
+			OwnerAuditInfo:       receiverAuditInfo,
+			EnrollmentID:         eID,
+			RevocationHandler:    rID,
+			Type:                 tok.Type,
+			Quantity:             q,
+			LedgerOutput:         ledgerOutput,
+			LedgerOutputFormat:   tokType,
+			LedgerOutputMetadata: transferMeta.OutputsMetadata[j],
 		})
 		counter++
 	}

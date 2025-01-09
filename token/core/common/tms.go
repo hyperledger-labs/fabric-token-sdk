@@ -9,7 +9,6 @@ package common
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
 )
 
 type PublicParametersManager[T driver.PublicParameters] interface {
@@ -64,15 +63,6 @@ func NewTokenService[T driver.PublicParameters](
 		authorization:           authorization,
 	}
 	return s, nil
-}
-
-func (s *Service[T]) GetTokenInfo(meta *driver.TokenRequestMetadata, target []byte) ([]byte, error) {
-	tokenInfoRaw := meta.GetTokenInfo(target)
-	if len(tokenInfoRaw) == 0 {
-		s.Logger.Debugf("metadata for [%s] not found", Hashable(target))
-		return nil, errors.Errorf("metadata for [%s] not found", Hashable(target))
-	}
-	return tokenInfoRaw, nil
 }
 
 // IdentityProvider returns the identity provider associated with the service
