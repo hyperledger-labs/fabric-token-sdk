@@ -20,8 +20,10 @@ type TokensConversionService interface {
 	CheckConversionProof(ch []byte, proof []byte, tokens []token.LedgerToken) (bool, error)
 }
 
+// TokensService models the token service
 type TokensService interface {
 	TokensConversionService
+
 	// SupportedTokenFormats returns the supported token formats
 	SupportedTokenFormats() []token.Format
 

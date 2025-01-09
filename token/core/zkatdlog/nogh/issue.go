@@ -60,15 +60,15 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 
 	if issuerIdentity.IsNone() && len(tokenType) == 0 && values == nil {
 		// this is a special case where the issue contains also redemption
-		// we need to extract token types and values from the unspendable tokens
+		// we need to extract token types and values from the passed tokens
 		tokenTypes, tokenValues, err := s.TokensService.ProcessTokenConversionRequest(opts.TokenConversionRequest)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to extract token types and values from unspendable tokens")
+			return nil, nil, errors.Wrapf(err, "failed to extract token types and values from the passed tokens")
 		}
 
 		// check that token types are all the same
 		if len(tokenTypes) == 0 {
-			return nil, nil, errors.New("no token types found in unspendable tokens")
+			return nil, nil, errors.New("no token types found in the passed tokens")
 		}
 		tokenType = tokenTypes[0]
 		for _, t := range tokenTypes {
@@ -83,7 +83,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		}
 		values = []uint64{totalValue}
 
-		s.Logger.Debugf("conversion: extracted token type [%s] and value [%d] from unspendable tokens", tokenType, totalValue)
+		s.Logger.Debugf("conversion: extracted token type [%s] and value [%d] from the passed tokens", tokenType, totalValue)
 
 		// fetch issuer identity
 		issuerIdentity, err = opts.Wallet.GetIssuerIdentity(tokenType)
@@ -141,9 +141,9 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		if len(tokens) != 0 {
 			action.Inputs = make([]*token.ID, len(tokens))
 			action.InputTokens = make([][]byte, len(tokens))
-			for i, unspendableToken := range tokens {
-				action.Inputs[i] = &unspendableToken.ID
-				action.InputTokens[i] = unspendableToken.Token
+			for i, tok := range tokens {
+				action.Inputs[i] = &tok.ID
+				action.InputTokens[i] = tok.Token
 			}
 		}
 	}
