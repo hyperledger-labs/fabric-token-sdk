@@ -461,6 +461,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 	}
 	precision := pp.Precision()
 	var outputs []*Output
+	recipientCounter := 0
 	for j, output := range issueAction.GetOutputs() {
 		if output == nil {
 			return nil, 0, errors.Errorf("%d^th output in issue action [%d] is nil", j, i)
@@ -482,36 +483,38 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if len(issueAction.GetOutputs()) != len(issueMeta.OutputsMetadata) || len(issueMeta.ReceiversAuditInfos) != len(issueAction.GetOutputs()) {
 			return nil, 0, errors.Wrapf(err, "failed matching issue action with its metadata [%d]: invalid metadata", i)
 		}
-		tok, issuer, _, format, err := tms.TokensService().Deobfuscate(raw, issueMeta.OutputsMetadata[j])
+		tok, issuer, recipients, format, err := tms.TokensService().Deobfuscate(raw, issueMeta.OutputsMetadata[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
-		eID, rID, err := tms.WalletService().GetEIDAndRH(issueMeta.Receivers[j], issueMeta.ReceiversAuditInfos[j])
-		if err != nil {
-			return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
-		}
-		q, err := token.ToQuantity(tok.Quantity, precision)
-		if err != nil {
-			return nil, 0, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
-		}
+		for _, recipient := range recipients {
+			eID, rID, err := tms.WalletService().GetEIDAndRH(recipient, issueMeta.ReceiversAuditInfos[recipientCounter])
+			if err != nil {
+				return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
+			}
+			q, err := token.ToQuantity(tok.Quantity, precision)
+			if err != nil {
+				return nil, 0, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
+			}
 
-		outputs = append(outputs, &Output{
-			Token:                *tok,
-			ActionIndex:          i,
-			Index:                counter,
-			Owner:                tok.Owner,
-			OwnerAuditInfo:       issueMeta.ReceiversAuditInfos[j],
-			EnrollmentID:         eID,
-			RevocationHandler:    rID,
-			Type:                 tok.Type,
-			Quantity:             q,
-			Issuer:               issuer,
-			LedgerOutput:         raw,
-			LedgerOutputFormat:   format,
-			LedgerOutputMetadata: issueMeta.OutputsMetadata[j],
-		})
-		counter++
-
+			outputs = append(outputs, &Output{
+				Token:                *tok,
+				ActionIndex:          i,
+				Index:                counter,
+				Owner:                tok.Owner,
+				OwnerAuditInfo:       issueMeta.ReceiversAuditInfos[j],
+				EnrollmentID:         eID,
+				RevocationHandler:    rID,
+				Type:                 tok.Type,
+				Quantity:             q,
+				Issuer:               issuer,
+				LedgerOutput:         raw,
+				LedgerOutputFormat:   format,
+				LedgerOutputMetadata: issueMeta.OutputsMetadata[j],
+			})
+			recipientCounter++
+			counter++
+		}
 	}
 	return outputs, counter, nil
 }
