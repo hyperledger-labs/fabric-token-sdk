@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package tokens
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -44,21 +43,6 @@ func (md mdMock) SpentTokenID() []*token2.ID {
 	return []*token2.ID{}
 }
 
-// The second return is the issuer.
-func (md mdMock) GetToken(raw []byte) (*token2.Token, token.Identity, []byte, error) {
-	var parsed []string
-	if len(raw) == 0 {
-		parsed = []string{"eid", "typ", "0x0"}
-	} else {
-		parsed = strings.Split(string(raw), ",")
-	}
-	return &token2.Token{
-		Owner:    []byte(parsed[0]),
-		Type:     token2.Type(parsed[1]),
-		Quantity: parsed[2],
-	}, []byte{}, []byte{}, nil
-}
-
 func TestParse(t *testing.T) {
 	tokens := &Tokens{
 		TMSProvider: nil,
@@ -88,7 +72,7 @@ func TestParse(t *testing.T) {
 	is := token.NewInputStream(qsMock{}, []*token.Input{input1}, 64)
 	os := token.NewOutputStream([]*token.Output{output1}, 64)
 
-	spend, store := tokens.parse(&authMock{}, "tx1", md, is, os, false, 64, false)
+	spend, store := tokens.parse(&authMock{}, "tx1", nil, md, is, os, false, 64, false)
 
 	assert.Len(t, spend, 1)
 	assert.Equal(t, "in", spend[0].TxId)
@@ -107,7 +91,7 @@ func TestParse(t *testing.T) {
 	// no ledger output -> spend
 	output1.LedgerOutput = []byte{}
 	os = token.NewOutputStream([]*token.Output{output1}, 64)
-	spend, store = tokens.parse(&authMock{}, "tx1", md, is, os, false, 64, false)
+	spend, store = tokens.parse(&authMock{}, "tx1", nil, md, is, os, false, 64, false)
 	assert.Len(t, spend, 2)
 	assert.Len(t, store, 0)
 
@@ -151,7 +135,7 @@ func TestParse(t *testing.T) {
 	is = token.NewInputStream(qsMock{}, []*token.Input{input1, input2}, 64)
 	os = token.NewOutputStream([]*token.Output{output1, output2}, 64)
 
-	spend, store = tokens.parse(&authMock{}, "tx2", md, is, os, false, 64, false)
+	spend, store = tokens.parse(&authMock{}, "tx2", nil, md, is, os, false, 64, false)
 	assert.Len(t, spend, 2)
 	assert.Equal(t, "in1", spend[0].TxId)
 	assert.Equal(t, uint64(1), spend[0].Index)
