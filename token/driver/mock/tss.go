@@ -10,7 +10,7 @@ import (
 )
 
 type TokensService struct {
-	DeobfuscateStub        func([]byte, []byte) (*token.Token, identity.Identity, token.Format, error)
+	DeobfuscateStub        func([]byte, []byte) (*token.Token, identity.Identity, []identity.Identity, token.Format, error)
 	deobfuscateMutex       sync.RWMutex
 	deobfuscateArgsForCall []struct {
 		arg1 []byte
@@ -19,14 +19,16 @@ type TokensService struct {
 	deobfuscateReturns struct {
 		result1 *token.Token
 		result2 identity.Identity
-		result3 token.Format
-		result4 error
+		result3 []identity.Identity
+		result4 token.Format
+		result5 error
 	}
 	deobfuscateReturnsOnCall map[int]struct {
 		result1 *token.Token
 		result2 identity.Identity
-		result3 token.Format
-		result4 error
+		result3 []identity.Identity
+		result4 token.Format
+		result5 error
 	}
 	SupportedTokenFormatsStub        func() []token.Format
 	supportedTokenFormatsMutex       sync.RWMutex
@@ -42,7 +44,7 @@ type TokensService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, identity.Identity, token.Format, error) {
+func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, identity.Identity, []identity.Identity, token.Format, error) {
 	var arg1Copy []byte
 	if arg1 != nil {
 		arg1Copy = make([]byte, len(arg1))
@@ -67,9 +69,9 @@ func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, 
 		return stub(arg1, arg2)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3, ret.result4
+		return ret.result1, ret.result2, ret.result3, ret.result4, ret.result5
 	}
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3, fakeReturns.result4
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3, fakeReturns.result4, fakeReturns.result5
 }
 
 func (fake *TokensService) DeobfuscateCallCount() int {
@@ -78,7 +80,7 @@ func (fake *TokensService) DeobfuscateCallCount() int {
 	return len(fake.deobfuscateArgsForCall)
 }
 
-func (fake *TokensService) DeobfuscateCalls(stub func([]byte, []byte) (*token.Token, identity.Identity, token.Format, error)) {
+func (fake *TokensService) DeobfuscateCalls(stub func([]byte, []byte) (*token.Token, identity.Identity, []identity.Identity, token.Format, error)) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = stub
@@ -91,19 +93,20 @@ func (fake *TokensService) DeobfuscateArgsForCall(i int) ([]byte, []byte) {
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *TokensService) DeobfuscateReturns(result1 *token.Token, result2 identity.Identity, result3 token.Format, result4 error) {
+func (fake *TokensService) DeobfuscateReturns(result1 *token.Token, result2 identity.Identity, result3 []identity.Identity, result4 token.Format, result5 error) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = nil
 	fake.deobfuscateReturns = struct {
 		result1 *token.Token
 		result2 identity.Identity
-		result3 token.Format
-		result4 error
-	}{result1, result2, result3, result4}
+		result3 []identity.Identity
+		result4 token.Format
+		result5 error
+	}{result1, result2, result3, result4, result5}
 }
 
-func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token, result2 identity.Identity, result3 token.Format, result4 error) {
+func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token, result2 identity.Identity, result3 []identity.Identity, result4 token.Format, result5 error) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = nil
@@ -111,16 +114,18 @@ func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token,
 		fake.deobfuscateReturnsOnCall = make(map[int]struct {
 			result1 *token.Token
 			result2 identity.Identity
-			result3 token.Format
-			result4 error
+			result3 []identity.Identity
+			result4 token.Format
+			result5 error
 		})
 	}
 	fake.deobfuscateReturnsOnCall[i] = struct {
 		result1 *token.Token
 		result2 identity.Identity
-		result3 token.Format
-		result4 error
-	}{result1, result2, result3, result4}
+		result3 []identity.Identity
+		result4 token.Format
+		result5 error
+	}{result1, result2, result3, result4, result5}
 }
 
 func (fake *TokensService) SupportedTokenFormats() []token.Format {
