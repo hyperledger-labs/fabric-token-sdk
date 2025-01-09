@@ -37,7 +37,7 @@ type PublicParams struct {
 // Setup initializes PublicParams
 func Setup(precision uint64) (*PublicParams, error) {
 	if precision > 64 {
-		return nil, errors.Errorf("invalid precision [%d], should be smaller than 64", precision)
+		return nil, errors.Errorf("invalid precision [%d], must be smaller or equal than 64", precision)
 	}
 	if precision == 0 {
 		return nil, errors.New("invalid precision, should be greater than 0")
