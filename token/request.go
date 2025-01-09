@@ -384,15 +384,15 @@ func (r *Request) Convert(
 	ctx context.Context,
 	wallet *IssuerWallet,
 	receiver Identity,
-	unspendableTokens []token.LedgerToken,
+	tokens []token.LedgerToken,
 	witness []byte,
 	opts ...IssueOption,
 ) (*IssueAction, error) {
 	if wallet == nil {
 		return nil, errors.Errorf("wallet is nil")
 	}
-	if len(unspendableTokens) == 0 {
-		return nil, errors.Errorf("unspendableTokens is empty")
+	if len(tokens) == 0 {
+		return nil, errors.Errorf("tokens is empty")
 	}
 
 	opt, err := compileIssueOptions(opts...)
@@ -410,7 +410,7 @@ func (r *Request) Convert(
 		&driver.IssueOptions{
 			Attributes: opt.Attributes,
 			TokenConversionRequest: &driver.TokenConversionRequest{
-				Tokens: unspendableTokens,
+				Tokens: tokens,
 				Proof:  witness,
 			},
 			Wallet: wallet.w,

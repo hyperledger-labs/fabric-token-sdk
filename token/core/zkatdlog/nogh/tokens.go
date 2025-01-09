@@ -161,7 +161,7 @@ func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
 
 func (s *TokensService) ProcessTokenConversionRequest(utp *driver.TokenConversionRequest) ([]token.Type, []uint64, error) {
 	if utp == nil {
-		return nil, nil, errors.New("unspendable token package is nil")
+		return nil, nil, errors.New("nil token conversion request")
 	}
 
 	ok, err := s.CheckConversionProof(utp.Proof, utp.Proof, utp.Tokens)

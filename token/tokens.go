@@ -21,10 +21,12 @@ func (t *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 	return t.ts.Deobfuscate(output, outputMetadata)
 }
 
+// NewConversionChallenge generates a new conversion challenge
 func (t *TokensService) NewConversionChallenge() ([]byte, error) {
 	return t.ts.NewConversionChallenge()
 }
 
+// GenConversionProof generates a conversion proof for the given challenge and tokens
 func (t *TokensService) GenConversionProof(id []byte, tokens []token.LedgerToken) ([]byte, error) {
 	return t.ts.GenConversionProof(id, tokens)
 }
