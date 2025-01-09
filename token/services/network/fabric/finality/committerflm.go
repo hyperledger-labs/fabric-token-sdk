@@ -20,12 +20,25 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+type CommitterListenerManagerConfig struct {
+	MaxRetries        int
+	RetryWaitDuration time.Duration
+}
+
 type committerBasedFLMProvider struct {
-	fnsp              *fabric.NetworkServiceProvider
-	tracerProvider    trace.TracerProvider
-	keyTranslator     translator.KeyTranslator
-	maxRetries        int
-	retryWaitDuration time.Duration
+	fnsp           *fabric.NetworkServiceProvider
+	tracerProvider trace.TracerProvider
+	keyTranslator  translator.KeyTranslator
+	config         CommitterListenerManagerConfig
+}
+
+func NewCommitterBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, config CommitterListenerManagerConfig) *committerBasedFLMProvider {
+	return &committerBasedFLMProvider{
+		fnsp:           fnsp,
+		tracerProvider: tracerProvider,
+		keyTranslator:  keyTranslator,
+		config:         config,
+	}
 }
 
 func (p *committerBasedFLMProvider) NewManager(network, channel string) (ListenerManager, error) {
@@ -45,8 +58,8 @@ func (p *committerBasedFLMProvider) NewManager(network, channel string) (Listene
 			Namespace: network,
 		})),
 		keyTranslator:     p.keyTranslator,
-		maxRetries:        p.maxRetries,
-		retryWaitDuration: p.retryWaitDuration,
+		maxRetries:        p.config.MaxRetries,
+		retryWaitDuration: p.config.RetryWaitDuration,
 	}, nil
 }
 
