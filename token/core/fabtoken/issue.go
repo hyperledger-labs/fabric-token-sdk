@@ -35,6 +35,15 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		}
 	}
 
+	if issuerIdentity.IsNone() && len(tokenType) == 0 && values == nil {
+		return nil, nil, errors.Errorf("issuer identity, token type and values should be defined")
+	}
+	if opts != nil {
+		if opts.UnspendableTokenPackage != nil {
+			return nil, nil, errors.Errorf("redeem during issue is not supported")
+		}
+	}
+
 	var outs []*Output
 	var outputsMetadata [][]byte
 	pp := s.PublicParamsManager.PublicParameters()
@@ -67,13 +76,6 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owners[0], s.WalletService)
 	if err != nil {
 		return nil, nil, err
-	}
-
-	// prepare inputs to redeem, if any
-	if opts != nil {
-		if len(opts.UnspendableTokens) != 0 {
-			return nil, nil, errors.Errorf("redeem during issue is not supported")
-		}
 	}
 
 	meta := &driver.IssueMetadata{

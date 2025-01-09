@@ -380,7 +380,13 @@ func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Typ
 	return nil
 }
 
-func (r *Request) Convert(ctx context.Context, wallet *IssuerWallet, receiver Identity, unspendableTokens []token.UnspendableTokenInWallet, opts ...IssueOption) (*IssueAction, error) {
+func (r *Request) Convert(
+	ctx context.Context,
+	wallet *IssuerWallet,
+	receiver Identity,
+	unspendableTokens []token.UnspendableTokenInWallet,
+	opts ...IssueOption,
+) (*IssueAction, error) {
 	if wallet == nil {
 		return nil, errors.Errorf("wallet is nil")
 	}
@@ -393,6 +399,9 @@ func (r *Request) Convert(ctx context.Context, wallet *IssuerWallet, receiver Id
 		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
 
+	// TODO: generate witness
+	var witness []byte
+
 	// Compute Issue
 	action, meta, err := r.TokenService.tms.IssueService().Issue(
 		ctx,
@@ -401,9 +410,12 @@ func (r *Request) Convert(ctx context.Context, wallet *IssuerWallet, receiver Id
 		nil,
 		[][]byte{receiver},
 		&driver.IssueOptions{
-			Attributes:        opt.Attributes,
-			UnspendableTokens: unspendableTokens,
-			Wallet:            wallet.w,
+			Attributes: opt.Attributes,
+			UnspendableTokenPackage: &driver.UnspendableTokenPackage{
+				UnspendableTokens: unspendableTokens,
+				Witness:           witness,
+			},
+			Wallet: wallet.w,
 		},
 	)
 	if err != nil {
