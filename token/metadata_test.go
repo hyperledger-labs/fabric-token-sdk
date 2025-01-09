@@ -41,7 +41,6 @@ func testFilterByCase0(t *testing.T) {
 		},
 		Senders:            []token.Identity{token.Identity("Alice")},
 		SenderAuditInfos:   [][]byte{[]byte("Alice")},
-		Outputs:            [][]byte{[]byte("Bob's output")},
 		OutputsMetadata:    [][]byte{[]byte("Bob's output's token info")},
 		Receivers:          []token.Identity{token.Identity("Bob")},
 		ReceiverAuditInfos: [][]byte{[]byte("Bob")},
@@ -57,7 +56,6 @@ func testFilterByCase0(t *testing.T) {
 		},
 		Senders:            []token.Identity{token.Identity("Charlie")},
 		SenderAuditInfos:   [][]byte{[]byte("Charlie")},
-		Outputs:            [][]byte{[]byte("Dave's output")},
 		OutputsMetadata:    [][]byte{[]byte("Dave's output's token info")},
 		Receivers:          []token.Identity{token.Identity("Dave")},
 		ReceiverAuditInfos: [][]byte{[]byte("Dave")},
@@ -277,15 +275,10 @@ func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.Transf
 	assert.Nil(t, filtered.SenderAuditInfos)
 
 	// assert that the lengths are the same
-	assert.Len(t, original.Outputs, len(filtered.Outputs))
 	assert.Len(t, original.OutputsMetadata, len(filtered.OutputsMetadata))
 	assert.Len(t, original.Receivers, len(filtered.Receivers))
 	assert.Len(t, original.ReceiverAuditInfos, len(filtered.ReceiverAuditInfos))
 	assert.Len(t, original.ReceiverIsSender, len(filtered.ReceiverIsSender))
-	// assert each output is empty
-	for i := 0; i < len(original.Outputs); i++ {
-		assert.Nil(t, filtered.Outputs[i])
-	}
 	// assert each token info is empty
 	for i := 0; i < len(original.OutputsMetadata); i++ {
 		assert.Nil(t, filtered.OutputsMetadata[i])
@@ -308,7 +301,6 @@ func assertEqualTransferMetadata(t *testing.T, original, filtered *driver.Transf
 	assert.Nil(t, filtered.TokenIDs)
 	assert.Equal(t, original.Senders, filtered.Senders)
 	assert.Equal(t, original.SenderAuditInfos, filtered.SenderAuditInfos)
-	assert.Equal(t, original.Outputs, filtered.Outputs)
 	assert.Equal(t, original.OutputsMetadata, filtered.OutputsMetadata)
 	assert.Equal(t, original.Receivers, filtered.Receivers)
 	assert.Equal(t, original.ReceiverAuditInfos, filtered.ReceiverAuditInfos)

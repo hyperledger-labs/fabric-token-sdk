@@ -26,10 +26,6 @@ type MetaData interface {
 	SpentTokenID() []*token2.ID
 }
 
-type TokensService interface {
-	Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, token.Identity, token2.Format, error)
-}
-
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 
 // Transaction models a token transaction
@@ -257,7 +253,7 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get request's outputs")
 	}
-	toSpend, toAppend := t.parse(auth, txID, request.TokenService.TokensService(), md, is, os, auditorFlag, precision, graphHiding)
+	toSpend, toAppend := t.parse(auth, txID, md, is, os, auditorFlag, precision, graphHiding)
 	return toSpend, toAppend, nil
 }
 
@@ -265,7 +261,6 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 func (t *Tokens) parse(
 	auth driver.Authorization,
 	txID string,
-	tokensService TokensService,
 	md MetaData,
 	is *token.InputStream,
 	os *token.OutputStream,
@@ -294,24 +289,14 @@ func (t *Tokens) parse(
 	// parse the outputs
 	for _, output := range os.Outputs() {
 		// get token in the clear
-		tok, issuer, _, err := tokensService.Deobfuscate(output.LedgerOutput, output.LedgerOutputMetadata)
-		if err != nil {
-			logger.Errorf("transaction [%s], found a token but failed getting the clear version, skipping it [%s]", txID, err)
-			continue
-		}
-		if tok == nil {
-			logger.Warnf("failed getting token in the clear for [%s, %s]", output.ID(txID), string(output.LedgerOutput))
-			continue
-		}
-
 		if len(output.LedgerOutput) == 0 {
 			logger.Debugf("transaction [%s] without graph hiding, delete input [%d]", txID, output.Index)
 			toSpend = append(toSpend, &token2.ID{TxId: txID, Index: output.Index})
 			continue
 		}
 
-		issuerFlag := !issuer.IsNone() && auth.Issued(issuer, tok)
-		ownerWalletID, ids, mine := auth.IsMine(tok)
+		issuerFlag := !output.Issuer.IsNone() && auth.Issued(output.Issuer, &output.Token)
+		ownerWalletID, ids, mine := auth.IsMine(&output.Token)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			if mine {
 				logger.Debugf("transaction [%s], found a token and it is mine", txID)
@@ -328,7 +313,7 @@ func (t *Tokens) parse(
 			continue
 		}
 
-		ownerType, ownerIdentity, err := auth.OwnerType(tok.Owner)
+		ownerType, ownerIdentity, err := auth.OwnerType(output.Token.Owner)
 		if err != nil {
 			logger.Errorf("could not unmarshal identity when storing token: %s", err.Error())
 			continue
@@ -337,7 +322,7 @@ func (t *Tokens) parse(
 		tta := TokenToAppend{
 			txID:                  txID,
 			index:                 output.Index,
-			tok:                   tok,
+			tok:                   &output.Token,
 			tokenOnLedger:         output.LedgerOutput,
 			tokenOnLedgerFormat:   output.LedgerOutputFormat,
 			tokenOnLedgerMetadata: output.LedgerOutputMetadata,
@@ -345,7 +330,7 @@ func (t *Tokens) parse(
 			ownerIdentity:         ownerIdentity,
 			ownerWalletID:         ownerWalletID,
 			owners:                ids,
-			issuer:                issuer,
+			issuer:                output.Issuer,
 			precision:             precision,
 			flags: Flags{
 				Mine:    mine,

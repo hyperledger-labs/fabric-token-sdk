@@ -94,7 +94,6 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "failed getting enrollment ID")
 			}
-			var Outputs []byte
 			var TokenInfo []byte
 			var Receivers Identity
 			var ReceiverIsSender bool
@@ -102,7 +101,6 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 
 			if search(eIDs, recipientEID) != -1 {
 				m.Logger.Debugf("keeping transfer for [%s]", recipientEID)
-				Outputs = transfer.Outputs[i]
 				TokenInfo = transfer.OutputsMetadata[i]
 				Receivers = transfer.Receivers[i]
 				ReceiverIsSender = transfer.ReceiverIsSender[i]
@@ -112,7 +110,6 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 				m.Logger.Debugf("skipping transfer for [%s]", recipientEID)
 			}
 
-			transferRes.Outputs = append(transferRes.Outputs, Outputs)
 			transferRes.Receivers = append(transferRes.Receivers, Receivers)
 			transferRes.ReceiverIsSender = append(transferRes.ReceiverIsSender, ReceiverIsSender)
 			transferRes.ReceiverAuditInfos = append(transferRes.ReceiverAuditInfos, ReceiverAuditInfos)
@@ -130,7 +127,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			}
 		}
 
-		m.Logger.Debugf("keeping transfer with [%d] out of [%d] outputs", len(transferRes.Outputs), len(transfer.Outputs))
+		m.Logger.Debugf("keeping transfer with [%d] out of [%d] outputs", len(transferRes.OutputsMetadata), len(transfer.OutputsMetadata))
 		res.TokenRequestMetadata.Transfers = append(res.TokenRequestMetadata.Transfers, transferRes)
 	}
 
@@ -207,20 +204,17 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	if len(m.Senders) != len(m.SenderAuditInfos) {
 		return errors.Errorf("expected [%d] senders and sender audit infos but got [%d]", len(m.Senders), len(m.SenderAuditInfos))
 	}
-	if len(m.Outputs) != action.NumOutputs() {
-		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.Outputs), action.NumOutputs())
+	if len(m.OutputsMetadata) != action.NumOutputs() {
+		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.OutputsMetadata), action.NumOutputs())
 	}
-	if len(m.Outputs) != len(m.OutputsMetadata) {
-		return errors.Errorf("expected [%d] token info but got [%d]", len(m.Outputs), len(m.OutputsMetadata))
+	if len(m.OutputsMetadata) != len(m.Receivers) {
+		return errors.Errorf("expected [%d] receivers but got [%d]", len(m.OutputsMetadata), len(m.Receivers))
 	}
-	if len(m.Outputs) != len(m.Receivers) {
-		return errors.Errorf("expected [%d] receivers but got [%d]", len(m.Outputs), len(m.Receivers))
+	if len(m.OutputsMetadata) != len(m.ReceiverAuditInfos) {
+		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.OutputsMetadata), len(m.ReceiverAuditInfos))
 	}
-	if len(m.Outputs) != len(m.ReceiverAuditInfos) {
-		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.Outputs), len(m.ReceiverAuditInfos))
-	}
-	if len(m.Outputs) != len(m.ReceiverIsSender) {
-		return errors.Errorf("expected [%d] receiver is sender but got [%d]", len(m.Outputs), len(m.ReceiverIsSender))
+	if len(m.OutputsMetadata) != len(m.ReceiverIsSender) {
+		return errors.Errorf("expected [%d] receiver is sender but got [%d]", len(m.OutputsMetadata), len(m.ReceiverIsSender))
 	}
 	return nil
 }

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -20,6 +21,7 @@ type QueryService interface {
 
 // Output models the output of a token action
 type Output struct {
+	token.Token
 	// ActionIndex is the index of the action that created this output
 	ActionIndex int
 	// Index is the absolute position of this output in the token request
@@ -42,6 +44,8 @@ type Output struct {
 	LedgerOutputFormat token.Format
 	// LedgerOutputMetadata is the metadata of the output
 	LedgerOutputMetadata []byte
+	// Issuer is the identity of the issuer of this output, if any
+	Issuer driver.Identity
 }
 
 func (o Output) ID(txID string) *token.ID {
