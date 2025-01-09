@@ -27,38 +27,58 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+type newTxInfoMapper = func(network, channel string) finality.TxInfoMapper[TxInfo]
+
 type listenerEntry struct {
 	namespace driver2.Namespace
 	listener  driver.FinalityListener
 }
 
-func (e *listenerEntry) OnStatus(ctx context.Context, info txInfo) {
-	if len(e.namespace) == 0 || len(info.namespace) == 0 || e.namespace == info.namespace {
-		e.listener.OnStatus(ctx, info.txID, info.status, info.message, info.requestHash)
+func (e *listenerEntry) OnStatus(ctx context.Context, info TxInfo) {
+	if len(e.namespace) == 0 || len(info.Namespace) == 0 || e.namespace == info.Namespace {
+		e.listener.OnStatus(ctx, info.TxId, info.Status, info.Message, info.RequestHash)
 	}
 }
 
-func (e *listenerEntry) Equals(other finality.ListenerEntry[txInfo]) bool {
+func (e *listenerEntry) Equals(other finality.ListenerEntry[TxInfo]) bool {
 	return other != nil && other.(*listenerEntry).listener == e.listener
 }
 
-type txInfo struct {
-	txID        driver2.TxID
-	namespace   driver2.Namespace
-	status      driver.TxStatus
-	message     string
-	requestHash []byte
+type TxInfo struct {
+	TxId        driver2.TxID
+	Namespace   driver2.Namespace
+	Status      driver.TxStatus
+	Message     string
+	RequestHash []byte
 }
 
-func (i txInfo) TxID() driver2.TxID {
-	return i.txID
+func (i TxInfo) TxID() driver2.TxID {
+	return i.TxId
 }
 
 type deliveryBasedFLMProvider struct {
 	fnsp           *fabric.NetworkServiceProvider
 	tracerProvider trace.TracerProvider
-	keyTranslator  translator.KeyTranslator
 	config         finality.DeliveryListenerManagerConfig
+	newMapper      newTxInfoMapper
+}
+
+func NewDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, config finality.DeliveryListenerManagerConfig, newMapper newTxInfoMapper) *deliveryBasedFLMProvider {
+	return &deliveryBasedFLMProvider{
+		fnsp:           fnsp,
+		tracerProvider: tracerProvider,
+		config:         config,
+		newMapper:      newMapper,
+	}
+}
+
+func newEndorserDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, config finality.DeliveryListenerManagerConfig) *deliveryBasedFLMProvider {
+	return NewDeliveryBasedFLMProvider(fnsp, tracerProvider, config, func(network, _ string) finality.TxInfoMapper[TxInfo] {
+		return &endorserTxInfoMapper{
+			network:       network,
+			keyTranslator: keyTranslator,
+		}
+	})
 }
 
 func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (ListenerManager, error) {
@@ -70,12 +90,9 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 	if err != nil {
 		return nil, err
 	}
-	flm, err := finality.NewListenerManager[txInfo](p.config, ch.Delivery(), p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{
+	flm, err := finality.NewListenerManager[TxInfo](p.config, ch.Delivery(), p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{
 		Namespace: network,
-	})), &txInfoMapper{
-		network:       network,
-		keyTranslator: p.keyTranslator,
-	})
+	})), p.newMapper(network, channel))
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +100,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 }
 
 type deliveryBasedFLM struct {
-	lm finality.ListenerManager[txInfo]
+	lm finality.ListenerManager[TxInfo]
 }
 
 func (m *deliveryBasedFLM) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
@@ -94,12 +111,12 @@ func (m *deliveryBasedFLM) RemoveFinalityListener(txID string, listener driver.F
 	return m.lm.RemoveFinalityListener(txID, &listenerEntry{"", listener})
 }
 
-type txInfoMapper struct {
+type endorserTxInfoMapper struct {
 	network       string
 	keyTranslator translator.KeyTranslator
 }
 
-func (m *txInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.BlockMetadata, blockNum driver2.BlockNum, txNum driver2.TxNum) (map[driver2.Namespace]txInfo, error) {
+func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.BlockMetadata, blockNum driver2.BlockNum, txNum driver2.TxNum) (map[driver2.Namespace]TxInfo, error) {
 	_, payl, chdr, err := fabricutils.UnmarshalTx(tx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshaling tx [%d:%d]", blockNum, txNum)
@@ -113,23 +130,19 @@ func (m *txInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.B
 		return nil, errors.Wrapf(err, "failed extracting rwset")
 	}
 
-	_, finalityEvent, err := committer.MapFinalityEvent(ctx, block, txNum, chdr.TxId)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed mapping finality event")
+	if len(block.Metadata) < int(common.BlockMetadataIndex_TRANSACTIONS_FILTER) {
+		return nil, errors.Errorf("block metadata lacks transaction filter")
 	}
+	code, message := committer.MapValidationCode(int32(committer.ValidationFlags(block.Metadata[common.BlockMetadataIndex_TRANSACTIONS_FILTER])[txNum]))
 
-	code := finalityEvent.ValidationCode
-	message := finalityEvent.ValidationMessage
-	txID := chdr.TxId
-
-	return m.mapTxInfo(rwSet, txID, code, message)
+	return m.mapTxInfo(rwSet, chdr.TxId, code, message)
 }
 
-func (m *txInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]txInfo, error) {
+func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]TxInfo, error) {
 	logger.Debugf("Map processed tx [%s] with results of status [%v] and length [%d]", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
 	status, message := committer.MapValidationCode(tx.ValidationCode())
 	if status == driver.Invalid {
-		return []txInfo{{txID: tx.TxID(), status: status, message: message}}, nil
+		return []TxInfo{{TxId: tx.TxID(), Status: status, Message: message}}, nil
 	}
 	rwSet, err := vault.NewPopulator().Populate(tx.Results())
 	if err != nil {
@@ -142,22 +155,22 @@ func (m *txInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]txInfo
 	return collections.Values(infos), nil
 }
 
-func (m *txInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string, code driver3.ValidationCode, message string) (map[driver2.Namespace]txInfo, error) {
+func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string, code driver3.ValidationCode, message string) (map[driver2.Namespace]TxInfo, error) {
 	key, err := m.keyTranslator.CreateTokenRequestKey(txID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't create for token request [%s]", txID)
 	}
-	txInfos := make(map[driver2.Namespace]txInfo, len(rwSet.WriteSet.Writes))
+	txInfos := make(map[driver2.Namespace]TxInfo, len(rwSet.WriteSet.Writes))
 	logger.Infof("TX [%s] has %d namespaces", txID, len(rwSet.WriteSet.Writes))
 	for ns, write := range rwSet.WriteSet.Writes {
 		logger.Infof("TX [%s:%s] has %d writes", txID, ns, len(write))
 		if requestHash, ok := write[key]; ok {
-			txInfos[ns] = txInfo{
-				txID:        txID,
-				namespace:   ns,
-				status:      code,
-				message:     message,
-				requestHash: requestHash,
+			txInfos[ns] = TxInfo{
+				TxId:        txID,
+				Namespace:   ns,
+				Status:      code,
+				Message:     message,
+				RequestHash: requestHash,
 			}
 		} else {
 			logger.Warnf("TX [%s:%s] did not have key [%s]. Found: %v", txID, ns, key, write.Keys())
