@@ -19,15 +19,20 @@ import (
 
 type TokensService struct {
 	*common.TokensService
-	OutputTokenFormat token2.Format
+	IdentityDeserializer driver.Deserializer
+	OutputTokenFormat    token2.Format
 }
 
-func NewTokensService(pp *PublicParams) (*TokensService, error) {
+func NewTokensService(pp *PublicParams, identityDeserializer driver.Deserializer) (*TokensService, error) {
 	supportedTokens, err := supportedTokenFormat(pp.QuantityPrecision)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting supported token types")
 	}
-	return &TokensService{TokensService: common.NewTokensService(), OutputTokenFormat: supportedTokens}, nil
+	return &TokensService{
+		TokensService:        common.NewTokensService(),
+		IdentityDeserializer: identityDeserializer,
+		OutputTokenFormat:    supportedTokens,
+	}, nil
 }
 
 // Deobfuscate returns a deserialized token and the identity of its issuer
@@ -41,11 +46,17 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 	if err := metadata.Deserialize(outputMetadata); err != nil {
 		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
 	}
+
+	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	if err != nil {
+		return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
+	}
+
 	return &token2.Token{
 		Owner:    tok.Owner,
 		Type:     tok.Type,
 		Quantity: tok.Quantity,
-	}, metadata.Issuer, nil, s.OutputTokenFormat, nil
+	}, metadata.Issuer, recipients, s.OutputTokenFormat, nil
 }
 
 func (s *TokensService) SupportedTokenFormats() []token2.Format {
