@@ -9,7 +9,6 @@ package validator_test
 import (
 	"context"
 	"encoding/asn1"
-	"encoding/json"
 	"os"
 	"time"
 
@@ -515,11 +514,9 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	}
 
 	metadata.OutputsMetadata = marshalledInfo
-	metadata.Outputs = make([][]byte, len(transfer.OutputTokens))
 	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
 	metadata.OutputAuditInfos = make([][]byte, len(transfer.OutputTokens))
 	for i := 0; i < len(transfer.OutputTokens); i++ {
-		metadata.Outputs[i], err = json.Marshal(transfer.OutputTokens[i].Data)
 		Expect(err).NotTo(HaveOccurred())
 		metadata.ReceiverAuditInfos[i], err = auditInfo.Bytes()
 		Expect(err).NotTo(HaveOccurred())

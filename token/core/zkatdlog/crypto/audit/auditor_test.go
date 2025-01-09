@@ -134,11 +134,9 @@ func createTransfer(pp *crypto.PublicParams) (*transfer2.Action, driver.Transfer
 	}
 
 	metadata.OutputsMetadata = marshalledMeta
-	metadata.Outputs = make([][]byte, len(transfer.OutputTokens))
 	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
 	metadata.OutputAuditInfos = make([][]byte, len(transfer.OutputTokens))
 	for i := 0; i < len(transfer.OutputTokens); i++ {
-		metadata.Outputs[i], err = json.Marshal(transfer.OutputTokens[i].Data)
 		Expect(err).NotTo(HaveOccurred())
 		metadata.ReceiverAuditInfos[i], err = auditInfo.Bytes()
 		Expect(err).NotTo(HaveOccurred())
@@ -171,10 +169,8 @@ func createTransferWithBogusOutput(pp *crypto.PublicParams) (*transfer2.Action, 
 	}
 
 	metadata.OutputsMetadata = marshalledInfo
-	metadata.Outputs = make([][]byte, len(transfer.OutputTokens))
 	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
 	for i := 0; i < len(transfer.OutputTokens); i++ {
-		metadata.Outputs[i], err = json.Marshal(transfer.OutputTokens[i].Data)
 		Expect(err).NotTo(HaveOccurred())
 		metadata.ReceiverAuditInfos[i], err = auditInfo.Bytes()
 		Expect(err).NotTo(HaveOccurred())

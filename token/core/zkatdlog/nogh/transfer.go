@@ -193,7 +193,6 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		TokenIDs:           tokenIDs,
 		Senders:            senders,
 		SenderAuditInfos:   senderAuditInfos,
-		Outputs:            outputs,
 		OutputsMetadata:    outputsMetadataRaw,
 		OutputAuditInfos:   outputAuditInfos,
 		Receivers:          receivers,
@@ -257,12 +256,12 @@ func (s *TransferService) prepareInputs(loadedTokens []LoadedToken) ([]*token.To
 	metadata := make([]*token.Metadata, len(loadedTokens))
 	signers := make([]driver.Identity, len(loadedTokens))
 	for i, loadedToken := range loadedTokens {
-		tok, meta, _, err := s.TokenDeserializer.DeserializeToken(loadedToken.TokenFormat, loadedToken.Token, loadedToken.Metadata)
+		tok, tokenMetadata, _, err := s.TokenDeserializer.DeserializeToken(loadedToken.TokenFormat, loadedToken.Token, loadedToken.Metadata)
 		if err != nil {
 			return nil, nil, nil, errors.Wrapf(err, "failed deserializing token [%s]", string(loadedToken.Token))
 		}
 		tokens[i] = tok
-		metadata[i] = meta
+		metadata[i] = tokenMetadata
 		signers[i] = tok.GetOwner()
 	}
 	return tokens, metadata, signers, nil

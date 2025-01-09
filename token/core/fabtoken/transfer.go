@@ -128,11 +128,6 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		}
 		receiverAuditInfos = append(receiverAuditInfos, auditInfo...)
 	}
-	outputs, err := transfer.GetSerializedOutputs()
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed getting serialized outputs")
-	}
-
 	receiverIsSender := make([]bool, len(receivers))
 	for i, receiver := range receivers {
 		_, err = ws.OwnerWallet(receiver)
@@ -143,7 +138,6 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		TokenIDs:           tokenIDs,
 		Senders:            senders,
 		SenderAuditInfos:   senderAuditInfos,
-		Outputs:            outputs,
 		OutputsMetadata:    outputsMetadata,
 		OutputAuditInfos:   outputAuditInfos,
 		Receivers:          receivers,
@@ -151,7 +145,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		ReceiverIsSender:   receiverIsSender,
 	}
 
-	s.Logger.Debugf("Transfer metadata: [out:%d, rec:%d]", len(metadata.Outputs), len(metadata.Receivers))
+	s.Logger.Debugf("Transfer metadata: [out:%d, rec:%d]", len(metadata.OutputsMetadata), len(metadata.Receivers))
 
 	// done
 	return transfer, metadata, nil
