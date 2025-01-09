@@ -20,7 +20,7 @@ type replicationOpts interface {
 }
 
 type TMSOpts struct {
-	Alias               string
+	Alias               topology.TMSAlias
 	TokenSDKDriver      string
 	PublicParamsGenArgs []string
 	Aries               bool

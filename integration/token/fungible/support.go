@@ -885,7 +885,7 @@ func GetTMSByNetworkName(network *integration.Infrastructure, networkName string
 	return tms
 }
 
-func GetTMSByAlias(network *integration.Infrastructure, alias string) *topology.TMS {
+func GetTMSByAlias(network *integration.Infrastructure, alias topology.TMSAlias) *topology.TMS {
 	tp := tplatform.GetPlatform(network.Ctx, "token")
 	Expect(tp).NotTo(BeNil())
 	var tms *topology.TMS
