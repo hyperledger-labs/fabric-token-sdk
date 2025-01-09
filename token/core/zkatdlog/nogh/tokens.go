@@ -99,6 +99,16 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 	return output, metadata, nil, nil
 }
 
+func (s *TokensService) GenConversionProof(ch []byte, tokens []token.LedgerToken) ([]byte, error) {
+	// TODO: implement
+	return nil, nil
+}
+
+func (s *TokensService) CheckConversionProof(ch []byte, proof []byte, tokens []token.LedgerToken) (bool, error) {
+	// TODO: implement
+	return true, nil
+}
+
 func (s *TokensService) deserializeToken(outputRaw []byte, metadataRaw []byte, checkOwner bool) (*token2.Token, *token2.Metadata, *token.Token, error) {
 	// get zkatdlog token
 	output, err := s.getOutput(outputRaw, checkOwner)
@@ -149,12 +159,18 @@ func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
 	return token.Format(hasher.HexDigest()), nil
 }
 
-func (s *TokensService) CheckUnspendableTokens(utp *driver.UnspendableTokenPackage) ([]token.Type, []uint64, error) {
+func (s *TokensService) ProcessTokenConversionRequest(utp *driver.TokenConversionRequest) ([]token.Type, []uint64, error) {
 	if utp == nil {
 		return nil, nil, errors.New("unspendable token package is nil")
 	}
 
-	// TODO: verify witness
+	ok, err := s.CheckConversionProof(utp.Proof, utp.Proof, utp.Tokens)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to check conversion proof")
+	}
+	if !ok {
+		return nil, nil, errors.New("invalid conversion proof")
+	}
 
 	var tokenTypes []token.Type
 	var tokenValue []uint64
@@ -173,18 +189,18 @@ func (s *TokensService) CheckUnspendableTokens(utp *driver.UnspendableTokenPacka
 		return nil, nil, errors.Wrap(err, "failed to get fabtoken type")
 	}
 
-	for _, tok := range utp.UnspendableTokens {
+	for _, tok := range utp.Tokens {
 		var tokenType token.Type
 		var q uint64
 		var err error
 
 		switch tok.Format {
 		case fabtoken16Type:
-			tokenType, q, err = s.CheckUnspentTokens(&tok, 16)
+			tokenType, q, err = s.checkFabtokenToken(&tok, 16)
 		case fabtoken32Type:
-			tokenType, q, err = s.CheckUnspentTokens(&tok, 32)
+			tokenType, q, err = s.checkFabtokenToken(&tok, 32)
 		case fabtoken64Type:
-			tokenType, q, err = s.CheckUnspentTokens(&tok, 64)
+			tokenType, q, err = s.checkFabtokenToken(&tok, 64)
 		default:
 			return nil, nil, errors.Errorf("unsupported token format [%s]", tok.Format)
 		}
@@ -198,7 +214,7 @@ func (s *TokensService) CheckUnspendableTokens(utp *driver.UnspendableTokenPacka
 	return tokenTypes, tokenValue, nil
 }
 
-func (s *TokensService) CheckUnspentTokens(tok *token.UnspendableTokenInWallet, precision uint64) (token.Type, uint64, error) {
+func (s *TokensService) checkFabtokenToken(tok *token.LedgerToken, precision uint64) (token.Type, uint64, error) {
 	if precision > 64 {
 		return "", 0, errors.Errorf("unsupported precision [%d]", precision)
 	}

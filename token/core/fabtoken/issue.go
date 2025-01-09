@@ -39,7 +39,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, errors.Errorf("issuer identity, token type and values should be defined")
 	}
 	if opts != nil {
-		if opts.UnspendableTokenPackage != nil {
+		if opts.TokenConversionRequest != nil {
 			return nil, nil, errors.Errorf("redeem during issue is not supported")
 		}
 	}

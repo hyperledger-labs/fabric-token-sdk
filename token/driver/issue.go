@@ -12,20 +12,22 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// UnspendableTokenPackage is a container of unspendable tokens that should be redeemed during in an issue action
-type UnspendableTokenPackage struct {
-	// UnspendableTokens is a list of unspendable tokens that should be redeemed in an issue action
-	UnspendableTokens []token.UnspendableTokenInWallet
-	// Witness is a witness that proves the ownership of the unspendable tokens
-	Witness []byte
+// TokenConversionRequest is a request to convert tokens
+type TokenConversionRequest struct {
+	// Challenge is a challenge to be solved by the prover
+	Challenge []byte
+	// Tokens is a list of tokens to be converted
+	Tokens []token.LedgerToken
+	// Proof is a proof that the prover has solved the challenge
+	Proof []byte
 }
 
 // IssueOptions models the options that can be passed to the issue command
 type IssueOptions struct {
 	// Attributes is a container of generic options that might be driver specific
 	Attributes map[interface{}]interface{}
-	// UnspendableTokenPackage is a container of unspendable tokens that should be redeemed in the same issue action
-	UnspendableTokenPackage *UnspendableTokenPackage
+	// TokenConversionRequest is a request to convert tokens
+	TokenConversionRequest *TokenConversionRequest
 	// Wallet is the wallet that should be used to issue the tokens.
 	Wallet IssuerWallet
 }

@@ -44,7 +44,7 @@ type SpendableTokensIterator interface {
 
 type UnspendableTokensIterator interface {
 	Close()
-	Next() (*token.UnspendableTokenInWallet, error)
+	Next() (*token.LedgerToken, error)
 }
 
 type Vault interface {

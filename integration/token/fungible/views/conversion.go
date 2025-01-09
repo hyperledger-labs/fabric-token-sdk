@@ -43,7 +43,7 @@ func (i *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 	span := context.StartSpan("conversion_initiator_view")
 	defer span.End()
 
-	// First, the initiator selects the tokens that are not spendable
+	// First, the initiator selects the tokens to convert, namely those that cannot be spent.
 	tms := token.GetManagementService(context, token.WithTMSID(i.TMSID))
 	assert.NotNil(tms, "failed getting token management service for [%s]", i.TMSID)
 	w := tms.WalletManager().OwnerWallet(i.Wallet)
@@ -186,7 +186,8 @@ func (p *ConversionResponderView) Call(context view.Context) (interface{}, error
 		err = tx.Convert(
 			wallet,
 			conversionRequest.RecipientData.Identity,
-			conversionRequest.UnspendableTokens,
+			conversionRequest.Tokens,
+			conversionRequest.Proof,
 		)
 		assert.NoError(err, "failed adding new issued token")
 

@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"bytes"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -19,16 +19,23 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type ConversionRequest struct {
-	TMSID             token.TMSID
-	RecipientData     RecipientData
-	UnspendableTokens []token2.UnspendableTokenInWallet
-	NotAnonymous      bool
+type ConversionAgreement struct {
+	Challenge []byte
+	TMSID     token.TMSID
 }
 
-// RequestConversionView is the initiator view to request an issuer the issuance of tokens.
+type ConversionRequest struct {
+	ID            []byte
+	TMSID         token.TMSID
+	RecipientData RecipientData
+	Tokens        []token2.LedgerToken
+	Proof         []byte
+	NotAnonymous  bool
+}
+
+// ConversionInitiatorView is the initiator view to request an issuer the conversion of tokens.
 // The view prepares an instance of ConversionRequest and send it to the issuer.
-type RequestConversionView struct {
+type ConversionInitiatorView struct {
 	Issuer       view.Identity
 	TokenType    string
 	Amount       uint64
@@ -36,23 +43,23 @@ type RequestConversionView struct {
 	Wallet       string
 	NotAnonymous bool
 
-	RecipientData            *RecipientData
-	UnspendableTokenInWallet []token2.UnspendableTokenInWallet
+	RecipientData *RecipientData
+	Tokens        []token2.LedgerToken
 }
 
-func NewRequestConversionView(issuer view.Identity, wallet string, unspendableTokenInWallet []token2.UnspendableTokenInWallet, notAnonymous bool) *RequestConversionView {
-	return &RequestConversionView{Issuer: issuer, Wallet: wallet, UnspendableTokenInWallet: unspendableTokenInWallet, NotAnonymous: notAnonymous}
+func NewRequestConversionView(issuer view.Identity, wallet string, tokens []token2.LedgerToken, notAnonymous bool) *ConversionInitiatorView {
+	return &ConversionInitiatorView{Issuer: issuer, Wallet: wallet, Tokens: tokens, NotAnonymous: notAnonymous}
 }
 
-// RequestConversion runs RequestConversionView with the passed arguments.
+// RequestConversion runs ConversionInitiatorView with the passed arguments.
 // The view will generate a recipient identity and pass it to the issuer.
-func RequestConversion(context view.Context, issuer view.Identity, wallet string, unspendableTokenInWallet []token2.UnspendableTokenInWallet, notAnonymous bool, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
-	return RequestConversionForRecipient(context, issuer, wallet, unspendableTokenInWallet, notAnonymous, nil, opts...)
+func RequestConversion(context view.Context, issuer view.Identity, wallet string, tokens []token2.LedgerToken, notAnonymous bool, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+	return RequestConversionForRecipient(context, issuer, wallet, tokens, notAnonymous, nil, opts...)
 }
 
-// RequestConversionForRecipient runs RequestConversionView with the passed arguments.
+// RequestConversionForRecipient runs ConversionInitiatorView with the passed arguments.
 // The view will send the passed recipient data to the issuer.
-func RequestConversionForRecipient(context view.Context, issuer view.Identity, wallet string, unspendableTokenInWallet []token2.UnspendableTokenInWallet, notAnonymous bool, recipientData *RecipientData, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+func RequestConversionForRecipient(context view.Context, issuer view.Identity, wallet string, tokens []token2.LedgerToken, notAnonymous bool, recipientData *RecipientData, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
 	options, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to compile options")
@@ -60,7 +67,7 @@ func RequestConversionForRecipient(context view.Context, issuer view.Identity, w
 	resultBoxed, err := context.RunView(NewRequestConversionView(
 		issuer,
 		wallet,
-		unspendableTokenInWallet,
+		tokens,
 		notAnonymous,
 	).WithWallet(wallet).WithTMSID(options.TMSID()).WithRecipientData(recipientData))
 	if err != nil {
@@ -71,25 +78,10 @@ func RequestConversionForRecipient(context view.Context, issuer view.Identity, w
 	return ir.RecipientData.Identity, result[1].(view.Session), nil
 }
 
-func (r *RequestConversionView) Call(context view.Context) (interface{}, error) {
+func (r *ConversionInitiatorView) Call(context view.Context) (interface{}, error) {
 	span := context.StartSpan("conversion_request_view")
 	defer span.End()
 	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
-
-	tmsID, recipientIdentity, auditInfo, tokenMetadata, err := r.getRecipientIdentity(context)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get recipient identity")
-	}
-	wr := &ConversionRequest{
-		TMSID: *tmsID,
-		RecipientData: RecipientData{
-			Identity:      recipientIdentity,
-			AuditInfo:     auditInfo,
-			TokenMetadata: tokenMetadata,
-		},
-		UnspendableTokens: r.UnspendableTokenInWallet,
-		NotAnonymous:      r.NotAnonymous,
-	}
 
 	span.AddEvent("start_session")
 	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)
@@ -98,7 +90,48 @@ func (r *RequestConversionView) Call(context view.Context) (interface{}, error) 
 		return nil, errors.Wrapf(err, "failed to get session to [%s]", r.Issuer)
 	}
 
+	// first agreement
+	agreement := &ConversionAgreement{}
+	span.AddEvent("send_conversion_agreement")
+	err = session.SendWithContext(context.Context(), agreement)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to send recipient data")
+	}
+
+	if err := session.ReceiveWithTimeout(agreement, 1*time.Minute); err != nil {
+		return nil, errors.Wrapf(err, "failed to receive conversion agreement")
+	}
+
+	// prepare request
 	span.AddEvent("send_conversion_request")
+
+	// - recipient identity
+	tmsID, recipientIdentity, auditInfo, tokenMetadata, err := r.getRecipientIdentity(context)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get recipient identity")
+	}
+	// - proof
+	tms := token.GetManagementService(context, token.WithTMSID(*tmsID))
+	if tms == nil {
+		return nil, errors.Errorf("tms not found for [%s]", tmsID)
+	}
+	proof, err := tms.TokensService().GenConversionProof(agreement.Challenge, r.Tokens)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to generate proof")
+	}
+
+	wr := &ConversionRequest{
+		ID:    agreement.Challenge,
+		TMSID: *tmsID,
+		RecipientData: RecipientData{
+			Identity:      recipientIdentity,
+			AuditInfo:     auditInfo,
+			TokenMetadata: tokenMetadata,
+		},
+		Tokens:       r.Tokens,
+		Proof:        proof,
+		NotAnonymous: r.NotAnonymous,
+	}
 	err = session.SendWithContext(context.Context(), wr)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
@@ -109,24 +142,24 @@ func (r *RequestConversionView) Call(context view.Context) (interface{}, error) 
 }
 
 // WithWallet sets the wallet to use to retrieve a recipient identity if it has not been passed already
-func (r *RequestConversionView) WithWallet(wallet string) *RequestConversionView {
+func (r *ConversionInitiatorView) WithWallet(wallet string) *ConversionInitiatorView {
 	r.Wallet = wallet
 	return r
 }
 
 // WithTMSID sets the TMS ID to be used
-func (r *RequestConversionView) WithTMSID(id token.TMSID) *RequestConversionView {
+func (r *ConversionInitiatorView) WithTMSID(id token.TMSID) *ConversionInitiatorView {
 	r.TMSID = id
 	return r
 }
 
 // WithRecipientData sets the recipient data to use
-func (r *RequestConversionView) WithRecipientData(data *RecipientData) *RequestConversionView {
+func (r *ConversionInitiatorView) WithRecipientData(data *RecipientData) *ConversionInitiatorView {
 	r.RecipientData = data
 	return r
 }
 
-func (r *RequestConversionView) getRecipientIdentity(context view.Context) (*token.TMSID, view.Identity, []byte, []byte, error) {
+func (r *ConversionInitiatorView) getRecipientIdentity(context view.Context) (*token.TMSID, view.Identity, []byte, []byte, error) {
 	if r.RecipientData != nil {
 		tmsID := token.GetManagementService(context, token.WithTMSID(r.TMSID)).ID()
 		return &tmsID, r.RecipientData.Identity, r.RecipientData.AuditInfo, r.RecipientData.TokenMetadata, nil
@@ -161,11 +194,11 @@ func (r *RequestConversionView) getRecipientIdentity(context view.Context) (*tok
 	return &tmsID, recipientIdentity, auditInfo, metadata, nil
 }
 
-// ReceiveConversionRequestView this is the view used by the issuer to receive a conversion request
-type ReceiveConversionRequestView struct{}
+// ConversionResponderView this is the view used by the issuer to receive a conversion request
+type ConversionResponderView struct{}
 
-func NewReceiveConversionRequestView() *ReceiveConversionRequestView {
-	return &ReceiveConversionRequestView{}
+func NewReceiveConversionRequestView() *ConversionResponderView {
+	return &ConversionResponderView{}
 }
 
 func ReceiveConversionRequest(context view.Context) (*ConversionRequest, error) {
@@ -177,19 +210,48 @@ func ReceiveConversionRequest(context view.Context) (*ConversionRequest, error) 
 	return ir, nil
 }
 
-func (r *ReceiveConversionRequestView) Call(context view.Context) (interface{}, error) {
+func (r *ConversionResponderView) Call(context view.Context) (interface{}, error) {
 	span := context.StartSpan("receive_conversion_request_view")
 	defer span.End()
-	session := session.JSON(context)
-	request := &ConversionRequest{}
-	assert.NoError(session.ReceiveWithTimeout(request, 1*time.Minute), "failed to receive the conversion request")
 
+	session := session.JSON(context)
+	agreement := &ConversionAgreement{}
+	if err := session.ReceiveWithTimeout(agreement, 1*time.Minute); err != nil {
+		return nil, errors.Wrapf(err, "failed to receive conversion request")
+	}
 	span.AddEvent("received_conversion_request")
-	tms := token.GetManagementService(context, token.WithTMSID(request.TMSID))
-	assert.NotNil(tms, "tms not found for [%s]", request.TMSID)
+	// sample agreement ID
+	tms := token.GetManagementService(context, token.WithTMSID(agreement.TMSID))
+	if tms == nil {
+		return nil, errors.Errorf("tms not found for [%s]", agreement.TMSID)
+	}
+	conversionChallange, err := tms.TokensService().NewConversionChallenge()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to generate conversion challenge")
+	}
+	agreement.Challenge = conversionChallange
+	agreement.TMSID = tms.ID()
+
+	// send the agreement back
+	if err := session.Send(agreement); err != nil {
+		return nil, errors.Wrapf(err, "failed to send conversion request")
+	}
+	// receive the response
+	request := &ConversionRequest{}
+	if err := session.ReceiveWithTimeout(request, 1*time.Minute); err != nil {
+		return nil, errors.Wrapf(err, "failed to receive conversion request")
+	}
+
+	// check the ID is the same
+	if !bytes.Equal(agreement.Challenge, request.ID) {
+		return nil, errors.Errorf("agreement ID mismatch [%v] != [%v]", agreement.Challenge, request.ID)
+	}
+	// check the TMS is the same
+	if !agreement.TMSID.Equal(request.TMSID) {
+		return nil, errors.Errorf("agreement TMSID mismatch [%v] != [%v]", agreement.TMSID, request.TMSID)
+	}
 
 	if err := tms.WalletManager().RegisterRecipientIdentity(&request.RecipientData); err != nil {
-		logger.Errorf("failed to register recipient identity: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}
 

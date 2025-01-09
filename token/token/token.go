@@ -103,7 +103,7 @@ type UnspentTokenInWallet struct {
 	Quantity string
 }
 
-type UnspendableTokenInWallet struct {
+type LedgerToken struct {
 	// ID is used to uniquely identify the token in the ledger
 	ID            ID
 	Format        Format

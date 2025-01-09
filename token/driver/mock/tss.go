@@ -10,6 +10,21 @@ import (
 )
 
 type TokensService struct {
+	CheckConversionProofStub        func([]byte, []byte, []token.LedgerToken) (bool, error)
+	checkConversionProofMutex       sync.RWMutex
+	checkConversionProofArgsForCall []struct {
+		arg1 []byte
+		arg2 []byte
+		arg3 []token.LedgerToken
+	}
+	checkConversionProofReturns struct {
+		result1 bool
+		result2 error
+	}
+	checkConversionProofReturnsOnCall map[int]struct {
+		result1 bool
+		result2 error
+	}
 	DeobfuscateStub        func([]byte, []byte) (*token.Token, identity.Identity, []identity.Identity, token.Format, error)
 	deobfuscateMutex       sync.RWMutex
 	deobfuscateArgsForCall []struct {
@@ -43,6 +58,32 @@ type TokensService struct {
 		result1 []identity.Identity
 		result2 error
 	}
+	GenConversionProofStub        func([]byte, []token.LedgerToken) ([]byte, error)
+	genConversionProofMutex       sync.RWMutex
+	genConversionProofArgsForCall []struct {
+		arg1 []byte
+		arg2 []token.LedgerToken
+	}
+	genConversionProofReturns struct {
+		result1 []byte
+		result2 error
+	}
+	genConversionProofReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
+	NewConversionChallengeStub        func() ([]byte, error)
+	newConversionChallengeMutex       sync.RWMutex
+	newConversionChallengeArgsForCall []struct {
+	}
+	newConversionChallengeReturns struct {
+		result1 []byte
+		result2 error
+	}
+	newConversionChallengeReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
 	SupportedTokenFormatsStub        func() []token.Format
 	supportedTokenFormatsMutex       sync.RWMutex
 	supportedTokenFormatsArgsForCall []struct {
@@ -55,6 +96,87 @@ type TokensService struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *TokensService) CheckConversionProof(arg1 []byte, arg2 []byte, arg3 []token.LedgerToken) (bool, error) {
+	var arg1Copy []byte
+	if arg1 != nil {
+		arg1Copy = make([]byte, len(arg1))
+		copy(arg1Copy, arg1)
+	}
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	var arg3Copy []token.LedgerToken
+	if arg3 != nil {
+		arg3Copy = make([]token.LedgerToken, len(arg3))
+		copy(arg3Copy, arg3)
+	}
+	fake.checkConversionProofMutex.Lock()
+	ret, specificReturn := fake.checkConversionProofReturnsOnCall[len(fake.checkConversionProofArgsForCall)]
+	fake.checkConversionProofArgsForCall = append(fake.checkConversionProofArgsForCall, struct {
+		arg1 []byte
+		arg2 []byte
+		arg3 []token.LedgerToken
+	}{arg1Copy, arg2Copy, arg3Copy})
+	stub := fake.CheckConversionProofStub
+	fakeReturns := fake.checkConversionProofReturns
+	fake.recordInvocation("CheckConversionProof", []interface{}{arg1Copy, arg2Copy, arg3Copy})
+	fake.checkConversionProofMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *TokensService) CheckConversionProofCallCount() int {
+	fake.checkConversionProofMutex.RLock()
+	defer fake.checkConversionProofMutex.RUnlock()
+	return len(fake.checkConversionProofArgsForCall)
+}
+
+func (fake *TokensService) CheckConversionProofCalls(stub func([]byte, []byte, []token.LedgerToken) (bool, error)) {
+	fake.checkConversionProofMutex.Lock()
+	defer fake.checkConversionProofMutex.Unlock()
+	fake.CheckConversionProofStub = stub
+}
+
+func (fake *TokensService) CheckConversionProofArgsForCall(i int) ([]byte, []byte, []token.LedgerToken) {
+	fake.checkConversionProofMutex.RLock()
+	defer fake.checkConversionProofMutex.RUnlock()
+	argsForCall := fake.checkConversionProofArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *TokensService) CheckConversionProofReturns(result1 bool, result2 error) {
+	fake.checkConversionProofMutex.Lock()
+	defer fake.checkConversionProofMutex.Unlock()
+	fake.CheckConversionProofStub = nil
+	fake.checkConversionProofReturns = struct {
+		result1 bool
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *TokensService) CheckConversionProofReturnsOnCall(i int, result1 bool, result2 error) {
+	fake.checkConversionProofMutex.Lock()
+	defer fake.checkConversionProofMutex.Unlock()
+	fake.CheckConversionProofStub = nil
+	if fake.checkConversionProofReturnsOnCall == nil {
+		fake.checkConversionProofReturnsOnCall = make(map[int]struct {
+			result1 bool
+			result2 error
+		})
+	}
+	fake.checkConversionProofReturnsOnCall[i] = struct {
+		result1 bool
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *TokensService) Deobfuscate(arg1 []byte, arg2 []byte) (*token.Token, identity.Identity, []identity.Identity, token.Format, error) {
@@ -210,6 +332,137 @@ func (fake *TokensService) RecipientsReturnsOnCall(i int, result1 []identity.Ide
 	}{result1, result2}
 }
 
+func (fake *TokensService) GenConversionProof(arg1 []byte, arg2 []token.LedgerToken) ([]byte, error) {
+	var arg1Copy []byte
+	if arg1 != nil {
+		arg1Copy = make([]byte, len(arg1))
+		copy(arg1Copy, arg1)
+	}
+	var arg2Copy []token.LedgerToken
+	if arg2 != nil {
+		arg2Copy = make([]token.LedgerToken, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.genConversionProofMutex.Lock()
+	ret, specificReturn := fake.genConversionProofReturnsOnCall[len(fake.genConversionProofArgsForCall)]
+	fake.genConversionProofArgsForCall = append(fake.genConversionProofArgsForCall, struct {
+		arg1 []byte
+		arg2 []token.LedgerToken
+	}{arg1Copy, arg2Copy})
+	stub := fake.GenConversionProofStub
+	fakeReturns := fake.genConversionProofReturns
+	fake.recordInvocation("GenConversionProof", []interface{}{arg1Copy, arg2Copy})
+	fake.genConversionProofMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *TokensService) GenConversionProofCallCount() int {
+	fake.genConversionProofMutex.RLock()
+	defer fake.genConversionProofMutex.RUnlock()
+	return len(fake.genConversionProofArgsForCall)
+}
+
+func (fake *TokensService) GenConversionProofCalls(stub func([]byte, []token.LedgerToken) ([]byte, error)) {
+	fake.genConversionProofMutex.Lock()
+	defer fake.genConversionProofMutex.Unlock()
+	fake.GenConversionProofStub = stub
+}
+
+func (fake *TokensService) GenConversionProofArgsForCall(i int) ([]byte, []token.LedgerToken) {
+	fake.genConversionProofMutex.RLock()
+	defer fake.genConversionProofMutex.RUnlock()
+	argsForCall := fake.genConversionProofArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *TokensService) GenConversionProofReturns(result1 []byte, result2 error) {
+	fake.genConversionProofMutex.Lock()
+	defer fake.genConversionProofMutex.Unlock()
+	fake.GenConversionProofStub = nil
+	fake.genConversionProofReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *TokensService) GenConversionProofReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.genConversionProofMutex.Lock()
+	defer fake.genConversionProofMutex.Unlock()
+	fake.GenConversionProofStub = nil
+	if fake.genConversionProofReturnsOnCall == nil {
+		fake.genConversionProofReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.genConversionProofReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *TokensService) NewConversionChallenge() ([]byte, error) {
+	fake.newConversionChallengeMutex.Lock()
+	ret, specificReturn := fake.newConversionChallengeReturnsOnCall[len(fake.newConversionChallengeArgsForCall)]
+	fake.newConversionChallengeArgsForCall = append(fake.newConversionChallengeArgsForCall, struct {
+	}{})
+	stub := fake.NewConversionChallengeStub
+	fakeReturns := fake.newConversionChallengeReturns
+	fake.recordInvocation("NewConversionChallenge", []interface{}{})
+	fake.newConversionChallengeMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *TokensService) NewConversionChallengeCallCount() int {
+	fake.newConversionChallengeMutex.RLock()
+	defer fake.newConversionChallengeMutex.RUnlock()
+	return len(fake.newConversionChallengeArgsForCall)
+}
+
+func (fake *TokensService) NewConversionChallengeCalls(stub func() ([]byte, error)) {
+	fake.newConversionChallengeMutex.Lock()
+	defer fake.newConversionChallengeMutex.Unlock()
+	fake.NewConversionChallengeStub = stub
+}
+
+func (fake *TokensService) NewConversionChallengeReturns(result1 []byte, result2 error) {
+	fake.newConversionChallengeMutex.Lock()
+	defer fake.newConversionChallengeMutex.Unlock()
+	fake.NewConversionChallengeStub = nil
+	fake.newConversionChallengeReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *TokensService) NewConversionChallengeReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.newConversionChallengeMutex.Lock()
+	defer fake.newConversionChallengeMutex.Unlock()
+	fake.NewConversionChallengeStub = nil
+	if fake.newConversionChallengeReturnsOnCall == nil {
+		fake.newConversionChallengeReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.newConversionChallengeReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *TokensService) SupportedTokenFormats() []token.Format {
 	fake.supportedTokenFormatsMutex.Lock()
 	ret, specificReturn := fake.supportedTokenFormatsReturnsOnCall[len(fake.supportedTokenFormatsArgsForCall)]
@@ -266,10 +519,16 @@ func (fake *TokensService) SupportedTokenFormatsReturnsOnCall(i int, result1 []t
 func (fake *TokensService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.checkConversionProofMutex.RLock()
+	defer fake.checkConversionProofMutex.RUnlock()
 	fake.deobfuscateMutex.RLock()
 	defer fake.deobfuscateMutex.RUnlock()
 	fake.recipientsMutex.RLock()
 	defer fake.recipientsMutex.RUnlock()
+	fake.genConversionProofMutex.RLock()
+	defer fake.genConversionProofMutex.RUnlock()
+	fake.newConversionChallengeMutex.RLock()
+	defer fake.newConversionChallengeMutex.RUnlock()
 	fake.supportedTokenFormatsMutex.RLock()
 	defer fake.supportedTokenFormatsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
