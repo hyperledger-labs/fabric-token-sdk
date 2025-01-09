@@ -384,7 +384,8 @@ func (r *Request) Convert(
 	ctx context.Context,
 	wallet *IssuerWallet,
 	receiver Identity,
-	unspendableTokens []token.UnspendableTokenInWallet,
+	unspendableTokens []token.LedgerToken,
+	witness []byte,
 	opts ...IssueOption,
 ) (*IssueAction, error) {
 	if wallet == nil {
@@ -399,9 +400,6 @@ func (r *Request) Convert(
 		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
 
-	// TODO: generate witness
-	var witness []byte
-
 	// Compute Issue
 	action, meta, err := r.TokenService.tms.IssueService().Issue(
 		ctx,
@@ -411,9 +409,9 @@ func (r *Request) Convert(
 		[][]byte{receiver},
 		&driver.IssueOptions{
 			Attributes: opt.Attributes,
-			UnspendableTokenPackage: &driver.UnspendableTokenPackage{
-				UnspendableTokens: unspendableTokens,
-				Witness:           witness,
+			TokenConversionRequest: &driver.TokenConversionRequest{
+				Tokens: unspendableTokens,
+				Proof:  witness,
 			},
 			Wallet: wallet.w,
 		},

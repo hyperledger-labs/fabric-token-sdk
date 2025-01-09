@@ -1336,12 +1336,12 @@ func (u *UnspendableTokensInWalletIterator) Close() {
 	Close(u.txs)
 }
 
-func (u *UnspendableTokensInWalletIterator) Next() (*token.UnspendableTokenInWallet, error) {
+func (u *UnspendableTokensInWalletIterator) Next() (*token.LedgerToken, error) {
 	if !u.txs.Next() {
 		return nil, nil
 	}
 
-	tok := &token.UnspendableTokenInWallet{}
+	tok := &token.LedgerToken{}
 	if err := u.txs.Scan(&tok.ID.TxId, &tok.ID.Index, &tok.Token, &tok.TokenMetadata, &tok.Format); err != nil {
 		return nil, err
 	}

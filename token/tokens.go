@@ -20,3 +20,11 @@ type TokensService struct {
 func (t *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, []Identity, token.Format, error) {
 	return t.ts.Deobfuscate(output, outputMetadata)
 }
+
+func (t *TokensService) NewConversionChallenge() ([]byte, error) {
+	return t.ts.NewConversionChallenge()
+}
+
+func (t *TokensService) GenConversionProof(id []byte, tokens []token.LedgerToken) ([]byte, error) {
+	return t.ts.GenConversionProof(id, tokens)
+}
