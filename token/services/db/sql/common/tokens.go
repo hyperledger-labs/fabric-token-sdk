@@ -13,6 +13,7 @@ import (
 	errors2 "errors"
 	"fmt"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -186,8 +187,8 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 	return &UnspentTokensInWalletIterator{txs: rows}, nil
 }
 
-// UnspendableTokensIteratorBy returns the minimum information for conversion about the tokens that cannot be spent
-func (db *TokenDB) UnspendableTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (tdriver.UnspendableTokensIterator, error) {
+// UnsupportedTokensIteratorBy returns the minimum information for conversion about the tokens that are not supported
+func (db *TokenDB) UnsupportedTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (tdriver.UnsupportedTokensIterator, error) {
 	// first select all the distinct ledger types
 	includeFormats, err := db.unspendableTokenFormats(ctx, walletID, tokenType)
 	if err != nil {
@@ -1018,19 +1019,12 @@ func (db *TokenDB) unspendableTokenFormats(ctx context.Context, walletID string,
 		if err := rows.Scan(&tmp); err != nil {
 			return nil, errors.Wrapf(err, "failed to scan row")
 		}
-
-		logger.Debugf("format from db [%s]", tmp)
-
-		// include tmp only if it is not in supportedFormats
 		format := token.Format(tmp)
-		found := false
-		for _, t := range supportedFormats {
-			if t == format {
-				found = true
-				break
-			}
-		}
-		if !found {
+
+		logger.Debugf("format from db [%s]", format)
+
+		// include format only if it is not in supportedFormats
+		if !slices.Contains(supportedFormats, format) {
 			includeFormats = append(includeFormats, format)
 		}
 	}

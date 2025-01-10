@@ -874,29 +874,23 @@ func CheckPublicParamsMatch(network *integration.Infrastructure, tmsId *token2.T
 func GetTMSByNetworkName(network *integration.Infrastructure, networkName string) *topology.TMS {
 	tp := tplatform.GetPlatform(network.Ctx, "token")
 	Expect(tp).NotTo(BeNil())
-	var tms *topology.TMS
 	for _, TMS := range tp.GetTopology().TMSs {
 		if TMS.Network == networkName {
-			tms = TMS
-			break
+			return TMS
 		}
 	}
-	Expect(tms).NotTo(BeNil())
-	return tms
+	panic(fmt.Sprintf("TMS not found for network [%s]", networkName))
 }
 
 func GetTMSByAlias(network *integration.Infrastructure, alias topology.TMSAlias) *topology.TMS {
 	tp := tplatform.GetPlatform(network.Ctx, "token")
 	Expect(tp).NotTo(BeNil())
-	var tms *topology.TMS
 	for _, TMS := range tp.GetTopology().TMSs {
 		if TMS.Alias == alias {
-			tms = TMS
-			break
+			return TMS
 		}
 	}
-	Expect(tms).NotTo(BeNil())
-	return tms
+	panic(fmt.Sprintf("TMS not found for alias [%s]", alias))
 }
 
 func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS) {

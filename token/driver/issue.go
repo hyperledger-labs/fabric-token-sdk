@@ -15,11 +15,11 @@ import (
 // TokenConversionRequest is a request to convert tokens
 type TokenConversionRequest struct {
 	// Challenge is a challenge to be solved by the prover
-	Challenge []byte
+	Challenge ConversionChallenge
 	// Tokens is a list of tokens to be converted
 	Tokens []token.LedgerToken
 	// Proof is a proof that the prover has solved the challenge
-	Proof []byte
+	Proof ConversionProof
 }
 
 // IssueOptions models the options that can be passed to the issue command

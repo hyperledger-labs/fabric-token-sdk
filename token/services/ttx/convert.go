@@ -37,7 +37,7 @@ type ConversionRequest struct {
 // The view prepares an instance of ConversionRequest and send it to the issuer.
 type ConversionInitiatorView struct {
 	Issuer       view.Identity
-	TokenType    string
+	TokenType    token2.Type
 	Amount       uint64
 	TMSID        token.TMSID
 	Wallet       string
