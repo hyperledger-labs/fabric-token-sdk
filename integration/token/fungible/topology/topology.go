@@ -64,7 +64,7 @@ func Topology(opts common.Opts) []api.Topology {
 	)
 	issuer.AddOptions(opts.ReplicationOpts.For("issuer")...)
 	issuer.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{})
-	issuer.RegisterResponder(&views.ConversionResponderView{}, &views.ConversionInitiatorView{})
+	issuer.RegisterResponder(&views.TokensUpgradeResponderView{}, &views.TokensUpgradeInitiatorView{})
 	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	issuer.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
@@ -210,7 +210,7 @@ func Topology(opts common.Opts) []api.Topology {
 	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 	alice.RegisterViewFactory("MaliciousTransfer", &views.MaliciousTransferViewFactory{})
 	alice.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
-	alice.RegisterViewFactory("Conversion", &views.ConversionInitiatorViewFactory{})
+	alice.RegisterViewFactory("TokensUpgrade", &views.TokensUpgradeInitiatorViewFactory{})
 	alice.RegisterViewFactory("SetSpendableFlag", &views.SetSpendableFlagViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
@@ -251,7 +251,7 @@ func Topology(opts common.Opts) []api.Topology {
 	bob.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
 	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 	bob.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
-	bob.RegisterViewFactory("Conversion", &views.ConversionInitiatorViewFactory{})
+	bob.RegisterViewFactory("TokensUpgrade", &views.TokensUpgradeInitiatorViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),

@@ -11,23 +11,23 @@ import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 //go:generate counterfeiter -o mock/tss.go -fake-name TokensService . TokensService
 
 type (
-	ConversionChallenge []byte
-	ConversionProof     []byte
+	TokenUpgradeChallenge []byte
+	TokenUpgradeProof     []byte
 )
 
-// TokensConversionService models the token conversion service
-type TokensConversionService interface {
-	// NewConversionChallenge generates a new conversion challenge
-	NewConversionChallenge() (ConversionChallenge, error)
-	// GenConversionProof generates a conversion proof for the given challenge and tokens
-	GenConversionProof(ch ConversionChallenge, tokens []token.LedgerToken) ([]byte, error)
-	// CheckConversionProof checks the conversion proof for the given challenge and tokens
-	CheckConversionProof(ch ConversionChallenge, proof ConversionProof, tokens []token.LedgerToken) (bool, error)
+// TokensUpgradeService models the token update service
+type TokensUpgradeService interface {
+	// NewUpgradeChallenge generates a new upgrade challenge
+	NewUpgradeChallenge() (TokenUpgradeChallenge, error)
+	// GenUpgradeProof generates an upgrade proof for the given challenge and tokens
+	GenUpgradeProof(ch TokenUpgradeChallenge, tokens []token.LedgerToken) ([]byte, error)
+	// CheckUpgradeProof checks the upgrade proof for the given challenge and tokens
+	CheckUpgradeProof(ch TokenUpgradeChallenge, proof TokenUpgradeProof, tokens []token.LedgerToken) (bool, error)
 }
 
 // TokensService models the token service
 type TokensService interface {
-	TokensConversionService
+	TokensUpgradeService
 
 	// SupportedTokenFormats returns the supported token formats
 	SupportedTokenFormats() []token.Format

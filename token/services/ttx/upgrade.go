@@ -19,12 +19,12 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type ConversionAgreement struct {
+type UpgradeTokensAgreement struct {
 	Challenge []byte
 	TMSID     token.TMSID
 }
 
-type ConversionRequest struct {
+type UpgradeTokensRequest struct {
 	ID            []byte
 	TMSID         token.TMSID
 	RecipientData RecipientData
@@ -33,9 +33,9 @@ type ConversionRequest struct {
 	NotAnonymous  bool
 }
 
-// ConversionInitiatorView is the initiator view to request an issuer the conversion of tokens.
-// The view prepares an instance of ConversionRequest and send it to the issuer.
-type ConversionInitiatorView struct {
+// UpgradeTokensInitiatorView is the initiator view to request an issuer the upgrade of tokens.
+// The view prepares an instance of UpgradeTokensRequest and send it to the issuer.
+type UpgradeTokensInitiatorView struct {
 	Issuer       view.Identity
 	TokenType    token2.Type
 	Amount       uint64
@@ -47,19 +47,19 @@ type ConversionInitiatorView struct {
 	Tokens        []token2.LedgerToken
 }
 
-func NewRequestConversionView(issuer view.Identity, wallet string, tokens []token2.LedgerToken, notAnonymous bool) *ConversionInitiatorView {
-	return &ConversionInitiatorView{Issuer: issuer, Wallet: wallet, Tokens: tokens, NotAnonymous: notAnonymous}
+func NewRequestConversionView(issuer view.Identity, wallet string, tokens []token2.LedgerToken, notAnonymous bool) *UpgradeTokensInitiatorView {
+	return &UpgradeTokensInitiatorView{Issuer: issuer, Wallet: wallet, Tokens: tokens, NotAnonymous: notAnonymous}
 }
 
-// RequestConversion runs ConversionInitiatorView with the passed arguments.
+// RequestTokensUpgrade runs UpgradeTokensInitiatorView with the passed arguments.
 // The view will generate a recipient identity and pass it to the issuer.
-func RequestConversion(context view.Context, issuer view.Identity, wallet string, tokens []token2.LedgerToken, notAnonymous bool, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
-	return RequestConversionForRecipient(context, issuer, wallet, tokens, notAnonymous, nil, opts...)
+func RequestTokensUpgrade(context view.Context, issuer view.Identity, wallet string, tokens []token2.LedgerToken, notAnonymous bool, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+	return RequestTokensUpgradeForRecipient(context, issuer, wallet, tokens, notAnonymous, nil, opts...)
 }
 
-// RequestConversionForRecipient runs ConversionInitiatorView with the passed arguments.
+// RequestTokensUpgradeForRecipient runs UpgradeTokensInitiatorView with the passed arguments.
 // The view will send the passed recipient data to the issuer.
-func RequestConversionForRecipient(context view.Context, issuer view.Identity, wallet string, tokens []token2.LedgerToken, notAnonymous bool, recipientData *RecipientData, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+func RequestTokensUpgradeForRecipient(context view.Context, issuer view.Identity, wallet string, tokens []token2.LedgerToken, notAnonymous bool, recipientData *RecipientData, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
 	options, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to compile options")
@@ -74,11 +74,11 @@ func RequestConversionForRecipient(context view.Context, issuer view.Identity, w
 		return nil, nil, err
 	}
 	result := resultBoxed.([]interface{})
-	ir := result[0].(*ConversionRequest)
+	ir := result[0].(*UpgradeTokensRequest)
 	return ir.RecipientData.Identity, result[1].(view.Session), nil
 }
 
-func (r *ConversionInitiatorView) Call(context view.Context) (interface{}, error) {
+func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, error) {
 	span := context.StartSpan("conversion_request_view")
 	defer span.End()
 	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
@@ -91,7 +91,7 @@ func (r *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 	}
 
 	// first agreement
-	agreement := &ConversionAgreement{}
+	agreement := &UpgradeTokensAgreement{}
 	span.AddEvent("send_conversion_agreement")
 	err = session.SendWithContext(context.Context(), agreement)
 	if err != nil {
@@ -99,11 +99,11 @@ func (r *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 	}
 
 	if err := session.ReceiveWithTimeout(agreement, 1*time.Minute); err != nil {
-		return nil, errors.Wrapf(err, "failed to receive conversion agreement")
+		return nil, errors.Wrapf(err, "failed to receive upgrade agreement")
 	}
 
 	// prepare request
-	span.AddEvent("send_conversion_request")
+	span.AddEvent("send_upgrade_request")
 
 	// - recipient identity
 	tmsID, recipientIdentity, auditInfo, tokenMetadata, err := r.getRecipientIdentity(context)
@@ -115,12 +115,12 @@ func (r *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 	if tms == nil {
 		return nil, errors.Errorf("tms not found for [%s]", tmsID)
 	}
-	proof, err := tms.TokensService().GenConversionProof(agreement.Challenge, r.Tokens)
+	proof, err := tms.TokensService().GenUpgradeProof(agreement.Challenge, r.Tokens)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate proof")
 	}
 
-	wr := &ConversionRequest{
+	wr := &UpgradeTokensRequest{
 		ID:    agreement.Challenge,
 		TMSID: *tmsID,
 		RecipientData: RecipientData{
@@ -142,24 +142,24 @@ func (r *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 }
 
 // WithWallet sets the wallet to use to retrieve a recipient identity if it has not been passed already
-func (r *ConversionInitiatorView) WithWallet(wallet string) *ConversionInitiatorView {
+func (r *UpgradeTokensInitiatorView) WithWallet(wallet string) *UpgradeTokensInitiatorView {
 	r.Wallet = wallet
 	return r
 }
 
 // WithTMSID sets the TMS ID to be used
-func (r *ConversionInitiatorView) WithTMSID(id token.TMSID) *ConversionInitiatorView {
+func (r *UpgradeTokensInitiatorView) WithTMSID(id token.TMSID) *UpgradeTokensInitiatorView {
 	r.TMSID = id
 	return r
 }
 
 // WithRecipientData sets the recipient data to use
-func (r *ConversionInitiatorView) WithRecipientData(data *RecipientData) *ConversionInitiatorView {
+func (r *UpgradeTokensInitiatorView) WithRecipientData(data *RecipientData) *UpgradeTokensInitiatorView {
 	r.RecipientData = data
 	return r
 }
 
-func (r *ConversionInitiatorView) getRecipientIdentity(context view.Context) (*token.TMSID, view.Identity, []byte, []byte, error) {
+func (r *UpgradeTokensInitiatorView) getRecipientIdentity(context view.Context) (*token.TMSID, view.Identity, []byte, []byte, error) {
 	if r.RecipientData != nil {
 		tmsID := token.GetManagementService(context, token.WithTMSID(r.TMSID)).ID()
 		return &tmsID, r.RecipientData.Identity, r.RecipientData.AuditInfo, r.RecipientData.TokenMetadata, nil
@@ -194,52 +194,52 @@ func (r *ConversionInitiatorView) getRecipientIdentity(context view.Context) (*t
 	return &tmsID, recipientIdentity, auditInfo, metadata, nil
 }
 
-// ConversionResponderView this is the view used by the issuer to receive a conversion request
-type ConversionResponderView struct{}
+// UpgradeTokensResponderView this is the view used by the issuer to receive a upgrade request
+type UpgradeTokensResponderView struct{}
 
-func NewReceiveConversionRequestView() *ConversionResponderView {
-	return &ConversionResponderView{}
+func NewReceiveupgradeRequestView() *UpgradeTokensResponderView {
+	return &UpgradeTokensResponderView{}
 }
 
-func ReceiveConversionRequest(context view.Context) (*ConversionRequest, error) {
-	requestBoxed, err := context.RunView(NewReceiveConversionRequestView())
+func ReceiveTokensUpgradeRequest(context view.Context) (*UpgradeTokensRequest, error) {
+	requestBoxed, err := context.RunView(NewReceiveupgradeRequestView())
 	if err != nil {
 		return nil, err
 	}
-	ir := requestBoxed.(*ConversionRequest)
+	ir := requestBoxed.(*UpgradeTokensRequest)
 	return ir, nil
 }
 
-func (r *ConversionResponderView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("receive_conversion_request_view")
+func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("receive_upgrade_request_view")
 	defer span.End()
 
 	session := session.JSON(context)
-	agreement := &ConversionAgreement{}
+	agreement := &UpgradeTokensAgreement{}
 	if err := session.ReceiveWithTimeout(agreement, 1*time.Minute); err != nil {
-		return nil, errors.Wrapf(err, "failed to receive conversion request")
+		return nil, errors.Wrapf(err, "failed to receive upgrade request")
 	}
-	span.AddEvent("received_conversion_request")
+	span.AddEvent("received_upgrade_request")
 	// sample agreement ID
 	tms := token.GetManagementService(context, token.WithTMSID(agreement.TMSID))
 	if tms == nil {
 		return nil, errors.Errorf("tms not found for [%s]", agreement.TMSID)
 	}
-	conversionChallange, err := tms.TokensService().NewConversionChallenge()
+	challenge, err := tms.TokensService().NewUpgradeChallenge()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to generate conversion challenge")
+		return nil, errors.Wrapf(err, "failed to generate upgrade challenge")
 	}
-	agreement.Challenge = conversionChallange
+	agreement.Challenge = challenge
 	agreement.TMSID = tms.ID()
 
 	// send the agreement back
 	if err := session.Send(agreement); err != nil {
-		return nil, errors.Wrapf(err, "failed to send conversion request")
+		return nil, errors.Wrapf(err, "failed to send upgrade request")
 	}
 	// receive the response
-	request := &ConversionRequest{}
+	request := &UpgradeTokensRequest{}
 	if err := session.ReceiveWithTimeout(request, 1*time.Minute); err != nil {
-		return nil, errors.Wrapf(err, "failed to receive conversion request")
+		return nil, errors.Wrapf(err, "failed to receive upgrade request")
 	}
 
 	// check the ID is the same

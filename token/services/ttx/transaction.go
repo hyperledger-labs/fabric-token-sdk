@@ -225,7 +225,7 @@ func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ token2.Type, value u
 	return t.TokenRequest.Redeem(t.Context, wallet, typ, value, opts...)
 }
 
-func (t *Transaction) Convert(
+func (t *Transaction) Upgrade(
 	wallet *token.IssuerWallet,
 	receiver view.Identity,
 	tokens []token2.LedgerToken,

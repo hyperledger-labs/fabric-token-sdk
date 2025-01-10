@@ -83,7 +83,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		}
 		values = []uint64{totalValue}
 
-		s.Logger.Debugf("conversion: extracted token type [%s] and value [%d] from the passed tokens", tokenType, totalValue)
+		s.Logger.Debugf("upgrade: extracted token type [%s] and value [%d] from the passed tokens", tokenType, totalValue)
 
 		// fetch issuer identity
 		issuerIdentity, err = opts.Wallet.GetIssuerIdentity(tokenType)

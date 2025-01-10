@@ -220,7 +220,7 @@ func (t *Tokens) SetSupportedTokenFormats(tokenTypes []token2.Format) error {
 	return t.Storage.tokenDB.SetSupportedTokenFormats(tokenTypes)
 }
 
-// UnsupportedTokensIteratorBy returns the minimum information for conversion about the tokens that are not supported
+// UnsupportedTokensIteratorBy returns the minimum information for upgrade about the tokens that are not supported
 func (t *Tokens) UnsupportedTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.UnsupportedTokensIterator, error) {
 	return t.Storage.tokenDB.UnsupportedTokensIteratorBy(ctx, walletID, typ)
 }

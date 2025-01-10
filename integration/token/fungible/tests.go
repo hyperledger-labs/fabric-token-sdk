@@ -1175,7 +1175,7 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 
 }
 
-func TestUpdatability(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, sel *token3.ReplicaSelector) {
+func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, sel *token3.ReplicaSelector) {
 	// we start with fabtoken 16bits, performs a few operation, and then switch
 	auditor := sel.Get(auditorId)
 	issuer := sel.Get("issuer")
@@ -1221,7 +1221,7 @@ func TestUpdatability(network *integration.Infrastructure, auditorId string, onR
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor, "insufficient funds, only [0] tokens of type [EUR] are available, but [110] were requested and no other process has any tokens locked")
-	Conversion(network, nil, alice, "", "EUR", auditor, issuer)
+	TokensUpgrade(network, nil, alice, "", "EUR", auditor, issuer)
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
 	CopyDBsTo(network, "./testdata", alice)
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
