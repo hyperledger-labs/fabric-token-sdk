@@ -139,7 +139,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		Senders:            senders,
 		SenderAuditInfos:   senderAuditInfos,
 		OutputsMetadata:    outputsMetadata,
-		OutputAuditInfos:   outputAuditInfos,
+		OutputsAuditInfo:   outputAuditInfos,
 		Receivers:          receivers,
 		ReceiverAuditInfos: receiverAuditInfos,
 		ReceiverIsSender:   receiverIsSender,

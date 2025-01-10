@@ -103,7 +103,7 @@ var _ = Describe("Auditor", func() {
 				_, auditinfo := getIdemixInfo("./testdata/idemix")
 				raw, err := auditinfo.Bytes()
 				Expect(err).NotTo(HaveOccurred())
-				metadata.OutputAuditInfos[0] = raw
+				metadata.OutputsAuditInfo[0] = raw
 				raw, err = transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
 				err = auditor.Check(context.Background(), &driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
@@ -135,12 +135,12 @@ func createTransfer(pp *crypto.PublicParams) (*transfer2.Action, driver.Transfer
 
 	metadata.OutputsMetadata = marshalledMeta
 	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
-	metadata.OutputAuditInfos = make([][]byte, len(transfer.OutputTokens))
+	metadata.OutputsAuditInfo = make([][]byte, len(transfer.OutputTokens))
 	for i := 0; i < len(transfer.OutputTokens); i++ {
 		Expect(err).NotTo(HaveOccurred())
 		metadata.ReceiverAuditInfos[i], err = auditInfo.Bytes()
 		Expect(err).NotTo(HaveOccurred())
-		metadata.OutputAuditInfos[i] = metadata.ReceiverAuditInfos[i]
+		metadata.OutputsAuditInfo[i] = metadata.ReceiverAuditInfos[i]
 	}
 	tokns := make([][]*token.Token, 1)
 	for i := 0; i < len(inputs); i++ {
