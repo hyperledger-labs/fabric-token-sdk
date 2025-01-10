@@ -477,6 +477,17 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 			if failOnMissing {
 				return nil, 0, errors.Errorf("missing token info for output [%d,%d]", i, j)
 			}
+			// check the recipients anyway
+			recipients, err := tms.TokensService().Recipients(raw)
+			if err != nil {
+				return nil, 0, errors.Wrapf(err, "failed getting recipients [%d,%d]", i, j)
+			}
+			for _, recipient := range recipients {
+				if !recipient.Equal(issueMeta.Receivers[recipientCounter]) {
+					return nil, 0, errors.Errorf("invalid recipient [%d,%d] [%s:%s]", i, j, recipient, issueMeta.Receivers[recipientCounter])
+				}
+				recipientCounter++
+			}
 			counter++
 			continue
 		}
@@ -552,6 +563,17 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			if failOnMissing {
 				return nil, 0, errors.Errorf("missing token info for output [%d,%d]", i, j)
 			}
+			// check the recipients anyway
+			recipients, err := tms.TokensService().Recipients(raw)
+			if err != nil {
+				return nil, 0, errors.Wrapf(err, "failed getting recipients [%d,%d]", i, j)
+			}
+			for _, recipient := range recipients {
+				if !recipient.Equal(transferMeta.Receivers[recipientCounter]) {
+					return nil, 0, errors.Errorf("invalid recipient [%d,%d] [%s:%s]", i, j, recipient, transferMeta.Receivers[recipientCounter])
+				}
+				recipientCounter++
+			}
 			counter++
 			continue
 		}
@@ -567,7 +589,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 
 		for _, recipient := range recipients {
 			if !recipient.Equal(transferMeta.Receivers[recipientCounter]) {
-				return nil, 0, errors.Errorf("invalid recipient [%d,%d]", i, j)
+				return nil, 0, errors.Errorf("invalid recipient [%d,%d] [%s:%s]", i, j, recipient, transferMeta.Receivers[recipientCounter])
 			}
 			var eID string
 			var rID string

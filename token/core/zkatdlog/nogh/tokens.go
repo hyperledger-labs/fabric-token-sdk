@@ -42,6 +42,18 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	}, nil
 }
 
+func (s *TokensService) Recipients(output []byte) ([]driver.Identity, error) {
+	tok := &token2.Token{}
+	if err := tok.Deserialize(output); err != nil {
+		return nil, errors.Wrap(err, "failed to deserialize token")
+	}
+	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get recipients")
+	}
+	return recipients, nil
+}
+
 // Deobfuscate unmarshals a token and token info from raw bytes
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer

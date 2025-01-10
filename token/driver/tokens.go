@@ -20,4 +20,7 @@ type TokensService interface {
 	// - the recipients defined by Token.Owner,
 	// = and the output format
 	Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, []Identity, token.Format, error)
+
+	// Recipients returns the recipients of the passed output
+	Recipients(output []byte) ([]Identity, error)
 }
