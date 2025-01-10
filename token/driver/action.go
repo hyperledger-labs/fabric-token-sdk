@@ -33,6 +33,8 @@ type IssueAction interface {
 	GetMetadata() map[string][]byte
 	// IsGraphHiding returns true if the action is graph hiding
 	IsGraphHiding() bool
+	// ExtraSigners returns the extra signers of the action
+	ExtraSigners() []Identity
 }
 
 // Output models an output of an action
@@ -71,4 +73,6 @@ type TransferAction interface {
 	IsGraphHiding() bool
 	// GetMetadata returns the action's metadata
 	GetMetadata() map[string][]byte
+	// ExtraSigners returns the extra signers of the action
+	ExtraSigners() []Identity
 }
