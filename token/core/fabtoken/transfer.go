@@ -107,7 +107,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		outputAuditInfos = append(outputAuditInfos, auditInfo...)
 	}
 
-	var senderAuditInfos [][]byte
+	senderAuditInfos := make([][]byte, len(inputTokens))
 	for _, t := range inputTokens {
 		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner, ws)
 		if err != nil {
@@ -116,7 +116,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		senderAuditInfos = append(senderAuditInfos, auditInfo...)
 	}
 
-	var receiverAuditInfos [][]byte
+	receiverAuditInfos := make([][]byte, len(receivers))
 	for _, receiver := range receivers {
 		if len(receiver) == 0 {
 			receiverAuditInfos = append(receiverAuditInfos, []byte{})

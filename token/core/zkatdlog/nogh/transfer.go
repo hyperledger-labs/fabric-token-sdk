@@ -141,7 +141,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	ws := s.WalletService
 
 	// prepare metadata
-	var outputsMetadataRaw [][]byte
+	outputsMetadataRaw := make([][]byte, len(outputMetadata))
 	for _, information := range outputMetadata {
 		raw, err := information.Serialize()
 		if err != nil {
@@ -150,7 +150,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		outputsMetadataRaw = append(outputsMetadataRaw, raw)
 	}
 	// audit info for receivers
-	var receiverAuditInfos [][]byte
+	receiverAuditInfos := make([][]byte, len(receivers))
 	for _, receiver := range receivers {
 		if len(receiver) == 0 {
 			receiverAuditInfos = append(receiverAuditInfos, []byte{})
@@ -164,7 +164,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	}
 
 	// audit info for senders
-	var senderAuditInfos [][]byte
+	senderAuditInfos := make([][]byte, len(tokens))
 	for i, t := range tokens {
 		auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(t.Owner, ws)
 		if err != nil {

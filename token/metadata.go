@@ -60,21 +60,20 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "failed getting enrollment ID")
 			}
-			var OutputsMetadata []byte
-			var Receivers Identity
-			var ReceiverAuditInfos []byte
+			var outputMetadata []byte
+			receivers := issue.Receivers[i]
+			var receiverAuditInfos []byte
 
 			if search(eIDs, recipientEID) != -1 {
-				OutputsMetadata = issue.OutputsMetadata[i]
-				Receivers = issue.Receivers[i]
-				ReceiverAuditInfos = issue.ReceiversAuditInfos[i]
+				outputMetadata = issue.OutputsMetadata[i]
+				receiverAuditInfos = issue.ReceiversAuditInfos[i]
 			} else {
 				m.Logger.Debugf("skipping issue for [%s]", recipientEID)
 			}
 
-			issueRes.OutputsMetadata = append(issueRes.OutputsMetadata, OutputsMetadata)
-			issueRes.Receivers = append(issueRes.Receivers, Receivers)
-			issueRes.ReceiversAuditInfos = append(issueRes.ReceiversAuditInfos, ReceiverAuditInfos)
+			issueRes.OutputsMetadata = append(issueRes.OutputsMetadata, outputMetadata)
+			issueRes.Receivers = append(issueRes.Receivers, receivers)
+			issueRes.ReceiversAuditInfos = append(issueRes.ReceiversAuditInfos, receiverAuditInfos)
 		}
 
 		res.TokenRequestMetadata.Issues = append(res.TokenRequestMetadata.Issues, issueRes)
@@ -96,7 +95,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			}
 			var outputMetadata []byte
 			var outputAuditInfo []byte
-			var receivers Identity
+			receiver := transfer.Receivers[i]
 			var receiverIsSender bool
 			var receiverAuditInfos []byte
 
@@ -106,7 +105,6 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 				outputMetadata = transfer.OutputsMetadata[i]
 				outputAuditInfo = transfer.OutputsAuditInfo[i]
 
-				receivers = transfer.Receivers[i]
 				receiverIsSender = transfer.ReceiverIsSender[i]
 				receiverAuditInfos = transfer.ReceiverAuditInfos[i]
 				skip = false
@@ -117,7 +115,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			transferRes.OutputsMetadata = append(transferRes.OutputsMetadata, outputMetadata)
 			transferRes.OutputsAuditInfo = append(transferRes.OutputsAuditInfo, outputAuditInfo)
 
-			transferRes.Receivers = append(transferRes.Receivers, receivers)
+			transferRes.Receivers = append(transferRes.Receivers, receiver)
 			transferRes.ReceiverIsSender = append(transferRes.ReceiverIsSender, receiverIsSender)
 			transferRes.ReceiverAuditInfos = append(transferRes.ReceiverAuditInfos, receiverAuditInfos)
 		}
