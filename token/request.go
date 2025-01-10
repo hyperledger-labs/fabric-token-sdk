@@ -491,6 +491,9 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 			return nil, 0, errors.Errorf("invalid issuer [%d,%d]", i, j)
 		}
 		for _, recipient := range recipients {
+			if !recipient.Equal(issueMeta.Receivers[recipientCounter]) {
+				return nil, 0, errors.Errorf("invalid recipient [%d,%d]", i, j)
+			}
 			eID, rID, err := tms.WalletService().GetEIDAndRH(recipient, issueMeta.ReceiversAuditInfos[recipientCounter])
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
@@ -529,6 +532,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 	}
 	precision := tms.PublicParamsManager().PublicParameters().Precision()
 	var outputs []*Output
+	recipientCounter := 0
 	for j, output := range transferAction.GetOutputs() {
 		if output == nil {
 			return nil, 0, errors.Errorf("%d^th output in transfer action [%d] is nil", j, i)
@@ -548,46 +552,51 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			continue
 		}
 
-		tok, issuer, _, tokType, err := tms.TokensService().Deobfuscate(raw, transferMeta.OutputsMetadata[j])
+		tok, issuer, recipients, tokType, err := tms.TokensService().Deobfuscate(raw, transferMeta.OutputsMetadata[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 		}
-		var eID string
-		var rID string
-		var receiverAuditInfo []byte
-		if len(tok.Owner) != 0 {
-			receiverAuditInfo = transferMeta.ReceiverAuditInfos[j]
-			eID, rID, err = tms.WalletService().GetEIDAndRH(transferMeta.Receivers[j], receiverAuditInfo)
-			if err != nil {
-				return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
-			}
-		}
 
-		q, err := token.ToQuantity(tok.Quantity, precision)
-		if err != nil {
-			return nil, 0, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
+		for _, recipient := range recipients {
+			if !recipient.Equal(transferMeta.Receivers[recipientCounter]) {
+				return nil, 0, errors.Errorf("invalid recipient [%d,%d]", i, j)
+			}
+			var eID string
+			var rID string
+			var receiverAuditInfo []byte
+			var ledgerOutput []byte
+			if len(tok.Owner) != 0 {
+				receiverAuditInfo = transferMeta.ReceiverAuditInfos[recipientCounter]
+				eID, rID, err = tms.WalletService().GetEIDAndRH(recipient, receiverAuditInfo)
+				if err != nil {
+					return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, recipientCounter)
+				}
+				ledgerOutput = raw
+			}
+
+			q, err := token.ToQuantity(tok.Quantity, precision)
+			if err != nil {
+				return nil, 0, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, recipientCounter)
+			}
+			r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
+			outputs = append(outputs, &Output{
+				Token:                *tok,
+				ActionIndex:          i,
+				Index:                counter,
+				Owner:                tok.Owner,
+				OwnerAuditInfo:       receiverAuditInfo,
+				EnrollmentID:         eID,
+				RevocationHandler:    rID,
+				Type:                 tok.Type,
+				Quantity:             q,
+				LedgerOutput:         ledgerOutput,
+				LedgerOutputFormat:   tokType,
+				LedgerOutputMetadata: transferMeta.OutputsMetadata[j],
+				Issuer:               issuer,
+			})
+			counter++
+			recipientCounter++
 		}
-		var ledgerOutput []byte
-		if !output.IsRedeem() {
-			ledgerOutput = raw
-		}
-		r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
-		outputs = append(outputs, &Output{
-			Token:                *tok,
-			ActionIndex:          i,
-			Index:                counter,
-			Owner:                tok.Owner,
-			OwnerAuditInfo:       receiverAuditInfo,
-			EnrollmentID:         eID,
-			RevocationHandler:    rID,
-			Type:                 tok.Type,
-			Quantity:             q,
-			LedgerOutput:         ledgerOutput,
-			LedgerOutputFormat:   tokType,
-			LedgerOutputMetadata: transferMeta.OutputsMetadata[j],
-			Issuer:               issuer,
-		})
-		counter++
 	}
 
 	return outputs, counter, nil

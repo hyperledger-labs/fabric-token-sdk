@@ -108,8 +108,8 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		values = append(values, q.ToBigInt().Uint64())
 		owners = append(owners, output.Owner)
 		if len(output.Owner) == 0 { // redeem
-			receivers = append(receivers, output.Owner)
-			outputAuditInfos = append(outputAuditInfos, []byte{})
+			// receivers = append(receivers, output.Owner)
+			// outputAuditInfos = append(outputAuditInfos, []byte{})
 			continue
 		}
 		recipients, err := s.IdentityDeserializer.Recipients(output.Owner)

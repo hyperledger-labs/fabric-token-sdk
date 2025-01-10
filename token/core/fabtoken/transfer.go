@@ -91,8 +91,8 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	var outputAuditInfos [][]byte
 	for _, output := range outs {
 		if len(output.Owner) == 0 { // redeem
-			receivers = append(receivers, output.Owner)
-			outputAuditInfos = append(outputAuditInfos, []byte{})
+			// receivers = append(receivers, output.Owner)
+			// outputAuditInfos = append(outputAuditInfos, []byte{})
 			continue
 		}
 		recipients, err := s.Deserializer.Recipients(output.Owner)
