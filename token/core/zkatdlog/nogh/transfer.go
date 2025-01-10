@@ -181,7 +181,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		return nil, nil, errors.Wrapf(err, "failed getting serialized outputs")
 	}
 
-	receiverIsSender := make([]bool, 0, len(receivers))
+	receiverIsSender := make([]bool, len(receivers))
 	for i, receiver := range receivers {
 		_, err := ws.OwnerWallet(receiver)
 		receiverIsSender[i] = err == nil

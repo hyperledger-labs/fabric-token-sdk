@@ -128,7 +128,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		}
 		receiverAuditInfos = append(receiverAuditInfos, auditInfo...)
 	}
-	receiverIsSender := make([]bool, 0, len(receivers))
+	receiverIsSender := make([]bool, len(receivers))
 	for i, receiver := range receivers {
 		_, err = ws.OwnerWallet(receiver)
 		receiverIsSender[i] = err == nil
