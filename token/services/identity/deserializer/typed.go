@@ -62,6 +62,9 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(id driver.Ident
 }
 
 func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]driver.Identity, error) {
+	if id.IsNone() {
+		return nil, nil
+	}
 	si, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
@@ -83,9 +86,9 @@ func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identi
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
 	}
-	//if recipient.Type != v.identityType {
+	// if recipient.Type != v.identityType {
 	//	return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
-	//}
+	// }
 
 	matcher, err := v.GetOwnerMatcher(ai)
 	if err != nil {

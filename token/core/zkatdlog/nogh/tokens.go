@@ -50,12 +50,9 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 	if err != nil {
 		return nil, nil, nil, "", errors.Wrapf(err, "failed to deobfuscate token")
 	}
-	var recipients []driver.Identity
-	if len(tok.Owner) != 0 {
-		recipients, err = s.IdentityDeserializer.Recipients(tok.Owner)
-		if err != nil {
-			return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
-		}
+	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	if err != nil {
+		return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
 	}
 	return tok, metadata.Issuer, recipients, s.OutputTokenFormat, nil
 }

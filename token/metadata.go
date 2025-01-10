@@ -174,10 +174,7 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	if len(m.OutputsMetadata) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.OutputsMetadata), action.NumOutputs())
 	}
-	if len(m.OutputsMetadata) != len(m.Receivers) {
-		return errors.Errorf("expected [%d] receivers but got [%d]", len(m.OutputsMetadata), len(m.Receivers))
-	}
-	if len(m.OutputsMetadata) != len(m.ReceiversAuditInfos) {
+	if len(m.Receivers) != len(m.ReceiversAuditInfos) {
 		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.OutputsMetadata), len(m.ReceiversAuditInfos))
 	}
 	return nil
@@ -207,14 +204,11 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	if len(m.OutputsMetadata) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.OutputsMetadata), action.NumOutputs())
 	}
-	if len(m.OutputsMetadata) != len(m.Receivers) {
-		return errors.Errorf("expected [%d] receivers but got [%d]", len(m.OutputsMetadata), len(m.Receivers))
+	if len(m.Receivers) != len(m.ReceiverAuditInfos) {
+		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.Receivers), len(m.ReceiverAuditInfos))
 	}
-	if len(m.OutputsMetadata) != len(m.ReceiverAuditInfos) {
-		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.OutputsMetadata), len(m.ReceiverAuditInfos))
-	}
-	if len(m.OutputsMetadata) != len(m.ReceiverIsSender) {
-		return errors.Errorf("expected [%d] receiver is sender but got [%d]", len(m.OutputsMetadata), len(m.ReceiverIsSender))
+	if len(m.Receivers) != len(m.ReceiverIsSender) {
+		return errors.Errorf("expected [%d] receiver is sender but got [%d]", len(m.Receivers), len(m.ReceiverIsSender))
 	}
 	return nil
 }
