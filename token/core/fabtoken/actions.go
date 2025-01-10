@@ -139,6 +139,10 @@ func (i *IssueAction) IsGraphHiding() bool {
 	return false
 }
 
+func (i *IssueAction) ExtraSigners() []driver.Identity {
+	return nil
+}
+
 // TransferAction encodes a fabtoken transfer
 type TransferAction struct {
 	// identifier of token to be transferred
@@ -237,4 +241,8 @@ func (t *TransferAction) Deserialize(raw []byte) error {
 // GetMetadata returns the transfer action's metadata
 func (t *TransferAction) GetMetadata() map[string][]byte {
 	return t.Metadata
+}
+
+func (t *TransferAction) ExtraSigners() []driver.Identity {
+	return nil
 }

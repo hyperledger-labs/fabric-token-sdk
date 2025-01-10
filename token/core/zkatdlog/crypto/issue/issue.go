@@ -106,6 +106,10 @@ func (i *IssueAction) IsGraphHiding() bool {
 	return false
 }
 
+func (i *IssueAction) ExtraSigners() []driver.Identity {
+	return nil
+}
+
 // NewIssue instantiates an IssueAction given the passed arguments
 func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte) (*IssueAction, error) {
 	if len(owners) != len(coms) {

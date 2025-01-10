@@ -249,6 +249,10 @@ func (t *Action) GetMetadata() map[string][]byte {
 	return t.Metadata
 }
 
+func (t *Action) ExtraSigners() []driver.Identity {
+	return nil
+}
+
 func getTokenData(tokens []*token.Token) []*math.G1 {
 	tokenData := make([]*math.G1, len(tokens))
 	for i := 0; i < len(tokens); i++ {

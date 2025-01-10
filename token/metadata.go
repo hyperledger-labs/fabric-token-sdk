@@ -181,6 +181,16 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	if len(m.Receivers) != len(m.ReceiversAuditInfos) {
 		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.OutputsMetadata), len(m.ReceiversAuditInfos))
 	}
+	extraSigner := action.a.ExtraSigners()
+	if len(m.ExtraSigners) != len(extraSigner) {
+		return errors.Errorf("expected [%d] extra signers but got [%d]", len(extraSigner), len(m.ExtraSigners))
+	}
+	// check that the extra signers are the same
+	for i, signer := range extraSigner {
+		if !signer.Equal(m.ExtraSigners[i]) {
+			return errors.Errorf("expected extra signer [%s] but got [%s]", signer, m.ExtraSigners[i])
+		}
+	}
 	return nil
 }
 
@@ -213,6 +223,16 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	}
 	if len(m.Receivers) != len(m.ReceiverAuditInfos) {
 		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.Receivers), len(m.ReceiverAuditInfos))
+	}
+	extraSigner := action.a.ExtraSigners()
+	if len(m.ExtraSigners) != len(extraSigner) {
+		return errors.Errorf("expected [%d] extra signers but got [%d]", len(extraSigner), len(m.ExtraSigners))
+	}
+	// check that the extra signers are the same
+	for i, signer := range extraSigner {
+		if !signer.Equal(m.ExtraSigners[i]) {
+			return errors.Errorf("expected extra signer [%s] but got [%s]", signer, m.ExtraSigners[i])
+		}
 	}
 	return nil
 }

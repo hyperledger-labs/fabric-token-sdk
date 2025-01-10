@@ -4,11 +4,22 @@ package mock
 import (
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type TransferAction struct {
+	ExtraSignersStub        func() []identity.Identity
+	extraSignersMutex       sync.RWMutex
+	extraSignersArgsForCall []struct {
+	}
+	extraSignersReturns struct {
+		result1 []identity.Identity
+	}
+	extraSignersReturnsOnCall map[int]struct {
+		result1 []identity.Identity
+	}
 	GetInputsStub        func() []*token.ID
 	getInputsMutex       sync.RWMutex
 	getInputsArgsForCall []struct {
@@ -131,6 +142,59 @@ type TransferAction struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *TransferAction) ExtraSigners() []identity.Identity {
+	fake.extraSignersMutex.Lock()
+	ret, specificReturn := fake.extraSignersReturnsOnCall[len(fake.extraSignersArgsForCall)]
+	fake.extraSignersArgsForCall = append(fake.extraSignersArgsForCall, struct {
+	}{})
+	stub := fake.ExtraSignersStub
+	fakeReturns := fake.extraSignersReturns
+	fake.recordInvocation("ExtraSigners", []interface{}{})
+	fake.extraSignersMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *TransferAction) ExtraSignersCallCount() int {
+	fake.extraSignersMutex.RLock()
+	defer fake.extraSignersMutex.RUnlock()
+	return len(fake.extraSignersArgsForCall)
+}
+
+func (fake *TransferAction) ExtraSignersCalls(stub func() []identity.Identity) {
+	fake.extraSignersMutex.Lock()
+	defer fake.extraSignersMutex.Unlock()
+	fake.ExtraSignersStub = stub
+}
+
+func (fake *TransferAction) ExtraSignersReturns(result1 []identity.Identity) {
+	fake.extraSignersMutex.Lock()
+	defer fake.extraSignersMutex.Unlock()
+	fake.ExtraSignersStub = nil
+	fake.extraSignersReturns = struct {
+		result1 []identity.Identity
+	}{result1}
+}
+
+func (fake *TransferAction) ExtraSignersReturnsOnCall(i int, result1 []identity.Identity) {
+	fake.extraSignersMutex.Lock()
+	defer fake.extraSignersMutex.Unlock()
+	fake.ExtraSignersStub = nil
+	if fake.extraSignersReturnsOnCall == nil {
+		fake.extraSignersReturnsOnCall = make(map[int]struct {
+			result1 []identity.Identity
+		})
+	}
+	fake.extraSignersReturnsOnCall[i] = struct {
+		result1 []identity.Identity
+	}{result1}
 }
 
 func (fake *TransferAction) GetInputs() []*token.ID {
@@ -747,6 +811,8 @@ func (fake *TransferAction) SerializeOutputAtReturnsOnCall(i int, result1 []byte
 func (fake *TransferAction) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.extraSignersMutex.RLock()
+	defer fake.extraSignersMutex.RUnlock()
 	fake.getInputsMutex.RLock()
 	defer fake.getInputsMutex.RUnlock()
 	fake.getMetadataMutex.RLock()
