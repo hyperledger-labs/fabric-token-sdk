@@ -490,6 +490,10 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if !issuer.Equal(issueAction.GetIssuer()) {
 			return nil, 0, errors.Errorf("invalid issuer [%d,%d]", i, j)
 		}
+		if len(recipients) == 0 {
+			return nil, 0, errors.Errorf("missing recipients [%d,%d]", i, j)
+		}
+
 		for _, recipient := range recipients {
 			if !recipient.Equal(issueMeta.Receivers[recipientCounter]) {
 				return nil, 0, errors.Errorf("invalid recipient [%d,%d]", i, j)
@@ -555,6 +559,10 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		tok, issuer, recipients, tokType, err := tms.TokensService().Deobfuscate(raw, transferMeta.OutputsMetadata[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
+		}
+		if len(recipients) == 0 {
+			// Add an empty recipient
+			recipients = append(recipients, Identity{})
 		}
 
 		for _, recipient := range recipients {
