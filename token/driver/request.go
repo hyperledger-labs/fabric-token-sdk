@@ -64,9 +64,10 @@ type IssueMetadata struct {
 type TransferMetadata struct {
 	// TokenIDs is the list of TokenIDs spent by this action
 	TokenIDs []*token.ID
-	// Senders is the list of senders
+	// Senders is the list of senders.
+	// For each input, a sender is the input's owner
 	Senders []Identity
-	// SendersAuditInfos, for each sender we have audit info to recover the enrollment ID of the sender
+	// SendersAuditInfos, for each sender we have audit info
 	SenderAuditInfos [][]byte
 
 	// OutputsMetadata, for each output we have an OutputsMetadata entry that contains secrets to de-obfuscate the output

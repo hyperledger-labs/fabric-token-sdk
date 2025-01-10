@@ -141,7 +141,14 @@ func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byt
 }
 
 // Check validates TokenRequest against TokenRequestMetadata
-func (a *Auditor) Check(ctx context.Context, tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, inputTokens [][]*token.Token, txID string) error {
+func (a *Auditor) Check(
+	ctx context.Context,
+	tokenRequest *driver.TokenRequest,
+	tokenRequestMetadata *driver.TokenRequestMetadata,
+	inputTokens [][]*token.Token,
+	txID string,
+) error {
+	// TODO: inputTokens should be checked against the actions
 	_, span := a.tracer.Start(ctx, "auditor_check")
 	defer span.End()
 	// De-obfuscate issue requests
