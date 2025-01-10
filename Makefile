@@ -122,6 +122,7 @@ tidy:
 clean:
 	docker network prune -f
 	docker container prune -f
+	docker volume prune -f
 	rm -rf ./integration/token/fungible/dlog/cmd/
 	rm -rf ./integration/token/fungible/dlog/testdata/
 	rm -rf ./integration/token/fungible/dloghsm/cmd/
@@ -145,6 +146,7 @@ clean:
 .PHONY: clean-fabric-peer-images
 clean-fabric-peer-images:
 	docker images -a | grep "_peer_" | awk '{print $3}' | xargs docker rmi
+	docker images -a | grep "peer.org" | awk '{print $3}' | xargs docker rmi
 
 .PHONY: tokengen
 tokengen:

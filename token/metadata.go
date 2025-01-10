@@ -94,26 +94,32 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "failed getting enrollment ID")
 			}
-			var TokenInfo []byte
-			var Receivers Identity
-			var ReceiverIsSender bool
-			var ReceiverAuditInfos []byte
+			var outputMetadata []byte
+			var outputAuditInfo []byte
+			var receivers Identity
+			var receiverIsSender bool
+			var receiverAuditInfos []byte
 
 			if search(eIDs, recipientEID) != -1 {
 				m.Logger.Debugf("keeping transfer for [%s]", recipientEID)
-				TokenInfo = transfer.OutputsMetadata[i]
-				Receivers = transfer.Receivers[i]
-				ReceiverIsSender = transfer.ReceiverIsSender[i]
-				ReceiverAuditInfos = transfer.ReceiverAuditInfos[i]
+
+				outputMetadata = transfer.OutputsMetadata[i]
+				outputAuditInfo = transfer.OutputsAuditInfo[i]
+
+				receivers = transfer.Receivers[i]
+				receiverIsSender = transfer.ReceiverIsSender[i]
+				receiverAuditInfos = transfer.ReceiverAuditInfos[i]
 				skip = false
 			} else {
 				m.Logger.Debugf("skipping transfer for [%s]", recipientEID)
 			}
 
-			transferRes.Receivers = append(transferRes.Receivers, Receivers)
-			transferRes.ReceiverIsSender = append(transferRes.ReceiverIsSender, ReceiverIsSender)
-			transferRes.ReceiverAuditInfos = append(transferRes.ReceiverAuditInfos, ReceiverAuditInfos)
-			transferRes.OutputsMetadata = append(transferRes.OutputsMetadata, TokenInfo)
+			transferRes.OutputsMetadata = append(transferRes.OutputsMetadata, outputMetadata)
+			transferRes.OutputsAuditInfo = append(transferRes.OutputsAuditInfo, outputAuditInfo)
+
+			transferRes.Receivers = append(transferRes.Receivers, receivers)
+			transferRes.ReceiverIsSender = append(transferRes.ReceiverIsSender, receiverIsSender)
+			transferRes.ReceiverAuditInfos = append(transferRes.ReceiverAuditInfos, receiverAuditInfos)
 		}
 
 		// if skip = true, it means that this transfer does not contain any output for the given enrollment IDs.
@@ -208,7 +214,7 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.OutputsMetadata), action.NumOutputs())
 	}
 	if len(m.OutputsAuditInfo) != action.NumOutputs() {
-		return errors.Errorf("expected [%d] output audit info but got [%d]", len(m.OutputsAuditInfo), action.NumOutputs())
+		return errors.Errorf("expected [%d] output audit info but got [%d]", action.NumOutputs(), len(m.OutputsAuditInfo))
 	}
 	if len(m.Receivers) != len(m.ReceiverAuditInfos) {
 		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.Receivers), len(m.ReceiverAuditInfos))
