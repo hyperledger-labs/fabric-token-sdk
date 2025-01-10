@@ -20,7 +20,7 @@ import (
 
 var _ = Describe("EndToEnd", func() {
 	for _, t := range integration.AllTestTypes {
-		Describe("Updatability with Auditor ne Issuer", t.Label, func() {
+		Describe("Tokens Upgrade with Auditor ne Issuer", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, []common.TMSOpts{
 				{
 					Alias:               "dlog-32bits",
@@ -30,7 +30,7 @@ var _ = Describe("EndToEnd", func() {
 			}, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T1"), func() { fungible.TestUpdatability(ts.II, "auditor", nil, selector) })
+			It("succeeded", Label("T1"), func() { fungible.TestTokensUpgrade(ts.II, "auditor", nil, selector) })
 		})
 	}
 })

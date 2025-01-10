@@ -77,7 +77,7 @@ func (s *TokensService) SupportedTokenFormats() []token.Format {
 
 func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
 	// Here we have to check if what we get in input is already as expected.
-	// If not, we need to check if a conversion is possible.
+	// If not, we need to check if a token upgrade is possible.
 	// If not, a failure is to be returned
 	if outputFormat != s.OutputTokenFormat {
 		return nil, nil, nil, errors.Errorf("invalid token type [%s], expected [%s]", outputFormat, s.OutputTokenFormat)
@@ -99,12 +99,12 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 	return output, metadata, nil, nil
 }
 
-func (s *TokensService) GenConversionProof(ch driver.ConversionChallenge, tokens []token.LedgerToken) ([]byte, error) {
+func (s *TokensService) GenUpgradeProof(ch driver.TokenUpgradeChallenge, tokens []token.LedgerToken) ([]byte, error) {
 	// TODO: implement
 	return nil, nil
 }
 
-func (s *TokensService) CheckConversionProof(ch driver.ConversionChallenge, proof driver.ConversionProof, tokens []token.LedgerToken) (bool, error) {
+func (s *TokensService) CheckUpgradeProof(ch driver.TokenUpgradeChallenge, proof driver.TokenUpgradeProof, tokens []token.LedgerToken) (bool, error) {
 	// TODO: implement
 	return true, nil
 }
@@ -161,15 +161,15 @@ func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
 
 func (s *TokensService) ProcessTokenConversionRequest(utp *driver.TokenConversionRequest) ([]token.Type, []uint64, error) {
 	if utp == nil {
-		return nil, nil, errors.New("nil token conversion request")
+		return nil, nil, errors.New("nil token upgrade request")
 	}
 
-	ok, err := s.CheckConversionProof(utp.Challenge, utp.Proof, utp.Tokens)
+	ok, err := s.CheckUpgradeProof(utp.Challenge, utp.Proof, utp.Tokens)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to check conversion proof")
+		return nil, nil, errors.Wrap(err, "failed to check upgrade proof")
 	}
 	if !ok {
-		return nil, nil, errors.New("invalid conversion proof")
+		return nil, nil, errors.New("invalid upgrade proof")
 	}
 
 	var tokenTypes []token.Type

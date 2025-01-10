@@ -1254,12 +1254,12 @@ func CheckPrometheusMetrics(ii *integration.Infrastructure, viewName string) {
 	}
 }
 
-func Conversion(network *integration.Infrastructure, wpm *WalletManagerProvider, user *token3.NodeReference, wallet string, typ token.Type, auditor *token3.NodeReference, issuer *token3.NodeReference, expectedErrorMsgs ...string) string {
+func TokensUpgrade(network *integration.Infrastructure, wpm *WalletManagerProvider, user *token3.NodeReference, wallet string, typ token.Type, auditor *token3.NodeReference, issuer *token3.NodeReference, expectedErrorMsgs ...string) string {
 	var recipientData *token2.RecipientData
 	if wpm != nil {
 		recipientData = wpm.RecipientData(user.Id(), wallet)
 	}
-	txid, err := network.Client(user.ReplicaName()).CallView("Conversion", common.JSONMarshall(&views.Conversion{
+	txid, err := network.Client(user.ReplicaName()).CallView("TokensUpgrade", common.JSONMarshall(&views.TokensUpgrade{
 		Wallet:        wallet,
 		TokenType:     typ,
 		Issuer:        issuer.Id(),
@@ -1269,7 +1269,7 @@ func Conversion(network *integration.Infrastructure, wpm *WalletManagerProvider,
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
 		txID := common.JSONUnmarshalString(txid)
-		fmt.Printf("Conversion txID [%s]\n", txID)
+		fmt.Printf("TokensUpgrade txID [%s]\n", txID)
 		common2.CheckFinality(network, user, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
 		common2.CheckFinality(network, issuer, txID, nil, false)

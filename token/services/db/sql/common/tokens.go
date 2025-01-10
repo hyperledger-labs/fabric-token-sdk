@@ -187,7 +187,7 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 	return &UnspentTokensInWalletIterator{txs: rows}, nil
 }
 
-// UnsupportedTokensIteratorBy returns the minimum information for conversion about the tokens that are not supported
+// UnsupportedTokensIteratorBy returns the minimum information for upgrade about the tokens that are not supported
 func (db *TokenDB) UnsupportedTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (tdriver.UnsupportedTokensIterator, error) {
 	// first select all the distinct ledger types
 	includeFormats, err := db.unspendableTokenFormats(ctx, walletID, tokenType)

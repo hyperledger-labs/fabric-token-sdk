@@ -20,7 +20,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type Conversion struct {
+type TokensUpgrade struct {
 	// TMSID the token management service identifier
 	TMSID token.TMSID
 	// Wallet of the recipient of the cash to be issued
@@ -35,15 +35,15 @@ type Conversion struct {
 	NotAnonymous bool
 }
 
-type ConversionInitiatorView struct {
-	*Conversion
+type TokensUpgradeInitiatorView struct {
+	*TokensUpgrade
 }
 
-func (i *ConversionInitiatorView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("conversion_initiator_view")
+func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("upgrade_initiator_view")
 	defer span.End()
 
-	// First, the initiator selects the tokens to convert, namely those that cannot be spent.
+	// First, the initiator selects the tokens to upgrade, namely those that are unsupported.
 	tms := token.GetManagementService(context, token.WithTMSID(i.TMSID))
 	assert.NotNil(tms, "failed getting token management service for [%s]", i.TMSID)
 	w := tms.WalletManager().OwnerWallet(i.Wallet)
@@ -59,7 +59,7 @@ func (i *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 	unspendableTokens, err := collections.ReadAll(it)
 	assert.NoError(err, "failed getting tokens")
 
-	// Then, the initiator sends a conversion request to the issuer.
+	// Then, the initiator sends a upgrade request to the issuer.
 	// If the initiator has already some recipient data, it uses that directly
 	var id view.Identity
 	var session view.Session
@@ -67,9 +67,9 @@ func (i *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 		// Use the passed RecipientData.
 		// First register it locally
 		assert.NoError(w.RegisterRecipient(i.RecipientData), "failed to register remote recipient")
-		// Then request conversion
-		span.AddEvent("request_conversion_for_recipient")
-		id, session, err = ttx.RequestConversionForRecipient(
+		// Then request upgrade
+		span.AddEvent("request_upgrade_for_recipient")
+		id, session, err = ttx.RequestTokensUpgradeForRecipient(
 			context,
 			view.Identity(i.Issuer),
 			i.Wallet,
@@ -79,8 +79,8 @@ func (i *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 			token.WithTMSID(tms.ID()),
 		)
 	} else {
-		span.AddEvent("request_conversion")
-		id, session, err = ttx.RequestConversion(
+		span.AddEvent("request_upgrade")
+		id, session, err = ttx.RequestTokensUpgrade(
 			context,
 			view.Identity(i.Issuer),
 			i.Wallet,
@@ -89,16 +89,16 @@ func (i *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 			token.WithTMSID(tms.ID()),
 		)
 	}
-	assert.NoError(err, "failed to send conversion request")
+	assert.NoError(err, "failed to send upgrade request")
 
-	// Request conversion
+	// Request upgrade
 
 	// At this point we have an inversion of roles.
 	// The initiator becomes a responder.
 	// This is a trick to the reuse the same API independently of the role a party plays.
 	return context.RunView(nil, view.AsResponder(session), view.WithViewCall(
 		func(context view.Context) (interface{}, error) {
-			span := context.StartSpan("conversion_respond_view")
+			span := context.StartSpan("upgrade_respond_view")
 			defer span.End()
 			// At some point, the recipient receives the token transaction that in the meantime has been assembled
 			tx, err := ttx.ReceiveTransaction(context)
@@ -118,7 +118,7 @@ func (i *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 			// If everything is fine, the recipient accepts and sends back her signature.
 			// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
 			// This depends on the driver implementation.
-			span.AddEvent("accept_conversion")
+			span.AddEvent("accept_upgrade")
 			_, err = context.RunView(ttx.NewAcceptView(tx))
 			assert.NoError(err, "failed to accept new tokens")
 
@@ -132,26 +132,26 @@ func (i *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 	))
 }
 
-type ConversionInitiatorViewFactory struct{}
+type TokensUpgradeInitiatorViewFactory struct{}
 
-func (p *ConversionInitiatorViewFactory) NewView(in []byte) (view.View, error) {
-	f := &ConversionInitiatorView{Conversion: &Conversion{}}
-	err := json.Unmarshal(in, f.Conversion)
+func (p *TokensUpgradeInitiatorViewFactory) NewView(in []byte) (view.View, error) {
+	f := &TokensUpgradeInitiatorView{TokensUpgrade: &TokensUpgrade{}}
+	err := json.Unmarshal(in, f.TokensUpgrade)
 	assert.NoError(err, "failed unmarshalling input")
 
 	return f, nil
 }
 
-type ConversionResponderView struct {
+type TokensUpgradeResponderView struct {
 	Auditor string
 }
 
-func (p *ConversionResponderView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("conversion_responder_view")
+func (p *TokensUpgradeResponderView) Call(context view.Context) (interface{}, error) {
+	span := context.StartSpan("upgrade_responder_view")
 	defer span.End()
-	// First the issuer receives the conversion request
-	conversionRequest, err := ttx.ReceiveConversionRequest(context)
-	assert.NoError(err, "failed to receive conversion request")
+	// First the issuer receives the upgrade request
+	upgradeRequest, err := ttx.ReceiveTokensUpgradeRequest(context)
+	assert.NoError(err, "failed to receive upgrade request")
 
 	// Now we have an inversion of roles. The issuer becomes an initiator.
 	// This is a trick to reuse the code used in IssueCashView
@@ -160,7 +160,7 @@ func (p *ConversionResponderView) Call(context view.Context) (interface{}, error
 		// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
 		// have been issued already including the current request.
 		// No check is performed for other types.
-		wallet := token.GetManagementService(context, token.WithTMSID(conversionRequest.TMSID)).WalletManager().IssuerWallet("")
+		wallet := token.GetManagementService(context, token.WithTMSID(upgradeRequest.TMSID)).WalletManager().IssuerWallet("")
 		assert.NotNil(wallet, "issuer wallet not found")
 
 		// At this point, the issuer is ready to prepare the token transaction.
@@ -173,21 +173,21 @@ func (p *ConversionResponderView) Call(context view.Context) (interface{}, error
 			auditorID = p.Auditor
 		}
 		auditor := view2.GetIdentityProvider(context).Identity(auditorID)
-		if !conversionRequest.NotAnonymous {
+		if !upgradeRequest.NotAnonymous {
 			// The issuer creates an anonymous transaction (for Fabric, this means that the resulting transaction will be signed using idemix),
-			tx, err = ttx.NewAnonymousTransaction(context, ttx.WithAuditor(auditor), ttx.WithTMSID(conversionRequest.TMSID))
+			tx, err = ttx.NewAnonymousTransaction(context, ttx.WithAuditor(auditor), ttx.WithTMSID(upgradeRequest.TMSID))
 		} else {
 			// The issuer creates a nominal transaction using the default identity
-			tx, err = ttx.NewTransaction(context, nil, ttx.WithAuditor(auditor), ttx.WithTMSID(conversionRequest.TMSID))
+			tx, err = ttx.NewTransaction(context, nil, ttx.WithAuditor(auditor), ttx.WithTMSID(upgradeRequest.TMSID))
 		}
 		assert.NoError(err, "failed creating issue transaction")
 
 		// The issuer adds a new issue operation to the transaction following the instruction received
-		err = tx.Convert(
+		err = tx.Upgrade(
 			wallet,
-			conversionRequest.RecipientData.Identity,
-			conversionRequest.Tokens,
-			conversionRequest.Proof,
+			upgradeRequest.RecipientData.Identity,
+			upgradeRequest.Tokens,
+			upgradeRequest.Proof,
 		)
 		assert.NoError(err, "failed adding new issued token")
 
