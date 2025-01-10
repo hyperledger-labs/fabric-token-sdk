@@ -142,7 +142,6 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		OutputsAuditInfo:   outputAuditInfos,
 		Receivers:          receivers,
 		ReceiverAuditInfos: receiverAuditInfos,
-		ReceiverIsSender:   receiverIsSender,
 	}
 
 	s.Logger.Debugf("Transfer metadata: [out:%d, rec:%d]", len(metadata.OutputsMetadata), len(metadata.Receivers))

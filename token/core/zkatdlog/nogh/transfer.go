@@ -197,7 +197,6 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		OutputsAuditInfo:   outputAuditInfos,
 		Receivers:          receivers,
 		ReceiverAuditInfos: receiverAuditInfos,
-		ReceiverIsSender:   receiverIsSender,
 	}
 
 	return zkTransfer, metadata, nil

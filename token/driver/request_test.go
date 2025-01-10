@@ -88,7 +88,6 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("receiver1"),
 					[]byte("receiver2"),
 				},
-				ReceiverIsSender: []bool{true, false},
 				ReceiverAuditInfos: [][]byte{
 					[]byte("receiver_audit_info1"),
 					[]byte("receiver_audit_info2"),

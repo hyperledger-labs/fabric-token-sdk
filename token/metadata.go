@@ -96,7 +96,6 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			var outputMetadata []byte
 			var outputAuditInfo []byte
 			receiver := transfer.Receivers[i]
-			var receiverIsSender bool
 			var receiverAuditInfos []byte
 
 			if search(eIDs, recipientEID) != -1 {
@@ -105,7 +104,6 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 				outputMetadata = transfer.OutputsMetadata[i]
 				outputAuditInfo = transfer.OutputsAuditInfo[i]
 
-				receiverIsSender = transfer.ReceiverIsSender[i]
 				receiverAuditInfos = transfer.ReceiverAuditInfos[i]
 				skip = false
 			} else {
@@ -116,7 +114,6 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			transferRes.OutputsAuditInfo = append(transferRes.OutputsAuditInfo, outputAuditInfo)
 
 			transferRes.Receivers = append(transferRes.Receivers, receiver)
-			transferRes.ReceiverIsSender = append(transferRes.ReceiverIsSender, receiverIsSender)
 			transferRes.ReceiverAuditInfos = append(transferRes.ReceiverAuditInfos, receiverAuditInfos)
 		}
 
@@ -216,9 +213,6 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	}
 	if len(m.Receivers) != len(m.ReceiverAuditInfos) {
 		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.Receivers), len(m.ReceiverAuditInfos))
-	}
-	if len(m.Receivers) != len(m.ReceiverIsSender) {
-		return errors.Errorf("expected [%d] receiver is sender but got [%d]", len(m.Receivers), len(m.ReceiverIsSender))
 	}
 	return nil
 }
