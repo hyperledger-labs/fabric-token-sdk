@@ -107,7 +107,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		outputAuditInfos = append(outputAuditInfos, auditInfo...)
 	}
 
-	senderAuditInfos := make([][]byte, len(inputTokens))
+	senderAuditInfos := make([][]byte, 0, len(inputTokens))
 	for _, t := range inputTokens {
 		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner, ws)
 		if err != nil {
@@ -116,7 +116,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		senderAuditInfos = append(senderAuditInfos, auditInfo...)
 	}
 
-	receiverAuditInfos := make([][]byte, len(receivers))
+	receiverAuditInfos := make([][]byte, 0, len(receivers))
 	for _, receiver := range receivers {
 		if len(receiver) == 0 {
 			receiverAuditInfos = append(receiverAuditInfos, []byte{})
@@ -128,7 +128,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		}
 		receiverAuditInfos = append(receiverAuditInfos, auditInfo...)
 	}
-	receiverIsSender := make([]bool, len(receivers))
+	receiverIsSender := make([]bool, 0, len(receivers))
 	for i, receiver := range receivers {
 		_, err = ws.OwnerWallet(receiver)
 		receiverIsSender[i] = err == nil

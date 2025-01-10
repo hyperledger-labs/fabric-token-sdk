@@ -141,7 +141,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	ws := s.WalletService
 
 	// prepare metadata
-	outputsMetadataRaw := make([][]byte, len(outputMetadata))
+	outputsMetadataRaw := make([][]byte, 0, len(outputMetadata))
 	for _, information := range outputMetadata {
 		raw, err := information.Serialize()
 		if err != nil {
@@ -150,7 +150,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		outputsMetadataRaw = append(outputsMetadataRaw, raw)
 	}
 	// audit info for receivers
-	receiverAuditInfos := make([][]byte, len(receivers))
+	receiverAuditInfos := make([][]byte, 0, len(receivers))
 	for _, receiver := range receivers {
 		if len(receiver) == 0 {
 			receiverAuditInfos = append(receiverAuditInfos, []byte{})
@@ -164,7 +164,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	}
 
 	// audit info for senders
-	senderAuditInfos := make([][]byte, len(tokens))
+	senderAuditInfos := make([][]byte, 0, len(tokens))
 	for i, t := range tokens {
 		auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(t.Owner, ws)
 		if err != nil {
@@ -181,7 +181,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		return nil, nil, errors.Wrapf(err, "failed getting serialized outputs")
 	}
 
-	receiverIsSender := make([]bool, len(receivers))
+	receiverIsSender := make([]bool, 0, len(receivers))
 	for i, receiver := range receivers {
 		_, err := ws.OwnerWallet(receiver)
 		receiverIsSender[i] = err == nil
