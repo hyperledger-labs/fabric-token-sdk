@@ -262,7 +262,7 @@ func assertEmptyIssueMetadata(t *testing.T, original, filtered *driver.IssueMeta
 	}
 	// assert that the receivers are empty
 	for i := 0; i < len(original.Receivers); i++ {
-		assert.Empty(t, filtered.Receivers[i])
+		assert.Equal(t, original.Receivers[i], filtered.Receivers[i])
 	}
 	// assert that the receivers audit infos are empty
 	for i := 0; i < len(original.ReceiversAuditInfos); i++ {
@@ -287,7 +287,7 @@ func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.Transf
 	}
 	// assert each receiver is empty
 	for i := 0; i < len(original.Receivers); i++ {
-		assert.Nil(t, filtered.Receivers[i])
+		assert.NotNil(t, filtered.Receivers[i])
 	}
 	// assert each receiver audit info is empty
 	for i := 0; i < len(original.ReceiverAuditInfos); i++ {
