@@ -970,17 +970,15 @@ func (r *Request) BindTo(binder Binder, identity Identity) error {
 
 		// receivers
 		receivers := r.Metadata.Transfers[i].Receivers
-		for j, b := range r.Metadata.Transfers[i].ReceiverIsSender {
-			if b {
-				if w := r.TokenService.WalletManager().Wallet(receivers[j]); w != nil {
-					// this is me, skip
-					continue
-				}
+		for j := range receivers {
+			if w := r.TokenService.WalletManager().Wallet(receivers[j]); w != nil {
+				// this is me, skip
+				continue
+			}
 
-				r.TokenService.logger.Debugf("bind receiver as sender [%s] to [%s]", receivers[j], identity)
-				if err := binder.Bind(identity, receivers[j]); err != nil {
-					return errors.Wrap(err, "failed binding receiver identities")
-				}
+			r.TokenService.logger.Debugf("bind receiver as sender [%s] to [%s]", receivers[j], identity)
+			if err := binder.Bind(identity, receivers[j]); err != nil {
+				return errors.Wrap(err, "failed binding receiver identities")
 			}
 		}
 	}

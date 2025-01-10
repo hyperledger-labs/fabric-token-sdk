@@ -45,7 +45,6 @@ func testFilterByCase0(t *testing.T) {
 		OutputsAuditInfo:   [][]byte{[]byte("Bob's output's token audit info")},
 		Receivers:          []token.Identity{token.Identity("Bob")},
 		ReceiverAuditInfos: [][]byte{[]byte("Bob")},
-		ReceiverIsSender:   []bool{false},
 	}
 	// From Charlie to Dave
 	charlieToDave := driver.TransferMetadata{
@@ -61,7 +60,6 @@ func testFilterByCase0(t *testing.T) {
 		OutputsAuditInfo:   [][]byte{[]byte("Dave's output's token audit info")},
 		Receivers:          []token.Identity{token.Identity("Dave")},
 		ReceiverAuditInfos: [][]byte{[]byte("Dave")},
-		ReceiverIsSender:   []bool{false},
 	}
 	ws := &mock.WalletService{}
 	ws.GetEnrollmentIDReturnsOnCall(0, "Bob", nil)
@@ -280,7 +278,6 @@ func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.Transf
 	assert.Len(t, original.OutputsMetadata, len(filtered.OutputsMetadata))
 	assert.Len(t, original.Receivers, len(filtered.Receivers))
 	assert.Len(t, original.ReceiverAuditInfos, len(filtered.ReceiverAuditInfos))
-	assert.Len(t, original.ReceiverIsSender, len(filtered.ReceiverIsSender))
 	// assert each token info is empty
 	for i := 0; i < len(original.OutputsMetadata); i++ {
 		assert.Nil(t, filtered.OutputsMetadata[i])
@@ -292,10 +289,6 @@ func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.Transf
 	// assert each receiver audit info is empty
 	for i := 0; i < len(original.ReceiverAuditInfos); i++ {
 		assert.Nil(t, filtered.ReceiverAuditInfos[i])
-	}
-	// assert each receiver is sender is false
-	for i := 0; i < len(original.ReceiverIsSender); i++ {
-		assert.False(t, filtered.ReceiverIsSender[i])
 	}
 }
 

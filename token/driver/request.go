@@ -77,8 +77,6 @@ type TransferMetadata struct {
 	Receivers []Identity
 	// ReceiversAuditInfos, for each receiver we have audit info to recover the enrollment ID of the receiver
 	ReceiverAuditInfos [][]byte
-	// ReceiverIsSender indicates if the receiver is a sender in this very same action
-	ReceiverIsSender []bool
 
 	// ExtraSigners is the list of extra identities that are not part of the transfer action per se
 	// but needs to sign the request
@@ -124,7 +122,6 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 			Senders:            transfer.Senders,
 			SenderAuditInfos:   transfer.SenderAuditInfos,
 			Receivers:          transfer.Receivers,
-			ReceiverIsSender:   transfer.ReceiverIsSender,
 			ReceiverAuditInfos: transfer.ReceiverAuditInfos,
 			ExtraSigners:       transfer.ExtraSigners,
 		}
@@ -161,7 +158,6 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 			Senders:            transfer.Senders,
 			SenderAuditInfos:   transfer.SenderAuditInfos,
 			Receivers:          transfer.Receivers,
-			ReceiverIsSender:   transfer.ReceiverIsSender,
 			ReceiverAuditInfos: transfer.ReceiverAuditInfos,
 			ExtraSigners:       transfer.ExtraSigners,
 		}
@@ -186,7 +182,6 @@ type TransferMetadataSer struct {
 	Senders            []Identity
 	SenderAuditInfos   [][]byte
 	Receivers          []Identity
-	ReceiverIsSender   []bool
 	ReceiverAuditInfos [][]byte
 	ExtraSigners       []Identity
 }
