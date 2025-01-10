@@ -515,12 +515,12 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 
 	metadata.OutputsMetadata = marshalledInfo
 	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
-	metadata.OutputAuditInfos = make([][]byte, len(transfer.OutputTokens))
+	metadata.OutputsAuditInfo = make([][]byte, len(transfer.OutputTokens))
 	for i := 0; i < len(transfer.OutputTokens); i++ {
 		Expect(err).NotTo(HaveOccurred())
 		metadata.ReceiverAuditInfos[i], err = auditInfo.Bytes()
 		Expect(err).NotTo(HaveOccurred())
-		metadata.OutputAuditInfos[i] = metadata.ReceiverAuditInfos[i]
+		metadata.OutputsAuditInfo[i] = metadata.ReceiverAuditInfos[i]
 	}
 
 	tokns := make([][]*tokn.Token, 1)

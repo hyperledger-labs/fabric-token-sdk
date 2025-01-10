@@ -168,6 +168,9 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	if action == nil {
 		return errors.New("can't match issue metadata to issue action: nil issue action")
 	}
+	if m.Issuer.IsNone() {
+		return errors.New("expected issuer but got none")
+	}
 	if len(m.OutputsMetadata) != 1 {
 		return errors.Errorf("expected one output, got [%d]", len(m.OutputsMetadata))
 	}
@@ -203,6 +206,9 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	}
 	if len(m.OutputsMetadata) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.OutputsMetadata), action.NumOutputs())
+	}
+	if len(m.OutputsAuditInfo) != action.NumOutputs() {
+		return errors.Errorf("expected [%d] output audit info but got [%d]", len(m.OutputsAuditInfo), action.NumOutputs())
 	}
 	if len(m.Receivers) != len(m.ReceiverAuditInfos) {
 		return errors.Errorf("expected [%d] receiver audit infos but got [%d]", len(m.Receivers), len(m.ReceiverAuditInfos))
