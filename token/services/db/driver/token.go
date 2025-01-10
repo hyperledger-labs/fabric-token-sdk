@@ -153,8 +153,8 @@ type TokenDB interface {
 	UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (driver.UnspentTokensIterator, error)
 	// SpendableTokensIteratorBy returns an iterator over all tokens owned solely by the passed wallet identifier and of a given type
 	SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token.Type) (driver.SpendableTokensIterator, error)
-	// UnspendableTokensIteratorBy returns the minimum information for conversion about the tokens that cannot be spent
-	UnspendableTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (driver.UnspendableTokensIterator, error)
+	// UnsupportedTokensIteratorBy returns the minimum information for conversion about the tokens that are not supported
+	UnsupportedTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (driver.UnsupportedTokensIterator, error)
 	// ListUnspentTokensBy returns the list of all tokens owned by the passed identifier of a given type
 	ListUnspentTokensBy(walletID string, typ token.Type) (*token.UnspentTokens, error)
 	// ListUnspentTokens returns the list of all owned tokens

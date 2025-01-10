@@ -21,10 +21,6 @@ func IssueValidate(ctx *Context) error {
 		return errors.Wrapf(err, "failed validating issue action")
 	}
 
-	if len(action.Inputs) != len(action.InputTokens) {
-		return errors.Errorf("invalid number of token inputs")
-	}
-
 	commitments, err := action.GetCommitments()
 	if err != nil {
 		return errors.New("failed to verify issue")

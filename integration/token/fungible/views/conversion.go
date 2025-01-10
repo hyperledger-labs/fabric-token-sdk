@@ -54,7 +54,7 @@ func (i *ConversionInitiatorView) Call(context view.Context) (interface{}, error
 	tokens, err := tokensProvider.Tokens(tms.ID())
 	assert.NoError(err, "failed getting tokens")
 	assert.NotNil(tokens, "failed getting tokens")
-	it, err := tokens.UnspendableTokensIteratorBy(context.Context(), w.ID(), i.TokenType)
+	it, err := tokens.UnsupportedTokensIteratorBy(context.Context(), w.ID(), i.TokenType)
 	assert.NoError(err, "failed getting tokens iterator")
 	unspendableTokens, err := collections.ReadAll(it)
 	assert.NoError(err, "failed getting tokens")

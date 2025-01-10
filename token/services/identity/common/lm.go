@@ -9,6 +9,7 @@ package common
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
@@ -294,24 +295,13 @@ func (l *LocalMembership) registerLocalIdentities(configuration *driver.Identity
 func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration, keyManager KeyManager, defaultID bool) error {
 	// check for duplicates
 	name := config.ID
-	_, ok := l.localIdentitiesByName[name]
-	if ok && !keyManager.Anonymous() && len(l.targetIdentities) > 0 {
-		// is the identity in the target identities? If no, ignore it.
-		identity, _, err := keyManager.Identity(nil)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to get wallet identity from [%s]", name)
-		}
-		found := false
-		for _, id := range l.targetIdentities {
-			if id.Equal(identity) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			l.logger.Debugf("identity [%s] not in target identities, ignore it", name)
-			return nil
-		}
+	if _, ok := l.localIdentitiesByName[config.ID]; !ok || keyManager.Anonymous() || len(l.targetIdentities) == 0 {
+		l.logger.Debugf("no target identity check needed, skip it")
+	} else if identity, _, err := keyManager.Identity(nil); err != nil {
+		return err
+	} else if found := slices.ContainsFunc(l.targetIdentities, identity.Equal); !found {
+		l.logger.Debugf("identity [%s] not in target identities, ignore it", name)
+		return nil
 	}
 
 	eID := keyManager.EnrollmentID()

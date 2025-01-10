@@ -28,7 +28,7 @@ type MetaData interface {
 
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 
-type UnspendableTokensIterator = driver.UnspendableTokensIterator
+type UnspendableTokensIterator = driver.UnsupportedTokensIterator
 
 // Transaction models a token transaction
 type Transaction interface {
@@ -220,8 +220,9 @@ func (t *Tokens) SetSupportedTokenFormats(tokenTypes []token2.Format) error {
 	return t.Storage.tokenDB.SetSupportedTokenFormats(tokenTypes)
 }
 
-func (t *Tokens) UnspendableTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.UnspendableTokensIterator, error) {
-	return t.Storage.tokenDB.UnspendableTokensIteratorBy(ctx, walletID, typ)
+// UnsupportedTokensIteratorBy returns the minimum information for conversion about the tokens that are not supported
+func (t *Tokens) UnsupportedTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.UnsupportedTokensIterator, error) {
+	return t.Storage.tokenDB.UnsupportedTokensIteratorBy(ctx, walletID, typ)
 }
 
 func (t *Tokens) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {

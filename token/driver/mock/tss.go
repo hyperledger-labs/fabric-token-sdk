@@ -10,11 +10,11 @@ import (
 )
 
 type TokensService struct {
-	CheckConversionProofStub        func([]byte, []byte, []token.LedgerToken) (bool, error)
+	CheckConversionProofStub        func(driver.ConversionChallenge, driver.ConversionProof, []token.LedgerToken) (bool, error)
 	checkConversionProofMutex       sync.RWMutex
 	checkConversionProofArgsForCall []struct {
-		arg1 []byte
-		arg2 []byte
+		arg1 driver.ConversionChallenge
+		arg2 driver.ConversionProof
 		arg3 []token.LedgerToken
 	}
 	checkConversionProofReturns struct {
@@ -58,10 +58,10 @@ type TokensService struct {
 		result1 []identity.Identity
 		result2 error
 	}
-	GenConversionProofStub        func([]byte, []token.LedgerToken) ([]byte, error)
+	GenConversionProofStub        func(driver.ConversionChallenge, []token.LedgerToken) ([]byte, error)
 	genConversionProofMutex       sync.RWMutex
 	genConversionProofArgsForCall []struct {
-		arg1 []byte
+		arg1 driver.ConversionChallenge
 		arg2 []token.LedgerToken
 	}
 	genConversionProofReturns struct {
@@ -72,16 +72,16 @@ type TokensService struct {
 		result1 []byte
 		result2 error
 	}
-	NewConversionChallengeStub        func() ([]byte, error)
+	NewConversionChallengeStub        func() (driver.ConversionChallenge, error)
 	newConversionChallengeMutex       sync.RWMutex
 	newConversionChallengeArgsForCall []struct {
 	}
 	newConversionChallengeReturns struct {
-		result1 []byte
+		result1 driver.ConversionChallenge
 		result2 error
 	}
 	newConversionChallengeReturnsOnCall map[int]struct {
-		result1 []byte
+		result1 driver.ConversionChallenge
 		result2 error
 	}
 	SupportedTokenFormatsStub        func() []token.Format
@@ -98,17 +98,7 @@ type TokensService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokensService) CheckConversionProof(arg1 []byte, arg2 []byte, arg3 []token.LedgerToken) (bool, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
-	}
+func (fake *TokensService) CheckConversionProof(arg1 driver.ConversionChallenge, arg2 driver.ConversionProof, arg3 []token.LedgerToken) (bool, error) {
 	var arg3Copy []token.LedgerToken
 	if arg3 != nil {
 		arg3Copy = make([]token.LedgerToken, len(arg3))
@@ -117,13 +107,13 @@ func (fake *TokensService) CheckConversionProof(arg1 []byte, arg2 []byte, arg3 [
 	fake.checkConversionProofMutex.Lock()
 	ret, specificReturn := fake.checkConversionProofReturnsOnCall[len(fake.checkConversionProofArgsForCall)]
 	fake.checkConversionProofArgsForCall = append(fake.checkConversionProofArgsForCall, struct {
-		arg1 []byte
-		arg2 []byte
+		arg1 driver.ConversionChallenge
+		arg2 driver.ConversionProof
 		arg3 []token.LedgerToken
-	}{arg1Copy, arg2Copy, arg3Copy})
+	}{arg1, arg2, arg3Copy})
 	stub := fake.CheckConversionProofStub
 	fakeReturns := fake.checkConversionProofReturns
-	fake.recordInvocation("CheckConversionProof", []interface{}{arg1Copy, arg2Copy, arg3Copy})
+	fake.recordInvocation("CheckConversionProof", []interface{}{arg1, arg2, arg3Copy})
 	fake.checkConversionProofMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3)
@@ -140,13 +130,13 @@ func (fake *TokensService) CheckConversionProofCallCount() int {
 	return len(fake.checkConversionProofArgsForCall)
 }
 
-func (fake *TokensService) CheckConversionProofCalls(stub func([]byte, []byte, []token.LedgerToken) (bool, error)) {
+func (fake *TokensService) CheckConversionProofCalls(stub func(driver.ConversionChallenge, driver.ConversionProof, []token.LedgerToken) (bool, error)) {
 	fake.checkConversionProofMutex.Lock()
 	defer fake.checkConversionProofMutex.Unlock()
 	fake.CheckConversionProofStub = stub
 }
 
-func (fake *TokensService) CheckConversionProofArgsForCall(i int) ([]byte, []byte, []token.LedgerToken) {
+func (fake *TokensService) CheckConversionProofArgsForCall(i int) (driver.ConversionChallenge, driver.ConversionProof, []token.LedgerToken) {
 	fake.checkConversionProofMutex.RLock()
 	defer fake.checkConversionProofMutex.RUnlock()
 	argsForCall := fake.checkConversionProofArgsForCall[i]
@@ -332,12 +322,7 @@ func (fake *TokensService) RecipientsReturnsOnCall(i int, result1 []identity.Ide
 	}{result1, result2}
 }
 
-func (fake *TokensService) GenConversionProof(arg1 []byte, arg2 []token.LedgerToken) ([]byte, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
+func (fake *TokensService) GenConversionProof(arg1 driver.ConversionChallenge, arg2 []token.LedgerToken) ([]byte, error) {
 	var arg2Copy []token.LedgerToken
 	if arg2 != nil {
 		arg2Copy = make([]token.LedgerToken, len(arg2))
@@ -346,12 +331,12 @@ func (fake *TokensService) GenConversionProof(arg1 []byte, arg2 []token.LedgerTo
 	fake.genConversionProofMutex.Lock()
 	ret, specificReturn := fake.genConversionProofReturnsOnCall[len(fake.genConversionProofArgsForCall)]
 	fake.genConversionProofArgsForCall = append(fake.genConversionProofArgsForCall, struct {
-		arg1 []byte
+		arg1 driver.ConversionChallenge
 		arg2 []token.LedgerToken
-	}{arg1Copy, arg2Copy})
+	}{arg1, arg2Copy})
 	stub := fake.GenConversionProofStub
 	fakeReturns := fake.genConversionProofReturns
-	fake.recordInvocation("GenConversionProof", []interface{}{arg1Copy, arg2Copy})
+	fake.recordInvocation("GenConversionProof", []interface{}{arg1, arg2Copy})
 	fake.genConversionProofMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
@@ -368,13 +353,13 @@ func (fake *TokensService) GenConversionProofCallCount() int {
 	return len(fake.genConversionProofArgsForCall)
 }
 
-func (fake *TokensService) GenConversionProofCalls(stub func([]byte, []token.LedgerToken) ([]byte, error)) {
+func (fake *TokensService) GenConversionProofCalls(stub func(driver.ConversionChallenge, []token.LedgerToken) ([]byte, error)) {
 	fake.genConversionProofMutex.Lock()
 	defer fake.genConversionProofMutex.Unlock()
 	fake.GenConversionProofStub = stub
 }
 
-func (fake *TokensService) GenConversionProofArgsForCall(i int) ([]byte, []token.LedgerToken) {
+func (fake *TokensService) GenConversionProofArgsForCall(i int) (driver.ConversionChallenge, []token.LedgerToken) {
 	fake.genConversionProofMutex.RLock()
 	defer fake.genConversionProofMutex.RUnlock()
 	argsForCall := fake.genConversionProofArgsForCall[i]
@@ -407,7 +392,7 @@ func (fake *TokensService) GenConversionProofReturnsOnCall(i int, result1 []byte
 	}{result1, result2}
 }
 
-func (fake *TokensService) NewConversionChallenge() ([]byte, error) {
+func (fake *TokensService) NewConversionChallenge() (driver.ConversionChallenge, error) {
 	fake.newConversionChallengeMutex.Lock()
 	ret, specificReturn := fake.newConversionChallengeReturnsOnCall[len(fake.newConversionChallengeArgsForCall)]
 	fake.newConversionChallengeArgsForCall = append(fake.newConversionChallengeArgsForCall, struct {
@@ -431,34 +416,34 @@ func (fake *TokensService) NewConversionChallengeCallCount() int {
 	return len(fake.newConversionChallengeArgsForCall)
 }
 
-func (fake *TokensService) NewConversionChallengeCalls(stub func() ([]byte, error)) {
+func (fake *TokensService) NewConversionChallengeCalls(stub func() (driver.ConversionChallenge, error)) {
 	fake.newConversionChallengeMutex.Lock()
 	defer fake.newConversionChallengeMutex.Unlock()
 	fake.NewConversionChallengeStub = stub
 }
 
-func (fake *TokensService) NewConversionChallengeReturns(result1 []byte, result2 error) {
+func (fake *TokensService) NewConversionChallengeReturns(result1 driver.ConversionChallenge, result2 error) {
 	fake.newConversionChallengeMutex.Lock()
 	defer fake.newConversionChallengeMutex.Unlock()
 	fake.NewConversionChallengeStub = nil
 	fake.newConversionChallengeReturns = struct {
-		result1 []byte
+		result1 driver.ConversionChallenge
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *TokensService) NewConversionChallengeReturnsOnCall(i int, result1 []byte, result2 error) {
+func (fake *TokensService) NewConversionChallengeReturnsOnCall(i int, result1 driver.ConversionChallenge, result2 error) {
 	fake.newConversionChallengeMutex.Lock()
 	defer fake.newConversionChallengeMutex.Unlock()
 	fake.NewConversionChallengeStub = nil
 	if fake.newConversionChallengeReturnsOnCall == nil {
 		fake.newConversionChallengeReturnsOnCall = make(map[int]struct {
-			result1 []byte
+			result1 driver.ConversionChallenge
 			result2 error
 		})
 	}
 	fake.newConversionChallengeReturnsOnCall[i] = struct {
-		result1 []byte
+		result1 driver.ConversionChallenge
 		result2 error
 	}{result1, result2}
 }

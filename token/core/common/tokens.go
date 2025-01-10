@@ -19,7 +19,7 @@ func NewTokensService() *TokensService {
 	return &TokensService{}
 }
 
-func (s *TokensService) NewConversionChallenge() ([]byte, error) {
+func (s *TokensService) NewConversionChallenge() (driver.ConversionChallenge, error) {
 	// generate a 32 bytes secure random slice
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
@@ -29,10 +29,10 @@ func (s *TokensService) NewConversionChallenge() ([]byte, error) {
 	return key, nil
 }
 
-func (s *TokensService) GenConversionProof(ch []byte, tokens []token.LedgerToken) ([]byte, error) {
+func (s *TokensService) GenConversionProof(ch driver.ConversionChallenge, tokens []token.LedgerToken) ([]byte, error) {
 	return nil, nil
 }
 
-func (s *TokensService) CheckConversionProof(ch []byte, proof []byte, tokens []token.LedgerToken) (bool, error) {
+func (s *TokensService) CheckConversionProof(ch driver.ConversionChallenge, proof driver.ConversionProof, tokens []token.LedgerToken) (bool, error) {
 	return true, nil
 }

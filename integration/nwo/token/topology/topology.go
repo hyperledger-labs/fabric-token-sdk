@@ -59,7 +59,9 @@ type TMS struct {
 	Auditors            []string
 	Certifiers          []string
 	Issuers             []string
-	Transient           bool
+	// Transient indicates if the TMS is transient
+	// A transient TMS is not deployed on the network
+	Transient bool
 
 	TokenTopology   TokenTopology  `yaml:"-"`
 	FSCNodes        []*node.Node   `yaml:"-"`

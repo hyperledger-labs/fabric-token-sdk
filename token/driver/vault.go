@@ -42,7 +42,7 @@ type SpendableTokensIterator interface {
 	Next() (*token.UnspentTokenInWallet, error)
 }
 
-type UnspendableTokensIterator interface {
+type UnsupportedTokensIterator interface {
 	Close()
 	Next() (*token.LedgerToken, error)
 }

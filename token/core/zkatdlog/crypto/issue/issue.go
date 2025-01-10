@@ -18,14 +18,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+type ActionInput struct {
+	ID    token2.ID
+	Token []byte
+}
+
 // Action specifies an issue of one or more tokens
 type Action struct {
 	// Issuer is the identity of issuer
 	Issuer driver.Identity
-	// Inputs specify the identifiers in of the tokens to redeem
-	Inputs []*token2.ID
-	// InputTokens are the tokens to redeem
-	InputTokens [][]byte
+	// Inputs are the tokens to be redeemed by this issue action
+	Inputs []ActionInput
 	// Outputs are the newly issued tokens
 	Outputs []*token.Token `protobuf:"bytes,1,rep,name=outputs,proto3" json:"outputs,omitempty"`
 	// Proof carries the ZKP of IssueAction validity
@@ -39,11 +42,19 @@ func (i *Action) NumInputs() int {
 }
 
 func (i *Action) GetInputs() []*token2.ID {
-	return i.Inputs
+	res := make([]*token2.ID, len(i.Inputs))
+	for i, input := range i.Inputs {
+		res[i] = &input.ID
+	}
+	return res
 }
 
 func (i *Action) GetSerializedInputs() ([][]byte, error) {
-	return i.InputTokens, nil
+	res := make([][]byte, len(i.Inputs))
+	for i, input := range i.Inputs {
+		res[i] = input.Token
+	}
+	return res, nil
 }
 
 func (i *Action) GetSerialNumbers() []string {
@@ -78,8 +89,8 @@ func (i *Action) NumOutputs() int {
 // GetOutputs returns the Outputs in IssueAction
 func (i *Action) GetOutputs() []driver.Output {
 	res := make([]driver.Output, len(i.Outputs))
-	for i, token := range i.Outputs {
-		res[i] = token
+	for i, tok := range i.Outputs {
+		res[i] = tok
 	}
 	return res
 }
@@ -87,12 +98,12 @@ func (i *Action) GetOutputs() []driver.Output {
 // GetSerializedOutputs returns the serialization of Outputs
 func (i *Action) GetSerializedOutputs() ([][]byte, error) {
 	res := make([][]byte, len(i.Outputs))
-	for i, token := range i.Outputs {
-		if token == nil {
+	for i, tok := range i.Outputs {
+		if tok == nil {
 			return nil, errors.New("invalid issue: there is a nil output")
 		}
 		var err error
-		res[i], err = token.Serialize()
+		res[i], err = tok.Serialize()
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +133,7 @@ func (i *Action) GetCommitments() ([]*math.G1, error) {
 	return com, nil
 }
 
-// IsGraphHiding returns false, indicating that fabtoken does not hide the transaction graph
+// IsGraphHiding returns false, this driver does not hide the transaction graph
 func (i *Action) IsGraphHiding() bool {
 	return false
 }
@@ -131,14 +142,8 @@ func (i *Action) Validate() error {
 	if i.Issuer.IsNone() {
 		return errors.Errorf("issuer is not set")
 	}
-	if len(i.Inputs) != len(i.InputTokens) {
-		return errors.Errorf("number of inputs does not match number of input tokens")
-	}
-	for j, input := range i.Inputs {
-		if input == nil {
-			return errors.Errorf("nil input in issue action")
-		}
-		if i.InputTokens[j] == nil {
+	for _, input := range i.Inputs {
+		if len(input.Token) == 0 {
 			return errors.Errorf("nil input token in issue action")
 		}
 	}

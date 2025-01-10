@@ -136,15 +136,16 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	}
 
 	// prepare inputs to redeem, if any
-	if opts != nil && opts.TokenConversionRequest != nil {
+	var tokenIDs []*token.ID
+	if opts != nil && opts.TokenConversionRequest != nil && len(opts.TokenConversionRequest.Tokens) > 0 {
 		tokens := opts.TokenConversionRequest.Tokens
-		if len(tokens) != 0 {
-			action.Inputs = make([]*token.ID, len(tokens))
-			action.InputTokens = make([][]byte, len(tokens))
-			for i, tok := range tokens {
-				action.Inputs[i] = &tok.ID
-				action.InputTokens[i] = tok.Token
+		action.Inputs = make([]issue.ActionInput, len(tokens))
+		for i, tok := range tokens {
+			action.Inputs[i] = issue.ActionInput{
+				ID:    tok.ID,
+				Token: tok.Token,
 			}
+			tokenIDs = append(tokenIDs, &tok.ID)
 		}
 	}
 
@@ -152,7 +153,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 
 	meta := &driver.IssueMetadata{
 		Issuer:              issuerSerializedIdentity,
-		TokenIDs:            action.Inputs,
+		TokenIDs:            tokenIDs,
 		Outputs:             outputs,
 		OutputsMetadata:     outputsMetadata,
 		Receivers:           []driver.Identity{driver.Identity(owners[0])},

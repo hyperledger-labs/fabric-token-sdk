@@ -99,12 +99,12 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 	return output, metadata, nil, nil
 }
 
-func (s *TokensService) GenConversionProof(ch []byte, tokens []token.LedgerToken) ([]byte, error) {
+func (s *TokensService) GenConversionProof(ch driver.ConversionChallenge, tokens []token.LedgerToken) ([]byte, error) {
 	// TODO: implement
 	return nil, nil
 }
 
-func (s *TokensService) CheckConversionProof(ch []byte, proof []byte, tokens []token.LedgerToken) (bool, error) {
+func (s *TokensService) CheckConversionProof(ch driver.ConversionChallenge, proof driver.ConversionProof, tokens []token.LedgerToken) (bool, error) {
 	// TODO: implement
 	return true, nil
 }
@@ -164,7 +164,7 @@ func (s *TokensService) ProcessTokenConversionRequest(utp *driver.TokenConversio
 		return nil, nil, errors.New("nil token conversion request")
 	}
 
-	ok, err := s.CheckConversionProof(utp.Proof, utp.Proof, utp.Tokens)
+	ok, err := s.CheckConversionProof(utp.Challenge, utp.Proof, utp.Tokens)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to check conversion proof")
 	}
