@@ -9,6 +9,7 @@ package nogh
 import (
 	errors2 "errors"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	fabtoken2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
@@ -20,6 +21,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
+
+var precisions = map[token.Format]uint64{
+	utils.MustGet(fabtoken2.SupportedTokenFormat(16)): 16,
+	utils.MustGet(fabtoken2.SupportedTokenFormat(32)): 32,
+	utils.MustGet(fabtoken2.SupportedTokenFormat(64)): 64,
+}
 
 type TokensService struct {
 	*common.TokensService
@@ -172,44 +179,18 @@ func (s *TokensService) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequ
 		return nil, nil, errors.New("invalid upgrade proof")
 	}
 
-	var tokenTypes []token.Type
-	var tokenValue []uint64
+	tokenTypes := make([]token.Type, len(utp.Tokens))
+	tokenValue := make([]uint64, len(utp.Tokens))
 
-	// which types do we recognize? Any other type is not convertable
-	fabtoken16Type, err := fabtoken2.SupportedTokenFormat(16)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get fabtoken type")
-	}
-	fabtoken32Type, err := fabtoken2.SupportedTokenFormat(32)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get fabtoken type")
-	}
-	fabtoken64Type, err := fabtoken2.SupportedTokenFormat(64)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get fabtoken type")
-	}
-
-	for _, tok := range utp.Tokens {
-		var tokenType token.Type
-		var q uint64
-		var err error
-
-		switch tok.Format {
-		case fabtoken16Type:
-			tokenType, q, err = s.checkFabtokenToken(&tok, 16)
-		case fabtoken32Type:
-			tokenType, q, err = s.checkFabtokenToken(&tok, 32)
-		case fabtoken64Type:
-			tokenType, q, err = s.checkFabtokenToken(&tok, 64)
-		default:
+	for i, tok := range utp.Tokens {
+		precision, ok := precisions[tok.Format]
+		if !ok {
 			return nil, nil, errors.Errorf("unsupported token format [%s]", tok.Format)
 		}
+		tokenTypes[i], tokenValue[i], err = s.checkFabtokenToken(&tok, precision)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to check unspent tokens")
 		}
-
-		tokenTypes = append(tokenTypes, tokenType)
-		tokenValue = append(tokenValue, q)
 	}
 	return tokenTypes, tokenValue, nil
 }
