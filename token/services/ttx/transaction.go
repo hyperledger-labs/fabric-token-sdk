@@ -232,7 +232,7 @@ func (t *Transaction) Upgrade(
 	proof []byte,
 	opts ...token.IssueOption,
 ) error {
-	_, err := t.TokenRequest.Convert(t.Context, wallet, receiver, tokens, proof, opts...)
+	_, err := t.TokenRequest.Upgrade(t.Context, wallet, receiver, tokens, proof, opts...)
 	return err
 }
 
