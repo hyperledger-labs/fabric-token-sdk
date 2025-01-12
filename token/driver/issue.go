@@ -12,22 +12,22 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// TokenConversionRequest is a request to convert tokens
-type TokenConversionRequest struct {
+// TokenUpgradeRequest is a request to convert tokens
+type TokenUpgradeRequest struct {
 	// Challenge is a challenge to be solved by the prover
-	Challenge TokenUpgradeChallenge
+	Challenge TokensUpgradeChallenge
 	// Tokens is a list of tokens to be converted
 	Tokens []token.LedgerToken
 	// Proof is a proof that the prover has solved the challenge
-	Proof TokenUpgradeProof
+	Proof TokensUpgradeProof
 }
 
 // IssueOptions models the options that can be passed to the issue command
 type IssueOptions struct {
 	// Attributes is a container of generic options that might be driver specific
 	Attributes map[interface{}]interface{}
-	// TokenConversionRequest is a request to convert tokens
-	TokenConversionRequest *TokenConversionRequest
+	// TokensUpgradeRequest is a request to upgrade tokens
+	TokensUpgradeRequest *TokenUpgradeRequest
 	// Wallet is the wallet that should be used to issue the tokens.
 	Wallet IssuerWallet
 }

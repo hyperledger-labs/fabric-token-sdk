@@ -409,7 +409,7 @@ func (r *Request) Convert(
 		[][]byte{receiver},
 		&driver.IssueOptions{
 			Attributes: opt.Attributes,
-			TokenConversionRequest: &driver.TokenConversionRequest{
+			TokensUpgradeRequest: &driver.TokenUpgradeRequest{
 				Tokens: tokens,
 				Proof:  witness,
 			},

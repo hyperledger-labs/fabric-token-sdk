@@ -61,7 +61,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	if issuerIdentity.IsNone() && len(tokenType) == 0 && values == nil {
 		// this is a special case where the issue contains also redemption
 		// we need to extract token types and values from the passed tokens
-		tokenTypes, tokenValues, err := s.TokensService.ProcessTokenConversionRequest(opts.TokenConversionRequest)
+		tokenTypes, tokenValues, err := s.TokensService.ProcessTokensUpgradeRequest(opts.TokensUpgradeRequest)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed to extract token types and values from the passed tokens")
 		}
@@ -137,8 +137,8 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 
 	// prepare inputs to redeem, if any
 	var tokenIDs []*token.ID
-	if opts != nil && opts.TokenConversionRequest != nil && len(opts.TokenConversionRequest.Tokens) > 0 {
-		tokens := opts.TokenConversionRequest.Tokens
+	if opts != nil && opts.TokensUpgradeRequest != nil && len(opts.TokensUpgradeRequest.Tokens) > 0 {
+		tokens := opts.TokensUpgradeRequest.Tokens
 		action.Inputs = make([]issue.ActionInput, len(tokens))
 		for i, tok := range tokens {
 			action.Inputs[i] = issue.ActionInput{

@@ -47,7 +47,7 @@ type UpgradeTokensInitiatorView struct {
 	Tokens        []token2.LedgerToken
 }
 
-func NewRequestConversionView(issuer view.Identity, wallet string, tokens []token2.LedgerToken, notAnonymous bool) *UpgradeTokensInitiatorView {
+func NewRequestTokensUpgradeView(issuer view.Identity, wallet string, tokens []token2.LedgerToken, notAnonymous bool) *UpgradeTokensInitiatorView {
 	return &UpgradeTokensInitiatorView{Issuer: issuer, Wallet: wallet, Tokens: tokens, NotAnonymous: notAnonymous}
 }
 
@@ -64,7 +64,7 @@ func RequestTokensUpgradeForRecipient(context view.Context, issuer view.Identity
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to compile options")
 	}
-	resultBoxed, err := context.RunView(NewRequestConversionView(
+	resultBoxed, err := context.RunView(NewRequestTokensUpgradeView(
 		issuer,
 		wallet,
 		tokens,
@@ -79,7 +79,7 @@ func RequestTokensUpgradeForRecipient(context view.Context, issuer view.Identity
 }
 
 func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("conversion_request_view")
+	span := context.StartSpan("upgrade_request_view")
 	defer span.End()
 	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
 
@@ -92,7 +92,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 
 	// first agreement
 	agreement := &UpgradeTokensAgreement{}
-	span.AddEvent("send_conversion_agreement")
+	span.AddEvent("send_upgrade_agreement")
 	err = session.SendWithContext(context.Context(), agreement)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
