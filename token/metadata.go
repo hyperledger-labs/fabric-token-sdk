@@ -185,9 +185,6 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	}
 
 	// check outputs
-	if len(m.Outputs) != 1 {
-		return errors.Errorf("expected one output, got [%d]", len(m.Outputs))
-	}
 	if len(m.OutputsMetadata) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.OutputsMetadata), action.NumOutputs())
 	}

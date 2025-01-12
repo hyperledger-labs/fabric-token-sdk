@@ -154,7 +154,6 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	meta := &driver.IssueMetadata{
 		Issuer:              issuerSerializedIdentity,
 		TokenIDs:            tokenIDs,
-		Outputs:             outputs,
 		OutputsMetadata:     outputsMetadata,
 		Receivers:           []driver.Identity{driver.Identity(owners[0])},
 		ReceiversAuditInfos: auditInfo,
