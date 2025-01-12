@@ -46,8 +46,6 @@ type IssueMetadata struct {
 	// TokenIDs is the list of TokenIDs spent by this action
 	TokenIDs []*token.ID
 
-	// Outputs is the list of outputs issued
-	Outputs [][]byte
 	// OutputsMetadata, for each output we have a OutputsMetadata entry that contains secrets to de-obfuscate the output
 	OutputsMetadata [][]byte
 	// Receivers, for each output we have a receiver
@@ -147,7 +145,6 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 		issues[i] = IssueMetadataSer{
 			Issuer:              issue.Issuer,
 			TokenIDs:            TokenIDs,
-			Outputs:             issue.Outputs,
 			OutputsMetadata:     issue.OutputsMetadata,
 			Receivers:           issue.Receivers,
 			ReceiversAuditInfos: issue.ReceiversAuditInfos,
@@ -206,7 +203,6 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 		m.Issues[i] = IssueMetadata{
 			Issuer:              issue.Issuer,
 			TokenIDs:            TokenIDs,
-			Outputs:             issue.Outputs,
 			OutputsMetadata:     issue.OutputsMetadata,
 			Receivers:           issue.Receivers,
 			ReceiversAuditInfos: issue.ReceiversAuditInfos,

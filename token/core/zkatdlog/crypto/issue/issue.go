@@ -158,7 +158,7 @@ func (i *Action) Validate() error {
 	return nil
 }
 
-func (i *IssueAction) ExtraSigners() []driver.Identity {
+func (i *Action) ExtraSigners() []driver.Identity {
 	return nil
 }
 
