@@ -380,7 +380,7 @@ func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Typ
 	return nil
 }
 
-func (r *Request) Convert(
+func (r *Request) Upgrade(
 	ctx context.Context,
 	wallet *IssuerWallet,
 	receiver Identity,
