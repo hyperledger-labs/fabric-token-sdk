@@ -10,18 +10,18 @@ import (
 )
 
 type TokensService struct {
-	CheckConversionProofStub        func(driver.TokenUpgradeChallenge, driver.TokenUpgradeProof, []token.LedgerToken) (bool, error)
-	checkConversionProofMutex       sync.RWMutex
-	checkConversionProofArgsForCall []struct {
-		arg1 driver.TokenUpgradeChallenge
-		arg2 driver.TokenUpgradeProof
+	CheckUpgradeProofStub        func(driver.TokensUpgradeChallenge, driver.TokensUpgradeProof, []token.LedgerToken) (bool, error)
+	checkUpgradeProofMutex       sync.RWMutex
+	checkUpgradeProofArgsForCall []struct {
+		arg1 driver.TokensUpgradeChallenge
+		arg2 driver.TokensUpgradeProof
 		arg3 []token.LedgerToken
 	}
-	checkConversionProofReturns struct {
+	checkUpgradeProofReturns struct {
 		result1 bool
 		result2 error
 	}
-	checkConversionProofReturnsOnCall map[int]struct {
+	checkUpgradeProofReturnsOnCall map[int]struct {
 		result1 bool
 		result2 error
 	}
@@ -58,30 +58,30 @@ type TokensService struct {
 		result1 []identity.Identity
 		result2 error
 	}
-	GenConversionProofStub        func(driver.TokenUpgradeChallenge, []token.LedgerToken) ([]byte, error)
-	genConversionProofMutex       sync.RWMutex
-	genConversionProofArgsForCall []struct {
-		arg1 driver.TokenUpgradeChallenge
+	GenUpgradeProofStub        func(driver.TokensUpgradeChallenge, []token.LedgerToken) ([]byte, error)
+	genUpgradeProofMutex       sync.RWMutex
+	genUpgradeProofArgsForCall []struct {
+		arg1 driver.TokensUpgradeChallenge
 		arg2 []token.LedgerToken
 	}
-	genConversionProofReturns struct {
+	genUpgradeProofReturns struct {
 		result1 []byte
 		result2 error
 	}
-	genConversionProofReturnsOnCall map[int]struct {
+	genUpgradeProofReturnsOnCall map[int]struct {
 		result1 []byte
 		result2 error
 	}
-	NewConversionChallengeStub        func() (driver.TokenUpgradeChallenge, error)
-	newConversionChallengeMutex       sync.RWMutex
-	newConversionChallengeArgsForCall []struct {
+	NewUpgradeChallengeStub        func() (driver.TokensUpgradeChallenge, error)
+	newUpgradeChallengeMutex       sync.RWMutex
+	newUpgradeChallengeArgsForCall []struct {
 	}
-	newConversionChallengeReturns struct {
-		result1 driver.TokenUpgradeChallenge
+	newUpgradeChallengeReturns struct {
+		result1 driver.TokensUpgradeChallenge
 		result2 error
 	}
-	newConversionChallengeReturnsOnCall map[int]struct {
-		result1 driver.TokenUpgradeChallenge
+	newUpgradeChallengeReturnsOnCall map[int]struct {
+		result1 driver.TokensUpgradeChallenge
 		result2 error
 	}
 	SupportedTokenFormatsStub        func() []token.Format
@@ -98,23 +98,23 @@ type TokensService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokensService) CheckUpgradeProof(arg1 driver.TokenUpgradeChallenge, arg2 driver.TokenUpgradeProof, arg3 []token.LedgerToken) (bool, error) {
+func (fake *TokensService) CheckUpgradeProof(arg1 driver.TokensUpgradeChallenge, arg2 driver.TokensUpgradeProof, arg3 []token.LedgerToken) (bool, error) {
 	var arg3Copy []token.LedgerToken
 	if arg3 != nil {
 		arg3Copy = make([]token.LedgerToken, len(arg3))
 		copy(arg3Copy, arg3)
 	}
-	fake.checkConversionProofMutex.Lock()
-	ret, specificReturn := fake.checkConversionProofReturnsOnCall[len(fake.checkConversionProofArgsForCall)]
-	fake.checkConversionProofArgsForCall = append(fake.checkConversionProofArgsForCall, struct {
-		arg1 driver.TokenUpgradeChallenge
-		arg2 driver.TokenUpgradeProof
+	fake.checkUpgradeProofMutex.Lock()
+	ret, specificReturn := fake.checkUpgradeProofReturnsOnCall[len(fake.checkUpgradeProofArgsForCall)]
+	fake.checkUpgradeProofArgsForCall = append(fake.checkUpgradeProofArgsForCall, struct {
+		arg1 driver.TokensUpgradeChallenge
+		arg2 driver.TokensUpgradeProof
 		arg3 []token.LedgerToken
 	}{arg1, arg2, arg3Copy})
-	stub := fake.CheckConversionProofStub
-	fakeReturns := fake.checkConversionProofReturns
+	stub := fake.CheckUpgradeProofStub
+	fakeReturns := fake.checkUpgradeProofReturns
 	fake.recordInvocation("CheckUpgradeProof", []interface{}{arg1, arg2, arg3Copy})
-	fake.checkConversionProofMutex.Unlock()
+	fake.checkUpgradeProofMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3)
 	}
@@ -124,46 +124,46 @@ func (fake *TokensService) CheckUpgradeProof(arg1 driver.TokenUpgradeChallenge, 
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *TokensService) CheckConversionProofCallCount() int {
-	fake.checkConversionProofMutex.RLock()
-	defer fake.checkConversionProofMutex.RUnlock()
-	return len(fake.checkConversionProofArgsForCall)
+func (fake *TokensService) CheckUpgradeProofCallCount() int {
+	fake.checkUpgradeProofMutex.RLock()
+	defer fake.checkUpgradeProofMutex.RUnlock()
+	return len(fake.checkUpgradeProofArgsForCall)
 }
 
-func (fake *TokensService) CheckConversionProofCalls(stub func(driver.TokenUpgradeChallenge, driver.TokenUpgradeProof, []token.LedgerToken) (bool, error)) {
-	fake.checkConversionProofMutex.Lock()
-	defer fake.checkConversionProofMutex.Unlock()
-	fake.CheckConversionProofStub = stub
+func (fake *TokensService) CheckUpgradeProofCalls(stub func(driver.TokensUpgradeChallenge, driver.TokensUpgradeProof, []token.LedgerToken) (bool, error)) {
+	fake.checkUpgradeProofMutex.Lock()
+	defer fake.checkUpgradeProofMutex.Unlock()
+	fake.CheckUpgradeProofStub = stub
 }
 
-func (fake *TokensService) CheckConversionProofArgsForCall(i int) (driver.TokenUpgradeChallenge, driver.TokenUpgradeProof, []token.LedgerToken) {
-	fake.checkConversionProofMutex.RLock()
-	defer fake.checkConversionProofMutex.RUnlock()
-	argsForCall := fake.checkConversionProofArgsForCall[i]
+func (fake *TokensService) CheckUpgradeProofArgsForCall(i int) (driver.TokensUpgradeChallenge, driver.TokensUpgradeProof, []token.LedgerToken) {
+	fake.checkUpgradeProofMutex.RLock()
+	defer fake.checkUpgradeProofMutex.RUnlock()
+	argsForCall := fake.checkUpgradeProofArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *TokensService) CheckConversionProofReturns(result1 bool, result2 error) {
-	fake.checkConversionProofMutex.Lock()
-	defer fake.checkConversionProofMutex.Unlock()
-	fake.CheckConversionProofStub = nil
-	fake.checkConversionProofReturns = struct {
+func (fake *TokensService) CheckUpgradeProofReturns(result1 bool, result2 error) {
+	fake.checkUpgradeProofMutex.Lock()
+	defer fake.checkUpgradeProofMutex.Unlock()
+	fake.CheckUpgradeProofStub = nil
+	fake.checkUpgradeProofReturns = struct {
 		result1 bool
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *TokensService) CheckConversionProofReturnsOnCall(i int, result1 bool, result2 error) {
-	fake.checkConversionProofMutex.Lock()
-	defer fake.checkConversionProofMutex.Unlock()
-	fake.CheckConversionProofStub = nil
-	if fake.checkConversionProofReturnsOnCall == nil {
-		fake.checkConversionProofReturnsOnCall = make(map[int]struct {
+func (fake *TokensService) CheckUpgradeProofReturnsOnCall(i int, result1 bool, result2 error) {
+	fake.checkUpgradeProofMutex.Lock()
+	defer fake.checkUpgradeProofMutex.Unlock()
+	fake.CheckUpgradeProofStub = nil
+	if fake.checkUpgradeProofReturnsOnCall == nil {
+		fake.checkUpgradeProofReturnsOnCall = make(map[int]struct {
 			result1 bool
 			result2 error
 		})
 	}
-	fake.checkConversionProofReturnsOnCall[i] = struct {
+	fake.checkUpgradeProofReturnsOnCall[i] = struct {
 		result1 bool
 		result2 error
 	}{result1, result2}
@@ -322,22 +322,22 @@ func (fake *TokensService) RecipientsReturnsOnCall(i int, result1 []identity.Ide
 	}{result1, result2}
 }
 
-func (fake *TokensService) GenUpgradeProof(arg1 driver.TokenUpgradeChallenge, arg2 []token.LedgerToken) ([]byte, error) {
+func (fake *TokensService) GenUpgradeProof(arg1 driver.TokensUpgradeChallenge, arg2 []token.LedgerToken) ([]byte, error) {
 	var arg2Copy []token.LedgerToken
 	if arg2 != nil {
 		arg2Copy = make([]token.LedgerToken, len(arg2))
 		copy(arg2Copy, arg2)
 	}
-	fake.genConversionProofMutex.Lock()
-	ret, specificReturn := fake.genConversionProofReturnsOnCall[len(fake.genConversionProofArgsForCall)]
-	fake.genConversionProofArgsForCall = append(fake.genConversionProofArgsForCall, struct {
-		arg1 driver.TokenUpgradeChallenge
+	fake.genUpgradeProofMutex.Lock()
+	ret, specificReturn := fake.genUpgradeProofReturnsOnCall[len(fake.genUpgradeProofArgsForCall)]
+	fake.genUpgradeProofArgsForCall = append(fake.genUpgradeProofArgsForCall, struct {
+		arg1 driver.TokensUpgradeChallenge
 		arg2 []token.LedgerToken
 	}{arg1, arg2Copy})
-	stub := fake.GenConversionProofStub
-	fakeReturns := fake.genConversionProofReturns
+	stub := fake.GenUpgradeProofStub
+	fakeReturns := fake.genUpgradeProofReturns
 	fake.recordInvocation("GenUpgradeProof", []interface{}{arg1, arg2Copy})
-	fake.genConversionProofMutex.Unlock()
+	fake.genUpgradeProofMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -347,60 +347,60 @@ func (fake *TokensService) GenUpgradeProof(arg1 driver.TokenUpgradeChallenge, ar
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *TokensService) GenConversionProofCallCount() int {
-	fake.genConversionProofMutex.RLock()
-	defer fake.genConversionProofMutex.RUnlock()
-	return len(fake.genConversionProofArgsForCall)
+func (fake *TokensService) GenUpgradeProofCallCount() int {
+	fake.genUpgradeProofMutex.RLock()
+	defer fake.genUpgradeProofMutex.RUnlock()
+	return len(fake.genUpgradeProofArgsForCall)
 }
 
-func (fake *TokensService) GenConversionProofCalls(stub func(driver.TokenUpgradeChallenge, []token.LedgerToken) ([]byte, error)) {
-	fake.genConversionProofMutex.Lock()
-	defer fake.genConversionProofMutex.Unlock()
-	fake.GenConversionProofStub = stub
+func (fake *TokensService) GenUpgradeProofCalls(stub func(driver.TokensUpgradeChallenge, []token.LedgerToken) ([]byte, error)) {
+	fake.genUpgradeProofMutex.Lock()
+	defer fake.genUpgradeProofMutex.Unlock()
+	fake.GenUpgradeProofStub = stub
 }
 
-func (fake *TokensService) GenConversionProofArgsForCall(i int) (driver.TokenUpgradeChallenge, []token.LedgerToken) {
-	fake.genConversionProofMutex.RLock()
-	defer fake.genConversionProofMutex.RUnlock()
-	argsForCall := fake.genConversionProofArgsForCall[i]
+func (fake *TokensService) GenUpgradeProofArgsForCall(i int) (driver.TokensUpgradeChallenge, []token.LedgerToken) {
+	fake.genUpgradeProofMutex.RLock()
+	defer fake.genUpgradeProofMutex.RUnlock()
+	argsForCall := fake.genUpgradeProofArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *TokensService) GenConversionProofReturns(result1 []byte, result2 error) {
-	fake.genConversionProofMutex.Lock()
-	defer fake.genConversionProofMutex.Unlock()
-	fake.GenConversionProofStub = nil
-	fake.genConversionProofReturns = struct {
+func (fake *TokensService) GenUpgradeProofReturns(result1 []byte, result2 error) {
+	fake.genUpgradeProofMutex.Lock()
+	defer fake.genUpgradeProofMutex.Unlock()
+	fake.GenUpgradeProofStub = nil
+	fake.genUpgradeProofReturns = struct {
 		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *TokensService) GenConversionProofReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.genConversionProofMutex.Lock()
-	defer fake.genConversionProofMutex.Unlock()
-	fake.GenConversionProofStub = nil
-	if fake.genConversionProofReturnsOnCall == nil {
-		fake.genConversionProofReturnsOnCall = make(map[int]struct {
+func (fake *TokensService) GenUpgradeProofReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.genUpgradeProofMutex.Lock()
+	defer fake.genUpgradeProofMutex.Unlock()
+	fake.GenUpgradeProofStub = nil
+	if fake.genUpgradeProofReturnsOnCall == nil {
+		fake.genUpgradeProofReturnsOnCall = make(map[int]struct {
 			result1 []byte
 			result2 error
 		})
 	}
-	fake.genConversionProofReturnsOnCall[i] = struct {
+	fake.genUpgradeProofReturnsOnCall[i] = struct {
 		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *TokensService) NewUpgradeChallenge() (driver.TokenUpgradeChallenge, error) {
-	fake.newConversionChallengeMutex.Lock()
-	ret, specificReturn := fake.newConversionChallengeReturnsOnCall[len(fake.newConversionChallengeArgsForCall)]
-	fake.newConversionChallengeArgsForCall = append(fake.newConversionChallengeArgsForCall, struct {
+func (fake *TokensService) NewUpgradeChallenge() (driver.TokensUpgradeChallenge, error) {
+	fake.newUpgradeChallengeMutex.Lock()
+	ret, specificReturn := fake.newUpgradeChallengeReturnsOnCall[len(fake.newUpgradeChallengeArgsForCall)]
+	fake.newUpgradeChallengeArgsForCall = append(fake.newUpgradeChallengeArgsForCall, struct {
 	}{})
-	stub := fake.NewConversionChallengeStub
-	fakeReturns := fake.newConversionChallengeReturns
+	stub := fake.NewUpgradeChallengeStub
+	fakeReturns := fake.newUpgradeChallengeReturns
 	fake.recordInvocation("NewUpgradeChallenge", []interface{}{})
-	fake.newConversionChallengeMutex.Unlock()
+	fake.newUpgradeChallengeMutex.Unlock()
 	if stub != nil {
 		return stub()
 	}
@@ -410,40 +410,40 @@ func (fake *TokensService) NewUpgradeChallenge() (driver.TokenUpgradeChallenge, 
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *TokensService) NewConversionChallengeCallCount() int {
-	fake.newConversionChallengeMutex.RLock()
-	defer fake.newConversionChallengeMutex.RUnlock()
-	return len(fake.newConversionChallengeArgsForCall)
+func (fake *TokensService) NewUpgradeChallengeCallCount() int {
+	fake.newUpgradeChallengeMutex.RLock()
+	defer fake.newUpgradeChallengeMutex.RUnlock()
+	return len(fake.newUpgradeChallengeArgsForCall)
 }
 
-func (fake *TokensService) NewConversionChallengeCalls(stub func() (driver.TokenUpgradeChallenge, error)) {
-	fake.newConversionChallengeMutex.Lock()
-	defer fake.newConversionChallengeMutex.Unlock()
-	fake.NewConversionChallengeStub = stub
+func (fake *TokensService) NewUpgradeChallengeCalls(stub func() (driver.TokensUpgradeChallenge, error)) {
+	fake.newUpgradeChallengeMutex.Lock()
+	defer fake.newUpgradeChallengeMutex.Unlock()
+	fake.NewUpgradeChallengeStub = stub
 }
 
-func (fake *TokensService) NewConversionChallengeReturns(result1 driver.TokenUpgradeChallenge, result2 error) {
-	fake.newConversionChallengeMutex.Lock()
-	defer fake.newConversionChallengeMutex.Unlock()
-	fake.NewConversionChallengeStub = nil
-	fake.newConversionChallengeReturns = struct {
-		result1 driver.TokenUpgradeChallenge
+func (fake *TokensService) NewUpgradeChallengeReturns(result1 driver.TokensUpgradeChallenge, result2 error) {
+	fake.newUpgradeChallengeMutex.Lock()
+	defer fake.newUpgradeChallengeMutex.Unlock()
+	fake.NewUpgradeChallengeStub = nil
+	fake.newUpgradeChallengeReturns = struct {
+		result1 driver.TokensUpgradeChallenge
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *TokensService) NewConversionChallengeReturnsOnCall(i int, result1 driver.TokenUpgradeChallenge, result2 error) {
-	fake.newConversionChallengeMutex.Lock()
-	defer fake.newConversionChallengeMutex.Unlock()
-	fake.NewConversionChallengeStub = nil
-	if fake.newConversionChallengeReturnsOnCall == nil {
-		fake.newConversionChallengeReturnsOnCall = make(map[int]struct {
-			result1 driver.TokenUpgradeChallenge
+func (fake *TokensService) NewUpgradeChallengeReturnsOnCall(i int, result1 driver.TokensUpgradeChallenge, result2 error) {
+	fake.newUpgradeChallengeMutex.Lock()
+	defer fake.newUpgradeChallengeMutex.Unlock()
+	fake.NewUpgradeChallengeStub = nil
+	if fake.newUpgradeChallengeReturnsOnCall == nil {
+		fake.newUpgradeChallengeReturnsOnCall = make(map[int]struct {
+			result1 driver.TokensUpgradeChallenge
 			result2 error
 		})
 	}
-	fake.newConversionChallengeReturnsOnCall[i] = struct {
-		result1 driver.TokenUpgradeChallenge
+	fake.newUpgradeChallengeReturnsOnCall[i] = struct {
+		result1 driver.TokensUpgradeChallenge
 		result2 error
 	}{result1, result2}
 }
@@ -504,16 +504,16 @@ func (fake *TokensService) SupportedTokenFormatsReturnsOnCall(i int, result1 []t
 func (fake *TokensService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.checkConversionProofMutex.RLock()
-	defer fake.checkConversionProofMutex.RUnlock()
+	fake.checkUpgradeProofMutex.RLock()
+	defer fake.checkUpgradeProofMutex.RUnlock()
 	fake.deobfuscateMutex.RLock()
 	defer fake.deobfuscateMutex.RUnlock()
 	fake.recipientsMutex.RLock()
 	defer fake.recipientsMutex.RUnlock()
-	fake.genConversionProofMutex.RLock()
-	defer fake.genConversionProofMutex.RUnlock()
-	fake.newConversionChallengeMutex.RLock()
-	defer fake.newConversionChallengeMutex.RUnlock()
+	fake.genUpgradeProofMutex.RLock()
+	defer fake.genUpgradeProofMutex.RUnlock()
+	fake.newUpgradeChallengeMutex.RLock()
+	defer fake.newUpgradeChallengeMutex.RUnlock()
 	fake.supportedTokenFormatsMutex.RLock()
 	defer fake.supportedTokenFormatsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

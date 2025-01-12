@@ -19,7 +19,7 @@ func NewTokensService() *TokensService {
 	return &TokensService{}
 }
 
-func (s *TokensService) NewUpgradeChallenge() (driver.TokenUpgradeChallenge, error) {
+func (s *TokensService) NewUpgradeChallenge() (driver.TokensUpgradeChallenge, error) {
 	// generate a 32 bytes secure random slice
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
@@ -29,10 +29,10 @@ func (s *TokensService) NewUpgradeChallenge() (driver.TokenUpgradeChallenge, err
 	return key, nil
 }
 
-func (s *TokensService) GenUpgradeProof(ch driver.TokenUpgradeChallenge, tokens []token.LedgerToken) ([]byte, error) {
+func (s *TokensService) GenUpgradeProof(ch driver.TokensUpgradeChallenge, tokens []token.LedgerToken) ([]byte, error) {
 	return nil, nil
 }
 
-func (s *TokensService) CheckUpgradeProof(ch driver.TokenUpgradeChallenge, proof driver.TokenUpgradeProof, tokens []token.LedgerToken) (bool, error) {
+func (s *TokensService) CheckUpgradeProof(ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token.LedgerToken) (bool, error) {
 	return true, nil
 }

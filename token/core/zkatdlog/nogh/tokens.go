@@ -99,12 +99,12 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 	return output, metadata, nil, nil
 }
 
-func (s *TokensService) GenUpgradeProof(ch driver.TokenUpgradeChallenge, tokens []token.LedgerToken) ([]byte, error) {
+func (s *TokensService) GenUpgradeProof(ch driver.TokensUpgradeChallenge, tokens []token.LedgerToken) ([]byte, error) {
 	// TODO: implement
 	return nil, nil
 }
 
-func (s *TokensService) CheckUpgradeProof(ch driver.TokenUpgradeChallenge, proof driver.TokenUpgradeProof, tokens []token.LedgerToken) (bool, error) {
+func (s *TokensService) CheckUpgradeProof(ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token.LedgerToken) (bool, error) {
 	// TODO: implement
 	return true, nil
 }
@@ -159,7 +159,7 @@ func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
 	return token.Format(hasher.HexDigest()), nil
 }
 
-func (s *TokensService) ProcessTokenConversionRequest(utp *driver.TokenConversionRequest) ([]token.Type, []uint64, error) {
+func (s *TokensService) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequest) ([]token.Type, []uint64, error) {
 	if utp == nil {
 		return nil, nil, errors.New("nil token upgrade request")
 	}
