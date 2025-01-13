@@ -33,7 +33,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 	ts := token.NewTestSuite(opts.SQLConfigs, StartPortDlog, nft.Topology(common.Opts{
 		Backend:         "orion",
 		CommType:        commType,
-		TokenSDKDriver:  "dlog",
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
 		SDKs:            []api.SDK{&odlog.SDK{}},
 		ReplicationOpts: opts,
 	}))

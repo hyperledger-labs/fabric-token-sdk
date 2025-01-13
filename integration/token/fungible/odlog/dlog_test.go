@@ -35,8 +35,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 		common.Opts{
 			Backend:        "orion",
 			CommType:       commType,
-			TokenSDKDriver: "dlog",
-			Aries:          true,
+			DefaultTMSOpts: common.TMSOpts{TokenSDKDriver: "dlog", Aries: true},
 			SDKs:           []api.SDK{&odlog.SDK{}},
 			// FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:info",
 			// FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:view-sdk.services.comm=debug:info",

@@ -39,7 +39,7 @@ func Topology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("grpc=error:debug", "")
+	// fscTopology.SetLogging("grpc=error:debug", "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	fscTopology.AddNodeByName("issuer").
@@ -93,8 +93,8 @@ func Topology(opts common.Opts) []api.Topology {
 		RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.TokenSDKDriver)
-	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.DefaultTMSOpts.TokenSDKDriver)
+	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
 	if opts.Backend == "orion" {
 		// we need to define the custodian
