@@ -8,6 +8,7 @@ package nogh
 
 import (
 	errors2 "errors"
+	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
@@ -30,24 +31,48 @@ var precisions = map[token.Format]uint64{
 
 type TokensService struct {
 	*common.TokensService
+
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
-	OutputTokenFormat       token.Format
 	IdentityDeserializer    driver.Deserializer
+
+	OutputTokenFormat               token.Format
+	SupportedTokenFormatList        []token.Format
+	UpgradeSupportedTokenFormatList []token.Format
 }
 
 func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
 	// compute supported tokens
 	// dlog without graph hiding
-	commTokenTypes, err := supportedTokenFormat(publicParametersManager.PublicParams())
+	pp := publicParametersManager.PublicParams()
+	maxPrecision := pp.RangeProofParams.BitLength
+
+	outputTokenFormat, err := supportedTokenFormat(pp)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed computing comm token types")
 	}
 
+	// we support all fabtoken with precision less than maxPrecision, in addition to outputTokenFormat
+	supportedTokenFormatList := []token.Format{outputTokenFormat}
+	var upgradeSupportedTokenFormatList []token.Format
+	for _, precision := range []uint64{16, 32, 64} {
+		format, err := fabtoken2.SupportedTokenFormat(precision)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed computing fabtoken token format with precision [%d]", precision)
+		}
+		if precision <= maxPrecision {
+			supportedTokenFormatList = append(supportedTokenFormatList, format)
+		} else {
+			upgradeSupportedTokenFormatList = append(upgradeSupportedTokenFormatList, format)
+		}
+	}
+
 	return &TokensService{
-		TokensService:           common.NewTokensService(),
-		PublicParametersManager: publicParametersManager,
-		IdentityDeserializer:    identityDeserializer,
-		OutputTokenFormat:       commTokenTypes,
+		TokensService:                   common.NewTokensService(),
+		PublicParametersManager:         publicParametersManager,
+		IdentityDeserializer:            identityDeserializer,
+		OutputTokenFormat:               outputTokenFormat,
+		SupportedTokenFormatList:        supportedTokenFormatList,
+		UpgradeSupportedTokenFormatList: upgradeSupportedTokenFormatList,
 	}, nil
 }
 
@@ -79,7 +104,7 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 }
 
 func (s *TokensService) SupportedTokenFormats() []token.Format {
-	return []token.Format{s.OutputTokenFormat}
+	return s.SupportedTokenFormatList
 }
 
 func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.ConversionWitness, error) {
@@ -171,6 +196,14 @@ func (s *TokensService) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequ
 		return nil, nil, errors.New("nil token upgrade request")
 	}
 
+	// check that each token doesn't have a supported format
+	for _, tok := range utp.Tokens {
+		if !slices.Contains(s.UpgradeSupportedTokenFormatList, tok.Format) {
+			return nil, nil, errors.Errorf("upgrade of unsupported token format [%s] requested", tok.Format)
+		}
+	}
+
+	// check the upgrade proof
 	ok, err := s.CheckUpgradeProof(utp.Challenge, utp.Proof, utp.Tokens)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to check upgrade proof")
@@ -179,9 +212,9 @@ func (s *TokensService) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequ
 		return nil, nil, errors.New("invalid upgrade proof")
 	}
 
+	// for each token, extract type and value
 	tokenTypes := make([]token.Type, len(utp.Tokens))
 	tokenValue := make([]uint64, len(utp.Tokens))
-
 	for i, tok := range utp.Tokens {
 		precision, ok := precisions[tok.Format]
 		if !ok {
@@ -196,8 +229,9 @@ func (s *TokensService) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequ
 }
 
 func (s *TokensService) checkFabtokenToken(tok *token.LedgerToken, precision uint64) (token.Type, uint64, error) {
-	if precision > 64 {
-		return "", 0, errors.Errorf("unsupported precision [%d]", precision)
+	maxPrecision := s.PublicParametersManager.PublicParams().RangeProofParams.BitLength
+	if precision < maxPrecision {
+		return "", 0, errors.Errorf("unsupported precision [%d], max [%d]", precision, maxPrecision)
 	}
 
 	typedToken, err := fabtoken.UnmarshalTypedToken(tok.Token)
