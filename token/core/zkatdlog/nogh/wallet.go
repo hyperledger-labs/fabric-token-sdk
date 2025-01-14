@@ -51,7 +51,7 @@ func NewWalletFactory(
 	}
 }
 
-func (w *WalletFactory) NewWallet(role driver.IdentityRole, walletRegistry common.WalletRegistry, info driver.IdentityInfo, id string) (driver.Wallet, error) {
+func (w *WalletFactory) NewWallet(id string, role driver.IdentityRole, walletRegistry common.WalletRegistry, identityInfo driver.IdentityInfo) (driver.Wallet, error) {
 	switch role {
 	case driver.OwnerRole:
 		newWallet, err := common.NewAnonymousOwnerWallet(
@@ -61,7 +61,7 @@ func (w *WalletFactory) NewWallet(role driver.IdentityRole, walletRegistry commo
 			w.Deserializer,
 			walletRegistry,
 			id,
-			info,
+			identityInfo,
 			w.walletsConfiguration.CacheSizeForOwnerID(id),
 		)
 		if err != nil {
@@ -70,24 +70,24 @@ func (w *WalletFactory) NewWallet(role driver.IdentityRole, walletRegistry commo
 		w.Logger.Debugf("created owner wallet [%s]", id)
 		return newWallet, nil
 	case driver.IssuerRole:
-		idInfoIdentity, _, err := info.Get()
+		idInfoIdentity, _, err := identityInfo.Get()
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get issuer wallet identity for [%s]", id)
 		}
 		newWallet := common.NewIssuerWallet(w.Logger, w.IdentityProvider, w.TokenVault, id, idInfoIdentity)
-		if err := walletRegistry.BindIdentity(idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
+		if err := walletRegistry.BindIdentity(idInfoIdentity, identityInfo.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
 		w.Logger.Debugf("created issuer wallet [%s]", id)
 		return newWallet, nil
 	case driver.AuditorRole:
 		w.Logger.Debugf("no wallet found, create it [%s]", id)
-		idInfoIdentity, _, err := info.Get()
+		idInfoIdentity, _, err := identityInfo.Get()
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get auditor wallet identity for [%s]", id)
 		}
 		newWallet := common.NewAuditorWallet(w.IdentityProvider, id, idInfoIdentity)
-		if err := walletRegistry.BindIdentity(idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
+		if err := walletRegistry.BindIdentity(idInfoIdentity, identityInfo.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
 		w.Logger.Debugf("created auditor wallet [%s]", id)

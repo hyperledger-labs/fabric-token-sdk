@@ -26,12 +26,45 @@ import (
 
 type LoadedToken = common.LoadedToken[[]byte, []byte]
 
+type PreparedTransferInput struct {
+	Token          *token.Token
+	Metadata       *token.Metadata
+	UpgradeWitness *token.UpgradeWitness
+	Owner          driver.Identity
+}
+
+type PreparedTransferInputs []PreparedTransferInput
+
+func (p *PreparedTransferInputs) Owners() []driver.Identity {
+	owners := make([]driver.Identity, len(*p))
+	for i, input := range *p {
+		owners[i] = input.Owner
+	}
+	return owners
+}
+
+func (p *PreparedTransferInputs) Tokens() []*token.Token {
+	tokens := make([]*token.Token, len(*p))
+	for i, input := range *p {
+		tokens[i] = input.Token
+	}
+	return tokens
+}
+
+func (p *PreparedTransferInputs) Metadata() []*token.Metadata {
+	metas := make([]*token.Metadata, len(*p))
+	for i, input := range *p {
+		metas[i] = input.Metadata
+	}
+	return metas
+}
+
 type TokenLoader interface {
 	LoadTokens(ctx context.Context, ids []*token2.ID) ([]LoadedToken, error)
 }
 
 type TokenDeserializer interface {
-	DeserializeToken(outputFormat token2.Format, outputRaw []byte, metadataRaw []byte) (*token.Token, *token.Metadata, *token.ConversionWitness, error)
+	DeserializeToken(outputFormat token2.Format, outputRaw []byte, metadataRaw []byte) (*token.Token, *token.Metadata, *token.UpgradeWitness, error)
 }
 
 type TransferService struct {
@@ -82,14 +115,14 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
-	tokens, metas, senders, err := s.prepareInputs(loadedTokens)
+	prepareInputs, err := s.prepareInputs(loadedTokens)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to prepare inputs")
 	}
 
 	// get sender
 	pp := s.PublicParametersManager.PublicParams()
-	sender, err := transfer.NewSender(nil, tokens, tokenIDs, metas, pp)
+	sender, err := transfer.NewSender(nil, prepareInputs.Tokens(), tokenIDs, prepareInputs.Metadata(), pp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -127,7 +160,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	// return for each output its information in the clear
 	start := time.Now()
 	span.AddEvent("start_generate_zk_transfer")
-	zkTransfer, outputMetadata, err := sender.GenerateZKTransfer(newCtx, values, owners)
+	action, outputMetadata, err := sender.GenerateZKTransfer(newCtx, values, owners)
 	span.AddEvent("end_generate_zk_transfer")
 	duration := time.Since(start)
 	if err != nil {
@@ -136,9 +169,13 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	s.Metrics.zkTransferDuration.Observe(float64(duration.Milliseconds()))
 
 	// add transfer action's metadata
-	zkTransfer.Metadata = meta.TransferActionMetadata(opts.Attributes)
+	action.Metadata = meta.TransferActionMetadata(opts.Attributes)
 
-	ws := s.WalletService
+	// add upgrade witness
+	action.InputUpgradeWitness = make([]*token.UpgradeWitness, len(action.InputTokens))
+	for i := range action.InputTokens {
+		action.InputUpgradeWitness[i] = prepareInputs[i].UpgradeWitness
+	}
 
 	// prepare metadata
 	outputsMetadataRaw := make([][]byte, 0, len(outputMetadata))
@@ -150,6 +187,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		outputsMetadataRaw = append(outputsMetadataRaw, raw)
 	}
 	// audit info for receivers
+	ws := s.WalletService
 	receiverAuditInfos := make([][]byte, 0, len(receivers))
 	for _, receiver := range receivers {
 		if len(receiver) == 0 {
@@ -164,6 +202,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	}
 
 	// audit info for senders
+	tokens := prepareInputs.Tokens()
 	senderAuditInfos := make([][]byte, 0, len(tokens))
 	for i, t := range tokens {
 		auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(t.Owner, ws)
@@ -176,7 +215,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		senderAuditInfos = append(senderAuditInfos, auditInfo...)
 	}
 
-	outputs, err := zkTransfer.GetSerializedOutputs()
+	outputs, err := action.GetSerializedOutputs()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting serialized outputs")
 	}
@@ -191,7 +230,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 
 	metadata := &driver.TransferMetadata{
 		TokenIDs:           tokenIDs,
-		Senders:            senders,
+		Senders:            prepareInputs.Owners(),
 		SenderAuditInfos:   senderAuditInfos,
 		OutputsMetadata:    outputsMetadataRaw,
 		OutputsAuditInfo:   outputAuditInfos,
@@ -199,7 +238,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		ReceiverAuditInfos: receiverAuditInfos,
 	}
 
-	return zkTransfer, metadata, nil
+	return action, metadata, nil
 }
 
 // VerifyTransfer checks the outputs in the TransferActionMetadata against the passed metadata
@@ -250,20 +289,21 @@ func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.Transfer
 	return transferAction, nil
 }
 
-func (s *TransferService) prepareInputs(loadedTokens []LoadedToken) ([]*token.Token, []*token.Metadata, []driver.Identity, error) {
-	tokens := make([]*token.Token, len(loadedTokens))
-	metadata := make([]*token.Metadata, len(loadedTokens))
-	signers := make([]driver.Identity, len(loadedTokens))
+func (s *TransferService) prepareInputs(loadedTokens []LoadedToken) (PreparedTransferInputs, error) {
+	preparedInputs := make([]PreparedTransferInput, len(loadedTokens))
 	for i, loadedToken := range loadedTokens {
-		tok, tokenMetadata, _, err := s.TokenDeserializer.DeserializeToken(loadedToken.TokenFormat, loadedToken.Token, loadedToken.Metadata)
+		tok, tokenMetadata, upgradeWitness, err := s.TokenDeserializer.DeserializeToken(loadedToken.TokenFormat, loadedToken.Token, loadedToken.Metadata)
 		if err != nil {
-			return nil, nil, nil, errors.Wrapf(err, "failed deserializing token [%s]", string(loadedToken.Token))
+			return nil, errors.Wrapf(err, "failed deserializing token [%s]", string(loadedToken.Token))
 		}
-		tokens[i] = tok
-		metadata[i] = tokenMetadata
-		signers[i] = tok.GetOwner()
+		preparedInputs[i] = PreparedTransferInput{
+			Token:          tok,
+			Metadata:       tokenMetadata,
+			Owner:          tok.GetOwner(),
+			UpgradeWitness: upgradeWitness,
+		}
 	}
-	return tokens, metadata, signers, nil
+	return preparedInputs, nil
 }
 
 func getTokenData(tokens []*token.Token) []*math.G1 {

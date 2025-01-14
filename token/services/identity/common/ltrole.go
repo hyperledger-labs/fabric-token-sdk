@@ -17,42 +17,19 @@ import (
 
 // LongTermRole models a role whose identities are not anonymous
 type LongTermRole struct {
-	logger          logging.Logger
-	roleID          driver.IdentityRole
-	networkID       string
-	nodeIdentity    driver.Identity
-	localMembership localMembership
+	*Role
+	nodeIdentity driver.Identity
 }
 
 func NewLongTermRole(logger logging.Logger, roleID driver.IdentityRole, networkID string, nodeIdentity driver.Identity, localMembership localMembership) *LongTermRole {
 	return &LongTermRole{
-		logger:          logger,
-		roleID:          roleID,
-		networkID:       networkID,
-		nodeIdentity:    nodeIdentity,
-		localMembership: localMembership,
+		Role:         NewRole(logger, roleID, networkID, localMembership),
+		nodeIdentity: nodeIdentity,
 	}
 }
 
-func (r *LongTermRole) ID() driver.IdentityRole {
-	return r.roleID
-}
-
-// GetIdentityInfo returns the identity information for the given identity identifier
-func (r *LongTermRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
-	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf("[%s] getting info for [%s]", r.networkID, id)
-	}
-
-	info, err := r.localMembership.GetIdentityInfo(id, nil)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "[%s] failed to get long term identity for [%s]", r.networkID, id)
-	}
-	return info, nil
-}
-
-// MapToID returns the identity for the given argument
-func (r *LongTermRole) MapToID(v driver.WalletLookupID) (driver.Identity, string, error) {
+// MapToIdentity returns the identity for the given argument
+func (r *LongTermRole) MapToIdentity(v driver.WalletLookupID) (driver.Identity, string, error) {
 	switch vv := v.(type) {
 	case driver.Identity:
 		return r.mapIdentityToID(vv)
@@ -173,13 +150,4 @@ func (r *LongTermRole) mapIdentityToID(v driver.Identity) (driver.Identity, stri
 	}
 
 	return id, "", nil
-}
-
-// RegisterIdentity registers the given identity
-func (r *LongTermRole) RegisterIdentity(config driver.IdentityConfiguration) error {
-	return r.localMembership.RegisterIdentity(config)
-}
-
-func (r *LongTermRole) IdentityIDs() ([]string, error) {
-	return r.localMembership.IDs()
 }
