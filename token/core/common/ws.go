@@ -43,7 +43,7 @@ type WalletRegistry interface {
 }
 
 type WalletFactory interface {
-	NewWallet(role driver.IdentityRole, walletRegistry WalletRegistry, info driver.IdentityInfo, id string) (driver.Wallet, error)
+	NewWallet(id string, role driver.IdentityRole, walletRegistry WalletRegistry, info driver.IdentityInfo) (driver.Wallet, error)
 }
 
 type RegistryEntry struct {
@@ -220,7 +220,7 @@ func (s *WalletService) walletByID(role driver.IdentityRole, id driver.WalletLoo
 	}
 
 	// create the wallet
-	newWallet, err := s.WalletFactory.NewWallet(role, registry, idInfo, wID)
+	newWallet, err := s.WalletFactory.NewWallet(wID, role, registry, idInfo)
 	if err != nil {
 		return nil, err
 	}

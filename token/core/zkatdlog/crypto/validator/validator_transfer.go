@@ -34,6 +34,10 @@ func TransferSignatureValidate(ctx *Context) error {
 
 	for i, in := range ctx.TransferAction.Inputs {
 		tok := ctx.TransferAction.InputTokens[i]
+
+		// TODO check witness
+
+		// check sender signature
 		ctx.Logger.Debugf("check sender [%d][%s]", i, driver.Identity(tok.Owner).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner)
 		if err != nil {

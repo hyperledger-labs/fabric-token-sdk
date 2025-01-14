@@ -200,6 +200,10 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			}
 			sigmas[party.UniqueID()] = sigma
 			continue
+		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("failed to find a signer for party [%s]: [%s]", party, err)
+			}
 		}
 
 		// Case 2:
