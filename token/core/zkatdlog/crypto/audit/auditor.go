@@ -277,10 +277,19 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 		return errors.Errorf("owner at index [%d] cannot be unwrapped", index)
 	}
 	switch ro.Type {
+	case msp.X509Identity:
+		matcher, err := des.GetOwnerMatcher(token.Owner.OwnerInfo)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get owner matcher for output [%d]", index)
+		}
+		if err := matcher.Match(ro.Identity); err != nil {
+			return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
+		}
+		return nil
 	case msp.IdemixIdentity:
 		matcher, err := des.GetOwnerMatcher(token.Owner.OwnerInfo)
 		if err != nil {
-			return errors.Errorf("failed to get owner matcher for output [%d]", index)
+			return errors.Wrapf(err, "failed to get owner matcher for output [%d]", index)
 		}
 		if err := matcher.Match(ro.Identity); err != nil {
 			return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
@@ -291,7 +300,6 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 	default:
 		return errors.Errorf("identity type [%s] not recognized", ro.Type)
 	}
-
 }
 
 func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index int) error {
