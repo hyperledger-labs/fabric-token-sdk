@@ -167,7 +167,13 @@ func (t *Action) GetInputs() []*token2.ID {
 
 func (t *Action) GetSerializedInputs() ([][]byte, error) {
 	var res [][]byte
-	for _, token := range t.InputTokens {
+	for i, token := range t.InputTokens {
+		if w := t.InputUpgradeWitness[i]; w != nil {
+			res = append(res, w.Token)
+
+			continue
+		}
+
 		r, err := token.Serialize()
 		if err != nil {
 			return nil, err

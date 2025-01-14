@@ -10,6 +10,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+type MatcherDeserializer interface {
+	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
+}
+
 // VerifierDeserializer is the interface for verifiers' deserializer.
 // A verifier checks the validity of a signature against the identity associated with the verifier
 type VerifierDeserializer interface {
@@ -18,7 +22,7 @@ type VerifierDeserializer interface {
 
 // AuditMatcherProvider provides audit related deserialization functionalities
 type AuditMatcherProvider interface {
-	GetOwnerMatcher(raw []byte) (driver.Matcher, error)
+	MatcherDeserializer
 	MatchOwnerIdentity(id driver.Identity, ai []byte) error
 	GetOwnerAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([][]byte, error)
 }
@@ -72,8 +76,8 @@ func (d *Deserializer) Recipients(id driver.Identity) ([]driver.Identity, error)
 	return d.recipientExtractor.Recipients(id)
 }
 
-func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return d.auditMatcherProvider.GetOwnerMatcher(raw)
+func (d *Deserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+	return d.auditMatcherProvider.GetOwnerMatcher(owner, auditInfo)
 }
 
 func (d *Deserializer) MatchOwnerIdentity(id driver.Identity, ai []byte) error {

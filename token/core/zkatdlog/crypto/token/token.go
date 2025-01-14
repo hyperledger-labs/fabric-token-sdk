@@ -167,6 +167,7 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, 
 }
 
 type UpgradeWitness struct {
+	Token []byte
 	// Type is the type of the token
 	Type token2.Type
 	// Value is the quantity of the token
