@@ -14,9 +14,10 @@ import (
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
@@ -43,7 +44,7 @@ func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 
 func (d *base) newWalletService(
 	tmsConfig driver.Config,
-	binder common2.NetworkBinderService,
+	binder idriver.NetworkBinderService,
 	storageProvider identity.StorageProvider,
 	qe driver.QueryEngine,
 	logger logging.Logger,
@@ -63,7 +64,7 @@ func (d *base) newWalletService(
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
 	ip := identity.NewProvider(identityDB, sigService, binder, NewEIDRHDeserializer())
-	identityConfig, err := config2.NewIdentityConfig(tmsConfig)
+	identityConfig, err := config.NewIdentityConfig(tmsConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create identity config")
 	}
@@ -85,6 +86,7 @@ func (d *base) newWalletService(
 		identityConfig.DefaultCacheSize(),
 		pp.IdemixIssuerPK,
 		pp.IdemixCurveID,
+		x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[driver.OwnerRole], ip, ignoreRemote),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
