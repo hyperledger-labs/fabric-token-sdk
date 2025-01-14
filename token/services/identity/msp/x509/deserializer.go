@@ -40,9 +40,9 @@ func (d *MSPIdentityDeserializer) DeserializeVerifier(id driver.Identity) (drive
 
 type AuditMatcherDeserializer struct{}
 
-func (a *AuditMatcherDeserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+func (a *AuditMatcherDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	ai := &AuditInfo{}
-	err := ai.FromBytes(raw)
+	err := ai.FromBytes(auditInfo)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal")
 	}

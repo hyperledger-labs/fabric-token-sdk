@@ -149,6 +149,7 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 			Value:          curve.NewZrFromUint64(value),
 			BlindingFactor: meta[0].BlindingFactor,
 		}, &token2.UpgradeWitness{
+			Token:          outputRaw,
 			Type:           tokenType,
 			Value:          curve.NewZrFromUint64(value),
 			BlindingFactor: meta[0].BlindingFactor,

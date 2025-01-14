@@ -23,8 +23,8 @@ type Deserializer struct {
 
 // NewDeserializer returns a deserializer
 func NewDeserializer() *Deserializer {
-	m := deserializer.NewTypedVerifierDeserializerMultiplex(&x509.AuditMatcherDeserializer{})
-	m.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}))
+	m := deserializer.NewTypedVerifierDeserializerMultiplex()
+	m.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 	m.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(m))
 
 	return &Deserializer{
