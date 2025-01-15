@@ -11,9 +11,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -394,60 +394,36 @@ func (n *Network) Connect(ns string) ([]token.ServiceOption, error) {
 
 // Provider returns an instance of network provider
 type Provider struct {
-	lock     sync.Mutex
-	networks map[string]*Network
-	drivers  []driver.Driver
+	networks        lazy.Provider[netId, *Network]
+	networkProvider *networkProvider
+}
+
+type netId struct {
+	network, channel string
+}
+
+func key(id netId) string {
+	return id.network + id.channel
 }
 
 // NewProvider returns a new instance of network provider
 func NewProvider() *Provider {
-	ms := &Provider{
-		networks: map[string]*Network{},
-		drivers:  make([]driver.Driver, 0),
+	ms := &networkProvider{drivers: make([]driver.Driver, 0)}
+
+	return &Provider{
+		networkProvider: ms,
+		networks:        lazy.NewProviderWithKeyMapper(key, ms.newNetwork),
 	}
-	return ms
 }
 
 func (np *Provider) RegisterDriver(driver driver.Driver) {
-	np.drivers = append(np.drivers, driver)
+	np.networkProvider.registerDriver(driver)
 }
 
 // GetNetwork returns a network instance for the given network and channel
 func (np *Provider) GetNetwork(network string, channel string) (*Network, error) {
-	np.lock.Lock()
-	defer np.lock.Unlock()
-
 	logger.Debugf("GetNetwork: [%s:%s]", network, channel)
-
-	key := network + channel
-	service, ok := np.networks[key]
-	if !ok {
-		var err error
-		service, err = np.newNetwork(network, channel)
-		if err != nil {
-			logger.Errorf("failed to get network: [%s:%s] %s", network, channel, err)
-			return nil, err
-		}
-		np.networks[key] = service
-	}
-
-	logger.Debugf("GetNetwork: [%s:%s], returning...", network, channel)
-
-	return service, nil
-}
-
-func (np *Provider) newNetwork(network string, channel string) (*Network, error) {
-	var errs []error
-	for _, d := range np.drivers {
-		nw, err := d.New(network, channel)
-		if err != nil {
-			errs = append(errs, errors.WithMessagef(err, "failed to create network [%s:%s]", network, channel))
-			continue
-		}
-		logger.Debugf("new network [%s:%s]", network, channel)
-		return &Network{n: nw}, nil
-	}
-	return nil, errors.Errorf("no network driver found for [%s:%s], errs [%v]", network, channel, errs)
+	return np.networks.Get(netId{network: network, channel: channel})
 }
 
 func (np *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
@@ -459,6 +435,30 @@ func (np *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions,
 		return nil, errors.WithMessagef(err, "failed to get network [%s:%s]", opt.Network, opt.Channel)
 	}
 	return n.Normalize(opt)
+}
+
+// networkProvider instantiates new networks based on the registered drivers
+type networkProvider struct {
+	drivers []driver.Driver
+}
+
+func (np *networkProvider) registerDriver(driver driver.Driver) {
+	np.drivers = append(np.drivers, driver)
+}
+
+func (np *networkProvider) newNetwork(netId netId) (*Network, error) {
+	network, channel := netId.network, netId.channel
+	var errs []error
+	for _, d := range np.drivers {
+		nw, err := d.New(network, channel)
+		if err != nil {
+			errs = append(errs, errors.WithMessagef(err, "failed to create network [%s:%s]", network, channel))
+			continue
+		}
+		logger.Debugf("new network [%s:%s]", network, channel)
+		return &Network{n: nw}, nil
+	}
+	return nil, errors.Errorf("no network driver found for [%s:%s], errs [%v]", network, channel, errs)
 }
 
 // GetInstance returns a network instance for the given network and channel
