@@ -275,8 +275,8 @@ func (pp *PublicParams) Validate() error {
 	if int(pp.Curve) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(pp.Curve), len(mathlib.Curves)-1)
 	}
-	if len(pp.IdemixIssuerPublicKeys) != 0 {
-		return errors.Errorf("expected at one idemix issuer public key, found [%d]", len(pp.IdemixIssuerPublicKeys))
+	if len(pp.IdemixIssuerPublicKeys) != 1 {
+		return errors.Errorf("expected one idemix issuer public key, found [%d]", len(pp.IdemixIssuerPublicKeys))
 	}
 
 	for _, issuer := range pp.IdemixIssuerPublicKeys {
