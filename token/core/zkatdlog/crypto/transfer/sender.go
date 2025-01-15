@@ -169,11 +169,13 @@ func (t *Action) GetSerializedInputs() ([][]byte, error) {
 	var res [][]byte
 	for i, token := range t.InputTokens {
 		if w := t.InputUpgradeWitness[i]; w != nil {
-			res = append(res, w.Token)
-
+			ser, err := w.FabToken.Serialize()
+			if err != nil {
+				return nil, err
+			}
+			res = append(res, ser)
 			continue
 		}
-
 		r, err := token.Serialize()
 		if err != nil {
 			return nil, err

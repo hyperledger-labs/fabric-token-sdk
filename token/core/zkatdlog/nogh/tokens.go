@@ -19,7 +19,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -131,26 +130,26 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 	if !ok {
 		return nil, nil, nil, errors.Errorf("unsupported token format [%s]", outputFormat)
 	}
-	tokenType, value, owner, err := s.checkFabtokenToken(outputRaw, precision)
+	fabToken, value, err := s.checkFabtokenToken(outputRaw, precision)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to unmarshal fabtoken token")
 	}
 	pp := s.PublicParametersManager.PublicParams()
 	curve := math2.Curves[pp.Curve]
-	tokens, meta, err := token2.GetTokensWithWitness([]uint64{value}, tokenType, pp.PedersenGenerators, curve)
+	tokens, meta, err := token2.GetTokensWithWitness([]uint64{value}, fabToken.Type, pp.PedersenGenerators, curve)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to compute commitment")
 	}
 	return &token2.Token{
-			Owner: owner,
+			Owner: fabToken.Owner,
 			Data:  tokens[0],
 		}, &token2.Metadata{
-			Type:           tokenType,
+			Type:           fabToken.Type,
 			Value:          curve.NewZrFromUint64(value),
 			BlindingFactor: meta[0].BlindingFactor,
 		}, &token2.UpgradeWitness{
-			Token:          outputRaw,
-			Type:           tokenType,
+			FabToken:       fabToken,
+			Type:           fabToken.Type,
 			Value:          curve.NewZrFromUint64(value),
 			BlindingFactor: meta[0].BlindingFactor,
 		}, nil
@@ -262,32 +261,31 @@ func (s *TokensService) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequ
 		if !ok {
 			return nil, nil, errors.Errorf("unsupported token format [%s]", tok.Format)
 		}
-		tokenTypes[i], tokenValue[i], _, err = s.checkFabtokenToken(tok.Token, precision)
+		fabToken, v, err := s.checkFabtokenToken(tok.Token, precision)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to check unspent tokens")
 		}
+		tokenTypes[i] = fabToken.Type
+		tokenValue[i] = v
 	}
 	return tokenTypes, tokenValue, nil
 }
 
-func (s *TokensService) checkFabtokenToken(tok []byte, precision uint64) (token.Type, uint64, []byte, error) {
+func (s *TokensService) checkFabtokenToken(tok []byte, precision uint64) (*fabtoken2.Output, uint64, error) {
 	maxPrecision := s.PublicParametersManager.PublicParams().RangeProofParams.BitLength
 	if precision < maxPrecision {
-		return "", 0, nil, errors.Errorf("unsupported precision [%d], max [%d]", precision, maxPrecision)
+		return nil, 0, errors.Errorf("unsupported precision [%d], max [%d]", precision, maxPrecision)
 	}
 
-	typedToken, err := fabtoken.UnmarshalTypedToken(tok)
+	output := &fabtoken2.Output{}
+	err := output.Deserialize(tok)
 	if err != nil {
-		return "", 0, nil, errors.Wrap(err, "failed to unmarshal typed token")
+		return nil, 0, errors.Wrap(err, "failed to unmarshal fabtoken")
 	}
-	fabToken, err := fabtoken.UnmarshalToken(typedToken.Token)
+	q, err := token.NewUBigQuantity(output.Quantity, precision)
 	if err != nil {
-		return "", 0, nil, errors.Wrap(err, "failed to unmarshal fabtoken")
-	}
-	q, err := token.NewUBigQuantity(fabToken.Quantity, precision)
-	if err != nil {
-		return "", 0, nil, errors.Wrap(err, "failed to create quantity")
+		return nil, 0, errors.Wrap(err, "failed to create quantity")
 	}
 
-	return fabToken.Type, q.Uint64(), fabToken.Owner, nil
+	return output, q.Uint64(), nil
 }
