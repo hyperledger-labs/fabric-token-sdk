@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
-
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
@@ -41,6 +40,7 @@ func TestGenFullSuccess(t *testing.T) {
 
 	tempOutput, err := os.MkdirTemp("", "tokengen-test")
 	gt.Expect(err).NotTo(HaveOccurred())
+	// tempOutput := "./testdata"
 	defer os.RemoveAll(tempOutput)
 
 	testGenRun(
@@ -256,7 +256,7 @@ func validateOutputEquivalent(gt *WithT, tempOutput, auditorsMSPdir, issuersMSPd
 
 	idemixPK, err := os.ReadFile(idemixMSPdir)
 	gt.Expect(err).NotTo(HaveOccurred())
-	gt.Expect(idemixPK).To(BeEquivalentTo(pp.IdemixIssuerPK))
+	gt.Expect(idemixPK).To(BeEquivalentTo(pp.IdemixIssuerPublicKeys[0].PublicKey))
 }
 
 func testGenRunWithError(gt *WithT, tokengen string, args []string, errMsg string) {

@@ -40,7 +40,7 @@ func TestSerialization(t *testing.T) {
 	ser2, err := pp2.Serialize()
 	assert.NoError(t, err)
 
-	assert.Equal(t, pp.IdemixIssuerPK, pp2.IdemixIssuerPK)
+	assert.Equal(t, pp.IdemixIssuerPublicKeys, pp2.IdemixIssuerPublicKeys)
 	assert.Equal(t, pp.PedersenGenerators, pp2.PedersenGenerators)
 	assert.Equal(t, pp.RangeProofParams, pp2.RangeProofParams)
 

@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/artifactgen/gen"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/certfier"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/version"
