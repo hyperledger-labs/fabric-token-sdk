@@ -8,6 +8,7 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type Iterator[T any] interface {
@@ -54,6 +55,8 @@ type IdentityDB interface {
 	GetTokenInfo(id []byte) ([]byte, []byte, error)
 	// StoreSignerInfo stores the passed signer info and bound it to the given identity
 	StoreSignerInfo(id, info []byte) error
+	// GetExistingSignerInfo returns the hashes of the identities for which StoreSignerInfo was called
+	GetExistingSignerInfo(ids ...driver.Identity) ([]string, error)
 	// SignerInfoExists returns true if StoreSignerInfo was called on input the given identity
 	SignerInfoExists(id []byte) (bool, error)
 	// GetSignerInfo returns the signer info bound to the given identity

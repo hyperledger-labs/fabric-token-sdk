@@ -16,24 +16,26 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/stretchr/testify/assert"
 )
 
-func initIdentityDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*IdentityDB, error) {
+func initIdentityDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int, ci common.Interpreter) (*IdentityDB, error) {
 	d := NewSQLDBOpener("", "")
 	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return nil, err
 	}
-	return NewIdentityDB(sqlDB, tablePrefix, true, secondcache.NewTyped[bool](1000), secondcache.NewTyped[[]byte](1000))
+	return NewIdentityDB(sqlDB, tablePrefix, true, secondcache.NewTyped[bool](1000), secondcache.NewTyped[[]byte](1000), ci)
 }
 
 func TestIdentitySqlite(t *testing.T) {
 	tempDir := t.TempDir()
 
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initIdentityDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10, sqlite.NewInterpreter())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -45,7 +47,7 @@ func TestIdentitySqlite(t *testing.T) {
 
 func TestIdentitySqliteMemory(t *testing.T) {
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initIdentityDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10, sqlite.NewInterpreter())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -60,7 +62,7 @@ func TestIdentityPostgres(t *testing.T) {
 	defer terminate()
 
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB(sql2.Postgres, pgConnStr, c.Name, 10)
+		db, err := initIdentityDB(sql2.Postgres, pgConnStr, c.Name, 10, postgres.NewInterpreter())
 		if err != nil {
 			t.Fatal(err)
 		}

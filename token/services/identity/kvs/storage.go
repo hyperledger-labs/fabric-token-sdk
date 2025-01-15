@@ -28,6 +28,7 @@ type RecipientData struct {
 
 type KVS interface {
 	Exists(id string) bool
+	GetExisting(ids ...string) []string
 	Put(id string, state interface{}) error
 	Get(id string, state interface{}) error
 	GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error)
@@ -227,16 +228,24 @@ func (s *IdentityDB) StoreSignerInfo(id, info []byte) error {
 	return nil
 }
 
+func (s *IdentityDB) GetExistingSignerInfo(identities ...driver2.Identity) ([]string, error) {
+	keys := make([]string, len(identities))
+	for i, id := range identities {
+		k, err := kvs.CreateCompositeKey("sigService", []string{"signer", id.UniqueID()})
+		if err != nil {
+			return nil, err
+		}
+		keys[i] = k
+	}
+	return s.kvs.GetExisting(keys...), nil
+}
+
 func (s *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
-	idHash := driver2.Identity(id).UniqueID()
-	k, err := kvs.CreateCompositeKey("sigService", []string{"signer", idHash})
+	existing, err := s.GetExistingSignerInfo(id)
 	if err != nil {
 		return false, err
 	}
-	if s.kvs.Exists(k) {
-		return true, nil
-	}
-	return false, nil
+	return len(existing) > 0, nil
 }
 
 func (s *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
