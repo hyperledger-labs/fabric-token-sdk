@@ -169,10 +169,6 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, 
 
 type UpgradeWitness struct {
 	FabToken *fabtoken.Output
-	// Type is the type of the token
-	Type token2.Type
-	// Value is the quantity of the token
-	Value *math.Zr
 	// BlindingFactor is the blinding factor used to commit type and value
 	BlindingFactor *math.Zr
 }

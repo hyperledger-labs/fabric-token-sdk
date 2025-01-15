@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -65,8 +66,19 @@ func TransferUpgradeWitnessValidate(ctx *Context) error {
 			if witness.FabToken == nil {
 				return errors.Errorf("fabtoken token not found in witness")
 			}
-			// TODO: recompute commitment
-
+			// recompute commitment
+			// deserialize quantity witness.FabToken.Quantity
+			q, err := token2.ToQuantity(witness.FabToken.Quantity, ctx.PP.QuantityPrecision)
+			if err != nil {
+				return errors.Wrapf(err, "failed to unmarshal quantity")
+			}
+			tokens, _, err := token.GetTokensWithWitness([]uint64{q.ToBigInt().Uint64()}, witness.FabToken.Type, ctx.PP.PedersenGenerators, math.Curves[ctx.PP.Curve])
+			if err != nil {
+				return errors.Wrapf(err, "failed to compute commitment")
+			}
+			if !ctx.TransferAction.InputTokens[i].Data.Equals(tokens[0]) {
+				return errors.Wrapf(err, "recomputed commitment does not match")
+			}
 			// check owner
 			if !bytes.Equal(ctx.TransferAction.InputTokens[i].Owner, witness.FabToken.Owner) {
 				return errors.Errorf("owners do not correspond")
