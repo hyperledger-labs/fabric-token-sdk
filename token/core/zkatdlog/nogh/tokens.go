@@ -38,7 +38,8 @@ type TokensService struct {
 func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
 	// compute supported tokens
 	// dlog without graph hiding
-	commTokenTypes, err := supportedTokenFormat(publicParametersManager.PublicParams())
+	pp := publicParametersManager.PublicParams()
+	commTokenTypes, err := supportedTokenFormat(pp, &pp.IdemixIssuerPublicKeys[0])
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed computing comm token types")
 	}
@@ -152,14 +153,14 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 	return output, nil
 }
 
-func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
+func supportedTokenFormat(pp *crypto.PublicParams, ipk *crypto.IdemixIssuerPublicKey) (token.Format, error) {
 	hasher := common.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
 		hasher.AddInt(int(pp.Curve)),
 		hasher.AddG1s(pp.PedersenGenerators),
-		hasher.AddInt(int(pp.IdemixIssuerPublicKeys[0].Curve)),
-		hasher.AddBytes(pp.IdemixIssuerPublicKeys[0].PublicKey),
+		hasher.AddInt(int(ipk.Curve)),
+		hasher.AddBytes(ipk.PublicKey),
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}
