@@ -32,7 +32,7 @@ type UpdateArgs struct {
 	Auditors []string
 }
 
-// Cmd returns the Cobra Command for Version
+// UpdateCmd returns the Cobra Command for Update
 func UpdateCmd() *cobra.Command {
 	// Set the flags on the node start command.
 	flags := cmd.Flags()
@@ -69,6 +69,11 @@ var cmd = &cobra.Command{
 
 // Update prints a new version of the config file with updated certs
 func Update(args *UpdateArgs) error {
+	defer func() {
+		if e := recover(); e != nil {
+			fmt.Printf("caught error [%s]\n", e)
+		}
+	}()
 	oldraw, err := os.ReadFile(args.InputFile)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read input file at [%s]", args.InputFile)

@@ -158,8 +158,8 @@ func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
 		hasher.AddInt32(comm.Type),
 		hasher.AddInt(int(pp.Curve)),
 		hasher.AddG1s(pp.PedersenGenerators),
-		hasher.AddInt(int(pp.IdemixCurveID)),
-		hasher.AddBytes(pp.IdemixIssuerPK),
+		hasher.AddInt(int(pp.IdemixIssuerPublicKeys[0].Curve)),
+		hasher.AddBytes(pp.IdemixIssuerPublicKeys[0].PublicKey),
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}

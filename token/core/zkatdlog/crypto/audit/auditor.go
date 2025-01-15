@@ -94,8 +94,6 @@ type Auditor struct {
 	Signer SigningIdentity
 	// Pedersen generators used to compute TokenData
 	PedersenParams []*math.G1
-	// SigningIdentity parameters (e.g., pseudonym parameters)
-	NYMParams []byte
 	// Elliptic curve
 	Curve *math.Curve
 
@@ -105,13 +103,12 @@ type Auditor struct {
 	GetAuditInfoForTransfersFunc GetAuditInfoForTransfersFunc
 }
 
-func NewAuditor(logger logging.Logger, tracer trace.Tracer, des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
+func NewAuditor(logger logging.Logger, tracer trace.Tracer, des Deserializer, pp []*math.G1, signer SigningIdentity, c *math.Curve) *Auditor {
 	a := &Auditor{
 		Logger:         logger,
 		tracer:         tracer,
 		Des:            des,
 		PedersenParams: pp,
-		NYMParams:      nymparams,
 		Signer:         signer,
 		Curve:          c,
 	}

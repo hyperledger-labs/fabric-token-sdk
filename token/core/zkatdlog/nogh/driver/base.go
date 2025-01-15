@@ -83,8 +83,7 @@ func (d *base) newWalletService(
 	role, err := roleFactory.NewIdemix(
 		driver.OwnerRole,
 		identityConfig.DefaultCacheSize(),
-		pp.IdemixIssuerPK,
-		pp.IdemixCurveID,
+		&pp.IdemixIssuerPublicKeys[0],
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
