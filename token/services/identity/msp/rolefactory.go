@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package msp
 
 import (
-	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/common"
@@ -85,20 +85,23 @@ func NewRoleFactory(
 }
 
 // NewIdemix creates a new Idemix-based role
-func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerPublicKey []byte, curveID math3.CurveID, additionalKMPs ...common.KeyManagerProvider) (identity.Role, error) {
+func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerPublicKey *crypto.IdemixIssuerPublicKey, additionalKMPs ...common.KeyManagerProvider) (identity.Role, error) {
 	f.Logger.Debugf("create idemix role for [%s]", driver.IdentityRoleStrings[role])
+	if issuerPublicKey == nil {
+		return nil, errors.New("expected a non-nil idemix public key")
+	}
 
 	backend, err := f.StorageProvider.NewKeystore()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get new keystore backend")
 	}
-	keyStore, err := msp.NewKeyStore(curveID, backend)
+	keyStore, err := msp.NewKeyStore(issuerPublicKey.Curve, backend)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
 	}
 	kmp := idemix2.NewKeyManagerProvider(
-		issuerPublicKey,
-		curveID,
+		issuerPublicKey.PublicKey,
+		issuerPublicKey.Curve,
 		RoleToMSPID[role],
 		keyStore,
 		f.SignerService,

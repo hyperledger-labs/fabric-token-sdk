@@ -68,6 +68,11 @@ func (rpp *RangeProofParams) Validate(curveID mathlib.CurveID) error {
 	return nil
 }
 
+type IdemixIssuerPublicKey struct {
+	PublicKey []byte
+	Curve     mathlib.CurveID
+}
+
 func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
 	pp := &PublicParams{}
 	pp.Label = label
@@ -88,9 +93,7 @@ type PublicParams struct {
 	// RangeProofParams contains the public parameters for the range proof scheme.
 	RangeProofParams *RangeProofParams
 	// IdemixCurveID is the pairing-friendly curve used for the idemix scheme.
-	IdemixCurveID mathlib.CurveID
-	// IdemixIssuerPK is the public key of the issuer of the idemix scheme.
-	IdemixIssuerPK []byte
+	IdemixIssuerPublicKeys []IdemixIssuerPublicKey
 	// Auditor is the public key of the auditor.
 	Auditor driver.Identity
 	// IssuerIDs is a list of public keys of the entities that can issue tokens.
@@ -120,17 +123,17 @@ func SetupWithCustomLabel(bitLength uint64, idemixIssuerPK []byte, label string,
 	if err := pp.GenerateRangeProofParameters(bitLength); err != nil {
 		return nil, errors.Wrapf(err, "failed to generated range-proof parameters")
 	}
-	pp.IdemixIssuerPK = idemixIssuerPK
-	pp.IdemixCurveID = idemixCurveID
+	pp.IdemixIssuerPublicKeys = []IdemixIssuerPublicKey{
+		{
+			PublicKey: idemixIssuerPK,
+			Curve:     idemixCurveID,
+		},
+	}
 	pp.RangeProofParams.BitLength = bitLength
 	pp.RangeProofParams.NumberOfRounds = log2(bitLength)
 	pp.QuantityPrecision = bitLength
 	pp.MaxToken = pp.ComputeMaxTokenValue()
 	return pp, nil
-}
-
-func (pp *PublicParams) IdemixCurve() mathlib.CurveID {
-	return pp.IdemixCurveID
 }
 
 func (pp *PublicParams) Identifier() string {
@@ -272,8 +275,17 @@ func (pp *PublicParams) Validate() error {
 	if int(pp.Curve) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(pp.Curve), len(mathlib.Curves)-1)
 	}
-	if int(pp.IdemixCurveID) > len(mathlib.Curves)-1 {
-		return errors.Errorf("invalid public parameters: invalid idemix curveID [%d > %d]", int(pp.Curve), len(mathlib.Curves)-1)
+	if len(pp.IdemixIssuerPublicKeys) != 0 {
+		return errors.Errorf("expected at one idemix issuer public key, found [%d]", len(pp.IdemixIssuerPublicKeys))
+	}
+
+	for _, issuer := range pp.IdemixIssuerPublicKeys {
+		if len(issuer.PublicKey) == 0 {
+			return errors.Errorf("expected idemix issuer public key to be non-empty")
+		}
+		if int(issuer.Curve) > len(mathlib.Curves)-1 {
+			return errors.Errorf("invalid public parameters: invalid idemix curveID [%d > %d]", int(pp.Curve), len(mathlib.Curves)-1)
+		}
 	}
 	if err := math2.CheckElements(pp.PedersenGenerators, pp.Curve, 3); err != nil {
 		return errors.Wrapf(err, "invalid pedersen generators")
@@ -292,9 +304,6 @@ func (pp *PublicParams) Validate() error {
 	}
 	if pp.QuantityPrecision != pp.RangeProofParams.BitLength {
 		return errors.Errorf("invalid public parameters: quantity precision should be [%d] instead it is [%d]", pp.RangeProofParams.BitLength, pp.QuantityPrecision)
-	}
-	if len(pp.IdemixIssuerPK) == 0 {
-		return errors.New("invalid public parameters: empty idemix issuer")
 	}
 	maxToken := pp.ComputeMaxTokenValue()
 	if maxToken != pp.MaxToken {

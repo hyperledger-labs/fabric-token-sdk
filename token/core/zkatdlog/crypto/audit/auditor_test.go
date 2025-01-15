@@ -12,8 +12,6 @@ import (
 	"os"
 	"time"
 
-	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -33,6 +31,7 @@ import (
 	msp3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	msp2 "github.com/hyperledger/fabric/msp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -52,9 +51,9 @@ var _ = Describe("Auditor", func() {
 		Expect(err).NotTo(HaveOccurred())
 		pp, err = crypto.Setup(32, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, math.FP256BN_AMCL)
+		des, err := idemix.NewDeserializer(pp.IdemixIssuerPublicKeys[0].PublicKey, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), &noop.Tracer{}, des, pp.PedersenGenerators, nil, fakeSigningIdentity, math.Curves[pp.Curve])
+		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), &noop.Tracer{}, des, pp.PedersenGenerators, fakeSigningIdentity, math.Curves[pp.Curve])
 		fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)
 
 	})
