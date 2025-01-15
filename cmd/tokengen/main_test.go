@@ -38,7 +38,7 @@ func TestGenFullSuccess(t *testing.T) {
 	gt.Expect(err).NotTo(HaveOccurred())
 	defer gexec.CleanupBuildArtifacts()
 
-	tempOutput, err := os.MkdirTemp("./testada", "tokengen-test")
+	tempOutput, err := os.MkdirTemp("", "tokengen-test")
 	gt.Expect(err).NotTo(HaveOccurred())
 	// tempOutput := "./testdata"
 	defer os.RemoveAll(tempOutput)
