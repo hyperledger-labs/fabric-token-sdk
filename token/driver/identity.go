@@ -68,6 +68,9 @@ type IdentityProvider interface {
 	// RegisterSigner registers a Signer and a Verifier for passed identity.
 	RegisterSigner(identity Identity, signer Signer, verifier Verifier, signerInfo []byte) error
 
+	// AreMe returns the hashes of the passed identities that have a signer registered before
+	AreMe(identities ...Identity) []string
+
 	// IsMe returns true if a signer was ever registered for the passed identity
 	IsMe(party Identity) bool
 

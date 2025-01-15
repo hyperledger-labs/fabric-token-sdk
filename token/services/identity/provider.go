@@ -8,6 +8,7 @@ package identity
 
 import (
 	"runtime/debug"
+	"slices"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -36,6 +37,7 @@ type EnrollmentIDUnmarshaler interface {
 
 type sigService interface {
 	IsMe(identity driver.Identity) bool
+	AreMe(identities ...driver.Identity) []string
 	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
 	RegisterVerifier(identity driver.Identity, v driver.Verifier) error
 	GetSigner(identity driver.Identity) (driver.Signer, error)
@@ -101,31 +103,41 @@ func (p *Provider) RegisterSigner(identity driver.Identity, signer driver.Signer
 	return p.SigService.RegisterSigner(identity, signer, verifier, signerInfo)
 }
 
-func (p *Provider) IsMe(identity driver.Identity) bool {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("identity [%s] is me?", identity)
-	}
-	p.isMeCacheLock.RLock()
-	isMe, ok := p.isMeCache[identity.String()]
-	p.isMeCacheLock.RUnlock()
-	if ok {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("identity [%s] is me? [%v] from cache", identity, isMe)
-		}
-		return isMe
-	}
+func (p *Provider) AreMe(identities ...driver.Identity) []string {
+	logger.Debugf("identity [%s] is me?", identities)
 
-	found := false
-	defer func() {
-		p.isMeCacheLock.Lock()
-		p.isMeCache[identity.String()] = found
-		p.isMeCacheLock.Unlock()
-	}()
-	found = p.SigService.IsMe(identity)
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("identity [%s] is me? [%v] from sig service", identity, isMe)
+	result := make([]string, 0)
+	notFound := make([]driver.Identity, 0)
+
+	p.isMeCacheLock.RLock()
+	for _, id := range identities {
+		if isMe, ok := p.isMeCache[id.UniqueID()]; !ok {
+			notFound = append(notFound, id)
+		} else if isMe {
+			result = append(result, id.UniqueID())
+		}
 	}
-	return found
+	if len(notFound) == 0 {
+		defer p.isMeCacheLock.RUnlock()
+		return result
+	}
+	p.isMeCacheLock.RUnlock()
+
+	p.isMeCacheLock.Lock()
+
+	// TODO: Look up cache under write lock
+
+	defer p.isMeCacheLock.Unlock()
+
+	found := p.SigService.AreMe(notFound...)
+	for _, id := range notFound {
+		p.isMeCache[id.UniqueID()] = slices.Contains(found, id.UniqueID())
+	}
+	return append(result, found...)
+}
+
+func (p *Provider) IsMe(identity driver.Identity) bool {
+	return len(p.AreMe(identity)) > 0
 }
 
 func (p *Provider) RegisterRecipientIdentity(id driver.Identity) error {

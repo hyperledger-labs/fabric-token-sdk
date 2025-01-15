@@ -23,5 +23,5 @@ func OpenIdentityDB(k common.Opts) (driver.IdentityDB, error) {
 }
 
 func NewIdentityDB(db *sql.DB, opts common.NewDBOpts) (driver.IdentityDB, error) {
-	return common.NewCachedIdentityDB(db, opts)
+	return common.NewCachedIdentityDB(db, opts, postgres.NewInterpreter())
 }
