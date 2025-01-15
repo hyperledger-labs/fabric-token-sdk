@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -507,6 +508,18 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 
 func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, auditors []view.Identity, distributionList []view.Identity) ([]distributionListEntry, error) {
 	// Compress distributionList by removing duplicates
+
+	allIds := append(distributionList, auditors...)
+	mine := collections.NewSet(view2.GetSigService(context).AreMe(allIds...)...)
+	remainingIds := make([]view.Identity, 0, len(allIds)-mine.Length())
+	for _, id := range allIds {
+		if !mine.Contains(id.UniqueID()) {
+			remainingIds = append(remainingIds, id)
+		}
+	}
+	mine.Add(c.tx.TokenService().SigService().AreMe(remainingIds...)...)
+	logger.Debugf("%d/%d ids were mine", mine.Length(), len(allIds))
+
 	var distributionListCompressed []distributionListEntry
 	for _, party := range distributionList {
 		// For each party in the distribution list:
@@ -522,7 +535,8 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to [%s]?", party.UniqueID())
 		}
-		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(party)
+
+		isMe := mine.Contains(party.UniqueID())
 		if !isMe {
 			// check if there is a wallet that contains that identity
 			isMe = c.tx.TokenService().WalletManager().OwnerWallet(party) != nil
@@ -578,7 +592,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 
 	// check the auditors
 	for _, party := range auditors {
-		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(party)
+		isMe := mine.Contains(party.UniqueID())
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
 		}

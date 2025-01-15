@@ -51,6 +51,11 @@ func (s *SignatureService) RegisterSigner(identity Identity, signer Signer, veri
 	return s.ip.RegisterSigner(identity, signer, verifier, nil)
 }
 
+// AreMe returns the hashes of the passed identities that have a signer registered before
+func (s *SignatureService) AreMe(identities ...Identity) []string {
+	return s.ip.AreMe(identities...)
+}
+
 // IsMe returns true if for the given identity there is a signer registered
 func (s *SignatureService) IsMe(party Identity) bool {
 	return s.ip.IsMe(party)

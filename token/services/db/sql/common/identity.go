@@ -10,11 +10,14 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -36,31 +39,35 @@ type identityTables struct {
 type IdentityDB struct {
 	db    *sql.DB
 	table identityTables
+	ci    common.Interpreter
 
+	signerCacheLock sync.RWMutex
 	signerInfoCache cache[bool]
 	auditInfoCache  cache[[]byte]
 }
 
-func newIdentityDB(db *sql.DB, tables identityTables, singerInfoCache cache[bool], auditInfoCache cache[[]byte]) *IdentityDB {
+func newIdentityDB(db *sql.DB, tables identityTables, singerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) *IdentityDB {
 	return &IdentityDB{
 		db:              db,
 		table:           tables,
 		signerInfoCache: singerInfoCache,
 		auditInfoCache:  auditInfoCache,
+		ci:              ci,
 	}
 }
 
-func NewCachedIdentityDB(db *sql.DB, opts NewDBOpts) (driver.IdentityDB, error) {
+func NewCachedIdentityDB(db *sql.DB, opts NewDBOpts, ci common.Interpreter) (driver.IdentityDB, error) {
 	return NewIdentityDB(
 		db,
 		opts.TablePrefix,
 		opts.CreateSchema,
 		secondcache.NewTyped[bool](1000),
 		secondcache.NewTyped[[]byte](1000),
+		ci,
 	)
 }
 
-func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfoCache cache[bool], auditInfoCache cache[[]byte]) (*IdentityDB, error) {
+func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) (*IdentityDB, error) {
 	tables, err := GetTableNames(tablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
@@ -75,6 +82,7 @@ func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfo
 		},
 		signerInfoCache,
 		auditInfoCache,
+		ci,
 	)
 	if createSchema {
 		if err = common.InitSchema(db, []string{identityDB.GetSchema()}...); err != nil {
@@ -211,31 +219,82 @@ func (db *IdentityDB) StoreSignerInfo(id, info []byte) error {
 		}
 	}
 
+	db.signerCacheLock.Lock()
+	defer db.signerCacheLock.Unlock()
 	db.signerInfoCache.Add(h, true)
 	return nil
 }
 
-func (db *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
-	h := token.Identity(id).String()
+func (db *IdentityDB) GetExistingSignerInfo(ids ...driver2.Identity) ([]string, error) {
+	idHashes := make([]string, len(ids))
+	for i, id := range ids {
+		idHashes[i] = id.UniqueID()
+	}
 
-	value, _, err := db.signerInfoCache.GetOrLoad(h, func() (bool, error) {
-		query, err := NewSelect("info").From(db.table.Signers).Where("identity_hash = $1").Compile()
-		if err != nil {
-			return false, errors.Wrapf(err, "failed compiling query")
+	result := make([]string, 0)
+	notFound := make([]string, 0)
+
+	db.signerCacheLock.RLock()
+	for _, idHash := range idHashes {
+		if v, ok := db.signerInfoCache.Get(idHash); !ok {
+			notFound = append(notFound, idHash)
+		} else if v {
+			result = append(result, idHash)
 		}
-		logger.Debug(query)
-		row := db.db.QueryRow(query, h)
-		var info []byte
-		err = row.Scan(&info)
-		if err == nil {
-			return true, nil
+	}
+	if len(notFound) == 0 {
+		defer db.signerCacheLock.RUnlock()
+		return result, nil
+	}
+	db.signerCacheLock.RUnlock()
+
+	idHashes = notFound
+	notFound = make([]string, 0)
+	db.signerCacheLock.Lock()
+	defer db.signerCacheLock.Unlock()
+	for _, idHash := range idHashes {
+		if v, ok := db.signerInfoCache.Get(idHash); !ok {
+			notFound = append(notFound, idHash)
+		} else if v {
+			result = append(result, idHash)
 		}
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, nil
+	}
+	if len(notFound) == 0 {
+		return result, nil
+	}
+
+	idHashes = notFound
+	condition := db.ci.InStrings("identity_hash", idHashes)
+	ctr := 1
+	query, err := NewSelect("identity_hash").From(db.table.Signers).Where(condition.ToString(&ctr)).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed compiling query")
+	}
+	logger.Debug(query, condition.Params())
+	rows, err := db.db.Query(query, condition.Params()...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	found := collections.NewSet[string]()
+	for rows.Next() {
+		var idHash string
+		if err := rows.Scan(&idHash); err != nil {
+			return nil, err
 		}
-		return false, errors.Wrapf(err, "error querying db")
-	})
-	return value, err
+		found.Add(idHash)
+	}
+	for _, idHash := range idHashes {
+		db.signerInfoCache.Add(idHash, found.Contains(idHash))
+	}
+	return append(result, found.ToSlice()...), nil
+}
+
+func (db *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
+	existing, err := db.GetExistingSignerInfo(id)
+	if err != nil {
+		return false, err
+	}
+	return len(existing) > 0, nil
 }
 
 func (db *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
