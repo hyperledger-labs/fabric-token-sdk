@@ -48,8 +48,8 @@ func HTLCSingleFabricNetworkTopology(opts common.Opts) []api.Topology {
 		AddOptions(opts.ReplicationOpts.For("bob")...)
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, opts.TokenSDKDriver)
-	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
+	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
@@ -87,8 +87,8 @@ func HTLCSingleOrionNetworkTopology(opts common.Opts) []api.Topology {
 		AddOptions(opts.ReplicationOpts.For("custodian")...)
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", opts.TokenSDKDriver)
-	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", opts.DefaultTMSOpts.TokenSDKDriver)
+	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 	orion2.SetCustodian(tms, custodian.Name)
@@ -148,13 +148,13 @@ func HTLCTwoFabricNetworksTopology(opts common.Opts) []api.Topology {
 		RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), f1Topology, f1Topology.Channels[0].Name, opts.TokenSDKDriver)
-	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), f1Topology, f1Topology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
+	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
-	tms = tokenTopology.AddTMS(fscTopology.ListNodes(), f2Topology, f2Topology.Channels[0].Name, opts.TokenSDKDriver)
-	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
+	tms = tokenTopology.AddTMS(fscTopology.ListNodes(), f2Topology, f2Topology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
+	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
@@ -215,13 +215,13 @@ func HTLCNoCrossClaimTopology(opts common.Opts) []api.Topology {
 		RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, opts.TokenSDKDriver)
-	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
+	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
-	tms = tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "bob"), f2Topology, f2Topology.Channels[0].Name, opts.TokenSDKDriver)
-	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
+	tms = tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "bob"), f2Topology, f2Topology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
+	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
@@ -287,14 +287,14 @@ func HTLCNoCrossClaimWithOrionTopology(opts common.Opts) []api.Topology {
 	tokenTopology := token.NewTopology()
 
 	// TMS for the Fabric Network
-	tmsFabric := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, opts.TokenSDKDriver)
-	common.SetDefaultParams(opts.TokenSDKDriver, tmsFabric, true)
+	tmsFabric := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
+	common.SetDefaultParams(tmsFabric, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tmsFabric, "Org1")
 	tmsFabric.AddAuditor(auditor)
 
 	// TMS for the Orion Network
-	tmsOrion := tokenTopology.AddTMS(fscTopology.ListNodes("custodian", "auditor", "issuer", "bob"), orionTopology, "", opts.TokenSDKDriver)
-	common.SetDefaultParams(opts.TokenSDKDriver, tmsOrion, true)
+	tmsOrion := tokenTopology.AddTMS(fscTopology.ListNodes("custodian", "auditor", "issuer", "bob"), orionTopology, "", opts.DefaultTMSOpts.TokenSDKDriver)
+	common.SetDefaultParams(tmsOrion, opts.DefaultTMSOpts)
 	tmsOrion.AddAuditor(auditor)
 	orion2.SetCustodian(tmsOrion, custodian.Name)
 

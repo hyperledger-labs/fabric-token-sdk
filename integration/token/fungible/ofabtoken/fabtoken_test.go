@@ -35,8 +35,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 		common.Opts{
 			Backend:         "orion",
 			CommType:        commType,
-			TokenSDKDriver:  "fabtoken",
-			Aries:           true,
+			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken", Aries: true},
 			SDKs:            []api.SDK{&ofabtoken.SDK{}},
 			ReplicationOpts: opts,
 			OnlyUnity:       true,

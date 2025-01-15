@@ -11,6 +11,7 @@ import (
 	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
 	dvp2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp"
 	. "github.com/onsi/ginkgo/v2"
@@ -31,7 +32,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 	opts, selector := token2.NewReplicationOptions(factor, names...)
 	ts := token2.NewTestSuite(opts.SQLConfigs, StartPort, dvp2.Topology(dvp2.Opts{
 		CommType:       commType,
-		TokenSDKDriver: "dlog",
+		DefaultTMSOpts: common.TMSOpts{TokenSDKDriver: "dlog"},
 		FSCLogSpec:     "",
 		SDKs:           []api2.SDK{&fdlog.SDK{}},
 		Replication:    opts,

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -166,4 +167,8 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, 
 	return com, nil
 }
 
-type ConversionWitness struct{}
+type UpgradeWitness struct {
+	FabToken *fabtoken.Output
+	// BlindingFactor is the blinding factor used to commit type and value
+	BlindingFactor *math.Zr
+}

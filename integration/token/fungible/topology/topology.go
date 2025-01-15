@@ -328,10 +328,10 @@ func Topology(opts common.Opts) []api.Topology {
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.TokenSelector = opts.TokenSelector
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.TokenSDKDriver)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.DefaultTMSOpts.TokenSDKDriver)
 	tms.SetNamespace("token-chaincode")
-	common.SetDefaultParams(opts.TokenSDKDriver, tms, opts.Aries)
-	if !opts.Aries {
+	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
+	if !opts.DefaultTMSOpts.Aries {
 		// Enable Fabric-CA
 		fabric2.WithFabricCA(tms)
 	}

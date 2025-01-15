@@ -30,9 +30,8 @@ type Opts struct {
 	CommType            fsc.P2PCommunicationType
 	ReplicationOpts     replicationOpts
 	Backend             string
-	TokenSDKDriver      string
+	DefaultTMSOpts      TMSOpts
 	AuditorAsIssuer     bool
-	Aries               bool
 	FSCLogSpec          string
 	NoAuditor           bool
 	HSM                 bool
@@ -45,18 +44,21 @@ type Opts struct {
 	ExtraTMSs           []TMSOpts
 }
 
-func SetDefaultParams(tokenSDKDriver string, tms *topology.TMS, aries bool) {
-	switch tokenSDKDriver {
+func SetDefaultParams(tms *topology.TMS, opts TMSOpts) {
+	switch opts.TokenSDKDriver {
 	case "dlog":
-		if aries {
+		if opts.Aries {
 			dlog.WithAries(tms)
 		}
-		// max token value is 2^16
-		tms.SetTokenGenPublicParams("16")
 	case "fabtoken":
+		// no nothig
+	default:
+		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", opts.TokenSDKDriver)
+	}
+	if len(opts.PublicParamsGenArgs) != 0 {
+		tms.SetTokenGenPublicParams(opts.PublicParamsGenArgs...)
+	} else {
 		// max token value is 2^16
 		tms.SetTokenGenPublicParams("16")
-	default:
-		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
 	}
 }

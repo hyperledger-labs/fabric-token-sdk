@@ -111,8 +111,8 @@ func (i *Deserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, erro
 	return i.Deserializer.DeserializeAuditInfo(raw)
 }
 
-func (i *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return i.Deserializer.DeserializeAuditInfo(raw)
+func (i *Deserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+	return i.Deserializer.DeserializeAuditInfo(auditInfo)
 }
 
 func (i *Deserializer) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {

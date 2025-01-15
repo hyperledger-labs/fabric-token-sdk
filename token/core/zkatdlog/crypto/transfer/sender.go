@@ -102,7 +102,6 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 			Type:           s.InputInformation[0].Type,
 			Value:          math.Curves[s.PublicParams.Curve].NewZrFromUint64(outtw[i].Value),
 			BlindingFactor: outtw[i].BlindingFactor,
-			Owner:          owners[i],
 		}
 	}
 	return transfer, inf, nil
@@ -126,7 +125,8 @@ type Action struct {
 	// Inputs specify the identifiers in of the tokens to be spent
 	Inputs []*token2.ID
 	// InputCommitments are the PedersenCommitments in the inputs
-	InputTokens []*token.Token
+	InputTokens         []*token.Token
+	InputUpgradeWitness []*token.UpgradeWitness
 	// OutputTokens are the new tokens resulting from the transfer
 	OutputTokens []*token.Token
 	// ZK Proof that shows that the transfer is correct
@@ -167,7 +167,15 @@ func (t *Action) GetInputs() []*token2.ID {
 
 func (t *Action) GetSerializedInputs() ([][]byte, error) {
 	var res [][]byte
-	for _, token := range t.InputTokens {
+	for i, token := range t.InputTokens {
+		if w := t.InputUpgradeWitness[i]; w != nil {
+			ser, err := w.FabToken.Serialize()
+			if err != nil {
+				return nil, err
+			}
+			res = append(res, ser)
+			continue
+		}
 		r, err := token.Serialize()
 		if err != nil {
 			return nil, err

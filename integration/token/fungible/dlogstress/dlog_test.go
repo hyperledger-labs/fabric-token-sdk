@@ -39,16 +39,15 @@ var sdks = map[string]api.SDK{
 }
 
 func newTestSuite(backend string) (*token.TestSuite, *token.ReplicaSelector) {
-	//opts, selector := token.NewReplicationOptions(token.None)
+	// opts, selector := token.NewReplicationOptions(token.None)
 	opts, selector := token.NewReplicationOptions(1, "alice", "bob", "charlie", "issuer", "auditor")
 	ts := token.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
 		common.Opts{
 			Backend:         backend,
-			TokenSDKDriver:  "dlog",
-			Aries:           true,
+			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog", Aries: true},
 			ReplicationOpts: opts,
 			CommType:        fsc.LibP2P,
-			//FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:info",
+			// FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:info",
 			SDKs:       []api.SDK{sdks[backend]},
 			Monitoring: true,
 		},

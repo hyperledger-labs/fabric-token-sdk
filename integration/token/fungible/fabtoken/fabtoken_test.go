@@ -61,8 +61,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 		common.Opts{
 			Backend:         "fabric",
 			CommType:        commType,
-			TokenSDKDriver:  "fabtoken",
-			Aries:           true,
+			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken", Aries: true},
 			SDKs:            []api.SDK{&ffabtoken.SDK{}},
 			ReplicationOpts: opts,
 			WebEnabled:      true, // Needed for the Remote Wallet with websockets

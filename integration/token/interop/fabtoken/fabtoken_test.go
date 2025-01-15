@@ -67,7 +67,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLC.StartPortForNode, interop.HTLCSingleFabricNetworkTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
-		TokenSDKDriver:  "fabtoken",
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
 		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
 	}))
 	return ts, selector
@@ -78,7 +78,7 @@ func newTestSuiteSingleOrion(commType fsc.P2PCommunicationType, factor int, name
 	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCOrion.StartPortForNode, interop.HTLCSingleOrionNetworkTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
-		TokenSDKDriver:  "fabtoken",
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
 		SDKs:            []api2.SDK{&ofabtoken.SDK{}},
 	}))
 	return ts, selector
@@ -89,7 +89,7 @@ func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names 
 	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
-		TokenSDKDriver:  "fabtoken",
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
 		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
 	}))
 	return ts, selector
@@ -100,7 +100,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
-		TokenSDKDriver:  "fabtoken",
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
 		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
 	}))
 	return ts, selector
@@ -111,7 +111,7 @@ func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int
 	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimWithOrionTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
-		TokenSDKDriver:  "fabtoken",
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
 		SDKs:            []api2.SDK{&fofabtoken.SDK{}},
 	}))
 	return ts, selector

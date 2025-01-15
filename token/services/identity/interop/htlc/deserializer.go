@@ -94,6 +94,10 @@ func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ st
 	return [][]byte{auditInfoRaw}, nil
 }
 
+func (t *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+	panic("not implemented")
+}
+
 type AuditDeserializer struct {
 	AuditInfoDeserializer driver2.AuditInfoDeserializer
 }

@@ -54,6 +54,7 @@ type LocalMembership struct {
 	localIdentitiesByEnrollmentID map[string]*LocalIdentity
 	localIdentitiesByIdentity     map[string]*LocalIdentity
 	targetIdentities              []view.Identity
+	DefaultAnonymous              bool
 }
 
 func NewLocalMembership(
@@ -65,7 +66,8 @@ func NewLocalMembership(
 	identityDB driver3.IdentityDB,
 	binderService driver2.BinderService,
 	identityType string,
-	KeyManagerProvider KeyManagerProvider,
+	keyManagerProvider KeyManagerProvider,
+	defaultAnonymous bool,
 ) *LocalMembership {
 	return &LocalMembership{
 		logger:                        logger,
@@ -79,7 +81,8 @@ func NewLocalMembership(
 		localIdentitiesByIdentity:     map[string]*LocalIdentity{},
 		binderService:                 binderService,
 		IdentityType:                  identityType,
-		KeyManagerProvider:            KeyManagerProvider,
+		KeyManagerProvider:            keyManagerProvider,
+		DefaultAnonymous:              defaultAnonymous,
 	}
 }
 
@@ -145,11 +148,11 @@ func (l *LocalMembership) IDs() ([]string, error) {
 	l.localIdentitiesMutex.RLock()
 	defer l.localIdentitiesMutex.RUnlock()
 
-	var ids []string
+	set := collections.NewSet[string]()
 	for _, identity := range l.localIdentities {
-		ids = append(ids, identity.Name)
+		set.Add(identity.Name)
 	}
-	return ids, nil
+	return set.ToSlice(), nil
 }
 
 func (l *LocalMembership) Load(identities []*config.Identity, targets []view.Identity) error {
@@ -202,6 +205,10 @@ func (l *LocalMembership) Load(identities []*config.Identity, targets []view.Ide
 
 func (l *LocalMembership) getDefaultIdentifier() string {
 	for _, identity := range l.localIdentities {
+		if l.DefaultAnonymous && !identity.Anonymous {
+			continue
+		}
+
 		if identity.Default {
 			return identity.Name
 		}
@@ -309,6 +316,7 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 		Name:         name,
 		Default:      defaultID,
 		EnrollmentID: eID,
+		Anonymous:    keyManager.Anonymous(),
 		GetIdentity:  keyManager.Identity,
 		Remote:       keyManager.IsRemote(),
 	}

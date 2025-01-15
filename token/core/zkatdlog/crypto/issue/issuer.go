@@ -76,7 +76,6 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*Action, []*
 			Type:           i.Type,
 			Value:          math.Curves[i.PublicParams.Curve].NewZrFromUint64(tw[j].Value),
 			BlindingFactor: tw[j].BlindingFactor,
-			Owner:          owners[j],
 			Issuer:         signerRaw,
 		}
 	}

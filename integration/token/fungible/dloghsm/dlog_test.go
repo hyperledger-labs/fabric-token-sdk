@@ -50,9 +50,8 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names
 		common.Opts{
 			Backend:         "fabric",
 			CommType:        commType,
-			TokenSDKDriver:  "dlog",
+			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog", Aries: mask&Aries > 0},
 			NoAuditor:       mask&NoAuditor > 0,
-			Aries:           mask&Aries > 0,
 			AuditorAsIssuer: mask&AuditorAsIssuer > 0,
 			HSM:             mask&HSM > 0,
 			WebEnabled:      mask&WebEnabled > 0,

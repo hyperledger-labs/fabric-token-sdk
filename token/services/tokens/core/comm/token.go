@@ -34,8 +34,6 @@ type Metadata struct {
 	Value *math.Zr
 	// BlindingFactor is the blinding factor used to commit type and value
 	BlindingFactor *math.Zr
-	// Owner is the owner of the token
-	Owner []byte
 	// Issuer is the issuer of the token, if defined
 	Issuer []byte
 }

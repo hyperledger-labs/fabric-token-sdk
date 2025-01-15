@@ -33,7 +33,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 	ts := token.NewTestSuite(opts.SQLConfigs, StartPortDlog, nft.Topology(common.Opts{
 		Backend:         "fabric",
 		CommType:        commType,
-		TokenSDKDriver:  "fabtoken",
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
 		SDKs:            []api.SDK{&ffabtoken.SDK{}},
 		ReplicationOpts: opts,
 	}))

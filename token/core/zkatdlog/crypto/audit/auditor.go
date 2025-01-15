@@ -37,7 +37,7 @@ type SigningIdentity interface {
 // Deserializer deserialize audit information
 type Deserializer interface {
 	// GetOwnerMatcher returns the owner matcher for the given audit info
-	GetOwnerMatcher(auditInfo []byte) (driver.Matcher, error)
+	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
 // InspectTokenOwnerFunc models a function to inspect the owner field
@@ -277,10 +277,19 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 		return errors.Errorf("owner at index [%d] cannot be unwrapped", index)
 	}
 	switch ro.Type {
-	case msp.IdemixIdentity:
-		matcher, err := des.GetOwnerMatcher(token.Owner.OwnerInfo)
+	case msp.X509Identity:
+		matcher, err := des.GetOwnerMatcher(token.Token.Owner, token.Owner.OwnerInfo)
 		if err != nil {
-			return errors.Errorf("failed to get owner matcher for output [%d]", index)
+			return errors.Wrapf(err, "failed to get owner matcher for output [%d]", index)
+		}
+		if err := matcher.Match(ro.Identity); err != nil {
+			return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
+		}
+		return nil
+	case msp.IdemixIdentity:
+		matcher, err := des.GetOwnerMatcher(token.Token.Owner, token.Owner.OwnerInfo)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get owner matcher for output [%d]", index)
 		}
 		if err := matcher.Match(ro.Identity); err != nil {
 			return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
@@ -291,7 +300,6 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 	default:
 		return errors.Errorf("identity type [%s] not recognized", ro.Type)
 	}
-
 }
 
 func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index int) error {
@@ -308,7 +316,7 @@ func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index in
 		return errors.Wrap(err, "failed getting script sender and recipient")
 	}
 
-	sender, err := des.GetOwnerMatcher(scriptInf.Sender)
+	sender, err := des.GetOwnerMatcher(scriptSender, scriptInf.Sender)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal audit info from script sender [%s]", string(scriptInf.Sender))
 	}
@@ -320,7 +328,7 @@ func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index in
 		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Sender))
 	}
 
-	recipient, err := des.GetOwnerMatcher(scriptInf.Recipient)
+	recipient, err := des.GetOwnerMatcher(scriptRecipient, scriptInf.Recipient)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal audit info from script recipient [%s]", string(scriptInf.Recipient))
 	}

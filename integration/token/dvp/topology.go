@@ -23,7 +23,7 @@ import (
 
 type Opts struct {
 	CommType       fsc.P2PCommunicationType
-	TokenSDKDriver string
+	DefaultTMSOpts common.TMSOpts
 	FSCLogSpec     string
 	SDKs           []api2.SDK
 	Replication    token2.ReplicationOpts
@@ -38,7 +38,7 @@ func Topology(opts Opts) []api.Topology {
 	fabricTopology.EnableGRPCLogging()
 	fabricTopology.EnableLogPeersToFile()
 	fabricTopology.EnableLogOrderersToFile()
-	//fabricTopology.SetLogging("info", "")
+	// fabricTopology.SetLogging("info", "")
 
 	// FSC
 	fscTopology := fsc.NewTopology()
@@ -114,8 +114,8 @@ func Topology(opts Opts) []api.Topology {
 		RegisterViewFactory("TxFinality", &views.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, opts.TokenSDKDriver)
-	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
+	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 

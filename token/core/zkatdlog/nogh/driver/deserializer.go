@@ -33,8 +33,9 @@ func NewDeserializer(pp *crypto.PublicParams) (*Deserializer, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", pp.IdemixCurveID)
 	}
-	m := deserializer.NewTypedVerifierDeserializerMultiplex(idemixDes)
-	m.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes))
+	m := deserializer.NewTypedVerifierDeserializerMultiplex()
+	m.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
+	m.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 	m.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(m))
 
 	return &Deserializer{
@@ -80,6 +81,7 @@ type EIDRHDeserializer = deserializer.EIDRHDeserializer
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
 	d.AddDeserializer(msp.IdemixIdentity, &idemix.AuditInfoDeserializer{})
+	d.AddDeserializer(msp.X509Identity, &x509.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix.AuditInfoDeserializer{}))
 	return d
 }

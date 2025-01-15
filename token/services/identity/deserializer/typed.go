@@ -22,20 +22,20 @@ type TypedVerifierDeserializer interface {
 	DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error)
 	Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error)
 	GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([][]byte, error)
+	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
 // AuditMatcherDeserializer deserializes raw bytes into a matcher, which allows an auditor to match an identity to an enrollment ID
 type AuditMatcherDeserializer interface {
-	GetOwnerMatcher(raw []byte) (driver.Matcher, error)
+	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
 type TypedVerifierDeserializerMultiplex struct {
-	deserializers            map[string]TypedVerifierDeserializer
-	auditMatcherDeserializer AuditMatcherDeserializer
+	deserializers map[string]TypedVerifierDeserializer
 }
 
-func NewTypedVerifierDeserializerMultiplex(auditMatcherDeserializer AuditMatcherDeserializer) *TypedVerifierDeserializerMultiplex {
-	return &TypedVerifierDeserializerMultiplex{deserializers: map[string]TypedVerifierDeserializer{}, auditMatcherDeserializer: auditMatcherDeserializer}
+func NewTypedVerifierDeserializerMultiplex() *TypedVerifierDeserializerMultiplex {
+	return &TypedVerifierDeserializerMultiplex{deserializers: map[string]TypedVerifierDeserializer{}}
 }
 
 func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ string, d TypedVerifierDeserializer) {
@@ -76,8 +76,23 @@ func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]d
 	return d.Recipients(id, si.Type, si.Identity)
 }
 
-func (v *TypedVerifierDeserializerMultiplex) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return v.auditMatcherDeserializer.GetOwnerMatcher(raw)
+func (v *TypedVerifierDeserializerMultiplex) GetOwnerMatcher(id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+	if id.IsNone() {
+		return nil, nil
+	}
+	si, err := identity.UnmarshalTypedIdentity(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
+	}
+	return v.getOwnerMatcher(si.Type, id, auditInfo)
+}
+
+func (v *TypedVerifierDeserializerMultiplex) getOwnerMatcher(idType string, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+	d, ok := v.deserializers[idType]
+	if !ok {
+		return nil, errors.Errorf("no deserializer found for [%s]", idType)
+	}
+	return d.GetOwnerMatcher(id, auditInfo)
 }
 
 func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identity, ai []byte) error {
@@ -90,7 +105,7 @@ func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identi
 	//	return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
 	// }
 
-	matcher, err := v.GetOwnerMatcher(ai)
+	matcher, err := v.getOwnerMatcher(recipient.Type, id, ai)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info matcher for [%s]", id)
 	}
@@ -119,10 +134,11 @@ func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(id driver.Identit
 
 type TypedIdentityVerifierDeserializer struct {
 	common.VerifierDeserializer
+	common.MatcherDeserializer
 }
 
-func NewTypedIdentityVerifierDeserializer(verifierDeserializer common.VerifierDeserializer) *TypedIdentityVerifierDeserializer {
-	return &TypedIdentityVerifierDeserializer{VerifierDeserializer: verifierDeserializer}
+func NewTypedIdentityVerifierDeserializer(verifierDeserializer common.VerifierDeserializer, matcherDeserializer common.MatcherDeserializer) *TypedIdentityVerifierDeserializer {
+	return &TypedIdentityVerifierDeserializer{VerifierDeserializer: verifierDeserializer, MatcherDeserializer: matcherDeserializer}
 }
 
 func (t *TypedIdentityVerifierDeserializer) DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error) {
@@ -139,4 +155,8 @@ func (t *TypedIdentityVerifierDeserializer) GetOwnerAuditInfo(id driver.Identity
 		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", id)
 	}
 	return [][]byte{auditInfo}, nil
+}
+
+func (t *TypedIdentityVerifierDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+	return t.MatcherDeserializer.GetOwnerMatcher(owner, auditInfo)
 }

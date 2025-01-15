@@ -222,7 +222,7 @@ type Deserializer interface {
 	// GetAuditorVerifier returns the verifier associated to the passed auditor identity
 	GetAuditorVerifier(id Identity) (Verifier, error)
 	// GetOwnerMatcher returns an identity matcher for the passed identity audit data
-	GetOwnerMatcher(auditData []byte) (Matcher, error)
+	GetOwnerMatcher(owner Identity, auditInfo []byte) (Matcher, error)
 	// Recipients returns the recipient identities from the given serialized representation
 	Recipients(raw Identity) ([]Identity, error)
 	// MatchOwnerIdentity returns nil if the given identity matches the given audit information.

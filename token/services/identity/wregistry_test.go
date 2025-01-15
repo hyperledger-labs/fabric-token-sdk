@@ -45,27 +45,27 @@ func (f *fakeRole) ID() driver.IdentityRole {
 	return 0
 }
 
-func (f *fakeRole) MapToID(v driver.WalletLookupID) (driver.Identity, string, error) {
-	//TODO implement me
+func (f *fakeRole) MapToIdentity(v driver.WalletLookupID) (driver.Identity, string, error) {
+	// TODO implement me
 	panic("implement me")
 }
 
 func (f *fakeRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (f *fakeRole) RegisterIdentity(config driver.IdentityConfiguration) error {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (f *fakeRole) IdentityIDs() ([]string, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (f *fakeRole) Load(pp driver.PublicParameters) error {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }

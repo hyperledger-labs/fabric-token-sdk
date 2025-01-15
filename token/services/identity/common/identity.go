@@ -16,6 +16,7 @@ type LocalIdentity struct {
 	Name         string
 	EnrollmentID string
 	Default      bool
+	Anonymous    bool
 	GetIdentity  GetIdentityFunc
 	Remote       bool
 }

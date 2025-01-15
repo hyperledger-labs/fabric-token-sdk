@@ -51,7 +51,7 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver
 	}
 	var walletIdentifiers []string
 
-	identity, walletID, err := r.Role.MapToID(id)
+	identity, walletID, err := r.Role.MapToIdentity(id)
 	if err != nil {
 		fail := true
 		// give it a second change

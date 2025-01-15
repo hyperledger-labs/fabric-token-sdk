@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
@@ -85,7 +85,7 @@ func NewRoleFactory(
 }
 
 // NewIdemix creates a new Idemix-based role
-func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerPublicKey []byte, curveID math3.CurveID) (identity.Role, error) {
+func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerPublicKey []byte, curveID math3.CurveID, additionalKMPs ...common.KeyManagerProvider) (identity.Role, error) {
 	f.Logger.Debugf("create idemix role for [%s]", driver.IdentityRoleStrings[role])
 
 	backend, err := f.StorageProvider.NewKeystore()
@@ -111,7 +111,7 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
-	lm := common2.NewLocalMembership(
+	lm := common.NewLocalMembership(
 		f.Logger,
 		f.Config,
 		f.NetworkDefaultIdentity,
@@ -120,7 +120,8 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 		identityDB,
 		f.BinderService,
 		RoleToMSPID[role],
-		kmp,
+		common.NewMultiplexerKeyManagerProvider(append([]common.KeyManagerProvider{kmp}, additionalKMPs...)),
+		true,
 	)
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
@@ -130,7 +131,7 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
 	return &WrappingBindingRole{
-		Role:             common2.NewAnonymousRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
+		Role:             common.NewAnonymousRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
 		IdentityType:     IdemixIdentity,
 		RootIdentity:     f.FSCIdentity,
 		IdentityProvider: f.IdentityProvider,
@@ -156,7 +157,7 @@ func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType str
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
-	lm := common2.NewLocalMembership(
+	lm := common.NewLocalMembership(
 		logging.MustGetLogger("token-sdk.services.identity.msp.x509"),
 		f.Config,
 		f.NetworkDefaultIdentity,
@@ -166,6 +167,7 @@ func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType str
 		f.BinderService,
 		RoleToMSPID[role],
 		kmp,
+		false,
 	)
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
@@ -176,7 +178,7 @@ func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType str
 	}
 
 	return &WrappingBindingRole{
-		Role:             common2.NewLongTermRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
+		Role:             common.NewLongTermRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
 		IdentityType:     identityType,
 		RootIdentity:     f.FSCIdentity,
 		IdentityProvider: f.IdentityProvider,
