@@ -49,7 +49,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	var outputTokenFormat token.Format
 	supportedTokenFormatList := make([]token.Format, 3)
 	for i, precision := range crypto.SupportedPrecisions {
-		format, err := supportedTokenFormat(pp, precision)
+		format, err := supportedTokenFormat(pp, precision, &pp.IdemixIssuerPublicKeys[0])
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed computing comm token types")
 		}
@@ -229,15 +229,15 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 	return output, nil
 }
 
-func supportedTokenFormat(pp *crypto.PublicParams, precision uint64) (token.Format, error) {
+func supportedTokenFormat(pp *crypto.PublicParams, precision uint64, ipk *crypto.IdemixIssuerPublicKey) (token.Format, error) {
 	hasher := common.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
 		hasher.AddInt(int(pp.Curve)),
 		hasher.AddUInt64(precision),
 		hasher.AddG1s(pp.PedersenGenerators),
-		hasher.AddInt(int(pp.IdemixIssuerPublicKeys[0].Curve)),
-		hasher.AddBytes(pp.IdemixIssuerPublicKeys[0].PublicKey),
+		hasher.AddInt(int(ipk.Curve)),
+		hasher.AddBytes(ipk.PublicKey),
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}
