@@ -52,6 +52,7 @@ func New(logger logging.Logger, pp *crypto.PublicParams, deserializer driver.Des
 	transferValidators := []ValidateTransferFunc{
 		TransferActionValidate,
 		TransferSignatureValidate,
+		TransferUpgradeWitnessValidate,
 		TransferZKProofValidate,
 		TransferHTLCValidate,
 	}

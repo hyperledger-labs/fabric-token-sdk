@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
+	"bytes"
 	"encoding/json"
 	"time"
 
@@ -54,6 +55,24 @@ func TransferSignatureValidate(ctx *Context) error {
 	ctx.InputTokens = ctx.TransferAction.InputTokens
 	ctx.Signatures = signatures
 
+	return nil
+}
+
+func TransferUpgradeWitnessValidate(ctx *Context) error {
+	for i, witness := range ctx.TransferAction.InputUpgradeWitness {
+		if witness != nil {
+			// check that the corresponding input is compatible with the witness
+			if witness.FabToken == nil {
+				return errors.Errorf("fabtoken token not found in witness")
+			}
+			// TODO: recompute commitment
+
+			// check owner
+			if !bytes.Equal(ctx.TransferAction.InputTokens[i].Owner, witness.FabToken.Owner) {
+				return errors.Errorf("owners do not correspond")
+			}
+		}
+	}
 	return nil
 }
 
