@@ -11,6 +11,7 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
@@ -25,6 +26,7 @@ type Storage interface {
 	StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 	GetAuditInfo(id []byte) ([]byte, error)
 	StoreSignerInfo(id, info []byte) error
+	GetExistingSignerInfo(ids ...driver.Identity) ([]string, error)
 	SignerInfoExists(id []byte) (bool, error)
 	GetSignerInfo(identity []byte) ([]byte, error)
 }
@@ -152,6 +154,42 @@ func (o *Service) RegisterVerifier(identity driver.Identity, verifier driver.Ver
 		logger.Debugf("register verifier to [%s]:[%s]", idHash, GetIdentifier(verifier))
 	}
 	return nil
+}
+
+func (o *Service) AreMe(identities ...driver.Identity) []string {
+	logger.Debugf("is me [%s]?", identities)
+	idHashes := make([]string, len(identities))
+	for i, id := range identities {
+		idHashes[i] = id.UniqueID()
+	}
+
+	result := collections.NewSet[string]()
+	notFound := make([]driver.Identity, 0)
+
+	// check local cache
+	o.sync.RLock()
+	for _, id := range identities {
+		if _, ok := o.signers[id.UniqueID()]; ok {
+			logger.Debugf("is me [%s]? yes, from cache", id)
+			result.Add(id.UniqueID())
+		} else {
+			notFound = append(notFound, id)
+		}
+	}
+	o.sync.RUnlock()
+
+	if len(notFound) == 0 || o.storage == nil {
+		return result.ToSlice()
+	}
+
+	// check storage
+	found, err := o.storage.GetExistingSignerInfo(notFound...)
+	if err != nil {
+		logger.Errorf("failed checking if a signer exists [%s]", err)
+		return result.ToSlice()
+	}
+	result.Add(found...)
+	return result.ToSlice()
 }
 
 func (o *Service) IsMe(identity driver.Identity) bool {
