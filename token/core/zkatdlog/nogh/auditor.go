@@ -90,15 +90,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	span.AddEvent("load_public_params")
 	pp := s.PublicParametersManager.PublicParams()
 	span.AddEvent("create_new_auditor")
-	auditor := audit.NewAuditor(
-		s.Logger,
-		s.tracer,
-		s.Deserializer,
-		pp.PedersenGenerators,
-		pp.IdemixIssuerPK,
-		nil,
-		math.Curves[pp.Curve],
-	)
+	auditor := audit.NewAuditor(s.Logger, s.tracer, s.Deserializer, pp.PedersenGenerators, nil, math.Curves[pp.Curve])
 	span.AddEvent("start_auditor_check")
 	err = auditor.Check(
 		newCtx,

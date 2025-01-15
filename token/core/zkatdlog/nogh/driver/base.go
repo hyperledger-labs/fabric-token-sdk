@@ -84,8 +84,7 @@ func (d *base) newWalletService(
 	role, err := roleFactory.NewIdemix(
 		driver.OwnerRole,
 		identityConfig.DefaultCacheSize(),
-		pp.IdemixIssuerPK,
-		pp.IdemixCurveID,
+		&pp.IdemixIssuerPublicKeys[0],
 		x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[driver.OwnerRole], ip, ignoreRemote),
 	)
 	if err != nil {
