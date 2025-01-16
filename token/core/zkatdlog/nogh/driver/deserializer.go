@@ -29,6 +29,7 @@ func NewDeserializer(pp *crypto.PublicParams) (*Deserializer, error) {
 	if pp == nil {
 		return nil, errors.New("failed to get deserializer: nil public parameters")
 	}
+
 	idemixDes, err := idemix.NewDeserializer(pp.IdemixIssuerPublicKeys[0].PublicKey, pp.IdemixIssuerPublicKeys[0].Curve)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", pp.IdemixIssuerPublicKeys[0].Curve)
