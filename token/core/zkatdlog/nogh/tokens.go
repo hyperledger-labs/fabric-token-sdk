@@ -48,8 +48,9 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	// dlog without graph hiding
 	var outputTokenFormat token.Format
 	supportedTokenFormatList := make([]token.Format, 3)
+	for j := 0; j < len(pp.IdemixIssuerPublicKeys); j++ {
 	for i, precision := range crypto.SupportedPrecisions {
-		format, err := supportedTokenFormat(pp, precision, &pp.IdemixIssuerPublicKeys[0])
+		format, err := supportedTokenFormat(pp, precision, &pp.IdemixIssuerPublicKeys[j])
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed computing comm token types")
 		}
@@ -60,6 +61,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 		if precision <= maxPrecision {
 			supportedTokenFormatList[i] = format
 		}
+	}
 	}
 	if len(outputTokenFormat) == 0 {
 		return nil, errors.Errorf("precision not found")

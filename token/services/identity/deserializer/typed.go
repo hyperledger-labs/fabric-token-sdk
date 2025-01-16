@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package deserializer
 
 import (
+	errors2 "errors"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -31,15 +33,20 @@ type AuditMatcherDeserializer interface {
 }
 
 type TypedVerifierDeserializerMultiplex struct {
-	deserializers map[string]TypedVerifierDeserializer
+	deserializers map[string][]TypedVerifierDeserializer
 }
 
 func NewTypedVerifierDeserializerMultiplex() *TypedVerifierDeserializerMultiplex {
-	return &TypedVerifierDeserializerMultiplex{deserializers: map[string]TypedVerifierDeserializer{}}
+	return &TypedVerifierDeserializerMultiplex{deserializers: map[string][]TypedVerifierDeserializer{}}
 }
 
 func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ string, d TypedVerifierDeserializer) {
-	v.deserializers[typ] = d
+	_, ok := v.deserializers[typ]
+	if !ok {
+		v.deserializers[typ] = []TypedVerifierDeserializer{d}
+		return
+	}
+	v.deserializers[typ] = append(v.deserializers[typ], d)
 }
 
 func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
@@ -47,18 +54,23 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(id driver.Ident
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
 	}
-	d, ok := v.deserializers[si.Type]
+	dess, ok := v.deserializers[si.Type]
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Deserializing [%s] with type [%s]", id, si.Type)
 	}
-	verifier, err := d.DeserializeVerifier(si.Type, si.Identity)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed deserializing [%s]", si.Type)
+	var errs []error
+	for _, deserializer := range dess {
+		verifier, err := deserializer.DeserializeVerifier(si.Type, si.Identity)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		return verifier, nil
 	}
-	return verifier, nil
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid deserializer")
 }
 
 func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]driver.Identity, error) {
@@ -69,11 +81,21 @@ func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]d
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
 	}
-	d, ok := v.deserializers[si.Type]
+	dess, ok := v.deserializers[si.Type]
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
 	}
-	return d.Recipients(id, si.Type, si.Identity)
+
+	var errs []error
+	for _, deserializer := range dess {
+		ids, err := deserializer.Recipients(id, si.Type, si.Identity)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		return ids, nil
+	}
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid deserializer")
 }
 
 func (v *TypedVerifierDeserializerMultiplex) GetOwnerMatcher(id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
@@ -121,15 +143,20 @@ func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(id driver.Identit
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
 	}
-	d, ok := v.deserializers[si.Type]
+	dess, ok := v.deserializers[si.Type]
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
 	}
-	res, err := d.GetOwnerAuditInfo(id, si.Type, si.Identity, p)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get owner audit info, type [%s]", si.Type)
+	var errs []error
+	for _, deserializer := range dess {
+		info, err := deserializer.GetOwnerAuditInfo(id, si.Type, si.Identity, p)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		return info, nil
 	}
-	return res, nil
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid deserializer")
 }
 
 type TypedIdentityVerifierDeserializer struct {

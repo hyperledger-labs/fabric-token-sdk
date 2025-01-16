@@ -12,10 +12,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 type Service struct {
 	*common.Service[*crypto.PublicParams]
+	validator *validator.Validator
 }
 
 func NewTokenService(
@@ -51,12 +53,17 @@ func NewTokenService(
 		return nil, err
 	}
 
+	validator, err := validator.New(logger, ppm.PublicParams(), deserializer), nil
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to instantiate validator")
+	}
 	s := &Service{
-		Service: root,
+		Service:   root,
+		validator: validator,
 	}
 	return s, nil
 }
 
 func (s *Service) Validator() (driver.Validator, error) {
-	return validator.New(s.Logger, s.PublicParametersManager.PublicParams(), s.Deserializer()), nil
+	return s.validator, nil
 }
