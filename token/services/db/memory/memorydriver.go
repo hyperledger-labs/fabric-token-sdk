@@ -40,8 +40,8 @@ func (d *Driver[D]) Open(_ driver.ConfigProvider, tmsID token.TMSID) (D, error) 
 		SkipCreateTable: false,
 		SkipPragmas:     false,
 		MaxOpenConns:    10,
-		MaxIdleConns:    10,
-		MaxIdleTime:     time.Minute,
+		MaxIdleConns:    common.CopyPtr(10),
+		MaxIdleTime:     common.CopyPtr(time.Minute),
 	}
 	return d.dbOpener(opts)
 }

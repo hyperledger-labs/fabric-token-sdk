@@ -121,7 +121,7 @@ func (db *IdentityDB) ConfigurationExists(id, typ string) (bool, error) {
 	if err != nil {
 		return false, errors.Wrapf(err, "failed compiling query")
 	}
-	result, err := QueryUnique[string](db.db, query, id, typ)
+	result, err := common.QueryUnique[string](db.db, query, id, typ)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed getting configuration for [%s:%s]", id, typ)
 	}

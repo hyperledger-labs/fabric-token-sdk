@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
@@ -76,7 +77,7 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 }
 
 func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
-	db, err := postgres2.OpenDB(pgConnStr, 10, 2, time.Minute)
+	db, err := postgres2.OpenDB(pgConnStr, 10, common.CopyPtr(common.DefaultMaxIdleConns), common.CopyPtr(common.DefaultMaxIdleTime))
 	if err != nil {
 		return nil, err
 	}
