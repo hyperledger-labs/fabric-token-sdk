@@ -43,16 +43,28 @@ type TokensService struct {
 func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
 	// compute supported tokens
 	// dlog without graph hiding
+	// we support all fabtoken with precision less than maxPrecision, in addition to outputTokenFormat
 	pp := publicParametersManager.PublicParams()
 	maxPrecision := pp.RangeProofParams.BitLength
-
-	outputTokenFormat, err := supportedTokenFormat(pp)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed computing comm token types")
+	var outputTokenFormat token.Format
+	supportedTokenFormatList := make([]token.Format, 3)
+	for i, precision := range []uint64{16, 32, 64} {
+		format, err := supportedTokenFormat(pp, precision)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed computing comm token types")
+		}
+		if precision == maxPrecision {
+			outputTokenFormat = format
+		}
+		// these precisions are supported directly
+		if precision <= pp.QuantityPrecision {
+			supportedTokenFormatList[i] = format
+		}
+	}
+	if len(outputTokenFormat) == 0 {
+		return nil, errors.Errorf("precision not found")
 	}
 
-	// we support all fabtoken with precision less than maxPrecision, in addition to outputTokenFormat
-	supportedTokenFormatList := []token.Format{outputTokenFormat}
 	var upgradeSupportedTokenFormatList []token.Format
 	for _, precision := range []uint64{16, 32, 64} {
 		format, err := fabtoken2.SupportedTokenFormat(precision)
@@ -216,11 +228,12 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 	return output, nil
 }
 
-func supportedTokenFormat(pp *crypto.PublicParams) (token.Format, error) {
+func supportedTokenFormat(pp *crypto.PublicParams, precision uint64) (token.Format, error) {
 	hasher := common.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
 		hasher.AddInt(int(pp.Curve)),
+		hasher.AddUInt64(precision),
 		hasher.AddG1s(pp.PedersenGenerators),
 		hasher.AddInt(int(pp.IdemixCurveID)),
 		hasher.AddBytes(pp.IdemixIssuerPK),

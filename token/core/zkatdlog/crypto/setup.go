@@ -277,11 +277,8 @@ func (pp *PublicParams) Validate() error {
 		return errors.New("invalid public parameters: nil range proof parameters")
 	}
 	bitLength := pp.RangeProofParams.BitLength
-	if bitLength > 64 {
-		return errors.Errorf("invalid bit length [%d], should be smaller than 64", bitLength)
-	}
-	if bitLength == 0 {
-		return errors.New("invalid bit length, should be greater than 0")
+	if bitLength != 16 && bitLength != 32 && bitLength != 64 {
+		return errors.Errorf("invalid bit length [%d], should be either 16, 32, or 64", bitLength)
 	}
 	err := pp.RangeProofParams.Validate(pp.Curve)
 	if err != nil {
