@@ -112,7 +112,8 @@ func (d *Opener[V]) compileOpts(cp driver.ConfigProvider, tmsID token.TMSID) (*O
 func (d *Opener[V]) OpenSQLDB(driverName common.SQLDriverType, dataSourceName string, maxOpenConns int, skipPragmas bool) (V, error) {
 	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
 
-	return d.dbCache.Get(Opts{Driver: driverName, DataSource: dataSourceName, MaxOpenConns: maxOpenConns, MaxIdleConns: 2, MaxIdleTime: time.Minute, SkipPragmas: skipPragmas})
+	maxIdleConns, maxIdleTime := 2, time.Minute
+	return d.dbCache.Get(Opts{Driver: driverName, DataSource: dataSourceName, MaxOpenConns: maxOpenConns, MaxIdleConns: &maxIdleConns, MaxIdleTime: &maxIdleTime, SkipPragmas: skipPragmas})
 }
 
 func key(k Opts) string {
