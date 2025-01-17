@@ -42,10 +42,10 @@ type TokensService struct {
 
 func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
 	// compute supported tokens
-	// dlog without graph hiding
-	// we support all fabtoken with precision less than maxPrecision, in addition to outputTokenFormat
 	pp := publicParametersManager.PublicParams()
 	maxPrecision := pp.RangeProofParams.BitLength
+
+	// dlog without graph hiding
 	var outputTokenFormat token.Format
 	supportedTokenFormatList := make([]token.Format, 3)
 	for i, precision := range crypto.SupportedPrecisions {
@@ -57,7 +57,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 			outputTokenFormat = format
 		}
 		// these precisions are supported directly
-		if precision <= pp.QuantityPrecision {
+		if precision <= maxPrecision {
 			supportedTokenFormatList[i] = format
 		}
 	}
@@ -65,6 +65,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 		return nil, errors.Errorf("precision not found")
 	}
 
+	// in addition, we support all fabtoken with precision less than maxPrecision
 	var upgradeSupportedTokenFormatList []token.Format
 	for _, precision := range []uint64{16, 32, 64} {
 		format, err := fabtoken2.SupportedTokenFormat(precision)
