@@ -13,6 +13,7 @@ import (
 	"strconv"
 
 	mathlib "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -20,6 +21,10 @@ import (
 
 const (
 	DLogPublicParameters = "zkatdlog"
+)
+
+var (
+	SupportedPrecisions = []uint64{16, 32, 64}
 )
 
 type RangeProofParams struct {
@@ -277,8 +282,9 @@ func (pp *PublicParams) Validate() error {
 		return errors.New("invalid public parameters: nil range proof parameters")
 	}
 	bitLength := pp.RangeProofParams.BitLength
-	if bitLength != 16 && bitLength != 32 && bitLength != 64 {
-		return errors.Errorf("invalid bit length [%d], should be either 16, 32, or 64", bitLength)
+	supportedPrecisions := collections.NewSet(SupportedPrecisions...)
+	if !supportedPrecisions.Contains(bitLength) {
+		return errors.Errorf("invalid bit length [%d], should be one of [%v]", bitLength, supportedPrecisions.ToSlice())
 	}
 	err := pp.RangeProofParams.Validate(pp.Curve)
 	if err != nil {

@@ -48,7 +48,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	maxPrecision := pp.RangeProofParams.BitLength
 	var outputTokenFormat token.Format
 	supportedTokenFormatList := make([]token.Format, 3)
-	for i, precision := range []uint64{16, 32, 64} {
+	for i, precision := range crypto.SupportedPrecisions {
 		format, err := supportedTokenFormat(pp, precision)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed computing comm token types")
