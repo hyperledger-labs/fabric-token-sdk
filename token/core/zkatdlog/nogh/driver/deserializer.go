@@ -30,13 +30,15 @@ func NewDeserializer(pp *crypto.PublicParams) (*Deserializer, error) {
 		return nil, errors.New("failed to get deserializer: nil public parameters")
 	}
 
-	idemixDes, err := idemix.NewDeserializer(pp.IdemixIssuerPublicKeys[0].PublicKey, pp.IdemixIssuerPublicKeys[0].Curve)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", pp.IdemixIssuerPublicKeys[0].Curve)
-	}
 	m := deserializer.NewTypedVerifierDeserializerMultiplex()
+	for _, idemixIssuerPublicKey := range pp.IdemixIssuerPublicKeys {
+		idemixDes, err := idemix.NewDeserializer(idemixIssuerPublicKey.PublicKey, idemixIssuerPublicKey.Curve)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", idemixIssuerPublicKey.Curve)
+		}
+		m.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+	}
 	m.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
-	m.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 	m.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(m))
 
 	return &Deserializer{
