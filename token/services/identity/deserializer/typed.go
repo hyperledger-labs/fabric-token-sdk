@@ -110,11 +110,22 @@ func (v *TypedVerifierDeserializerMultiplex) GetOwnerMatcher(id driver.Identity,
 }
 
 func (v *TypedVerifierDeserializerMultiplex) getOwnerMatcher(idType string, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
-	d, ok := v.deserializers[idType]
+	dess, ok := v.deserializers[idType]
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", idType)
 	}
-	return d.GetOwnerMatcher(id, auditInfo)
+
+	var errs []error
+	for _, deserializer := range dess {
+		ids, err := deserializer.GetOwnerMatcher(id, auditInfo)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		return ids, nil
+	}
+
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid deserializer")
 }
 
 func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identity, ai []byte) error {
