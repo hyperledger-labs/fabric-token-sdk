@@ -49,19 +49,19 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	var outputTokenFormat token.Format
 	supportedTokenFormatList := make([]token.Format, 3)
 	for j := 0; j < len(pp.IdemixIssuerPublicKeys); j++ {
-	for i, precision := range crypto.SupportedPrecisions {
-		format, err := supportedTokenFormat(pp, precision, &pp.IdemixIssuerPublicKeys[j])
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed computing comm token types")
+		for i, precision := range crypto.SupportedPrecisions {
+			format, err := supportedTokenFormat(pp, precision, &pp.IdemixIssuerPublicKeys[j])
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed computing comm token types")
+			}
+			if precision == maxPrecision {
+				outputTokenFormat = format
+			}
+			// these precisions are supported directly
+			if precision <= maxPrecision {
+				supportedTokenFormatList[i] = format
+			}
 		}
-		if precision == maxPrecision {
-			outputTokenFormat = format
-		}
-		// these precisions are supported directly
-		if precision <= maxPrecision {
-			supportedTokenFormatList[i] = format
-		}
-	}
 	}
 	if len(outputTokenFormat) == 0 {
 		return nil, errors.Errorf("precision not found")
