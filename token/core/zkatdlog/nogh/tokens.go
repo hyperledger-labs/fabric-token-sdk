@@ -46,25 +46,23 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	maxPrecision := pp.RangeProofParams.BitLength
 
 	// dlog without graph hiding
-	var outputTokenFormat token.Format
-	supportedTokenFormatList := make([]token.Format, 3)
-	for j := 0; j < len(pp.IdemixIssuerPublicKeys); j++ {
-		for i, precision := range crypto.SupportedPrecisions {
-			format, err := supportedTokenFormat(pp, precision, &pp.IdemixIssuerPublicKeys[j])
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed computing comm token types")
-			}
-			if precision == maxPrecision {
-				outputTokenFormat = format
-			}
+	outputTokenFormat, err := supportedTokenFormat(pp, maxPrecision, &pp.IdemixIssuerPublicKeys[0])
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed computing comm token types")
+	}
+
+	supportedTokenFormatList := make([]token.Format, 0, 3*len(pp.IdemixIssuerPublicKeys))
+	for _, key := range pp.IdemixIssuerPublicKeys {
+		for _, precision := range crypto.SupportedPrecisions {
 			// these precisions are supported directly
 			if precision <= maxPrecision {
-				supportedTokenFormatList[i] = format
+				format, err := supportedTokenFormat(pp, precision, &key)
+				if err != nil {
+					return nil, errors.Wrapf(err, "failed computing comm token types")
+				}
+				supportedTokenFormatList = append(supportedTokenFormatList, format)
 			}
 		}
-	}
-	if len(outputTokenFormat) == 0 {
-		return nil, errors.Errorf("precision not found")
 	}
 
 	// in addition, we support all fabtoken with precision less than maxPrecision
