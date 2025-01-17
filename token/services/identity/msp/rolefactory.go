@@ -87,28 +87,32 @@ func NewRoleFactory(
 // NewIdemix creates a new Idemix-based role
 func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerPublicKey *crypto.IdemixIssuerPublicKey, additionalKMPs ...common.KeyManagerProvider) (identity.Role, error) {
 	f.Logger.Debugf("create idemix role for [%s]", driver.IdentityRoleStrings[role])
-	if issuerPublicKey == nil {
+	if issuerPublicKey == nil && len(additionalKMPs) == 0 {
 		return nil, errors.New("expected a non-nil idemix public key")
 	}
 
-	backend, err := f.StorageProvider.NewKeystore()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get new keystore backend")
+	kmps := additionalKMPs
+	if issuerPublicKey != nil {
+		backend, err := f.StorageProvider.NewKeystore()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get new keystore backend")
+		}
+		keyStore, err := msp.NewKeyStore(issuerPublicKey.Curve, backend)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
+		}
+		kmp := idemix2.NewKeyManagerProvider(
+			issuerPublicKey.PublicKey,
+			issuerPublicKey.Curve,
+			RoleToMSPID[role],
+			keyStore,
+			f.SignerService,
+			f.Config,
+			cacheSize,
+			f.ignoreRemote,
+		)
+		kmps = append([]common.KeyManagerProvider{kmp}, additionalKMPs...)
 	}
-	keyStore, err := msp.NewKeyStore(issuerPublicKey.Curve, backend)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
-	}
-	kmp := idemix2.NewKeyManagerProvider(
-		issuerPublicKey.PublicKey,
-		issuerPublicKey.Curve,
-		RoleToMSPID[role],
-		keyStore,
-		f.SignerService,
-		f.Config,
-		cacheSize,
-		f.ignoreRemote,
-	)
 
 	identityDB, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
 	if err != nil {
@@ -123,7 +127,7 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 		identityDB,
 		f.BinderService,
 		RoleToMSPID[role],
-		common.NewMultiplexerKeyManagerProvider(append([]common.KeyManagerProvider{kmp}, additionalKMPs...)),
+		common.NewMultiplexerKeyManagerProvider(kmps),
 		true,
 	)
 	identities, err := f.IdentitiesForRole(role)

@@ -97,6 +97,7 @@ jobs:
           fabtoken-fabric-t5,
           update-t1,
           update-t2,
+          update-t3,
           dlog-orion,
           fabtoken-orion,
           nft-dlog,

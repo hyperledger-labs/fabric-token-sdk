@@ -47,6 +47,24 @@ var _ = Describe("EndToEnd", func() {
 			AfterEach(ts.TearDown)
 			It("succeeded", Label("T2"), func() { fungible.TestLocalTokensUpgrade(ts.II, "auditor", nil, selector) })
 		})
+
+		Describe("Rotate Idemix Issuer", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, 32, []common.TMSOpts{
+				{
+					Alias:               "dlog-32bits",
+					TokenSDKDriver:      "dlog",
+					PublicParamsGenArgs: []string{"32"},
+				},
+				{
+					Alias:               "dlog-32bits-bis",
+					TokenSDKDriver:      "dlog",
+					PublicParamsGenArgs: []string{"32"},
+				},
+			}, t.ReplicationFactor, "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T3"), func() { fungible.TestIdemixIssuerPublicKeyRotation(ts.II, "auditor", nil, selector) })
+		})
 	}
 })
 
