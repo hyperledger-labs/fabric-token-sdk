@@ -105,6 +105,10 @@ integration-tests-update-t1:
 integration-tests-update-t2:
 	make integration-tests-update TEST_FILTER="T2"
 
+.PHONY: integration-tests-update-t3
+integration-tests-update-t3:
+	make integration-tests-update TEST_FILTER="T3"
+
 .PHONY: integration-tests-update
 integration-tests-update:
 	cd ./integration/token/fungible/update; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --label-filter="$(TEST_FILTER)" .

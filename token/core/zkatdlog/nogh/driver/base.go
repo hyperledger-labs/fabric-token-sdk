@@ -14,9 +14,12 @@ import (
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -81,11 +84,38 @@ func (d *base) newWalletService(
 		deserializerManager,
 		ignoreRemote,
 	)
+	// owner role
+	// we have one key manager for fabtoken and one for each idemix issuer public key
+	kmps := []common2.KeyManagerProvider{
+		x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[driver.OwnerRole], ip, ignoreRemote),
+	}
+	for _, key := range pp.IdemixIssuerPublicKeys {
+		backend, err := storageProvider.NewKeystore()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get new keystore backend")
+		}
+		keyStore, err := msp2.NewKeyStore(key.Curve, backend)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
+		}
+		kmp := idemix2.NewKeyManagerProvider(
+			key.PublicKey,
+			key.Curve,
+			msp.RoleToMSPID[driver.OwnerRole],
+			keyStore,
+			sigService,
+			identityConfig,
+			identityConfig.DefaultCacheSize(),
+			ignoreRemote,
+		)
+		kmps = append(kmps, kmp)
+	}
+
 	role, err := roleFactory.NewIdemix(
 		driver.OwnerRole,
 		identityConfig.DefaultCacheSize(),
-		&pp.IdemixIssuerPublicKeys[0],
-		x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[driver.OwnerRole], ip, ignoreRemote),
+		nil,
+		kmps...,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
