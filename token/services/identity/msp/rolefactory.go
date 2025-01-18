@@ -127,8 +127,8 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 		identityDB,
 		f.BinderService,
 		RoleToMSPID[role],
-		common.NewMultiplexerKeyManagerProvider(kmps),
 		true,
+		kmps...,
 	)
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
@@ -173,8 +173,8 @@ func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType str
 		identityDB,
 		f.BinderService,
 		RoleToMSPID[role],
-		kmp,
 		false,
+		kmp,
 	)
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {

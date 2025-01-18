@@ -345,7 +345,7 @@ func (db *IdentityDB) GetSchema() string {
 			url TEXT NOT NULL,
 			conf BYTEA,
 			raw BYTEA,
-			PRIMARY KEY(id, type)
+			PRIMARY KEY(id, type, url)
 		);
 		CREATE INDEX IF NOT EXISTS idx_ic_type_%s ON %s ( type );
 		CREATE INDEX IF NOT EXISTS idx_ic_id_type_%s ON %s ( id, type );

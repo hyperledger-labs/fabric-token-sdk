@@ -7,11 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	errors3 "errors"
 	"os"
 	"path/filepath"
 	"slices"
 	"sync"
 
+	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -37,6 +39,11 @@ type KeyManager interface {
 	Identity([]byte) (driver.Identity, []byte, error)
 }
 
+type LocalIdentityWithPriority struct {
+	Identity *LocalIdentity
+	Priority int
+}
+
 type LocalMembership struct {
 	config                 driver2.Config
 	defaultNetworkIdentity driver.Identity
@@ -44,17 +51,16 @@ type LocalMembership struct {
 	deserializerManager    driver2.DeserializerManager
 	identityDB             driver3.IdentityDB
 	binderService          driver2.BinderService
-	KeyManagerProvider     KeyManagerProvider
+	KeyManagerProviders    []KeyManagerProvider
 	IdentityType           string
 	logger                 logging.Logger
 
-	localIdentitiesMutex          sync.RWMutex
-	localIdentities               []*LocalIdentity
-	localIdentitiesByName         map[string]*LocalIdentity
-	localIdentitiesByEnrollmentID map[string]*LocalIdentity
-	localIdentitiesByIdentity     map[string]*LocalIdentity
-	targetIdentities              []view.Identity
-	DefaultAnonymous              bool
+	localIdentitiesMutex      sync.RWMutex
+	localIdentities           []*LocalIdentity
+	localIdentitiesByName     map[string][]LocalIdentityWithPriority
+	localIdentitiesByIdentity map[string]*LocalIdentity
+	targetIdentities          []view.Identity
+	DefaultAnonymous          bool
 }
 
 func NewLocalMembership(
@@ -66,23 +72,22 @@ func NewLocalMembership(
 	identityDB driver3.IdentityDB,
 	binderService driver2.BinderService,
 	identityType string,
-	keyManagerProvider KeyManagerProvider,
 	defaultAnonymous bool,
+	keyManagerProviders ...KeyManagerProvider,
 ) *LocalMembership {
 	return &LocalMembership{
-		logger:                        logger,
-		config:                        config,
-		defaultNetworkIdentity:        defaultNetworkIdentity,
-		signerService:                 signerService,
-		deserializerManager:           deserializerManager,
-		identityDB:                    identityDB,
-		localIdentitiesByEnrollmentID: map[string]*LocalIdentity{},
-		localIdentitiesByName:         map[string]*LocalIdentity{},
-		localIdentitiesByIdentity:     map[string]*LocalIdentity{},
-		binderService:                 binderService,
-		IdentityType:                  identityType,
-		KeyManagerProvider:            keyManagerProvider,
-		DefaultAnonymous:              defaultAnonymous,
+		logger:                    logger,
+		config:                    config,
+		defaultNetworkIdentity:    defaultNetworkIdentity,
+		signerService:             signerService,
+		deserializerManager:       deserializerManager,
+		identityDB:                identityDB,
+		localIdentitiesByName:     map[string][]LocalIdentityWithPriority{},
+		localIdentitiesByIdentity: map[string]*LocalIdentity{},
+		binderService:             binderService,
+		IdentityType:              identityType,
+		KeyManagerProviders:       keyManagerProviders,
+		DefaultAnonymous:          defaultAnonymous,
 	}
 }
 
@@ -165,8 +170,7 @@ func (l *LocalMembership) Load(identities []*config.Identity, targets []view.Ide
 
 	// cleanup tables
 	l.localIdentities = make([]*LocalIdentity, 0)
-	l.localIdentitiesByName = make(map[string]*LocalIdentity)
-	l.localIdentitiesByEnrollmentID = make(map[string]*LocalIdentity)
+	l.localIdentitiesByName = make(map[string][]LocalIdentityWithPriority, 0)
 
 	// load identities from configuration
 	for _, identityConfig := range identities {
@@ -231,30 +235,38 @@ func (l *LocalMembership) registerIdentity(identity config.Identity) error {
 }
 
 func (l *LocalMembership) registerLocalIdentity(identityConfig *driver.IdentityConfiguration, defaultIdentity bool) error {
-	provider, err := l.KeyManagerProvider.Get(identityConfig)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get identity provider for [%s]", identityConfig.ID)
+	var errs []error
+	var keyManager KeyManager
+	var index int
+	for i, p := range l.KeyManagerProviders {
+		var err error
+		keyManager, err = p.Get(identityConfig)
+		if err == nil {
+			index = i
+			break
+		}
+		errs = append(errs, err)
+	}
+	if keyManager == nil {
+		return errors2.Wrap(errors3.Join(errs...), "failed to get a key manager for the passed identity config")
 	}
 
 	l.logger.Debugf("append local identity for [%s]", identityConfig.ID)
-	if err := l.addLocalIdentity(identityConfig, provider, defaultIdentity); err != nil {
+	if err := l.addLocalIdentity(identityConfig, keyManager, defaultIdentity, index); err != nil {
 		return errors.Wrapf(err, "failed to add local identity for [%s]", identityConfig.ID)
 	}
 
 	l.logger.Debugf("does the configuration already exists for [%s]?", identityConfig.ID)
-	if exists, _ := l.identityDB.ConfigurationExists(identityConfig.ID, l.IdentityType); !exists {
-		l.logger.Debugf("does the configuration already exists for [%s]? no, add it", identityConfig.ID)
-		if err := l.identityDB.AddConfiguration(driver3.IdentityConfiguration{
-			ID:     identityConfig.ID,
-			Type:   l.IdentityType,
-			URL:    identityConfig.URL,
-			Config: identityConfig.Config,
-			Raw:    identityConfig.Raw,
-		}); err != nil {
-			return err
-		}
+	if err := l.identityDB.AddConfiguration(driver3.IdentityConfiguration{
+		ID:     identityConfig.ID,
+		Type:   l.IdentityType,
+		URL:    identityConfig.URL,
+		Config: identityConfig.Config,
+		Raw:    identityConfig.Raw,
+	}); err != nil {
+		return err
 	}
-	l.logger.Debugf("added local identity for id [%s], remote [%v]", identityConfig.ID+"@"+provider.EnrollmentID(), provider.IsRemote())
+	l.logger.Debugf("added local identity for id [%s], remote [%v]", identityConfig.ID+"@"+keyManager.EnrollmentID(), keyManager.IsRemote())
 	return nil
 }
 
@@ -299,7 +311,7 @@ func (l *LocalMembership) registerLocalIdentities(configuration *driver.Identity
 	return nil
 }
 
-func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration, keyManager KeyManager, defaultID bool) error {
+func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration, keyManager KeyManager, defaultID bool, priority int) error {
 	// check for duplicates
 	name := config.ID
 	if _, ok := l.localIdentitiesByName[config.ID]; !ok || keyManager.Anonymous() || len(l.targetIdentities) == 0 {
@@ -320,10 +332,23 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 		GetIdentity:  keyManager.Identity,
 		Remote:       keyManager.IsRemote(),
 	}
-	l.localIdentitiesByName[name] = localIdentity
-	if len(eID) != 0 {
-		l.localIdentitiesByEnrollmentID[eID] = localIdentity
+	list, ok := l.localIdentitiesByName[name]
+	if !ok {
+		list = make([]LocalIdentityWithPriority, 0)
 	}
+	list = append(list, LocalIdentityWithPriority{
+		Identity: localIdentity,
+		Priority: priority,
+	})
+	slices.SortFunc(list, func(a, b LocalIdentityWithPriority) int {
+		if a.Priority < b.Priority {
+			return -1
+		} else if a.Priority > b.Priority {
+			return 1
+		}
+		return 0
+	})
+	l.localIdentitiesByName[name] = list
 
 	l.logger.Debugf("adding identity mapping for [%s] by name and eID [%s]", name, eID)
 
@@ -355,13 +380,13 @@ func (l *LocalMembership) getLocalIdentity(label string) *LocalIdentity {
 	if l.logger.IsEnabledFor(zapcore.DebugLevel) {
 		l.logger.Debugf("get local identity by label [%s]", hash.Hashable(label))
 	}
-	r, ok := l.localIdentitiesByName[label]
+	identities, ok := l.localIdentitiesByName[label]
 	if ok {
-		return r
+		return identities[0].Identity
 	}
-	r, ok = l.localIdentitiesByIdentity[label]
+	identity, ok := l.localIdentitiesByIdentity[label]
 	if ok {
-		return r
+		return identity
 	}
 
 	if l.logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -380,6 +405,7 @@ func (l *LocalMembership) loadFromStorage() error {
 	for it.HasNext() {
 		item, err := it.Next()
 		if err != nil {
+			it.Close()
 			return err
 		}
 		items = append(items, item)

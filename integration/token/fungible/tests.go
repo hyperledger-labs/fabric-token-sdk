@@ -1173,7 +1173,6 @@ func TestStress(network *integration.Infrastructure, auditorId string, selector 
 	aliceTransferPool.Wait()
 	bobTransferPool.Wait()
 	charlieTransferPool.Wait()
-
 }
 
 func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, sel *token3.ReplicaSelector) {
@@ -1227,6 +1226,8 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	// CopyDBsTo(network, "./testdata", alice)
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
+	CheckBalanceAndHolding(network, alice, "", "EUR", 0, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 110, auditor)
 }
 
 func TestLocalTokensUpgrade(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, sel *token3.ReplicaSelector) {
@@ -1277,6 +1278,8 @@ func TestLocalTokensUpgrade(network *integration.Infrastructure, auditorId strin
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
+	CheckBalanceAndHolding(network, alice, "", "EUR", 0, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 110, auditor)
 }
 
 func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, sel *token3.ReplicaSelector) {
@@ -1327,8 +1330,10 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
+	CheckBalanceAndHolding(network, alice, "", "EUR", 0, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 110, auditor)
 
-	// rotate
+	// rotate issuer public key, bob should be able to spend his token
 	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(pp.Validate()).NotTo(HaveOccurred())
@@ -1355,6 +1360,13 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
-	CopyDBsTo(network, "./testdata", alice)
+	CheckBalanceAndHolding(network, alice, "", "EUR", 0, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 110, auditor)
+
+	TransferCash(network, bob, "", "EUR", 110, alice, auditor)
+	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorDB(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
+	CopyDBsTo(network, "./testdata", alice)
 }

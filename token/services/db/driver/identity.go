@@ -20,11 +20,12 @@ type Iterator[T any] interface {
 type WalletID = string
 
 type IdentityConfiguration struct {
-	ID     string
-	Type   string
-	URL    string
-	Config []byte
-	Raw    []byte
+	ID       string
+	Type     string
+	URL      string
+	Config   []byte
+	Raw      []byte
+	Priority int
 }
 
 type WalletDB interface {
