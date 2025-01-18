@@ -91,8 +91,10 @@ func (p *NetworkHandler) DeleteDBs(node *sfcnode.Node) {
 func (p *NetworkHandler) CopyDBsTo(node *sfcnode.Node, to string) {
 	Expect(os.MkdirAll(to, 0775)).ToNot(HaveOccurred(), "failed to create [%s]", to)
 	for _, uniqueName := range node.ReplicaUniqueNames() {
-		for _, path := range []string{p.TokensDBSQLDataSourceDir(uniqueName)} {
-			destination := filepath.Join(to, uniqueName)
+		for _, path := range []string{p.TokensDBSQLDataSourceDir(uniqueName), p.TTXDBSQLDataSourceDir(uniqueName)} {
+			elements := filepath.SplitList(path)
+			lastElement := elements[len(elements)-1]
+			destination := filepath.Join(to, uniqueName, lastElement)
 			Expect(os.MkdirAll(destination, 0775)).ToNot(HaveOccurred(), "failed to create [%s]", destination)
 
 			Expect(CopyDir(path, destination)).ToNot(HaveOccurred(), "failed to copy [%s] to [%s]", path, destination)

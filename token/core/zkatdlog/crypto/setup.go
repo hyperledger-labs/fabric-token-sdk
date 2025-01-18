@@ -92,7 +92,8 @@ type PublicParams struct {
 	PedersenGenerators []*mathlib.G1
 	// RangeProofParams contains the public parameters for the range proof scheme.
 	RangeProofParams *RangeProofParams
-	// IdemixCurveID is the pairing-friendly curve used for the idemix scheme.
+	// IdemixIssuerPublicKeys contains the idemix issuer public keys
+	// Wallets should prefer the use of keys valid under the public key whose index in the array is the smallest.
 	IdemixIssuerPublicKeys []IdemixIssuerPublicKey
 	// Auditor is the public key of the auditor.
 	Auditor driver.Identity
