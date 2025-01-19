@@ -70,7 +70,7 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(id driver.Ident
 		}
 		return verifier, nil
 	}
-	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid deserializer")
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%s]", si.Type)
 }
 
 func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]driver.Identity, error) {
@@ -95,7 +95,7 @@ func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]d
 		}
 		return ids, nil
 	}
-	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid deserializer")
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserializer recipients for [%s]", si.Type)
 }
 
 func (v *TypedVerifierDeserializerMultiplex) GetOwnerMatcher(id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
@@ -117,15 +117,15 @@ func (v *TypedVerifierDeserializerMultiplex) getOwnerMatcher(idType string, id d
 
 	var errs []error
 	for _, deserializer := range dess {
-		ids, err := deserializer.GetOwnerMatcher(id, auditInfo)
+		matcher, err := deserializer.GetOwnerMatcher(id, auditInfo)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		return ids, nil
+		return matcher, nil
 	}
 
-	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid deserializer")
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid owner matcher for [%s]", idType)
 }
 
 func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identity, ai []byte) error {
@@ -134,10 +134,6 @@ func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identi
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
 	}
-	// if recipient.Type != v.identityType {
-	//	return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
-	// }
-
 	matcher, err := v.getOwnerMatcher(recipient.Type, id, ai)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info matcher for [%s]", id)
@@ -167,7 +163,7 @@ func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(id driver.Identit
 		}
 		return info, nil
 	}
-	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid deserializer")
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid deserializer for audit info for [%s]", si.Type)
 }
 
 type TypedIdentityVerifierDeserializer struct {
