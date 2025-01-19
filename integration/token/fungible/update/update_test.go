@@ -60,7 +60,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, fabtokenPrecision int, extr
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken", PublicParamsGenArgs: []string{strconv.Itoa(fabtokenPrecision)}},
 		OnlyUnity:       true,
 		ExtraTMSs:       extraTMSs,
-		FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
+		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 	}))
 	return ts, selector
 }

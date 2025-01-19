@@ -253,6 +253,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 			logger.Errorf("failed to get recipient identity: [%s]", err)
 			return nil, errors.Wrapf(err, "failed to get recipient identity")
 		}
+		recipientIdentity = recipientData.Identity
 	}
 	recipientDataRaw, err := RecipientDataBytes(recipientData)
 	if err != nil {
