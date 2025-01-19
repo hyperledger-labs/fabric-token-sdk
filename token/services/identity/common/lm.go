@@ -237,12 +237,12 @@ func (l *LocalMembership) registerIdentity(identity config.Identity) error {
 func (l *LocalMembership) registerLocalIdentity(identityConfig *driver.IdentityConfiguration, defaultIdentity bool) error {
 	var errs []error
 	var keyManager KeyManager
-	var index int
+	var priority int
 	for i, p := range l.KeyManagerProviders {
 		var err error
 		keyManager, err = p.Get(identityConfig)
 		if err == nil {
-			index = i
+			priority = i
 			break
 		}
 		errs = append(errs, err)
@@ -252,7 +252,7 @@ func (l *LocalMembership) registerLocalIdentity(identityConfig *driver.IdentityC
 	}
 
 	l.logger.Debugf("append local identity for [%s]", identityConfig.ID)
-	if err := l.addLocalIdentity(identityConfig, keyManager, defaultIdentity, index); err != nil {
+	if err := l.addLocalIdentity(identityConfig, keyManager, defaultIdentity, priority); err != nil {
 		return errors.Wrapf(err, "failed to add local identity for [%s]", identityConfig.ID)
 	}
 
@@ -350,7 +350,7 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 	})
 	l.localIdentitiesByName[name] = list
 
-	l.logger.Debugf("adding identity mapping for [%s] by name and eID [%s]", name, eID)
+	l.logger.Debugf("new local identity for [%s:%s] - [%v]", name, eID, list)
 
 	// deserializer
 	l.deserializerManager.AddDeserializer(keyManager)
