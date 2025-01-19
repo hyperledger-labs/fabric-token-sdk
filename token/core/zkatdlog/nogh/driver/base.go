@@ -86,9 +86,7 @@ func (d *base) newWalletService(
 	)
 	// owner role
 	// we have one key manager for fabtoken and one for each idemix issuer public key
-	kmps := []common2.KeyManagerProvider{
-		x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[driver.OwnerRole], ip, ignoreRemote),
-	}
+	var kmps []common2.KeyManagerProvider
 	for _, key := range pp.IdemixIssuerPublicKeys {
 		backend, err := storageProvider.NewKeystore()
 		if err != nil {
@@ -110,6 +108,7 @@ func (d *base) newWalletService(
 		)
 		kmps = append(kmps, kmp)
 	}
+	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[driver.OwnerRole], ip, ignoreRemote))
 
 	role, err := roleFactory.NewIdemix(
 		driver.OwnerRole,

@@ -177,15 +177,15 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
 		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditorID)
 		if err != nil {
-			logger.Debugf("Failed to get auditor verifier for %s", auditorID.UniqueID())
+			logger.Debugf("failed to get auditor verifier for [%s]", auditorID)
 			continue
 		}
 		span.AddEvent("verify_auditor_signature")
 		if err := v.Verify(signed, msg); err != nil {
-			logger.Debugf("Failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
+			logger.Debugf("failed verifying auditor signature [%s][%s][%s]", auditorID, hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("Auditor signature verified [%s][%s]", auditorID, base64.StdEncoding.EncodeToString(msg))
+				logger.Debugf("auditor signature verified [%s][%s]", auditorID, base64.StdEncoding.EncodeToString(msg))
 			}
 			validAuditing = true
 			break
@@ -197,7 +197,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	span.AddEvent("append_auditor_signature")
 	a.tx.TokenRequest.AddAuditorSignature(msg)
 
-	logger.Debug("Auditor signature verified")
+	logger.Debug("auditor signature verified")
 	return session, nil
 }
 
@@ -317,8 +317,6 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting signing identity for auditor identity [%s]", aid)
 	}
-
-	logger.Debug("signer at auditor", signer, aid)
 
 	raw, err := a.tx.MarshallToAudit()
 	if err != nil {

@@ -6,7 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 package common
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+import (
+	"fmt"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+)
 
 // GetIdentityFunc is a function that returns an Identity and its associated audit info for the given options
 type GetIdentityFunc func(auditInfo []byte) (driver.Identity, []byte, error)
@@ -19,6 +23,17 @@ type LocalIdentity struct {
 	Anonymous    bool
 	GetIdentity  GetIdentityFunc
 	Remote       bool
+}
+
+func (i *LocalIdentity) String() string {
+	if !i.Anonymous {
+		id, _, err := i.GetIdentity(nil)
+		if err != nil {
+			return err.Error()
+		}
+		return fmt.Sprintf("{%s@%s-%v-%v-%v}[%s]", i.Name, i.EnrollmentID, i.Default, i.Anonymous, i.Remote, id)
+	}
+	return fmt.Sprintf("{%s@%s-%v-%v-%v}", i.Name, i.EnrollmentID, i.Default, i.Anonymous, i.Remote)
 }
 
 // IdentityInfo implements the driver.IdentityInfo interface on top LocalIdentity
