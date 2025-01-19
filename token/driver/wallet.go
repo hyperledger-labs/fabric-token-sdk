@@ -59,6 +59,9 @@ type OwnerWallet interface {
 	// - TokenIdentityMetadata via GetTokenMetadataAuditInfo.
 	GetRecipientIdentity() (Identity, error)
 
+	// GetRecipientData returns a recipient data struct, it does not include the token metadata audit info
+	GetRecipientData() (*RecipientData, error)
+
 	// GetAuditInfo returns auditing information for the passed identity
 	GetAuditInfo(id Identity) ([]byte, error)
 

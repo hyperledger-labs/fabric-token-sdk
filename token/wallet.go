@@ -246,6 +246,11 @@ func (o *OwnerWallet) GetRecipientIdentity() (Identity, error) {
 	return o.w.GetRecipientIdentity()
 }
 
+// GetRecipientData return the owner recipient identity, it does not include token metadata audit info
+func (o *OwnerWallet) GetRecipientData() (*RecipientData, error) {
+	return o.w.GetRecipientData()
+}
+
 // GetAuditInfo returns auditing information for the passed identity
 func (o *OwnerWallet) GetAuditInfo(id Identity) ([]byte, error) {
 	return o.w.GetAuditInfo(id)

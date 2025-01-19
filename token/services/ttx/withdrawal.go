@@ -71,20 +71,16 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 	defer span.End()
 	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
 
-	tmsID, recipientIdentity, auditInfo, tokenMetadata, err := r.getRecipientIdentity(context)
+	tmsID, recipientData, err := r.getRecipientIdentity(context)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get recipient identity")
+		return nil, errors.Wrapf(err, "failed to get recipient data")
 	}
 	wr := &WithdrawalRequest{
-		TMSID: *tmsID,
-		RecipientData: RecipientData{
-			Identity:      recipientIdentity,
-			AuditInfo:     auditInfo,
-			TokenMetadata: tokenMetadata,
-		},
-		TokenType:    r.TokenType,
-		Amount:       r.Amount,
-		NotAnonymous: r.NotAnonymous,
+		TMSID:         *tmsID,
+		RecipientData: *recipientData,
+		TokenType:     r.TokenType,
+		Amount:        r.Amount,
+		NotAnonymous:  r.NotAnonymous,
 	}
 
 	span.AddEvent("start_session")
@@ -122,10 +118,10 @@ func (r *RequestWithdrawalView) WithRecipientData(data *RecipientData) *RequestW
 	return r
 }
 
-func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*token.TMSID, view.Identity, []byte, []byte, error) {
+func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*token.TMSID, *RecipientData, error) {
 	if r.RecipientData != nil {
 		tmsID := token.GetManagementService(context, token.WithTMSID(r.TMSID)).ID()
-		return &tmsID, r.RecipientData.Identity, r.RecipientData.AuditInfo, r.RecipientData.TokenMetadata, nil
+		return &tmsID, r.RecipientData, nil
 	}
 
 	w := GetWallet(
@@ -135,26 +131,16 @@ func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*tok
 	)
 	if w == nil {
 		logger.Errorf("failed to get wallet [%s]", r.Wallet)
-		return nil, nil, nil, nil, errors.Errorf("wallet [%s:%s] not found", r.Wallet, r.TMSID)
+		return nil, nil, errors.Errorf("wallet [%s:%s] not found", r.Wallet, r.TMSID)
 	}
-	recipientIdentity, err := w.GetRecipientIdentity()
+	recipientData, err := w.GetRecipientData()
 	if err != nil {
-		logger.Errorf("failed to get recipient identity: [%s]", err)
-		return nil, nil, nil, nil, errors.Wrapf(err, "failed to get recipient identity")
-	}
-	auditInfo, err := w.GetAuditInfo(recipientIdentity)
-	if err != nil {
-		logger.Errorf("failed to get audit info: [%s]", err)
-		return nil, nil, nil, nil, errors.Wrapf(err, "failed to get audit info")
-	}
-	metadata, err := w.GetTokenMetadata(recipientIdentity)
-	if err != nil {
-		logger.Errorf("failed to get token metadata: [%s]", err)
-		return nil, nil, nil, nil, errors.Wrapf(err, "failed to get token metadata")
+		logger.Errorf("failed to get recipient data: [%s]", err)
+		return nil, nil, errors.Wrapf(err, "failed to get recipient data")
 	}
 
 	tmsID := w.TMS().ID()
-	return &tmsID, recipientIdentity, auditInfo, metadata, nil
+	return &tmsID, recipientData, nil
 }
 
 // ReceiveWithdrawalRequestView this is the view used by the issuer to receive a withdrawal request

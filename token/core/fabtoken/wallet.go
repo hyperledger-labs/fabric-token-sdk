@@ -42,7 +42,10 @@ func (w *WalletFactory) NewWallet(id string, role driver.IdentityRole, walletReg
 	var newWallet driver.Wallet
 	switch role {
 	case driver.OwnerRole:
-		newWallet = common.NewLongTermOwnerWallet(w.identityProvider, w.tokenVault, idInfoIdentity, id, info)
+		newWallet, err = common.NewLongTermOwnerWallet(w.identityProvider, w.tokenVault, id, info)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to create owner wallet [%s]", id)
+		}
 	case driver.IssuerRole:
 		newWallet = common.NewIssuerWallet(w.logger, w.identityProvider, w.tokenVault, id, idInfoIdentity)
 	case driver.AuditorRole:

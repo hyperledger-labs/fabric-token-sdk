@@ -106,7 +106,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 	span.AddEvent("send_upgrade_request")
 
 	// - recipient identity
-	tmsID, recipientIdentity, auditInfo, tokenMetadata, err := r.getRecipientIdentity(context)
+	tmsID, recipientData, err := r.getRecipientData(context)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get recipient identity")
 	}
@@ -121,16 +121,12 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 	}
 
 	wr := &UpgradeTokensRequest{
-		ID:    agreement.Challenge,
-		TMSID: *tmsID,
-		RecipientData: RecipientData{
-			Identity:      recipientIdentity,
-			AuditInfo:     auditInfo,
-			TokenMetadata: tokenMetadata,
-		},
-		Tokens:       r.Tokens,
-		Proof:        proof,
-		NotAnonymous: r.NotAnonymous,
+		ID:            agreement.Challenge,
+		TMSID:         *tmsID,
+		RecipientData: *recipientData,
+		Tokens:        r.Tokens,
+		Proof:         proof,
+		NotAnonymous:  r.NotAnonymous,
 	}
 	err = session.SendWithContext(context.Context(), wr)
 	if err != nil {
@@ -159,10 +155,10 @@ func (r *UpgradeTokensInitiatorView) WithRecipientData(data *RecipientData) *Upg
 	return r
 }
 
-func (r *UpgradeTokensInitiatorView) getRecipientIdentity(context view.Context) (*token.TMSID, view.Identity, []byte, []byte, error) {
+func (r *UpgradeTokensInitiatorView) getRecipientData(context view.Context) (*token.TMSID, *RecipientData, error) {
 	if r.RecipientData != nil {
 		tmsID := token.GetManagementService(context, token.WithTMSID(r.TMSID)).ID()
-		return &tmsID, r.RecipientData.Identity, r.RecipientData.AuditInfo, r.RecipientData.TokenMetadata, nil
+		return &tmsID, r.RecipientData, nil
 	}
 
 	w := GetWallet(
@@ -172,37 +168,26 @@ func (r *UpgradeTokensInitiatorView) getRecipientIdentity(context view.Context) 
 	)
 	if w == nil {
 		logger.Errorf("failed to get wallet [%s]", r.Wallet)
-		return nil, nil, nil, nil, errors.Errorf("wallet [%s:%s] not found", r.Wallet, r.TMSID)
+		return nil, nil, errors.Errorf("wallet [%s:%s] not found", r.Wallet, r.TMSID)
 	}
-	recipientIdentity, err := w.GetRecipientIdentity()
+	recipientData, err := w.GetRecipientData()
 	if err != nil {
-		logger.Errorf("failed to get recipient identity: [%s]", err)
-		return nil, nil, nil, nil, errors.Wrapf(err, "failed to get recipient identity")
+		logger.Errorf("failed to get recipient data: [%s]", err)
+		return nil, nil, errors.Wrapf(err, "failed to get recipient data")
 	}
-	auditInfo, err := w.GetAuditInfo(recipientIdentity)
-	if err != nil {
-		logger.Errorf("failed to get audit info: [%s]", err)
-		return nil, nil, nil, nil, errors.Wrapf(err, "failed to get audit info")
-	}
-	metadata, err := w.GetTokenMetadata(recipientIdentity)
-	if err != nil {
-		logger.Errorf("failed to get token metadata: [%s]", err)
-		return nil, nil, nil, nil, errors.Wrapf(err, "failed to get token metadata")
-	}
-
 	tmsID := w.TMS().ID()
-	return &tmsID, recipientIdentity, auditInfo, metadata, nil
+	return &tmsID, recipientData, nil
 }
 
 // UpgradeTokensResponderView this is the view used by the issuer to receive a upgrade request
 type UpgradeTokensResponderView struct{}
 
-func NewReceiveupgradeRequestView() *UpgradeTokensResponderView {
+func NewReceiveUpgradeRequestView() *UpgradeTokensResponderView {
 	return &UpgradeTokensResponderView{}
 }
 
 func ReceiveTokensUpgradeRequest(context view.Context) (*UpgradeTokensRequest, error) {
-	requestBoxed, err := context.RunView(NewReceiveupgradeRequestView())
+	requestBoxed, err := context.RunView(NewReceiveUpgradeRequestView())
 	if err != nil {
 		return nil, err
 	}

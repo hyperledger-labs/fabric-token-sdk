@@ -248,25 +248,10 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	} else {
 		span.AddEvent("generate_identity")
 		// otherwise generate one fresh
-		recipientIdentity, err = w.GetRecipientIdentity()
+		recipientData, err = w.GetRecipientData()
 		if err != nil {
 			logger.Errorf("failed to get recipient identity: [%s]", err)
 			return nil, errors.Wrapf(err, "failed to get recipient identity")
-		}
-		auditInfo, err := w.GetAuditInfo(recipientIdentity)
-		if err != nil {
-			logger.Errorf("failed to get audit info: [%s]", err)
-			return nil, errors.Wrapf(err, "failed to get audit info")
-		}
-		metadata, err := w.GetTokenMetadata(recipientIdentity)
-		if err != nil {
-			logger.Errorf("failed to get token metadata: [%s]", err)
-			return nil, errors.Wrapf(err, "failed to get token metadata")
-		}
-		recipientData = &RecipientData{
-			Identity:      recipientIdentity,
-			AuditInfo:     auditInfo,
-			TokenMetadata: metadata,
 		}
 	}
 	recipientDataRaw, err := RecipientDataBytes(recipientData)
@@ -349,27 +334,15 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		if w == nil {
 			return nil, errors.WithMessagef(err, "failed getting wallet [%s]", f.Wallet)
 		}
-		me, err := w.GetRecipientIdentity()
+		localRecipientData, err := w.GetRecipientData()
 		if err != nil {
-			return nil, errors.WithMessagef(err, "failed getting recipient identity, wallet [%s]", w.ID())
-		}
-		auditInfo, err := w.GetAuditInfo(me)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed getting recipient identity audit info, wallet [%s]", w.ID())
-		}
-		metadata, err := w.GetTokenMetadata(me)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed getting recipient identity metadata, wallet [%s]", w.ID())
+			return nil, errors.WithMessagef(err, "failed getting recipient data, wallet [%s]", w.ID())
 		}
 		// Send request
 		request := &ExchangeRecipientRequest{
-			TMSID:    f.TMSID,
-			WalletID: f.Other,
-			RecipientData: &RecipientData{
-				Identity:      me,
-				AuditInfo:     auditInfo,
-				TokenMetadata: metadata,
-			},
+			TMSID:         f.TMSID,
+			WalletID:      f.Other,
+			RecipientData: localRecipientData,
 		}
 		requestRaw, err := request.Bytes()
 		if err != nil {
@@ -385,33 +358,33 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 			return nil, err
 		}
 
-		recipientData, err := RecipientDataFromBytes(payload)
+		remoteRecipientData, err := RecipientDataFromBytes(payload)
 		if err != nil {
 			return nil, err
 		}
-		if err := ts.WalletManager().RegisterRecipientIdentity(recipientData); err != nil {
+		if err := ts.WalletManager().RegisterRecipientIdentity(remoteRecipientData); err != nil {
 			return nil, err
 		}
 
 		// Update the Endpoint Resolver
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("bind [%s] to other [%s]", recipientData.Identity, f.Other)
+			logger.Debugf("bind [%s] to other [%s]", remoteRecipientData.Identity, f.Other)
 		}
 		resolver := view2.GetEndpointService(context)
-		err = resolver.Bind(f.Other, recipientData.Identity)
+		err = resolver.Bind(f.Other, remoteRecipientData.Identity)
 		if err != nil {
 			return nil, err
 		}
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("bind me [%s] to [%s]", me, context.Me())
+			logger.Debugf("bind me [%s] to [%s]", localRecipientData.Identity, context.Me())
 		}
-		err = resolver.Bind(context.Me(), me)
+		err = resolver.Bind(context.Me(), localRecipientData.Identity)
 		if err != nil {
 			return nil, err
 		}
 
-		return []view.Identity{me, recipientData.Identity}, nil
+		return []view.Identity{localRecipientData.Identity, remoteRecipientData.Identity}, nil
 	}
 }
 
@@ -457,43 +430,29 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		wallet = string(request.WalletID)
 	}
 	w := ts.WalletManager().OwnerWallet(wallet)
-	me, err := w.GetRecipientIdentity()
+	recipientData, err := w.GetRecipientData()
 	if err != nil {
-		return nil, err
-	}
-	auditInfo, err := w.GetAuditInfo(me)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting recipient identity audit info, wallet [%s]", w.ID())
-	}
-	metadata, err := w.GetTokenMetadata(me)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting recipient identity metadata, wallet [%s]", w.ID())
-	}
-
-	recipientData := &RecipientData{
-		Identity:      me,
-		AuditInfo:     auditInfo,
-		TokenMetadata: metadata,
+		return nil, errors.WithMessagef(err, "failed getting recipient data, wallet [%s]", w.ID())
 	}
 	recipientDataRaw, err := RecipientDataBytes(recipientData)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed getting recipient data, wallet [%s]", w.ID())
 	}
 
 	if err := session.SendWithContext(context.Context(), recipientDataRaw); err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed sending recipient data, wallet [%s]", w.ID())
 	}
 
 	// Update the Endpoint Resolver
 	resolver := view2.GetEndpointService(context)
-	err = resolver.Bind(context.Me(), me)
+	err = resolver.Bind(context.Me(), recipientData.Identity)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
 	}
 	err = resolver.Bind(session.Info().Caller, other)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
 	}
 
-	return []view.Identity{me, other}, nil
+	return []token.Identity{recipientData.Identity, other}, nil
 }
