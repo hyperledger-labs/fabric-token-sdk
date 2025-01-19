@@ -16,14 +16,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type WalletIdentityCacheBackendFunc func() (driver.Identity, error)
+type WalletIdentityCacheBackendFunc func() (*driver.RecipientData, error)
 
 type WalletIdentityCache struct {
 	Logger logging.Logger
 
 	once    sync.Once
 	backed  WalletIdentityCacheBackendFunc
-	cache   chan driver.Identity
+	cache   chan *driver.RecipientData
 	timeout time.Duration
 }
 
@@ -34,13 +34,13 @@ func NewWalletIdentityCache(Logger logging.Logger, backed WalletIdentityCacheBac
 	ci := &WalletIdentityCache{
 		Logger:  Logger,
 		backed:  backed,
-		cache:   make(chan driver.Identity, size),
+		cache:   make(chan *driver.RecipientData, size),
 		timeout: time.Millisecond * 100,
 	}
 	return ci
 }
 
-func (c *WalletIdentityCache) Identity() (driver.Identity, error) {
+func (c *WalletIdentityCache) RecipientData() (*driver.RecipientData, error) {
 	c.once.Do(func() {
 		c.Logger.Debugf("provision identities with cache size [%d]", cap(c.cache))
 		if cap(c.cache) > 0 {
@@ -55,7 +55,7 @@ func (c *WalletIdentityCache) Identity() (driver.Identity, error) {
 	timeout := time.NewTimer(c.timeout)
 	defer timeout.Stop()
 
-	var identity driver.Identity
+	var identity *driver.RecipientData
 	var err error
 	select {
 	case entry := <-c.cache:
