@@ -53,6 +53,7 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver
 
 	identity, walletID, err := r.Role.MapToIdentity(id)
 	if err != nil {
+		logger.Errorf("failed to map wallet [%s] to identity [%s], use a fallback strategy", id, err)
 		fail := true
 		// give it a second change
 		passedIdentity, ok := toViewIdentity(id)

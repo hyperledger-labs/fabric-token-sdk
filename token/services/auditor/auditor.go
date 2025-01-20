@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -102,7 +103,7 @@ func (a *Auditor) Append(tx Transaction) error {
 	defer a.Release(tx)
 
 	// append request to audit db
-	if err := a.auditDB.Append(tx.Request()); err != nil {
+	if err := a.auditDB.Append(tx.Request(), a.gapFiller); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 
@@ -145,4 +146,36 @@ func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
 
 func (a *Auditor) Check(context context.Context) ([]string, error) {
 	return a.checkService.Check(context)
+}
+
+func (a *Auditor) gapFiller(record *token.AuditRecord) error {
+	filter := record.Inputs.ByEnrollmentID("")
+	if filter.Count() == 0 {
+		return nil
+	}
+	// TODO: extract from the audit tokens
+	targetEID := record.Outputs.EnrollmentIDs()[0]
+
+	// fetch all the tokens
+	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting management service for [%s]", a.tmsID)
+	}
+	tokens, err := tms.Vault().NewQueryEngine().ListAuditTokens(filter.IDs()...)
+	if err != nil {
+		return errors.WithMessagef(err, "failed listing tokens for [%s]", filter.IDs())
+	}
+	precision := tms.PublicParametersManager().PublicParameters().Precision()
+	for i := 0; i < filter.Count(); i++ {
+		item := filter.At(i)
+		item.EnrollmentID = targetEID
+		item.Owner = tokens[i].Owner
+		item.Type = tokens[i].Type
+		q, err := token2.ToQuantity(tokens[i].Quantity, precision)
+		if err != nil {
+			return errors.WithMessagef(err, "failed converting token quantity [%s]", tokens[i].Quantity)
+		}
+		item.Quantity = q
+	}
+	return nil
 }

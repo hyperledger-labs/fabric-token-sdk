@@ -371,7 +371,7 @@ func (w *AnonymousOwnerWallet) getRecipientIdentity() (*driver.RecipientData, er
 	// Get a new pseudonym
 	pseudonym, auditInfo, err := w.OwnerIdentityInfo.Get()
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting recipient identity from wallet [%s]", w.ID())
+		return nil, errors.WithMessagef(err, "failed getting recipient identity from wallet [%s:%s]", w.ID(), w.OwnerIdentityInfo.EnrollmentID())
 	}
 
 	// Register the pseudonym
