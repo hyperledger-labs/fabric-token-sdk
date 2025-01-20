@@ -122,6 +122,7 @@ type CertifierWallet interface {
 
 type IdentityConfiguration struct {
 	ID     string
+	Type   string
 	URL    string
 	Config []byte
 	Raw    []byte

@@ -255,7 +255,7 @@ func (i *WrappingBindingInfo) Get() (driver.Identity, []byte, error) {
 	// get the identity
 	id, ai, err := i.IdentityInfo.Get()
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to get root identity")
+		return nil, nil, errors.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID())
 	}
 	// register the audit info
 	if err := i.IdentityProvider.RegisterAuditInfo(id, ai); err != nil {

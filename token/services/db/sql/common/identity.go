@@ -116,16 +116,16 @@ func (db *IdentityDB) IteratorConfigurations(configurationType string) (driver.I
 	return &IdentityConfigurationIterator{rows: rows, configurationType: configurationType}, nil
 }
 
-func (db *IdentityDB) ConfigurationExists(id, typ string) (bool, error) {
-	query, err := NewSelect("id").From(db.table.IdentityConfigurations).Where("id=$1 AND type=$2").Compile()
+func (db *IdentityDB) ConfigurationExists(id, typ, url string) (bool, error) {
+	query, err := NewSelect("id").From(db.table.IdentityConfigurations).Where("id=$1 AND type=$2 AND url=$3").Compile()
 	if err != nil {
 		return false, errors.Wrapf(err, "failed compiling query")
 	}
-	result, err := common.QueryUnique[string](db.db, query, id, typ)
+	result, err := common.QueryUnique[string](db.db, query, id, typ, url)
 	if err != nil {
-		return false, errors.Wrapf(err, "failed getting configuration for [%s:%s]", id, typ)
+		return false, errors.Wrapf(err, "failed getting configuration for [%s:%s:%s]", id, typ, url)
 	}
-	logger.Debugf("found configuration for [%s:%s]", id, typ)
+	logger.Debugf("found configuration for [%s:%s:%s]", id, typ, url)
 	return len(result) != 0, nil
 }
 
@@ -348,7 +348,7 @@ func (db *IdentityDB) GetSchema() string {
 			PRIMARY KEY(id, type, url)
 		);
 		CREATE INDEX IF NOT EXISTS idx_ic_type_%s ON %s ( type );
-		CREATE INDEX IF NOT EXISTS idx_ic_id_type_%s ON %s ( id, type );
+		CREATE INDEX IF NOT EXISTS idx_ic_id_type_%s ON %s ( id, type, url );
 
 		-- IdentityInfo
 		CREATE TABLE IF NOT EXISTS %s (

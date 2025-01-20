@@ -149,12 +149,19 @@ func newDB(p driver.AuditTransactionDB) *DB {
 }
 
 // Append appends send and receive movements, and transaction records corresponding to the passed token request
-func (d *DB) Append(req *token.Request) error {
+func (d *DB) Append(req *token.Request, gapFiller func(record *token.AuditRecord) error) error {
 	logger.Debugf("appending new record... [%s]", req.Anchor)
 
 	record, err := req.AuditRecord()
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting audit records for request [%s]", req.Anchor)
+	}
+
+	// fill the gap in the record
+	if gapFiller != nil {
+		if err := gapFiller(record); err != nil {
+			return errors.WithMessagef(err, "failed filling gaps for request [%s]", req.Anchor)
+		}
 	}
 
 	logger.Debugf("parsing new audit record... [%d] in, [%d] out", record.Inputs.Count(), record.Outputs.Count())

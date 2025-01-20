@@ -1200,6 +1200,7 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	IssueSuccessfulCash(network, "", "EUR", 110, alice, auditor, true, issuer, endorsers...)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
 
@@ -1219,9 +1220,15 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
 
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor, "insufficient funds, only [0] tokens of type [EUR] are available, but [110] were requested and no other process has any tokens locked")
+	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
 	TokensUpgrade(network, nil, alice, "", "EUR", auditor, issuer)
+	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
+
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
 	// CopyDBsTo(network, "./testdata", alice)
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
@@ -1255,6 +1262,7 @@ func TestLocalTokensUpgrade(network *integration.Infrastructure, auditorId strin
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	IssueSuccessfulCash(network, "", "EUR", 110, alice, auditor, true, issuer, endorsers...)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
 
@@ -1274,6 +1282,7 @@ func TestLocalTokensUpgrade(network *integration.Infrastructure, auditorId strin
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
 
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
@@ -1326,6 +1335,7 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
+	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
 
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)

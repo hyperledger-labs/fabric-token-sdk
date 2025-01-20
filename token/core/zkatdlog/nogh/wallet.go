@@ -67,7 +67,7 @@ func (w *WalletFactory) NewWallet(id string, role driver.IdentityRole, walletReg
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to create new owner wallet [%s]", id)
 		}
-		w.Logger.Debugf("created owner wallet [%s]", id)
+		w.Logger.Debugf("created owner wallet [%s] for identity [%s:%s:%v]", id, identityInfo.ID(), identityInfo.EnrollmentID(), identityInfo.Remote())
 		return newWallet, nil
 	case driver.IssuerRole:
 		idInfoIdentity, _, err := identityInfo.Get()

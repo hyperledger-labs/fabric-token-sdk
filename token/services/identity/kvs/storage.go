@@ -141,7 +141,7 @@ func NewIdentityDB(kvs KVS, tmsID token.TMSID) *IdentityDB {
 }
 
 func (s *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
-	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", s.tmsID.String(), "registeredIdentity", wp.Type, wp.ID})
+	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", s.tmsID.String(), "registeredIdentity", wp.Type, wp.ID, wp.URL})
 	if err != nil {
 		return errors.Wrapf(err, "failed to create key")
 	}
@@ -156,8 +156,8 @@ func (s *IdentityDB) IteratorConfigurations(configurationType string) (driver.It
 	return &IdentityConfigurationsIterator{Iterator: it}, nil
 }
 
-func (s *IdentityDB) ConfigurationExists(id, typ string) (bool, error) {
-	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", s.tmsID.String(), "registeredIdentity", typ, id})
+func (s *IdentityDB) ConfigurationExists(id, typ, url string) (bool, error) {
+	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", s.tmsID.String(), "registeredIdentity", typ, id, url})
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to create key")
 	}

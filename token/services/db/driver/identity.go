@@ -19,14 +19,7 @@ type Iterator[T any] interface {
 
 type WalletID = string
 
-type IdentityConfiguration struct {
-	ID       string
-	Type     string
-	URL      string
-	Config   []byte
-	Raw      []byte
-	Priority int
-}
+type IdentityConfiguration = driver.IdentityConfiguration
 
 type WalletDB interface {
 	// GetWalletID fetches a walletID that is bound to the identity passed
@@ -45,7 +38,7 @@ type IdentityDB interface {
 	// AddConfiguration stores an identity and the path to the credentials relevant to this identity
 	AddConfiguration(wp IdentityConfiguration) error
 	// ConfigurationExists returns true if a configuration with the given id and type exists.
-	ConfigurationExists(id, typ string) (bool, error)
+	ConfigurationExists(id, typ, url string) (bool, error)
 	// IteratorConfigurations returns an iterator to all configurations stored
 	IteratorConfigurations(configurationType string) (Iterator[IdentityConfiguration], error)
 	// StoreIdentityData stores the passed identity and token information

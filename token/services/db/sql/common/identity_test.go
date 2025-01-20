@@ -100,7 +100,7 @@ func TConfigurations(t *testing.T, db *IdentityDB) {
 	assert.True(t, reflect.DeepEqual(expected, c))
 	assert.NoError(t, it.Close())
 
-	exists, err := db.ConfigurationExists("pineapple", "core")
+	exists, err := db.ConfigurationExists("pineapple", "core", "")
 	assert.NoError(t, err)
 	assert.True(t, exists)
 
@@ -108,7 +108,7 @@ func TConfigurations(t *testing.T, db *IdentityDB) {
 	assert.NoError(t, err)
 	assert.False(t, it.HasNext())
 
-	exists, err = db.ConfigurationExists("pineapple", "no core")
+	exists, err = db.ConfigurationExists("pineapple", "no core", "")
 	assert.NoError(t, err)
 	assert.False(t, exists)
 
