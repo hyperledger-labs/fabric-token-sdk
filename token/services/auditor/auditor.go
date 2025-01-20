@@ -103,7 +103,7 @@ func (a *Auditor) Append(tx Transaction) error {
 	defer a.Release(tx)
 
 	// append request to audit db
-	if err := a.auditDB.Append(tx.Request(), a.gapFiller); err != nil {
+	if err := a.auditDB.Append(tx.Request(), a.completeInputsWithEmptyEID); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 
@@ -148,7 +148,7 @@ func (a *Auditor) Check(context context.Context) ([]string, error) {
 	return a.checkService.Check(context)
 }
 
-func (a *Auditor) gapFiller(record *token.AuditRecord) error {
+func (a *Auditor) completeInputsWithEmptyEID(record *token.AuditRecord) error {
 	filter := record.Inputs.ByEnrollmentID("")
 	if filter.Count() == 0 {
 		return nil
