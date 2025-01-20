@@ -41,7 +41,7 @@ var logger = logging.MustGetLogger("token-sdk.integration.token.orion")
 
 type Entry struct {
 	TMS     *topology2.TMS
-	Wallets map[string]*generators.Wallets
+	Wallets map[string]*topology2.Wallets
 }
 
 type NetworkHandler struct {
@@ -90,7 +90,7 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	}
 
 	logger.Debugf("Generating public parameters for [%s:%s] with args [%+v]", tms.ID(), args)
-	wallets := &generators.Wallets{}
+	wallets := &topology2.Wallets{}
 	for _, w := range entry.Wallets {
 		wallets.Issuers = append(wallets.Issuers, w.Issuers...)
 		wallets.Auditors = append(wallets.Auditors, w.Auditors...)
@@ -171,7 +171,7 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 		},
 		"TMSID":               func() string { return tms.ID() },
 		"TMS":                 func() *topology2.TMS { return tms },
-		"Wallets":             func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
+		"Wallets":             func() *topology2.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
 		"SQLDriver":           func() string { return string(persistence.DriverType) },
 		"SQLDataSource":       func() string { return p.dataSource(*persistence, p.TTXDBSQLDataSourceDir(uniqueName), tms) },
 		"TokensSQLDriver":     func() string { return string(persistence.DriverType) },
@@ -258,11 +258,11 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	o := node.PlatformOpts()
 	opts := topology2.ToOptions(o)
 
-	wallet := &generators.Wallets{
-		Certifiers: []generators.Identity{},
-		Issuers:    []generators.Identity{},
-		Owners:     []generators.Identity{},
-		Auditors:   []generators.Identity{},
+	wallet := &topology2.Wallets{
+		Certifiers: []topology2.Identity{},
+		Issuers:    []topology2.Identity{},
+		Owners:     []topology2.Identity{},
+		Auditors:   []topology2.Identity{},
 	}
 	entry.Wallets[node.Name] = wallet
 
@@ -339,7 +339,7 @@ func (p *NetworkHandler) GetEntry(tms *topology2.TMS) *Entry {
 	if !ok {
 		entry = &Entry{
 			TMS:     tms,
-			Wallets: map[string]*generators.Wallets{},
+			Wallets: map[string]*topology2.Wallets{},
 		}
 		p.Entries[tms.Network+tms.Channel+tms.Namespace] = entry
 	}

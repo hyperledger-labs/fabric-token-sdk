@@ -98,7 +98,6 @@ func Topology(opts common.Opts) []api.Topology {
 	newIssuer.AddOptions(opts.ReplicationOpts.For("newIssuer")...)
 	newIssuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
 	newIssuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-	newIssuer.RegisterViewFactory("GetIssuerWalletIdentity", &views.GetIssuerWalletIdentityViewFactory{})
 	newIssuer.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 	newIssuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	newIssuer.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
@@ -112,7 +111,6 @@ func Topology(opts common.Opts) []api.Topology {
 	newAuditor.AddOptions(opts.ReplicationOpts.For("newAuditor")...)
 	newAuditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 	newAuditor.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-	newAuditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 	newAuditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 	newAuditor.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	newAuditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
@@ -147,7 +145,6 @@ func Topology(opts common.Opts) []api.Topology {
 		newIssuer.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 		newIssuer.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
 		newIssuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-		newIssuer.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 	} else {
 		auditor = fscTopology.AddNodeByName("auditor").AddOptions(
 			fabric.WithOrganization("Org1"),
@@ -168,7 +165,6 @@ func Topology(opts common.Opts) []api.Topology {
 		auditor.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 		auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 		auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
-		auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 		auditor.RegisterViewFactory("RevokeUser", &views.RevokeUserViewFactory{})
 		auditor.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 		auditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})

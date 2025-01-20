@@ -103,11 +103,11 @@ func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 	return output, nil
 }
 
-func (d *CryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, node *node.Node, certifiers ...string) []generators.Identity {
+func (d *CryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, node *node.Node, certifiers ...string) []topology.Identity {
 	return nil
 }
 
-func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []generators.Identity {
+func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []topology.Identity {
 	logger.Infof("generate [owners] identities [%v]", owners)
 
 	curveID := d.DefaultCurve
@@ -115,7 +115,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 		curveID = CurveIDToString(math3.BLS12_381_BBS)
 	}
 
-	var res []generators.Identity
+	var res []topology.Identity
 	tmsID := tms.ID()
 	for i, owner := range owners {
 		pathPrefix := ""
@@ -181,7 +181,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 		signerBytes, err := os.ReadFile(filepath.Join(userOutput, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner))
 		Expect(err).NotTo(HaveOccurred())
 
-		res = append(res, generators.Identity{
+		res = append(res, topology.Identity{
 			ID:   owner,
 			Path: userOutput,
 			Raw:  signerBytes,
@@ -191,11 +191,11 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 	return res
 }
 
-func (d *CryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []generators.Identity {
+func (d *CryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []topology.Identity {
 	return d.FabTokenGenerator.GenerateIssuerIdentities(tms, n, issuers...)
 }
 
-func (d *CryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []generators.Identity {
+func (d *CryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []topology.Identity {
 	return d.FabTokenGenerator.GenerateAuditorIdentities(tms, n, auditors...)
 }
 

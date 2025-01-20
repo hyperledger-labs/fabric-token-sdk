@@ -85,7 +85,6 @@ func Topology(opts common.Opts) []api.Topology {
 		RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{}).
 		RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{}).
 		RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{}).
-		RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{}).
 		RegisterViewFactory("RevokeUser", &views.RevokeUserViewFactory{}).
 		RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 

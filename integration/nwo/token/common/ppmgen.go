@@ -13,7 +13,6 @@ import (
 
 	msp "github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
@@ -29,7 +28,7 @@ func NewFabTokenPublicParamsGenerator() *FabTokenPublicParamsGenerator {
 	return &FabTokenPublicParamsGenerator{}
 }
 
-func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generators.Wallets, args ...interface{}) ([]byte, error) {
+func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topology.Wallets, args ...interface{}) ([]byte, error) {
 	precision := fabtoken.DefaultPrecision
 	if len(args) == 2 {
 		// First is empty
@@ -94,6 +93,9 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *gen
 	if err != nil {
 		return nil, err
 	}
+
+	tms.Wallets = wallets
+
 	return ppRaw, nil
 }
 
@@ -105,7 +107,7 @@ func NewDLogPublicParamsGenerator(defaultCurveID math3.CurveID) *DLogPublicParam
 	return &DLogPublicParamsGenerator{DefaultCurveID: defaultCurveID}
 }
 
-func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generators.Wallets, args ...interface{}) ([]byte, error) {
+func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topology.Wallets, args ...interface{}) ([]byte, error) {
 	if len(args) != 2 {
 		return nil, errors.Errorf("invalid number of arguments, expected 2, got %d", len(args))
 	}
@@ -188,5 +190,8 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 	if err != nil {
 		return nil, err
 	}
+
+	tms.Wallets = wallets
+
 	return ppRaw, nil
 }

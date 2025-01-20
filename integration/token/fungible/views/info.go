@@ -160,31 +160,6 @@ func GetTMSPublicParams(tms *token.ManagementService) []byte {
 	return ppBytes
 }
 
-type GetIssuerWalletIdentity struct {
-	ID string
-}
-
-type GetIssuerWalletIdentityView struct {
-	*GetIssuerWalletIdentity
-}
-
-type GetIssuerWalletIdentityViewFactory struct{}
-
-func (g *GetIssuerWalletIdentity) Call(context view.Context) (interface{}, error) {
-	defaultIssuerWallet := token.GetManagementService(context).WalletManager().IssuerWallet(g.ID)
-	assert.NotNil(defaultIssuerWallet, "no default issuer wallet")
-	id, err := defaultIssuerWallet.GetIssuerIdentity("")
-	assert.NoError(err, "failed getting issuer Identity ")
-	return id, err
-}
-
-func (p *GetIssuerWalletIdentityViewFactory) NewView(in []byte) (view.View, error) {
-	f := &GetIssuerWalletIdentityView{GetIssuerWalletIdentity: &GetIssuerWalletIdentity{}}
-	err := json.Unmarshal(in, f.GetIssuerWalletIdentity)
-	assert.NoError(err, "failed unmarshalling input")
-	return f, nil
-}
-
 type DoesWalletExist struct {
 	TMSID      token.TMSID
 	Wallet     string

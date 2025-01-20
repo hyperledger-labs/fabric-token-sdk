@@ -314,28 +314,3 @@ func (p *SetTransactionAuditStatusViewFactory) NewView(in []byte) (view.View, er
 
 	return f, nil
 }
-
-type GetAuditorWalletIdentity struct {
-	ID string
-}
-
-type GetAuditorWalletIdentityView struct {
-	*GetAuditorWalletIdentity
-}
-
-func (g *GetAuditorWalletIdentity) Call(context view.Context) (interface{}, error) {
-	defaultAuditorWallet := token.GetManagementService(context).WalletManager().AuditorWallet(g.ID)
-	assert.NotNil(defaultAuditorWallet, "no default auditor wallet")
-	id, err := defaultAuditorWallet.GetAuditorIdentity()
-	assert.NoError(err, "failed getting auditorIdentity ")
-	return id, err
-}
-
-type GetAuditorWalletIdentityViewFactory struct{}
-
-func (p *GetAuditorWalletIdentityViewFactory) NewView(in []byte) (view.View, error) {
-	f := &GetAuditorWalletIdentityView{GetAuditorWalletIdentity: &GetAuditorWalletIdentity{}}
-	err := json.Unmarshal(in, f.GetAuditorWalletIdentity)
-	assert.NoError(err, "failed unmarshalling input")
-	return f, nil
-}
