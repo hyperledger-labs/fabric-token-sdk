@@ -119,23 +119,23 @@ func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 	return "", nil
 }
 
-func (d *CryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, n *node.Node, certifiers ...string) []generators.Identity {
+func (d *CryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, n *node.Node, certifiers ...string) []topology.Identity {
 	return d.Generate(tms, n, "certifiers", certifiers...)
 }
 
-func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []generators.Identity {
+func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []topology.Identity {
 	return d.Generate(tms, n, "owners", owners...)
 }
 
-func (d *CryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []generators.Identity {
+func (d *CryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []topology.Identity {
 	return d.Generate(tms, n, "issuers", issuers...)
 }
 
-func (d *CryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []generators.Identity {
+func (d *CryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []topology.Identity {
 	return d.Generate(tms, n, "auditors", auditors...)
 }
 
-func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wallet string, names ...string) []generators.Identity {
+func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wallet string, names ...string) []topology.Identity {
 	logger.Infof("generate [%s] identities [%v]", wallet, names)
 
 	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), n.ID(), wallet)
@@ -177,7 +177,7 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 	d.GenerateCryptoConfig(output, l)
 	d.GenerateArtifacts(output)
 
-	var identities []generators.Identity
+	var identities []topology.Identity
 	for i, name := range names {
 		idOutput := filepath.Join(
 			output,
@@ -210,7 +210,7 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 			Expect(os.Remove(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))).NotTo(HaveOccurred())
 		}
 
-		id := generators.Identity{
+		id := topology.Identity{
 			ID:   name,
 			Path: idOutput,
 		}

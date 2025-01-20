@@ -49,7 +49,14 @@ var _ = Describe("EndToEnd", func() {
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
 			It("Update public params", Label("T2"), func() {
-				fungible.TestPublicParamsUpdate(ts.II, "newAuditor", PrepareUpdatedPublicParams(ts.II, "newAuditor", "default"), "default", false, selector)
+				fungible.TestPublicParamsUpdate(
+					ts.II,
+					"newAuditor",
+					PrepareUpdatedPublicParams(ts.II, "newAuditor", "default"),
+					"default",
+					false,
+					selector,
+				)
 			})
 			It("Test Identity Revocation", Label("T3"), func() { fungible.TestRevokeIdentity(ts.II, "auditor", selector) })
 			It("Test Remote Wallet (GRPC)", Label("T4"), func() { fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, false) })
@@ -62,7 +69,14 @@ var _ = Describe("EndToEnd", func() {
 			AfterEach(ts.TearDown)
 			It("succeeded", Label("T6"), func() { fungible.TestAll(ts.II, "issuer", nil, true, selector) })
 			It("Update public params", Label("T7"), func() {
-				fungible.TestPublicParamsUpdate(ts.II, "newIssuer", PrepareUpdatedPublicParams(ts.II, "newIssuer", "default"), "default", true, selector)
+				fungible.TestPublicParamsUpdate(
+					ts.II,
+					"newIssuer",
+					PrepareUpdatedPublicParams(ts.II, "newIssuer", "default"),
+					"default",
+					true,
+					selector,
+				)
 			})
 		})
 
@@ -100,8 +114,9 @@ var _ = Describe("EndToEnd", func() {
 
 func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, networkName string) []byte {
 	tms := fungible.GetTMSByNetworkName(network, networkName)
-	auditorId := fungible.GetAuditorIdentity(network, auditor)
-	issuerId := fungible.GetIssuerIdentity(network, "newIssuer.id1")
+	auditorId := fungible.GetAuditorIdentity(tms, auditor)
+	issuerId := fungible.GetIssuerIdentity(tms, "newIssuer.id1")
+
 	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
 	Expect(ok).To(BeTrue(), "failed to get token platform from context")
 
@@ -138,9 +153,9 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			Monitoring:          false,
 			ReplicationOpts:     opts,
 			FSCBasedEndorsement: mask&WithEndorsers > 0,
-			// FSCLogSpec:          "token-sdk=debug:fabric-sdk=debug:info",
-			OnlyUnity:     true,
-			TokenSelector: tokenSelector,
+			FSCLogSpec:          "token-sdk=debug:fabric-sdk=debug:info",
+			OnlyUnity:           true,
+			TokenSelector:       tokenSelector,
 		},
 	))
 	return ts, selector

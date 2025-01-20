@@ -839,12 +839,10 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditorId strin
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
 	manager := sel.Get("manager")
-
 	auditor := sel.Get("auditor")
-	errorMessage := "failed to verify issuers' signatures"
+	errorMessage := "issuer wallet [] not found"
 	if issuerAsAuditor {
 		auditor = issuer
-		errorMessage = "failed verifying auditor signature"
 	}
 	RegisterAuditor(network, auditor)
 	txId := IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)

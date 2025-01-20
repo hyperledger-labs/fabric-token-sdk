@@ -27,6 +27,8 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -1011,24 +1013,34 @@ func WhoDeletedToken(network *integration.Infrastructure, id *token3.NodeReferen
 	return result
 }
 
-func GetAuditorIdentity(network *integration.Infrastructure, Id string) []byte {
-	auditorIdentity, err := network.Client(Id).CallView("GetAuditorWalletIdentity", common.JSONMarshall(&views.GetAuditorWalletIdentityView{GetAuditorWalletIdentity: &views.GetAuditorWalletIdentity{}}))
-	Expect(err).NotTo(HaveOccurred())
-
-	auditorId := auditorIdentity.([]byte)
-	var aID []byte
-	common.JSONUnmarshal(auditorId, &aID)
-	return aID
+func GetAuditorIdentity(tms *topology.TMS, id string) []byte {
+	for _, auditor := range tms.Wallets.Auditors {
+		if auditor.ID == id {
+			// Build an MSP Identity
+			provider, _, err := x509.NewKeyManager(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
+			Expect(err).NotTo(HaveOccurred())
+			id, _, err := provider.Identity(nil)
+			Expect(err).NotTo(HaveOccurred())
+			return id
+		}
+	}
+	Expect(false).To(BeTrue(), "auditor identity not found in [%s]", id)
+	return nil
 }
 
-func GetIssuerIdentity(network *integration.Infrastructure, Id string) []byte {
-	issuerIdentity, err := network.Client(Id).CallView("GetIssuerWalletIdentity", common.JSONMarshall(&views.GetIssuerWalletIdentityView{GetIssuerWalletIdentity: &views.GetIssuerWalletIdentity{}}))
-	Expect(err).NotTo(HaveOccurred())
-
-	issuerId := issuerIdentity.([]byte)
-	var aID []byte
-	common.JSONUnmarshal(issuerId, &aID)
-	return aID
+func GetIssuerIdentity(tms *topology.TMS, id string) []byte {
+	for _, issuer := range tms.Wallets.Issuers {
+		if issuer.ID == id {
+			// Build an MSP Identity
+			provider, _, err := x509.NewKeyManager(issuer.Path, "", msp2.IssuerMSPID, nil, issuer.Opts)
+			Expect(err).NotTo(HaveOccurred())
+			id, _, err := provider.Identity(nil)
+			Expect(err).NotTo(HaveOccurred())
+			return id
+		}
+	}
+	Expect(false).To(BeTrue(), "issuer identity not found in [%s]", id)
+	return nil
 }
 
 func JSONUnmarshalFloat64(v interface{}) float64 {
