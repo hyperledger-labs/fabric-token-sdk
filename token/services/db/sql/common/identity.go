@@ -97,7 +97,7 @@ func (db *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed compiling query")
 	}
-	logger.Debug(query)
+	logger.Debug(query, wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw)
 
 	_, err = db.db.Exec(query, wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw)
 	return err

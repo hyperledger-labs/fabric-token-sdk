@@ -312,7 +312,7 @@ func (l *LocalMembership) registerLocalIdentity(identityConfig *driver.IdentityC
 		return errors.Wrapf(err, "failed to add local identity for [%s]", identityConfig.ID)
 	}
 
-	if exists, _ := l.identityDB.ConfigurationExists(identityConfig.ID, identityConfig.Type, identityConfig.URL); !exists {
+	if exists, _ := l.identityDB.ConfigurationExists(identityConfig.ID, l.IdentityType, identityConfig.URL); !exists {
 		l.logger.Debugf("does the configuration already exists for [%s]? no, add it", identityConfig.ID)
 		if err := l.identityDB.AddConfiguration(driver3.IdentityConfiguration{
 			ID:     identityConfig.ID,
@@ -348,6 +348,7 @@ func (l *LocalMembership) registerLocalIdentities(configuration *driver.Identity
 		return nil
 	}
 	found := 0
+	var errs []error
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -358,13 +359,14 @@ func (l *LocalMembership) registerLocalIdentities(configuration *driver.Identity
 			URL:    filepath.Join(configuration.URL, id),
 			Config: configuration.Config,
 		}, false); err != nil {
+			errs = append(errs, err)
 			l.logger.Errorf("failed registering local identity [%s]: [%s]", id, err)
 			continue
 		}
 		found++
 	}
 	if found == 0 {
-		return errors.Errorf("no valid identities found in [%s]", configuration.URL)
+		return errors.Errorf("no valid identities found in [%s], errs [%v]", configuration.URL, errs)
 	}
 	return nil
 }

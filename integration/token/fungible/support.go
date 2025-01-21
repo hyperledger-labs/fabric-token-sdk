@@ -1129,7 +1129,7 @@ func RegisterOwnerIdentity(network *integration.Infrastructure, id *token3.NodeR
 		_, err := network.Client(replicaName).CallView("RegisterOwnerIdentity", common.JSONMarshall(&views.RegisterOwnerIdentity{
 			IdentityConfiguration: identityConfiguration,
 		}))
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "cannot register owner identity at replica [%s]", replicaName)
 		network.Ctx.SetViewClient(identityConfiguration.ID, network.Client(replicaName))
 	}
 }
