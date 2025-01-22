@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +30,7 @@ func TestGetWallet(t *testing.T) {
 	alice := driver.Identity("alice")
 	meta := "meta"
 	wr := identity.NewWalletRegistry(
-		nil,
+		&logging.MockLogger{},
 		&fakeRole{},
 		kvs2.NewWalletDB(kvsStorage, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}),
 	)
