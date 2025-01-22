@@ -26,12 +26,12 @@ type localMembership interface {
 // Role models a generic role
 type Role struct {
 	logger          logging.Logger
-	roleID          driver.IdentityRole
+	roleID          driver.IdentityRoleType
 	networkID       string
 	localMembership localMembership
 }
 
-func NewRole(logger logging.Logger, roleID driver.IdentityRole, networkID string, localMembership localMembership) *Role {
+func NewRole(logger logging.Logger, roleID driver.IdentityRoleType, networkID string, localMembership localMembership) *Role {
 	return &Role{
 		logger:          logger,
 		roleID:          roleID,
@@ -40,7 +40,7 @@ func NewRole(logger logging.Logger, roleID driver.IdentityRole, networkID string
 	}
 }
 
-func (r *Role) ID() driver.IdentityRole {
+func (r *Role) ID() driver.IdentityRoleType {
 	return r.roleID
 }
 

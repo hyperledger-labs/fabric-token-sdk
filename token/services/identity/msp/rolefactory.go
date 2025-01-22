@@ -33,7 +33,7 @@ const (
 )
 
 // RoleToMSPID maps the role to the MSP ID
-var RoleToMSPID = map[driver.IdentityRole]string{
+var RoleToMSPID = map[driver.IdentityRoleType]string{
 	driver.OwnerRole:     OwnerMSPID,
 	driver.IssuerRole:    IssuerMSPID,
 	driver.AuditorRole:   AuditorMSPID,
@@ -85,7 +85,7 @@ func NewRoleFactory(
 }
 
 // NewIdemix creates a new Idemix-based role
-func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerPublicKey *crypto.IdemixIssuerPublicKey, additionalKMPs ...common.KeyManagerProvider) (identity.Role, error) {
+func (f *RoleFactory) NewIdemix(role driver.IdentityRoleType, cacheSize int, issuerPublicKey *crypto.IdemixIssuerPublicKey, additionalKMPs ...common.KeyManagerProvider) (identity.Role, error) {
 	f.Logger.Debugf("create idemix role for [%s]", driver.IdentityRoleStrings[role])
 	if issuerPublicKey == nil && len(additionalKMPs) == 0 {
 		return nil, errors.New("expected a non-nil idemix public key")
@@ -147,15 +147,15 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 }
 
 // NewX509 creates a new X509-based role
-func (f *RoleFactory) NewX509(role driver.IdentityRole, targets ...driver.Identity) (identity.Role, error) {
+func (f *RoleFactory) NewX509(role driver.IdentityRoleType, targets ...driver.Identity) (identity.Role, error) {
 	return f.newX509WithType(role, "", false, targets...)
 }
 
-func (f *RoleFactory) NewWrappedX509(role driver.IdentityRole, ignoreRemote bool) (identity.Role, error) {
+func (f *RoleFactory) NewWrappedX509(role driver.IdentityRoleType, ignoreRemote bool) (identity.Role, error) {
 	return f.newX509WithType(role, X509Identity, ignoreRemote)
 }
 
-func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType string, ignoreRemote bool, targets ...driver.Identity) (identity.Role, error) {
+func (f *RoleFactory) newX509WithType(role driver.IdentityRoleType, identityType string, ignoreRemote bool, targets ...driver.Identity) (identity.Role, error) {
 	f.Logger.Debugf("create x509 role for [%s]", driver.IdentityRoleStrings[role])
 
 	kmp := x5092.NewKeyManagerProvider(f.Config, RoleToMSPID[role], f.SignerService, ignoreRemote)
@@ -194,7 +194,7 @@ func (f *RoleFactory) newX509WithType(role driver.IdentityRole, identityType str
 }
 
 // IdentitiesForRole returns the configured identities for the passed role
-func (f *RoleFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Identity, error) {
+func (f *RoleFactory) IdentitiesForRole(role driver.IdentityRoleType) ([]*config.Identity, error) {
 	return f.Config.IdentitiesForRole(role)
 }
 

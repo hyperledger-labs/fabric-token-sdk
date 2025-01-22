@@ -70,7 +70,7 @@ func (i *IdentityConfig) TranslatePath(path string) string {
 	return i.Config.TranslatePath(path)
 }
 
-func (i *IdentityConfig) IdentitiesForRole(role driver.IdentityRole) ([]*Identity, error) {
+func (i *IdentityConfig) IdentitiesForRole(role driver.IdentityRoleType) ([]*Identity, error) {
 	switch role {
 	case driver.IssuerRole:
 		return i.Wallets.Issuers, nil

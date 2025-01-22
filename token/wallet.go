@@ -76,9 +76,6 @@ func (wm *WalletManager) RegisterIssuerIdentity(id string, url string) error {
 
 // RegisterRecipientIdentity registers a new recipient identity
 func (wm *WalletManager) RegisterRecipientIdentity(data *RecipientData) error {
-	if err := wm.managementService.tms.IdentityProvider().RegisterRecipientIdentity(data.Identity); err != nil {
-		return err
-	}
 	return wm.walletService.RegisterRecipientIdentity(data)
 }
 

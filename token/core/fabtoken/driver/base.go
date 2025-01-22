@@ -57,7 +57,7 @@ func (d *base) newWalletService(
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
-	ip := identity.NewProvider(identityDB, sigService, binder, NewEIDRHDeserializer())
+	ip := identity.NewProvider(logger.Named("identity"), identityDB, sigService, binder, NewEIDRHDeserializer())
 	identityConfig, err := config2.NewIdentityConfig(tmsConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create identity config")
@@ -108,9 +108,9 @@ func (d *base) newWalletService(
 		ip,
 		NewDeserializer(),
 		fabtoken.NewWalletFactory(logger, ip, qe),
-		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
-		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
-		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
+		identity.NewWalletRegistry(logger.Named("identity.owner-wallet-registry"), roles[driver.OwnerRole], walletDB),
+		identity.NewWalletRegistry(logger.Named("identity.issuer-wallet-registry"), roles[driver.IssuerRole], walletDB),
+		identity.NewWalletRegistry(logger.Named("identity.auditor-wallet-registry"), roles[driver.AuditorRole], walletDB),
 		nil,
 	)
 

@@ -22,7 +22,7 @@ type AnonymousRole struct {
 	nodeIdentity driver.Identity
 }
 
-func NewAnonymousRole(logger logging.Logger, roleID driver.IdentityRole, networkID string, nodeIdentity driver.Identity, localMembership localMembership) *AnonymousRole {
+func NewAnonymousRole(logger logging.Logger, roleID driver.IdentityRoleType, networkID string, nodeIdentity driver.Identity, localMembership localMembership) *AnonymousRole {
 	return &AnonymousRole{
 		Role:         NewRole(logger, roleID, networkID, localMembership),
 		nodeIdentity: nodeIdentity,

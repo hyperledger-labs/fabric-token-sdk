@@ -33,7 +33,7 @@ func NewWalletFactory(logger logging.Logger, identityProvider driver.IdentityPro
 	return &WalletFactory{logger: logger, identityProvider: identityProvider, tokenVault: tokenVault}
 }
 
-func (w *WalletFactory) NewWallet(id string, role driver.IdentityRole, walletRegistry common.WalletRegistry, info driver.IdentityInfo) (driver.Wallet, error) {
+func (w *WalletFactory) NewWallet(id string, role driver.IdentityRoleType, walletRegistry common.WalletRegistry, info driver.IdentityInfo) (driver.Wallet, error) {
 	idInfoIdentity, _, err := info.Get()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get owner wallet identity for [%s]", id)

@@ -43,7 +43,7 @@ type WalletRegistry interface {
 }
 
 type WalletFactory interface {
-	NewWallet(id string, role driver.IdentityRole, walletRegistry WalletRegistry, info driver.IdentityInfo) (driver.Wallet, error)
+	NewWallet(id string, role driver.IdentityRoleType, walletRegistry WalletRegistry, info driver.IdentityInfo) (driver.Wallet, error)
 }
 
 type RegistryEntry struct {
@@ -57,7 +57,7 @@ type WalletService struct {
 	Deserializer     driver.Deserializer
 
 	WalletFactory WalletFactory
-	Registries    map[driver.IdentityRole]*RegistryEntry
+	Registries    map[driver.IdentityRoleType]*RegistryEntry
 }
 
 func NewWalletService(
@@ -70,7 +70,7 @@ func NewWalletService(
 	AuditorWalletRegistry WalletRegistry,
 	CertifierWalletsRegistry WalletRegistry,
 ) *WalletService {
-	registries := map[driver.IdentityRole]*RegistryEntry{}
+	registries := map[driver.IdentityRoleType]*RegistryEntry{}
 	registries[driver.OwnerRole] = &RegistryEntry{Registry: OwnerWalletRegistry, Mutex: &sync.RWMutex{}}
 	registries[driver.IssuerRole] = &RegistryEntry{Registry: IssuerWalletRegistry, Mutex: &sync.RWMutex{}}
 	registries[driver.AuditorRole] = &RegistryEntry{Registry: AuditorWalletRegistry, Mutex: &sync.RWMutex{}}
@@ -113,6 +113,12 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	if data == nil {
 		return errors.WithStack(ErrNilRecipientData)
 	}
+
+	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
+	if err := s.IdentityProvider.RegisterRecipientIdentity(data.Identity); err != nil {
+		return errors.Wrapf(err, "failed to register recipient identity")
+	}
+
 	if s.Logger.IsEnabledFor(zapcore.DebugLevel) {
 		s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, Hashable(data.AuditInfo))
 	}
@@ -191,7 +197,7 @@ func (s *WalletService) SpentIDs(ids ...*token.ID) ([]string, error) {
 	return nil, nil
 }
 
-func (s *WalletService) walletByID(role driver.IdentityRole, id driver.WalletLookupID) (driver.Wallet, error) {
+func (s *WalletService) walletByID(role driver.IdentityRoleType, id driver.WalletLookupID) (driver.Wallet, error) {
 	entry := s.Registries[role]
 	registry := entry.Registry
 	mutex := entry.Mutex

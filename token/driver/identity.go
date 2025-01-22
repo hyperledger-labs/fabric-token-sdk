@@ -11,8 +11,8 @@ import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 // Identity represents a generic identity
 type Identity = view.Identity
 
-// IdentityRole is the role of an identity
-type IdentityRole int
+// IdentityRoleType is the role of an identity
+type IdentityRoleType int
 
 const (
 	// IssuerRole is the role of an issuer
@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	IdentityRoleStrings = map[IdentityRole]string{
+	IdentityRoleStrings = map[IdentityRoleType]string{
 		IssuerRole:    "issuer",
 		AuditorRole:   "auditor",
 		OwnerRole:     "owner",

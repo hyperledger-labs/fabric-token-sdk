@@ -21,7 +21,7 @@ type LongTermRole struct {
 	nodeIdentity driver.Identity
 }
 
-func NewLongTermRole(logger logging.Logger, roleID driver.IdentityRole, networkID string, nodeIdentity driver.Identity, localMembership localMembership) *LongTermRole {
+func NewLongTermRole(logger logging.Logger, roleID driver.IdentityRoleType, networkID string, nodeIdentity driver.Identity, localMembership localMembership) *LongTermRole {
 	return &LongTermRole{
 		Role:         NewRole(logger, roleID, networkID, localMembership),
 		nodeIdentity: nodeIdentity,
