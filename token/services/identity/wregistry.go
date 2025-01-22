@@ -14,12 +14,14 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
 // WalletRegistry manages wallets whose long-term identities have a given role.
 type WalletRegistry struct {
+	Logger  logging.Logger
 	Role    Role
 	Storage db.WalletDB
 
@@ -29,8 +31,9 @@ type WalletRegistry struct {
 // NewWalletRegistry returns a new registry for the passed parameters.
 // A registry is bound to a given role, and it is persistent.
 // Long-term identities are provided by the passed identity provider
-func NewWalletRegistry(role Role, storage db.WalletDB) *WalletRegistry {
+func NewWalletRegistry(logger logging.Logger, role Role, storage db.WalletDB) *WalletRegistry {
 	return &WalletRegistry{
+		Logger:  logger,
 		Role:    role,
 		Storage: storage,
 		Wallets: map[string]driver.Wallet{},
@@ -38,7 +41,7 @@ func NewWalletRegistry(role Role, storage db.WalletDB) *WalletRegistry {
 }
 
 func (r *WalletRegistry) RegisterIdentity(config driver.IdentityConfiguration) error {
-	logger.Debugf("register identity [%s:%s]", config.ID, config.URL)
+	r.Logger.Debugf("register identity [%s:%s]", config.ID, config.URL)
 	return r.Role.RegisterIdentity(config)
 }
 
@@ -46,8 +49,8 @@ func (r *WalletRegistry) RegisterIdentity(config driver.IdentityConfiguration) e
 // If a wallet is found, Lookup returns the wallet and its identifier.
 // If no wallet is found, Lookup returns the identity info and a potential wallet identifier for the passed id, if anything is found
 func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver.IdentityInfo, string, error) {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("lookup wallet by [%T]", id)
+	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
+		r.Logger.Debugf("lookup wallet by [%T]", id)
 	}
 	var walletIdentifiers []string
 
@@ -58,11 +61,11 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver
 		// give it a second change
 		passedIdentity, ok := toViewIdentity(id)
 		if ok {
-			logger.Debugf("lookup failed, check if there is a wallet for identity [%s]", passedIdentity)
+			r.Logger.Debugf("lookup failed, check if there is a wallet for identity [%s]", passedIdentity)
 			// is this identity registered
 			wID, err := r.GetWalletID(passedIdentity)
 			if err == nil && len(wID) != 0 {
-				logger.Debugf("lookup failed, there is a wallet for identity [%s]: [%s]", passedIdentity, wID)
+				r.Logger.Debugf("lookup failed, there is a wallet for identity [%s]: [%s]", passedIdentity, wID)
 				// we got a hit
 				walletID = wID
 				identity = passedIdentity
@@ -73,8 +76,8 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver
 			return nil, nil, "", errors.WithMessagef(err, "failed to lookup wallet [%s]", id)
 		}
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("looked-up identifier [%s:%s]", identity, toString(walletID))
+	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
+		r.Logger.Debugf("looked-up identifier [%s:%s]", identity, toString(walletID))
 	}
 	wID := walletID
 	walletEntry, ok := r.Wallets[wID]
@@ -86,34 +89,34 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver
 	// give it a second chance
 	passedIdentity, ok := toViewIdentity(id)
 	if ok {
-		logger.Debugf("no wallet found, check if there is a wallet for identity [%s]", passedIdentity)
+		r.Logger.Debugf("no wallet found, check if there is a wallet for identity [%s]", passedIdentity)
 		// is this identity registered
 		passedWalletID, err := r.GetWalletID(passedIdentity)
 		if err == nil && len(passedWalletID) != 0 {
-			logger.Debugf("no wallet found, there is a wallet for identity [%s]: [%s]", passedIdentity, passedWalletID)
+			r.Logger.Debugf("no wallet found, there is a wallet for identity [%s]: [%s]", passedIdentity, passedWalletID)
 			// we got a hit
 			walletEntry, ok = r.Wallets[passedWalletID]
 			if ok {
 				return walletEntry, nil, passedWalletID, nil
 			}
-			logger.Debugf("no wallet found, there is a wallet for identity [%s]: [%s] but it has not been recreated yet", passedIdentity, passedWalletID)
+			r.Logger.Debugf("no wallet found, there is a wallet for identity [%s]: [%s] but it has not been recreated yet", passedIdentity, passedWalletID)
 		}
 		walletIdentifiers = append(walletIdentifiers, passedWalletID)
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("no wallet found for [%s] at [%s]", passedIdentity, toString(wID))
+	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
+		r.Logger.Debugf("no wallet found for [%s] at [%s]", passedIdentity, toString(wID))
 	}
 	if len(identity) != 0 {
 		identityWID, err := r.GetWalletID(identity)
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
+		if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
+			r.Logger.Debugf("wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
 		}
 		if err == nil && len(identityWID) != 0 {
 			w, ok := r.Wallets[identityWID]
 			if ok {
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("found wallet [%s:%s:%s:%s]", identity, walletID, w.ID(), identityWID)
+				if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
+					r.Logger.Debugf("found wallet [%s:%s:%s:%s]", identity, walletID, w.ID(), identityWID)
 				}
 				return w, nil, identityWID, nil
 			}
@@ -129,13 +132,13 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver
 		var idInfo driver.IdentityInfo
 		idInfo, err = r.Role.GetIdentityInfo(id)
 		if err == nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("identity info found at [%s]", toString(id))
+			if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
+				r.Logger.Debugf("identity info found at [%s]", toString(id))
 			}
 			return nil, idInfo, id, nil
 		} else {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("identity info not found at [%s]", toString(id))
+			if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
+				r.Logger.Debugf("identity info not found at [%s]", toString(id))
 			}
 		}
 	}
@@ -151,8 +154,8 @@ func (r *WalletRegistry) RegisterWallet(id string, w driver.Wallet) error {
 // BindIdentity binds the passed identity to the passed wallet identifier.
 // Additional metadata can be bound to the identity.
 func (r *WalletRegistry) BindIdentity(identity driver.Identity, eID string, wID string, meta any) error {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
+	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
+		r.Logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
 	}
 	metaEncoded, err := json.Marshal(meta)
 	if err != nil {
@@ -194,8 +197,8 @@ func (r *WalletRegistry) WalletIDs() ([]string, error) {
 
 // GetIdentityMetadata loads metadata bound to the passed identity into the passed meta argument
 func (r *WalletRegistry) GetIdentityMetadata(identity driver.Identity, wID string, meta any) error {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("get recipient identity metadata [%s]->[%s]", identity, wID)
+	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
+		r.Logger.Debugf("get recipient identity metadata [%s]->[%s]", identity, wID)
 	}
 	raw, err := r.Storage.LoadMeta(identity, wID, int(r.Role.ID()))
 	if err != nil {
@@ -210,8 +213,8 @@ func (r *WalletRegistry) GetWalletID(identity driver.Identity) (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("wallet [%s] is bound to identity [%s]", wID, identity)
+	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
+		r.Logger.Debugf("wallet [%s] is bound to identity [%s]", wID, identity)
 	}
 	return wID, nil
 }

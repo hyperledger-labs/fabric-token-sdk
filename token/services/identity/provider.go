@@ -17,16 +17,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = logging.MustGetLogger("token-sdk.services.identity")
-
-// Deserializer is an interface for deserializing identities
-type Deserializer interface {
-	// DeserializeSigner deserializes a signer from its bytes representation
-	DeserializeSigner(raw []byte) (driver.Signer, error)
-}
-
-// EnrollmentIDUnmarshaler decodes an enrollment ID form an audit info
-type EnrollmentIDUnmarshaler interface {
+// enrollmentIDUnmarshaler decodes an enrollment ID form an audit info
+type enrollmentIDUnmarshaler interface {
 	// GetEnrollmentID returns the enrollment ID from the audit info
 	GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error)
 	// GetRevocationHandler returns the revocation handle from the audit info
@@ -45,32 +37,40 @@ type sigService interface {
 	GetVerifier(identity driver.Identity) (driver.Verifier, error)
 }
 
-type Storage interface {
+type storage interface {
 	GetAuditInfo(id []byte) ([]byte, error)
 	StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 }
 
-type Binder interface {
+type binder interface {
 	Bind(longTerm driver.Identity, ephemeral driver.Identity) error
 }
 
 // Provider implements the driver.IdentityProvider interface.
 // Provider handles the long-term identities on top of which wallets are defined.
 type Provider struct {
+	Logger     logging.Logger
 	SigService sigService
-	Binder     Binder
-	Storage    Storage
+	Binder     binder
+	Storage    storage
 
-	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
+	enrollmentIDUnmarshaler enrollmentIDUnmarshaler
 	isMeCacheLock           sync.RWMutex
 	isMeCache               map[string]bool
 }
 
 // NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
 // The Provider handles the long-term identities on top of which wallets are defined.
-func NewProvider(Storage Storage, sigService sigService, binder Binder, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler) *Provider {
+func NewProvider(
+	logger logging.Logger,
+	storage storage,
+	sigService sigService,
+	binder binder,
+	enrollmentIDUnmarshaler enrollmentIDUnmarshaler,
+) *Provider {
 	return &Provider{
-		Storage:                 Storage,
+		Logger:                  logger,
+		Storage:                 storage,
 		SigService:              sigService,
 		Binder:                  binder,
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
@@ -104,7 +104,7 @@ func (p *Provider) RegisterSigner(identity driver.Identity, signer driver.Signer
 }
 
 func (p *Provider) AreMe(identities ...driver.Identity) []string {
-	logger.Debugf("identity [%s] is me?", identities)
+	p.Logger.Debugf("identity [%s] is me?", identities)
 
 	result := make([]string, 0)
 	notFound := make([]driver.Identity, 0)
@@ -141,8 +141,8 @@ func (p *Provider) IsMe(identity driver.Identity) bool {
 }
 
 func (p *Provider) RegisterRecipientIdentity(id driver.Identity) error {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Registering identity [%s]", id)
+	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+		p.Logger.Debugf("Registering identity [%s]", id)
 	}
 	p.isMeCacheLock.Lock()
 	p.isMeCache[id.String()] = false
@@ -159,7 +159,7 @@ func (p *Provider) GetSigner(identity driver.Identity) (driver.Signer, error) {
 	}()
 	signer, err := p.SigService.GetSigner(identity)
 	if err != nil {
-		logger.Warn(err)
+		p.Logger.Warn(err)
 		return nil, errors.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 	}
 	found = true
@@ -180,21 +180,21 @@ func (p *Provider) GetRevocationHandler(identity driver.Identity, auditInfo []by
 
 func (p *Provider) Bind(longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error {
 	if copyAll {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
+		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+			p.Logger.Debugf("Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
 		}
 		setSV := true
 		signer, err := p.GetSigner(longTerm)
 		if err != nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("failed getting signer for [%s][%s][%s]", longTerm, err, debug.Stack())
+			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+				p.Logger.Debugf("failed getting signer for [%s][%s][%s]", longTerm, err, debug.Stack())
 			}
 			setSV = false
 		}
 		verifier, err := p.SigService.GetVerifier(longTerm)
 		if err != nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("failed getting verifier for [%s][%s][%s]", longTerm, err, debug.Stack())
+			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+				p.Logger.Debugf("failed getting verifier for [%s][%s][%s]", longTerm, err, debug.Stack())
 			}
 			verifier = nil
 		}
@@ -202,8 +202,8 @@ func (p *Provider) Bind(longTerm driver.Identity, ephemeral driver.Identity, cop
 		setAI := true
 		auditInfo, err := p.GetAuditInfo(longTerm)
 		if err != nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("failed getting audit info for [%s][%s]", longTerm, err)
+			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+				p.Logger.Debugf("failed getting audit info for [%s][%s]", longTerm, err)
 			}
 			setAI = false
 		}

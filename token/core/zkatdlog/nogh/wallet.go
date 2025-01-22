@@ -51,7 +51,7 @@ func NewWalletFactory(
 	}
 }
 
-func (w *WalletFactory) NewWallet(id string, role driver.IdentityRole, walletRegistry common.WalletRegistry, identityInfo driver.IdentityInfo) (driver.Wallet, error) {
+func (w *WalletFactory) NewWallet(id string, role driver.IdentityRoleType, walletRegistry common.WalletRegistry, identityInfo driver.IdentityInfo) (driver.Wallet, error) {
 	switch role {
 	case driver.OwnerRole:
 		newWallet, err := common.NewAnonymousOwnerWallet(
