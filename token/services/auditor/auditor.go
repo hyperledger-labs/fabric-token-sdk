@@ -97,13 +97,43 @@ func (a *Auditor) Audit(tx Transaction) (*token.InputStream, *token.OutputStream
 	return record.Inputs, record.Outputs, nil
 }
 
+func newRequestWrapper(r *token.Request, tms *token.ManagementService) *requestWrapper {
+	return &requestWrapper{r: r, tms: tms}
+}
+
+type requestWrapper struct {
+	r   *token.Request
+	tms *token.ManagementService
+}
+
+func (r *requestWrapper) Bytes() ([]byte, error) { return r.r.Bytes() }
+func (r *requestWrapper) AllApplicationMetadata() map[string][]byte {
+	return r.r.AllApplicationMetadata()
+}
+func (r *requestWrapper) PublicParamsHash() token.PPHash { return r.r.PublicParamsHash() }
+
+func (r *requestWrapper) AuditRecord() (*token.AuditRecord, error) {
+	record, err := r.r.AuditRecord()
+	if err != nil {
+		return nil, err
+	}
+	if err := r.completeInputsWithEmptyEID(record); err != nil {
+		return nil, errors.WithMessagef(err, "failed filling gaps for request [%s]", r.r.Anchor)
+	}
+	return record, nil
+}
+
 // Append adds the passed transaction to the auditor database.
 // It also releases the locks acquired by Audit.
 func (a *Auditor) Append(tx Transaction) error {
 	defer a.Release(tx)
 
+	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
+	if err != nil {
+		return err
+	}
 	// append request to audit db
-	if err := a.auditDB.Append(tx.Request(), a.completeInputsWithEmptyEID); err != nil {
+	if err := a.auditDB.Append(newRequestWrapper(tx.Request(), tms)); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 
@@ -148,7 +178,7 @@ func (a *Auditor) Check(context context.Context) ([]string, error) {
 	return a.checkService.Check(context)
 }
 
-func (a *Auditor) completeInputsWithEmptyEID(record *token.AuditRecord) error {
+func (r *requestWrapper) completeInputsWithEmptyEID(record *token.AuditRecord) error {
 	filter := record.Inputs.ByEnrollmentID("")
 	if filter.Count() == 0 {
 		return nil
@@ -157,15 +187,11 @@ func (a *Auditor) completeInputsWithEmptyEID(record *token.AuditRecord) error {
 	targetEID := record.Outputs.EnrollmentIDs()[0]
 
 	// fetch all the tokens
-	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
-	if err != nil {
-		return errors.WithMessagef(err, "failed getting management service for [%s]", a.tmsID)
-	}
-	tokens, err := tms.Vault().NewQueryEngine().ListAuditTokens(filter.IDs()...)
+	tokens, err := r.tms.Vault().NewQueryEngine().ListAuditTokens(filter.IDs()...)
 	if err != nil {
 		return errors.WithMessagef(err, "failed listing tokens for [%s]", filter.IDs())
 	}
-	precision := tms.PublicParametersManager().PublicParameters().Precision()
+	precision := r.tms.PublicParametersManager().PublicParameters().Precision()
 	for i := 0; i < filter.Count(); i++ {
 		item := filter.At(i)
 		item.EnrollmentID = targetEID

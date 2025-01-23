@@ -86,8 +86,8 @@ func (d *base) newWalletService(
 	)
 	// owner role
 	// we have one key manager for fabtoken and one for each idemix issuer public key
-	var kmps []common2.KeyManagerProvider
-	for _, key := range pp.IdemixIssuerPublicKeys {
+	kmps := make([]common2.KeyManagerProvider, len(pp.IdemixIssuerPublicKeys)+1)
+	for i, key := range pp.IdemixIssuerPublicKeys {
 		backend, err := storageProvider.NewKeystore()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get new keystore backend")
@@ -96,7 +96,7 @@ func (d *base) newWalletService(
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
 		}
-		kmp := idemix2.NewKeyManagerProvider(
+		kmps[i] = idemix2.NewKeyManagerProvider(
 			key.PublicKey,
 			key.Curve,
 			msp.RoleToMSPID[driver.OwnerRole],
@@ -106,9 +106,8 @@ func (d *base) newWalletService(
 			identityConfig.DefaultCacheSize(),
 			ignoreRemote,
 		)
-		kmps = append(kmps, kmp)
 	}
-	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[driver.OwnerRole], ip, ignoreRemote))
+	kmps[len(kmps)-1] = x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[driver.OwnerRole], ip, ignoreRemote)
 
 	role, err := roleFactory.NewIdemix(
 		driver.OwnerRole,
