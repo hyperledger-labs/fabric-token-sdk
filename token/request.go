@@ -171,6 +171,12 @@ type Request struct {
 	TokenService *ManagementService `json:"-"`
 }
 
+func (r *Request) AllApplicationMetadata() map[string][]byte { return r.Metadata.Application }
+func (r *Request) PublicParamsHash() PPHash {
+	return r.TokenService.PublicParametersManager().PublicParamsHash()
+}
+func (r *Request) String() string { return r.Anchor }
+
 // NewRequest creates a new empty request for the given token service and anchor
 func NewRequest(tokenService *ManagementService, anchor string) *Request {
 	return &Request{

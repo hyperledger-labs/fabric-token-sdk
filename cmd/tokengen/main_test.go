@@ -18,6 +18,7 @@ import (
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )
@@ -256,7 +257,7 @@ func validateOutputEquivalent(gt *WithT, tempOutput, auditorsMSPdir, issuersMSPd
 
 	idemixPK, err := os.ReadFile(idemixMSPdir)
 	gt.Expect(err).NotTo(HaveOccurred())
-	gt.Expect(idemixPK).To(BeEquivalentTo(pp.IdemixIssuerPublicKeys[0].PublicKey))
+	gt.Expect(idemixPK).To(BeEquivalentTo(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey))
 }
 
 func testGenRunWithError(gt *WithT, tokengen string, args []string, errMsg string) {

@@ -1014,32 +1014,25 @@ func WhoDeletedToken(network *integration.Infrastructure, id *token3.NodeReferen
 }
 
 func GetAuditorIdentity(tms *topology.TMS, id string) []byte {
-	for _, auditor := range tms.Wallets.Auditors {
-		if auditor.ID == id {
-			// Build an MSP Identity
-			provider, _, err := x509.NewKeyManager(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
-			Expect(err).NotTo(HaveOccurred())
-			id, _, err := provider.Identity(nil)
-			Expect(err).NotTo(HaveOccurred())
-			return id
-		}
-	}
-	Expect(false).To(BeTrue(), "auditor identity not found in [%s]", id)
-	return nil
+	return getIdentity(tms.Wallets.Auditors, id, msp2.AuditorMSPID)
 }
 
 func GetIssuerIdentity(tms *topology.TMS, id string) []byte {
-	for _, issuer := range tms.Wallets.Issuers {
-		if issuer.ID == id {
+	return getIdentity(tms.Wallets.Issuers, id, msp2.IssuerMSPID)
+}
+
+func getIdentity(identities []topology.Identity, id string, mspID string) []byte {
+	for _, identity := range identities {
+		if identity.ID == id {
 			// Build an MSP Identity
-			provider, _, err := x509.NewKeyManager(issuer.Path, "", msp2.IssuerMSPID, nil, issuer.Opts)
+			provider, _, err := x509.NewKeyManager(identity.Path, "", mspID, nil, identity.Opts)
 			Expect(err).NotTo(HaveOccurred())
 			id, _, err := provider.Identity(nil)
 			Expect(err).NotTo(HaveOccurred())
 			return id
 		}
 	}
-	Expect(false).To(BeTrue(), "issuer identity not found in [%s]", id)
+	Expect(false).To(BeTrue(), "identity not found in [%s]", id)
 	return nil
 }
 

@@ -26,14 +26,14 @@ type LocalIdentity struct {
 }
 
 func (i *LocalIdentity) String() string {
-	if !i.Anonymous {
-		id, _, err := i.GetIdentity(nil)
-		if err != nil {
-			return err.Error()
-		}
-		return fmt.Sprintf("{%s@%s-%v-%v-%v}[%s]", i.Name, i.EnrollmentID, i.Default, i.Anonymous, i.Remote, id)
+	if i.Anonymous {
+		return fmt.Sprintf("{%s@%s-%v-%v-%v}", i.Name, i.EnrollmentID, i.Default, i.Anonymous, i.Remote)
 	}
-	return fmt.Sprintf("{%s@%s-%v-%v-%v}", i.Name, i.EnrollmentID, i.Default, i.Anonymous, i.Remote)
+	id, _, err := i.GetIdentity(nil)
+	if err != nil {
+		return err.Error()
+	}
+	return fmt.Sprintf("{%s@%s-%v-%v-%v}[%s]", i.Name, i.EnrollmentID, i.Default, i.Anonymous, i.Remote, id)
 }
 
 // IdentityInfo implements the driver.IdentityInfo interface on top LocalIdentity

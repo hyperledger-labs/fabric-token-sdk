@@ -23,6 +23,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+type tokenRequest interface {
+	AuditRecord() (*token.AuditRecord, error)
+	Bytes() ([]byte, error)
+	AllApplicationMetadata() map[string][]byte
+	PublicParamsHash() token.PPHash
+}
+
 type (
 	Holder  = db.DriverHolder[*DB, driver.AuditTransactionDB, driver.AuditDBDriver]
 	Manager = db.Manager[*DB, driver.AuditTransactionDB, driver.AuditDBDriver]
@@ -149,26 +156,19 @@ func newDB(p driver.AuditTransactionDB) *DB {
 }
 
 // Append appends send and receive movements, and transaction records corresponding to the passed token request
-func (d *DB) Append(req *token.Request, gapFiller func(record *token.AuditRecord) error) error {
-	logger.Debugf("appending new record... [%s]", req.Anchor)
+func (d *DB) Append(req tokenRequest) error {
+	logger.Debugf("appending new record... [%s]", req)
 
 	record, err := req.AuditRecord()
 	if err != nil {
-		return errors.WithMessagef(err, "failed getting audit records for request [%s]", req.Anchor)
-	}
-
-	// fill the gap in the record
-	if gapFiller != nil {
-		if err := gapFiller(record); err != nil {
-			return errors.WithMessagef(err, "failed filling gaps for request [%s]", req.Anchor)
-		}
+		return errors.WithMessagef(err, "failed getting audit records for request [%s]", req)
 	}
 
 	logger.Debugf("parsing new audit record... [%d] in, [%d] out", record.Inputs.Count(), record.Outputs.Count())
 	now := time.Now().UTC()
 	raw, err := req.Bytes()
 	if err != nil {
-		return errors.Wrapf(err, "failed to marshal token request [%s]", req.Anchor)
+		return errors.Wrapf(err, "failed to marshal token request [%s]", req)
 	}
 	mov, err := ttxdb.Movements(record, now)
 	if err != nil {
@@ -187,8 +187,8 @@ func (d *DB) Append(req *token.Request, gapFiller func(record *token.AuditRecord
 	if err := w.AddTokenRequest(
 		record.Anchor,
 		raw,
-		req.Metadata.Application,
-		req.TokenService.PublicParametersManager().PublicParamsHash(),
+		req.AllApplicationMetadata(),
+		req.PublicParamsHash(),
 	); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
