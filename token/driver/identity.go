@@ -11,44 +11,6 @@ import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 // Identity represents a generic identity
 type Identity = view.Identity
 
-// IdentityRoleType is the role of an identity
-type IdentityRoleType int
-
-const (
-	// IssuerRole is the role of an issuer
-	IssuerRole = iota
-	// AuditorRole is the role of an auditor
-	AuditorRole
-	// OwnerRole is the role of an owner
-	OwnerRole
-	// CertifierRole is the role of a certifier
-	CertifierRole
-)
-
-var (
-	IdentityRoleStrings = map[IdentityRoleType]string{
-		IssuerRole:    "issuer",
-		AuditorRole:   "auditor",
-		OwnerRole:     "owner",
-		CertifierRole: "certifier",
-	}
-)
-
-// IdentityInfo models a long-term identity inside the Identity Provider.
-// An identity has an identifier (ID) and an Enrollment ID, unique identifier.
-// An identity can be remote, meaning that the corresponding secret key is remotely available.
-type IdentityInfo interface {
-	// ID returns the identifier of the Identity
-	ID() string
-	// EnrollmentID returns the enrollment ID of the Identity
-	EnrollmentID() string
-	// Remote is true if this identity info refers to an identify whose corresponding secret key is not known, it is external/remote
-	Remote() bool
-	// Get returns the identity and it is audit info.
-	// Get might return a different identity at each call depending on the implementation.
-	Get() (Identity, []byte, error)
-}
-
 //go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
 
 // IdentityProvider manages identity-related concepts like signature signers, verifiers, audit information, and so on.

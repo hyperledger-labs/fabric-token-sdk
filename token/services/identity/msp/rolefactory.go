@@ -12,8 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	x5092 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
@@ -33,25 +32,25 @@ const (
 )
 
 // RoleToMSPID maps the role to the MSP ID
-var RoleToMSPID = map[driver.IdentityRoleType]string{
-	driver.OwnerRole:     OwnerMSPID,
-	driver.IssuerRole:    IssuerMSPID,
-	driver.AuditorRole:   AuditorMSPID,
-	driver.CertifierRole: CertifierMSPID,
+var RoleToMSPID = map[identity.RoleType]string{
+	identity.OwnerRole:     OwnerMSPID,
+	identity.IssuerRole:    IssuerMSPID,
+	identity.AuditorRole:   AuditorMSPID,
+	identity.CertifierRole: CertifierMSPID,
 }
 
 // RoleFactory is the factory for creating wallets, idemix and x509
 type RoleFactory struct {
 	Logger                 logging.Logger
 	TMSID                  token.TMSID
-	Config                 driver2.Config
+	Config                 idriver.Config
 	FSCIdentity            driver.Identity
 	NetworkDefaultIdentity driver.Identity
-	IdentityProvider       driver2.IdentityProvider
-	SignerService          driver2.SigService
-	BinderService          driver2.BinderService
+	IdentityProvider       idriver.IdentityProvider
+	SignerService          idriver.SigService
+	BinderService          idriver.BinderService
 	StorageProvider        identity.StorageProvider
-	DeserializerManager    driver2.DeserializerManager
+	DeserializerManager    idriver.DeserializerManager
 	ignoreRemote           bool
 }
 
@@ -59,14 +58,14 @@ type RoleFactory struct {
 func NewRoleFactory(
 	logger logging.Logger,
 	TMSID token.TMSID,
-	config driver2.Config,
+	config idriver.Config,
 	fscIdentity driver.Identity,
 	networkDefaultIdentity driver.Identity,
-	identityProvider driver2.IdentityProvider,
-	signerService driver2.SigService,
-	binderService driver2.BinderService,
-	storageProvider identity.StorageProvider,
-	deserializerManager driver2.DeserializerManager,
+	identityProvider idriver.IdentityProvider,
+	signerService idriver.SigService,
+	binderService idriver.BinderService,
+	storageProvider idriver.StorageProvider,
+	deserializerManager idriver.DeserializerManager,
 	ignoreRemote bool,
 ) *RoleFactory {
 	return &RoleFactory{
@@ -85,8 +84,8 @@ func NewRoleFactory(
 }
 
 // NewIdemix creates a new Idemix-based role
-func (f *RoleFactory) NewIdemix(role driver.IdentityRoleType, cacheSize int, issuerPublicKey *crypto.IdemixIssuerPublicKey, additionalKMPs ...common.KeyManagerProvider) (identity.Role, error) {
-	f.Logger.Debugf("create idemix role for [%s]", driver.IdentityRoleStrings[role])
+func (f *RoleFactory) NewIdemix(role identity.RoleType, cacheSize int, issuerPublicKey *crypto.IdemixIssuerPublicKey, additionalKMPs ...common.KeyManagerProvider) (identity.Role, error) {
+	f.Logger.Debugf("create idemix role for [%s]", identity.RoleTypeStrings[role])
 	if issuerPublicKey == nil && len(additionalKMPs) == 0 {
 		return nil, errors.New("expected a non-nil idemix public key")
 	}
@@ -147,16 +146,16 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRoleType, cacheSize int, iss
 }
 
 // NewX509 creates a new X509-based role
-func (f *RoleFactory) NewX509(role driver.IdentityRoleType, targets ...driver.Identity) (identity.Role, error) {
+func (f *RoleFactory) NewX509(role identity.RoleType, targets ...driver.Identity) (identity.Role, error) {
 	return f.newX509WithType(role, "", false, targets...)
 }
 
-func (f *RoleFactory) NewWrappedX509(role driver.IdentityRoleType, ignoreRemote bool) (identity.Role, error) {
+func (f *RoleFactory) NewWrappedX509(role identity.RoleType, ignoreRemote bool) (identity.Role, error) {
 	return f.newX509WithType(role, X509Identity, ignoreRemote)
 }
 
-func (f *RoleFactory) newX509WithType(role driver.IdentityRoleType, identityType string, ignoreRemote bool, targets ...driver.Identity) (identity.Role, error) {
-	f.Logger.Debugf("create x509 role for [%s]", driver.IdentityRoleStrings[role])
+func (f *RoleFactory) newX509WithType(role identity.RoleType, identityType string, ignoreRemote bool, targets ...driver.Identity) (identity.Role, error) {
+	f.Logger.Debugf("create x509 role for [%s]", identity.RoleTypeStrings[role])
 
 	kmp := x5092.NewKeyManagerProvider(f.Config, RoleToMSPID[role], f.SignerService, ignoreRemote)
 
@@ -194,7 +193,7 @@ func (f *RoleFactory) newX509WithType(role driver.IdentityRoleType, identityType
 }
 
 // IdentitiesForRole returns the configured identities for the passed role
-func (f *RoleFactory) IdentitiesForRole(role driver.IdentityRoleType) ([]*config.Identity, error) {
+func (f *RoleFactory) IdentitiesForRole(role identity.RoleType) ([]*idriver.ConfiguredIdentity, error) {
 	return f.Config.IdentitiesForRole(role)
 }
 
@@ -214,17 +213,17 @@ type WrappingBindingRole struct {
 	IdentityType identity.Type
 
 	RootIdentity     driver.Identity
-	IdentityProvider driver2.IdentityProvider
-	BinderService    driver2.BinderService
+	IdentityProvider idriver.IdentityProvider
+	BinderService    idriver.BinderService
 }
 
-func (r *WrappingBindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
+func (r *WrappingBindingRole) GetIdentityInfo(id string) (identity.Info, error) {
 	info, err := r.Role.GetIdentityInfo(id)
 	if err != nil {
 		return nil, err
 	}
 	return &WrappingBindingInfo{
-		IdentityInfo:     info,
+		Info:             info,
 		IdentityType:     r.IdentityType,
 		RootIdentity:     r.RootIdentity,
 		IdentityProvider: r.IdentityProvider,
@@ -235,25 +234,25 @@ func (r *WrappingBindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, e
 // WrappingBindingInfo wraps a driver.IdentityInfo to further register the audit info,
 // and binds the new identity to the default FSC node identity
 type WrappingBindingInfo struct {
-	driver.IdentityInfo
+	identity.Info
 	IdentityType identity.Type
 
 	RootIdentity     driver.Identity
-	IdentityProvider driver2.IdentityProvider
-	BinderService    driver2.BinderService
+	IdentityProvider idriver.IdentityProvider
+	BinderService    idriver.BinderService
 }
 
 func (i *WrappingBindingInfo) ID() string {
-	return i.IdentityInfo.ID()
+	return i.Info.ID()
 }
 
 func (i *WrappingBindingInfo) EnrollmentID() string {
-	return i.IdentityInfo.EnrollmentID()
+	return i.Info.EnrollmentID()
 }
 
 func (i *WrappingBindingInfo) Get() (driver.Identity, []byte, error) {
 	// get the identity
-	id, ai, err := i.IdentityInfo.Get()
+	id, ai, err := i.Info.Get()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID())
 	}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -22,7 +23,7 @@ type AnonymousRole struct {
 	nodeIdentity driver.Identity
 }
 
-func NewAnonymousRole(logger logging.Logger, roleID driver.IdentityRoleType, networkID string, nodeIdentity driver.Identity, localMembership localMembership) *AnonymousRole {
+func NewAnonymousRole(logger logging.Logger, roleID identity.RoleType, networkID string, nodeIdentity driver.Identity, localMembership localMembership) *AnonymousRole {
 	return &AnonymousRole{
 		Role:         NewRole(logger, roleID, networkID, localMembership),
 		nodeIdentity: nodeIdentity,

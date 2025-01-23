@@ -8,6 +8,7 @@ package common
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/pkg/errors"
 )
 
@@ -41,7 +42,7 @@ func NewPublicParamsManager[T driver.PublicParameters](
 		return nil, errors.WithMessage(err, "invalid public parameters")
 	}
 	ppm.publicParameters = pp
-	ppm.ppHash = Hashable(ppRaw).Raw()
+	ppm.ppHash = utils.Hashable(ppRaw).Raw()
 
 	return ppm, nil
 }

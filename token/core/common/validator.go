@@ -9,8 +9,9 @@ package common
 import (
 	"context"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/pkg/errors"
 )
 
@@ -95,7 +96,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 		return nil, nil, errors.Wrap(err, "failed to marshal signed token request")
 	}
 
-	v.Logger.Debugf("cc tx-id [%s][%s]", Hashable(raqRaw), anchor)
+	v.Logger.Debugf("cc tx-id [%s][%s]", utils.Hashable(raqRaw), anchor)
 	signed := append(raqRaw, []byte(anchor)...)
 	var signatures [][]byte
 	if len(v.PublicParams.Auditors()) != 0 {

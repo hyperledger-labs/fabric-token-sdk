@@ -4,13 +4,15 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package wallet
 
 import (
 	"context"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -170,12 +172,12 @@ type LongTermOwnerWallet struct {
 	IdentityProvider  driver.IdentityProvider
 	TokenVault        OwnerTokenVault
 	WalletID          string
-	OwnerIdentityInfo driver.IdentityInfo
+	OwnerIdentityInfo idriver.IdentityInfo
 	OwnerIdentity     driver.Identity
 	OwnerAuditInfo    []byte
 }
 
-func NewLongTermOwnerWallet(IdentityProvider driver.IdentityProvider, TokenVault OwnerTokenVault, id string, identityInfo driver.IdentityInfo) (*LongTermOwnerWallet, error) {
+func NewLongTermOwnerWallet(IdentityProvider driver.IdentityProvider, TokenVault OwnerTokenVault, id string, identityInfo idriver.IdentityInfo) (*LongTermOwnerWallet, error) {
 	identity, auditInfo, err := identityInfo.Get()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get identity info")
@@ -287,8 +289,8 @@ type AnonymousOwnerWallet struct {
 	*LongTermOwnerWallet
 	Logger         logging.Logger
 	Deserializer   driver.Deserializer
-	WalletRegistry WalletRegistry
-	IdentityCache  *WalletIdentityCache
+	WalletRegistry idriver.WalletRegistry
+	IdentityCache  *IdentityCache
 }
 
 func NewAnonymousOwnerWallet(
@@ -296,9 +298,9 @@ func NewAnonymousOwnerWallet(
 	IdentityProvider driver.IdentityProvider,
 	TokenVault OwnerTokenVault,
 	Deserializer driver.Deserializer,
-	walletRegistry WalletRegistry,
+	walletRegistry idriver.WalletRegistry,
 	id string,
-	identityInfo driver.IdentityInfo,
+	identityInfo idriver.IdentityInfo,
 	cacheSize int,
 ) (*AnonymousOwnerWallet, error) {
 	w := &AnonymousOwnerWallet{
@@ -342,13 +344,13 @@ func (w *AnonymousOwnerWallet) RegisterRecipient(data *driver.RecipientData) err
 	if data == nil {
 		return errors.WithStack(ErrNilRecipientData)
 	}
-	w.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, Hashable(data.AuditInfo))
+	w.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
 
 	// recognize identity and register it
 	// match identity and audit info
 	err := w.Deserializer.MatchOwnerIdentity(data.Identity, data.AuditInfo)
 	if err != nil {
-		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, Hashable(data.AuditInfo))
+		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, utils.Hashable(data.AuditInfo))
 	}
 	// register verifier and audit info
 	v, err := w.Deserializer.GetOwnerVerifier(data.Identity)

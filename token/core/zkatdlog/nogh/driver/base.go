@@ -8,7 +8,6 @@ package driver
 
 import (
 	view3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
@@ -22,6 +21,7 @@ import (
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
@@ -55,7 +55,7 @@ func (d *base) newWalletService(
 	networkDefaultIdentity view3.Identity,
 	publicParams driver.PublicParameters,
 	ignoreRemote bool,
-) (*common.WalletService, error) {
+) (*wallet.Service, error) {
 	pp := publicParams.(*crypto.PublicParams)
 	// Prepare roles
 	roles := identity.NewRoles()
@@ -111,7 +111,7 @@ func (d *base) newWalletService(
 	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[driver.OwnerRole], ip, ignoreRemote))
 
 	role, err := roleFactory.NewIdemix(
-		driver.OwnerRole,
+		identity.OwnerRole,
 		identityConfig.DefaultCacheSize(),
 		nil,
 		kmps...,
@@ -119,22 +119,22 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
-	roles.Register(driver.OwnerRole, role)
-	role, err = roleFactory.NewX509(driver.IssuerRole, pp.Issuers()...)
+	roles.Register(identity.OwnerRole, role)
+	role, err = roleFactory.NewX509(identity.IssuerRole, pp.Issuers()...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create issuer role")
 	}
-	roles.Register(driver.IssuerRole, role)
-	role, err = roleFactory.NewX509(driver.AuditorRole, pp.Auditors()...)
+	roles.Register(identity.IssuerRole, role)
+	role, err = roleFactory.NewX509(identity.AuditorRole, pp.Auditors()...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create auditor role")
 	}
-	roles.Register(driver.AuditorRole, role)
-	role, err = roleFactory.NewX509(driver.CertifierRole)
+	roles.Register(identity.AuditorRole, role)
+	role, err = roleFactory.NewX509(identity.CertifierRole)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create certifier role")
 	}
-	roles.Register(driver.CertifierRole, role)
+	roles.Register(identity.CertifierRole, role)
 	// wallet service
 	walletDB, err := storageProvider.OpenWalletDB(tmsID)
 	if err != nil {
@@ -145,14 +145,14 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to instantiate the deserializer")
 	}
-	return common.NewWalletService(
+	return wallet.NewService(
 		logger,
 		ip,
 		deserializer,
 		zkatdlog.NewWalletFactory(logger, ip, qe, identityConfig, deserializer),
-		identity.NewWalletRegistry(logger.Named("identity.owner-wallet-registry"), roles[driver.OwnerRole], walletDB),
-		identity.NewWalletRegistry(logger.Named("identity.issuer-wallet-registry"), roles[driver.IssuerRole], walletDB),
-		identity.NewWalletRegistry(logger.Named("identity.auditor-wallet-registry"), roles[driver.AuditorRole], walletDB),
+		wallet.NewRegistry(logger.Named("identity.owner-wallet-registry"), roles[identity.OwnerRole], walletDB),
+		wallet.NewRegistry(logger.Named("identity.issuer-wallet-registry"), roles[identity.IssuerRole], walletDB),
+		wallet.NewRegistry(logger.Named("identity.auditor-wallet-registry"), roles[identity.AuditorRole], walletDB),
 		nil,
 	), nil
 }

@@ -7,7 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/pkg/errors"
 )
 
@@ -16,25 +17,12 @@ type Config interface {
 	UnmarshalKey(key string, rawVal interface{}) error
 }
 
-type Identity struct {
-	ID        string      `yaml:"id"`
-	Default   bool        `yaml:"default,omitempty"`
-	Path      string      `yaml:"path"`
-	CacheSize int         `yaml:"cacheSize"`
-	Type      string      `yaml:"type,omitempty"`
-	Opts      interface{} `yaml:"opts,omitempty"`
-}
-
-func (i *Identity) String() string {
-	return i.ID
-}
-
 type Wallets struct {
-	DefaultCacheSize int         `yaml:"defaultCacheSize,omitempty"`
-	Certifiers       []*Identity `yaml:"certifiers,omitempty"`
-	Owners           []*Identity `yaml:"owners,omitempty"`
-	Issuers          []*Identity `yaml:"issuers,omitempty"`
-	Auditors         []*Identity `yaml:"auditors,omitempty"`
+	DefaultCacheSize int                          `yaml:"defaultCacheSize,omitempty"`
+	Certifiers       []*driver.ConfiguredIdentity `yaml:"certifiers,omitempty"`
+	Owners           []*driver.ConfiguredIdentity `yaml:"owners,omitempty"`
+	Issuers          []*driver.ConfiguredIdentity `yaml:"issuers,omitempty"`
+	Auditors         []*driver.ConfiguredIdentity `yaml:"auditors,omitempty"`
 }
 
 type IdentityConfig struct {
@@ -70,7 +58,7 @@ func (i *IdentityConfig) TranslatePath(path string) string {
 	return i.Config.TranslatePath(path)
 }
 
-func (i *IdentityConfig) IdentitiesForRole(role driver.IdentityRoleType) ([]*Identity, error) {
+func (i *IdentityConfig) IdentitiesForRole(role identity.RoleType) ([]*driver.ConfiguredIdentity, error) {
 	switch role {
 	case driver.IssuerRole:
 		return i.Wallets.Issuers, nil

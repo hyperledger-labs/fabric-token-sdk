@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/fabtoken"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -76,7 +77,7 @@ func (s *TokensService) SupportedTokenFormats() []token2.Format {
 }
 
 func SupportedTokenFormat(precision uint64) (token2.Format, error) {
-	hasher := common.NewSHA256Hasher()
+	hasher := utils.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(fabtoken.Type),
 		hasher.AddString(msp.X509Identity),

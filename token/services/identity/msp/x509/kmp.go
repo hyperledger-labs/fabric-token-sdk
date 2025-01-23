@@ -13,8 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
@@ -28,19 +27,19 @@ const (
 )
 
 type KeyManagerProvider struct {
-	config        driver2.Config
+	config        idriver.Config
 	mspID         string
-	signerService driver2.SigService
+	signerService idriver.SigService
 	// ignoreVerifyOnlyWallet when set to true, for each wallet the service will force the load of the secrets
 	ignoreVerifyOnlyWallet bool
 }
 
-func NewKeyManagerProvider(config driver2.Config, mspID string, signerService driver2.SigService, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
+func NewKeyManagerProvider(config idriver.Config, mspID string, signerService idriver.SigService, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
 	return &KeyManagerProvider{config: config, mspID: mspID, signerService: signerService, ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet}
 }
 
 func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
-	identityConfig := &config.Identity{
+	identityConfig := &idriver.ConfiguredIdentity{
 		ID:   idConfig.ID,
 		Path: idConfig.URL,
 	}
@@ -61,7 +60,7 @@ func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (common
 	return k.registerIdentity(mspConfig, identityConfig, idConfig)
 }
 
-func (k *KeyManagerProvider) registerIdentity(conf *m.MSPConfig, identityConfig *config.Identity, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
+func (k *KeyManagerProvider) registerIdentity(conf *m.MSPConfig, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
 	// Try to register the MSP provider
 	translatedPath := k.config.TranslatePath(identityConfig.Path)
 	p, err := k.registerProvider(conf, identityConfig, translatedPath, idConfig)
@@ -72,7 +71,7 @@ func (k *KeyManagerProvider) registerIdentity(conf *m.MSPConfig, identityConfig 
 	return p, nil
 }
 
-func (k *KeyManagerProvider) registerProvider(conf *m.MSPConfig, identityConfig *config.Identity, translatedPath string, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
+func (k *KeyManagerProvider) registerProvider(conf *m.MSPConfig, identityConfig *idriver.ConfiguredIdentity, translatedPath string, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
 	opts, err := msp.ToBCCSPOpts(identityConfig.Opts)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to extract BCCSP options")

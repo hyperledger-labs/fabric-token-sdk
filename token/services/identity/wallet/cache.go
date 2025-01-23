@@ -4,34 +4,34 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package wallet
 
 import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-type WalletIdentityCacheBackendFunc func() (*driver.RecipientData, error)
+type IdentityCacheBackendFunc func() (*driver.RecipientData, error)
 
-type WalletIdentityCache struct {
+type IdentityCache struct {
 	Logger logging.Logger
 
 	once    sync.Once
-	backed  WalletIdentityCacheBackendFunc
+	backed  IdentityCacheBackendFunc
 	cache   chan *driver.RecipientData
 	timeout time.Duration
 }
 
-func NewWalletIdentityCache(Logger logging.Logger, backed WalletIdentityCacheBackendFunc, size int) *WalletIdentityCache {
+func NewWalletIdentityCache(Logger logging.Logger, backed IdentityCacheBackendFunc, size int) *IdentityCache {
 	if size < 0 {
 		size = 0
 	}
-	ci := &WalletIdentityCache{
+	ci := &IdentityCache{
 		Logger:  Logger,
 		backed:  backed,
 		cache:   make(chan *driver.RecipientData, size),
@@ -40,7 +40,7 @@ func NewWalletIdentityCache(Logger logging.Logger, backed WalletIdentityCacheBac
 	return ci
 }
 
-func (c *WalletIdentityCache) RecipientData() (*driver.RecipientData, error) {
+func (c *IdentityCache) RecipientData() (*driver.RecipientData, error) {
 	c.once.Do(func() {
 		c.Logger.Debugf("provision identities with cache size [%d]", cap(c.cache))
 		if cap(c.cache) > 0 {
@@ -75,7 +75,7 @@ func (c *WalletIdentityCache) RecipientData() (*driver.RecipientData, error) {
 	return identity, nil
 }
 
-func (c *WalletIdentityCache) provisionIdentities() {
+func (c *IdentityCache) provisionIdentities() {
 	for {
 		id, err := c.backed()
 		if err != nil {

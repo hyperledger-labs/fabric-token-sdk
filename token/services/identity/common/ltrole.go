@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -21,7 +22,7 @@ type LongTermRole struct {
 	nodeIdentity driver.Identity
 }
 
-func NewLongTermRole(logger logging.Logger, roleID driver.IdentityRoleType, networkID string, nodeIdentity driver.Identity, localMembership localMembership) *LongTermRole {
+func NewLongTermRole(logger logging.Logger, roleID identity.RoleType, networkID string, nodeIdentity driver.Identity, localMembership localMembership) *LongTermRole {
 	return &LongTermRole{
 		Role:         NewRole(logger, roleID, networkID, localMembership),
 		nodeIdentity: nodeIdentity,

@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package identity_test
+package wallet_test
 
 import (
 	"testing"
@@ -15,8 +15,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,7 +30,7 @@ func TestGetWallet(t *testing.T) {
 
 	alice := driver.Identity("alice")
 	meta := "meta"
-	wr := identity.NewWalletRegistry(
+	wr := wallet.NewRegistry(
 		&logging.MockLogger{},
 		&fakeRole{},
 		kvs2.NewWalletDB(kvsStorage, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}),
@@ -46,7 +47,7 @@ func TestGetWallet(t *testing.T) {
 
 type fakeRole struct{}
 
-func (f *fakeRole) ID() driver.IdentityRoleType {
+func (f *fakeRole) ID() idriver.IdentityRoleType {
 	return 0
 }
 
@@ -55,7 +56,7 @@ func (f *fakeRole) MapToIdentity(v driver.WalletLookupID) (driver.Identity, stri
 	panic("implement me")
 }
 
-func (f *fakeRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
+func (f *fakeRole) GetIdentityInfo(id string) (idriver.IdentityInfo, error) {
 	// TODO implement me
 	panic("implement me")
 }
