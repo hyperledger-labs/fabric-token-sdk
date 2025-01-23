@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -42,16 +43,12 @@ type storage interface {
 	StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 }
 
-type binder interface {
-	Bind(longTerm driver.Identity, ephemeral driver.Identity) error
-}
-
 // Provider implements the driver.IdentityProvider interface.
 // Provider handles the long-term identities on top of which wallets are defined.
 type Provider struct {
 	Logger     logging.Logger
 	SigService sigService
-	Binder     binder
+	Binder     idriver.NetworkBinderService
 	Storage    storage
 
 	enrollmentIDUnmarshaler enrollmentIDUnmarshaler
@@ -65,7 +62,7 @@ func NewProvider(
 	logger logging.Logger,
 	storage storage,
 	sigService sigService,
-	binder binder,
+	binder idriver.NetworkBinderService,
 	enrollmentIDUnmarshaler enrollmentIDUnmarshaler,
 ) *Provider {
 	return &Provider{

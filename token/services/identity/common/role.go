@@ -8,6 +8,8 @@ package common
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -16,7 +18,7 @@ import (
 type localMembership interface {
 	DefaultNetworkIdentity() driver.Identity
 	IsMe(id driver.Identity) bool
-	GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error)
+	GetIdentityInfo(label string, auditInfo []byte) (idriver.IdentityInfo, error)
 	GetIdentifier(id driver.Identity) (string, error)
 	GetDefaultIdentifier() string
 	RegisterIdentity(config driver.IdentityConfiguration) error
@@ -26,12 +28,12 @@ type localMembership interface {
 // Role models a generic role
 type Role struct {
 	logger          logging.Logger
-	roleID          driver.IdentityRoleType
+	roleID          identity.RoleType
 	networkID       string
 	localMembership localMembership
 }
 
-func NewRole(logger logging.Logger, roleID driver.IdentityRoleType, networkID string, localMembership localMembership) *Role {
+func NewRole(logger logging.Logger, roleID identity.RoleType, networkID string, localMembership localMembership) *Role {
 	return &Role{
 		logger:          logger,
 		roleID:          roleID,
@@ -40,12 +42,12 @@ func NewRole(logger logging.Logger, roleID driver.IdentityRoleType, networkID st
 	}
 }
 
-func (r *Role) ID() driver.IdentityRoleType {
+func (r *Role) ID() identity.RoleType {
 	return r.roleID
 }
 
 // GetIdentityInfo returns the identity information for the given identity identifier
-func (r *Role) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
+func (r *Role) GetIdentityInfo(id string) (idriver.IdentityInfo, error) {
 	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
 		r.logger.Debugf("[%s] getting info for [%s]", r.networkID, id)
 	}

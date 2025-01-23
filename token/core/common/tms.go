@@ -7,8 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 type PublicParametersManager[T driver.PublicParameters] interface {
@@ -34,7 +35,7 @@ type Service[T driver.PublicParameters] struct {
 
 func NewTokenService[T driver.PublicParameters](
 	logger logging.Logger,
-	ws *WalletService,
+	ws *wallet.Service,
 	publicParametersManager PublicParametersManager[T],
 	identityProvider driver.IdentityProvider,
 	serializer driver.Serializer,

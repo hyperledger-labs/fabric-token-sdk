@@ -9,9 +9,11 @@ package nogh
 import (
 	"context"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -51,10 +53,10 @@ func NewWalletFactory(
 	}
 }
 
-func (w *WalletFactory) NewWallet(id string, role driver.IdentityRoleType, walletRegistry common.WalletRegistry, identityInfo driver.IdentityInfo) (driver.Wallet, error) {
+func (w *WalletFactory) NewWallet(id string, role identity.RoleType, walletRegistry idriver.WalletRegistry, identityInfo identity.Info) (driver.Wallet, error) {
 	switch role {
-	case driver.OwnerRole:
-		newWallet, err := common.NewAnonymousOwnerWallet(
+	case identity.OwnerRole:
+		newWallet, err := wallet.NewAnonymousOwnerWallet(
 			w.Logger,
 			w.IdentityProvider,
 			w.TokenVault,
@@ -69,30 +71,30 @@ func (w *WalletFactory) NewWallet(id string, role driver.IdentityRoleType, walle
 		}
 		w.Logger.Debugf("created owner wallet [%s] for identity [%s:%s:%v]", id, identityInfo.ID(), identityInfo.EnrollmentID(), identityInfo.Remote())
 		return newWallet, nil
-	case driver.IssuerRole:
+	case identity.IssuerRole:
 		idInfoIdentity, _, err := identityInfo.Get()
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get issuer wallet identity for [%s]", id)
 		}
-		newWallet := common.NewIssuerWallet(w.Logger, w.IdentityProvider, w.TokenVault, id, idInfoIdentity)
+		newWallet := wallet.NewIssuerWallet(w.Logger, w.IdentityProvider, w.TokenVault, id, idInfoIdentity)
 		if err := walletRegistry.BindIdentity(idInfoIdentity, identityInfo.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
 		w.Logger.Debugf("created issuer wallet [%s]", id)
 		return newWallet, nil
-	case driver.AuditorRole:
+	case identity.AuditorRole:
 		w.Logger.Debugf("no wallet found, create it [%s]", id)
 		idInfoIdentity, _, err := identityInfo.Get()
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get auditor wallet identity for [%s]", id)
 		}
-		newWallet := common.NewAuditorWallet(w.IdentityProvider, id, idInfoIdentity)
+		newWallet := wallet.NewAuditorWallet(w.IdentityProvider, id, idInfoIdentity)
 		if err := walletRegistry.BindIdentity(idInfoIdentity, identityInfo.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
 		w.Logger.Debugf("created auditor wallet [%s]", id)
 		return newWallet, nil
-	case driver.CertifierRole:
+	case identity.CertifierRole:
 		return nil, errors.Errorf("certifiers are not supported by this driver")
 	default:
 		return nil, errors.Errorf("role [%d] not supported", role)

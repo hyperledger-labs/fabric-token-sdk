@@ -7,14 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
@@ -38,15 +38,15 @@ func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 
 func (d *base) newWalletService(
 	tmsConfig driver.Config,
-	binder common2.NetworkBinderService,
+	binder driver2.NetworkBinderService,
 	storageProvider identity.StorageProvider,
-	qe common.TokenVault,
+	qe wallet.TokenVault,
 	logger logging.Logger,
 	fscIdentity driver.Identity,
 	networkDefaultIdentity driver.Identity,
 	pp driver.PublicParameters,
 	ignoreRemote bool,
-) (*common.WalletService, error) {
+) (*wallet.Service, error) {
 	tmsID := tmsConfig.ID()
 
 	// Prepare roles
@@ -76,26 +76,26 @@ func (d *base) newWalletService(
 		deserializerManager,
 		ignoreRemote,
 	)
-	role, err := roleFactory.NewWrappedX509(driver.OwnerRole, ignoreRemote)
+	role, err := roleFactory.NewWrappedX509(identity.OwnerRole, ignoreRemote)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
-	roles.Register(driver.OwnerRole, role)
-	role, err = roleFactory.NewX509(driver.IssuerRole, pp.Issuers()...)
+	roles.Register(identity.OwnerRole, role)
+	role, err = roleFactory.NewX509(identity.IssuerRole, pp.Issuers()...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create issuer role")
 	}
-	roles.Register(driver.IssuerRole, role)
-	role, err = roleFactory.NewX509(driver.AuditorRole, pp.Auditors()...)
+	roles.Register(identity.IssuerRole, role)
+	role, err = roleFactory.NewX509(identity.AuditorRole, pp.Auditors()...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create auditor role")
 	}
-	roles.Register(driver.AuditorRole, role)
-	role, err = roleFactory.NewX509(driver.CertifierRole)
+	roles.Register(identity.AuditorRole, role)
+	role, err = roleFactory.NewX509(identity.CertifierRole)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create certifier role")
 	}
-	roles.Register(driver.CertifierRole, role)
+	roles.Register(identity.CertifierRole, role)
 
 	// Instantiate the token service
 	// wallet service
@@ -103,14 +103,14 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ws := common.NewWalletService(
+	ws := wallet.NewService(
 		logger,
 		ip,
 		NewDeserializer(),
 		fabtoken.NewWalletFactory(logger, ip, qe),
-		identity.NewWalletRegistry(logger.Named("identity.owner-wallet-registry"), roles[driver.OwnerRole], walletDB),
-		identity.NewWalletRegistry(logger.Named("identity.issuer-wallet-registry"), roles[driver.IssuerRole], walletDB),
-		identity.NewWalletRegistry(logger.Named("identity.auditor-wallet-registry"), roles[driver.AuditorRole], walletDB),
+		wallet.NewRegistry(logger.Named("identity.owner-wallet-registry"), roles[identity.OwnerRole], walletDB),
+		wallet.NewRegistry(logger.Named("identity.issuer-wallet-registry"), roles[identity.IssuerRole], walletDB),
+		wallet.NewRegistry(logger.Named("identity.auditor-wallet-registry"), roles[identity.AuditorRole], walletDB),
 		nil,
 	)
 

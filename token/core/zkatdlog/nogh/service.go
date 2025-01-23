@@ -8,11 +8,12 @@ package nogh
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 type Service struct {
@@ -22,7 +23,7 @@ type Service struct {
 
 func NewTokenService(
 	logger logging.Logger,
-	ws *common.WalletService,
+	ws *wallet.Service,
 	ppm common.PublicParametersManager[*crypto.PublicParams],
 	identityProvider driver.IdentityProvider,
 	serializer driver.Serializer,

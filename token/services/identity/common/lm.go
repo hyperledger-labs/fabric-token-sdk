@@ -19,8 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -32,7 +31,7 @@ type KeyManagerProvider interface {
 }
 
 type KeyManager interface {
-	driver2.Deserializer
+	idriver.Deserializer
 	EnrollmentID() string
 	IsRemote() bool
 	Anonymous() bool
@@ -45,12 +44,12 @@ type LocalIdentityWithPriority struct {
 }
 
 type LocalMembership struct {
-	config                 driver2.Config
+	config                 idriver.Config
 	defaultNetworkIdentity driver.Identity
-	signerService          driver2.SigService
-	deserializerManager    driver2.DeserializerManager
+	signerService          idriver.SigService
+	deserializerManager    idriver.DeserializerManager
 	identityDB             driver3.IdentityDB
-	binderService          driver2.BinderService
+	binderService          idriver.BinderService
 	KeyManagerProviders    []KeyManagerProvider
 	IdentityType           string
 	logger                 logging.Logger
@@ -65,12 +64,12 @@ type LocalMembership struct {
 
 func NewLocalMembership(
 	logger logging.Logger,
-	config driver2.Config,
+	config idriver.Config,
 	defaultNetworkIdentity driver.Identity,
-	signerService driver2.SigService,
-	deserializerManager driver2.DeserializerManager,
+	signerService idriver.SigService,
+	deserializerManager idriver.DeserializerManager,
 	identityDB driver3.IdentityDB,
-	binderService driver2.BinderService,
+	binderService idriver.BinderService,
 	identityType string,
 	defaultAnonymous bool,
 	keyManagerProviders ...KeyManagerProvider,
@@ -126,7 +125,7 @@ func (l *LocalMembership) GetDefaultIdentifier() string {
 	return l.getDefaultIdentifier()
 }
 
-func (l *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error) {
+func (l *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (idriver.IdentityInfo, error) {
 	l.localIdentitiesMutex.RLock()
 	defer l.localIdentitiesMutex.RUnlock()
 
@@ -160,7 +159,7 @@ func (l *LocalMembership) IDs() ([]string, error) {
 	return set.ToSlice(), nil
 }
 
-func (l *LocalMembership) Load(identities []*config.Identity, targets []view.Identity) error {
+func (l *LocalMembership) Load(identities []*idriver.ConfiguredIdentity, targets []view.Identity) error {
 	l.localIdentitiesMutex.Lock()
 	defer l.localIdentitiesMutex.Unlock()
 

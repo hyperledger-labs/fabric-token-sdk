@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package identity
+package wallet
 
 import (
 	"encoding/json"
@@ -14,25 +14,27 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-// WalletRegistry manages wallets whose long-term identities have a given role.
-type WalletRegistry struct {
+// Registry manages wallets whose long-term identities have a given role.
+type Registry struct {
 	Logger  logging.Logger
-	Role    Role
+	Role    identity.Role
 	Storage db.WalletDB
 
 	Wallets map[string]driver.Wallet
 }
 
-// NewWalletRegistry returns a new registry for the passed parameters.
+// NewRegistry returns a new registry for the passed parameters.
 // A registry is bound to a given role, and it is persistent.
 // Long-term identities are provided by the passed identity provider
-func NewWalletRegistry(logger logging.Logger, role Role, storage db.WalletDB) *WalletRegistry {
-	return &WalletRegistry{
+func NewRegistry(logger logging.Logger, role identity.Role, storage db.WalletDB) *Registry {
+	return &Registry{
 		Logger:  logger,
 		Role:    role,
 		Storage: storage,
@@ -40,7 +42,7 @@ func NewWalletRegistry(logger logging.Logger, role Role, storage db.WalletDB) *W
 	}
 }
 
-func (r *WalletRegistry) RegisterIdentity(config driver.IdentityConfiguration) error {
+func (r *Registry) RegisterIdentity(config driver.IdentityConfiguration) error {
 	r.Logger.Debugf("register identity [%s:%s]", config.ID, config.URL)
 	return r.Role.RegisterIdentity(config)
 }
@@ -48,7 +50,7 @@ func (r *WalletRegistry) RegisterIdentity(config driver.IdentityConfiguration) e
 // Lookup searches the wallet corresponding to the passed id.
 // If a wallet is found, Lookup returns the wallet and its identifier.
 // If no wallet is found, Lookup returns the identity info and a potential wallet identifier for the passed id, if anything is found
-func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver.IdentityInfo, string, error) {
+func (r *Registry) Lookup(id driver.WalletLookupID) (driver.Wallet, idriver.IdentityInfo, string, error) {
 	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
 		r.Logger.Debugf("lookup wallet by [%T]", id)
 	}
@@ -129,7 +131,7 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver
 			continue
 		}
 		// give it a second chance
-		var idInfo driver.IdentityInfo
+		var idInfo idriver.IdentityInfo
 		idInfo, err = r.Role.GetIdentityInfo(id)
 		if err == nil {
 			if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -146,14 +148,14 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver
 }
 
 // RegisterWallet binds the passed wallet to the passed id
-func (r *WalletRegistry) RegisterWallet(id string, w driver.Wallet) error {
+func (r *Registry) RegisterWallet(id string, w driver.Wallet) error {
 	r.Wallets[id] = w
 	return nil
 }
 
 // BindIdentity binds the passed identity to the passed wallet identifier.
 // Additional metadata can be bound to the identity.
-func (r *WalletRegistry) BindIdentity(identity driver.Identity, eID string, wID string, meta any) error {
+func (r *Registry) BindIdentity(identity driver.Identity, eID string, wID string, meta any) error {
 	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
 		r.Logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
 	}
@@ -166,12 +168,12 @@ func (r *WalletRegistry) BindIdentity(identity driver.Identity, eID string, wID 
 
 // ContainsIdentity returns true if the passed identity belongs to the passed wallet,
 // false otherwise
-func (r *WalletRegistry) ContainsIdentity(identity driver.Identity, wID string) bool {
+func (r *Registry) ContainsIdentity(identity driver.Identity, wID string) bool {
 	return r.Storage.IdentityExists(identity, wID, int(r.Role.ID()))
 }
 
 // WalletIDs returns the list of wallet identifiers
-func (r *WalletRegistry) WalletIDs() ([]string, error) {
+func (r *Registry) WalletIDs() ([]string, error) {
 	walletIDs, err := r.Role.IdentityIDs()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet identifiers from identity provider")
@@ -196,7 +198,7 @@ func (r *WalletRegistry) WalletIDs() ([]string, error) {
 }
 
 // GetIdentityMetadata loads metadata bound to the passed identity into the passed meta argument
-func (r *WalletRegistry) GetIdentityMetadata(identity driver.Identity, wID string, meta any) error {
+func (r *Registry) GetIdentityMetadata(identity driver.Identity, wID string, meta any) error {
 	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
 		r.Logger.Debugf("get recipient identity metadata [%s]->[%s]", identity, wID)
 	}
@@ -208,7 +210,7 @@ func (r *WalletRegistry) GetIdentityMetadata(identity driver.Identity, wID strin
 }
 
 // GetWalletID returns the wallet identifier bound to the passed identity
-func (r *WalletRegistry) GetWalletID(identity driver.Identity) (string, error) {
+func (r *Registry) GetWalletID(identity driver.Identity) (string, error) {
 	wID, err := r.Storage.GetWalletID(identity, int(r.Role.ID()))
 	if err != nil {
 		return "", nil

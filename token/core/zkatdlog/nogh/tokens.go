@@ -19,6 +19,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
+	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -230,7 +231,7 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 }
 
 func supportedTokenFormat(pp *crypto.PublicParams, precision uint64, ipk *crypto.IdemixIssuerPublicKey) (token.Format, error) {
-	hasher := common.NewSHA256Hasher()
+	hasher := utils2.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
 		hasher.AddInt(int(pp.Curve)),
