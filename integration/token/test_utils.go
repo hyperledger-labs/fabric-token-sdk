@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
@@ -30,7 +31,7 @@ type ReplicationOptions struct {
 func (o *ReplicationOptions) For(name string) []node.Option {
 	opts := o.ReplicationOptions.For(name)
 	if sqlConfig, ok := o.SQLConfigs[name]; ok {
-		opts = append(opts, token.WithPostgresPersistence(sqlConfig))
+		opts = append(opts, fabric.WithPostgresPersistence(sqlConfig, "token"))
 	}
 	return opts
 }

@@ -125,9 +125,9 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(uniqueName))
 	Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(uniqueName))
 
-	persistence := node.Options.GetPersistence("token").SQL
-	if len(persistence.DriverType) == 0 {
-		persistence = sfcnode.SQLOpts{DriverType: sql2.SQLite}
+	persistence := node.Options.GetPersistence("token")
+	if persistence == nil {
+		persistence = &sfcnode.SQLOpts{DriverType: sql2.SQLite}
 	}
 
 	t, err := template.New("peer").Funcs(template.FuncMap{
@@ -135,9 +135,9 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 		"TMS":                 func() *topology2.TMS { return tms },
 		"Wallets":             func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
 		"SQLDriver":           func() string { return string(persistence.DriverType) },
-		"SQLDataSource":       func() string { return p.dataSource(persistence, p.TTXDBSQLDataSourceDir(uniqueName), tms) },
+		"SQLDataSource":       func() string { return p.dataSource(*persistence, p.TTXDBSQLDataSourceDir(uniqueName), tms) },
 		"TokensSQLDriver":     func() string { return string(persistence.DriverType) },
-		"TokensSQLDataSource": func() string { return p.dataSource(persistence, p.TokensDBSQLDataSourceDir(uniqueName), tms) },
+		"TokensSQLDataSource": func() string { return p.dataSource(*persistence, p.TokensDBSQLDataSourceDir(uniqueName), tms) },
 		"Endorsement":         func() bool { return IsFSCEndorsementEnabled(tms) },
 		"Endorsers":           func() []string { return Endorsers(tms) },
 		"EndorserID":          func() string { return "" },
