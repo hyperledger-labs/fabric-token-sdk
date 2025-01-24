@@ -27,7 +27,7 @@ type IdentityCache struct {
 	timeout time.Duration
 }
 
-func NewWalletIdentityCache(Logger logging.Logger, backed IdentityCacheBackendFunc, size int) *IdentityCache {
+func NewIdentityCache(Logger logging.Logger, backed IdentityCacheBackendFunc, size int) *IdentityCache {
 	if size < 0 {
 		size = 0
 	}

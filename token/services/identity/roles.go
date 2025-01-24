@@ -28,6 +28,9 @@ var (
 	RoleTypeStrings = driver.IdentityRoleStrings
 )
 
+// Info models a long-term identity inside the Identity Provider.
+// An identity has an identifier (ID) and an Enrollment ID, unique identifier.
+// An identity can be remote, meaning that the corresponding secret key is remotely available.
 type Info = driver.IdentityInfo
 
 // Role is a container of long-term identities.

@@ -52,7 +52,7 @@ func NewWalletFactory(
 	}
 }
 
-func (w *WalletFactory) NewWallet(id string, role identity.RoleType, walletRegistry identity.WalletRegistry, identityInfo identity.Info) (driver.Wallet, error) {
+func (w *WalletFactory) NewWallet(id string, role identity.RoleType, walletRegistry wallet.Registry, identityInfo identity.Info) (driver.Wallet, error) {
 	switch role {
 	case identity.OwnerRole:
 		newWallet, err := wallet.NewAnonymousOwnerWallet(

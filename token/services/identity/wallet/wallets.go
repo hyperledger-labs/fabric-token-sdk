@@ -10,7 +10,7 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -172,12 +172,12 @@ type LongTermOwnerWallet struct {
 	IdentityProvider  driver.IdentityProvider
 	TokenVault        OwnerTokenVault
 	WalletID          string
-	OwnerIdentityInfo idriver.IdentityInfo
+	OwnerIdentityInfo identity.Info
 	OwnerIdentity     driver.Identity
 	OwnerAuditInfo    []byte
 }
 
-func NewLongTermOwnerWallet(IdentityProvider driver.IdentityProvider, TokenVault OwnerTokenVault, id string, identityInfo idriver.IdentityInfo) (*LongTermOwnerWallet, error) {
+func NewLongTermOwnerWallet(IdentityProvider driver.IdentityProvider, TokenVault OwnerTokenVault, id string, identityInfo identity.Info) (*LongTermOwnerWallet, error) {
 	identity, auditInfo, err := identityInfo.Get()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get identity info")
@@ -289,7 +289,7 @@ type AnonymousOwnerWallet struct {
 	*LongTermOwnerWallet
 	Logger         logging.Logger
 	Deserializer   driver.Deserializer
-	WalletRegistry idriver.WalletRegistry
+	WalletRegistry Registry
 	IdentityCache  *IdentityCache
 }
 
@@ -298,9 +298,9 @@ func NewAnonymousOwnerWallet(
 	IdentityProvider driver.IdentityProvider,
 	TokenVault OwnerTokenVault,
 	Deserializer driver.Deserializer,
-	walletRegistry idriver.WalletRegistry,
+	walletRegistry Registry,
 	id string,
-	identityInfo idriver.IdentityInfo,
+	identityInfo identity.Info,
 	cacheSize int,
 ) (*AnonymousOwnerWallet, error) {
 	w := &AnonymousOwnerWallet{
@@ -314,7 +314,7 @@ func NewAnonymousOwnerWallet(
 		WalletRegistry: walletRegistry,
 		Deserializer:   Deserializer,
 	}
-	w.IdentityCache = NewWalletIdentityCache(logger, w.getRecipientIdentity, cacheSize)
+	w.IdentityCache = NewIdentityCache(logger, w.getRecipientIdentity, cacheSize)
 	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), cacheSize)
 	return w, nil
 }
