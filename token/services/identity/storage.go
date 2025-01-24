@@ -13,5 +13,3 @@ import (
 type Keystore = driver.Keystore
 
 type StorageProvider = driver.StorageProvider
-
-type WalletRegistry = driver.WalletRegistry

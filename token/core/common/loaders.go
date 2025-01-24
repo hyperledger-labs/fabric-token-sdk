@@ -11,12 +11,21 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type TokenVault interface {
+	IsPending(id *token.ID) (bool, error)
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error)
+	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
+	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error)
+	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
+	PublicParams() ([]byte, error)
+	Balance(id string, tokenType token.Type) (uint64, error)
+}
 
 type LedgerToken interface {
 	GetOwner() []byte
@@ -37,7 +46,7 @@ type TokenAndMetadataDeserializer[T any, M any] interface {
 
 type VaultLedgerTokenLoader[T any] struct {
 	Logger       logging.Logger
-	TokenVault   wallet.TokenVault
+	TokenVault   TokenVault
 	Deserializer TokenDeserializer[T]
 
 	// Variables used to control retry condition
@@ -45,7 +54,7 @@ type VaultLedgerTokenLoader[T any] struct {
 	RetryDelay time.Duration
 }
 
-func NewLedgerTokenLoader[T any](logger logging.Logger, _ trace.TracerProvider, tokenVault wallet.TokenVault, deserializer TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
+func NewLedgerTokenLoader[T any](logger logging.Logger, _ trace.TracerProvider, tokenVault TokenVault, deserializer TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
 	return &VaultLedgerTokenLoader[T]{
 		Logger:       logger,
 		TokenVault:   tokenVault,
@@ -122,11 +131,11 @@ type LoadedToken[T any, M any] struct {
 }
 
 type VaultLedgerTokenAndMetadataLoader[T any, M any] struct {
-	TokenVault   wallet.TokenVault
+	TokenVault   TokenVault
 	Deserializer TokenAndMetadataDeserializer[T, M]
 }
 
-func NewVaultLedgerTokenAndMetadataLoader[T any, M any](tokenVault wallet.TokenVault, deserializer TokenAndMetadataDeserializer[T, M]) *VaultLedgerTokenAndMetadataLoader[T, M] {
+func NewVaultLedgerTokenAndMetadataLoader[T any, M any](tokenVault TokenVault, deserializer TokenAndMetadataDeserializer[T, M]) *VaultLedgerTokenAndMetadataLoader[T, M] {
 	return &VaultLedgerTokenAndMetadataLoader[T, M]{TokenVault: tokenVault, Deserializer: deserializer}
 }
 

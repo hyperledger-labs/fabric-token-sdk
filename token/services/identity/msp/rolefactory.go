@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/common"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
@@ -39,6 +40,11 @@ var RoleToMSPID = map[identity.RoleType]string{
 	identity.CertifierRole: CertifierMSPID,
 }
 
+type StorageProvider interface {
+	OpenIdentityDB(tmsID token.TMSID) (driver2.IdentityDB, error)
+	NewKeystore() (identity.Keystore, error)
+}
+
 // RoleFactory is the factory for creating wallets, idemix and x509
 type RoleFactory struct {
 	Logger                 logging.Logger
@@ -49,7 +55,7 @@ type RoleFactory struct {
 	IdentityProvider       idriver.IdentityProvider
 	SignerService          idriver.SigService
 	BinderService          idriver.BinderService
-	StorageProvider        identity.StorageProvider
+	StorageProvider        StorageProvider
 	DeserializerManager    idriver.DeserializerManager
 	ignoreRemote           bool
 }
@@ -64,7 +70,7 @@ func NewRoleFactory(
 	identityProvider idriver.IdentityProvider,
 	signerService idriver.SigService,
 	binderService idriver.BinderService,
-	storageProvider idriver.StorageProvider,
+	storageProvider StorageProvider,
 	deserializerManager idriver.DeserializerManager,
 	ignoreRemote bool,
 ) *RoleFactory {

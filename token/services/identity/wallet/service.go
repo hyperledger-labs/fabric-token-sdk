@@ -7,12 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package wallet
 
 import (
-	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -24,22 +22,22 @@ var (
 	ErrNilRecipientData = errors.New("nil recipient data")
 )
 
-type TokenVault interface {
-	IsPending(id *token.ID) (bool, error)
-	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error)
-	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
-	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error)
-	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
-	PublicParams() ([]byte, error)
-	Balance(id string, tokenType token.Type) (uint64, error)
+type Registry interface {
+	WalletIDs() ([]string, error)
+	RegisterIdentity(config driver.IdentityConfiguration) error
+	Lookup(id driver.WalletLookupID) (driver.Wallet, identity.Info, string, error)
+	RegisterWallet(id string, wallet driver.Wallet) error
+	BindIdentity(identity driver.Identity, eID string, wID string, meta any) error
+	ContainsIdentity(i driver.Identity, id string) bool
+	GetIdentityMetadata(identity driver.Identity, wID string, meta any) error
 }
 
 type Factory interface {
-	NewWallet(id string, role identity.RoleType, wr idriver.WalletRegistry, info identity.Info) (driver.Wallet, error)
+	NewWallet(id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error)
 }
 
 type RegistryEntry struct {
-	Registry idriver.WalletRegistry
+	Registry Registry
 	Mutex    *sync.RWMutex
 }
 
@@ -57,7 +55,7 @@ func NewService(
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
 	walletFactory Factory,
-	walletRegistries map[identity.RoleType]idriver.WalletRegistry,
+	walletRegistries map[identity.RoleType]Registry,
 ) *Service {
 	registries := map[identity.RoleType]*RegistryEntry{}
 	for roleType, registry := range walletRegistries {

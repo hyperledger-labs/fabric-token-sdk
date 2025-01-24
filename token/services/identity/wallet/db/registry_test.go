@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package wallet_test
+package db_test
 
 import (
 	"testing"
@@ -17,7 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,7 +30,7 @@ func TestGetWallet(t *testing.T) {
 
 	alice := driver.Identity("alice")
 	meta := "meta"
-	wr := wallet.NewRegistry(
+	wr := db.NewWalletRegistry(
 		&logging.MockLogger{},
 		&fakeRole{},
 		kvs2.NewWalletDB(kvsStorage, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}),

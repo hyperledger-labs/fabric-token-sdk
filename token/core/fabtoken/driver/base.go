@@ -40,7 +40,7 @@ func (d *base) newWalletService(
 	tmsConfig driver.Config,
 	binder driver2.NetworkBinderService,
 	storageProvider identity.StorageProvider,
-	qe wallet.TokenVault,
+	qe fabtoken.TokenVault,
 	logger logging.Logger,
 	fscIdentity driver.Identity,
 	networkDefaultIdentity driver.Identity,
