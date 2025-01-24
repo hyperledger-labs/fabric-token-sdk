@@ -11,7 +11,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -53,7 +52,7 @@ func NewWalletFactory(
 	}
 }
 
-func (w *WalletFactory) NewWallet(id string, role identity.RoleType, walletRegistry idriver.WalletRegistry, identityInfo identity.Info) (driver.Wallet, error) {
+func (w *WalletFactory) NewWallet(id string, role identity.RoleType, walletRegistry identity.WalletRegistry, identityInfo identity.Info) (driver.Wallet, error) {
 	switch role {
 	case identity.OwnerRole:
 		newWallet, err := wallet.NewAnonymousOwnerWallet(

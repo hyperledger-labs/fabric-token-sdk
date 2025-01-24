@@ -33,16 +33,3 @@ type Info = driver.IdentityInfo
 // Role is a container of long-term identities.
 // A long-term identity is then used to construct a wallet.
 type Role = driver.Role
-
-// Roles is a map of Role, one for each identity role
-type Roles map[RoleType]Role
-
-// NewRoles returns a new Roles maps
-func NewRoles() Roles {
-	return make(Roles)
-}
-
-// Register associates an instance of Role to a given identifier
-func (m Roles) Register(usage RoleType, role Role) {
-	m[usage] = role
-}

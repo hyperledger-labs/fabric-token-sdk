@@ -58,7 +58,7 @@ func (d *base) newWalletService(
 ) (*wallet.Service, error) {
 	pp := publicParams.(*crypto.PublicParams)
 	// Prepare roles
-	roles := identity.NewRoles()
+	roles := wallet.NewRoles()
 	deserializerManager := sig.NewMultiplexDeserializer()
 	tmsID := tmsConfig.ID()
 	identityDB, err := storageProvider.OpenIdentityDB(tmsID)
@@ -150,9 +150,6 @@ func (d *base) newWalletService(
 		ip,
 		deserializer,
 		zkatdlog.NewWalletFactory(logger, ip, qe, identityConfig, deserializer),
-		wallet.NewRegistry(logger.Named("identity.owner-wallet-registry"), roles[identity.OwnerRole], walletDB),
-		wallet.NewRegistry(logger.Named("identity.issuer-wallet-registry"), roles[identity.IssuerRole], walletDB),
-		wallet.NewRegistry(logger.Named("identity.auditor-wallet-registry"), roles[identity.AuditorRole], walletDB),
-		nil,
+		roles.ToWalletRegistries(logger, walletDB),
 	), nil
 }

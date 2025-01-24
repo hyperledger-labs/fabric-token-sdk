@@ -50,7 +50,7 @@ func (d *base) newWalletService(
 	tmsID := tmsConfig.ID()
 
 	// Prepare roles
-	roles := identity.NewRoles()
+	roles := wallet.NewRoles()
 	deserializerManager := sig.NewMultiplexDeserializer()
 	identityDB, err := storageProvider.OpenIdentityDB(tmsID)
 	if err != nil {
@@ -108,10 +108,7 @@ func (d *base) newWalletService(
 		ip,
 		NewDeserializer(),
 		fabtoken.NewWalletFactory(logger, ip, qe),
-		wallet.NewRegistry(logger.Named("identity.owner-wallet-registry"), roles[identity.OwnerRole], walletDB),
-		wallet.NewRegistry(logger.Named("identity.issuer-wallet-registry"), roles[identity.IssuerRole], walletDB),
-		wallet.NewRegistry(logger.Named("identity.auditor-wallet-registry"), roles[identity.AuditorRole], walletDB),
-		nil,
+		roles.ToWalletRegistries(logger, walletDB),
 	)
 
 	return ws, nil

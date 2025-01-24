@@ -57,17 +57,15 @@ func NewService(
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
 	walletFactory Factory,
-	OwnerWalletRegistry idriver.WalletRegistry,
-	IssuerWalletRegistry idriver.WalletRegistry,
-	AuditorWalletRegistry idriver.WalletRegistry,
-	CertifierWalletsRegistry idriver.WalletRegistry,
+	walletRegistries map[identity.RoleType]idriver.WalletRegistry,
 ) *Service {
 	registries := map[identity.RoleType]*RegistryEntry{}
-	registries[identity.OwnerRole] = &RegistryEntry{Registry: OwnerWalletRegistry, Mutex: &sync.RWMutex{}}
-	registries[identity.IssuerRole] = &RegistryEntry{Registry: IssuerWalletRegistry, Mutex: &sync.RWMutex{}}
-	registries[identity.AuditorRole] = &RegistryEntry{Registry: AuditorWalletRegistry, Mutex: &sync.RWMutex{}}
-	registries[identity.CertifierRole] = &RegistryEntry{Registry: CertifierWalletsRegistry, Mutex: &sync.RWMutex{}}
-
+	for roleType, registry := range walletRegistries {
+		registries[roleType] = &RegistryEntry{
+			Registry: registry,
+			Mutex:    &sync.RWMutex{},
+		}
+	}
 	return &Service{
 		Logger:           logger,
 		IdentityProvider: identityProvider,
