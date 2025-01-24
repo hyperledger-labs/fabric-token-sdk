@@ -41,7 +41,6 @@ func TestGenFullSuccess(t *testing.T) {
 
 	tempOutput, err := os.MkdirTemp("", "tokengen-test")
 	gt.Expect(err).NotTo(HaveOccurred())
-	// tempOutput := "./testdata"
 	defer os.RemoveAll(tempOutput)
 
 	testGenRun(
