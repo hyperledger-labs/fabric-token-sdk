@@ -117,51 +117,35 @@ func replicaName(name string, idx int) string {
 	return fmt.Sprintf("fsc.%s.%d", name, idx)
 }
 
-func NewTestSuite(sqlConfigs map[string]*common.PostgresConfig, startPort func() int, topologies []api.Topology) *TestSuite {
+func NewTestSuite(startPort func() int, topologies []api.Topology) *TestSuite {
 	return &TestSuite{
-		sqlConfigs: sqlConfigs,
-		generator: func() (*integration.Infrastructure, error) {
-			i, err := integration.New(startPort(), "", integration.ReplaceTemplate(topologies)...)
-			return i, err
-		},
-		closeFunc: func() {},
+		generator: func() (*integration.Infrastructure, error) { return integration.New(startPort(), "", topologies...) },
 	}
 }
 
 // NewLocalTestSuite returns a new test suite that stores configuration data in `./testdata` and does not remove it when
 // the test is done.
-func NewLocalTestSuite(sqlConfigs map[string]*common.PostgresConfig, startPort func() int, topologies []api.Topology) *TestSuite {
+func NewLocalTestSuite(startPort func() int, topologies []api.Topology) *TestSuite {
 	return &TestSuite{
-		sqlConfigs: sqlConfigs,
 		generator: func() (*integration.Infrastructure, error) {
-			i, err := integration.New(startPort(), "./testdata", integration.ReplaceTemplate(topologies)...)
+			i, err := integration.New(startPort(), "./testdata", topologies...)
 			i.DeleteOnStop = false
 			return i, err
 		},
-		closeFunc: func() {},
 	}
 }
 
 type TestSuite struct {
-	sqlConfigs map[string]*common.PostgresConfig
-	generator  func() (*integration.Infrastructure, error)
+	generator func() (*integration.Infrastructure, error)
 
-	closeFunc func()
-	II        *integration.Infrastructure
+	II *integration.Infrastructure
 }
 
 func (s *TestSuite) TearDown() {
 	s.II.Stop()
-	s.closeFunc()
 }
 
 func (s *TestSuite) Setup() {
-	if len(s.sqlConfigs) > 0 {
-		closeFunc, err := common.StartPostgresWithFmt(s.sqlConfigs)
-		Expect(err).NotTo(HaveOccurred())
-		s.closeFunc = closeFunc
-	}
-
 	// Create the integration ii
 	network, err := s.generator()
 	Expect(err).NotTo(HaveOccurred())

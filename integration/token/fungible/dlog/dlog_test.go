@@ -125,7 +125,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 
 func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, tokenSelector string, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
+	ts := token2.NewTestSuite(StartPortDlog, topology.Topology(
 		common.Opts{
 			Backend:             "fabric",
 			CommType:            commType,

@@ -64,7 +64,7 @@ var _ = Describe("FabToken end to end", func() {
 
 func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLC.StartPortForNode, interop.HTLCSingleFabricNetworkTopology(common.Opts{
+	ts := token2.NewTestSuite(integration2.FabTokenInteropHTLC.StartPortForNode, interop.HTLCSingleFabricNetworkTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
@@ -75,7 +75,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 
 func newTestSuiteSingleOrion(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCOrion.StartPortForNode, interop.HTLCSingleOrionNetworkTopology(common.Opts{
+	ts := token2.NewTestSuite(integration2.FabTokenInteropHTLCOrion.StartPortForNode, interop.HTLCSingleOrionNetworkTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
@@ -86,7 +86,7 @@ func newTestSuiteSingleOrion(commType fsc.P2PCommunicationType, factor int, name
 
 func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
+	ts := token2.NewTestSuite(integration2.FabTokenInteropHTLCTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
@@ -97,7 +97,7 @@ func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names 
 
 func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimTopology(common.Opts{
+	ts := token2.NewTestSuite(integration2.FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
@@ -108,7 +108,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 
 func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, integration2.FabTokenInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimWithOrionTopology(common.Opts{
+	ts := token2.NewTestSuite(integration2.FabTokenInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimWithOrionTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},

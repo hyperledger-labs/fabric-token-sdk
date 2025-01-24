@@ -31,7 +31,7 @@ var _ = Describe("Orion EndToEnd", func() {
 
 func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
+	ts := token2.NewTestSuite(StartPortDlog, topology.Topology(
 		common.Opts{
 			Backend:        "orion",
 			CommType:       commType,

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -27,7 +28,7 @@ func DefaultPostgresConfig(node string) *PostgresConfig {
 }
 
 func StartPostgresWithFmt(configs map[string]*PostgresConfig) (func(), error) {
-	return postgres2.StartPostgresWithFmt(configs)
+	return postgres2.StartPostgresWithFmt(collections.Values(configs))
 }
 
 // https://testcontainers.com/guides/getting-started-with-testcontainers-for-go/

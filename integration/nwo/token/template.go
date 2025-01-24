@@ -16,7 +16,7 @@ token:
     type: delivery
     delivery:
       mapperParallelism: 10
-      lruSize: 100
-      lruBuffer: 50
+      lruSize: 1500
+      lruBuffer: 500
       listenerTimeout: 30s
 `
