@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
@@ -115,7 +114,7 @@ type Network struct {
 	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
 	flm                        finality.ListenerManager
 	llm                        lookup.ListenerManager
-	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
+	defaultPublicParamsFetcher NetworkPublicParamsFetcher
 	tokenQueryExecutor         driver.TokenQueryExecutor
 	spentTokenQueryExecutor    driver.SpentTokenQueryExecutor
 	endorsementServiceProvider EndorsementServiceProvider
@@ -134,7 +133,7 @@ func NewNetwork(
 	endorsementServiceProvider EndorsementServiceProvider,
 	tokenQueryExecutor driver.TokenQueryExecutor,
 	tracerProvider trace.TracerProvider,
-	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher,
+	defaultPublicParamsFetcher NetworkPublicParamsFetcher,
 	spentTokenQueryExecutor driver.SpentTokenQueryExecutor,
 	keyTranslator translator.KeyTranslator,
 	flm finality.ListenerManager,

@@ -6,10 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-)
-
 // PPHash is used to model the hash of the raw public parameters.
 // This should avoid confusion between the bytes of the public params themselves and its hash.
 type PPHash []byte
@@ -28,12 +24,6 @@ func (pp *SerializedPublicParameters) Deserialize(raw []byte) error {
 		return err
 	}
 	return nil
-}
-
-// NetworkPublicParamsFetcher models a public parameters fetcher per network.
-type NetworkPublicParamsFetcher interface {
-	// Fetch fetches the public parameters for the given network, channel, and namespace
-	Fetch(network driver.Network, channel driver.Channel, namespace driver.Namespace) ([]byte, error)
 }
 
 // PublicParamsFetcher models a public parameters fetcher.

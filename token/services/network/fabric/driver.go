@@ -9,12 +9,12 @@ package fabric
 import (
 	"slices"
 
+	driver4 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	config2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -30,6 +30,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// NetworkPublicParamsFetcher models a public parameters fetcher per network.
+type NetworkPublicParamsFetcher interface {
+	// Fetch fetches the public parameters for the given network, channel, and namespace
+	Fetch(network driver4.Network, channel driver4.Channel, namespace driver4.Namespace) ([]byte, error)
+}
+
 type Driver struct {
 	fnsProvider                     *fabric.NetworkServiceProvider
 	vaultProvider                   driver.TokenVaultProvider
@@ -41,7 +47,7 @@ type Driver struct {
 	tmsProvider                     *token.ManagementServiceProvider
 	identityProvider                driver2.IdentityProvider
 	tracerProvider                  trace.TracerProvider
-	defaultPublicParamsFetcher      driver3.NetworkPublicParamsFetcher
+	defaultPublicParamsFetcher      NetworkPublicParamsFetcher
 	tokenQueryExecutorProvider      driver.TokenQueryExecutorProvider
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider
 	supportedDrivers                []string
@@ -98,7 +104,7 @@ func NewDriver(
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
 	identityProvider driver2.IdentityProvider,
-	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher,
+	defaultPublicParamsFetcher NetworkPublicParamsFetcher,
 	tokenQueryExecutorProvider driver.TokenQueryExecutorProvider,
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
 	keyTranslator translator.KeyTranslator,
