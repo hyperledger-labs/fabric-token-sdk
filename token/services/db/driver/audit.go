@@ -9,6 +9,7 @@ package driver
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
@@ -27,6 +28,9 @@ type AuditTransactionDB interface {
 	// GetStatus returns the status of a given transaction.
 	// It returns an error if the transaction is not found
 	GetStatus(txID string) (TxStatus, string, error)
+
+	// GetStatuses returns the status of multiple transactions.
+	GetStatuses(txIDs ...driver.TxID) (StatusResponseIterator, error)
 
 	// QueryTransactions returns a list of transactions that match the passed params
 	QueryTransactions(params QueryTransactionsParams) (TransactionIterator, error)

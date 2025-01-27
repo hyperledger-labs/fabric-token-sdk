@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -174,6 +175,21 @@ func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error)
 		return driver.Unknown, "", errors.Wrapf(err, "error querying db")
 	}
 	return status, statusMessage, nil
+}
+
+func (db *TransactionDB) GetStatuses(txIDs ...driver3.TxID) (driver.StatusResponseIterator, error) {
+	where, args := common.Where(db.ci.InStrings("tx_id", txIDs))
+
+	query, err := NewSelect("tx_id, status, status_message").From(db.table.Requests).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "error compiling query")
+	}
+	logger.Debug(query, args)
+	rows, err := db.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return &StatusResponseIterator{txs: rows}, nil
 }
 
 func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
@@ -362,6 +378,28 @@ func marshal(in map[string][]byte) (string, error) {
 
 func unmarshal(in []byte, out *map[string][]byte) error {
 	return json.Unmarshal(in, out)
+}
+
+type StatusResponseIterator struct {
+	txs *sql.Rows
+}
+
+func (t *StatusResponseIterator) Close() {
+	Close(t.txs)
+}
+
+func (t *StatusResponseIterator) Next() (*driver.StatusResponse, error) {
+	var r driver.StatusResponse
+	if !t.txs.Next() {
+		return nil, nil
+	}
+	// tx_id, status, status_message
+	err := t.txs.Scan(
+		&r.TxID,
+		&r.ValidationCode,
+		&r.ValidationMessage,
+	)
+	return &r, err
 }
 
 type TransactionIterator struct {

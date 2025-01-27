@@ -164,6 +164,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(func(dbManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
 			return sherdlock.NewFetcherProvider(dbManager, notifierManager, metricsProvider, sherdlock.Mixed)
 		}),
+		p.Container().Provide(ttx.NewFinalityServiceProvider, dig.As(new(ttx.FinalityServiceProvider))),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")
@@ -201,6 +202,7 @@ func (p *SDK) Install() error {
 		digutils.Register[*tokens.Manager](p.Container()),
 		digutils.Register[trace.TracerProvider](p.Container()),
 		digutils.Register[metrics.Provider](p.Container()),
+		digutils.Register[ttx.FinalityServiceProvider](p.Container()),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting backward comaptibility with SP")

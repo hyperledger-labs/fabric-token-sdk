@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
@@ -257,6 +258,10 @@ func (d *DB) GetStatus(txID string) (TxStatus, string, error) {
 	}
 	logger.Debugf("Got status [%s][%s]", txID, status)
 	return status, message, nil
+}
+
+func (d *DB) GetStatuses(txIDs ...driver2.TxID) (driver.StatusResponseIterator, error) {
+	return d.db.GetStatuses(txIDs...)
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.

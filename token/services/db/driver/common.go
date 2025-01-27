@@ -167,6 +167,9 @@ type TokenRequestRecord struct {
 	Status TxStatus
 }
 
+// StatusResponseIterator is an iterator for status responses
+type StatusResponseIterator = collections.Iterator[*StatusResponse]
+
 // TransactionIterator is an iterator for transactions
 type TransactionIterator = collections.Iterator[*TransactionRecord]
 

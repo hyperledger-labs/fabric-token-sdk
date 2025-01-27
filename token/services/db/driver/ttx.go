@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
@@ -47,6 +48,12 @@ type AtomicWrite interface {
 	AddValidationRecord(txID string, meta map[string][]byte) error
 }
 
+type StatusResponse struct {
+	TxID              driver2.TxID
+	ValidationCode    TxStatus
+	ValidationMessage string
+}
+
 type TransactionDB interface {
 	// Close closes the databases
 	Close() error
@@ -61,6 +68,9 @@ type TransactionDB interface {
 	// GetStatus returns the status of a given transaction.
 	// It returns an error if the transaction is not found
 	GetStatus(txID string) (TxStatus, string, error)
+
+	// GetStatuses returns the status of multiple transactions.
+	GetStatuses(txIDs ...driver2.TxID) (StatusResponseIterator, error)
 
 	// QueryTransactions returns a list of transactions that match the given criteria
 	QueryTransactions(params QueryTransactionsParams) (TransactionIterator, error)
