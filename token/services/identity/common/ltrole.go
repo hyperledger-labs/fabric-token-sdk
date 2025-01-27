@@ -39,43 +39,47 @@ func (r *LongTermRole) MapToIdentity(v driver.WalletLookupID) (driver.Identity, 
 	case string:
 		return r.mapStringToID(vv)
 	default:
-		return nil, "", errors.Errorf("[LongTermIdentity] identifier not recognised, expected []byte or driver.Identity, got [%T], [%s]", v, debug.Stack())
+		return nil, "", errors.Errorf("identifier not recognised, expected []byte or driver.Identity, got [%T], [%s]", v, string(debug.Stack()))
 	}
 }
 
 func (r *LongTermRole) mapStringToID(v string) (driver.Identity, string, error) {
-	defaultID := r.localMembership.DefaultNetworkIdentity()
+	defaultNetworkIdentity := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
 	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
 		r.logger.Debugf("[%s] mapping identifier for [%s,%s], default identities [%s:%s]",
 			r.networkID,
 			v,
-			string(defaultID),
-			defaultID.String(),
+			string(defaultNetworkIdentity),
+			defaultNetworkIdentity.String(),
 			r.nodeIdentity.String(),
 		)
 	}
 
 	label := v
-	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf("[LongTermIdentity] looking up identifier for label [%s]", label)
-	}
+	labelAsIdentity := driver.Identity(label)
 	switch {
 	case len(label) == 0:
-		return defaultID, defaultIdentifier, nil
+		r.logger.Debugf("passed empty label")
+		return nil, defaultIdentifier, nil
 	case label == defaultIdentifier:
-		return defaultID, defaultIdentifier, nil
-	case label == defaultID.UniqueID():
-		return defaultID, defaultIdentifier, nil
-	case label == string(defaultID):
-		return defaultID, defaultIdentifier, nil
-	case defaultID.Equal(driver.Identity(label)):
-		return defaultID, defaultIdentifier, nil
-	case r.nodeIdentity.Equal(driver.Identity(label)):
-		return defaultID, defaultIdentifier, nil
-	case r.localMembership.IsMe(driver.Identity(label)):
-		id := driver.Identity(label)
+		r.logger.Debugf("passed default identifier")
+		return nil, defaultIdentifier, nil
+	case label == defaultNetworkIdentity.UniqueID():
+		r.logger.Debugf("passed default identity")
+		return nil, defaultIdentifier, nil
+	case label == string(defaultNetworkIdentity):
+		r.logger.Debugf("passed default identity as string")
+		return nil, defaultIdentifier, nil
+	case defaultNetworkIdentity.Equal(labelAsIdentity):
+		r.logger.Debugf("passed default identity as view identity")
+		return nil, defaultIdentifier, nil
+	case r.nodeIdentity.Equal(labelAsIdentity):
+		r.logger.Debugf("passed node identity as view identity")
+		return nil, defaultIdentifier, nil
+	case r.localMembership.IsMe(labelAsIdentity):
+		id := labelAsIdentity
 		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
 			return id, idIdentifier, nil
 		}
@@ -102,24 +106,30 @@ func (r *LongTermRole) mapStringToID(v string) (driver.Identity, string, error) 
 }
 
 func (r *LongTermRole) mapIdentityToID(v driver.Identity) (driver.Identity, string, error) {
-	defaultID := r.localMembership.DefaultNetworkIdentity()
+	defaultNetworkIdentity := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
 	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
 		r.logger.Debugf(
 			"[LongTermIdentity] looking up identifier for identity [%s], default identity [%s]",
 			v,
-			defaultID.String(),
+			defaultNetworkIdentity.String(),
 		)
 	}
 	id := v
 	switch {
 	case id.IsNone():
-		return defaultID, defaultIdentifier, nil
-	case id.Equal(defaultID):
-		return defaultID, defaultIdentifier, nil
+		r.logger.Debugf("passed empty identity")
+		return nil, defaultIdentifier, nil
+	case id.Equal(defaultNetworkIdentity):
+		r.logger.Debugf("passed default identity")
+		return nil, defaultIdentifier, nil
+	case string(id) == defaultIdentifier:
+		r.logger.Debugf("passed default identifier")
+		return nil, defaultIdentifier, nil
 	case id.Equal(r.nodeIdentity):
-		return defaultID, defaultIdentifier, nil
+		r.logger.Debugf("passed identity is the node identity (same bytes)")
+		return nil, defaultIdentifier, nil
 	case r.localMembership.IsMe(id):
 		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
 			return id, idIdentifier, nil
@@ -129,7 +139,7 @@ func (r *LongTermRole) mapIdentityToID(v driver.Identity) (driver.Identity, stri
 		}
 		return id, "", nil
 	case string(id) == defaultIdentifier:
-		return defaultID, defaultIdentifier, nil
+		return nil, defaultIdentifier, nil
 	}
 
 	label := string(id)
@@ -150,5 +160,5 @@ func (r *LongTermRole) mapIdentityToID(v driver.Identity) (driver.Identity, stri
 		r.logger.Debugf("[LongTermIdentity] cannot find match for driver.Identity string [%s]", v)
 	}
 
-	return id, "", nil
+	return nil, string(id), nil
 }

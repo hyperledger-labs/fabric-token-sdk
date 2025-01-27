@@ -44,6 +44,8 @@ type IdentityInfo interface {
 	// Get returns the identity and it is audit info.
 	// Get might return a different identity at each call depending on the implementation.
 	Get() (Identity, []byte, error)
+	// Anonymous is true if this identity supports anonymity
+	Anonymous() bool
 }
 
 type (
