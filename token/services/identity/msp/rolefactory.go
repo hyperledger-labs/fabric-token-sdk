@@ -143,13 +143,7 @@ func (f *RoleFactory) NewIdemix(role identity.RoleType, cacheSize int, issuerPub
 	if err := lm.Load(identities, nil); err != nil {
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
-	return &WrappingBindingRole{
-		Role:             common.NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
-		IdentityType:     IdemixIdentity,
-		RootIdentity:     f.FSCIdentity,
-		IdentityProvider: f.IdentityProvider,
-		BinderService:    f.BinderService,
-	}, nil
+	return common.NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm), nil
 }
 
 // NewX509 creates a new X509-based role
@@ -191,109 +185,10 @@ func (f *RoleFactory) newX509WithType(role identity.RoleType, identityType strin
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
 
-	return &WrappingBindingRole{
-		Role:             common.NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
-		IdentityType:     identityType,
-		RootIdentity:     f.FSCIdentity,
-		IdentityProvider: f.IdentityProvider,
-		BinderService:    f.BinderService,
-	}, nil
+	return common.NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm), nil
 }
 
 // IdentitiesForRole returns the configured identities for the passed role
 func (f *RoleFactory) IdentitiesForRole(role identity.RoleType) ([]*idriver.ConfiguredIdentity, error) {
 	return f.Config.IdentitiesForRole(role)
-}
-
-// BindingRole returns a new role wrapping the passed one.
-// Identities will be bound to the long term identities this factory refers to.
-func (f *RoleFactory) BindingRole(role identity.Role) (identity.Role, error) {
-	return &WrappingBindingRole{
-		Role:             role,
-		RootIdentity:     f.FSCIdentity,
-		IdentityProvider: f.IdentityProvider,
-		BinderService:    f.BinderService,
-	}, nil
-}
-
-type WrappingBindingRole struct {
-	identity.Role
-	IdentityType identity.Type
-
-	RootIdentity     driver.Identity
-	IdentityProvider idriver.IdentityProvider
-	BinderService    idriver.BinderService
-}
-
-func (r *WrappingBindingRole) GetIdentityInfo(id string) (identity.Info, error) {
-	info, err := r.Role.GetIdentityInfo(id)
-	if err != nil {
-		return nil, err
-	}
-	return &WrappingBindingInfo{
-		Info:             info,
-		IdentityType:     r.IdentityType,
-		RootIdentity:     r.RootIdentity,
-		IdentityProvider: r.IdentityProvider,
-		BinderService:    r.BinderService,
-	}, nil
-}
-
-// WrappingBindingInfo wraps a driver.IdentityInfo to further register the audit info,
-// and binds the new identity to the default FSC node identity
-type WrappingBindingInfo struct {
-	identity.Info
-	IdentityType identity.Type
-
-	RootIdentity     driver.Identity
-	IdentityProvider idriver.IdentityProvider
-	BinderService    idriver.BinderService
-}
-
-func (i *WrappingBindingInfo) ID() string {
-	return i.Info.ID()
-}
-
-func (i *WrappingBindingInfo) EnrollmentID() string {
-	return i.Info.EnrollmentID()
-}
-
-func (i *WrappingBindingInfo) Get() (driver.Identity, []byte, error) {
-	// get the identity
-	id, ai, err := i.Info.Get()
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID())
-	}
-	// register the audit info
-	if err := i.IdentityProvider.RegisterAuditInfo(id, ai); err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to register audit info for identity [%s]", id)
-	}
-	// bind the identity to the default FSC node identity
-	if i.BinderService != nil {
-		if err := i.BinderService.Bind(i.RootIdentity, id, false); err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
-		}
-	}
-	// wrap the backend identity, and bind it
-	if len(i.IdentityType) != 0 {
-		typedIdentity, err := identity.WrapWithType(i.IdentityType, id)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
-		}
-		if i.BinderService != nil {
-			if err := i.BinderService.Bind(id, typedIdentity, true); err != nil {
-				return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
-			}
-			if err := i.BinderService.Bind(i.RootIdentity, typedIdentity, false); err != nil {
-				return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, i.RootIdentity)
-			}
-		} else {
-			// register at the list the audit info
-			if err := i.IdentityProvider.RegisterAuditInfo(typedIdentity, ai); err != nil {
-				return nil, nil, errors.Wrapf(err, "failed to register audit info for identity [%s]", id)
-			}
-		}
-		id = typedIdentity
-	}
-	return id, ai, nil
 }

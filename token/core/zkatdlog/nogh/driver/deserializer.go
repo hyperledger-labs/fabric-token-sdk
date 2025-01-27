@@ -30,25 +30,28 @@ func NewDeserializer(pp *crypto.PublicParams) (*Deserializer, error) {
 		return nil, errors.New("failed to get deserializer: nil public parameters")
 	}
 
-	m := deserializer.NewTypedVerifierDeserializerMultiplex()
+	ownerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
 	for _, idemixIssuerPublicKey := range pp.IdemixIssuerPublicKeys {
 		idemixDes, err := idemix.NewDeserializer(idemixIssuerPublicKey.PublicKey, idemixIssuerPublicKey.Curve)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", idemixIssuerPublicKey.Curve)
 		}
-		m.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+		ownerDeserializer.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 	}
-	m.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
-	m.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(m))
+	ownerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
+	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
+
+	auditorIssuerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
+	auditorIssuerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(
 			msp.IdemixIdentity,
-			&x509.MSPIdentityDeserializer{},
-			m,
-			&x509.MSPIdentityDeserializer{},
-			m,
-			m,
+			auditorIssuerDeserializer,
+			ownerDeserializer,
+			auditorIssuerDeserializer,
+			ownerDeserializer,
+			ownerDeserializer,
 		),
 	}, nil
 }

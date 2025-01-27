@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	cryptodlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/pkg/errors"
@@ -64,7 +65,11 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
 			if tms.Auditors[0] == auditor.ID {
-				pp.AddAuditor(id)
+				wrap, err := identity.WrapWithType(msp2.X509Identity, id)
+				if err != nil {
+					return nil, errors.WithMessagef(err, "failed to create x509 identity for auditor [%v]", auditor)
+				}
+				pp.AddAuditor(wrap)
 			}
 		}
 	}
@@ -84,7 +89,11 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
 			if tms.Issuers[0] == issuer.ID {
-				pp.AddIssuer(id)
+				wrap, err := identity.WrapWithType(msp2.X509Identity, id)
+				if err != nil {
+					return nil, errors.WithMessagef(err, "failed to create x509 identity for auditor [%v]", issuer)
+				}
+				pp.AddIssuer(wrap)
 			}
 		}
 	}
@@ -161,7 +170,11 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
 			if tms.Auditors[0] == auditor.ID {
-				pp.AddAuditor(id)
+				wrap, err := identity.WrapWithType(msp2.X509Identity, id)
+				if err != nil {
+					return nil, errors.WithMessagef(err, "failed to create x509 identity for auditor [%v]", auditor)
+				}
+				pp.AddAuditor(wrap)
 			}
 		}
 	}
@@ -181,7 +194,11 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
 			if tms.Issuers[0] == issuer.ID {
-				pp.AddIssuer(id)
+				wrap, err := identity.WrapWithType(msp2.X509Identity, id)
+				if err != nil {
+					return nil, errors.WithMessagef(err, "failed to create x509 identity for issuer [%v]", issuer)
+				}
+				pp.AddIssuer(wrap)
 			}
 		}
 	}
