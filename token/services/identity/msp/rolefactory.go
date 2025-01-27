@@ -143,7 +143,7 @@ func (f *RoleFactory) NewIdemix(role identity.RoleType, cacheSize int, issuerPub
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
 	return &WrappingBindingRole{
-		Role:             common.NewAnonymousRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
+		Role:             common.NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
 		IdentityType:     IdemixIdentity,
 		RootIdentity:     f.FSCIdentity,
 		IdentityProvider: f.IdentityProvider,
@@ -190,7 +190,7 @@ func (f *RoleFactory) newX509WithType(role identity.RoleType, identityType strin
 	}
 
 	return &WrappingBindingRole{
-		Role:             common.NewLongTermRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
+		Role:             common.NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm),
 		IdentityType:     identityType,
 		RootIdentity:     f.FSCIdentity,
 		IdentityProvider: f.IdentityProvider,
