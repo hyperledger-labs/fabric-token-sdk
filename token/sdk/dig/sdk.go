@@ -36,7 +36,7 @@ import (
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
+	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	identitydriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"

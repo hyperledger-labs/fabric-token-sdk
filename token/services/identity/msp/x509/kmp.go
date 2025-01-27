@@ -12,8 +12,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/common"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"

@@ -10,9 +10,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -49,8 +51,6 @@ func (d *base) newWalletService(
 ) (*wallet.Service, error) {
 	tmsID := tmsConfig.ID()
 
-	// Prepare roles
-	roles := wallet.NewRoles()
 	deserializerManager := sig.NewMultiplexDeserializer()
 	identityDB, err := storageProvider.OpenIdentityDB(tmsID)
 	if err != nil {
@@ -58,40 +58,30 @@ func (d *base) newWalletService(
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
 	ip := identity.NewProvider(logger.Named("identity"), identityDB, sigService, binder, NewEIDRHDeserializer())
-	identityConfig, err := config2.NewIdentityConfig(tmsConfig)
+	identityConfig, err := config.NewIdentityConfig(tmsConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create identity config")
 	}
 
-	roleFactory := msp.NewRoleFactory(
-		logger,
-		tmsID,
-		identityConfig,         // config
-		fscIdentity,            // FSC identity
-		networkDefaultIdentity, // network default identity
-		ip,
-		ip, // signer service
-		ip, // endpoint service
-		storageProvider,
-		deserializerManager,
-		ignoreRemote,
-	)
-	role, err := roleFactory.NewWrappedX509(identity.OwnerRole, ignoreRemote)
+	// Prepare roles
+	roleFactory := role.NewFactory(logger, tmsID, identityConfig, fscIdentity, networkDefaultIdentity, ip, ip, ip, storageProvider, deserializerManager)
+	role, err := roleFactory.NewRole(identity.OwnerRole, false, nil, x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.OwnerRole], ip, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
+	roles := wallet.NewRoles()
 	roles.Register(identity.OwnerRole, role)
-	role, err = roleFactory.NewX509(identity.IssuerRole, pp.Issuers()...)
+	role, err = roleFactory.NewRole(identity.IssuerRole, false, pp.Issuers(), x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.IssuerRole], ip, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create issuer role")
 	}
 	roles.Register(identity.IssuerRole, role)
-	role, err = roleFactory.NewX509(identity.AuditorRole, pp.Auditors()...)
+	role, err = roleFactory.NewRole(identity.AuditorRole, false, pp.Auditors(), x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.AuditorRole], ip, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create auditor role")
 	}
 	roles.Register(identity.AuditorRole, role)
-	role, err = roleFactory.NewX509(identity.CertifierRole)
+	role, err = roleFactory.NewRole(identity.CertifierRole, false, nil, x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.CertifierRole], ip, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create certifier role")
 	}

@@ -7,19 +7,20 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	view3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -51,13 +52,12 @@ func (d *base) newWalletService(
 	storageProvider identity.StorageProvider,
 	qe driver.QueryEngine,
 	logger logging.Logger,
-	fscIdentity view3.Identity,
-	networkDefaultIdentity view3.Identity,
+	fscIdentity view.Identity,
+	networkDefaultIdentity view.Identity,
 	publicParams driver.PublicParameters,
 	ignoreRemote bool,
 ) (*wallet.Service, error) {
 	pp := publicParams.(*crypto.PublicParams)
-	// Prepare roles
 	roles := wallet.NewRoles()
 	deserializerManager := sig.NewMultiplexDeserializer()
 	tmsID := tmsConfig.ID()
@@ -71,22 +71,12 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create identity config")
 	}
-	roleFactory := msp.NewRoleFactory(
-		logger,
-		tmsID,
-		identityConfig,         // config
-		fscIdentity,            // FSC identity
-		networkDefaultIdentity, // network default identity
-		ip,
-		ip, // signer service
-		ip, // endpoint service
-		storageProvider,
-		deserializerManager,
-		ignoreRemote,
-	)
+
+	// Prepare roles
+	roleFactory := role.NewFactory(logger, tmsID, identityConfig, fscIdentity, networkDefaultIdentity, ip, ip, ip, storageProvider, deserializerManager)
 	// owner role
 	// we have one key manager for fabtoken and one for each idemix issuer public key
-	kmps := make([]common2.KeyManagerProvider, 0, len(pp.IdemixIssuerPublicKeys)+1)
+	kmps := make([]membership.KeyManagerProvider, 0, len(pp.IdemixIssuerPublicKeys)+1)
 	for _, key := range pp.IdemixIssuerPublicKeys {
 		backend, err := storageProvider.NewKeystore()
 		if err != nil {
@@ -96,7 +86,7 @@ func (d *base) newWalletService(
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
 		}
-		kmp := idemix2.NewKeyManagerProvider(
+		kmp := idemix.NewKeyManagerProvider(
 			key.PublicKey,
 			key.Curve,
 			msp.RoleToMSPID[identity.OwnerRole],
@@ -110,37 +100,32 @@ func (d *base) newWalletService(
 	}
 	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.OwnerRole], ip, ignoreRemote))
 
-	role, err := roleFactory.NewIdemix(
-		identity.OwnerRole,
-		identityConfig.DefaultCacheSize(),
-		nil,
-		kmps...,
-	)
+	role, err := roleFactory.NewRole(identity.OwnerRole, true, nil, kmps...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
 	roles.Register(identity.OwnerRole, role)
-	role, err = roleFactory.NewX509(identity.IssuerRole, pp.Issuers()...)
+	role, err = roleFactory.NewRole(identity.IssuerRole, false, pp.Issuers(), x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.IssuerRole], ip, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create issuer role")
 	}
 	roles.Register(identity.IssuerRole, role)
-	role, err = roleFactory.NewX509(identity.AuditorRole, pp.Auditors()...)
+	role, err = roleFactory.NewRole(identity.AuditorRole, false, pp.Auditors(), x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.AuditorRole], ip, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create auditor role")
 	}
 	roles.Register(identity.AuditorRole, role)
-	role, err = roleFactory.NewX509(identity.CertifierRole)
+	role, err = roleFactory.NewRole(identity.CertifierRole, false, nil, x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.CertifierRole], ip, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create certifier role")
 	}
 	roles.Register(identity.CertifierRole, role)
+
 	// wallet service
 	walletDB, err := storageProvider.OpenWalletDB(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-
 	deserializer, err := NewDeserializer(pp)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to instantiate the deserializer")
