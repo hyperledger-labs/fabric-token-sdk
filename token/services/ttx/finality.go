@@ -190,6 +190,12 @@ func (s *finalityService) GetFinality(ctx context.Context, txID driver.TxID, tim
 	if status == ttxdb.Unknown {
 		return errors.New("unknown status")
 	}
+	if status == ttxdb.Confirmed {
+		return nil
+	}
+	if status == ttxdb.Deleted {
+		return errors.New("tx is not valid")
+	}
 
 	span.AddEvent("add_listener")
 	ch := make(chan common.StatusEvent, 2) // TODO: Why 200 capacity?
