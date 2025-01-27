@@ -11,8 +11,8 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/common"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/cache"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -39,7 +39,7 @@ func NewKeyManagerProvider(issuerPublicKey []byte, curveID math.CurveID, mspID s
 	return &KeyManagerProvider{issuerPublicKey: issuerPublicKey, curveID: curveID, mspID: mspID, keyStore: keyStore, signerService: signerService, config: config, cacheSize: cacheSize, ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet}
 }
 
-func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (common.KeyManager, error) {
+func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	var conf *msp.MSPConfig
 	var err error
 	if len(identityConfig.Raw) != 0 {
@@ -99,7 +99,7 @@ func (l *KeyManagerProvider) cacheSizeForID(id string) (int, error) {
 }
 
 type WrappedKeyManager struct {
-	common.KeyManager
+	membership.KeyManager
 	getIdentityFunc func([]byte) (driver.Identity, []byte, error)
 }
 
