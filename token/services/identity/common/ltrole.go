@@ -9,6 +9,7 @@ package common
 import (
 	"runtime/debug"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -48,10 +49,10 @@ func (r *LongTermRole) mapStringToID(v string) (driver.Identity, string, error) 
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
 	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf("[%s] mapping identifier for [%s,%s], default identities [%s:%s]",
+		r.logger.Debugf("[%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
 			r.networkID,
 			v,
-			string(defaultNetworkIdentity),
+			hash.Hashable(v).String(),
 			defaultNetworkIdentity.String(),
 			r.nodeIdentity.String(),
 		)
@@ -79,28 +80,22 @@ func (r *LongTermRole) mapStringToID(v string) (driver.Identity, string, error) 
 		r.logger.Debugf("passed node identity as view identity")
 		return nil, defaultIdentifier, nil
 	case r.localMembership.IsMe(labelAsIdentity):
+		r.logger.Debugf("passed a local member")
 		id := labelAsIdentity
 		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
-			return id, idIdentifier, nil
+			return nil, idIdentifier, nil
 		}
 		if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-			r.logger.Debugf("[LongTermIdentity] failed getting identity info for [%s], returning the identity", id)
+			r.logger.Debugf("failed getting identity info for [%s], returning the identity", id)
 		}
 		return id, "", nil
 	}
 
-	if info, err := r.localMembership.GetIdentityInfo(label, nil); err == nil {
-		id, _, err := info.Get()
-		if err != nil {
-			if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-				r.logger.Debugf("failed getting identity info for [%s], returning the identity", id)
-			}
-			return nil, info.ID(), nil
-		}
-		return id, label, nil
+	if idIdentifier, err := r.localMembership.GetIdentifier(labelAsIdentity); err == nil {
+		return nil, idIdentifier, nil
 	}
 	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf("[LongTermIdentity] cannot find match for driver.Identity string [%s]", label)
+		r.logger.Debugf("cannot find match for string [%s]", v)
 	}
 	return nil, label, nil
 }
@@ -110,12 +105,14 @@ func (r *LongTermRole) mapIdentityToID(v driver.Identity) (driver.Identity, stri
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
 	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf(
-			"[LongTermIdentity] looking up identifier for identity [%s], default identity [%s]",
+		r.logger.Debugf("[%s] mapping driver.Identity identifier for [%s], default identities [%s:%s]",
+			r.networkID,
 			v,
 			defaultNetworkIdentity.String(),
+			r.nodeIdentity.String(),
 		)
 	}
+
 	id := v
 	switch {
 	case id.IsNone():
@@ -131,6 +128,7 @@ func (r *LongTermRole) mapIdentityToID(v driver.Identity) (driver.Identity, stri
 		r.logger.Debugf("passed identity is the node identity (same bytes)")
 		return nil, defaultIdentifier, nil
 	case r.localMembership.IsMe(id):
+		r.logger.Debugf("passed identity is me")
 		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
 			return id, idIdentifier, nil
 		}
@@ -138,8 +136,9 @@ func (r *LongTermRole) mapIdentityToID(v driver.Identity) (driver.Identity, stri
 			r.logger.Debugf("failed getting identity info for [%s], returning the identity", id)
 		}
 		return id, "", nil
-	case string(id) == defaultIdentifier:
-		return nil, defaultIdentifier, nil
+	}
+	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
+		r.logger.Debugf("looking up identifier for identity as label [%s]", hash.Hashable(id))
 	}
 
 	label := string(id)
@@ -153,12 +152,13 @@ func (r *LongTermRole) mapIdentityToID(v driver.Identity) (driver.Identity, stri
 		}
 		return id, label, nil
 	}
+
 	if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
-		return id, idIdentifier, nil
-	}
-	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf("[LongTermIdentity] cannot find match for driver.Identity string [%s]", v)
+		return nil, idIdentifier, nil
 	}
 
+	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
+		r.logger.Debugf("cannot find match for driver.Identity string [%s]", id)
+	}
 	return nil, string(id), nil
 }
