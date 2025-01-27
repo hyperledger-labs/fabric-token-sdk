@@ -48,7 +48,7 @@ func IssueValidate(ctx *Context) error {
 
 	verifier, err := ctx.Deserializer.GetIssuerVerifier(action.Issuer)
 	if err != nil {
-		return errors.Wrapf(err, "failed getting verifier for [%s]", driver.Identity(action.Issuer).String())
+		return errors.Wrapf(err, "failed getting verifier for issuer [%s]", action.Issuer.String())
 	}
 	if _, err := ctx.SignatureProvider.HasBeenSignedBy(action.Issuer, verifier); err != nil {
 		return errors.Wrapf(err, "failed verifying signature")

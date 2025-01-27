@@ -494,7 +494,7 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 
 	verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
 	if err != nil {
-		return errors.Wrapf(err, "failed getting verifier for [%s]", entry.ID)
+		return errors.Wrapf(err, "failed getting verifier for identity [%s]", entry.ID)
 	}
 	if err := verifier.Verify(txRaw, sigma); err != nil {
 		return errors.Wrapf(err, "failed verifying ack signature from [%s]", entry.ID)

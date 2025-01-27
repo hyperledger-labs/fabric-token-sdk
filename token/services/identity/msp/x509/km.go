@@ -12,10 +12,15 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
+)
+
+const (
+	IdentityType identity.Type = "x509"
 )
 
 var logger = logging.MustGetLogger("token-sdk.services.identity.msp.x509")
@@ -182,4 +187,8 @@ func (p *KeyManager) String() string {
 
 func (p *KeyManager) SerializedIdentity() (driver.SigningIdentity, error) {
 	return p.sID, nil
+}
+
+func (p *KeyManager) IdentityType() identity.Type {
+	return IdentityType
 }

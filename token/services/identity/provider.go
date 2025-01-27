@@ -191,7 +191,7 @@ func (p *Provider) Bind(longTerm driver.Identity, ephemeral driver.Identity, cop
 		verifier, err := p.SigService.GetVerifier(longTerm)
 		if err != nil {
 			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-				p.Logger.Debugf("failed getting verifier for [%s][%s][%s]", longTerm, err, debug.Stack())
+				p.Logger.Debugf("failed getting verifier for identity [%s][%s][%s]", longTerm, err, debug.Stack())
 			}
 			verifier = nil
 		}

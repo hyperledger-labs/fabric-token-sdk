@@ -355,13 +355,13 @@ func (w *AnonymousOwnerWallet) RegisterRecipient(data *driver.RecipientData) err
 	// register verifier and audit info
 	v, err := w.Deserializer.GetOwnerVerifier(data.Identity)
 	if err != nil {
-		return errors.Wrapf(err, "failed getting verifier for [%s]", data.Identity)
+		return errors.Wrapf(err, "failed getting verifier for owner [%s]", data.Identity)
 	}
 	if err := w.IdentityProvider.RegisterVerifier(data.Identity, v); err != nil {
-		return errors.Wrapf(err, "failed registering verifier for [%s]", data.Identity)
+		return errors.Wrapf(err, "failed registering verifier for owner [%s]", data.Identity)
 	}
 	if err := w.IdentityProvider.RegisterRecipientData(data); err != nil {
-		return errors.Wrapf(err, "failed registering audit info for [%s]", data.Identity)
+		return errors.Wrapf(err, "failed registering audit info for owner [%s]", data.Identity)
 	}
 	if err := w.WalletRegistry.BindIdentity(data.Identity, w.EnrollmentID(), w.WalletID, nil); err != nil {
 		return errors.WithMessagef(err, "failed storing recipient identity in wallet [%s]", w.WalletID)
