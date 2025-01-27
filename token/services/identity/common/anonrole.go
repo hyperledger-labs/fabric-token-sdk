@@ -45,7 +45,7 @@ func (r *AnonymousRole) MapToIdentity(v driver.WalletLookupID) (driver.Identity,
 }
 
 func (r *AnonymousRole) mapStringToID(v string) (driver.Identity, string, error) {
-	defaultID := r.localMembership.DefaultNetworkIdentity()
+	defaultNetworkIdentity := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
 	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -53,13 +53,13 @@ func (r *AnonymousRole) mapStringToID(v string) (driver.Identity, string, error)
 			r.networkID,
 			v,
 			hash.Hashable(v).String(),
-			defaultID.String(),
+			defaultNetworkIdentity.String(),
 			r.nodeIdentity.String(),
 		)
 	}
 
 	label := v
-	viewIdentity := driver.Identity(label)
+	labelAsIdentity := driver.Identity(label)
 	switch {
 	case len(label) == 0:
 		r.logger.Debugf("passed empty label")
@@ -67,24 +67,24 @@ func (r *AnonymousRole) mapStringToID(v string) (driver.Identity, string, error)
 	case label == defaultIdentifier:
 		r.logger.Debugf("passed default identifier")
 		return nil, defaultIdentifier, nil
-	case label == defaultID.UniqueID():
+	case label == defaultNetworkIdentity.UniqueID():
 		r.logger.Debugf("passed default identity")
 		return nil, defaultIdentifier, nil
-	case label == string(defaultID):
+	case label == string(defaultNetworkIdentity):
 		r.logger.Debugf("passed default identity as string")
 		return nil, defaultIdentifier, nil
-	case defaultID.Equal(viewIdentity):
+	case defaultNetworkIdentity.Equal(labelAsIdentity):
 		r.logger.Debugf("passed default identity as view identity")
 		return nil, defaultIdentifier, nil
-	case r.nodeIdentity.Equal(viewIdentity):
+	case r.nodeIdentity.Equal(labelAsIdentity):
 		r.logger.Debugf("passed node identity as view identity")
 		return nil, defaultIdentifier, nil
-	case r.localMembership.IsMe(viewIdentity):
+	case r.localMembership.IsMe(labelAsIdentity):
 		r.logger.Debugf("passed a local member")
 		return nil, defaultIdentifier, nil
 	}
 
-	if idIdentifier, err := r.localMembership.GetIdentifier(viewIdentity); err == nil {
+	if idIdentifier, err := r.localMembership.GetIdentifier(labelAsIdentity); err == nil {
 		return nil, idIdentifier, nil
 	}
 	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -115,7 +115,7 @@ func (r *AnonymousRole) mapIdentityToID(v driver.Identity) (driver.Identity, str
 		r.logger.Debugf("passed default identity")
 		return nil, defaultIdentifier, nil
 	case string(id) == defaultIdentifier:
-		r.logger.Debugf("passed 'idemix' identity")
+		r.logger.Debugf("passed default identifier")
 		return nil, defaultIdentifier, nil
 	case id.Equal(r.nodeIdentity):
 		r.logger.Debugf("passed identity is the node identity (same bytes)")

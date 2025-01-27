@@ -61,3 +61,7 @@ func (i *IdentityInfo) Get() (driver.Identity, []byte, error) {
 func (i *IdentityInfo) Remote() bool {
 	return i.localIdentity.Remote
 }
+
+func (i *IdentityInfo) Anonymous() bool {
+	return i.localIdentity.Anonymous
+}
