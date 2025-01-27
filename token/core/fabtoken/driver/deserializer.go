@@ -23,18 +23,21 @@ type Deserializer struct {
 
 // NewDeserializer returns a deserializer
 func NewDeserializer() *Deserializer {
-	m := deserializer.NewTypedVerifierDeserializerMultiplex()
-	m.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
-	m.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(m))
+	ownerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
+	ownerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
+	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
+
+	auditorIssuerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
+	auditorIssuerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(
 			msp.X509Identity,
-			&x509.MSPIdentityDeserializer{}, // audit
-			m,                               // owner
-			&x509.MSPIdentityDeserializer{}, // issuer
-			m,
-			m,
+			auditorIssuerDeserializer,
+			ownerDeserializer, // owner
+			auditorIssuerDeserializer,
+			ownerDeserializer,
+			ownerDeserializer,
 		),
 	}
 }

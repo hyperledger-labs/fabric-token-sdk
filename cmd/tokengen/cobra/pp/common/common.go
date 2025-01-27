@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	msp3 "github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
@@ -71,7 +72,11 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get auditor identity [%s]", auditor)
 		}
-		pp.AddAuditor(id)
+		wrap, err := identity.WrapWithType(msp.X509Identity, id)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to create x509 identity for auditor [%s]", auditor)
+		}
+		pp.AddAuditor(wrap)
 	}
 	// Issuers
 	for _, issuer := range Issuers {
@@ -79,7 +84,11 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get issuer identity [%s]", issuer)
 		}
-		pp.AddIssuer(id)
+		wrap, err := identity.WrapWithType(msp.X509Identity, id)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to create x509 identity for issuer [%s]", issuer)
+		}
+		pp.AddIssuer(wrap)
 	}
 	return nil
 }

@@ -181,7 +181,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		}
 		span.AddEvent("verify_auditor_signature")
 		if err := v.Verify(signed, msg); err != nil {
-			logger.Debugf("failed verifying auditor signature [%s][%s][%s]", auditorID, hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
+			logger.Errorf("failed verifying auditor signature [%s][%s][%s]", auditorID, hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("auditor signature verified [%s][%s]", auditorID, base64.StdEncoding.EncodeToString(msg))

@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	errors3 "errors"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -18,11 +18,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v2"
 )
@@ -50,7 +49,7 @@ type LocalMembership struct {
 	defaultNetworkIdentity driver.Identity
 	signerService          idriver.SigService
 	deserializerManager    idriver.DeserializerManager
-	identityDB             driver3.IdentityDB
+	identityDB             dbdriver.IdentityDB
 	binderService          idriver.BinderService
 	KeyManagerProviders    []KeyManagerProvider
 	IdentityType           string
@@ -71,7 +70,7 @@ func NewLocalMembership(
 	defaultNetworkIdentity driver.Identity,
 	signerService idriver.SigService,
 	deserializerManager idriver.DeserializerManager,
-	identityDB driver3.IdentityDB,
+	identityDB dbdriver.IdentityDB,
 	binderService idriver.BinderService,
 	identityType string,
 	defaultAnonymous bool,
@@ -120,7 +119,7 @@ func (l *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
 		}
 		return r.Name, nil
 	}
-	return "", errors.Errorf("identifier not found for id [%s]", id)
+	return "", errors2.Errorf("identifier not found for id [%s]", id)
 }
 
 func (l *LocalMembership) GetDefaultIdentifier() string {
@@ -139,7 +138,7 @@ func (l *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (idriv
 	}
 	localIdentity := l.getLocalIdentity(label)
 	if localIdentity == nil {
-		return nil, errors.Errorf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
+		return nil, errors2.Errorf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
 	}
 	return NewIdentityInfo(localIdentity, func() (driver.Identity, []byte, error) {
 		return localIdentity.GetIdentity(auditInfo)
@@ -178,11 +177,11 @@ func (l *LocalMembership) Load(identities []*idriver.ConfiguredIdentity, targets
 	// prepare all identity configurations
 	identityConfigurations, defaults, err := l.toIdentityConfiguration(identities)
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare identity configurations")
+		return errors2.Wrap(err, "failed to prepare identity configurations")
 	}
 	storedIdentityConfigurations, err := l.storedIdentityConfigurations()
 	if err != nil {
-		return errors.Wrap(err, "failed to load stored identity configurations")
+		return errors2.Wrap(err, "failed to load stored identity configurations")
 	}
 
 	// merge identityConfigurations and storedIdentityConfigurations
@@ -273,7 +272,7 @@ func (l *LocalMembership) toIdentityConfiguration(identities []*idriver.Configur
 	for i, identity := range identities {
 		optsRaw, err := yaml.Marshal(identity.Opts)
 		if err != nil {
-			return nil, nil, errors.WithMessage(err, "failed to marshal identity options")
+			return nil, nil, errors2.WithMessagef(err, "failed to marshal identity options")
 		}
 		ics[i] = driver.IdentityConfiguration{
 			ID:     identity.ID,
@@ -304,7 +303,7 @@ func (l *LocalMembership) registerLocalIdentity(identityConfig *driver.IdentityC
 	}
 	if keyManager == nil {
 		return errors2.Wrapf(
-			errors3.Join(errs...),
+			errors.Join(errs...),
 			"failed to get a key manager for the passed identity config for [%s:%s]",
 			identityConfig.ID,
 			identityConfig.URL,
@@ -313,12 +312,12 @@ func (l *LocalMembership) registerLocalIdentity(identityConfig *driver.IdentityC
 
 	l.logger.Debugf("append local identity for [%s]", identityConfig.ID)
 	if err := l.addLocalIdentity(identityConfig, keyManager, defaultIdentity, priority); err != nil {
-		return errors.Wrapf(err, "failed to add local identity for [%s]", identityConfig.ID)
+		return errors2.Wrapf(err, "failed to add local identity for [%s]", identityConfig.ID)
 	}
 
 	if exists, _ := l.identityDB.ConfigurationExists(identityConfig.ID, l.IdentityType, identityConfig.URL); !exists {
 		l.logger.Debugf("does the configuration already exists for [%s]? no, add it", identityConfig.ID)
-		if err := l.identityDB.AddConfiguration(driver3.IdentityConfiguration{
+		if err := l.identityDB.AddConfiguration(dbdriver.IdentityConfiguration{
 			ID:     identityConfig.ID,
 			Type:   l.IdentityType,
 			URL:    identityConfig.URL,
@@ -339,7 +338,7 @@ func (l *LocalMembership) registerIdentityConfiguration(identity *driver.Identit
 		l.logger.Warnf("failed to load local identity at [%s]:[%s]", identity.URL, err)
 		// Does path correspond to a folder containing multiple identities?
 		if err := l.registerLocalIdentities(identity); err != nil {
-			return errors.WithMessage(err, "failed to register local identity")
+			return errors2.WithMessagef(err, "failed to register local identity")
 		}
 	}
 	return nil
@@ -370,18 +369,41 @@ func (l *LocalMembership) registerLocalIdentities(configuration *driver.Identity
 		found++
 	}
 	if found == 0 {
-		return errors.Errorf("no valid identities found in [%s], errs [%v]", configuration.URL, errs)
+		return errors2.Errorf("no valid identities found in [%s], errs [%v]", configuration.URL, errs)
 	}
 	return nil
 }
 
 func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration, keyManager KeyManager, defaultID bool, priority int) error {
+	var getIdentity GetIdentityFunc
+	var identity driver.Identity
+
+	typedIdentityInfo := &TypedIdentityInfo{
+		GetIdentity:      keyManager.Identity,
+		IdentityType:     keyManager.IdentityType(),
+		EnrollmentID:     keyManager.EnrollmentID(),
+		RootIdentity:     l.defaultNetworkIdentity,
+		IdentityProvider: l.IdentityProvider,
+		BinderService:    l.binderService,
+	}
+	if keyManager.Anonymous() {
+		getIdentity = typedIdentityInfo.Get
+	} else {
+		var auditInfo []byte
+		var err error
+		identity, auditInfo, err = typedIdentityInfo.Get(nil)
+		if err != nil {
+			return errors2.WithMessagef(err, "failed to get identity")
+		}
+		getIdentity = func([]byte) (driver.Identity, []byte, error) {
+			return identity, auditInfo, nil
+		}
+	}
+
 	// check for duplicates
 	name := config.ID
 	if keyManager.Anonymous() || len(l.targetIdentities) == 0 {
 		l.logger.Debugf("no target identity check needed, skip it")
-	} else if identity, _, err := keyManager.Identity(nil); err != nil {
-		return err
 	} else if found := slices.ContainsFunc(l.targetIdentities, identity.Equal); !found {
 		l.logger.Debugf("identity [%s:%s] not in target identities, ignore it", name, config.URL)
 		return nil
@@ -395,16 +417,8 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 		Default:      defaultID,
 		EnrollmentID: eID,
 		Anonymous:    keyManager.Anonymous(),
-		// GetIdentity: (&WrappingBindingInfo{
-		// 	GetIdentity:      keyManager.Identity,
-		// 	IdentityType:     keyManager.IdentityType(),
-		// 	EnrollmentID:     eID,
-		// 	RootIdentity:     l.defaultNetworkIdentity,
-		// 	IdentityProvider: l.IdentityProvider,
-		// 	BinderService:    l.binderService,
-		// }).Get,
-		GetIdentity: keyManager.Identity,
-		Remote:      keyManager.IsRemote(),
+		GetIdentity:  getIdentity,
+		Remote:       keyManager.IsRemote(),
 	}
 	l.logger.Debugf("new local identity for [%s:%s] - [%v]", name, eID, localIdentity)
 
@@ -433,17 +447,13 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 
 	// if the keyManager is not anonymous
 	if !keyManager.Anonymous() {
-		identity, _, err := keyManager.Identity(nil)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to get wallet identity from [%s]", name)
-		}
 		if l.logger.IsEnabledFor(zapcore.DebugLevel) {
 			l.logger.Debugf("adding identity mapping for [%s]", identity)
 		}
 		l.localIdentitiesByIdentity[identity.String()] = localIdentity
 		if l.binderService != nil {
 			if err := l.binderService.Bind(l.defaultNetworkIdentity, identity, false); err != nil {
-				return errors.WithMessagef(err, "cannot bind identity for [%s,%s]", identity, eID)
+				return errors2.WithMessagef(err, "cannot bind identity for [%s,%s]", identity, eID)
 			}
 		}
 	}
@@ -474,14 +484,14 @@ func (l *LocalMembership) getLocalIdentity(label string) *LocalIdentity {
 	return nil
 }
 
-func (l *LocalMembership) storedIdentityConfigurations() ([]driver3.IdentityConfiguration, error) {
+func (l *LocalMembership) storedIdentityConfigurations() ([]dbdriver.IdentityConfiguration, error) {
 	it, err := l.identityDB.IteratorConfigurations(l.IdentityType)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get registered identities from kvs")
+		return nil, errors2.WithMessagef(err, "failed to get registered identities from kvs")
 	}
 	defer it.Close()
 	// copy the iterator
-	items := make([]driver3.IdentityConfiguration, 0)
+	items := make([]dbdriver.IdentityConfiguration, 0)
 	for it.HasNext() {
 		item, err := it.Next()
 		if err != nil {
@@ -492,7 +502,7 @@ func (l *LocalMembership) storedIdentityConfigurations() ([]driver3.IdentityConf
 	return items, nil
 }
 
-type WrappingBindingInfo struct {
+type TypedIdentityInfo struct {
 	GetIdentity  func([]byte) (driver.Identity, []byte, error)
 	IdentityType identity.Type
 
@@ -502,39 +512,39 @@ type WrappingBindingInfo struct {
 	BinderService    idriver.BinderService
 }
 
-func (i *WrappingBindingInfo) Get(auditInfo []byte) (driver.Identity, []byte, error) {
+func (i *TypedIdentityInfo) Get(auditInfo []byte) (driver.Identity, []byte, error) {
 	// get the identity
 	id, ai, err := i.GetIdentity(auditInfo)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID)
+		return nil, nil, errors2.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID)
 	}
 	// register the audit info
 	if err := i.IdentityProvider.RegisterAuditInfo(id, ai); err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to register audit info for identity [%s]", id)
+		return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 	}
 	// bind the identity to the default FSC node identity
 	if i.BinderService != nil {
 		if err := i.BinderService.Bind(i.RootIdentity, id, false); err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
+			return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
 		}
 	}
 	// wrap the backend identity, and bind it
 	if len(i.IdentityType) != 0 {
 		typedIdentity, err := identity.WrapWithType(i.IdentityType, id)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
+			return nil, nil, errors2.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
 		}
 		if i.BinderService != nil {
 			if err := i.BinderService.Bind(id, typedIdentity, true); err != nil {
-				return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
+				return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
 			}
 			if err := i.BinderService.Bind(i.RootIdentity, typedIdentity, false); err != nil {
-				return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, i.RootIdentity)
+				return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, i.RootIdentity)
 			}
 		} else {
 			// register at the list the audit info
 			if err := i.IdentityProvider.RegisterAuditInfo(typedIdentity, ai); err != nil {
-				return nil, nil, errors.Wrapf(err, "failed to register audit info for identity [%s]", id)
+				return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 			}
 		}
 		id = typedIdentity
