@@ -174,6 +174,7 @@ func (s *finalityService) GetFinality(ctx context.Context, txID driver.TxID, tim
 	}
 
 	span.AddEvent("add_listener")
+	// Capacity set to 2, in case an event comes from the listener and one from the DB at the same time
 	ch := make(chan common.StatusEvent, 2)
 	logger.Infof("add status listener for [%s]", txID)
 	s.db.AddStatusListener(txID, ch)
