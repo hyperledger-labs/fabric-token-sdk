@@ -73,22 +73,20 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 		timeout = 5 * time.Minute
 	}
 	logger.Infof("call finality for [%s]", txID)
+	defer logger.Infof("found finality for [%s]", txID)
 	fs, err := GetFinalityService(ctx, tmsID)
 	if err != nil {
 		logger.Errorf("error finding finality service: %v", err)
 		return nil, errors.Wrapf(err, "could not find finality service")
 	}
-	logger.Infof("found finality service for [%s]: %v", txID, fs)
 	return nil, fs.GetFinality(ctx.Context(), txID, timeout)
 }
 
 func GetFinalityService(sp view2.ServiceProvider, tmsID driver2.TMSID) (FinalityService, error) {
-	logger.Infof("get finality service for [%v]", tmsID)
 	fsp, err := sp.GetService(reflect.TypeOf((*FinalityServiceProvider)(nil)))
 	if err != nil {
 		return nil, err
 	}
-	logger.Infof("get auditor wallet")
 	if isAuditor := MyAuditorWallet(sp) != nil; isAuditor {
 		logger.Infof("is auditor")
 		return fsp.(FinalityServiceProvider).NewAuditFinalityService(tmsID)
@@ -125,10 +123,8 @@ func finalityProvider[T finalityDB](provider dbProvider[T], tracerProvider trace
 		defer logger.Infof("created new finality provider for [%v]", tmsID)
 		db, err := provider(tmsID)
 		if err != nil {
-			logger.Errorf("failed to provide db for [%s]: %v", tmsID, err)
 			return nil, err
 		}
-		logger.Infof("provided db for [%s]: %v", tmsID, err)
 		return newFinalityService(db, tracerProvider), nil
 	})
 }
@@ -147,13 +143,11 @@ func (p *finalityServiceProvider) NewTTxFinalityService(tmsID driver2.TMSID) (Fi
 }
 
 func newFinalityService(db finalityDB, tracerProvider trace.TracerProvider) *finalityService {
-	logger.Infof("create new finality service")
-	defer logger.Infof("created new finality service")
 	s := &finalityService{
 		db:      db,
 		tracer:  tracerProvider.Tracer("finality_tracer"),
 		timeout: finalityTimeout,
-		polling: 1 * time.Second,
+		polling: 500 * time.Millisecond,
 		pending: make(map[driver.TxID]pendingTx),
 	}
 	go s.startQueryPending(context.Background())
