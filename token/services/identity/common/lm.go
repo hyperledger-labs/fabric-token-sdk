@@ -262,7 +262,7 @@ func (l *LocalMembership) firstDefaultIdentifier() *LocalIdentity {
 	return nil
 }
 
-func (l *LocalMembership) toIdentityConfiguration(identities []*config.Identity) ([]driver.IdentityConfiguration, []bool, error) {
+func (l *LocalMembership) toIdentityConfiguration(identities []*idriver.ConfiguredIdentity) ([]driver.IdentityConfiguration, []bool, error) {
 	ics := make([]driver.IdentityConfiguration, len(identities))
 	defaults := make([]bool, len(identities))
 	for i, identity := range identities {
