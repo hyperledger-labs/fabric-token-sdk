@@ -55,11 +55,11 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			provider, _, err := x509.NewKeyManager(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
+			km, _, err := x509.NewKeyManager(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to create x509 provider")
+				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
-			id, _, err := provider.Identity(nil)
+			id, _, err := km.Identity(nil)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
@@ -75,11 +75,11 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 		}
 		for _, issuer := range wallets.Issuers {
 			// Build an MSP Identity
-			provider, _, err := x509.NewKeyManager(issuer.Path, "", msp2.AuditorMSPID, nil, issuer.Opts)
+			km, _, err := x509.NewKeyManager(issuer.Path, "", msp2.AuditorMSPID, nil, issuer.Opts)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to create x509 provider")
+				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
-			id, _, err := provider.Identity(nil)
+			id, _, err := km.Identity(nil)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
@@ -152,11 +152,11 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			provider, _, err := x509.NewKeyManager(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
+			km, _, err := x509.NewKeyManager(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to create x509 provider")
+				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
-			id, _, err := provider.Identity(nil)
+			id, _, err := km.Identity(nil)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
@@ -172,11 +172,11 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 		}
 		for _, issuer := range wallets.Issuers {
 			// Build an MSP Identity
-			provider, _, err := x509.NewKeyManager(issuer.Path, "", msp2.AuditorMSPID, nil, issuer.Opts)
+			km, _, err := x509.NewKeyManager(issuer.Path, "", msp2.AuditorMSPID, nil, issuer.Opts)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to create x509 provider")
+				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
-			id, _, err := provider.Identity(nil)
+			id, _, err := km.Identity(nil)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}

@@ -126,11 +126,11 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequest(ledger driver.Ledger, s
 	}
 	err = v.verifyIssues(ledger, ia, signatureProvider, attributes)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to verify issuers' signatures [%s]", anchor)
+		return nil, nil, errors.Wrapf(err, "failed to verify issue actions [%s]", anchor)
 	}
 	err = v.verifyTransfers(ledger, ta, signatureProvider, attributes)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to verify senders' signatures [%s]", anchor)
+		return nil, nil, errors.Wrapf(err, "failed to verify transfer actions [%s]", anchor)
 	}
 
 	var actions []interface{}
@@ -178,9 +178,9 @@ func (v *Validator[P, T, TA, IA, DS]) verifyAuditorSignature(signatureProvider d
 }
 
 func (v *Validator[P, T, TA, IA, DS]) verifyIssues(ledger driver.Ledger, issues []IA, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
-	for _, issue := range issues {
+	for i, issue := range issues {
 		if err := v.verifyIssue(issue, ledger, signatureProvider, attributes); err != nil {
-			return errors.Wrapf(err, "failed to verify transfer action")
+			return errors.Wrapf(err, "failed to verify issue action at [%d]", i)
 		}
 	}
 	return nil
@@ -221,9 +221,9 @@ func (v *Validator[P, T, TA, IA, DS]) verifyIssue(tr IA, ledger driver.Ledger, s
 func (v *Validator[P, T, TA, IA, DS]) verifyTransfers(ledger driver.Ledger, transferActions []TA, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
 	v.Logger.Debugf("check sender start...")
 	defer v.Logger.Debugf("check sender finished.")
-	for _, action := range transferActions {
+	for i, action := range transferActions {
 		if err := v.verifyTransfer(action, ledger, signatureProvider, attributes); err != nil {
-			return errors.Wrapf(err, "failed to verify transfer action")
+			return errors.Wrapf(err, "failed to verify transfer action at [%d]", i)
 		}
 	}
 	return nil

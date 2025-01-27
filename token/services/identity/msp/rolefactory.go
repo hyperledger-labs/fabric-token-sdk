@@ -133,6 +133,7 @@ func (f *RoleFactory) NewIdemix(role identity.RoleType, cacheSize int, issuerPub
 		f.BinderService,
 		RoleToMSPID[role],
 		true,
+		f.IdentityProvider,
 		kmps...,
 	)
 	identities, err := f.IdentitiesForRole(role)
@@ -179,6 +180,7 @@ func (f *RoleFactory) newX509WithType(role identity.RoleType, identityType strin
 		f.BinderService,
 		RoleToMSPID[role],
 		false,
+		f.IdentityProvider,
 		kmp,
 	)
 	identities, err := f.IdentitiesForRole(role)

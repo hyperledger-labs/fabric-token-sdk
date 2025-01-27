@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
@@ -35,6 +36,7 @@ type KeyManager interface {
 	EnrollmentID() string
 	IsRemote() bool
 	Anonymous() bool
+	IdentityType() identity.Type
 	Identity([]byte) (driver.Identity, []byte, error)
 }
 
@@ -52,6 +54,7 @@ type LocalMembership struct {
 	binderService          idriver.BinderService
 	KeyManagerProviders    []KeyManagerProvider
 	IdentityType           string
+	IdentityProvider       idriver.IdentityProvider
 	logger                 logging.Logger
 
 	localIdentitiesMutex      sync.RWMutex
@@ -72,6 +75,7 @@ func NewLocalMembership(
 	binderService idriver.BinderService,
 	identityType string,
 	defaultAnonymous bool,
+	identityProvider idriver.IdentityProvider,
 	keyManagerProviders ...KeyManagerProvider,
 ) *LocalMembership {
 	return &LocalMembership{
@@ -87,6 +91,7 @@ func NewLocalMembership(
 		IdentityType:              identityType,
 		KeyManagerProviders:       keyManagerProviders,
 		DefaultAnonymous:          defaultAnonymous,
+		IdentityProvider:          identityProvider,
 	}
 }
 
@@ -390,8 +395,16 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 		Default:      defaultID,
 		EnrollmentID: eID,
 		Anonymous:    keyManager.Anonymous(),
-		GetIdentity:  keyManager.Identity,
-		Remote:       keyManager.IsRemote(),
+		// GetIdentity: (&WrappingBindingInfo{
+		// 	GetIdentity:      keyManager.Identity,
+		// 	IdentityType:     keyManager.IdentityType(),
+		// 	EnrollmentID:     eID,
+		// 	RootIdentity:     l.defaultNetworkIdentity,
+		// 	IdentityProvider: l.IdentityProvider,
+		// 	BinderService:    l.binderService,
+		// }).Get,
+		GetIdentity: keyManager.Identity,
+		Remote:      keyManager.IsRemote(),
 	}
 	l.logger.Debugf("new local identity for [%s:%s] - [%v]", name, eID, localIdentity)
 
@@ -477,4 +490,54 @@ func (l *LocalMembership) storedIdentityConfigurations() ([]driver3.IdentityConf
 		items = append(items, item)
 	}
 	return items, nil
+}
+
+type WrappingBindingInfo struct {
+	GetIdentity  func([]byte) (driver.Identity, []byte, error)
+	IdentityType identity.Type
+
+	EnrollmentID     string
+	RootIdentity     driver.Identity
+	IdentityProvider idriver.IdentityProvider
+	BinderService    idriver.BinderService
+}
+
+func (i *WrappingBindingInfo) Get(auditInfo []byte) (driver.Identity, []byte, error) {
+	// get the identity
+	id, ai, err := i.GetIdentity(auditInfo)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID)
+	}
+	// register the audit info
+	if err := i.IdentityProvider.RegisterAuditInfo(id, ai); err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to register audit info for identity [%s]", id)
+	}
+	// bind the identity to the default FSC node identity
+	if i.BinderService != nil {
+		if err := i.BinderService.Bind(i.RootIdentity, id, false); err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
+		}
+	}
+	// wrap the backend identity, and bind it
+	if len(i.IdentityType) != 0 {
+		typedIdentity, err := identity.WrapWithType(i.IdentityType, id)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
+		}
+		if i.BinderService != nil {
+			if err := i.BinderService.Bind(id, typedIdentity, true); err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
+			}
+			if err := i.BinderService.Bind(i.RootIdentity, typedIdentity, false); err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, i.RootIdentity)
+			}
+		} else {
+			// register at the list the audit info
+			if err := i.IdentityProvider.RegisterAuditInfo(typedIdentity, ai); err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to register audit info for identity [%s]", id)
+			}
+		}
+		id = typedIdentity
+	}
+	return id, ai, nil
 }
