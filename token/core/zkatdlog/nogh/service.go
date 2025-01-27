@@ -11,9 +11,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/pkg/errors"
 )
 
 type Service struct {

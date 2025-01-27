@@ -99,7 +99,7 @@ func (d *base) newWalletService(
 		kmp := idemix2.NewKeyManagerProvider(
 			key.PublicKey,
 			key.Curve,
-			msp.RoleToMSPID[driver.OwnerRole],
+			msp.RoleToMSPID[identity.OwnerRole],
 			keyStore,
 			sigService,
 			identityConfig,
@@ -108,7 +108,7 @@ func (d *base) newWalletService(
 		)
 		kmps = append(kmps, kmp)
 	}
-	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[driver.OwnerRole], ip, ignoreRemote))
+	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.OwnerRole], ip, ignoreRemote))
 
 	role, err := roleFactory.NewIdemix(
 		identity.OwnerRole,
