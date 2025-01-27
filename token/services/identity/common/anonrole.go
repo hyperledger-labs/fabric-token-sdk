@@ -81,7 +81,14 @@ func (r *AnonymousRole) mapStringToID(v string) (driver.Identity, string, error)
 		return nil, defaultIdentifier, nil
 	case r.localMembership.IsMe(labelAsIdentity):
 		r.logger.Debugf("passed a local member")
-		return nil, defaultIdentifier, nil
+		id := labelAsIdentity
+		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
+			return nil, idIdentifier, nil
+		}
+		if r.logger.IsEnabledFor(zapcore.DebugLevel) {
+			r.logger.Debugf("failed getting identity info for [%s], returning the identity", id)
+		}
+		return id, "", nil
 	}
 
 	if idIdentifier, err := r.localMembership.GetIdentifier(labelAsIdentity); err == nil {
@@ -94,14 +101,14 @@ func (r *AnonymousRole) mapStringToID(v string) (driver.Identity, string, error)
 }
 
 func (r *AnonymousRole) mapIdentityToID(v driver.Identity) (driver.Identity, string, error) {
-	defaultID := r.localMembership.DefaultNetworkIdentity()
+	defaultNetworkIdentity := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
 	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
 		r.logger.Debugf("[%s] mapping driver.Identity identifier for [%s], default identities [%s:%s]",
 			r.networkID,
 			v,
-			defaultID.String(),
+			defaultNetworkIdentity.String(),
 			r.nodeIdentity.String(),
 		)
 	}
@@ -111,7 +118,7 @@ func (r *AnonymousRole) mapIdentityToID(v driver.Identity) (driver.Identity, str
 	case id.IsNone():
 		r.logger.Debugf("passed empty identity")
 		return nil, defaultIdentifier, nil
-	case id.Equal(defaultID):
+	case id.Equal(defaultNetworkIdentity):
 		r.logger.Debugf("passed default identity")
 		return nil, defaultIdentifier, nil
 	case string(id) == defaultIdentifier:
