@@ -61,7 +61,12 @@ func GetMSPIdentity(entry string, mspID string) (driver.Identity, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create x509 identity for [%s]", entry)
 	}
-	return id, nil
+
+	wrap, err := identity.WrapWithType(msp.X509Identity, id)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to wrap x509 identity for [%s]", entry)
+	}
+	return wrap, nil
 }
 
 // SetupIssuersAndAuditors sets up the issuers and auditors for the given public parameters
@@ -72,11 +77,7 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get auditor identity [%s]", auditor)
 		}
-		wrap, err := identity.WrapWithType(msp.X509Identity, id)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to create x509 identity for auditor [%s]", auditor)
-		}
-		pp.AddAuditor(wrap)
+		pp.AddAuditor(id)
 	}
 	// Issuers
 	for _, issuer := range Issuers {
@@ -84,11 +85,7 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get issuer identity [%s]", issuer)
 		}
-		wrap, err := identity.WrapWithType(msp.X509Identity, id)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to create x509 identity for issuer [%s]", issuer)
-		}
-		pp.AddIssuer(wrap)
+		pp.AddIssuer(id)
 	}
 	return nil
 }

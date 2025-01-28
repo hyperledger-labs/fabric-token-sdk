@@ -272,10 +272,10 @@ var _ = Describe("validator", func() {
 	})
 })
 
-func prepareECDSASigner() (*ecdsa.ECDSASigner, *ecdsa.ECDSAVerifier) {
+func prepareECDSASigner() (*ecdsa.Signer, *ecdsa.Verifier) {
 	signer, err := ecdsa.NewECDSASigner()
 	Expect(err).NotTo(HaveOccurred())
-	return signer, signer.ECDSAVerifier
+	return signer, signer.Verifier
 }
 
 func prepareNonAnonymousIssueRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*issue2.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata) {
