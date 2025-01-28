@@ -153,7 +153,7 @@ type Authorization interface {
 
 //go:generate counterfeiter -o mock/ws.go -fake-name WalletService . WalletService
 
-// WalletService models the wallet service that handles issuer, recipient, auditor and certifier wallets
+// WalletService models the wallet service that handles issuer, owner, auditor, and certifier wallets
 type WalletService interface {
 	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
 	RegisterRecipientIdentity(data *RecipientData) error

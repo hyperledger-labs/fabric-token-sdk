@@ -27,6 +27,7 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -1022,14 +1023,16 @@ func GetIssuerIdentity(tms *topology.TMS, id string) []byte {
 }
 
 func getIdentity(identities []topology.Identity, id string, mspID string) []byte {
-	for _, identity := range identities {
-		if identity.ID == id {
+	for _, topologyIdentity := range identities {
+		if topologyIdentity.ID == id {
 			// Build an MSP Identity
-			provider, _, err := x509.NewKeyManager(identity.Path, "", mspID, nil, identity.Opts)
+			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, "", mspID, nil, topologyIdentity.Opts)
 			Expect(err).NotTo(HaveOccurred())
-			id, _, err := provider.Identity(nil)
+			newIdentity, _, err := kmp.Identity(nil)
 			Expect(err).NotTo(HaveOccurred())
-			return id
+			wrap, err := identity.WrapWithType(msp2.X509Identity, newIdentity)
+			Expect(err).NotTo(HaveOccurred())
+			return wrap
 		}
 	}
 	Expect(false).To(BeTrue(), "identity not found in [%s]", id)

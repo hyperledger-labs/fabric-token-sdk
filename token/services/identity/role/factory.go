@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package role
 
 import (
+	"fmt"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -74,7 +76,7 @@ func (f *Factory) NewRole(role identity.RoleType, defaultAnon bool, targets []dr
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
 	lm := membership.NewLocalMembership(
-		logging.MustGetLogger("token-sdk.services.identity.msp.x509"),
+		f.Logger.Named(fmt.Sprintf("membership.role.%s", identity.RoleToString(role))),
 		f.Config,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
