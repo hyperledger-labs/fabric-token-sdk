@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
-	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
@@ -134,7 +133,7 @@ func (d *base) newWalletService(
 		logger,
 		ip,
 		deserializer,
-		zkatdlog.NewWalletFactory(logger, ip, qe, identityConfig, deserializer),
+		wallet.NewFactory(logger, ip, qe, identityConfig, deserializer),
 		roles.ToWalletRegistries(logger, walletDB),
 	), nil
 }

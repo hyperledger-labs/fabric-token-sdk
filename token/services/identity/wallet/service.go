@@ -32,7 +32,7 @@ type Registry interface {
 	GetIdentityMetadata(identity driver.Identity, wID string, meta any) error
 }
 
-type Factory interface {
+type walletFactory interface {
 	NewWallet(id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error)
 }
 
@@ -46,7 +46,7 @@ type Service struct {
 	IdentityProvider driver.IdentityProvider
 	Deserializer     driver.Deserializer
 
-	WalletFactory Factory
+	WalletFactory walletFactory
 	Registries    map[identity.RoleType]*RegistryEntry
 }
 
@@ -54,7 +54,7 @@ func NewService(
 	logger logging.Logger,
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
-	walletFactory Factory,
+	walletFactory walletFactory,
 	walletRegistries map[identity.RoleType]Registry,
 ) *Service {
 	registries := map[identity.RoleType]*RegistryEntry{}

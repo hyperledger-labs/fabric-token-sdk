@@ -4,14 +4,13 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package nogh
+package wallet
 
 import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -28,7 +27,7 @@ type WalletsConfiguration interface {
 	CacheSizeForOwnerID(id string) int
 }
 
-type WalletFactory struct {
+type Factory struct {
 	Logger               logging.Logger
 	IdentityProvider     driver.IdentityProvider
 	TokenVault           TokenVault
@@ -36,14 +35,14 @@ type WalletFactory struct {
 	Deserializer         driver.Deserializer
 }
 
-func NewWalletFactory(
+func NewFactory(
 	logger logging.Logger,
 	identityProvider driver.IdentityProvider,
 	tokenVault TokenVault,
 	walletsConfiguration WalletsConfiguration,
 	deserializer driver.Deserializer,
-) *WalletFactory {
-	return &WalletFactory{
+) *Factory {
+	return &Factory{
 		Logger:               logger,
 		IdentityProvider:     identityProvider,
 		TokenVault:           tokenVault,
@@ -52,30 +51,39 @@ func NewWalletFactory(
 	}
 }
 
-func (w *WalletFactory) NewWallet(id string, role identity.RoleType, walletRegistry wallet.Registry, identityInfo identity.Info) (driver.Wallet, error) {
+func (w *Factory) NewWallet(id string, role identity.RoleType, walletRegistry Registry, identityInfo identity.Info) (driver.Wallet, error) {
 	switch role {
 	case identity.OwnerRole:
-		newWallet, err := wallet.NewAnonymousOwnerWallet(
-			w.Logger,
-			w.IdentityProvider,
-			w.TokenVault,
-			w.Deserializer,
-			walletRegistry,
-			id,
-			identityInfo,
-			w.walletsConfiguration.CacheSizeForOwnerID(id),
-		)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to create new owner wallet [%s]", id)
+		if identityInfo.Anonymous() {
+			newWallet, err := NewAnonymousOwnerWallet(
+				w.Logger,
+				w.IdentityProvider,
+				w.TokenVault,
+				w.Deserializer,
+				walletRegistry,
+				id,
+				identityInfo,
+				w.walletsConfiguration.CacheSizeForOwnerID(id),
+			)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to create new owner wallet [%s]", id)
+			}
+			w.Logger.Debugf("created owner wallet [%s] for identity [%s:%s:%v]", id, identityInfo.ID(), identityInfo.EnrollmentID(), identityInfo.Remote())
+			return newWallet, nil
 		}
-		w.Logger.Debugf("created owner wallet [%s] for identity [%s:%s:%v]", id, identityInfo.ID(), identityInfo.EnrollmentID(), identityInfo.Remote())
+
+		// non-anonymous
+		newWallet, err := NewLongTermOwnerWallet(w.IdentityProvider, w.TokenVault, id, identityInfo)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to create owner wallet [%s]", id)
+		}
 		return newWallet, nil
 	case identity.IssuerRole:
 		idInfoIdentity, _, err := identityInfo.Get()
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get issuer wallet identity for [%s]", id)
 		}
-		newWallet := wallet.NewIssuerWallet(w.Logger, w.IdentityProvider, w.TokenVault, id, idInfoIdentity)
+		newWallet := NewIssuerWallet(w.Logger, w.IdentityProvider, w.TokenVault, id, idInfoIdentity)
 		if err := walletRegistry.BindIdentity(idInfoIdentity, identityInfo.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
@@ -87,7 +95,7 @@ func (w *WalletFactory) NewWallet(id string, role identity.RoleType, walletRegis
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get auditor wallet identity for [%s]", id)
 		}
-		newWallet := wallet.NewAuditorWallet(w.IdentityProvider, id, idInfoIdentity)
+		newWallet := NewAuditorWallet(w.IdentityProvider, id, idInfoIdentity)
 		if err := walletRegistry.BindIdentity(idInfoIdentity, identityInfo.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}

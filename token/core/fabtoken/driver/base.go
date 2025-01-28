@@ -42,7 +42,7 @@ func (d *base) newWalletService(
 	tmsConfig driver.Config,
 	binder driver2.NetworkBinderService,
 	storageProvider identity.StorageProvider,
-	qe fabtoken.TokenVault,
+	qe driver.QueryEngine,
 	logger logging.Logger,
 	fscIdentity driver.Identity,
 	networkDefaultIdentity driver.Identity,
@@ -93,11 +93,12 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
+	deserializer := NewDeserializer()
 	ws := wallet.NewService(
 		logger,
 		ip,
-		NewDeserializer(),
-		fabtoken.NewWalletFactory(logger, ip, qe),
+		deserializer,
+		wallet.NewFactory(logger, ip, qe, identityConfig, deserializer),
 		roles.ToWalletRegistries(logger, walletDB),
 	)
 
