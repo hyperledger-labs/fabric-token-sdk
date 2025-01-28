@@ -2,6 +2,10 @@
 
 The Token-SDK uses identities to establish trust and control access within the system. 
 These identities are like digital passports that verify who a party is and what actions they're authorized to perform.
+Therefore, the identity service must offer:
+1. A way to define these identities, 
+2. A way to generate and verify digital signatures valid under these identities, and
+3. A way to marshal/unmarshal identities and signatures.
 
 **Think of Roles as Teams:**
 
@@ -29,15 +33,14 @@ This is particularly useful for protecting user privacy.
 
 Importantly, roles can contain different identity types. 
 These roles then act as the foundation for creating wallets. 
-A wallet is like a digital vault that stores a long-term identity (the main key) and any credentials derived from it. 
+A wallet is like a digital vault that stores a long-term identity (the main key) and any credentials derived from it, if supported. 
 Different wallet types provide different functionalities. 
 For example, an issuer wallet lets you see a list of issued tokens, while an owner wallet shows unspent tokens.
-
-To manage these identities and wallets, the identity service provides several tools:
-
-* **Identity Provider:** Manages roles and the identities within them.
-* **Wallet Registry:** Uses the Identity Provider to manage all wallets associated with a specific role. 
-This registry relies on the token driver to implement the specific wallet functionalities defined by the Driver API.
+All these wallets have though a minimum common denominator: 
+Given a wallet, you, as the developer, can derive identities to be used in different contexts.
+For example, given an owner wallet, you can derive the identities that will own tokens. 
+To spend these tokens, the wallet will give access to the signers bound to these identities.
+The signers can be used to generate the signatures necessary to spend these tokens.
 
 In essence, the Token-SDK identity service provides a secure and flexible framework for managing access control within your system.
 
@@ -47,7 +50,8 @@ The identity service is locate under [`token/services/identity`](./../../token/s
 
 Building on the concept of long-term identities, we'll now explore how they are grouped into roles within the identity service.
 
-Each role acts as a container for long-term identities, which are then used to create wallets. Here's the interface that defines a role:
+Each role acts as a container for long-term identities, which are then used to create wallets. 
+Here's the interface that defines a role:
 
 ```go
 // Role is a container of long-term identities.
@@ -69,24 +73,66 @@ type Role interface {
 
 This interface offers functions for managing identities within the role. 
 You, as the developer, have the flexibility to implement a role using any identity representation that best fits your application's needs. 
-For example, a role could even encompass identities based on various cryptographic schemes.
 
-The identity service conveniently provides two built-in implementations of the Role interface. 
-Both implementations leverage the concept of Hyperledger Fabric MSP ([https://hyperledger-fabric.readthedocs.io/en/latest/msp.html](https://hyperledger-fabric.readthedocs.io/en/latest/msp.html)):
+A default implementation is provided under [`token/services/identity/role`](./../../token/services/identity/role).
 
-* [**MSP X.509:**](./../../token/services/identity/msp/x509) This implementation retrieves long-term identities from local folders adhering to the X.509-based MSP format.
-* [**MSP Idemix:**](./../../token/services/identity/msp/idemix) This implementation loads long-term identities from local folders that follow the Idemix-based MSP format.
+## Understanding Wallets in More Detail
 
-## Using the Identity Service in a Token Driver
+The Token-SDK abstracts the wallet management via a service called `WalletService`. 
+Here is the interface that defines such a service:
 
-If you want to use the Identity Service in your Token Driver, then here is what you need to do.
+```go
+// WalletService models the wallet service that handles issuer, recipient, auditor and certifier wallets
+type WalletService interface {
+	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
+	RegisterRecipientIdentity(data *RecipientData) error
 
-First, instantiate your roles. The identity service come equipped with two `Role` implementation.
-One is based on X.509 certificates, the other one is based on Idemix. 
-Both requires the identities to be stored on the filesystem following the Hyperledger Fabric MSP prescriptions. 
+	// GetAuditInfo retrieves the audit information for the passed identity
+	GetAuditInfo(id Identity) ([]byte, error)
 
-High level, these are the steps to follow:
-1. Instantiate the roles your driver will support.
-2. Instantiate the Wallet Registry for each role.
+	// GetEnrollmentID extracts the enrollment id from the passed audit information
+	GetEnrollmentID(identity Identity, auditInfo []byte) (string, error)
 
-See an example taken from the [`fabtoken`](./../../token/core/fabtoken/driver) driver.
+	// GetRevocationHandle extracts the revocation handler from the passed audit information
+	GetRevocationHandle(identity Identity, auditInfo []byte) (string, error)
+
+	// GetEIDAndRH returns both enrollment ID and revocation handle
+	GetEIDAndRH(identity Identity, auditInfo []byte) (string, string, error)
+
+	// Wallet returns the wallet bound to the passed identity, if any is available
+	Wallet(identity Identity) Wallet
+
+	// RegisterOwnerIdentity registers an owner long-term identity
+	RegisterOwnerIdentity(config IdentityConfiguration) error
+
+	// RegisterIssuerIdentity registers an issuer long-term wallet
+	RegisterIssuerIdentity(config IdentityConfiguration) error
+
+	// OwnerWalletIDs returns the list of owner wallet identifiers
+	OwnerWalletIDs() ([]string, error)
+
+	// OwnerWallet returns an instance of the OwnerWallet interface bound to the passed id.
+	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
+	OwnerWallet(id WalletLookupID) (OwnerWallet, error)
+
+	// IssuerWallet returns an instance of the IssuerWallet interface bound to the passed id.
+	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
+	IssuerWallet(id WalletLookupID) (IssuerWallet, error)
+
+	// AuditorWallet returns an instance of the AuditorWallet interface bound to the passed id.
+	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
+	AuditorWallet(id WalletLookupID) (AuditorWallet, error)
+
+	// CertifierWallet returns an instance of the CertifierWallet interface bound to the passed id.
+	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
+	CertifierWallet(id WalletLookupID) (CertifierWallet, error)
+
+	// SpentIDs returns the spend ids for the passed token ids
+	SpentIDs(ids ...*token.ID) ([]string, error)
+}
+```
+
+The `WalletService` gives access to the available wallets.
+You, as the developer, have the flexibility to implement a `WalletService` that best fits your application's needs.
+
+A default implementation is provided under [`token/services/identity/wallet`](./../../token/services/identity/wallet).
