@@ -18,6 +18,8 @@ import (
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/pkg/errors"
@@ -36,16 +38,16 @@ var (
 	}
 )
 
-type ECDSASignature struct {
+type Signature struct {
 	R, S *big.Int
 }
 
-type ECDSASigner struct {
-	*ECDSAVerifier
+type Signer struct {
+	*Verifier
 	SK *ecdsa.PrivateKey
 }
 
-func (d *ECDSASigner) Sign(message []byte) ([]byte, error) {
+func (d *Signer) Sign(message []byte) ([]byte, error) {
 	dgst := sha256.Sum256(message)
 
 	r, s, err := ecdsa.Sign(rand.Reader, d.SK, dgst[:])
@@ -61,12 +63,25 @@ func (d *ECDSASigner) Sign(message []byte) ([]byte, error) {
 	return utils.MarshalECDSASignature(r, s)
 }
 
-type ECDSAVerifier struct {
+func (d *Signer) Serialize() ([]byte, error) {
+	return d.Verifier.Serialize()
+}
+
+type Verifier struct {
 	PK *ecdsa.PublicKey
 }
 
-func (d *ECDSAVerifier) Verify(message, sigma []byte) error {
-	signature := &ECDSASignature{}
+func NewECDSASigner() (*Signer, error) {
+	// Create ephemeral key and store it in the context
+	sk, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	return &Signer{SK: sk, Verifier: &Verifier{PK: &sk.PublicKey}}, nil
+}
+
+func (v *Verifier) Verify(message, sigma []byte) error {
+	signature := &Signature{}
 	_, err := asn1.Unmarshal(sigma, signature)
 	if err != nil {
 		return err
@@ -82,7 +97,7 @@ func (d *ECDSAVerifier) Verify(message, sigma []byte) error {
 	}
 	digest := hash.Sum(nil)
 
-	lowS, err := IsLowS(d.PK, signature.S)
+	lowS, err := IsLowS(v.PK, signature.S)
 	if err != nil {
 		return err
 	}
@@ -90,7 +105,7 @@ func (d *ECDSAVerifier) Verify(message, sigma []byte) error {
 		return errors.New("signature is not in lowS")
 	}
 
-	valid := ecdsa.Verify(d.PK, digest, signature.R, signature.S)
+	valid := ecdsa.Verify(v.PK, digest, signature.R, signature.S)
 	if !valid {
 		return errors.Errorf("signature not valid")
 	}
@@ -98,31 +113,14 @@ func (d *ECDSAVerifier) Verify(message, sigma []byte) error {
 	return nil
 }
 
-func NewECDSASigner() (*ECDSASigner, error) {
-	// Create ephemeral key and store it in the context
-	sk, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-	return &ECDSASigner{SK: sk, ECDSAVerifier: &ECDSAVerifier{PK: &sk.PublicKey}}, nil
-}
-
-func NewECDSAVerifier(pk *ecdsa.PublicKey) *ECDSAVerifier {
-	return &ECDSAVerifier{PK: pk}
-}
-
-func (s *ECDSASigner) Serialize() ([]byte, error) {
-	return s.ECDSAVerifier.Serialize()
-}
-
-func (v *ECDSAVerifier) Serialize() ([]byte, error) {
+func (v *Verifier) Serialize() ([]byte, error) {
 	pkRaw, err := PemEncodeKey(v.PK)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshalling public key")
 	}
 
 	mspSI := &msp.SerializedIdentity{
-		//Type:    msp.SerializedIdentity_PK,
+		// Type:    msp.SerializedIdentity_PK,
 		IdBytes: pkRaw,
 	}
 	raw, err := proto.Marshal(mspSI)
@@ -130,7 +128,12 @@ func (v *ECDSAVerifier) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed marshalling msp serialized identity")
 	}
 
-	return raw, nil
+	wrap, err := identity.WrapWithType(msp2.X509Identity, raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed wrapping identity")
+	}
+
+	return wrap, nil
 }
 
 // PemEncodeKey takes a Go key and converts it to bytes
@@ -154,39 +157,6 @@ func PemEncodeKey(key interface{}) ([]byte, error) {
 	}
 
 	return pem.EncodeToMemory(&pem.Block{Type: keyType + " KEY", Bytes: encoded}), nil
-}
-
-// PemDecodeKey takes bytes and returns a Go key
-func PemDecodeKey(keyBytes []byte) (interface{}, error) {
-	block, _ := pem.Decode(keyBytes)
-	if block == nil {
-		return nil, errors.New("bytes are not PEM encoded")
-	}
-
-	var key interface{}
-	var err error
-	switch block.Type {
-	case "PRIVATE KEY":
-		key, err = x509.ParsePKCS8PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, errors.WithMessage(err, "pem bytes are not PKCS8 encoded ")
-		}
-	case "CERTIFICATE":
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, errors.WithMessage(err, "pem bytes are not cert encoded ")
-		}
-		return cert.PublicKey, nil
-	case "PUBLIC KEY":
-		key, err = x509.ParsePKIXPublicKey(block.Bytes)
-		if err != nil {
-			return nil, errors.WithMessage(err, "pem bytes are not PKIX encoded ")
-		}
-	default:
-		return nil, errors.Errorf("bad key type %s", block.Type)
-	}
-
-	return key, nil
 }
 
 // IsLowS checks that s is a low-S
