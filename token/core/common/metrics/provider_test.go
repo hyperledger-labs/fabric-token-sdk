@@ -249,7 +249,6 @@ func (m *mockCounter) With(labelValues ...string) metrics.Counter {
 }
 
 func (m *mockCounter) Add(delta float64) {
-	return
 }
 
 type mockGauge struct {
@@ -257,7 +256,6 @@ type mockGauge struct {
 }
 
 func (m *mockGauge) Set(value float64) {
-	return
 }
 
 func (m *mockGauge) With(labelValues ...string) metrics.Gauge {
@@ -266,7 +264,6 @@ func (m *mockGauge) With(labelValues ...string) metrics.Gauge {
 }
 
 func (m *mockGauge) Add(delta float64) {
-	return
 }
 
 type mockHistogram struct {
@@ -279,5 +276,4 @@ func (m *mockHistogram) With(labelValues ...string) metrics.Histogram {
 }
 
 func (m *mockHistogram) Observe(value float64) {
-	return
 }
