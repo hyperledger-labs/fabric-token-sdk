@@ -71,6 +71,7 @@ func recoverFromDuplicate(recovered any) {
 func AllLabelNames(extraLabels ...MetricLabel) []MetricLabel {
 	return append([]string{NetworkLabel, ChannelLabel, NamespaceLabel}, extraLabels...)
 }
+
 func StatsdFormat(extraLabels ...MetricLabel) string {
 	return "%{#fqname}.%{" + strings.Join(AllLabelNames(extraLabels...), "}.%{") + "}"
 }
