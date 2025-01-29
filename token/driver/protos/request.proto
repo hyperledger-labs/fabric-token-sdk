@@ -10,6 +10,11 @@ package protos;
 
 option go_package = "../protos-go/request";
 
+enum ActionType {
+  ISSUE = 0;
+  TRANSFER = 1;
+}
+
 message Identity {
   bytes raw = 1;
 }
@@ -51,4 +56,19 @@ message ActionMetadata {
 message TokenRequestMetadata {
   repeated ActionMetadata metadata = 1;
   map<string, string> application = 2; // Assuming application metadata is key-value pairs
+}
+
+message Action {
+    ActionType type = 1;
+    bytes raw = 2;
+}
+
+message Signature {
+  bytes raw = 1;
+}
+
+message TokenRequest {
+  repeated Action actions = 1;
+  repeated Signature signatures = 2;
+  repeated Signature auditor_signature = 3;
 }
