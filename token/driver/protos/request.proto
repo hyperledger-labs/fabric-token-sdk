@@ -63,8 +63,9 @@ message ActionMetadata {
 
 // Token request metadata containing multiple actions and application-specific data
 message TokenRequestMetadata {
-  repeated ActionMetadata metadata = 1; // List of token actions (issue/transfer)
-  map<string, bytes> application = 2; // Application-specific metadata stored as key-value pairs
+  uint32 version = 1; // Version number
+  repeated ActionMetadata metadata = 2; // List of token actions (issue/transfer)
+  map<string, bytes> application = 3; // Application-specific metadata stored as key-value pairs
 }
 
 // Represents a single action with its type and raw payload
@@ -80,7 +81,8 @@ message Signature {
 
 // Token request containing multiple actions and their signatures
 message TokenRequest {
-  repeated Action actions = 1; // List of token actions to perform
-  repeated Signature signatures = 2; // Signatures for the actions
-  repeated Signature auditor_signature = 3; // Additional signatures from auditors
+  uint32 version = 1; // Version number
+  repeated Action actions = 2; // List of token actions to perform
+  repeated Signature signatures = 3; // Signatures for the actions
+  repeated Signature auditor_signature = 4; // Additional signatures from auditors
 }
