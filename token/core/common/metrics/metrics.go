@@ -20,5 +20,3 @@ type (
 	Provider      = metrics.Provider
 	MetricLabel   = string
 )
-
-var GetProvider = metrics.GetProvider
