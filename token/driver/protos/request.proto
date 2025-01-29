@@ -10,65 +10,77 @@ package protos;
 
 option go_package = "../protos-go/request";
 
+// Enum representing different types of token actions
 enum ActionType {
+  // Token issuance action type
   ISSUE = 0;
+  // Token transfer action type
   TRANSFER = 1;
 }
 
+// Represents an identity, could be a public key or DID
 message Identity {
-  bytes raw = 1;
+  bytes raw = 1; // Raw bytes representing the identity
 }
 
+// Unique identifier for a token
 message TokenID {
-  string tx_id = 1;
-  uint64 index = 2;
+  string tx_id = 1; // Transaction ID where this token was created
+  uint64 index = 2; // Index of this token in the transaction output
 }
 
+// Metadata for a transfer action containing multiple tokens
 message TransferMetadata {
-  repeated TokenID token_ids = 1;
-  repeated bytes outputs = 2;
-  repeated bytes output_audit_infos = 3;
-  repeated bytes outputs_metadata = 4;
-  repeated Identity senders = 5;
-  repeated bytes sender_audit_infos = 6;
-  repeated Identity receivers = 7;
-  repeated bytes receiver_audit_infos = 8;
-  repeated Identity extra_signers = 9;
+  repeated TokenID token_ids = 1; // List of token IDs being transferred
+  repeated bytes outputs = 2; // New token states after transfer
+  repeated bytes output_audit_Infos = 3; // Audit information for new token states
+  repeated bytes outputs_metadata = 4; // Additional metadata for new tokens
+  repeated Identity senders = 5; // Senders of the tokens
+  repeated bytes sender_audit_infos = 6; // Audit info from senders
+  repeated Identity receivers = 7; // Recipients of the tokens
+  repeated bytes receiver_audit_infos = 8; // Audit info from recipients
+  repeated Identity extra_signers = 9; // Additional signers for the transfer
 }
 
+// Metadata for an issuance action containing multiple tokens
 message IssueMetadata {
-  Identity issuer = 1;
-  repeated TokenID token_ids = 2;
-  repeated bytes outputs = 3;
-  repeated bytes outputs_metadata = 4;
-  repeated Identity receivers = 5;
-  repeated bytes receiver_audit_infos = 6;
-  repeated Identity extra_signers = 7;
+  Identity issuer = 1; // Issuer of the tokens
+  repeated TokenID token_ids = 2; // List of token IDs being consumed
+  repeated bytes outputs = 3; // Initial token states after issuance
+  repeated bytes outputs_metadata = 4; // Additional metadata for new tokens
+  repeated Identity receivers = 5; // Recipients of the newly issued tokens
+  repeated bytes receiver_audit_infos = 6; // Audit info from recipients
+  repeated Identity extra_signers = 7; // Additional signers for the issuance
 }
 
+// Union type containing either issue or transfer metadata
 message ActionMetadata {
-  oneof Metadata {
-    IssueMetadata issue_metadata = 1;
-    TransferMetadata transfer_metadata = 2;
+  oneof Metadata { // Oneof field containing either issue or transfer metadata
+    IssueMetadata issue_metadata = 1; // Issue action metadata
+    TransferMetadata transfer_metadata = 2; // Transfer action metadata
   }
 }
 
+// Token request metadata containing multiple actions and application-specific data
 message TokenRequestMetadata {
-  repeated ActionMetadata metadata = 1;
-  map<string, string> application = 2; // Assuming application metadata is key-value pairs
+  repeated ActionMetadata metadata = 1; // List of token actions (issue/transfer)
+  map<string, bytes> application = 2; // Application-specific metadata stored as key-value pairs
 }
 
+// Represents a single action with its type and raw payload
 message Action {
-    ActionType type = 1;
-    bytes raw = 2;
+  ActionType type = 1; // Type of action (see ActionType)
+  bytes raw = 2; // Raw bytes representing the action details
 }
 
+// Represents a cryptographic signature
 message Signature {
-  bytes raw = 1;
+  bytes raw = 1; // Raw bytes of the signature
 }
 
+// Token request containing multiple actions and their signatures
 message TokenRequest {
-  repeated Action actions = 1;
-  repeated Signature signatures = 2;
-  repeated Signature auditor_signature = 3;
+  repeated Action actions = 1; // List of token actions to perform
+  repeated Signature signatures = 2; // Signatures for the actions
+  repeated Signature auditor_signature = 3; // Additional signatures from auditors
 }
