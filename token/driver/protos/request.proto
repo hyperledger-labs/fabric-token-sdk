@@ -1,0 +1,54 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+syntax = "proto3";
+
+package protos;
+
+option go_package = "../protos-go/request";
+
+message Identity {
+  bytes raw = 1;
+}
+
+message TokenID {
+  string tx_id = 1;
+  uint64 index = 2;
+}
+
+message TransferMetadata {
+  repeated TokenID token_ids = 1;
+  repeated bytes outputs = 2;
+  repeated bytes output_audit_infos = 3;
+  repeated bytes outputs_metadata = 4;
+  repeated Identity senders = 5;
+  repeated bytes sender_audit_infos = 6;
+  repeated Identity receivers = 7;
+  repeated bytes receiver_audit_infos = 8;
+  repeated Identity extra_signers = 9;
+}
+
+message IssueMetadata {
+  Identity issuer = 1;
+  repeated TokenID token_ids = 2;
+  repeated bytes outputs = 3;
+  repeated bytes outputs_metadata = 4;
+  repeated Identity receivers = 5;
+  repeated bytes receiver_audit_infos = 6;
+  repeated Identity extra_signers = 7;
+}
+
+message ActionMetadata {
+  oneof Metadata {
+    IssueMetadata issue_metadata = 1;
+    TransferMetadata transfer_metadata = 2;
+  }
+}
+
+message TokenRequestMetadata {
+  repeated ActionMetadata metadata = 1;
+  map<string, string> application = 2; // Assuming application metadata is key-value pairs
+}
