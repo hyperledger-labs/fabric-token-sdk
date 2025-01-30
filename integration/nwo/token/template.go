@@ -13,7 +13,7 @@ token:
   selector:
     driver: {{ TokenSelector }}
   finality:
-    type: delivery
+    type: {{ FinalityType }}
     delivery:
       mapperParallelism: 10
       lruSize: 100

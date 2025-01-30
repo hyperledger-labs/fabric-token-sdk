@@ -274,9 +274,9 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure, sel *t
 
 	scan(network, bob, hash, crypto.SHA256, bobLockTxID, true, token.WithTMSID(beta))
 	start := time.Now()
-	scanWithError(network, alice, hash, crypto.SHA256, txID, []string{"context done"}, true, token.WithTMSID(alpha))
+	scanWithError(network, alice, hash, crypto.SHA256, txID, []string{"reached, stop scan."}, true, token.WithTMSID(alpha))
 	Expect(time.Since(start)).To(BeNumerically("<", time.Second*30), "scan should be canceled on last tx, before timeout")
-	scanWithError(network, alice, hash, crypto.SHA256, txID, []string{"timeout reached"}, false, token.WithTMSID(alpha))
+	scanWithError(network, alice, hash, crypto.SHA256, txID, []string{"context done"}, false, token.WithTMSID(alpha))
 
 	CheckPublicParams(network, token.TMSID{}, alice, bob)
 	CheckPublicParams(network, alpha, issuer, auditor)

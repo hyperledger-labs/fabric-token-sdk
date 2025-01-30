@@ -32,14 +32,17 @@ type Topology struct {
 	TopologyType string `yaml:"type,omitempty"`
 
 	TokenSelector string
+	FinalityType  string
 	TMSs          []*topology.TMS
 }
 
 func NewTopology() *Topology {
 	return &Topology{
-		TopologyName: TopologyName,
-		TopologyType: TopologyName,
-		TMSs:         []*topology.TMS{},
+		TopologyName:  TopologyName,
+		TopologyType:  TopologyName,
+		TokenSelector: "",
+		FinalityType:  "delivery",
+		TMSs:          []*topology.TMS{},
 	}
 }
 

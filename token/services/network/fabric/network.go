@@ -332,8 +332,8 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	if err := waitTimeout(wg, timeout); err != nil {
 		return nil, err
 	}
-	logger.Debugf("lookup transfer metadata key [%s] from [%s] in namespace [%s], done, value [%s]", key, transferMetadataKey, namespace, l.value)
-	return l.value, nil
+	logger.Debugf("lookup transfer metadata key [%s] from [%s] in namespace [%s], done, result [%s][%s]", key, transferMetadataKey, namespace, l.value, l.err)
+	return l.value, l.err
 }
 
 func (n *Network) Ledger() (driver.Ledger, error) {
@@ -366,12 +366,22 @@ type lookupListener struct {
 	key   string
 	wg    *sync.WaitGroup
 	value []byte
+	err   error
 }
 
 func (l *lookupListener) OnStatus(ctx context.Context, key string, value []byte) {
-	logger.Debugf("lookup transfer metadata key [%s], got [%s]", key, l.key)
+	logger.Debugf("lookup transfer metadata key [%s], got value [%s][%v]", l.key, key, value)
 	if l.key == key {
 		l.value = value
+		l.wg.Done()
+		return
+	}
+}
+
+func (l *lookupListener) OnError(ctx context.Context, key string, err error) {
+	logger.Debugf("lookup transfer metadata key [%s], got error [%s][%s]", l.key, key, err)
+	if l.key == key {
+		l.err = err
 		l.wg.Done()
 		return
 	}

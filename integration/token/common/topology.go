@@ -42,6 +42,7 @@ type Opts struct {
 	OnlyUnity           bool
 	FSCBasedEndorsement bool
 	ExtraTMSs           []TMSOpts
+	FinalityType        string
 }
 
 func SetDefaultParams(tms *topology.TMS, opts TMSOpts) {
