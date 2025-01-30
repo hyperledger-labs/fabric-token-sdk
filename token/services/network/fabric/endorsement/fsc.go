@@ -54,7 +54,7 @@ func NewFSCService(
 	}
 	committer := ch.Committer()
 	if configuration.GetBool(AmIAnEndorserKey) {
-		logger.Info("this node is an endorser, prepare it...")
+		logger.Debug("this node is an endorser, prepare it...")
 		// if I'm an endorser, I need to process all token transactions
 		if err := committer.ProcessNamespace(tmsID.Namespace); err != nil {
 			return nil, errors.WithMessagef(err, "failed to add namespace to committer [%s]", tmsID.Namespace)
@@ -66,7 +66,7 @@ func NewFSCService(
 			return nil, errors.WithMessagef(err, "failed to register approval view for [%s]", tmsID)
 		}
 	} else {
-		logger.Infof("this node is an not endorser, is key set? [%v].", configuration.IsSet(AmIAnEndorserKey))
+		logger.Debugf("this node is an not endorser, is key set? [%v].", configuration.IsSet(AmIAnEndorserKey))
 	}
 
 	policyType := configuration.GetString(PolicyType)
@@ -78,7 +78,7 @@ func NewFSCService(
 	if err := configuration.UnmarshalKey(EndorsersKey, &endorserIDs); err != nil {
 		return nil, errors.WithMessage(err, "failed to load endorsers")
 	}
-	logger.Infof("defined [%s] as endorsers for [%s]", endorserIDs, tmsID)
+	logger.Debugf("defined [%s] as endorsers for [%s]", endorserIDs, tmsID)
 	if len(endorserIDs) == 0 {
 		return nil, errors.Errorf("no endorsers found for [%s]", tmsID)
 	}

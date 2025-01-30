@@ -71,7 +71,7 @@ type TokenChaincode struct {
 }
 
 func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
-	logger.Infof("init token chaincode...")
+	logger.Debugf("init token chaincode...")
 
 	ppRaw, err := cc.Params(Params)
 	if err != nil {
@@ -94,7 +94,7 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 			res = shim.Error(fmt.Sprintf("failed responding [%s]", r))
 		} else {
 			if res.Status == 200 {
-				logger.Infof("[%s] OK", txID)
+				logger.Debugf("[%s] OK", txID)
 			} else {
 				logger.Errorf("[%s] %d: %s", txID, res.Status, res.Message)
 			}
@@ -106,7 +106,7 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 	case 0:
 		return shim.Error("missing parameters")
 	default:
-		logger.Infof("[%s] %s", txID, string(args[0]))
+		logger.Debugf("[%s] %s", txID, string(args[0]))
 		switch f := string(args[0]); f {
 		case InvokeFunction:
 			if len(args) != 1 {
@@ -173,16 +173,16 @@ func (cc *TokenChaincode) GetValidator(builtInParams string) (Validator, error) 
 }
 
 func (cc *TokenChaincode) Initialize(builtInParams string) error {
-	logger.Infof("reading public parameters...")
+	logger.Debugf("reading public parameters...")
 
 	ppRaw, err := cc.Params(builtInParams)
 	if err != nil {
 		return errors.WithMessagef(err, "failed reading public parameters")
 	}
 
-	logger.Infof("instantiate public parameter manager and validator...")
+	logger.Debugf("instantiate public parameter manager and validator...")
 	ppm, validator, err := cc.TokenServicesFactory(ppRaw)
-	logger.Infof("instantiate public parameter manager and validator done with err [%v]", err)
+	logger.Debugf("instantiate public parameter manager and validator done with err [%v]", err)
 	if err != nil {
 		return errors.Wrap(err, "failed to instantiate public parameter manager and validator")
 	}
@@ -199,7 +199,7 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 		return ""
 	}
 
-	logger.Infof("reading %s ...", publicParamsPath)
+	logger.Debugf("reading %s ...", publicParamsPath)
 	paramsAsBytes, err := os.ReadFile(publicParamsPath)
 	if err != nil {
 		logger.Errorf(
@@ -258,7 +258,7 @@ func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) pb
 		return shim.Error("need to initialize public parameters")
 	}
 
-	logger.Infof("query public params, size [%d]", len(raw))
+	logger.Debugf("query public params, size [%d]", len(raw))
 
 	return shim.Success(raw)
 }
@@ -270,7 +270,7 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 		return shim.Error(err.Error())
 	}
 
-	logger.Infof("query tokens [%v]...", ids)
+	logger.Debugf("query tokens [%v]...", ids)
 
 	w := translator.New(
 		stub.GetTxID(),

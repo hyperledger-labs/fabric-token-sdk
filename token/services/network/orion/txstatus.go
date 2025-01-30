@@ -51,7 +51,7 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
 	}
-	logger.Infof("request tx status for [%s]", r.TxID)
+	logger.Debugf("request tx status for [%s]", r.TxID)
 
 	// TODO: Should we sign the txStatus request?
 	request := &TxStatusRequest{
@@ -68,7 +68,7 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 	if err := session.Receive(response); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
-	logger.Infof("got tx status response for [%s]: [%d]", r.TxID, response.Status)
+	logger.Debugf("got tx status response for [%s]: [%d]", r.TxID, response.Status)
 	return response, nil
 }
 

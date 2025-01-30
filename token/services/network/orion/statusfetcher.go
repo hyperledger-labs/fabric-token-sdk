@@ -51,7 +51,7 @@ func (r *StatusFetcher) FetchStatus(network, namespace string, txID driver.TxID)
 	}
 	trRef, err := r.fetch(func() ([]byte, error) { return tx.Get(namespace, reqKey) }, code)
 	if err == nil {
-		logger.Infof("Found with DataTx(txID) [%s]", txID)
+		logger.Debugf("Found with DataTx(txID) [%s]", txID)
 	}
 
 	if err != nil {
@@ -62,7 +62,7 @@ func (r *StatusFetcher) FetchStatus(network, namespace string, txID driver.TxID)
 		}
 		trRef, err = r.fetch(func() ([]byte, error) { return qe.Get(reqKey) }, code)
 		if err == nil {
-			logger.Infof("Found with query executor: [%s]", txID)
+			logger.Debugf("Found with query executor: [%s]", txID)
 		}
 	}
 

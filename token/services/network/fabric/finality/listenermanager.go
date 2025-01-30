@@ -25,7 +25,7 @@ type ListenerManagerProvider interface {
 type ListenerManager = driver.FinalityListenerManager
 
 func NewListenerManagerProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, lmConfig config.ListenerManagerConfig) ListenerManagerProvider {
-	logger.Infof("Create Finality Listener Manager provider with config: %s", lmConfig)
+	logger.Debugf("Create Finality Listener Manager provider with config: %s", lmConfig)
 	switch lmConfig.Type() {
 	case config.Delivery:
 		return newEndorserDeliveryBasedFLMProvider(fnsp, tracerProvider, keyTranslator, finality.DeliveryListenerManagerConfig{

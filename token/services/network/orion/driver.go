@@ -121,7 +121,7 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed checking if custodian is enabled")
 	}
-	logger.Infof("Orion Custodian enabled: %t", enabled)
+	logger.Debugf("Orion Custodian enabled: %t", enabled)
 	dbManager := NewDBManager(d.onsProvider, d.configProvider, enabled)
 	statusCache := secondcache.NewTyped[*TxStatusResponse](1000)
 	if enabled {
