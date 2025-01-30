@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	config3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -77,7 +78,7 @@ func NewGenericDriver(
 		NewTokenExecutorProvider(fnsProvider),
 		NewSpentTokenExecutorProvider(fnsProvider, keyTranslator),
 		keyTranslator,
-		finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, finality.NewListenerManagerConfig(configService)),
+		finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)),
 		endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator),
 		config2.GenericDriver,
 	)
