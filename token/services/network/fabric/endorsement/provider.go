@@ -83,11 +83,11 @@ func (l *loader) load(tmsID token2.TMSID) (Service, error) {
 	}
 
 	if !configuration.IsSet(FSCEndorsementKey) {
-		logger.Infof("chaincode endorsement enabled...")
+		logger.Debugf("chaincode endorsement enabled...")
 		return NewChaincodeEndorsementService(tmsID), nil
 	}
 
-	logger.Infof("FSC endorsement enabled...")
+	logger.Debugf("FSC endorsement enabled...")
 	return NewFSCService(
 		l.fnsp,
 		tmsID,

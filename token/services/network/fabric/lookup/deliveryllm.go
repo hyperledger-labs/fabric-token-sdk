@@ -132,7 +132,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 		return nil, errors.Wrapf(err, "failed unmarshaling tx [%d:%d]", blockNum, txNum)
 	}
 	if common.HeaderType(chdr.Type) != common.HeaderType_ENDORSER_TRANSACTION {
-		logger.Warnf("Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
+		logger.Debugf("Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
 		return nil, nil
 	}
 	rwSet, err := rwset.NewEndorserTransactionReader(m.network).Read(payl, chdr)
@@ -165,12 +165,12 @@ func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) (
 
 func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string) (map[driver2.Namespace]TxInfo, error) {
 	txInfos := make(map[driver2.Namespace]TxInfo, len(rwSet.WriteSet.Writes))
-	logger.Infof("TX [%s] has %d namespaces", txID, len(rwSet.WriteSet.Writes))
+	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.WriteSet.Writes))
 	for ns, writes := range rwSet.WriteSet.Writes {
-		logger.Infof("TX [%s:%s] has %d writes", txID, ns, len(writes))
+		logger.Debugf("TX [%s:%s] has %d writes", txID, ns, len(writes))
 		for key, value := range writes {
 			if strings.HasPrefix(key, m.prefix) {
-				logger.Infof("TX [%s:%s] does have key [%s].", txID, ns, key)
+				logger.Debugf("TX [%s:%s] does have key [%s].", txID, ns, key)
 				txInfos[ns] = TxInfo{
 					Namespace: ns,
 					Key:       key,

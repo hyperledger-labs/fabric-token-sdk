@@ -122,7 +122,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 		return nil, errors.Wrapf(err, "failed unmarshaling tx [%d:%d]", blockNum, txNum)
 	}
 	if common.HeaderType(chdr.Type) != common.HeaderType_ENDORSER_TRANSACTION {
-		logger.Warnf("Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
+		logger.Debugf("Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
 		return nil, nil
 	}
 	rwSet, err := rwset.NewEndorserTransactionReader(m.network).Read(payl, chdr)
@@ -161,9 +161,9 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string,
 		return nil, errors.Wrapf(err, "can't create for token request [%s]", txID)
 	}
 	txInfos := make(map[driver2.Namespace]TxInfo, len(rwSet.WriteSet.Writes))
-	logger.Infof("TX [%s] has %d namespaces", txID, len(rwSet.WriteSet.Writes))
+	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.WriteSet.Writes))
 	for ns, write := range rwSet.WriteSet.Writes {
-		logger.Infof("TX [%s:%s] has %d writes", txID, ns, len(write))
+		logger.Debugf("TX [%s:%s] has %d writes", txID, ns, len(write))
 		if requestHash, ok := write[key]; ok {
 			txInfos[ns] = TxInfo{
 				TxId:        txID,
@@ -173,7 +173,7 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string,
 				RequestHash: requestHash,
 			}
 		} else {
-			logger.Warnf("TX [%s:%s] did not have key [%s]. Found: %v", txID, ns, key, write.Keys())
+			logger.Debugf("TX [%s:%s] did not have key [%s]. Found: %v", txID, ns, key, write.Keys())
 		}
 	}
 	return txInfos, nil

@@ -326,7 +326,7 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	}
 	defer func() {
 		if err := n.llm.RemoveLookupListener(transferMetadataKey, l); err != nil {
-			logger.Warnf("failed to remove lookup listener [%s]: %v", transferMetadataKey, err)
+			logger.Debugf("failed to remove lookup listener [%s]: %v", transferMetadataKey, err)
 		}
 	}()
 	if err := waitTimeout(wg, timeout); err != nil {
