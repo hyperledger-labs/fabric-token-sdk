@@ -114,7 +114,8 @@ func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
 		SDKs:            []api2.SDK{&fofabtoken.SDK{}},
-		FinalityType:    "committer",
+		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
+		FinalityType: "committer",
 	}))
 	return ts, selector
 }

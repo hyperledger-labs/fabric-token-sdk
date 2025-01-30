@@ -288,6 +288,9 @@ func HTLCNoCrossClaimWithOrionTopology(opts common.Opts) []api.Topology {
 		AddOptions(opts.ReplicationOpts.For("custodian")...)
 
 	tokenTopology := token.NewTopology()
+	if len(opts.FinalityType) != 0 {
+		tokenTopology.FinalityType = opts.FinalityType
+	}
 
 	// TMS for the Fabric Network
 	tmsFabric := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
