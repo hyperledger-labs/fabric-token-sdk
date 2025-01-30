@@ -324,7 +324,11 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	if err := n.llm.AddLookupListener(namespace, transferMetadataKey, startingTxID, stopOnLastTx, l); err != nil {
 		return nil, errors.Wrapf(err, "failed to add lookup listener")
 	}
-	defer n.llm.RemoveLookupListener(key, l)
+	defer func() {
+		if err := n.llm.RemoveLookupListener(transferMetadataKey, l); err != nil {
+			logger.Warnf("failed to remove lookup listener [%s]: %v", transferMetadataKey, err)
+		}
+	}()
 	waitTimeout(wg, timeout)
 	logger.Debugf("lookup transfer metadata key [%s] from [%s] in namespace [%s], done, value [%s]", key, transferMetadataKey, namespace, l.value)
 	return l.value, nil
