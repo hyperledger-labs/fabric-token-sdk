@@ -215,6 +215,9 @@ func HTLCNoCrossClaimTopology(opts common.Opts) []api.Topology {
 		RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{})
 
 	tokenTopology := token.NewTopology()
+	if len(opts.FinalityType) != 0 {
+		tokenTopology.FinalityType = opts.FinalityType
+	}
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
 	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")

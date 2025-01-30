@@ -22,8 +22,8 @@ type ListenerManagerProvider interface {
 }
 
 type ListenerManager interface {
-	AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener LookupListener) error
-	RemoveLookupListener(id string, listener LookupListener) error
+	AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener Listener) error
+	RemoveLookupListener(id string, listener Listener) error
 }
 
 func NewListenerManagerProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, lmConfig config.ListenerManagerConfig) ListenerManagerProvider {

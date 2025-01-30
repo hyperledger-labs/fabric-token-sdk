@@ -29,14 +29,16 @@ import (
 
 type newTxInfoMapper = func(network, channel string) finality.TxInfoMapper[TxInfo]
 
-type LookupListener interface {
-	// OnStatus is called when the status of a transaction changes
+type Listener interface {
+	// OnStatus is called when the key has been found
 	OnStatus(ctx context.Context, key string, value []byte)
+	// OnError is called when an error occurs during the search of the key
+	OnError(ctx context.Context, key string, err error)
 }
 
 type listenerEntry struct {
 	namespace driver2.Namespace
-	listener  LookupListener
+	listener  Listener
 }
 
 func (e *listenerEntry) OnStatus(ctx context.Context, info TxInfo) {
@@ -111,11 +113,11 @@ type deliveryBasedLLM struct {
 	lm finality.ListenerManager[TxInfo]
 }
 
-func (m *deliveryBasedLLM) AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener LookupListener) error {
+func (m *deliveryBasedLLM) AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener Listener) error {
 	return m.lm.AddFinalityListener(key, &listenerEntry{namespace, listener})
 }
 
-func (m *deliveryBasedLLM) RemoveLookupListener(key string, listener LookupListener) error {
+func (m *deliveryBasedLLM) RemoveLookupListener(key string, listener Listener) error {
 	return m.lm.RemoveFinalityListener(key, &listenerEntry{"", listener})
 }
 

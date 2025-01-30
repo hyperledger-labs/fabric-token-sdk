@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"go.opentelemetry.io/otel/trace"
@@ -63,7 +64,7 @@ type channelBasedLLM struct {
 	listeners      map[string]*Scanner
 }
 
-func (c *channelBasedLLM) AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener LookupListener) error {
+func (c *channelBasedLLM) AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener Listener) error {
 	s := &Scanner{
 		context:      nil,
 		channel:      c.channel,
@@ -80,7 +81,7 @@ func (c *channelBasedLLM) AddLookupListener(namespace string, key string, starti
 	return nil
 }
 
-func (c *channelBasedLLM) RemoveLookupListener(id string, listener LookupListener) error {
+func (c *channelBasedLLM) RemoveLookupListener(id string, listener Listener) error {
 	c.listenersMutex.Lock()
 	defer c.listenersMutex.Unlock()
 
@@ -99,7 +100,7 @@ type Scanner struct {
 	key          string
 	startingTxID string
 	stopOnLastTx bool
-	listener     LookupListener
+	listener     Listener
 
 	stopMutex sync.RWMutex
 	stop      bool
@@ -111,6 +112,7 @@ func (s *Scanner) Scan() {
 	if s.stopOnLastTx {
 		id, err := v.GetLastTxID()
 		if err != nil {
+			s.listener.OnError(s.context, s.key, err)
 			return
 		}
 		lastTxID = id
@@ -157,11 +159,14 @@ func (s *Scanner) Scan() {
 		}
 		logger.Debugf("scanning for key [%s] on [%s] not found", s.key, tx.TxID())
 		if s.stopOnLastTx && lastTxID == tx.TxID() {
-			logger.Debugf("final transaction reached on [%s]", tx.TxID())
+			logger.Debugf("transaction [%s] reached, stop scan.", lastTxID)
+			return true, errors.Errorf("transaction [%s] reached, stop scan.", lastTxID)
 		}
 		return false, nil
 	}); err != nil {
 		logger.Errorf("failed scanning for key [%s]: [%s]", s.key, err)
+		s.listener.OnError(s.context, s.key, err)
+		return
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
