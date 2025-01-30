@@ -41,7 +41,7 @@ var sdks = map[string]api.SDK{
 func newTestSuite(backend string) (*token.TestSuite, *token.ReplicaSelector) {
 	// opts, selector := token.NewReplicationOptions(token.None)
 	opts, selector := token.NewReplicationOptions(1, "alice", "bob", "charlie", "issuer", "auditor")
-	ts := token.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
+	ts := token.NewTestSuite(StartPortDlog, topology.Topology(
 		common.Opts{
 			Backend:         backend,
 			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog", Aries: true},

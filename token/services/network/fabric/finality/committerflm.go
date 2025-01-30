@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
@@ -136,9 +137,9 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 
 	// Fetch the token request hash. Retry in case some other replica committed it shortly before
 	span.AddEvent("fetch_request_hash")
-	var tokenRequestHash []byte
+	var tokenRequestHash *driver2.VersionedRead
 	var retries int
-	for tokenRequestHash, err = qe.GetState(t.namespace, key); err == nil && len(tokenRequestHash) == 0 && retries < t.maxRetries; tokenRequestHash, err = qe.GetState(t.namespace, key) {
+	for tokenRequestHash, err = qe.GetState(t.namespace, key); err == nil && (tokenRequestHash == nil || len(tokenRequestHash.Raw) == 0) && retries < t.maxRetries; tokenRequestHash, err = qe.GetState(t.namespace, key) {
 		span.AddEvent("retry_fetch_request_hash")
 		logger.Debugf("did not find token request [%s]. retrying...", txID)
 		retries++
@@ -149,5 +150,5 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 		panic(fmt.Sprintf("can't get state [%s][%s]", txID, key))
 	}
 	span.AddEvent("call_root_listener")
-	t.root.OnStatus(newCtx, txID, status, message, tokenRequestHash)
+	t.root.OnStatus(newCtx, txID, status, message, tokenRequestHash.Raw)
 }

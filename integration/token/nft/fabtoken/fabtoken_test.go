@@ -30,7 +30,7 @@ var _ = Describe("EndToEnd", func() {
 
 func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string) (*token.TestSuite, *token.ReplicaSelector) {
 	opts, selector := token.NewReplicationOptions(factor, names...)
-	ts := token.NewTestSuite(opts.SQLConfigs, StartPortDlog, nft.Topology(common.Opts{
+	ts := token.NewTestSuite(StartPortDlog, nft.Topology(common.Opts{
 		Backend:         "fabric",
 		CommType:        commType,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},

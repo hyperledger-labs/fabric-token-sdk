@@ -26,10 +26,6 @@ func DefaultPostgresConfig(node string) *PostgresConfig {
 	return postgres2.DefaultConfig(node)
 }
 
-func StartPostgresWithFmt(configs map[string]*PostgresConfig) (func(), error) {
-	return postgres2.StartPostgresWithFmt(configs)
-}
-
 // https://testcontainers.com/guides/getting-started-with-testcontainers-for-go/
 // Note: Before running tests: docker pull postgres:16.2-alpine
 // Test may time out if image is not present on machine.
