@@ -8,8 +8,7 @@ package fabric
 
 import (
 	"context"
-	"encoding/base64"
-	"strings"
+	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
@@ -25,13 +24,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -115,6 +114,7 @@ type Network struct {
 
 	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
 	flm                        finality.ListenerManager
+	llm                        lookup.ListenerManager
 	defaultPublicParamsFetcher driver3.NetworkPublicParamsFetcher
 	tokenQueryExecutor         driver.TokenQueryExecutor
 	spentTokenQueryExecutor    driver.SpentTokenQueryExecutor
@@ -138,6 +138,7 @@ func NewNetwork(
 	spentTokenQueryExecutor driver.SpentTokenQueryExecutor,
 	keyTranslator translator.KeyTranslator,
 	flm finality.ListenerManager,
+	llm lookup.ListenerManager,
 ) *Network {
 	loader := &loader{
 		newVault: newVault,
@@ -156,6 +157,7 @@ func NewNetwork(
 		tokensProvider:             tokensProvider,
 		tokenVaultLazyCache:        lazy.NewProvider(loader.loadTokenVault),
 		flm:                        flm,
+		llm:                        llm,
 		defaultPublicParamsFetcher: defaultPublicParamsFetcher,
 		endorsementServiceProvider: endorsementServiceProvider,
 		tokenQueryExecutor:         tokenQueryExecutor,
@@ -315,73 +317,17 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)
 	}
-	var keyValue []byte
-	c, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	v := n.ch.Vault()
-
-	var lastTxID string
-	if stopOnLastTx {
-		id, err := v.GetLastTxID()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get last transaction id")
-		}
-		lastTxID = id
+	logger.Debugf("lookup transfer metadata key [%s] from [%s] in namespace [%s]", key, transferMetadataKey, namespace)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	l := &lookupListener{wg: wg, key: transferMetadataKey}
+	if err := n.llm.AddLookupListener(namespace, transferMetadataKey, startingTxID, stopOnLastTx, l); err != nil {
+		return nil, errors.Wrapf(err, "failed to add lookup listener")
 	}
-
-	if err := n.ch.Delivery().Scan(c, startingTxID, func(tx *fabric.ProcessedTransaction) (bool, error) {
-		logger.Debugf("scanning [%s]...", tx.TxID())
-
-		rws, err := v.InspectRWSet(tx.Results())
-		if err != nil {
-			return false, err
-		}
-
-		found := false
-		for _, ns := range rws.Namespaces() {
-			if ns == namespace {
-				found = true
-				break
-			}
-		}
-		if !found {
-			logger.Debugf("scanning [%s] does not contain namespace [%s]", tx.TxID(), namespace)
-			return false, nil
-		}
-
-		ns := namespace
-		for i := 0; i < rws.NumWrites(ns); i++ {
-			k, v, err := rws.GetWriteAt(ns, i)
-			if err != nil {
-				return false, err
-			}
-			if k == transferMetadataKey {
-				keyValue = v
-				return true, nil
-			}
-		}
-		logger.Debugf("scanning for key [%s] on [%s] not found", transferMetadataKey, tx.TxID())
-		if stopOnLastTx && lastTxID == tx.TxID() {
-			logger.Debugf("final transaction reached on [%s]", tx.TxID())
-			cancel()
-		}
-
-		return false, nil
-	}); err != nil {
-		if strings.Contains(err.Error(), "context done") {
-			return nil, errors.WithMessage(err, "timeout reached")
-		}
-		return nil, err
-	}
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("scanning for key [%s] with timeout [%s] found, [%s]",
-			transferMetadataKey,
-			timeout,
-			base64.StdEncoding.EncodeToString(keyValue),
-		)
-	}
-	return keyValue, nil
+	defer n.llm.RemoveLookupListener(key, l)
+	waitTimeout(wg, timeout)
+	logger.Debugf("lookup transfer metadata key [%s] from [%s] in namespace [%s], done, value [%s]", key, transferMetadataKey, namespace, l.value)
+	return l.value, nil
 }
 
 func (n *Network) Ledger() (driver.Ledger, error) {
@@ -408,4 +354,33 @@ func (l *loader) loadTokenVault(namespace string) (driver.TokenVault, error) {
 		return nil, errors.WithMessagef(err, "failed to get token vault")
 	}
 	return &tokenVault{tokenVault: tv}, nil
+}
+
+type lookupListener struct {
+	key   string
+	wg    *sync.WaitGroup
+	value []byte
+}
+
+func (l *lookupListener) OnStatus(ctx context.Context, key string, value []byte) {
+	logger.Debugf("lookup transfer metadata key [%s], got [%s]", key, l.key)
+	if l.key == key {
+		l.value = value
+		l.wg.Done()
+		return
+	}
+}
+
+func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return false
+	case <-time.After(timeout):
+		return true
+	}
 }

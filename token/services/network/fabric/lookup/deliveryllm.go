@@ -20,7 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/rwset"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/vault"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -41,6 +40,7 @@ type listenerEntry struct {
 }
 
 func (e *listenerEntry) OnStatus(ctx context.Context, info TxInfo) {
+	logger.Debugf("notify info [%v] to namespace [%s]", info, e.namespace)
 	if len(e.namespace) == 0 || len(info.Namespace) == 0 || e.namespace == info.Namespace {
 		e.listener.OnStatus(ctx, info.Key, info.Value)
 	}
@@ -77,10 +77,14 @@ func NewDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProv
 }
 
 func newEndorserDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, config finality.DeliveryListenerManagerConfig) *deliveryBasedLLMProvider {
+	prefix, err := keyTranslator.TransferActionMetadataKeyPrefix()
+	if err != nil {
+		panic(err)
+	}
 	return NewDeliveryBasedLLMProvider(fnsp, tracerProvider, config, func(network, _ string) finality.TxInfoMapper[TxInfo] {
 		return &endorserTxInfoMapper{
-			network:       network,
-			keyTranslator: keyTranslator,
+			network: network,
+			prefix:  prefix,
 		}
 	})
 }
@@ -107,17 +111,17 @@ type deliveryBasedLLM struct {
 	lm finality.ListenerManager[TxInfo]
 }
 
-func (m *deliveryBasedLLM) AddLookupListener(namespace string, txID string, listener LookupListener) error {
-	return m.lm.AddFinalityListener(txID, &listenerEntry{namespace, listener})
+func (m *deliveryBasedLLM) AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener LookupListener) error {
+	return m.lm.AddFinalityListener(key, &listenerEntry{namespace, listener})
 }
 
-func (m *deliveryBasedLLM) RemoveLookupListener(txID string, listener LookupListener) error {
-	return m.lm.RemoveFinalityListener(txID, &listenerEntry{"", listener})
+func (m *deliveryBasedLLM) RemoveLookupListener(key string, listener LookupListener) error {
+	return m.lm.RemoveFinalityListener(key, &listenerEntry{"", listener})
 }
 
 type endorserTxInfoMapper struct {
-	network       string
-	keyTranslator translator.KeyTranslator
+	network string
+	prefix  string
 }
 
 func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.BlockMetadata, blockNum driver2.BlockNum, txNum driver2.TxNum) (map[driver2.Namespace]TxInfo, error) {
@@ -163,7 +167,8 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string)
 	for ns, writes := range rwSet.WriteSet.Writes {
 		logger.Infof("TX [%s:%s] has %d writes", txID, ns, len(writes))
 		for key, value := range writes {
-			if strings.HasPrefix(key, keys.TransferActionMetadataPrefix) {
+			if strings.HasPrefix(key, m.prefix) {
+				logger.Infof("TX [%s:%s] does have key [%s].", txID, ns, key)
 				txInfos[ns] = TxInfo{
 					Namespace: ns,
 					Key:       key,

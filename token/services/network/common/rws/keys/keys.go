@@ -88,6 +88,10 @@ func (t *Translator) CreateTransferActionMetadataKey(key string) (translator.Key
 	return createCompositeKey(TransferActionMetadataPrefix, []string{key})
 }
 
+func (t *Translator) TransferActionMetadataKeyPrefix() (translator.Key, error) {
+	return createCompositeKey(TransferActionMetadataPrefix, nil)
+}
+
 // createCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go
 func createCompositeKey(objectType string, attributes []string) (translator.Key, error) {
 	if err := validateCompositeKeyAttribute(objectType); err != nil {
