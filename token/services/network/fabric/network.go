@@ -329,7 +329,9 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 			logger.Warnf("failed to remove lookup listener [%s]: %v", transferMetadataKey, err)
 		}
 	}()
-	waitTimeout(wg, timeout)
+	if err := waitTimeout(wg, timeout); err != nil {
+		return nil, err
+	}
 	logger.Debugf("lookup transfer metadata key [%s] from [%s] in namespace [%s], done, value [%s]", key, transferMetadataKey, namespace, l.value)
 	return l.value, nil
 }
@@ -375,7 +377,7 @@ func (l *lookupListener) OnStatus(ctx context.Context, key string, value []byte)
 	}
 }
 
-func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) error {
 	c := make(chan struct{})
 	go func() {
 		defer close(c)
@@ -383,8 +385,8 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	}()
 	select {
 	case <-c:
-		return false
+		return nil
 	case <-time.After(timeout):
-		return true
+		return errors.Errorf("context done")
 	}
 }
