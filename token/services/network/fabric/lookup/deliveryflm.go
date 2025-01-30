@@ -8,6 +8,7 @@ package lookup
 
 import (
 	"context"
+	"strings"
 
 	vault2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/core/generic/vault"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
@@ -18,8 +19,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/rwset"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/vault"
-	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -59,15 +60,15 @@ func (i TxInfo) TxID() driver2.TxID {
 	return i.Key
 }
 
-type deliveryBasedFLMProvider struct {
+type deliveryBasedLLMProvider struct {
 	fnsp           *fabric.NetworkServiceProvider
 	tracerProvider trace.TracerProvider
 	config         finality.DeliveryListenerManagerConfig
 	newMapper      newTxInfoMapper
 }
 
-func NewDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, config finality.DeliveryListenerManagerConfig, newMapper newTxInfoMapper) *deliveryBasedFLMProvider {
-	return &deliveryBasedFLMProvider{
+func NewDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, config finality.DeliveryListenerManagerConfig, newMapper newTxInfoMapper) *deliveryBasedLLMProvider {
+	return &deliveryBasedLLMProvider{
 		fnsp:           fnsp,
 		tracerProvider: tracerProvider,
 		config:         config,
@@ -75,8 +76,8 @@ func NewDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProv
 	}
 }
 
-func newEndorserDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, config finality.DeliveryListenerManagerConfig) *deliveryBasedFLMProvider {
-	return NewDeliveryBasedFLMProvider(fnsp, tracerProvider, config, func(network, _ string) finality.TxInfoMapper[TxInfo] {
+func newEndorserDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, config finality.DeliveryListenerManagerConfig) *deliveryBasedLLMProvider {
+	return NewDeliveryBasedLLMProvider(fnsp, tracerProvider, config, func(network, _ string) finality.TxInfoMapper[TxInfo] {
 		return &endorserTxInfoMapper{
 			network:       network,
 			keyTranslator: keyTranslator,
@@ -84,7 +85,7 @@ func newEndorserDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tr
 	})
 }
 
-func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (ListenerManager, error) {
+func (p *deliveryBasedLLMProvider) NewManager(network, channel string) (ListenerManager, error) {
 	net, err := p.fnsp.FabricNetworkService(network)
 	if err != nil {
 		return nil, err
@@ -99,18 +100,18 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 	if err != nil {
 		return nil, err
 	}
-	return &deliveryBasedFLM{flm}, nil
+	return &deliveryBasedLLM{flm}, nil
 }
 
-type deliveryBasedFLM struct {
+type deliveryBasedLLM struct {
 	lm finality.ListenerManager[TxInfo]
 }
 
-func (m *deliveryBasedFLM) AddLookupListener(namespace string, txID string, listener LookupListener) error {
+func (m *deliveryBasedLLM) AddLookupListener(namespace string, txID string, listener LookupListener) error {
 	return m.lm.AddFinalityListener(txID, &listenerEntry{namespace, listener})
 }
 
-func (m *deliveryBasedFLM) RemoveLookupListener(txID string, listener LookupListener) error {
+func (m *deliveryBasedLLM) RemoveLookupListener(txID string, listener LookupListener) error {
 	return m.lm.RemoveFinalityListener(txID, &listenerEntry{"", listener})
 }
 
@@ -136,14 +137,12 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 	if len(block.Metadata) < int(common.BlockMetadataIndex_TRANSACTIONS_FILTER) {
 		return nil, errors.Errorf("block metadata lacks transaction filter")
 	}
-	code, message := committer.MapValidationCode(int32(committer.ValidationFlags(block.Metadata[common.BlockMetadataIndex_TRANSACTIONS_FILTER])[txNum]))
-
-	return m.mapTxInfo(rwSet, chdr.TxId, code, message)
+	return m.mapTxInfo(rwSet, chdr.TxId)
 }
 
 func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]TxInfo, error) {
 	logger.Debugf("Map processed tx [%s] with results of status [%v] and length [%d]", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
-	status, message := committer.MapValidationCode(tx.ValidationCode())
+	status, _ := committer.MapValidationCode(tx.ValidationCode())
 	if status == driver.Invalid {
 		return []TxInfo{}, nil
 	}
@@ -151,30 +150,28 @@ func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) (
 	if err != nil {
 		return nil, err
 	}
-	infos, err := m.mapTxInfo(rwSet, tx.TxID(), status, message)
+	infos, err := m.mapTxInfo(rwSet, tx.TxID())
 	if err != nil {
 		return nil, err
 	}
 	return collections.Values(infos), nil
 }
 
-func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string, code driver3.ValidationCode, message string) (map[driver2.Namespace]TxInfo, error) {
-	key, err := m.keyTranslator.CreateTokenRequestKey(txID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "can't create for token request [%s]", txID)
-	}
+func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string) (map[driver2.Namespace]TxInfo, error) {
 	txInfos := make(map[driver2.Namespace]TxInfo, len(rwSet.WriteSet.Writes))
 	logger.Infof("TX [%s] has %d namespaces", txID, len(rwSet.WriteSet.Writes))
-	for ns, write := range rwSet.WriteSet.Writes {
-		logger.Infof("TX [%s:%s] has %d writes", txID, ns, len(write))
-		if value, ok := write[key]; ok {
-			txInfos[ns] = TxInfo{
-				Namespace: ns,
-				Key:       key,
-				Value:     value,
+	for ns, writes := range rwSet.WriteSet.Writes {
+		logger.Infof("TX [%s:%s] has %d writes", txID, ns, len(writes))
+		for key, value := range writes {
+			if strings.HasPrefix(key, keys.TransferActionMetadataPrefix) {
+				txInfos[ns] = TxInfo{
+					Namespace: ns,
+					Key:       key,
+					Value:     value,
+				}
+				// TODO: we assume here there is only one such a key
+				break
 			}
-		} else {
-			logger.Warnf("TX [%s:%s] did not have key [%s]. Found: %v", txID, ns, key, write.Keys())
 		}
 	}
 	return txInfos, nil
