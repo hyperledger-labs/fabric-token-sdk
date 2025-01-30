@@ -33,6 +33,7 @@ const (
 	QueryPublicParamsFunction = "queryPublicParams"
 	QueryTokensFunctions      = "queryTokens"
 	AreTokensSpent            = "areTokensSpent"
+	QueryStates               = "queryStates"
 
 	PublicParamsPathVarEnv = "PUBLIC_PARAMS_FILE_PATH"
 )
@@ -134,6 +135,11 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 				return shim.Error("request to check if tokens are spent is empty")
 			}
 			return cc.AreTokensSpent(args[1], stub)
+		case QueryStates:
+			if len(args) != 2 {
+				return shim.Error("request to query states is empty")
+			}
+			return cc.QueryStates(args[1], stub)
 		default:
 			return shim.Error(fmt.Sprintf("function [%s] not recognized", f))
 		}
@@ -314,6 +320,30 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 	if err != nil {
 		logger.Errorf("failed marshalling spent flags: [%s]", err)
 		return shim.Error(fmt.Sprintf("failed marshalling spent flags: [%s]", err))
+	}
+	return shim.Success(raw)
+}
+
+func (cc *TokenChaincode) QueryStates(idsRaw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+	var keys []string
+	if err := json.Unmarshal(idsRaw, &keys); err != nil {
+		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)
+		return shim.Error(err.Error())
+	}
+
+	logger.Debugf("query state for keys [%v]...", keys)
+	values := make([][]byte, 0, len(keys))
+	for _, key := range keys {
+		value, err := stub.GetState(key)
+		if err != nil {
+			logger.Debugf("failed querying state [%s]: [%s]", key, err)
+		}
+		values = append(values, value)
+	}
+	raw, err := json.Marshal(values)
+	if err != nil {
+		logger.Errorf("failed marshalling values: [%s]", err)
+		return shim.Error(fmt.Sprintf("failed marshalling values: [%s]", err))
 	}
 	return shim.Success(raw)
 }
