@@ -24,6 +24,7 @@ import (
 	config3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -46,6 +47,7 @@ type Driver struct {
 	supportedDrivers                []string
 	keyTranslator                   translator.KeyTranslator
 	flmProvider                     finality.ListenerManagerProvider
+	llmProvider                     lookup.ListenerManagerProvider
 	EndorsementServiceProvider      EndorsementServiceProvider
 }
 
@@ -79,6 +81,7 @@ func NewGenericDriver(
 		NewSpentTokenExecutorProvider(fnsProvider, keyTranslator),
 		keyTranslator,
 		finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)),
+		lookup.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)),
 		endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator),
 		config2.GenericDriver,
 	)
@@ -100,6 +103,7 @@ func NewDriver(
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
 	keyTranslator translator.KeyTranslator,
 	flmProvider finality.ListenerManagerProvider,
+	llmProvider lookup.ListenerManagerProvider,
 	endorsementServiceProvider EndorsementServiceProvider,
 	supportedDrivers ...string,
 ) *Driver {
@@ -120,6 +124,7 @@ func NewDriver(
 		supportedDrivers:                supportedDrivers,
 		keyTranslator:                   keyTranslator,
 		flmProvider:                     flmProvider,
+		llmProvider:                     llmProvider,
 		EndorsementServiceProvider:      endorsementServiceProvider,
 	}
 }
@@ -149,6 +154,10 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create a new flm")
 	}
+	llm, err := d.llmProvider.NewManager(network, channel)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create a new llm")
+	}
 
 	return NewNetwork(
 		fns,
@@ -166,5 +175,6 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		spentTokenQueryExecutor,
 		d.keyTranslator,
 		flm,
+		llm,
 	), nil
 }

@@ -42,6 +42,8 @@ type KeyTranslator interface {
 	CreateTransferActionMetadataKey(subkey string) (Key, error)
 	// GetTransferMetadataSubKey returns the subkey in the given transfer action metadata key
 	GetTransferMetadataSubKey(k string) (Key, error)
+	// TransferActionMetadataKeyPrefix TODO
+	TransferActionMetadataKeyPrefix() (Key, error)
 }
 
 // RWSet interface, used to read from, and write to, a rwset.
@@ -197,6 +199,11 @@ func (h *HashedKeyTranslator) CreateTransferActionMetadataKey(key Key) (Key, err
 		return "", err
 	}
 	return h.hash(8, k)
+}
+
+func (h *HashedKeyTranslator) TransferActionMetadataKeyPrefix() (Key, error) {
+	// TODO:
+	return "", nil
 }
 
 func (h *HashedKeyTranslator) hash(code byte, k string) (Key, error) {

@@ -22,7 +22,7 @@ type ListenerManagerProvider interface {
 }
 
 type ListenerManager interface {
-	AddLookupListener(namespace string, key string, listener LookupListener) error
+	AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener LookupListener) error
 	RemoveLookupListener(id string, listener LookupListener) error
 }
 
@@ -38,7 +38,10 @@ func NewListenerManagerProvider(fnsp *fabric.NetworkServiceProvider, tracerProvi
 			LRUBuffer:               lmConfig.DeliveryLRUBuffer(),
 		})
 	case config.Committer:
-		panic("implement me")
+		return NewChannelBasedFLMProvider(fnsp, tracerProvider, keyTranslator, ChannelListenerManagerConfig{
+			MaxRetries:        lmConfig.CommitterMaxRetries(),
+			RetryWaitDuration: lmConfig.CommitterRetryWaitDuration(),
+		})
 	}
 	panic("unknown config type: " + lmConfig.Type())
 }
