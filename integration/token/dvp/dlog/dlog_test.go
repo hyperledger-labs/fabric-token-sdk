@@ -30,7 +30,7 @@ var _ = Describe("EndToEnd", func() {
 
 func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, StartPort, dvp2.Topology(dvp2.Opts{
+	ts := token2.NewTestSuite(StartPort, dvp2.Topology(dvp2.Opts{
 		CommType:       commType,
 		DefaultTMSOpts: common.TMSOpts{TokenSDKDriver: "dlog"},
 		FSCLogSpec:     "",

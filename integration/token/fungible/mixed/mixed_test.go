@@ -31,7 +31,7 @@ var _ = Describe("EndToEnd", func() {
 
 func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, Topology(common.Opts{
+	ts := token2.NewTestSuite(StartPortDlog, Topology(common.Opts{
 		CommType:        commType,
 		SDKs:            []api.SDK{&fall.SDK{}},
 		ReplicationOpts: opts,
