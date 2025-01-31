@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	. "github.com/onsi/gomega"
 )
 
@@ -42,7 +43,7 @@ type Opts struct {
 	OnlyUnity           bool
 	FSCBasedEndorsement bool
 	ExtraTMSs           []TMSOpts
-	FinalityType        string
+	FinalityType        config.ManagerType
 }
 
 func SetDefaultParams(tms *topology.TMS, opts TMSOpts) {
