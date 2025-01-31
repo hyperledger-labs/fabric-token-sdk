@@ -9,6 +9,7 @@ package lookup
 import (
 	"context"
 	"encoding/base64"
+	"slices"
 	"sync"
 	"time"
 
@@ -135,14 +136,7 @@ func (s *Scanner) Scan() {
 			return false, err
 		}
 
-		found := false
-		for _, ns := range rws.Namespaces() {
-			if ns == s.namespace {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.Contains(rws.Namespaces(), s.namespace) {
 			logger.Debugf("scanning [%s] does not contain namespace [%s]", tx.TxID(), s.namespace)
 			return false, nil
 		}
