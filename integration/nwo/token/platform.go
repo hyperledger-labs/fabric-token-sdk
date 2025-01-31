@@ -260,7 +260,7 @@ func (p *Platform) UpdatePublicParams(tms *topology2.TMS, publicParams []byte) {
 func (p *Platform) GenerateExtension(node *sfcnode.Node) {
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"TokenSelector": func() string { return p.Topology.TokenSelector },
-		"FinalityType":  func() string { return p.Topology.FinalityType },
+		"FinalityType":  func() string { return string(p.Topology.FinalityType) },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 

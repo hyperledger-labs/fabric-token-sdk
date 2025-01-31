@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"go.opentelemetry.io/otel/trace"
@@ -40,7 +41,7 @@ func NewChannelBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvi
 	}
 }
 
-func (p *channelBasedFLMProvider) NewManager(network, channel string) (ListenerManager, error) {
+func (p *channelBasedFLMProvider) NewManager(network driver.Network, channel driver.Channel) (ListenerManager, error) {
 	net, err := p.fnsp.FabricNetworkService(network)
 	if err != nil {
 		return nil, err
@@ -57,14 +58,14 @@ func (p *channelBasedFLMProvider) NewManager(network, channel string) (ListenerM
 }
 
 type channelBasedLLM struct {
-	network string
+	network driver.Network
 	channel *fabric.Channel
 
 	listenersMutex sync.RWMutex
 	listeners      map[string]*Scanner
 }
 
-func (c *channelBasedLLM) AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener Listener) error {
+func (c *channelBasedLLM) AddLookupListener(namespace driver.Namespace, key driver.PKey, startingTxID string, stopOnLastTx bool, listener Listener) error {
 	s := &Scanner{
 		context:      nil,
 		channel:      c.channel,
@@ -96,8 +97,8 @@ func (c *channelBasedLLM) RemoveLookupListener(id string, listener Listener) err
 type Scanner struct {
 	context      context.Context
 	channel      *fabric.Channel
-	namespace    string
-	key          string
+	namespace    driver.Namespace
+	key          driver.PKey
 	startingTxID string
 	stopOnLastTx bool
 	listener     Listener

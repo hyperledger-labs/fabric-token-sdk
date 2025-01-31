@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fodlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/odlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	. "github.com/onsi/ginkgo/v2"
 )
 
@@ -104,7 +105,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
 		SDKs:            []api2.SDK{&fdlog.SDK{}},
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
-		FinalityType: "committer",
+		FinalityType: config.Committer,
 	}))
 	return ts, selector
 }
@@ -117,7 +118,7 @@ func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
 		SDKs:            []api2.SDK{&fodlog.SDK{}},
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:view-sdk=debug:info",
-		FinalityType: "committer", // we need committer here because we exercise
+		FinalityType: config.Committer, // we need committer here because we exercise
 	}))
 	return ts, selector
 }
