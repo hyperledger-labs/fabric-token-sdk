@@ -16,7 +16,7 @@ import (
 )
 
 func NewTokenDB(db *sql.DB, opts common.NewDBOpts) (driver.TokenDB, error) {
-	return common.NewTokenDB(db, opts, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewTokenDB(db, opts, common.NewTokenInterpreter(sqlite.NewInterpreter()), "")
 }
 
 func NewTokenNotifier(*sql.DB, common.NewDBOpts) (driver.TokenNotifier, error) {

@@ -35,7 +35,7 @@ type tokenTables struct {
 	Certifications string
 }
 
-func NewTokenDB(db *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.TokenDB, error) {
+func NewTokenDB(db *sql.DB, opts NewDBOpts, ci TokenInterpreter, schemaAlter string) (driver.TokenDB, error) {
 	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
@@ -48,7 +48,7 @@ func NewTokenDB(db *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.TokenDB
 		Certifications: tables.Certifications,
 	}, ci)
 	if opts.CreateSchema {
-		if err = common.InitSchema(db, tokenDB.GetSchema()); err != nil {
+		if err = common.InitSchema(db, tokenDB.GetSchema(), schemaAlter); err != nil {
 			return nil, err
 		}
 	}
