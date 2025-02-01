@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -67,8 +68,8 @@ func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, w
 }
 
 func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("withdrawal_request_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
 
 	tmsID, recipientData, err := r.getRecipientIdentity(context)
@@ -160,8 +161,8 @@ func ReceiveWithdrawalRequest(context view.Context) (*WithdrawalRequest, error) 
 }
 
 func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("receive_withdrawal_request_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	session := session.JSON(context)
 	request := &WithdrawalRequest{}
 	assert.NoError(session.ReceiveWithTimeout(request, 1*time.Minute), "failed to receive the withdrawal request")

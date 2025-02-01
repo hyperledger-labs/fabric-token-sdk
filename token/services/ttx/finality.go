@@ -67,8 +67,8 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 }
 
 func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, timeout time.Duration) (interface{}, error) {
-	span := ctx.StartSpan("finality")
-	defer span.End()
+	span := trace.SpanFromContext(ctx.Context())
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Listen to finality of [%s]", txID)
 	}

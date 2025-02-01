@@ -23,6 +23,7 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type TxStatusResponseCache interface {
@@ -70,8 +71,8 @@ func NewRequestApprovalView(
 }
 
 func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("approval_request_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	sm, err := r.DBManager.GetSessionManager(r.Network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting session manager for network [%s]", r.Network)
@@ -113,8 +114,8 @@ type RequestApprovalResponderView struct {
 }
 
 func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("approval_respond_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	// receive request
 	session := session2.JSON(context)
 	span.AddEvent("receive_approval_request")
@@ -136,8 +137,8 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 }
 
 func (r *RequestApprovalResponderView) process(context view.Context, request *ApprovalRequest) ([]byte, error) {
-	span := context.StartSpan("approval_request_process")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	ds, err := driver.GetTokenDriverService(context)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get token driver")
@@ -208,8 +209,8 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 }
 
 func (r *RequestApprovalResponderView) validate(context view.Context, request *ApprovalRequest, validator driver.Validator) ([]byte, bool, error) {
-	span := context.StartSpan("tx_request_validation")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	sm, err := r.dbManager.GetSessionManager(request.Network)
 	if err != nil {
 		return nil, true, errors.Wrapf(err, "failed to get session manager for network [%s]", request.Network)

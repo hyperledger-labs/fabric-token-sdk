@@ -10,11 +10,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
-	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/observables"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -114,8 +112,6 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	deserializer := ws.Deserializer
 	ip := ws.IdentityProvider
 
-	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
-	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
 	authorization := common.NewAuthorizationMultiplexer(
 		common.NewTMSAuthorization(logger, publicParamsManager.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
@@ -132,18 +128,9 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
-		observables.NewObservableIssueService(
-			fabtoken.NewIssueService(publicParamsManager, ws, deserializer),
-			observables.NewIssue(tracerProvider),
-		),
-		observables.NewObservableTransferService(
-			fabtoken.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
-			observables.NewTransfer(tracerProvider),
-		),
-		observables.NewObservableAuditorService(
-			fabtoken.NewAuditorService(),
-			observables.NewAudit(tracerProvider),
-		),
+		fabtoken.NewIssueService(publicParamsManager, ws, deserializer),
+		fabtoken.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
+		fabtoken.NewAuditorService(),
 		tokensService,
 		authorization,
 	)
@@ -159,11 +146,5 @@ func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Val
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	metricsProvider := metrics.NewTMSProvider(driver.TMSID{}, d.metricsProvider)
-	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
-	defaultValidator, err := d.DefaultValidator(pp)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create default validator")
-	}
-	return observables.NewObservableValidator(defaultValidator, observables.NewValidator(tracerProvider)), nil
+	return d.DefaultValidator(pp)
 }

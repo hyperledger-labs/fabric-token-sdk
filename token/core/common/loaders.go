@@ -10,7 +10,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -37,7 +36,6 @@ type TokenAndMetadataDeserializer[T any, M any] interface {
 
 type VaultLedgerTokenLoader[T any] struct {
 	Logger       logging.Logger
-	tracer       trace.Tracer
 	TokenVault   TokenVault
 	Deserializer TokenDeserializer[T]
 
@@ -46,10 +44,9 @@ type VaultLedgerTokenLoader[T any] struct {
 	RetryDelay time.Duration
 }
 
-func NewLedgerTokenLoader[T any](logger logging.Logger, tracerProvider trace.TracerProvider, tokenVault TokenVault, deserializer TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
+func NewLedgerTokenLoader[T any](logger logging.Logger, _ trace.TracerProvider, tokenVault TokenVault, deserializer TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
 	return &VaultLedgerTokenLoader[T]{
 		Logger:       logger,
-		tracer:       tracerProvider.Tracer("token_loader", tracing.WithMetricsOpts(tracing.MetricsOpts{Namespace: "tokensdk"})),
 		TokenVault:   tokenVault,
 		Deserializer: deserializer,
 		NumRetries:   6,
@@ -59,8 +56,10 @@ func NewLedgerTokenLoader[T any](logger logging.Logger, tracerProvider trace.Tra
 
 // GetTokenOutputs takes an array of token identifiers (txID, index) and returns the corresponding token outputs
 func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*token.ID) (map[string]T, error) {
-	_, span := s.tracer.Start(ctx, "token_outputs_fetch")
-	defer span.End()
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("start_get_token_outputs")
+	defer span.AddEvent("end_get_token_outputs")
+
 	var err error
 	for i := 0; i < s.NumRetries; i++ {
 		span.AddEvent("try_fetch")

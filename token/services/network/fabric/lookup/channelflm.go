@@ -68,7 +68,7 @@ type channelBasedLLM struct {
 
 func (c *channelBasedLLM) AddLookupListener(namespace driver.Namespace, key driver.PKey, startingTxID string, stopOnLastTx bool, listener Listener) error {
 	s := &Scanner{
-		context:      nil,
+		context:      context.Background(),
 		channel:      c.channel,
 		namespace:    namespace,
 		key:          key,
@@ -112,7 +112,7 @@ func (s *Scanner) Scan() {
 	v := s.channel.Vault()
 	var lastTxID string
 	if s.stopOnLastTx {
-		id, err := v.GetLastTxID()
+		id, err := v.GetLastTxID(s.context)
 		if err != nil {
 			s.listener.OnError(s.context, s.key, err)
 			return
@@ -131,7 +131,7 @@ func (s *Scanner) Scan() {
 
 		logger.Debugf("scanning [%s]...", tx.TxID())
 
-		rws, err := v.InspectRWSet(tx.Results())
+		rws, err := v.InspectRWSet(s.context, tx.Results())
 		if err != nil {
 			return false, err
 		}

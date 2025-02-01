@@ -138,8 +138,7 @@ func newAuditingViewInitiator(tx *Transaction, local bool) *AuditingViewInitiato
 }
 
 func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("auditing_initiator_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
 	var err error
 	var session view.Session
 	span.AddEvent("start_session")
@@ -276,8 +275,9 @@ func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *AuditApproveV
 }
 
 func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("audit_approve_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+	span.AddEvent("start_audit_approve_view")
+	defer span.AddEvent("end_audit_approve_view")
 	// Append audit records
 	if err := auditor.New(context, a.w).Append(a.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed appending audit records for transaction %s", a.tx.ID())

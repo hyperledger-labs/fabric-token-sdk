@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Withdrawal struct {
@@ -40,8 +41,8 @@ type WithdrawalInitiatorView struct {
 }
 
 func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("withdrawal_initiator_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	// First the initiator send a withdrawal request to the issuer.
 	// If the initiator has already some recipient data, it uses that directly
 	var id view.Identity
@@ -68,8 +69,8 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 	// This is a trick to the reuse the same API independently of the role a party plays.
 	return context.RunView(nil, view.AsResponder(session), view.WithViewCall(
 		func(context view.Context) (interface{}, error) {
-			span := context.StartSpan("withdrawal_respond_view")
-			defer span.End()
+			span := trace.SpanFromContext(context.Context())
+
 			// At some point, the recipient receives the token transaction that in the meantime has been assembled
 			tx, err := ttx.ReceiveTransaction(context)
 			assert.NoError(err, "failed to receive tokens")
@@ -116,8 +117,6 @@ type WithdrawalResponderView struct {
 }
 
 func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("withdrawal_responder_view")
-	defer span.End()
 	// First the issuer receives the withdrawal request
 	issueRequest, err := ttx.ReceiveWithdrawalRequest(context)
 	assert.NoError(err, "failed to receive withdrawal request")

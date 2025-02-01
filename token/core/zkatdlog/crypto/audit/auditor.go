@@ -146,8 +146,9 @@ func (a *Auditor) Check(
 	txID string,
 ) error {
 	// TODO: inputTokens should be checked against the actions
-	_, span := a.tracer.Start(ctx, "auditor_check")
-	defer span.End()
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("start_check")
+	defer span.AddEvent("end_check")
 	// De-obfuscate issue requests
 	span.AddEvent("get_issue_audit_info")
 	outputsFromIssue, err := a.GetAuditInfoForIssuesFunc(tokenRequest.Issues, tokenRequestMetadata.Issues)

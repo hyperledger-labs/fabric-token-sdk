@@ -55,14 +55,18 @@ func NewFinalityListener(logger logging.Logger, tmsProvider TokenManagementServi
 }
 
 func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
-	if err := t.retryRunner.Run(func() error { return t.runOnStatus(ctx, txID, status, message, tokenRequestHash) }); err != nil {
+	newCtx, span := t.tracer.Start(ctx, "on_status")
+	defer span.End()
+	if err := t.retryRunner.Run(func() error { return t.runOnStatus(newCtx, txID, status, message, tokenRequestHash) }); err != nil {
 		t.logger.Errorf("Listener failed")
 	}
 }
 
 func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) error {
-	newCtx, span := t.tracer.Start(ctx, "on_status")
-	defer span.End()
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("start_run_on_status")
+	defer span.AddEvent("end_run_on_status")
+
 	t.logger.Debugf("tx status changed for tx [%s]: [%s]", txID, status)
 	var txStatus driver.TxStatus
 	switch status {
@@ -97,7 +101,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 		} else {
 			t.logger.Debugf("append token request for [%s]", txID)
 			span.AddEvent("append_token_request")
-			if err := t.tokens.Append(newCtx, t.tmsID, txID, tr); err != nil {
+			if err := t.tokens.Append(ctx, t.tmsID, txID, tr); err != nil {
 				// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
 				t.logger.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
 				return fmt.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
@@ -108,7 +112,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 		txStatus = driver.Deleted
 	}
 	span.AddEvent("set_tx_status")
-	if err := t.ttxDB.SetStatus(newCtx, txID, txStatus, message); err != nil {
+	if err := t.ttxDB.SetStatus(ctx, txID, txStatus, message); err != nil {
 		t.logger.Errorf("<message> [%s]: [%s]", txID, err)
 		return fmt.Errorf("<message> [%s]: [%s]", txID, err)
 	}
