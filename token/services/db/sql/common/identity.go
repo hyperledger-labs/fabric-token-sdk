@@ -275,6 +275,7 @@ func (db *IdentityDB) GetExistingSignerInfo(ids ...driver2.Identity) ([]string, 
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
+	defer Close(rows)
 	found := collections.NewSet[string]()
 	for rows.Next() {
 		var idHash string
