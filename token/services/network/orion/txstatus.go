@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type TxStatusRequest struct {
@@ -40,8 +41,8 @@ func NewRequestTxStatusView(network string, namespace string, txID string, dbMan
 }
 
 func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("request_tx_status_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	sm, err := r.dbManager.GetSessionManager(r.Network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting session manager for network [%s]", r.Network)
@@ -79,8 +80,8 @@ type RequestTxStatusResponderView struct {
 }
 
 func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("request_tx_status_responder_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	// receive request
 	session := session2.JSON(context)
 	request := &TxStatusRequest{}

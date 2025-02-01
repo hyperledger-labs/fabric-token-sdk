@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -42,8 +43,8 @@ func NewBroadcastView(dbManager *DBManager, network string, blob interface{}) *B
 }
 
 func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("broadcast_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	sm, err := r.DBManager.GetSessionManager(r.Network)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting session manager for network [%s]", r.Network)
@@ -93,8 +94,8 @@ type BroadcastResponderView struct {
 }
 
 func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("broadcast_responder_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	// receive request
 	session := session2.JSON(context)
 	request := &BroadcastRequest{}

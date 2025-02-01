@@ -106,12 +106,14 @@ func NewTransferService(
 // Transfer returns a TransferActionMetadata as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
 func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.OwnerWallet, tokenIDs []*token2.ID, outputTokens []*token2.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
-	newCtx, span := s.tracer.Start(ctx, "transfer")
-	defer span.End()
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("start_transfer")
+	defer span.AddEvent("end_transfer")
+
 	s.Logger.Debugf("Prepare Transfer Action [%s,%v]", txID, tokenIDs)
 	// load tokens with the passed token identifiers
 	span.AddEvent("load_tokens")
-	loadedTokens, err := s.TokenLoader.LoadTokens(newCtx, tokenIDs)
+	loadedTokens, err := s.TokenLoader.LoadTokens(ctx, tokenIDs)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
@@ -160,7 +162,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	// return for each output its information in the clear
 	start := time.Now()
 	span.AddEvent("start_generate_zk_transfer")
-	action, outputMetadata, err := sender.GenerateZKTransfer(newCtx, values, owners)
+	action, outputMetadata, err := sender.GenerateZKTransfer(ctx, values, owners)
 	span.AddEvent("end_generate_zk_transfer")
 	duration := time.Since(start)
 	if err != nil {

@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -226,6 +227,9 @@ func (r *Request) ID() string {
 // The action issues to the receiver a token of the passed type and quantity.
 // Additional options can be passed to customize the action.
 func (r *Request) Issue(ctx context.Context, wallet *IssuerWallet, receiver Identity, typ token.Type, q uint64, opts ...IssueOption) (*IssueAction, error) {
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("start_issue")
+	defer span.AddEvent("end_issue")
 	if wallet == nil {
 		return nil, errors.Errorf("wallet is nil")
 	}

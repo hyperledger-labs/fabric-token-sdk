@@ -310,21 +310,25 @@ type FinalityListener struct {
 }
 
 func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string) {
-	if err := t.retryRunner.Run(func() error { return t.runOnStatus(ctx, txID, status, message) }); err != nil {
+	newCtx, span := t.tracer.Start(ctx, "on_status")
+	defer span.End()
+	if err := t.retryRunner.Run(func() error { return t.runOnStatus(newCtx, txID, status, message) }); err != nil {
 		logger.Errorf("failed running finality listener: %v", err)
 	}
 }
 
 func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status int, message string) (err error) {
-	newCtx, span := t.tracer.Start(ctx, "on_status")
-	defer span.End()
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("start_run_on_status")
+	defer span.AddEvent("end_run_on_status")
+
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Errorf("panic caught: %v", r)
 		}
 	}()
 	span.AddEvent("request_tx_status_view")
-	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID, t.dbManager), newCtx)
+	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID, t.dbManager), ctx)
 	if err != nil {
 		return errors.Wrapf(err, "failed retrieving token request [%s]", txID)
 	}
@@ -344,7 +348,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 	}
 
 	t.root.OnStatus(
-		newCtx,
+		ctx,
 		txID,
 		status,
 		message,

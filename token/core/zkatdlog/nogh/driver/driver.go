@@ -10,11 +10,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
-	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/observables"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
@@ -111,7 +109,6 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	)
 
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
-	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
 	driverMetrics := zkatdlog.NewMetrics(metricsProvider)
 	tokensService, err := zkatdlog.NewTokensService(ppm, deserializer)
 	if err != nil {
@@ -125,33 +122,24 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
-		observables.NewObservableIssueService(
-			zkatdlog.NewIssueService(logger, ppm, ws, deserializer, driverMetrics, tokensService),
-			observables.NewIssue(tracerProvider),
+		zkatdlog.NewIssueService(logger, ppm, ws, deserializer, driverMetrics, tokensService),
+		zkatdlog.NewTransferService(
+			logger,
+			ppm,
+			ws,
+			common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
+			deserializer,
+			driverMetrics,
+			d.tracerProvider,
+			tokensService,
 		),
-		observables.NewObservableTransferService(
-			zkatdlog.NewTransferService(
-				logger,
-				ppm,
-				ws,
-				common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
-				deserializer,
-				driverMetrics,
-				d.tracerProvider,
-				tokensService,
-			),
-			observables.NewTransfer(tracerProvider),
-		),
-		observables.NewObservableAuditorService(
-			zkatdlog.NewAuditorService(
-				logger,
-				ppm,
-				common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
-				deserializer,
-				driverMetrics,
-				d.tracerProvider,
-			),
-			observables.NewAudit(tracerProvider),
+		zkatdlog.NewAuditorService(
+			logger,
+			ppm,
+			common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
+			deserializer,
+			driverMetrics,
+			d.tracerProvider,
 		),
 		tokensService,
 		authorization,
@@ -169,11 +157,5 @@ func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Val
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	defaultValidator, err := d.DefaultValidator(pp)
-	if err != nil {
-		return nil, err
-	}
-	metricsProvider := metrics.NewTMSProvider(driver.TMSID{}, d.metricsProvider)
-	tracerProvider := tracing2.NewTracerProviderWithBackingProvider(d.tracerProvider, metricsProvider)
-	return observables.NewObservableValidator(defaultValidator, observables.NewValidator(tracerProvider)), nil
+	return d.DefaultValidator(pp)
 }

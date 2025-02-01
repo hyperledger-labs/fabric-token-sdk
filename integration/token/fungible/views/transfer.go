@@ -19,6 +19,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // TransferAction defines a transfer action
@@ -73,8 +74,8 @@ type TransferView struct {
 }
 
 func (t *TransferView) Call(context view.Context) (txID interface{}, err error) {
-	span := context.StartSpan("transfer_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	// As a first step operation, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which

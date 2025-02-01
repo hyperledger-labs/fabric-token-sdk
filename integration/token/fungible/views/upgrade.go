@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type TokensUpgrade struct {
@@ -40,8 +41,7 @@ type TokensUpgradeInitiatorView struct {
 }
 
 func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("upgrade_initiator_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
 
 	// First, the initiator selects the tokens to upgrade, namely those that are unsupported.
 	tms := token.GetManagementService(context, token.WithTMSID(i.TMSID))
@@ -98,8 +98,8 @@ func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, er
 	// This is a trick to the reuse the same API independently of the role a party plays.
 	return context.RunView(nil, view.AsResponder(session), view.WithViewCall(
 		func(context view.Context) (interface{}, error) {
-			span := context.StartSpan("upgrade_respond_view")
-			defer span.End()
+			span := trace.SpanFromContext(context.Context())
+
 			// At some point, the recipient receives the token transaction that in the meantime has been assembled
 			tx, err := ttx.ReceiveTransaction(context)
 			assert.NoError(err, "failed to receive tokens")
@@ -147,8 +147,6 @@ type TokensUpgradeResponderView struct {
 }
 
 func (p *TokensUpgradeResponderView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("upgrade_responder_view")
-	defer span.End()
 	// First the issuer receives the upgrade request
 	upgradeRequest, err := ttx.ReceiveTokensUpgradeRequest(context)
 	assert.NoError(err, "failed to receive upgrade request")

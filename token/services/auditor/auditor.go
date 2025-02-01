@@ -158,9 +158,7 @@ func (a *Auditor) Release(tx Transaction) {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *Auditor) SetStatus(ctx context.Context, txID string, status db.TxStatus, message string) error {
-	newCtx, span := a.finalityTracer.Start(ctx, "set_status", tracing.WithAttributes(tracing.String(txIdLabel, txID)))
-	defer span.End()
-	return a.auditDB.SetStatus(newCtx, txID, status, message)
+	return a.auditDB.SetStatus(ctx, txID, status, message)
 }
 
 // GetStatus return the status of the given transaction id.

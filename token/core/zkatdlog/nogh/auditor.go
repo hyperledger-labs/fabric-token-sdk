@@ -56,8 +56,9 @@ func NewAuditorService(
 
 // AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
 func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.TokenRequest, metadata *driver.TokenRequestMetadata, txID string) error {
-	newCtx, span := s.tracer.Start(ctx, "auditor_check")
-	defer span.End()
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("start_auditor_check")
+	defer span.AddEvent("end_auditor_check")
 	s.Logger.Debugf("[%s] check token request validity, number of transfer actions [%d]...", txID, len(metadata.Transfers))
 
 	actionDes := &validator.ActionDeserializer{}
@@ -73,7 +74,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	}
 
 	span.AddEvent("load_token_outputs")
-	// tokenMap, err := s.TokenCommitmentLoader.GetTokenOutputs(newCtx, tokenIDs)
+	// tokenMap, err := s.TokenCommitmentLoader.GetTokenOutputs(ctx, tokenIDs)
 	// if err != nil {
 	// 	return errors.Wrapf(err, "failed getting token outputs to perform auditor check")
 	// }
@@ -93,7 +94,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	auditor := audit.NewAuditor(s.Logger, s.tracer, s.Deserializer, pp.PedersenGenerators, nil, math.Curves[pp.Curve])
 	span.AddEvent("start_auditor_check")
 	err = auditor.Check(
-		newCtx,
+		ctx,
 		request,
 		metadata,
 		inputTokens,

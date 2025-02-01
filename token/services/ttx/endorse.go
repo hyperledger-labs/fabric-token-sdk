@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -648,8 +649,9 @@ func NewReceiveTransactionView(network string) *ReceiveTransactionView {
 }
 
 func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("receive_tx_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+	span.AddEvent("start_receive_transaction_view")
+	defer span.AddEvent("end_receive_transaction_view")
 
 	msg, err := ReadMessage(context.Session(), time.Minute*4)
 	if err != nil {

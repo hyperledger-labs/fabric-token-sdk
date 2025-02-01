@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -102,8 +103,6 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 }
 
 func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("request_recipient_identity_view")
-	defer span.End()
 	w := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager().OwnerWallet(f.Other)
 
 	if isSameNode := w != nil; !isSameNode {
@@ -116,8 +115,8 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 }
 
 func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Context) (interface{}, error) {
-	span := context.StartSpan("other_recipient_identity_request")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("request recipient [%s] is not registered", f.Other)
 	}
@@ -204,8 +203,8 @@ func RespondRequestRecipientIdentityUsingWallet(context view.Context, wallet str
 }
 
 func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("request_recipient_identity_respond_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	session, payload, err := session2.ReadFirstMessage(context)
 	if err != nil {
 		logger.Errorf("failed to read first message: [%s]", err)

@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -79,8 +80,8 @@ func RequestTokensUpgradeForRecipient(context view.Context, issuer view.Identity
 }
 
 func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("upgrade_request_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
+
 	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
 
 	span.AddEvent("start_session")
@@ -196,8 +197,7 @@ func ReceiveTokensUpgradeRequest(context view.Context) (*UpgradeTokensRequest, e
 }
 
 func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, error) {
-	span := context.StartSpan("receive_upgrade_request_view")
-	defer span.End()
+	span := trace.SpanFromContext(context.Context())
 
 	session := session.JSON(context)
 	agreement := &UpgradeTokensAgreement{}

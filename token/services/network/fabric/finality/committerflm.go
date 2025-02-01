@@ -130,7 +130,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	}
 
 	v := t.ch.Vault()
-	qe, err := v.NewQueryExecutor()
+	qe, err := v.NewQueryExecutor(ctx)
 	if err != nil {
 		panic(fmt.Sprintf("can't get query executor [%s]", txID))
 	}
@@ -139,7 +139,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	span.AddEvent("fetch_request_hash")
 	var tokenRequestHash *driver2.VersionedRead
 	var retries int
-	for tokenRequestHash, err = qe.GetState(t.namespace, key); err == nil && (tokenRequestHash == nil || len(tokenRequestHash.Raw) == 0) && retries < t.maxRetries; tokenRequestHash, err = qe.GetState(t.namespace, key) {
+	for tokenRequestHash, err = qe.GetState(ctx, t.namespace, key); err == nil && (tokenRequestHash == nil || len(tokenRequestHash.Raw) == 0) && retries < t.maxRetries; tokenRequestHash, err = qe.GetState(ctx, t.namespace, key) {
 		span.AddEvent("retry_fetch_request_hash")
 		logger.Debugf("did not find token request [%s]. retrying...", txID)
 		retries++
