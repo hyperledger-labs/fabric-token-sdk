@@ -79,6 +79,7 @@ func (db *TokenLockDB) logStaleLocks(leaseExpiry time.Duration) error {
 	if err != nil {
 		return err
 	}
+	defer common.Close(rows)
 
 	var lockEntries []lockEntry
 	for rows.Next() {

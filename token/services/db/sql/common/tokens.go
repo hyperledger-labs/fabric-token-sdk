@@ -1006,10 +1006,10 @@ func (db *TokenDB) unspendableTokenFormats(ctx context.Context, walletID string,
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
+	defer Close(rows)
 	if err := rows.Err(); err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
-	defer rows.Close()
 	// read the types from the query result and remove discard those in db.getSupportedTokenFormats()
 	supportedFormats := db.getSupportedTokenFormats()
 	logger.Debugf("supported token formats are [%v]", supportedFormats)

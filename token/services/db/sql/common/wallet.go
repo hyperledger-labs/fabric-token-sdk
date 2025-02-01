@@ -71,6 +71,7 @@ func (db *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer Close(rows)
 
 	var walletIDs []driver.WalletID
 	for rows.Next() {
