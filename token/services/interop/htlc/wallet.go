@@ -173,6 +173,7 @@ func (w *OwnerWallet) DeleteExpiredReceivedTokens(context view.Context, opts ...
 	if err != nil {
 		return errors.WithMessage(err, "failed to get an iterator of expired received tokens")
 	}
+	defer it.Close()
 	var buffer []*token2.UnspentToken
 	for {
 		tok, err := it.Next()
@@ -203,6 +204,7 @@ func (w *OwnerWallet) DeleteClaimedSentTokens(context view.Context, opts ...toke
 	if err != nil {
 		return errors.WithMessage(err, "failed to get an iterator of expired received tokens")
 	}
+	defer it.Close()
 	var buffer []*token2.UnspentToken
 	for {
 		tok, err := it.Next()
