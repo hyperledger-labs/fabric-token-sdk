@@ -49,7 +49,11 @@ func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transacti
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed compiling tx options")
 	}
-	net := network.GetInstance(context, txOpts.TMSID.Network, txOpts.TMSID.Channel)
+	tms := token.GetManagementService(
+		context,
+		token.WithTMSID(txOpts.TMSID),
+	)
+	net := network.GetInstance(context, tms.Network(), tms.Channel())
 	if net == nil {
 		return nil, errors.New("failed to get network")
 	}
