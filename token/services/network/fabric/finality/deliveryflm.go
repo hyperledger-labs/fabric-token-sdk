@@ -34,6 +34,10 @@ type listenerEntry struct {
 	listener  driver.FinalityListener
 }
 
+func (e *listenerEntry) Namespace() driver2.Namespace {
+	return e.namespace
+}
+
 func (e *listenerEntry) OnStatus(ctx context.Context, info TxInfo) {
 	if len(e.namespace) == 0 || len(info.Namespace) == 0 || e.namespace == info.Namespace {
 		e.listener.OnStatus(ctx, info.TxId, info.Status, info.Message, info.RequestHash)
@@ -90,9 +94,20 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 	if err != nil {
 		return nil, err
 	}
-	flm, err := finality.NewListenerManager[TxInfo](p.config, ch.Delivery(), p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{
-		Namespace: network,
-	})), p.newMapper(network, channel))
+	mapper := p.newMapper(network, channel)
+	flm, err := finality.NewListenerManager[TxInfo](
+		p.config,
+		ch.Delivery(),
+		&DeliveryScanQueryByID{
+			Delivery: ch.Delivery(),
+			Ledger:   ch.Ledger(),
+			Mapper:   mapper,
+		},
+		p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{
+			Namespace: network,
+		})),
+		mapper,
+	)
 	if err != nil {
 		return nil, err
 	}

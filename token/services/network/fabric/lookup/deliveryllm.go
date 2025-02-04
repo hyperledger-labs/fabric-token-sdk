@@ -41,6 +41,10 @@ type listenerEntry struct {
 	listener  Listener
 }
 
+func (e *listenerEntry) Namespace() driver2.Namespace {
+	return e.namespace
+}
+
 func (e *listenerEntry) OnStatus(ctx context.Context, info TxInfo) {
 	logger.Debugf("notify info [%v] to namespace [%s]", info, e.namespace)
 	if len(e.namespace) == 0 || len(info.Namespace) == 0 || e.namespace == info.Namespace {
@@ -100,9 +104,17 @@ func (p *deliveryBasedLLMProvider) NewManager(network, channel string) (Listener
 	if err != nil {
 		return nil, err
 	}
-	flm, err := finality.NewListenerManager[TxInfo](p.config, ch.Delivery(), p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{
-		Namespace: network,
-	})), p.newMapper(network, channel))
+	flm, err := finality.NewListenerManager[TxInfo](
+		p.config,
+		ch.Delivery(),
+		&DeliveryScanQueryByID{
+			Channel: ch,
+		},
+		p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{
+			Namespace: network,
+		})),
+		p.newMapper(network, channel),
+	)
 	if err != nil {
 		return nil, err
 	}
