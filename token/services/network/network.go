@@ -450,6 +450,7 @@ func (np *networkProvider) newNetwork(netId netId) (*Network, error) {
 	network, channel := netId.network, netId.channel
 	var errs []error
 	for _, d := range np.drivers {
+		logger.Debugf("new network service for [%s:%s]", network, channel)
 		nw, err := d.New(network, channel)
 		if err != nil {
 			errs = append(errs, errors.WithMessagef(err, "failed to create network [%s:%s]", network, channel))
