@@ -145,9 +145,11 @@ func (s *Scanner) Scan() {
 		for i := 0; i < rws.NumWrites(ns); i++ {
 			k, v, err := rws.GetWriteAt(ns, i)
 			if err != nil {
+				logger.Debugf("scanning [%s]: failed to get key [%s]", tx.TxID(), err)
 				return false, err
 			}
 			if k == s.key {
+				logger.Debugf("scanning [%s]: found key [%s]", tx.TxID(), k)
 				keyValue = v
 				return true, nil
 			}

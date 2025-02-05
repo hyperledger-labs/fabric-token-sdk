@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package lookup
 
 import (
+	"context"
 	"encoding/json"
 
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
@@ -24,7 +25,7 @@ type DeliveryScanQueryByID struct {
 	Channel *fabric.Channel
 }
 
-func (q *DeliveryScanQueryByID) QueryByID(lastBlock driver2.BlockNum, evicted map[driver2.TxID][]finality.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
+func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, lastBlock driver2.BlockNum, evicted map[driver2.TxID][]finality.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
 	// collects keys by namespace
 	keysByNS := map[driver2.Namespace][]string{}
 	for k, v := range evicted {
