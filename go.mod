@@ -9,7 +9,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250205090733-f23ad6152594
+	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250205094203-ec535d4f5f94
 	github.com/hyperledger-labs/orion-sdk-go v0.2.10
 	github.com/hyperledger-labs/orion-server v0.2.10
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
@@ -65,7 +65,6 @@ require (
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
-	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
@@ -79,8 +78,6 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
-	github.com/dgraph-io/badger/v3 v3.2103.5 // indirect
-	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/docker v27.2.0+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
@@ -109,11 +106,8 @@ require (
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/glog v1.2.4 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/flatbuffers v2.0.8+incompatible // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect

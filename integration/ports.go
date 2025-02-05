@@ -60,13 +60,13 @@ var (
 
 	AllTestTypes = []*InfrastructureType{
 		WebSocketNoReplication,
-		// LibP2PNoReplication,
-		// WebSocketWithReplication,
+		LibP2PNoReplication,
+		WebSocketWithReplication,
 	}
 )
 
 const (
-	BasePort integration.TestPortRange = integration.BasePort + integration.PortsPerSuite*iota + 10000
+	BasePort integration.TestPortRange = integration.BasePort + integration.PortsPerSuite*iota
 
 	ZKATDLogFungible
 	ZKATDLogFungibleStress

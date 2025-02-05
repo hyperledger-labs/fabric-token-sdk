@@ -137,7 +137,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 
 	// Fetch the token request hash. Retry in case some other replica committed it shortly before
 	span.AddEvent("fetch_request_hash")
-	var tokenRequestHash *driver2.VersionedRead
+	var tokenRequestHash *driver2.VaultRead
 	var retries int
 	for tokenRequestHash, err = qe.GetState(ctx, t.namespace, key); err == nil && (tokenRequestHash == nil || len(tokenRequestHash.Raw) == 0) && retries < t.maxRetries; tokenRequestHash, err = qe.GetState(ctx, t.namespace, key) {
 		span.AddEvent("retry_fetch_request_hash")
