@@ -24,7 +24,7 @@ type DeliveryScanQueryByID struct {
 	Channel *fabric.Channel
 }
 
-func (q *DeliveryScanQueryByID) QueryByID(evicted map[driver2.TxID][]finality.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
+func (q *DeliveryScanQueryByID) QueryByID(lastBlock driver2.BlockNum, evicted map[driver2.TxID][]finality.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
 	// collects keys by namespace
 	keysByNS := map[driver2.Namespace][]string{}
 	for k, v := range evicted {

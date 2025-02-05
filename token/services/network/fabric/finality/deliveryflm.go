@@ -39,8 +39,12 @@ func (e *listenerEntry) Namespace() driver2.Namespace {
 }
 
 func (e *listenerEntry) OnStatus(ctx context.Context, info TxInfo) {
+	logger.Debugf("notify listener for tx [%s] in namespace [%s]", info.TxId, info.Namespace)
 	if len(e.namespace) == 0 || len(info.Namespace) == 0 || e.namespace == info.Namespace {
+		logger.Debugf("notify listener for tx [%s] in namespace [%s], selected", info.TxId, info.Namespace)
 		e.listener.OnStatus(ctx, info.TxId, info.Status, info.Message, info.RequestHash)
+	} else {
+		logger.Debugf("notify listener for tx [%s] in namespace [%s], discarded", info.TxId, info.Namespace)
 	}
 }
 
@@ -180,6 +184,7 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string,
 	for ns, write := range rwSet.WriteSet.Writes {
 		logger.Debugf("TX [%s:%s] has %d writes", txID, ns, len(write))
 		if requestHash, ok := write[key]; ok {
+			logger.Debugf("TX [%s:%s] did have key [%s]. Found: %v", txID, ns, key, write.Keys())
 			txInfos[ns] = TxInfo{
 				TxId:        txID,
 				Namespace:   ns,
@@ -191,5 +196,6 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string,
 			logger.Debugf("TX [%s:%s] did not have key [%s]. Found: %v", txID, ns, key, write.Keys())
 		}
 	}
+	logger.Debugf("TX [%s] has [%d] infos", txID, len(txInfos))
 	return txInfos, nil
 }
