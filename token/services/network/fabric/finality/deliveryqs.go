@@ -25,9 +25,9 @@ type DeliveryScanQueryByID struct {
 }
 
 func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, lastBlock driver.BlockNum, evicted map[driver.TxID][]finality.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
-	txIDs := collections.Keys(evicted)
-	results := collections.NewSet(txIDs...)
-	ch := make(chan []TxInfo, len(txIDs))
+	keys := collections.Keys(evicted)
+	results := collections.NewSet(keys...)
+	ch := make(chan []TxInfo, len(keys))
 	go q.queryByID(ctx, results, ch, lastBlock)
 	return ch, nil
 }
@@ -69,7 +69,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, results collectio
 	}
 
 	if startDelivery {
-		startingBlock := MaxUint64(1, lastBlock-10)
+		startingBlock := finality.MaxUint64(1, lastBlock-10)
 		// startingBlock := uint64(0)
 		if logger.IsEnabledFor(zap.DebugLevel) {
 			logger.Debugf("start scanning blocks starting from [%d], looking for remaining keys [%v]", startingBlock, results.ToSlice())
@@ -101,11 +101,4 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, results collectio
 		}
 		logger.Debugf("finished scanning blocks starting from [%d]", startingBlock)
 	}
-}
-
-func MaxUint64(a, b uint64) uint64 {
-	if a > b {
-		return a
-	}
-	return b
 }
