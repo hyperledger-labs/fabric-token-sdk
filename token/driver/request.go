@@ -85,13 +85,13 @@ func (r *TokenRequest) FromBytes(raw []byte) error {
 		}
 	}
 	for _, signature := range tr.Signatures {
-		if signature == nil {
+		if signature == nil || len(signature.Raw) == 0 {
 			return errors.New("nil signature found")
 		}
 		r.Signatures = append(r.Signatures, signature.Raw)
 	}
 	for _, signature := range tr.AuditorSignatures {
-		if signature == nil {
+		if signature == nil || len(signature.Raw) == 0 {
 			return errors.New("nil auditor signature found")
 		}
 		r.AuditorSignatures = append(r.AuditorSignatures, signature.Raw)
