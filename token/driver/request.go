@@ -7,11 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"encoding/asn1"
-	"fmt"
-
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -35,12 +31,72 @@ type TokenRequest struct {
 }
 
 func (r *TokenRequest) Bytes() ([]byte, error) {
-	return asn1.Marshal(*r)
+	tr := &request.TokenRequest{
+		Version: Version,
+	}
+	for _, issue := range r.Issues {
+		tr.Actions = append(tr.Actions,
+			&request.Action{
+				Type: request.ActionType_ISSUE,
+				Raw:  issue,
+			},
+		)
+	}
+	for _, transfer := range r.Transfers {
+		tr.Actions = append(tr.Actions,
+			&request.Action{
+				Type: request.ActionType_TRANSFER,
+				Raw:  transfer,
+			},
+		)
+	}
+	for _, signature := range r.Signatures {
+		tr.Signatures = append(tr.Signatures, &request.Signature{
+			Raw: signature,
+		})
+	}
+	for _, signature := range r.AuditorSignatures {
+		tr.AuditorSignatures = append(tr.AuditorSignatures, &request.Signature{
+			Raw: signature,
+		})
+	}
+
+	return proto.Marshal(tr)
 }
 
 func (r *TokenRequest) FromBytes(raw []byte) error {
-	_, err := asn1.Unmarshal(raw, r)
-	return err
+	tr := &request.TokenRequest{}
+	err := proto.Unmarshal(raw, tr)
+	if err != nil {
+		return errors.Wrap(err, "failed unmarshalling token request")
+	}
+
+	for _, action := range tr.Actions {
+		if action == nil {
+			return errors.New("nil action found")
+		}
+		switch action.Type {
+		case request.ActionType_ISSUE:
+			r.Issues = append(r.Issues, action.Raw)
+		case request.ActionType_TRANSFER:
+			r.Transfers = append(r.Transfers, action.Raw)
+		default:
+			return errors.Errorf("unknown action type [%s]", action.Type)
+		}
+	}
+	for _, signature := range tr.Signatures {
+		if signature == nil {
+			return errors.New("nil signature found")
+		}
+		r.Signatures = append(r.Signatures, signature.Raw)
+	}
+	for _, signature := range tr.AuditorSignatures {
+		if signature == nil {
+			return errors.New("nil auditor signature found")
+		}
+		r.AuditorSignatures = append(r.AuditorSignatures, signature.Raw)
+	}
+	return nil
 }
 
 // IssueMetadata contains the metadata of an issue action.
@@ -125,6 +181,10 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 	for _, transfer := range m.Transfers {
 		tokenIDs := make([]*request.TokenID, len(transfer.TokenIDs))
 		for j, tokenID := range transfer.TokenIDs {
+			if tokenID == nil {
+				return nil, errors.Errorf("nil token ID at index [%d]", j)
+			}
+			tokenIDs[j] = &request.TokenID{}
 			tokenIDs[j].TxId = tokenID.TxId
 			tokenIDs[j].Index = tokenID.Index
 		}
@@ -166,6 +226,10 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 	for _, issue := range m.Issues {
 		tokenIDs := make([]*request.TokenID, len(issue.TokenIDs))
 		for j, tokenID := range issue.TokenIDs {
+			if tokenID == nil {
+				return nil, errors.Errorf("nil token ID at index [%d]", j)
+			}
+			tokenIDs[j] = &request.TokenID{}
 			tokenIDs[j].TxId = tokenID.TxId
 			tokenIDs[j].Index = tokenID.Index
 		}
@@ -212,72 +276,80 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 	for _, metadatum := range trm.Metadata {
 		im := metadatum.GetIssueMetadata()
 		if im != nil {
-
+			tokenIDs := make([]*token.ID, len(im.TokenIds))
+			for j, tokenID := range im.TokenIds {
+				if tokenID != nil {
+					tokenIDs[j] = &token.ID{}
+					tokenIDs[j].TxId = tokenID.TxId
+					tokenIDs[j].Index = tokenID.Index
+				}
+			}
+			receivers := make([]Identity, len(im.Receivers))
+			for j, receiver := range im.Receivers {
+				if receiver != nil {
+					receivers[j] = receiver.Raw
+				}
+			}
+			extraSigners := make([]Identity, len(im.ExtraSigners))
+			for j, extraSigner := range im.ExtraSigners {
+				if extraSigner != nil {
+					extraSigners[j] = extraSigner.Raw
+				}
+			}
 			m.Issues = append(m.Issues, IssueMetadata{
 				Issuer:              im.Issuer.Raw,
-				TokenIDs:            TokenIDs,
+				TokenIDs:            tokenIDs,
 				OutputsMetadata:     im.OutputsMetadata,
-				Receivers:           issue.Receivers,
-				ReceiversAuditInfos: im.ReceiversAuditInfos,
-				ExtraSigners:        issue.ExtraSigners,
-			}
+				Receivers:           receivers,
+				ReceiversAuditInfos: im.ReceiverAuditInfos,
+				ExtraSigners:        extraSigners,
+			})
 			continue
 		}
+
 		tm := metadatum.GetTransferMetadata()
 		if tm != nil {
+			tokenIDs := make([]*token.ID, len(tm.TokenIds))
+			for j, tokenID := range tm.TokenIds {
+				if tokenID != nil {
+					tokenIDs[j] = &token.ID{}
+					tokenIDs[j].TxId = tokenID.TxId
+					tokenIDs[j].Index = tokenID.Index
+				}
+			}
+			senders := make([]Identity, len(tm.Senders))
+			for j, sender := range tm.Senders {
+				if sender != nil {
+					senders[j] = sender.Raw
+				}
+			}
+			receivers := make([]Identity, len(tm.Receivers))
+			for j, receiver := range tm.Receivers {
+				if receiver != nil {
+					receivers[j] = receiver.Raw
+				}
+			}
+			extraSigners := make([]Identity, len(tm.ExtraSigners))
+			for j, extraSigner := range tm.ExtraSigners {
+				if extraSigner != nil {
+					extraSigners[j] = extraSigner.Raw
+				}
+			}
 
+			m.Transfers = append(m.Transfers, TransferMetadata{
+				TokenIDs:           tokenIDs,
+				Senders:            senders,
+				SenderAuditInfos:   tm.SenderAuditInfos,
+				OutputsMetadata:    tm.OutputsMetadata,
+				OutputsAuditInfo:   tm.OutputAudit_Infos,
+				Receivers:          receivers,
+				ReceiverAuditInfos: tm.ReceiverAuditInfos,
+				ExtraSigners:       extraSigners,
+			})
 			continue
 		}
 	}
 
-	// unmarshal transfers
-
-	for i, transfer := range ser.Transfers {
-		TokenIDs := make([]*token.ID, len(transfer.TokenIDs))
-		for j, tokenID := range transfer.TokenIDs {
-			TokenIDs[j] = &token.ID{
-				TxId:  tokenID.TxId,
-				Index: uint64(tokenID.Index),
-			}
-		}
-		m.Transfers[i] = TransferMetadata{
-			TokenIDs:           TokenIDs,
-			OutputsAuditInfo:   transfer.OutputAuditInfos,
-			OutputsMetadata:    transfer.OutputsMetadata,
-			Senders:            transfer.Senders,
-			SenderAuditInfos:   transfer.SenderAuditInfos,
-			Receivers:          transfer.Receivers,
-			ReceiverAuditInfos: transfer.ReceiverAuditInfos,
-			ExtraSigners:       transfer.ExtraSigners,
-		}
-	}
-
-	// unmarshal issues
-	m.Issues = make([]IssueMetadata, len(ser.Issues))
-	for i, issue := range ser.Issues {
-		TokenIDs := make([]*token.ID, len(issue.TokenIDs))
-		for j, tokenID := range issue.TokenIDs {
-			TokenIDs[j] = &token.ID{
-				TxId:  tokenID.TxId,
-				Index: uint64(tokenID.Index),
-			}
-		}
-		fmt.Printf("issue with [%d] inputs unmarshalled\n", len(issue.TokenIDs))
-		m.Issues[i] = IssueMetadata{
-			Issuer:              issue.Issuer,
-			TokenIDs:            TokenIDs,
-			OutputsMetadata:     issue.OutputsMetadata,
-			Receivers:           issue.Receivers,
-			ReceiversAuditInfos: issue.ReceiversAuditInfos,
-			ExtraSigners:        issue.ExtraSigners,
-		}
-	}
-
-	// unmarshal application metadata
-	m.Application, err = UnmarshalMeta(ser.Application)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal token request metadata: cannot unmarshal application metadata")
-	}
 	return nil
 }
 
@@ -306,10 +378,4 @@ type IssueMetadataSer struct {
 	Receivers           []Identity
 	ReceiversAuditInfos [][]byte
 	ExtraSigners        []Identity
-}
-
-type tokenRequestMetadataSer struct {
-	Issues      []IssueMetadataSer
-	Transfers   []TransferMetadataSer
-	Application []byte
 }
