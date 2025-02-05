@@ -82,5 +82,5 @@ message TokenRequest {
   uint32 version = 1; // Version number
   repeated Action actions = 2; // List of token actions to perform
   repeated Signature signatures = 3; // Signatures for the actions
-  repeated Signature auditor_signature = 4; // Additional signatures from auditors
+  repeated Signature auditor_signatures = 4; // Additional signatures from auditors
 }
