@@ -8,37 +8,12 @@ package driver
 
 import (
 	"encoding/asn1"
-	"sort"
 
 	jsoniter "github.com/json-iterator/go"
 )
 
-func Marshal(v interface{}) ([]byte, error) {
-	return jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(v)
-}
-
 func Unmarshal(data []byte, v interface{}) error {
 	return jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, v)
-}
-
-func MarshalMeta(v map[string][]byte) ([]byte, error) {
-	metaSer := metaSer{
-		Keys: make([]string, len(v)),
-		Vals: make([][]byte, len(v)),
-	}
-
-	i := 0
-	for k := range v {
-		metaSer.Keys[i] = k
-		i++
-	}
-	i = 0
-	sort.Strings(metaSer.Keys)
-	for _, key := range metaSer.Keys {
-		metaSer.Vals[i] = v[key]
-		i++
-	}
-	return asn1.Marshal(metaSer)
 }
 
 func UnmarshalMeta(raw []byte) (map[string][]byte, error) {
