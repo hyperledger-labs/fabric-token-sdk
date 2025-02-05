@@ -10,13 +10,13 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
-
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -81,22 +81,39 @@ func (lv *LockView) Call(context view.Context) (txID interface{}, err error) {
 	span.AddEvent("receive_escrow_recipient_identity")
 	recipients := make([]view.Identity, len(lv.Escrow))
 	for k, eid := range lv.Escrow {
-		recipients[k], err = ttx.RequestRecipientIdentity(context, eid, token2.WithTMSID(*lv.TMSID))
+		if lv.TMSID != nil {
+			recipients[k], err = ttx.RequestRecipientIdentity(context, eid, token2.WithTMSID(*lv.TMSID))
+		} else {
+			recipients[k], err = ttx.RequestRecipientIdentity(context, eid)
+		}
 		assert.NoError(err, "failed getting recipient")
 	}
 
 	// The sender will select tokens owned by this wallet
-	senderWallet := ttx.GetWallet(context, lv.Wallet, token2.WithTMSID(*lv.TMSID))
+	var senderWallet *token2.OwnerWallet
+	if lv.TMSID != nil {
+		senderWallet = ttx.GetWallet(context, lv.Wallet, token2.WithTMSID(*lv.TMSID))
+	} else {
+		senderWallet = ttx.GetWallet(context, lv.Wallet)
+	}
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", lv.Wallet)
 
 	// At this point, the sender is ready to prepare the token transaction.
 	// If NotAnonymous == fasle, then the sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
 	var tx *ttx.Transaction
-	txOpts := []ttx.TxOption{
-		ttx.WithTMSID(*lv.TMSID),
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(lv.Auditor)),
+	var txOpts []ttx.TxOption
+	if lv.TMSID != nil {
+		txOpts = []ttx.TxOption{
+			ttx.WithTMSID(*lv.TMSID),
+			ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(lv.Auditor)),
+		}
+	} else {
+		txOpts = []ttx.TxOption{
+			ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(lv.Auditor)),
+		}
 	}
+
 	span.AddEvent("create_transfer")
 	if !lv.NotAnonymous {
 		// create an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
@@ -126,6 +143,12 @@ func (lv *LockView) Call(context view.Context) (txID interface{}, err error) {
 		Identities: recipients,
 	}
 	raw, err := escrowID.Serialize()
+	assert.NoError(err, "failed serializing multi-identity")
+	ro := &identity.TypedIdentity{
+		Type:     multisig.Escrow,
+		Identity: raw,
+	}
+	raw, err = ro.Bytes()
 	assert.NoError(err, "failed serializing multi-identity")
 	// This transfer sends the token to an escrow governed by a multisig
 	err = tx.Transfer(
@@ -211,7 +234,11 @@ func (lv *LockWithSelectorView) Call(context view.Context) (interface{}, error) 
 	recipients := make([]view.Identity, len(lv.Escrow))
 	var err error
 	for k, eid := range lv.Escrow {
-		recipients[k], err = ttx.RequestRecipientIdentity(context, eid, token2.WithTMSID(*lv.TMSID))
+		if lv.TMSID != nil {
+			recipients[k], err = ttx.RequestRecipientIdentity(context, eid, token2.WithTMSID(*lv.TMSID))
+		} else {
+			recipients[k], err = ttx.RequestRecipientIdentity(context, eid)
+		}
 		assert.NoError(err, "failed getting recipient %s", eid)
 	}
 
@@ -311,7 +338,13 @@ func (lv *LockWithSelectorView) Call(context view.Context) (interface{}, error) 
 	escrowID := &multisig.MultiIdentity{
 		Identities: recipients,
 	}
-	raw, err := escrowID.Serialize()
+	raw, err := json.Marshal(escrowID)
+	assert.NoError(err, "failed serializing multi-identity")
+	ro := &identity.TypedIdentity{
+		Type:     multisig.Escrow,
+		Identity: raw,
+	}
+	raw, err = ro.Bytes()
 	assert.NoError(err, "failed serializing multi-identity")
 	// This transfer sends the token to an escrow governed by a multisig
 	err = tx.Transfer(

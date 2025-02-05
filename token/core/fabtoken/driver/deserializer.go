@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
@@ -29,6 +30,7 @@ func NewDeserializer() *Deserializer {
 
 	auditorIssuerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
 	auditorIssuerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
+	m.AddTypedVerifierDeserializer(multisig.Escrow, multisig.NewTypedIdentityDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditInfoDeserializer{}))
 
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(
@@ -56,5 +58,6 @@ func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
 	d.AddDeserializer(msp.X509Identity, &x509.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&x509.AuditInfoDeserializer{}))
+	d.AddDeserializer(multisig.Escrow, &multisig.EscrowInfoDeserializer{})
 	return d
 }

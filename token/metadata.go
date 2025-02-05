@@ -118,7 +118,11 @@ func (m *Metadata) filterTransfers(issues []*driver.TransferMetadata, eIDSet col
 		clone := &driver.TransferMetadata{
 			Inputs:       nil,
 			Outputs:      nil,
-			ExtraSigners: transfer.ExtraSigners,
+			ExtraSigners:       transfer.ExtraSigners,
+			Receivers:          make([][]Identity, len(transfer.Receivers)),
+			ReceiverAuditInfos: make([][]byte, len(transfer.ReceiverAuditInfos)),
+			OutputsMetadata:    make([][]byte, len(transfer.OutputsMetadata)),
+			OutputsAuditInfo:   make([][]byte, len(transfer.OutputsAuditInfo)),
 		}
 
 		// Filter outputs

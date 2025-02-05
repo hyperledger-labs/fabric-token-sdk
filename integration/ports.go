@@ -101,4 +101,6 @@ const (
 	Mixed
 
 	Updatability
+
+	FabtokenEscrow
 )
