@@ -896,7 +896,9 @@ func TransferDistributionList(r *token.Request) []view.Identity {
 	distributionList := make([]view.Identity, 0)
 	for _, transfer := range r.Transfers() {
 		distributionList = append(distributionList, transfer.Senders...)
-		distributionList = append(distributionList, transfer.Receivers...)
+		for _, rec := range transfer.Receivers {
+			distributionList = append(distributionList, rec...)
+		}
 	}
 	return distributionList
 }

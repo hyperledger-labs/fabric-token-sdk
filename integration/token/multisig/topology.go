@@ -72,6 +72,19 @@ func Topology(opts common.Opts) []api.Topology {
 	issuer.RegisterViewFactory("GetIssuerWalletIdentity", &views.GetIssuerWalletIdentityViewFactory{})
 	issuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
+	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
+		fabric.WithOrganization("Org1"),
+		fabric.WithAnonymousIdentity(),
+		orion.WithRole("auditor"),
+		token.WithAuditorIdentity(opts.HSM),
+	)
+	auditor.AddOptions(opts.ReplicationOpts.For("auditor")...)
+	auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+	auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
+	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
+	auditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
+
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
@@ -81,15 +94,12 @@ func Topology(opts common.Opts) []api.Topology {
 	)
 	alice.AddOptions(opts.ReplicationOpts.For("alice")...)
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
-	alice.RegisterResponder(&views.AcceptCashView{}, &views3.LockView{})
-	alice.RegisterResponder(&views.AcceptCashView{}, &views3.LockWithSelectorView{})
+	alice.RegisterResponder(&views3.AcceptCashView{}, &views3.LockView{})
+	alice.RegisterResponder(&views3.AcceptCashView{}, &views3.LockWithSelectorView{})
 	alice.RegisterViewFactory("lock", &views3.LockViewFactory{})
 	alice.RegisterViewFactory("lockWithSelector", &views3.LockWithSelectorViewFactory{})
-	alice.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
-	alice.RegisterViewFactory("balance", &views.BalanceViewFactory{})
+	alice.RegisterViewFactory("balance", &views3.BalanceViewFactory{})
 	alice.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
-	alice.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
-	alice.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	alice.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
 	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 	alice.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
@@ -103,15 +113,12 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithRemoteOwnerIdentity("bob_remote"),
 	)
 	bob.AddOptions(opts.ReplicationOpts.For("bob")...)
-	bob.RegisterResponder(&views.AcceptCashView{}, &views3.LockView{})
-	bob.RegisterResponder(&views.AcceptCashView{}, &views3.LockWithSelectorView{})
+	bob.RegisterResponder(&views3.AcceptCashView{}, &views3.LockView{})
+	bob.RegisterResponder(&views3.AcceptCashView{}, &views3.LockWithSelectorView{})
 	bob.RegisterViewFactory("lock", &views3.LockViewFactory{})
 	bob.RegisterViewFactory("lockWithSelector", &views3.LockWithSelectorViewFactory{})
-	bob.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
-	bob.RegisterViewFactory("balance", &views.BalanceViewFactory{})
+	bob.RegisterViewFactory("balance", &views3.BalanceViewFactory{})
 	bob.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
-	bob.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
-	bob.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	bob.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
 	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 	bob.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
@@ -124,15 +131,12 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithOwnerIdentity("charlie.id1"),
 	)
 	charlie.AddOptions(opts.ReplicationOpts.For("charlie")...)
-	charlie.RegisterResponder(&views.AcceptCashView{}, &views3.LockView{})
-	charlie.RegisterResponder(&views.AcceptCashView{}, &views3.LockWithSelectorView{})
+	charlie.RegisterResponder(&views3.AcceptCashView{}, &views3.LockView{})
+	charlie.RegisterResponder(&views3.AcceptCashView{}, &views3.LockWithSelectorView{})
 	charlie.RegisterViewFactory("lock", &views3.LockViewFactory{})
 	charlie.RegisterViewFactory("lockWithSelector", &views3.LockWithSelectorViewFactory{})
-	charlie.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
-	charlie.RegisterViewFactory("balance", &views.BalanceViewFactory{})
+	charlie.RegisterViewFactory("balance", &views3.BalanceViewFactory{})
 	charlie.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
-	charlie.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
-	charlie.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	charlie.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
 	charlie.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 	charlie.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
@@ -180,6 +184,10 @@ func Topology(opts common.Opts) []api.Topology {
 	} else {
 		nodeList = fscTopology.ListNodes()
 		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
+	}
+
+	if !opts.NoAuditor {
+		tms.AddAuditor(auditor)
 	}
 
 	if opts.OnlyUnity {
