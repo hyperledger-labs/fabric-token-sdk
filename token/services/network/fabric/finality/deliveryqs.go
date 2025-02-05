@@ -24,15 +24,15 @@ type DeliveryScanQueryByID struct {
 	Mapper   finality.TxInfoMapper[TxInfo]
 }
 
-func (q *DeliveryScanQueryByID) QueryByID(lastBlock driver.BlockNum, evicted map[driver.TxID][]finality.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
+func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, lastBlock driver.BlockNum, evicted map[driver.TxID][]finality.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
 	txIDs := collections.Keys(evicted)
 	results := collections.NewSet(txIDs...)
 	ch := make(chan []TxInfo, len(txIDs))
-	go q.queryByID(results, ch, lastBlock)
+	go q.queryByID(ctx, results, ch, lastBlock)
 	return ch, nil
 }
 
-func (q *DeliveryScanQueryByID) queryByID(results collections.Set[string], ch chan []TxInfo, lastBlock uint64) {
+func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, results collections.Set[string], ch chan []TxInfo, lastBlock uint64) {
 	defer close(ch)
 
 	// for each txID, fetch the corresponding transaction.
@@ -77,7 +77,7 @@ func (q *DeliveryScanQueryByID) queryByID(results collections.Set[string], ch ch
 
 		// start delivery for the future
 		err := q.Delivery.ScanFromBlock(
-			context.TODO(),
+			ctx,
 			startingBlock,
 			func(tx *fabric.ProcessedTransaction) (bool, error) {
 				if !results.Contains(tx.TxID()) {

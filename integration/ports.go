@@ -66,7 +66,7 @@ var (
 )
 
 const (
-	BasePort integration.TestPortRange = integration.BasePort + integration.PortsPerSuite*iota
+	BasePort integration.TestPortRange = integration.BasePort + integration.PortsPerSuite*iota + 10000
 
 	ZKATDLogFungible
 	ZKATDLogFungibleStress
