@@ -16,11 +16,14 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
+	slices2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	"go.uber.org/zap"
 )
 
 const (
-	QueryStates = tcc.QueryStates
+	QueryStates      = tcc.QueryStates
+	NumberPastBlocks = 10
+	FirstBlock       = 1
 )
 
 type DeliveryScanQueryByID struct {
@@ -28,23 +31,24 @@ type DeliveryScanQueryByID struct {
 	Channel  *fabric.Channel
 }
 
-func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, lastBlock driver2.BlockNum, evicted map[driver2.TxID][]finality.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
+func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, startingBlock driver2.BlockNum, evicted map[driver2.TxID][]finality.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
 	// we are abusing TxID to carry the name of the keys we are looking for.
 	// Keys are supposed to be unique
 	keys := collections.Keys(evicted) // These are the state keys we are looking for
-	results := collections.NewSet(keys...)
 	ch := make(chan []TxInfo, len(keys))
-	go q.queryByID(ctx, results, ch, lastBlock, evicted)
+	go q.queryByID(ctx, keys, ch, startingBlock, evicted)
 	return ch, nil
 }
 
-func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, results collections.Set[string], ch chan []TxInfo, lastBlock uint64, evicted map[driver2.TxID][]finality.ListenerEntry[TxInfo]) {
+func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver2.TxID, ch chan []TxInfo, lastBlock uint64, evicted map[driver2.TxID][]finality.ListenerEntry[TxInfo]) {
 	defer close(ch)
 
+	keySet := collections.NewSet(keys...)
+
 	// group keys by namespace
-	keysByNS := map[driver2.Namespace][]string{}
+	keysByNS := map[driver2.Namespace][]driver2.PKey{}
 	for k, v := range evicted {
-		ns := v[0].Namespace()
+		ns := slices2.GetAny(v).Namespace()
 		_, ok := keysByNS[ns]
 		if !ok {
 			keysByNS[ns] = []string{}
@@ -74,83 +78,86 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, results collectio
 			logger.Errorf("failed unmarshalling results for query by ids [%v]: [%s]", keys, err)
 			return
 		}
-		infos := make([]TxInfo, 0, len(values))
-		var remainingKeys []string
+		found := make([]TxInfo, 0, len(values))
+		var notFound []string
 		for i, value := range values {
 			if len(value) == 0 {
 				startDelivery = true
-				remainingKeys = append(remainingKeys, keys[i])
+				notFound = append(notFound, keys[i])
 				continue
 			}
-			infos = append(infos, TxInfo{
+			found = append(found, TxInfo{
 				Namespace: ns,
 				Key:       keys[i],
 				Value:     value,
 			})
-			results.Remove(keys[i])
+			keySet.Remove(keys[i])
 		}
-		if len(remainingKeys) == 0 {
+		if len(notFound) == 0 {
 			delete(keysByNS, ns)
 		} else {
-			keysByNS[ns] = remainingKeys
+			keysByNS[ns] = notFound
 		}
-		ch <- infos
+		ch <- found
 	}
 
-	if startDelivery {
-		startingBlock := finality.MaxUint64(1, lastBlock-10)
-		// startingBlock := uint64(0)
-		if logger.IsEnabledFor(zap.DebugLevel) {
-			logger.Debugf("start scanning blocks starting from [%d], looking for remaining keys [%v]", startingBlock, results.ToSlice())
-		}
-
-		// start delivery for the future
-		v := q.Channel.Vault()
-		err := q.Delivery.ScanFromBlock(
-			ctx,
-			startingBlock,
-			func(tx *fabric.ProcessedTransaction) (bool, error) {
-				rws, err := v.InspectRWSet(ctx, tx.Results())
-				if err != nil {
-					return false, err
-				}
-
-				var txInfos []TxInfo
-				for namespace, keys := range keysByNS {
-					if !slices.Contains(rws.Namespaces(), namespace) {
-						logger.Debugf("scanning [%s] does not contain namespace [%s]", tx.TxID(), namespace)
-						continue
-					}
-
-					for i := 0; i < rws.NumWrites(namespace); i++ {
-						k, v, err := rws.GetWriteAt(namespace, i)
-						if err != nil {
-							logger.Debugf("scanning [%s]: failed to get key [%s]", tx.TxID(), err)
-							return false, err
-						}
-						if slices.Contains(keys, k) {
-							logger.Debugf("scanning [%s]: found key [%s]", tx.TxID(), k)
-							txInfos = append(txInfos, TxInfo{
-								Namespace: namespace,
-								Key:       k,
-								Value:     v,
-							})
-							logger.Debugf("removing [%s] from searching list, remaining keys [%d]", k, results.Length())
-							results.Remove(k)
-						}
-					}
-				}
-				if len(txInfos) != 0 {
-					ch <- txInfos
-				}
-
-				return results.Length() == 0, nil
-			},
-		)
-		if err != nil {
-			logger.Errorf("failed scanning blocks [%s], started from [%d]", err, startingBlock)
-			return
-		}
-		logger.Debugf("finished scanning blocks starting from [%d]", startingBlock)
+	if !startDelivery {
+		return
 	}
+
+	startingBlock := finality.MaxUint64(FirstBlock, lastBlock-NumberPastBlocks)
+	// startingBlock := uint64(0)
+	if logger.IsEnabledFor(zap.DebugLevel) {
+		logger.Debugf("start scanning blocks starting from [%d], looking for remaining keys [%v]", startingBlock, keySet.ToSlice())
+	}
+
+	// start delivery for the future
+	v := q.Channel.Vault()
+	err := q.Delivery.ScanFromBlock(
+		ctx,
+		startingBlock,
+		func(tx *fabric.ProcessedTransaction) (bool, error) {
+			rws, err := v.InspectRWSet(ctx, tx.Results())
+			if err != nil {
+				return false, err
+			}
+
+			var txInfos []TxInfo
+			for namespace, keys := range keysByNS {
+				if !slices.Contains(rws.Namespaces(), namespace) {
+					logger.Debugf("scanning [%s] does not contain namespace [%s]", tx.TxID(), namespace)
+					continue
+				}
+
+				for i := 0; i < rws.NumWrites(namespace); i++ {
+					k, v, err := rws.GetWriteAt(namespace, i)
+					if err != nil {
+						logger.Debugf("scanning [%s]: failed to get key [%s]", tx.TxID(), err)
+						return false, err
+					}
+					if slices.Contains(keys, k) {
+						logger.Debugf("scanning [%s]: found key [%s]", tx.TxID(), k)
+						txInfos = append(txInfos, TxInfo{
+							Namespace: namespace,
+							Key:       k,
+							Value:     v,
+						})
+						logger.Debugf("removing [%s] from searching list, remaining keys [%d]", k, keySet.Length())
+						keySet.Remove(k)
+					}
+				}
+			}
+			if len(txInfos) != 0 {
+				ch <- txInfos
+			}
+
+			return keySet.Length() == 0, nil
+		},
+	)
+	if err != nil {
+		logger.Errorf("failed scanning blocks [%s], started from [%d]", err, startingBlock)
+		return
+	}
+	logger.Debugf("finished scanning blocks starting from [%d]", startingBlock)
+
 }
