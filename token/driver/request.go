@@ -10,8 +10,15 @@ import (
 	"encoding/asn1"
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+)
+
+const (
+	Version = 1
 )
 
 // TokenRequest is a collection of Token Action:
@@ -108,67 +115,123 @@ type TokenRequestMetadata struct {
 }
 
 func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
-	// marshal application metadata
-	meta, err := MarshalMeta(m.Application)
-	if err != nil {
-		return nil, errors.New("cannot marshal token request metadata: failed to marshal application metadata")
+	trm := &request.TokenRequestMetadata{
+		Version:     Version,
+		Metadata:    nil,
+		Application: m.Application,
 	}
 
 	// marshal transfers
-	transfers := make([]TransferMetadataSer, len(m.Transfers))
-	for i, transfer := range m.Transfers {
-		TokenIDs := make([]TokenIDSer, len(transfer.TokenIDs))
+	for _, transfer := range m.Transfers {
+		tokenIDs := make([]*request.TokenID, len(transfer.TokenIDs))
 		for j, tokenID := range transfer.TokenIDs {
-			TokenIDs[j].TxId = tokenID.TxId
-			TokenIDs[j].Index = int(tokenID.Index)
+			tokenIDs[j].TxId = tokenID.TxId
+			tokenIDs[j].Index = tokenID.Index
 		}
-		transfers[i] = TransferMetadataSer{
-			TokenIDs:           TokenIDs,
-			OutputAuditInfos:   transfer.OutputsAuditInfo,
-			OutputsMetadata:    transfer.OutputsMetadata,
-			Senders:            transfer.Senders,
-			SenderAuditInfos:   transfer.SenderAuditInfos,
-			Receivers:          transfer.Receivers,
-			ReceiverAuditInfos: transfer.ReceiverAuditInfos,
-			ExtraSigners:       transfer.ExtraSigners,
+		senders := make([]*request.Identity, len(transfer.Senders))
+		for j, sender := range transfer.Senders {
+			senders[j] = &request.Identity{
+				Raw: sender,
+			}
 		}
+		receivers := make([]*request.Identity, len(transfer.Receivers))
+		for j, receiver := range transfer.Receivers {
+			receivers[j] = &request.Identity{
+				Raw: receiver,
+			}
+		}
+		extraSigners := make([]*request.Identity, len(transfer.ExtraSigners))
+		for j, extraSigner := range transfer.ExtraSigners {
+			extraSigners[j] = &request.Identity{
+				Raw: extraSigner,
+			}
+		}
+		trm.Metadata = append(trm.Metadata, &request.ActionMetadata{
+			Metadata: &request.ActionMetadata_TransferMetadata{
+				TransferMetadata: &request.TransferMetadata{
+					TokenIds:           tokenIDs,
+					OutputAudit_Infos:  transfer.OutputsAuditInfo,
+					OutputsMetadata:    transfer.OutputsMetadata,
+					Senders:            senders,
+					SenderAuditInfos:   transfer.SenderAuditInfos,
+					Receivers:          receivers,
+					ReceiverAuditInfos: transfer.ReceiverAuditInfos,
+					ExtraSigners:       extraSigners,
+				},
+			},
+		})
 	}
 
 	// marshal issues
-	issues := make([]IssueMetadataSer, len(m.Issues))
-	for i, issue := range m.Issues {
-		TokenIDs := make([]TokenIDSer, len(issue.TokenIDs))
+	for _, issue := range m.Issues {
+		tokenIDs := make([]*request.TokenID, len(issue.TokenIDs))
 		for j, tokenID := range issue.TokenIDs {
-			TokenIDs[j].TxId = tokenID.TxId
-			TokenIDs[j].Index = int(tokenID.Index)
+			tokenIDs[j].TxId = tokenID.TxId
+			tokenIDs[j].Index = tokenID.Index
 		}
-		issues[i] = IssueMetadataSer{
-			Issuer:              issue.Issuer,
-			TokenIDs:            TokenIDs,
-			OutputsMetadata:     issue.OutputsMetadata,
-			Receivers:           issue.Receivers,
-			ReceiversAuditInfos: issue.ReceiversAuditInfos,
-			ExtraSigners:        issue.ExtraSigners,
+		receivers := make([]*request.Identity, len(issue.Receivers))
+		for j, receiver := range issue.Receivers {
+			receivers[j] = &request.Identity{
+				Raw: receiver,
+			}
 		}
+		extraSigners := make([]*request.Identity, len(issue.ExtraSigners))
+		for j, extraSigner := range issue.ExtraSigners {
+			extraSigners[j] = &request.Identity{
+				Raw: extraSigner,
+			}
+		}
+		trm.Metadata = append(trm.Metadata, &request.ActionMetadata{
+			Metadata: &request.ActionMetadata_IssueMetadata{
+				IssueMetadata: &request.IssueMetadata{
+					Issuer: &request.Identity{
+						Raw: issue.Issuer,
+					},
+					TokenIds:           tokenIDs,
+					OutputsMetadata:    issue.OutputsMetadata,
+					Receivers:          receivers,
+					ReceiverAuditInfos: issue.ReceiversAuditInfos,
+					ExtraSigners:       extraSigners,
+				},
+			},
+		})
 	}
 
-	ser := tokenRequestMetadataSer{
-		Issues:      issues,
-		Transfers:   transfers,
-		Application: meta,
-	}
-	return asn1.Marshal(ser)
+	return proto.Marshal(trm)
 }
 
 func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
-	ser := &tokenRequestMetadataSer{}
-	_, err := asn1.Unmarshal(raw, ser)
+	trm := &request.TokenRequestMetadata{}
+	err := proto.Unmarshal(raw, trm)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal token request metadata")
 	}
+	m.Application = trm.Application
+
+	// parse metadata
+	for _, metadatum := range trm.Metadata {
+		im := metadatum.GetIssueMetadata()
+		if im != nil {
+
+			m.Issues = append(m.Issues, IssueMetadata{
+				Issuer:              im.Issuer.Raw,
+				TokenIDs:            TokenIDs,
+				OutputsMetadata:     im.OutputsMetadata,
+				Receivers:           issue.Receivers,
+				ReceiversAuditInfos: im.ReceiversAuditInfos,
+				ExtraSigners:        issue.ExtraSigners,
+			}
+			continue
+		}
+		tm := metadatum.GetTransferMetadata()
+		if tm != nil {
+
+			continue
+		}
+	}
 
 	// unmarshal transfers
-	m.Transfers = make([]TransferMetadata, len(ser.Transfers))
+
 	for i, transfer := range ser.Transfers {
 		TokenIDs := make([]*token.ID, len(transfer.TokenIDs))
 		for j, tokenID := range transfer.TokenIDs {

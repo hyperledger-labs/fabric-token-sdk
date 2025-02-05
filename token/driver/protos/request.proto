@@ -32,25 +32,23 @@ message TokenID {
 // Metadata for a transfer action containing multiple tokens
 message TransferMetadata {
   repeated TokenID token_ids = 1; // List of token IDs being transferred
-  repeated bytes outputs = 2; // New token states after transfer
-  repeated bytes output_audit_Infos = 3; // Audit information for new token states
-  repeated bytes outputs_metadata = 4; // Additional metadata for new tokens
-  repeated Identity senders = 5; // Senders of the tokens
-  repeated bytes sender_audit_infos = 6; // Audit info from senders
-  repeated Identity receivers = 7; // Recipients of the tokens
-  repeated bytes receiver_audit_infos = 8; // Audit info from recipients
-  repeated Identity extra_signers = 9; // Additional signers for the transfer
+  repeated bytes output_audit_Infos = 2; // Audit information for new token states
+  repeated bytes outputs_metadata = 3; // Additional metadata for new tokens
+  repeated Identity senders = 4; // Senders of the tokens
+  repeated bytes sender_audit_infos = 5; // Audit info from senders
+  repeated Identity receivers = 6; // Recipients of the tokens
+  repeated bytes receiver_audit_infos = 7; // Audit info from recipients
+  repeated Identity extra_signers = 8; // Additional signers for the transfer
 }
 
 // Metadata for an issuance action containing multiple tokens
 message IssueMetadata {
   Identity issuer = 1; // Issuer of the tokens
   repeated TokenID token_ids = 2; // List of token IDs being consumed
-  repeated bytes outputs = 3; // Initial token states after issuance
-  repeated bytes outputs_metadata = 4; // Additional metadata for new tokens
-  repeated Identity receivers = 5; // Recipients of the newly issued tokens
-  repeated bytes receiver_audit_infos = 6; // Audit info from recipients
-  repeated Identity extra_signers = 7; // Additional signers for the issuance
+  repeated bytes outputs_metadata = 3; // Additional metadata for new tokens
+  repeated Identity receivers = 4; // Recipients of the newly issued tokens
+  repeated bytes receiver_audit_infos = 5; // Audit info from recipients
+  repeated Identity extra_signers = 6; // Additional signers for the issuance
 }
 
 // Union type containing either issue or transfer metadata
