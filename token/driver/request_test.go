@@ -9,9 +9,8 @@ package driver
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
-
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 func TestTokenRequestSerialization(t *testing.T) {
@@ -38,7 +37,7 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 		Issues: []IssueMetadata{
 			{
 				Issuer:   []byte{1, 2, 3},
-				TokenIDs: []*token2.ID{},
+				TokenIDs: []*token.ID{},
 				OutputsMetadata: [][]byte{
 					[]byte("token_info1"),
 					[]byte("token_info2"),
@@ -59,7 +58,7 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 		},
 		Transfers: []TransferMetadata{
 			{
-				TokenIDs: []*token2.ID{
+				TokenIDs: []*token.ID{
 					{
 						TxId:  "",
 						Index: 1,
