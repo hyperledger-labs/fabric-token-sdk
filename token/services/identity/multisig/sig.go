@@ -7,7 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
-	"encoding/asn1"
+	"encoding/json"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -26,7 +27,7 @@ type MultiSignature struct {
 
 func (v *MultiVerifier) Verify(msg, raw []byte) error {
 	sig := &MultiSignature{}
-	_, err := asn1.Unmarshal(raw, sig)
+	err := json.Unmarshal(raw, sig)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal multisig")
 	}
@@ -44,7 +45,7 @@ func (v *MultiVerifier) Verify(msg, raw []byte) error {
 }
 
 func (id *MultiIdentity) Serialize() ([]byte, error) {
-	raw, err := asn1.Marshal(id)
+	raw, err := json.Marshal(id)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +53,7 @@ func (id *MultiIdentity) Serialize() ([]byte, error) {
 }
 
 func (id *MultiIdentity) Deserialize(raw []byte) error {
-	_, err := asn1.Unmarshal(raw, id)
+	err := json.Unmarshal(raw, id)
 	if err != nil {
 		return err
 	}

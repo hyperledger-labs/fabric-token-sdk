@@ -1,0 +1,239 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+package multisig
+
+import (
+	"context"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
+)
+
+type Vault interface {
+	DeleteTokens(toDelete ...*token2.ID) error
+}
+
+type QueryEngine interface {
+	// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id. Type can be empty
+	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type) (driver.UnspentTokensIterator, error)
+}
+
+type TokenVault interface {
+	DeleteTokens(toDelete ...*token2.ID) error
+}
+
+// OwnerWallet is a combination of a wallet and a query service
+type OwnerWallet struct {
+	wallet      *token.OwnerWallet
+	queryEngine QueryEngine
+	vault       TokenVault
+	bufferSize  int
+}
+
+// ListTokensAsEscrow returns a list of tokens which are co-owned by OwnerWallet
+func (w *OwnerWallet) ListTokensAsEscrow(opts ...token.ListTokensOption) (*FilteredIterator, error) {
+	compiledOpts, err := token.CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile options")
+	}
+
+	return w.filterIterator(compiledOpts.TokenType)
+}
+
+// ListTokens returns a list of tokens that matches the passed options and whose recipient belongs to this wallet
+func (w *OwnerWallet) ListTokens(opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
+	compiledOpts, err := token.CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile options")
+	}
+
+	return w.filter(compiledOpts.TokenType)
+}
+
+// ListTokensIterator returns an iterator of tokens that matches the passed options and whose recipient belongs to this wallet
+func (w *OwnerWallet) ListTokensIterator(opts ...token.ListTokensOption) (*FilteredIterator, error) {
+	compiledOpts, err := token.CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile options")
+	}
+	return w.filterIterator(compiledOpts.TokenType)
+}
+
+func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.UnspentToken) error {
+	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
+	if len(tokens) == 0 {
+		return nil
+	}
+
+	// get spent flags
+	ids := make([]*token2.ID, len(tokens))
+	for i, tok := range tokens {
+		ids[i] = tok.Id
+	}
+	tms := w.wallet.TMS()
+	meta, err := tms.WalletManager().SpentIDs(ids)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
+	}
+	net := network.GetInstance(context, tms.Network(), tms.Channel())
+	if net == nil {
+		return errors.Errorf("cannot load network [%s:%s]", tms.Network(), tms.Channel())
+	}
+	spent, err := net.AreTokensSpent(context.Context(), tms.Namespace(), ids, meta)
+	if err != nil {
+		return errors.WithMessagef(err, "cannot fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
+	}
+
+	// remove the tokens flagged as spent
+	var toDelete []*token2.ID
+	for i, tok := range tokens {
+		if spent[i] {
+			logger.Debugf("token [%s] is spent", tok.Id)
+			toDelete = append(toDelete, tok.Id)
+		} else {
+			logger.Debugf("token [%s] is not spent", tok.Id)
+		}
+	}
+	if err := w.vault.DeleteTokens(toDelete...); err != nil {
+		return errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
+	}
+
+	return nil
+}
+
+func (w *OwnerWallet) filter(tokenType token2.Type) (*token2.UnspentTokens, error) {
+	it, err := w.filterIterator(tokenType)
+	if err != nil {
+		return nil, errors.Wrap(err, "token selection failed")
+	}
+	defer it.Close()
+	var tokens []*token2.UnspentToken
+	for {
+		tok, err := it.Next()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get next unspent token from iterator")
+		}
+		if tok == nil {
+			break
+		}
+		logger.Debugf("filtered token [%s]", tok.Id)
+
+		tokens = append(tokens, tok)
+	}
+	return &token2.UnspentTokens{Tokens: tokens}, nil
+}
+
+func (w *OwnerWallet) filterIterator(tokenType token2.Type) (*FilteredIterator, error) {
+	walletID := escrowWallet(w.wallet)
+	it, err := w.queryEngine.UnspentTokensIteratorBy(context.TODO(), walletID, tokenType)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get iterator over unspent tokens")
+	}
+	return &FilteredIterator{
+		it: it,
+	}, nil
+}
+
+// GetWallet returns the wallet whose id is the passed id
+func GetWallet(sp token.ServiceProvider, id string, opts ...token.ServiceOption) *token.OwnerWallet {
+	return ttx.GetWallet(sp, id, opts...)
+}
+
+// Wallet returns an OwnerWallet which contains a wallet and a query service
+func Wallet(sp token.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
+	if wallet == nil {
+		return nil
+	}
+
+	tms := wallet.TMS()
+	nw := network.GetInstance(sp, tms.Network(), tms.Channel())
+	if nw == nil {
+		return nil
+	}
+	vault, err := nw.TokenVault(tms.Namespace())
+	if err != nil {
+		logger.Errorf("failed to get vault for [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
+		return nil
+	}
+
+	return &OwnerWallet{
+		wallet:      wallet,
+		vault:       vault,
+		queryEngine: vault.QueryEngine(),
+		bufferSize:  100,
+	}
+}
+
+type FilteredIterator struct {
+	it driver.UnspentTokensIterator
+}
+
+func (f *FilteredIterator) Close() {
+	f.it.Close()
+}
+
+func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
+	for {
+		tok, err := f.it.Next()
+		if err != nil {
+			return nil, err
+		}
+		if tok == nil {
+			logger.Debugf("no more tokens!")
+			return nil, nil
+		}
+		owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
+		if err != nil {
+			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+			continue
+		}
+		if owner.Type == multisig.Escrow {
+			escrow := &multisig.MultiIdentity{}
+			if err := escrow.Deserialize(owner.Identity); err != nil {
+				logger.Debugf("token [%s,%s,%s,%s] contains an escrow? No", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
+				continue
+			}
+
+			logger.Debugf("token [%s,%s,%s,%s] contains an escrow? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
+			return tok, nil
+		}
+	}
+}
+
+// Sum  computes the sum of the quantities of the tokens in the iterator.
+// Sum closes the iterator at the end of the execution.
+func (f *FilteredIterator) Sum(precision uint64) (token2.Quantity, error) {
+	defer f.Close()
+	sum := token2.NewZeroQuantity(precision)
+	counter := 0
+	for {
+		tok, err := f.Next()
+		if err != nil {
+			return nil, err
+		}
+		if tok == nil {
+			break
+		}
+
+		q, err := token2.ToQuantity(tok.Quantity, precision)
+		if err != nil {
+			return nil, err
+		}
+		sum = sum.Add(q)
+		counter++
+	}
+	logger.Debugf("how many tokens %d and how much %s", counter, sum)
+	return sum, nil
+}
