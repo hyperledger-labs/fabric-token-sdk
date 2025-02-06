@@ -41,6 +41,7 @@ type Transaction struct {
 	NetworkProvider GetNetworkFunc
 	Opts            *TxOptions
 	Context         context.Context
+	FromRaw         []byte
 }
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
@@ -125,6 +126,7 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 			TokenRequest: token.NewRequest(nil, ""),
 		},
 		Context: context.Context(),
+		FromRaw: raw,
 	}
 	networkProvider := network.GetProvider(context).GetNetwork
 	if err := unmarshal(networkProvider, tx.Payload, raw); err != nil {

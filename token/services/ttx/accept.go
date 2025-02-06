@@ -37,25 +37,21 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	rawRequest, err := s.tx.Bytes()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal token request")
-	}
-
 	// Store transaction in the token transaction database
 	if err := StoreTransactionRecords(context, s.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
 	}
 
+	txRaw := s.tx.FromRaw
 	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(rawRequest), view2.GetIdentityProvider(context).DefaultIdentity())
+		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(txRaw), view2.GetIdentityProvider(context).DefaultIdentity())
 	}
 	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
 	}
-	sigma, err := signer.Sign(rawRequest)
+	sigma, err := signer.Sign(txRaw)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to sign ack response")
 	}

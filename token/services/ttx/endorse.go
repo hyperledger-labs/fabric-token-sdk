@@ -11,7 +11,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -48,7 +47,7 @@ type SignatureRequest struct {
 }
 
 func (sr *SignatureRequest) MessageToSign() []byte {
-	return append(sr.Request, sr.TxID...)
+	return sr.Request
 }
 
 type CollectEndorsementsView struct {
@@ -152,7 +151,12 @@ func (c *CollectEndorsementsView) requestSignaturesOnIssues(context view.Context
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collecting signature on [%d] request issue", len(c.tx.TokenRequest.Metadata.Issues))
 	}
-	return c.requestSignatures(c.tx.TokenRequest.IssueSigners(), c.tx.TokenService().SigService().IssuerVerifier, context, externalWallets)
+	return c.requestSignatures(
+		c.tx.TokenRequest.IssueSigners(),
+		c.tx.TokenService().SigService().IssuerVerifier,
+		context,
+		externalWallets,
+	)
 }
 
 func (c *CollectEndorsementsView) requestSignaturesOnTransfers(context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
@@ -160,7 +164,12 @@ func (c *CollectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 		logger.Debugf("collecting signature on [%d] request transfer", len(c.tx.TokenRequest.Metadata.Transfers))
 	}
 
-	return c.requestSignatures(c.tx.TokenRequest.TransferSigners(), c.tx.TokenService().SigService().OwnerVerifier, context, externalWallets)
+	return c.requestSignatures(
+		c.tx.TokenRequest.TransferSigners(),
+		c.tx.TokenService().SigService().OwnerVerifier,
+		context,
+		externalWallets,
+	)
 }
 
 func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, verifierGetter verifierGetterFunc, context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
@@ -172,13 +181,14 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 	if err != nil {
 		return nil, err
 	}
+	txIDRaw := []byte(c.tx.ID())
 
 	sigmas := make(map[string][]byte)
 	for _, party := range signers {
 		signatureRequest := &SignatureRequest{
 			TX:      txRaw,
 			Request: requestRaw,
-			TxID:    []byte(c.tx.ID()),
+			TxID:    txIDRaw,
 			Signer:  party,
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -460,11 +470,10 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 			}
 		}
 
-		retryRunner := utils.NewRetryRunner(3, 100*time.Millisecond, true)
-		if err := retryRunner.RunWithErrors(func() (bool, error) {
-			err := c.distributeEvnToParty(context, &entry, txRaw, owner)
-			return err == nil, err
-		}); err != nil {
+		// TODO:
+		// This operation might be retried, but this requires a change of protocol to make sure the recipient can always receive.
+		// It could be done by using a new context.
+		if err := c.distributeEvnToParty(context, &entry, txRaw, owner); err != nil {
 			return errors.Wrapf(err, "failed distribute evn to party [%s]", entry.ID)
 		}
 	}
@@ -774,7 +783,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// Receive transaction with envelope
-	_, rawRequest, err := s.receiveTransaction(context)
+	receivedTx, err := s.receiveTransaction(context)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed receiving transaction")
 	}
@@ -786,13 +795,13 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 
 	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(rawRequest), view2.GetIdentityProvider(context).DefaultIdentity())
+		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(receivedTx.FromRaw), view2.GetIdentityProvider(context).DefaultIdentity())
 	}
 	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
 	}
-	sigma, err := signer.Sign(rawRequest)
+	sigma, err := signer.Sign(receivedTx.FromRaw)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to sign ack response")
 	}
@@ -815,14 +824,14 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	return s.tx, nil
 }
 
-func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, []byte, error) {
+func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Receive transaction with envelope...")
 	}
 	// TODO: this might also happen multiple times because of the pseudonym. Avoid this by identity resolution at the sender
 	tx, err := ReceiveTransaction(context)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed receiving transaction")
+		return nil, errors.Wrapf(err, "failed receiving transaction")
 	}
 
 	// TODO: compare with the existing transaction
@@ -833,12 +842,8 @@ func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, []
 	// Set the envelope
 	request := s.tx.TokenRequest
 	s.tx = tx
-	raw, err := tx.Bytes()
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed getting bytes for transaction %s", tx.ID())
-	}
 	s.tx.TokenRequest = request
-	return tx, raw, nil
+	return tx, nil
 }
 
 func requestsToBeSigned(request *token.Request) ([]any, error) {
