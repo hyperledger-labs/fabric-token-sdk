@@ -141,6 +141,24 @@ func Topology(opts common.Opts) []api.Topology {
 	charlie.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 	charlie.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
 
+	dave := fscTopology.AddNodeByName("dave").AddOptions(
+		fabric.WithOrganization("Org2"),
+		fabric.WithAnonymousIdentity(),
+		orion.WithRole("dave"),
+		token.WithOwnerIdentity("dave.id1"),
+		token.WithRemoteOwnerIdentity("dasve_remote"),
+	)
+	dave.AddOptions(opts.ReplicationOpts.For("dave")...)
+	dave.RegisterResponder(&views3.AcceptCashView{}, &views3.LockView{})
+	dave.RegisterResponder(&views3.AcceptCashView{}, &views3.LockWithSelectorView{})
+	dave.RegisterViewFactory("lock", &views3.LockViewFactory{})
+	dave.RegisterViewFactory("lockWithSelector", &views3.LockWithSelectorViewFactory{})
+	dave.RegisterViewFactory("balance", &views3.BalanceViewFactory{})
+	dave.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
+	dave.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
+	dave.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
+	dave.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
+
 	if opts.FSCBasedEndorsement {
 		endorserTemplate := fscTopology.NewTemplate("endorser")
 		endorserTemplate.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
