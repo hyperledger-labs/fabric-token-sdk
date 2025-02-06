@@ -97,32 +97,6 @@ func (a *Auditor) Audit(tx Transaction) (*token.InputStream, *token.OutputStream
 	return record.Inputs, record.Outputs, nil
 }
 
-func newRequestWrapper(r *token.Request, tms *token.ManagementService) *requestWrapper {
-	return &requestWrapper{r: r, tms: tms}
-}
-
-type requestWrapper struct {
-	r   *token.Request
-	tms *token.ManagementService
-}
-
-func (r *requestWrapper) Bytes() ([]byte, error) { return r.r.Bytes() }
-func (r *requestWrapper) AllApplicationMetadata() map[string][]byte {
-	return r.r.AllApplicationMetadata()
-}
-func (r *requestWrapper) PublicParamsHash() token.PPHash { return r.r.PublicParamsHash() }
-
-func (r *requestWrapper) AuditRecord() (*token.AuditRecord, error) {
-	record, err := r.r.AuditRecord()
-	if err != nil {
-		return nil, err
-	}
-	if err := r.completeInputsWithEmptyEID(record); err != nil {
-		return nil, errors.WithMessagef(err, "failed filling gaps for request [%s]", r.r.Anchor)
-	}
-	return record, nil
-}
-
 // Append adds the passed transaction to the auditor database.
 // It also releases the locks acquired by Audit.
 func (a *Auditor) Append(tx Transaction) error {
@@ -174,6 +148,34 @@ func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
 
 func (a *Auditor) Check(context context.Context) ([]string, error) {
 	return a.checkService.Check(context)
+}
+
+type requestWrapper struct {
+	r   *token.Request
+	tms *token.ManagementService
+}
+
+func newRequestWrapper(r *token.Request, tms *token.ManagementService) *requestWrapper {
+	return &requestWrapper{r: r, tms: tms}
+}
+
+func (r *requestWrapper) Bytes() ([]byte, error) { return r.r.Bytes() }
+
+func (r *requestWrapper) AllApplicationMetadata() map[string][]byte {
+	return r.r.AllApplicationMetadata()
+}
+
+func (r *requestWrapper) PublicParamsHash() token.PPHash { return r.r.PublicParamsHash() }
+
+func (r *requestWrapper) AuditRecord() (*token.AuditRecord, error) {
+	record, err := r.r.AuditRecord()
+	if err != nil {
+		return nil, err
+	}
+	if err := r.completeInputsWithEmptyEID(record); err != nil {
+		return nil, errors.WithMessagef(err, "failed filling gaps for request [%s]", r.r.Anchor)
+	}
+	return record, nil
 }
 
 func (r *requestWrapper) completeInputsWithEmptyEID(record *token.AuditRecord) error {

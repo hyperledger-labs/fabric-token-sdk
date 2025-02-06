@@ -7,12 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"encoding/base64"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 type Backend struct {
+	Logger logging.Logger
 	// Ledger to access the ledger state
 	Ledger driver.GetStateFnc
 	// signed Message
@@ -23,8 +27,8 @@ type Backend struct {
 	Sigs [][]byte
 }
 
-func NewBackend(ledger driver.GetStateFnc, message []byte, sigs [][]byte) *Backend {
-	return &Backend{Ledger: ledger, Message: message, Sigs: sigs}
+func NewBackend(logger logging.Logger, ledger driver.GetStateFnc, message []byte, sigs [][]byte) *Backend {
+	return &Backend{Logger: logger, Ledger: ledger, Message: message, Sigs: sigs}
 }
 
 // HasBeenSignedBy checks if a given Message has been signed by the signing identity matching
@@ -36,6 +40,9 @@ func (b *Backend) HasBeenSignedBy(id driver.Identity, verifier driver.Verifier) 
 	sigma := b.Sigs[b.Cursor]
 	b.Cursor++
 
+	// if b.Logger.IsEnabledFor(zapcore.DebugLevel) {
+	b.Logger.Infof("verify signature [%s][%s][%s]", id, base64.StdEncoding.EncodeToString(sigma), Hashable(b.Message))
+	// }
 	return sigma, verifier.Verify(b.Message, sigma)
 }
 

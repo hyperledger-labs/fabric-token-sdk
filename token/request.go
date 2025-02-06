@@ -8,10 +8,11 @@ package token
 
 import (
 	"context"
-	"encoding/asn1"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -171,12 +172,6 @@ type Request struct {
 	// TokenService this request refers to
 	TokenService *ManagementService `json:"-"`
 }
-
-func (r *Request) AllApplicationMetadata() map[string][]byte { return r.Metadata.Application }
-func (r *Request) PublicParamsHash() PPHash {
-	return r.TokenService.PublicParametersManager().PublicParamsHash()
-}
-func (r *Request) String() string { return r.Anchor }
 
 // NewRequest creates a new empty request for the given token service and anchor
 func NewRequest(tokenService *ManagementService, anchor string) *Request {
@@ -908,11 +903,7 @@ func (r *Request) MarshalToAudit() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for audit", r.Anchor)
 	}
-	bytes, err := asn1.Marshal(driver.TokenRequest{Issues: r.Actions.Issues, Transfers: r.Actions.Transfers})
-	if err != nil {
-		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", r.Anchor)
-	}
-	return append(bytes, []byte(r.Anchor)...), nil
+	return r.Actions.MarshalToMessageToSign([]byte(r.Anchor))
 }
 
 // MarshalToSign marshals the request to a message suitable for signing.
@@ -920,7 +911,7 @@ func (r *Request) MarshalToSign() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for signing", r.Anchor)
 	}
-	return r.TokenService.tms.Serializer().MarshalTokenRequestToSign(r.Actions, r.Metadata)
+	return r.Actions.MarshalToMessageToSign([]byte(r.Anchor))
 }
 
 // RequestToBytes marshals the request's actions to bytes.
@@ -931,47 +922,40 @@ func (r *Request) RequestToBytes() ([]byte, error) {
 	return r.Actions.Bytes()
 }
 
-// MetadataToBytes marshals the request's metadata to bytes.
-func (r *Request) MetadataToBytes() ([]byte, error) {
-	if r.Metadata == nil {
-		return nil, errors.Errorf("failed to marshal metadata for request in tx [%s]", r.Anchor)
-	}
-	return r.Metadata.Bytes()
-}
-
 // Bytes marshals the request to bytes.
 // It includes: Anchor (or ID), actions, and metadata.
 func (r *Request) Bytes() ([]byte, error) {
-	req, err := r.RequestToBytes()
+	requestProto, err := r.Actions.ToProtos()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling request to bytes")
+		return nil, errors.Wrapf(err, "failed to marshal request in tx [%s]", r.Anchor)
 	}
-	meta, err := r.MetadataToBytes()
+	metadataProto, err := r.Metadata.ToProtos()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling metadata to bytes")
+		return nil, errors.Wrapf(err, "failed to marshal metadata in tx [%s]", r.Anchor)
 	}
-	return asn1.Marshal(requestSer{
-		TxID:     r.Anchor,
-		Actions:  req,
-		Metadata: meta,
-	})
+	requestWithMetadata := &request.TokenRequestWithMetadata{
+		Version:  0,
+		Anchor:   r.Anchor,
+		Request:  requestProto,
+		Metadata: metadataProto,
+	}
+	return proto.Marshal(requestWithMetadata)
 }
 
 // FromBytes unmarshalls the request from bytes overriding the content of the current request.
-func (r *Request) FromBytes(request []byte) error {
-	var req requestSer
-	_, err := asn1.Unmarshal(request, &req)
-	if err != nil {
-		return errors.Wrapf(err, "failed unmarshalling request")
+func (r *Request) FromBytes(raw []byte) error {
+	requestWithMetadata := &request.TokenRequestWithMetadata{}
+	if err := proto.Unmarshal(raw, requestWithMetadata); err != nil {
+		return errors.Wrapf(err, "failed unmarshaling request")
 	}
-	r.Anchor = req.TxID
-	if len(req.Actions) > 0 {
-		if err := r.Actions.FromBytes(req.Actions); err != nil {
+	r.Anchor = requestWithMetadata.Anchor
+	if requestWithMetadata.Request != nil {
+		if err := r.Actions.FromProtos(requestWithMetadata.Request); err != nil {
 			return errors.Wrapf(err, "failed unmarshalling actions")
 		}
 	}
-	if len(req.Metadata) > 0 {
-		if err := r.Metadata.FromBytes(req.Metadata); err != nil {
+	if requestWithMetadata.Metadata != nil {
+		if err := r.Metadata.FromProtos(requestWithMetadata.Metadata); err != nil {
 			return errors.Wrapf(err, "failed unmarshalling metadata")
 		}
 	}
@@ -1205,6 +1189,14 @@ func (r *Request) GetMetadata() (*Metadata, error) {
 	}, nil
 }
 
+func (r *Request) AllApplicationMetadata() map[string][]byte { return r.Metadata.Application }
+
+func (r *Request) PublicParamsHash() PPHash {
+	return r.TokenService.PublicParametersManager().PublicParamsHash()
+}
+
+func (r *Request) String() string { return r.Anchor }
+
 func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity, token.Type, error) {
 	inputTokens, err := r.TokenService.Vault().NewQueryEngine().GetTokens(inputs...)
 	if err != nil {
@@ -1374,10 +1366,4 @@ func (r *Request) cleanupInputIDs(ds []*token.ID) []*token.ID {
 		}
 	}
 	return newSlice
-}
-
-type requestSer struct {
-	TxID     string
-	Actions  []byte
-	Metadata []byte
 }

@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"encoding/asn1"
+
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -31,6 +33,14 @@ type TokenRequest struct {
 }
 
 func (r *TokenRequest) Bytes() ([]byte, error) {
+	tr, err := r.ToProtos()
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(tr)
+}
+
+func (r *TokenRequest) ToProtos() (*request.TokenRequest, error) {
 	tr := &request.TokenRequest{
 		Version: Version,
 	}
@@ -61,7 +71,7 @@ func (r *TokenRequest) Bytes() ([]byte, error) {
 		})
 	}
 
-	return proto.Marshal(tr)
+	return tr, nil
 }
 
 func (r *TokenRequest) FromBytes(raw []byte) error {
@@ -70,7 +80,10 @@ func (r *TokenRequest) FromBytes(raw []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling token request")
 	}
+	return r.FromProtos(tr)
+}
 
+func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
 	for _, action := range tr.Actions {
 		if action == nil {
 			return errors.New("nil action found")
@@ -97,6 +110,14 @@ func (r *TokenRequest) FromBytes(raw []byte) error {
 		r.AuditorSignatures = append(r.AuditorSignatures, signature.Raw)
 	}
 	return nil
+}
+
+func (r *TokenRequest) MarshalToMessageToSign(anchor []byte) ([]byte, error) {
+	bytes, err := asn1.Marshal(TokenRequest{Issues: r.Issues, Transfers: r.Transfers})
+	if err != nil {
+		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", string(anchor))
+	}
+	return append(bytes, anchor...), nil
 }
 
 // IssueMetadata contains the metadata of an issue action.
@@ -171,6 +192,14 @@ type TokenRequestMetadata struct {
 }
 
 func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
+	trm, err := m.ToProtos()
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(trm)
+}
+
+func (m *TokenRequestMetadata) ToProtos() (*request.TokenRequestMetadata, error) {
 	trm := &request.TokenRequestMetadata{
 		Version:     Version,
 		Metadata:    nil,
@@ -261,7 +290,7 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 		})
 	}
 
-	return proto.Marshal(trm)
+	return trm, nil
 }
 
 func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
@@ -270,9 +299,12 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal token request metadata")
 	}
-	m.Application = trm.Application
 
-	// parse metadata
+	return m.FromProtos(trm)
+}
+
+func (m *TokenRequestMetadata) FromProtos(trm *request.TokenRequestMetadata) error {
+	m.Application = trm.Application
 	for _, metadatum := range trm.Metadata {
 		im := metadatum.GetIssueMetadata()
 		if im != nil {
@@ -349,33 +381,5 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 			continue
 		}
 	}
-
 	return nil
-}
-
-type TokenIDSer struct {
-	TxId  string
-	Index int
-}
-
-type TransferMetadataSer struct {
-	TokenIDs           []TokenIDSer
-	Outputs            [][]byte
-	OutputAuditInfos   [][]byte
-	OutputsMetadata    [][]byte
-	Senders            []Identity
-	SenderAuditInfos   [][]byte
-	Receivers          []Identity
-	ReceiverAuditInfos [][]byte
-	ExtraSigners       []Identity
-}
-
-type IssueMetadataSer struct {
-	Issuer              Identity
-	TokenIDs            []TokenIDSer
-	Outputs             [][]byte
-	OutputsMetadata     [][]byte
-	Receivers           []Identity
-	ReceiversAuditInfos [][]byte
-	ExtraSigners        []Identity
 }

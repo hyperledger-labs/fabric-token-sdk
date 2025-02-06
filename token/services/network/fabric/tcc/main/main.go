@@ -10,7 +10,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/IBM/idemix/common/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
@@ -52,7 +52,7 @@ func main() {
 		config.LogFormat = "%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}"
 	}
 
-	flogging.Init(flogging.Config{
+	logging.Init(logging.Config{
 		Format:  config.LogFormat,
 		LogSpec: config.LogLevel,
 		Writer:  os.Stderr,

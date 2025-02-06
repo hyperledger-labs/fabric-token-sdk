@@ -1,0 +1,17 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+syntax = "proto3";
+
+package protos;
+
+option go_package = "../protos-go/pp";
+
+// PublicParameters describes typed public parameters
+message PublicParameters {
+  string type = 1; // the type of the public parameters
+  bytes public_parameters = 2; // the actual public parameters to be interpreted depending on the type
+}

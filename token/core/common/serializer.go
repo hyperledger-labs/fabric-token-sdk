@@ -15,10 +15,10 @@ func NewSerializer() *Serializer {
 	return &Serializer{}
 }
 
-func (s Serializer) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
-	newReq := &driver.TokenRequest{
-		Issues:    request.Issues,
-		Transfers: request.Transfers,
-	}
-	return newReq.Bytes()
+func (s Serializer) MarshalTokenRequestToSign(anchor string, request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
+	return request.MarshalToMessageToSign([]byte(anchor))
+}
+
+func (s Serializer) MarshalTokenRequestToAuditSign(anchor string, request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
+	return request.MarshalToMessageToSign([]byte(anchor))
 }

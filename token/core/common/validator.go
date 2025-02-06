@@ -8,6 +8,7 @@ package common
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -18,7 +19,8 @@ import (
 type MetadataCounterID = string
 
 const (
-	TokenRequestToSign driver.ValidationAttributeID = "trs"
+	TokenRequestToSign     driver.ValidationAttributeID = "trs"
+	TokenRequestSignatures driver.ValidationAttributeID = "sigs"
 )
 
 type Context[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
@@ -88,16 +90,10 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 	}
 
 	// Prepare message expected to be signed
-	req := &driver.TokenRequest{}
-	req.Transfers = tr.Transfers
-	req.Issues = tr.Issues
-	raqRaw, err := req.Bytes()
+	signed, err := tr.MarshalToMessageToSign([]byte(anchor))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to marshal signed token request")
 	}
-
-	v.Logger.Debugf("cc tx-id [%s][%s]", utils.Hashable(raqRaw), anchor)
-	signed := append(raqRaw, []byte(anchor)...)
 	var signatures [][]byte
 	if len(v.PublicParams.Auditors()) != 0 {
 		signatures = append(signatures, tr.AuditorSignatures...)
@@ -107,12 +103,13 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 	}
 
 	attributes := make(driver.ValidationAttributes)
-	attributes[TokenRequestToSign], err = v.Serializer.MarshalTokenRequestToSign(req, nil)
+	attributes[TokenRequestToSign] = signed
+	attributes[TokenRequestSignatures], err = json.Marshal(signatures)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to marshal signed token request")
+		return nil, nil, errors.Wrap(err, "failed to marshal token request signatures")
 	}
 
-	backend := NewBackend(getState, signed, signatures)
+	backend := NewBackend(v.Logger, getState, signed, signatures)
 	return v.VerifyTokenRequest(backend, backend, anchor, tr, attributes)
 }
 
@@ -171,6 +168,7 @@ func (v *Validator[P, T, TA, IA, DS]) verifyAuditorSignature(signatureProvider d
 		if err != nil {
 			return errors.Errorf("failed to deserialize auditor's public key")
 		}
+		v.Logger.Infof("verify auditor signature for [%s]", auditor)
 		_, err = signatureProvider.HasBeenSignedBy(auditor, verifier)
 		return err
 	}
