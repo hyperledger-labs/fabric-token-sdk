@@ -8,7 +8,6 @@ package audit
 
 import (
 	"context"
-	"encoding/asn1"
 	"encoding/json"
 
 	math "github.com/IBM/mathlib"
@@ -124,17 +123,16 @@ func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byt
 		return nil, errors.Errorf("audit of tx [%s] failed: : token request is nil", txID)
 	}
 	// Marshal tokenRequest
-	bytes, err := asn1.Marshal(driver.TokenRequest{Issues: tokenRequest.Issues, Transfers: tokenRequest.Transfers})
+	bytes, err := tokenRequest.MarshalToMessageToSign([]byte(txID))
 	if err != nil {
-		return nil, errors.Errorf("audit of tx [%s] failed: error marshal token request for signature", txID)
+		return nil, errors.Wrapf(err, "failed marshalling token request [%s]", txID)
 	}
 	// Sign
 	a.Logger.Debugf("Endorse [%s][%s]", hash.Hashable(bytes).String(), txID)
 	if a.Signer == nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: signer is nil", txID)
 	}
-
-	return a.Signer.Sign(append(bytes, []byte(txID)...))
+	return a.Signer.Sign(bytes)
 }
 
 // Check validates TokenRequest against TokenRequestMetadata
