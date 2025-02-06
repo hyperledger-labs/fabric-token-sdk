@@ -8,7 +8,6 @@ package validator_test
 
 import (
 	"context"
-	"encoding/asn1"
 	"os"
 	"time"
 
@@ -102,11 +101,11 @@ var _ = Describe("validator", func() {
 
 		// atomic action request
 		ar = &driver.TokenRequest{Transfers: tr.Transfers}
-		raw, err := asn1.Marshal(*ar)
+		raw, err := ar.MarshalToMessageToSign([]byte("2"))
 		Expect(err).NotTo(HaveOccurred())
 
 		// sender signs request
-		signatures, err := sender.SignTokenActions(raw, "2")
+		signatures, err := sender.SignTokenActions(raw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// auditor inspect token
@@ -132,7 +131,7 @@ var _ = Describe("validator", func() {
 				raw []byte
 			)
 			BeforeEach(func() {
-				raw, err = asn1.Marshal(*ir)
+				raw, err = ir.Bytes()
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
@@ -167,7 +166,7 @@ var _ = Describe("validator", func() {
 				fakeLedger.GetStateReturnsOnCall(4, nil, nil)
 				fakeLedger.GetStateReturnsOnCall(5, nil, nil)
 
-				raw, err = asn1.Marshal(*tr)
+				raw, err = tr.Bytes()
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
@@ -201,7 +200,7 @@ var _ = Describe("validator", func() {
 
 				fakeLedger.GetStateReturnsOnCall(4, nil, nil)
 
-				raw, err = asn1.Marshal(*rr)
+				raw, err = rr.Bytes()
 				Expect(err).NotTo(HaveOccurred())
 
 			})
@@ -238,7 +237,7 @@ var _ = Describe("validator", func() {
 				fakeLedger.GetStateReturnsOnCall(5, nil, nil)
 				fakeLedger.GetStateReturnsOnCall(6, nil, nil)
 
-				raw, err = asn1.Marshal(*ar)
+				raw, err = ar.Bytes()
 				Expect(err).NotTo(HaveOccurred())
 
 			})
@@ -251,14 +250,14 @@ var _ = Describe("validator", func() {
 			Context("when the sender's signature is not valid: wrong txID", func() {
 				BeforeEach(func() {
 					request := &driver.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
-					raw, err = asn1.Marshal(*request)
+					raw, err = request.MarshalToMessageToSign([]byte("3"))
 					Expect(err).NotTo(HaveOccurred())
 
-					signatures, err := sender.SignTokenActions(raw, "3")
+					signatures, err := sender.SignTokenActions(raw)
 					Expect(err).NotTo(HaveOccurred())
 					ar.Signatures[1] = signatures[0]
 
-					raw, err = asn1.Marshal(*ar)
+					raw, err = ar.Bytes()
 					Expect(err).NotTo(HaveOccurred())
 
 				})
@@ -439,10 +438,10 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer) (*driver.TokenR
 
 	// sign token request
 	ir = &driver.TokenRequest{Issues: [][]byte{raw}}
-	raw, err = asn1.Marshal(*ir)
+	raw, err = ir.MarshalToMessageToSign([]byte("1"))
 	Expect(err).NotTo(HaveOccurred())
 
-	sig, err := issuer.SignTokenActions(raw, "1")
+	sig, err := issuer.SignTokenActions(raw)
 	Expect(err).NotTo(HaveOccurred())
 	ir.Signatures = append(ir.Signatures, sig)
 
@@ -495,11 +494,11 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	transfer, metas, err := sender.GenerateZKTransfer(context.TODO(), outvalues, owners)
 	Expect(err).NotTo(HaveOccurred())
 
-	raw, err := transfer.Serialize()
+	transferRaw, err := transfer.Serialize()
 	Expect(err).NotTo(HaveOccurred())
 
-	tr := &driver.TokenRequest{Transfers: [][]byte{raw}}
-	raw, err = asn1.Marshal(*tr)
+	tr := &driver.TokenRequest{Transfers: [][]byte{transferRaw}}
+	raw, err := tr.MarshalToMessageToSign([]byte("1"))
 	Expect(err).NotTo(HaveOccurred())
 
 	marshalledInfo := make([][]byte, len(metas))
@@ -536,7 +535,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	Expect(err).NotTo(HaveOccurred())
 	tr.AuditorSignatures = append(tr.AuditorSignatures, sigma)
 
-	signatures, err := sender.SignTokenActions(raw, "1")
+	signatures, err := sender.SignTokenActions(raw)
 	Expect(err).NotTo(HaveOccurred())
 	tr.Signatures = append(tr.Signatures, signatures...)
 

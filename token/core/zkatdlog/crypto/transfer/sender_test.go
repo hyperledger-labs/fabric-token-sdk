@@ -102,7 +102,7 @@ var _ = Describe("Sender", func() {
 				raw, err := transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
 
-				sig, err := sender.SignTokenActions(raw, "0")
+				sig, err := sender.SignTokenActions(raw)
 				Expect(fakeSigningIdentity.SignCallCount()).To(Equal(3))
 				Expect(len(sig)).To(Equal(3))
 				Expect(err).NotTo(HaveOccurred())
@@ -120,7 +120,7 @@ var _ = Describe("Sender", func() {
 				raw, err := transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
 
-				sig, err := sender.SignTokenActions(raw, "0")
+				sig, err := sender.SignTokenActions(raw)
 				Expect(err).To(HaveOccurred())
 				Expect(sig).To(BeNil())
 				Expect(fakeSigningIdentity.SignCallCount()).To(Equal(3))

@@ -108,11 +108,11 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 }
 
 // SignTokenActions produces a signature for each input spent by the Sender
-func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
+func (s *Sender) SignTokenActions(raw []byte) ([][]byte, error) {
 	signatures := make([][]byte, len(s.Signers))
 	var err error
 	for i := 0; i < len(signatures); i++ {
-		signatures[i], err = s.Signers[i].Sign(append(raw, []byte(txID)...))
+		signatures[i], err = s.Signers[i].Sign(raw)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to sign token requests")
 		}
