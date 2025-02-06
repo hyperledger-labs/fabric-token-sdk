@@ -364,19 +364,15 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	}
 	// Ack for distribution
 	// Send the signature back
-	rawRequest, err := tx.Bytes()
-	if err != nil {
-		return errors.Wrapf(err, "failed marshalling tx [%s]", tx.ID())
-	}
 
 	var sigma []byte
-	logger.Debugf("auditor signing ack response [%s] with identity [%s]", hash.Hashable(rawRequest), view2.GetIdentityProvider(context).DefaultIdentity())
+	logger.Debugf("auditor signing ack response [%s] with identity [%s]", hash.Hashable(tx.FromRaw), view2.GetIdentityProvider(context).DefaultIdentity())
 	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting signing identity for [%s]", view2.GetIdentityProvider(context).DefaultIdentity())
 	}
 	span.AddEvent("sign_ack")
-	sigma, err = signer.Sign(rawRequest)
+	sigma, err = signer.Sign(tx.FromRaw)
 	if err != nil {
 		return errors.WithMessage(err, "failed to sign ack response")
 	}
