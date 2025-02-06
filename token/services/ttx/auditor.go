@@ -154,7 +154,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	// Receive signature
 	logger.Debugf("Receiving signature for [%s]", a.tx.ID())
 	span.AddEvent("start_receiving")
-	msg, err := ReadMessage(session, time.Minute)
+	signature, err := ReadMessage(session, time.Minute)
 	if err != nil {
 		span.RecordError(err)
 		return nil, errors.WithMessage(err, "failed to read audit event")
@@ -180,11 +180,11 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 			continue
 		}
 		span.AddEvent("verify_auditor_signature")
-		if err := v.Verify(signed, msg); err != nil {
+		if err := v.Verify(signed, signature); err != nil {
 			logger.Errorf("failed verifying auditor signature [%s][%s][%s]", auditorID, hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("auditor signature verified [%s][%s]", auditorID, base64.StdEncoding.EncodeToString(msg))
+				logger.Debugf("auditor signature verified [%s][%s][%s]", auditorID, base64.StdEncoding.EncodeToString(signature), hash.Hashable(signed))
 			}
 			validAuditing = true
 			break
@@ -194,7 +194,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 	}
 	span.AddEvent("append_auditor_signature")
-	a.tx.TokenRequest.AddAuditorSignature(msg)
+	a.tx.TokenRequest.AddAuditorSignature(signature)
 
 	logger.Debug("auditor signature verified")
 	return session, nil
