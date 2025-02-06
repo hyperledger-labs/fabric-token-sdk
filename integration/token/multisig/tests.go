@@ -22,6 +22,7 @@ func TestAll(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
 	alice := sel.Get("alice")
 	bob := sel.Get("bob")
 	charlie := sel.Get("charlie")
+	dave := sel.Get("dave")
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
@@ -30,8 +31,15 @@ func TestAll(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
 	CheckBalance(network, alice, "", "USD", 110, 0)
 	CheckHolding(network, alice, "", "USD", 110, auditor)
 
-	LockCash(network, alice, "", "USD", 50, bob, charlie, auditor)
+	LockCash(network, alice, "", "USD", 50, []*token3.NodeReference{bob, charlie, dave}, auditor)
 	CheckBalance(network, alice, "", "USD", 60, 0)
 	CheckBalance(network, bob, "", "USD", 0, 50)
 	CheckBalance(network, charlie, "", "USD", 0, 50)
+	CheckBalance(network, dave, "", "USD", 0, 50)
+
+	//LockCash(network, alice, "", "USD", 30, []*token3.NodeReference{bob, charlie}, auditor)
+	//CheckBalance(network, alice, "", "USD", 30, 0)
+	//CheckBalance(network, bob, "", "USD", 0, 80)
+	//CheckBalance(network, charlie, "", "USD", 0, 80)
+	//CheckBalance(network, dave, "", "USD", 0, 50)
 }
