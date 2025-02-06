@@ -217,8 +217,11 @@ func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
 func (f *FilteredIterator) Sum(precision uint64) (token2.Quantity, error) {
 	defer f.Close()
 	sum := token2.NewZeroQuantity(precision)
+	var tokens []*token2.UnspentToken
 	counter := 0
+
 	for {
+		isDuplicate := false
 		tok, err := f.Next()
 		if err != nil {
 			return nil, err
@@ -226,14 +229,21 @@ func (f *FilteredIterator) Sum(precision uint64) (token2.Quantity, error) {
 		if tok == nil {
 			break
 		}
-
-		q, err := token2.ToQuantity(tok.Quantity, precision)
-		if err != nil {
-			return nil, err
+		for _, t := range tokens {
+			if t.Id.TxId == tok.Id.TxId {
+				isDuplicate = true
+				break
+			}
 		}
-		sum = sum.Add(q)
+		if !isDuplicate {
+			q, err := token2.ToQuantity(tok.Quantity, precision)
+			if err != nil {
+				return nil, err
+			}
+			sum = sum.Add(q)
+			tokens = append(tokens, tok)
+		}
 		counter++
 	}
-	logger.Debugf("how many tokens %d and how much %s", counter, sum)
 	return sum, nil
 }

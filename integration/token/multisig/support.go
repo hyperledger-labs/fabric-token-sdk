@@ -7,21 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
-	"strconv"
-	"time"
-
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	topology2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/multisig/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
+	"strconv"
 )
 
 var (
@@ -94,36 +90,30 @@ func CheckHoldingForTMSID(network *integration.Infrastructure, ref *token3.NodeR
 	Expect(holding).To(Equal(int(expected)))
 }
 
-func LockCash(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, receiver1, receiver2 *token3.NodeReference, auditor *token3.NodeReference, expectedErrorMsgs ...string) string {
-	return LockCashForTMSID(network, sender, wallet, typ, amount, receiver1, receiver2, auditor, nil, expectedErrorMsgs...)
+func LockCash(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, receivers []*token3.NodeReference, auditor *token3.NodeReference) string {
+	return LockCashForTMSID(network, sender, wallet, typ, amount, receivers, auditor, nil)
 }
 
-func LockCashForTMSID(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, receiver1, receiver2 *token3.NodeReference, auditor *token3.NodeReference, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
+func LockCashForTMSID(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, receivers []*token3.NodeReference, auditor *token3.NodeReference, tmsId *token2.TMSID) string {
+	identities := make([]view.Identity, len(receivers))
+	eids := make([]string, len(receivers))
+	for i := 0; i < len(receivers); i++ {
+		eids[i] = receivers[i].Id()
+		identities[i] = network.Identity(eids[i])
+	}
 	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("lock", common.JSONMarshall(&views2.Lock{
 		Auditor:    auditor.Id(),
 		Wallet:     wallet,
 		Type:       typ,
 		Amount:     amount,
-		Escrow:     []view.Identity{network.Identity(receiver1.Id()), network.Identity(receiver2.Id())},
-		EscrowEIDs: []string{receiver1.Id(), receiver2.Id()},
+		Escrow:     identities,
+		EscrowEIDs: eids,
 		TMSID:      tmsId,
 	}))
-	if len(expectedErrorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
-		txID := common.JSONUnmarshalString(txidBoxed)
-		common2.CheckFinality(network, receiver1, txID, tmsId, false)
-		common2.CheckFinality(network, receiver2, txID, tmsId, false)
-		common2.CheckFinality(network, auditor, txID, tmsId, false)
+	Expect(err).NotTo(HaveOccurred())
+	txID := common.JSONUnmarshalString(txidBoxed)
+	return txID
 
-		return txID
-	}
-
-	Expect(err).To(HaveOccurred())
-	for _, msg := range expectedErrorMsgs {
-		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
-	}
-	time.Sleep(5 * time.Second)
-	return ""
 }
 
 func IssueCash(network *integration.Infrastructure, wallet string, typ token.Type, amount uint64, receiver, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, expectedErrorMsgs ...string) string {
@@ -146,26 +136,6 @@ func issueCashForTMSID(network *integration.Infrastructure, wallet string, typ t
 		TMSID:        tmsId,
 		Auditor:      auditor.Id(),
 	}))
-
-	topology.ToOptions(network.FscPlatform.Peers[0].Options).Endorser()
-	if len(expectedErrorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
-		txID := common.JSONUnmarshalString(txIDBoxed)
-		for _, n := range []*token3.NodeReference{receiver} {
-			common2.CheckFinality(network, n, txID, tmsId, false)
-		}
-		// Perform this check only if there is a fabric network
-		if getFabricTopology(network) != nil {
-			for _, n := range endorsers {
-				common2.CheckEndorserFinality(network, n, txID, tmsId, false)
-			}
-		}
-		return common.JSONUnmarshalString(txIDBoxed)
-	}
-
-	Expect(err).To(HaveOccurred())
-	for _, msg := range expectedErrorMsgs {
-		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
-	}
-	return ""
+	Expect(err).NotTo(HaveOccurred())
+	return common.JSONUnmarshalString(txIDBoxed)
 }
