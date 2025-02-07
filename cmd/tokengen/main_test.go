@@ -13,10 +13,10 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	. "github.com/onsi/gomega"
@@ -221,7 +221,7 @@ func TestGenFailure(t *testing.T) {
 	testGenRun(gt, tokengen, []string{"gen", "fabtoken", "--output", tempOutput})
 	raw, err := os.ReadFile(filepath.Join(tempOutput, "fabtoken_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
-	is := driver.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
+	is := core.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
 	pp, err := is.PublicParametersFromBytes(raw)
 	gt.Expect(err).NotTo(HaveOccurred())
 	_, err = is.DefaultValidator(pp)

@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -39,7 +41,7 @@ func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 }
 
 func (d *base) newWalletService(
-	tmsConfig driver.Config,
+	tmsConfig core.Config,
 	binder driver2.NetworkBinderService,
 	storageProvider identity.StorageProvider,
 	qe driver.QueryEngine,

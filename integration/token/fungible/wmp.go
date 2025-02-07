@@ -18,9 +18,9 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -113,7 +113,7 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	kvss, err := kvs.NewWithConfig(&mem.Driver{}, "", configProvider)
 	Expect(err).ToNot(HaveOccurred())
 	storageProvider := identity2.NewKVSStorageProvider(kvss)
-	s := driver.NewWalletServiceFactoryService(
+	s := core.NewWalletServiceFactoryService(
 		fabtoken.NewWalletServiceFactory(storageProvider),
 		dlog.NewWalletServiceFactory(storageProvider))
 	tmsConfig, err := configService.ConfigurationFor(tms.Network, tms.Channel, tms.Namespace)

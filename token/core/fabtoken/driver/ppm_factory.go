@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -16,8 +17,8 @@ import (
 // PPMFactory contains the static logic of the driver
 type PPMFactory struct{ *base }
 
-func NewPPMFactory() driver.NamedFactory[driver.PPMFactory] {
-	return driver.NamedFactory[driver.PPMFactory]{
+func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {
+	return core.NamedFactory[driver.PPMFactory]{
 		Name:   fabtoken.PublicParameters,
 		Driver: &PPMFactory{},
 	}

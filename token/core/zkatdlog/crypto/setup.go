@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
 	"github.com/pkg/errors"
 )
 
@@ -178,7 +179,7 @@ func (pp *PublicParams) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(&driver.SerializedPublicParameters{
+	return json.Marshal(&pp2.PublicParameters{
 		Identifier: pp.Label,
 		Raw:        raw,
 	})
@@ -189,7 +190,7 @@ func (pp *PublicParams) Precision() uint64 {
 }
 
 func (pp *PublicParams) Deserialize(raw []byte) error {
-	publicParams := &driver.SerializedPublicParameters{}
+	publicParams := &pp2.PublicParameters{}
 	if err := json.Unmarshal(raw, publicParams); err != nil {
 		return err
 	}

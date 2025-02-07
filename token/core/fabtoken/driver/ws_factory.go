@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -19,14 +20,14 @@ type WalletServiceFactory struct {
 	storageProvider identity.StorageProvider
 }
 
-func NewWalletServiceFactory(storageProvider identity.StorageProvider) driver.NamedFactory[driver.WalletServiceFactory] {
-	return driver.NamedFactory[driver.WalletServiceFactory]{
+func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.NamedFactory[driver.WalletServiceFactory] {
+	return core.NamedFactory[driver.WalletServiceFactory]{
 		Name:   fabtoken.PublicParameters,
 		Driver: &WalletServiceFactory{storageProvider: storageProvider},
 	}
 }
 
-func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Config, pp driver.PublicParameters) (driver.WalletService, error) {
+func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, params driver.PublicParameters) (driver.WalletService, error) {
 	tmsID := tmsConfig.ID()
 	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	return d.base.newWalletService(
@@ -37,7 +38,7 @@ func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Config, pp driv
 		logger,
 		nil,
 		nil,
-		pp,
+		params,
 		true,
 	)
 }

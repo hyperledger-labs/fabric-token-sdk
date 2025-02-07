@@ -10,20 +10,18 @@ package driver
 // This should avoid confusion between the bytes of the public params themselves and its hash.
 type PPHash []byte
 
-// SerializedPublicParameters is the serialized form of PublicParameters.
-type SerializedPublicParameters struct {
-	// Identifier is the unique identifier of this public parameters.
-	Identifier string
-	// Raw is marshalled version of the public parameters.
-	Raw []byte
+type PPReader interface {
+	// PublicParametersFromBytes unmarshals the bytes to a PublicParameters instance.
+	PublicParametersFromBytes(params []byte) (PublicParameters, error)
 }
 
-// Deserialize deserializes the serialized public parameters.
-func (pp *SerializedPublicParameters) Deserialize(raw []byte) error {
-	if err := Unmarshal(raw, pp); err != nil {
-		return err
-	}
-	return nil
+// PPMFactory contains the static logic of the driver
+type PPMFactory interface {
+	PPReader
+	// NewPublicParametersManager returns a new PublicParametersManager instance from the passed public parameters
+	NewPublicParametersManager(pp PublicParameters) (PublicParamsManager, error)
+	// DefaultValidator returns a new Validator instance from the passed public parameters
+	DefaultValidator(pp PublicParameters) (Validator, error)
 }
 
 // PublicParamsFetcher models a public parameters fetcher.

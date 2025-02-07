@@ -40,13 +40,13 @@ type TMSProvider struct {
 	configProvider     ConfigProvider
 	vault              Vault
 	callback           CallbackFunc
-	tokenDriverService *driver.TokenDriverService
+	tokenDriverService *TokenDriverService
 
 	lock     sync.RWMutex
 	services map[string]driver.TokenManagerService
 }
 
-func NewTMSProvider(logger logging.Logger, configProvider ConfigProvider, vault Vault, tokenDriverService *driver.TokenDriverService) *TMSProvider {
+func NewTMSProvider(logger logging.Logger, configProvider ConfigProvider, vault Vault, tokenDriverService *TokenDriverService) *TMSProvider {
 	ms := &TMSProvider{
 		logger:             logger,
 		configProvider:     configProvider,
