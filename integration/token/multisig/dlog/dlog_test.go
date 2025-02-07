@@ -4,7 +4,7 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabtoken
+package dlog
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
@@ -12,7 +12,7 @@ import (
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/multisig"
 	. "github.com/onsi/ginkgo/v2"
 )
@@ -34,8 +34,8 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 		common.Opts{
 			Backend:         "fabric",
 			CommType:        commType,
-			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken", Aries: false},
-			SDKs:            []api.SDK{&ffabtoken.SDK{}},
+			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog", Aries: false},
+			SDKs:            []api.SDK{&fdlog.SDK{}},
 			ReplicationOpts: opts,
 			WebEnabled:      true, // Needed for the Remote Wallet with websockets
 			FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
