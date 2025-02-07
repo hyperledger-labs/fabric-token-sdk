@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -294,6 +295,8 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 		return nil
 	case htlc2.ScriptType:
 		return inspectTokenOwnerOfScript(des, token, index)
+	case multisig.Escrow:
+		return inspectTokenOwnerOfEscrow(des, token, index)
 	default:
 		return errors.Errorf("identity type [%s] not recognized", ro.Type)
 	}
@@ -453,4 +456,20 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) *math.G1 {
 		com.Add(generators[i].Mul(vector[i]))
 	}
 	return com
+}
+
+func inspectTokenOwnerOfEscrow(des Deserializer, token *AuditableToken, index int) error {
+	owner, err := identity.UnmarshalTypedIdentity(token.Token.Owner)
+	if err != nil {
+		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
+	}
+	matcher, err := des.GetOwnerMatcher(token.Token.Owner, token.Owner.OwnerInfo)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get matcher for owner at index [%d]", index)
+	}
+	if err := matcher.Match(owner.Identity); err != nil {
+		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%v]", index, matcher)
+	}
+
+	return nil
 }
