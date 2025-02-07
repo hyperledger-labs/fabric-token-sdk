@@ -4,7 +4,7 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabtoken
+package dlog
 
 import (
 	"testing"
@@ -19,11 +19,10 @@ func TestEndToEnd(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "EndToEnd Escrow (FabToken) Suite")
+	RunSpecs(t, "EndToEnd Escrow (DLog) Suite")
 }
 
 func StartPortDlog() int {
-	return integration.FabtokenEscrow.StartPortForNode()
+	return integration.ZKATDLogEscrow.StartPortForNode()
 }

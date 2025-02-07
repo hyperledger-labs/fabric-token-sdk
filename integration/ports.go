@@ -98,9 +98,9 @@ const (
 	ZKATDLogInteropHTLCOrion
 	ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
 
-	Mixed
-
-	Updatability
-
 	FabtokenEscrow
+	ZKATDLogEscrow
+
+	Mixed
+	Updatability
 )
