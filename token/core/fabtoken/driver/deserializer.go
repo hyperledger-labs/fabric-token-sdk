@@ -30,7 +30,7 @@ func NewDeserializer() *Deserializer {
 
 	auditorIssuerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
 	auditorIssuerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
-	m.AddTypedVerifierDeserializer(multisig.Escrow, multisig.NewTypedIdentityDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditInfoDeserializer{}))
+	m.AddTypedVerifierDeserializer(multisig.Escrow, multisig.NewTypedIdentityDeserializer(&x509.MSPIdentityDeserializer{}, nil))
 
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(

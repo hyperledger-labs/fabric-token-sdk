@@ -8,21 +8,46 @@ package multisig
 
 import (
 	"encoding/json"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-sdk.services.multsig.deserializer")
-
 const Escrow = "Multisig"
-
-const Separator = "||"
 
 type VerifierDES interface {
 	DeserializeVerifier(id driver.Identity) (driver.Verifier, error)
+}
+
+type AuditInfoMatcher interface {
+	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
+}
+
+type EscrowInfoMatcher struct {
+	AuditInfoMatcher []driver.Matcher
+}
+
+func (e *EscrowInfoMatcher) Match(raw []byte) error {
+	mid := MultiIdentity{}
+	err := mid.Deserialize(raw)
+	if err != nil {
+		return err
+	}
+	if len(e.AuditInfoMatcher) != len(mid.Identities) {
+		return errors.Errorf("expected [%d] identities, received [%d]", len(e.AuditInfoMatcher), len(mid.Identities))
+	}
+	for k, id := range mid.Identities {
+		tid, err := identity.UnmarshalTypedIdentity(id)
+		if err != nil {
+			return err
+		}
+		err = e.AuditInfoMatcher[k].Match(tid.Identity)
+		if err != nil {
+			return errors.Wrapf(err, "identity at index %d does not match the audit info", k)
+		}
+	}
+	return nil
 }
 
 type EscrowInfo struct {
@@ -32,12 +57,12 @@ type EscrowInfo struct {
 }
 
 type TypedIdentityDeserializer struct {
-	VerifierDeserializer  VerifierDES
-	AuditInfoDeserializer driver2.AuditInfoDeserializer
+	VerifierDeserializer VerifierDES
+	AuditInfoMatcher     AuditInfoMatcher
 }
 
-func NewTypedIdentityDeserializer(verifierDeserializer VerifierDES, auditInfoDeserializer driver2.AuditInfoDeserializer) *TypedIdentityDeserializer {
-	return &TypedIdentityDeserializer{VerifierDeserializer: verifierDeserializer, AuditInfoDeserializer: auditInfoDeserializer}
+func NewTypedIdentityDeserializer(verifierDeserializer VerifierDES, auditInfoDeserializer AuditInfoMatcher) *TypedIdentityDeserializer {
+	return &TypedIdentityDeserializer{VerifierDeserializer: verifierDeserializer, AuditInfoMatcher: auditInfoDeserializer}
 }
 
 func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
@@ -67,7 +92,31 @@ func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ st
 }
 
 func (d *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
-	panic("implement me")
+	ei := &EscrowInfo{}
+	err := json.Unmarshal(auditInfo, ei)
+	if err != nil {
+		return nil, err
+	}
+	id, err := identity.UnmarshalTypedIdentity(owner)
+	if err != nil {
+		return nil, err
+	}
+	mid := MultiIdentity{}
+	err = mid.Deserialize(id.Identity)
+	if err != nil {
+		return nil, err
+	}
+	if len(mid.Identities) != len(ei.AuditInfo) {
+		return nil, errors.Errorf("expected %d audit info but received %d", len(mid.Identities), len(ei.AuditInfo))
+	}
+	matchers := make([]driver.Matcher, len(ei.AuditInfo))
+	for k, info := range ei.AuditInfo {
+		matchers[k], err = d.AuditInfoMatcher.GetOwnerMatcher(mid.Identities[k], info)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &EscrowInfoMatcher{AuditInfoMatcher: matchers}, nil
 }
 
 func (d *TypedIdentityDeserializer) DeserializeVerifier(typ string, id []byte) (driver.Verifier, error) {
