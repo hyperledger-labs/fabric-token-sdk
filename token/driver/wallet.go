@@ -202,6 +202,12 @@ type WalletService interface {
 	SpendIDs(ids ...*token.ID) ([]string, error)
 }
 
+type WalletServiceFactory interface {
+	PPReader
+	// NewWalletService returns an instance of the WalletService interface for the passed arguments
+	NewWalletService(tmsConfig Configuration, params PublicParameters) (WalletService, error)
+}
+
 // Matcher models a matcher that can be used to match identities
 type Matcher interface {
 	// Match returns true if the passed identity matches this matcher

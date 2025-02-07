@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
 	"github.com/pkg/errors"
 )
 
@@ -100,7 +101,7 @@ func (pp *PublicParams) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(&driver.SerializedPublicParameters{
+	return json.Marshal(&pp2.PublicParameters{
 		Identifier: pp.Label,
 		Raw:        raw,
 	})
@@ -108,12 +109,12 @@ func (pp *PublicParams) Serialize() ([]byte, error) {
 
 // Deserialize un-marshals the passed bytes into PublicParams
 func (pp *PublicParams) Deserialize(raw []byte) error {
-	publicParams := &driver.SerializedPublicParameters{}
+	publicParams := &pp2.PublicParameters{}
 	if err := json.Unmarshal(raw, publicParams); err != nil {
 		return err
 	}
 	if publicParams.Identifier != pp.Label {
-		return errors.Errorf("invalid identifier, expecting 'fabtoken', got [%s]", publicParams.Identifier)
+		return errors.Errorf("invalid identifier, expecting 'fabtoken', got [%s]", publicParams.Raw)
 	}
 	return json.Unmarshal(publicParams.Raw, pp)
 }

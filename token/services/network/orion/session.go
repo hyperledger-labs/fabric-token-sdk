@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
@@ -116,7 +117,7 @@ func (s *SessionManager) GetSession() (os *orion.Session, err error) {
 	return oSession, nil
 }
 
-func (s *SessionManager) PublicParameters(tds *driver.TokenDriverService, namespace string) (driver.PublicParameters, error) {
+func (s *SessionManager) PublicParameters(tds *core.TokenDriverService, namespace string) (driver.PublicParameters, error) {
 	s.ppMutex.RLock()
 	pp, ok := s.ppMap[namespace]
 	s.ppMutex.RUnlock()

@@ -184,7 +184,7 @@ func (p *SDK) Install() error {
 	// Backward compatibility with SP
 	err = errors2.Join(
 		digutils.Register[*kvs.KVS](p.Container()),
-		digutils.Register[*driver2.TokenDriverService](p.Container()),
+		digutils.Register[*core2.TokenDriverService](p.Container()),
 		digutils.Register[*network.Provider](p.Container()),
 		digutils.Register[*token.ManagementServiceProvider](p.Container()),
 		digutils.Register[*ttxdb.Manager](p.Container()),

@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
@@ -44,8 +45,8 @@ func NewDriver(
 	identityProvider view2.IdentityProvider,
 	endpointService *view.EndpointService,
 	networkProvider *network.Provider,
-) driver.NamedFactory[driver.Driver] {
-	return driver.NamedFactory[driver.Driver]{
+) core.NamedFactory[driver.Driver] {
+	return core.NamedFactory[driver.Driver]{
 		Name: crypto.DLogPublicParameters,
 		Driver: &Driver{
 			base:             &base{},
