@@ -7,8 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	"encoding/json"
-
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
 	"github.com/pkg/errors"

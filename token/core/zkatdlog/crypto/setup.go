@@ -8,13 +8,13 @@ package crypto
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"math/bits"
 	"strconv"
 
 	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/math"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
 	"github.com/pkg/errors"
@@ -53,16 +53,16 @@ func (rpp *RangeProofParams) Validate(curveID mathlib.CurveID) error {
 	if len(rpp.LeftGenerators) != len(rpp.RightGenerators) {
 		return errors.Errorf("invalid range proof parameters: the size of the left generators does not match the size of the right generators [%d vs, %d]", len(rpp.LeftGenerators), len(rpp.RightGenerators))
 	}
-	if err := math2.CheckElement(rpp.Q, curveID); err != nil {
+	if err := math.CheckElement(rpp.Q, curveID); err != nil {
 		return errors.Wrapf(err, "invalid range proof parameters: generator Q is invalid")
 	}
-	if err := math2.CheckElement(rpp.P, curveID); err != nil {
+	if err := math.CheckElement(rpp.P, curveID); err != nil {
 		return errors.Wrapf(err, "invalid range proof parameters: generator P is invalid")
 	}
-	if err := math2.CheckElements(rpp.LeftGenerators, curveID, rpp.BitLength); err != nil {
+	if err := math.CheckElements(rpp.LeftGenerators, curveID, rpp.BitLength); err != nil {
 		return errors.Wrap(err, "invalid range proof parameters, left generators is invalid")
 	}
-	if err := math2.CheckElements(rpp.RightGenerators, curveID, rpp.BitLength); err != nil {
+	if err := math.CheckElements(rpp.RightGenerators, curveID, rpp.BitLength); err != nil {
 		return errors.Wrap(err, "invalid range proof parameters, right generators is invalid")
 	}
 
@@ -289,7 +289,7 @@ func (pp *PublicParams) Validate() error {
 			return errors.Errorf("invalid public parameters: invalid idemix curveID [%d > %d]", int(pp.Curve), len(mathlib.Curves)-1)
 		}
 	}
-	if err := math2.CheckElements(pp.PedersenGenerators, pp.Curve, 3); err != nil {
+	if err := math.CheckElements(pp.PedersenGenerators, pp.Curve, 3); err != nil {
 		return errors.Wrapf(err, "invalid pedersen generators")
 	}
 	if pp.RangeProofParams == nil {
