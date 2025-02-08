@@ -7,9 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package transfer
 
 import (
-	"encoding/json"
-
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	crypto "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/pkg/errors"
