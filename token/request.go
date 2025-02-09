@@ -12,6 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -669,7 +670,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, recipientCounter)
 			}
-			r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
+			r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, utils.Hashable(ledgerOutput))
 			outputs = append(outputs, &Output{
 				Token:                *tok,
 				ActionIndex:          i,

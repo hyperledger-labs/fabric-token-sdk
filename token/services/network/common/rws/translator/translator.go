@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -59,8 +60,10 @@ func (t *Translator) Write(action interface{}) error {
 	return nil
 }
 
-func (t *Translator) CommitTokenRequest(raw []byte, storeHash bool) ([]byte, error) {
-	key, err := t.KeyTranslator.CreateTokenRequestKey(t.TxID)
+// CommitTokenRequest adds a write entry to the read-write set whose key depends on the content of token request and value
+// depends on the passed value parameter.
+func (t *Translator) CommitTokenRequest(tr []byte, value []byte, storeHash bool) ([]byte, error) {
+	key, err := t.KeyTranslator.CreateTokenRequestKey(utils.Hashable(tr).String())
 	if err != nil {
 		return nil, errors.Errorf("can't create for token request '%s'", t.TxID)
 	}
@@ -70,17 +73,17 @@ func (t *Translator) CommitTokenRequest(raw []byte, storeHash bool) ([]byte, err
 	var h []byte
 	if storeHash {
 		hash := sha256.New()
-		n, err := hash.Write(raw)
-		if n != len(raw) {
+		n, err := hash.Write(value)
+		if n != len(value) {
 			return nil, errors.Errorf("failed to write token request, hash failure '%s'", t.TxID)
 		}
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to write token request, hash failure '%s'", t.TxID)
 		}
-		raw = hash.Sum(nil)
-		h = raw
+		value = hash.Sum(nil)
+		h = value
 	}
-	err = t.RWSet.SetState(key, raw)
+	err = t.RWSet.SetState(key, value)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write token request'%s'", t.TxID)
 	}

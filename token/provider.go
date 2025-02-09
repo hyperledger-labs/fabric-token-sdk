@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/pkg/errors"
 )
 
@@ -225,7 +226,7 @@ func (p *tmsNormalizer) Normalize(opt *ServiceOptions) (*ServiceOptions, error) 
 }
 
 func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
-	p.logger.Debugf("update tms [%s] with public params [%s]", tmsID, Hashable(val))
+	p.logger.Debugf("update tms [%s] with public params [%s]", tmsID, utils.Hashable(val))
 	err := p.tmsProvider.Update(driver.ServiceOptions{
 		Network:      tmsID.Network,
 		Channel:      tmsID.Channel,
@@ -235,7 +236,7 @@ func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed updating tms [%s]", tmsID)
 	}
-	p.logger.Debugf("update tms [%s] with public params [%s]...done", tmsID, Hashable(val))
+	p.logger.Debugf("update tms [%s] with public params [%s]...done", tmsID, utils.Hashable(val))
 	return nil
 }
 

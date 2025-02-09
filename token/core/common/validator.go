@@ -17,7 +17,7 @@ import (
 type MetadataCounterID = string
 
 const (
-	TokenRequestToSign driver.ValidationAttributeID = "trs"
+	TokenRequestSignedContent driver.ValidationAttributeID = "trs"
 )
 
 type Context[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
@@ -106,7 +106,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 	}
 
 	attributes := make(driver.ValidationAttributes)
-	attributes[TokenRequestToSign], err = v.Serializer.MarshalTokenRequestToSign(req, nil)
+	attributes[TokenRequestSignedContent], err = v.Serializer.MarshalTokenRequestToSign(req, nil)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to marshal signed token request")
 	}

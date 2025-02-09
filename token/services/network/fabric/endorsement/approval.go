@@ -95,7 +95,7 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 
 type Translator interface {
 	AddPublicParamsDependency() error
-	CommitTokenRequest(raw []byte, storeHash bool) ([]byte, error)
+	CommitTokenRequest(tr []byte, value []byte, storeHash bool) ([]byte, error)
 	Write(action any) error
 }
 
@@ -180,7 +180,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 
 	// write actions into the transaction
 	logger.Debugf("Translate TX [%s]", tx.ID())
-	err = r.translate(tms, tx, validationMetadata, rws, actions...)
+	err = r.translate(tms, tx, requestRaw, validationMetadata, rws, actions...)
 	if err != nil {
 		return nil, err
 	}
@@ -197,6 +197,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 func (r *RequestApprovalResponderView) translate(
 	tms *token2.ManagementService,
 	tx *endorser.Transaction,
+	requestRaw []byte,
 	validationMetadata map[string][]byte,
 	rws *fabric2.RWSet,
 	actions ...any,
@@ -216,7 +217,7 @@ func (r *RequestApprovalResponderView) translate(
 	if err != nil {
 		return errors.Wrapf(err, "failed to add public params dependency")
 	}
-	_, err = w.CommitTokenRequest(validationMetadata[common.TokenRequestToSign], true)
+	_, err = w.CommitTokenRequest(requestRaw, validationMetadata[common.TokenRequestSignedContent], true)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write token request")
 	}

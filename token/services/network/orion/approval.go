@@ -252,7 +252,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 		}
 	}
 	span.AddEvent("commit_token_request")
-	h, err := t.CommitTokenRequest(attributes[common.TokenRequestToSign], true)
+	h, err := t.CommitTokenRequest(request.Request, attributes[common.TokenRequestSignedContent], true)
 	if err != nil {
 		return nil, false, errors.Wrapf(err, "failed to commit token request")
 	}
