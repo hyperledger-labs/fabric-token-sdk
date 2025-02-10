@@ -623,7 +623,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		if output == nil {
 			return nil, 0, errors.Errorf("%d^th output in transfer action [%d] is nil", j, i)
 		}
-		raw, err := output.Serialize()
+		ledgerOutput, err := output.Serialize()
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed deserializing transfer action output [%d,%d]", i, j)
 		}
@@ -635,7 +635,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 				return nil, 0, errors.Errorf("missing token info for output [%d,%d]", i, j)
 			}
 			// check the recipients anyway
-			recipients, err := tms.TokensService().Recipients(raw)
+			recipients, err := tms.TokensService().Recipients(ledgerOutput)
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "failed getting recipients [%d,%d]", i, j)
 			}
@@ -649,7 +649,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			continue
 		}
 
-		tok, issuer, recipients, tokType, err := tms.TokensService().Deobfuscate(raw, transferMeta.OutputsMetadata[j])
+		tok, issuer, recipients, ledgerOutputFormat, err := tms.TokensService().Deobfuscate(ledgerOutput, transferMeta.OutputsMetadata[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 		}
@@ -668,10 +668,13 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 				ActionIndex:          i,
 				Index:                counter,
 				Owner:                tok.Owner,
+				OwnerAuditInfo:       transferMeta.OutputsAuditInfo[j],
+				EnrollmentID:         "", // not available here
+				RevocationHandler:    "", // not available here
 				Type:                 tok.Type,
 				Quantity:             q,
-				LedgerOutput:         raw,
-				LedgerOutputFormat:   tokType,
+				LedgerOutput:         ledgerOutput,
+				LedgerOutputFormat:   ledgerOutputFormat,
 				LedgerOutputMetadata: transferMeta.OutputsMetadata[j],
 				Issuer:               issuer,
 			})
@@ -690,7 +693,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 					if err != nil {
 						return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, recipientCounter)
 					}
-					ledgerOutput = raw
+					ledgerOutput = ledgerOutput
 				}
 
 				r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
@@ -705,7 +708,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 					Type:                 tok.Type,
 					Quantity:             q,
 					LedgerOutput:         ledgerOutput,
-					LedgerOutputFormat:   tokType,
+					LedgerOutputFormat:   ledgerOutputFormat,
 					LedgerOutputMetadata: transferMeta.OutputsMetadata[j],
 					Issuer:               issuer,
 				})
