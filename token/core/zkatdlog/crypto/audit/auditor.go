@@ -8,7 +8,6 @@ package audit
 
 import (
 	"context"
-	"encoding/asn1"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
