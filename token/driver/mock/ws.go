@@ -4,16 +4,15 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type WalletService struct {
-	AuditorWalletStub        func(any) (driver.AuditorWallet, error)
+	AuditorWalletStub        func(driver.WalletLookupID) (driver.AuditorWallet, error)
 	auditorWalletMutex       sync.RWMutex
 	auditorWalletArgsForCall []struct {
-		arg1 any
+		arg1 driver.WalletLookupID
 	}
 	auditorWalletReturns struct {
 		result1 driver.AuditorWallet
@@ -23,10 +22,10 @@ type WalletService struct {
 		result1 driver.AuditorWallet
 		result2 error
 	}
-	CertifierWalletStub        func(any) (driver.CertifierWallet, error)
+	CertifierWalletStub        func(driver.WalletLookupID) (driver.CertifierWallet, error)
 	certifierWalletMutex       sync.RWMutex
 	certifierWalletArgsForCall []struct {
-		arg1 any
+		arg1 driver.WalletLookupID
 	}
 	certifierWalletReturns struct {
 		result1 driver.CertifierWallet
@@ -36,10 +35,10 @@ type WalletService struct {
 		result1 driver.CertifierWallet
 		result2 error
 	}
-	GetAuditInfoStub        func(view.Identity) ([]byte, error)
+	GetAuditInfoStub        func(driver.Identity) ([]byte, error)
 	getAuditInfoMutex       sync.RWMutex
 	getAuditInfoArgsForCall []struct {
-		arg1 view.Identity
+		arg1 driver.Identity
 	}
 	getAuditInfoReturns struct {
 		result1 []byte
@@ -49,10 +48,10 @@ type WalletService struct {
 		result1 []byte
 		result2 error
 	}
-	GetEIDAndRHStub        func(view.Identity, []byte) (string, string, error)
+	GetEIDAndRHStub        func(driver.Identity, []byte) (string, string, error)
 	getEIDAndRHMutex       sync.RWMutex
 	getEIDAndRHArgsForCall []struct {
-		arg1 view.Identity
+		arg1 driver.Identity
 		arg2 []byte
 	}
 	getEIDAndRHReturns struct {
@@ -65,10 +64,10 @@ type WalletService struct {
 		result2 string
 		result3 error
 	}
-	GetEnrollmentIDStub        func(view.Identity, []byte) (string, error)
+	GetEnrollmentIDStub        func(driver.Identity, []byte) (string, error)
 	getEnrollmentIDMutex       sync.RWMutex
 	getEnrollmentIDArgsForCall []struct {
-		arg1 view.Identity
+		arg1 driver.Identity
 		arg2 []byte
 	}
 	getEnrollmentIDReturns struct {
@@ -79,10 +78,10 @@ type WalletService struct {
 		result1 string
 		result2 error
 	}
-	GetRevocationHandleStub        func(view.Identity, []byte) (string, error)
+	GetRevocationHandleStub        func(driver.Identity, []byte) (string, error)
 	getRevocationHandleMutex       sync.RWMutex
 	getRevocationHandleArgsForCall []struct {
-		arg1 view.Identity
+		arg1 driver.Identity
 		arg2 []byte
 	}
 	getRevocationHandleReturns struct {
@@ -93,10 +92,10 @@ type WalletService struct {
 		result1 string
 		result2 error
 	}
-	IssuerWalletStub        func(any) (driver.IssuerWallet, error)
+	IssuerWalletStub        func(driver.WalletLookupID) (driver.IssuerWallet, error)
 	issuerWalletMutex       sync.RWMutex
 	issuerWalletArgsForCall []struct {
-		arg1 any
+		arg1 driver.WalletLookupID
 	}
 	issuerWalletReturns struct {
 		result1 driver.IssuerWallet
@@ -106,10 +105,10 @@ type WalletService struct {
 		result1 driver.IssuerWallet
 		result2 error
 	}
-	OwnerWalletStub        func(any) (driver.OwnerWallet, error)
+	OwnerWalletStub        func(driver.WalletLookupID) (driver.OwnerWallet, error)
 	ownerWalletMutex       sync.RWMutex
 	ownerWalletArgsForCall []struct {
-		arg1 any
+		arg1 driver.WalletLookupID
 	}
 	ownerWalletReturns struct {
 		result1 driver.OwnerWallet
@@ -164,23 +163,23 @@ type WalletService struct {
 	registerRecipientIdentityReturnsOnCall map[int]struct {
 		result1 error
 	}
-	SpentIDsStub        func(...*token.ID) ([]string, error)
-	spentIDsMutex       sync.RWMutex
-	spentIDsArgsForCall []struct {
+	SpendIDsStub        func(...*token.ID) ([]string, error)
+	spendIDsMutex       sync.RWMutex
+	spendIDsArgsForCall []struct {
 		arg1 []*token.ID
 	}
-	spentIDsReturns struct {
+	spendIDsReturns struct {
 		result1 []string
 		result2 error
 	}
-	spentIDsReturnsOnCall map[int]struct {
+	spendIDsReturnsOnCall map[int]struct {
 		result1 []string
 		result2 error
 	}
-	WalletStub        func(view.Identity) driver.Wallet
+	WalletStub        func(driver.Identity) driver.Wallet
 	walletMutex       sync.RWMutex
 	walletArgsForCall []struct {
-		arg1 view.Identity
+		arg1 driver.Identity
 	}
 	walletReturns struct {
 		result1 driver.Wallet
@@ -192,11 +191,11 @@ type WalletService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *WalletService) AuditorWallet(arg1 any) (driver.AuditorWallet, error) {
+func (fake *WalletService) AuditorWallet(arg1 driver.WalletLookupID) (driver.AuditorWallet, error) {
 	fake.auditorWalletMutex.Lock()
 	ret, specificReturn := fake.auditorWalletReturnsOnCall[len(fake.auditorWalletArgsForCall)]
 	fake.auditorWalletArgsForCall = append(fake.auditorWalletArgsForCall, struct {
-		arg1 any
+		arg1 driver.WalletLookupID
 	}{arg1})
 	stub := fake.AuditorWalletStub
 	fakeReturns := fake.auditorWalletReturns
@@ -217,13 +216,13 @@ func (fake *WalletService) AuditorWalletCallCount() int {
 	return len(fake.auditorWalletArgsForCall)
 }
 
-func (fake *WalletService) AuditorWalletCalls(stub func(any) (driver.AuditorWallet, error)) {
+func (fake *WalletService) AuditorWalletCalls(stub func(driver.WalletLookupID) (driver.AuditorWallet, error)) {
 	fake.auditorWalletMutex.Lock()
 	defer fake.auditorWalletMutex.Unlock()
 	fake.AuditorWalletStub = stub
 }
 
-func (fake *WalletService) AuditorWalletArgsForCall(i int) any {
+func (fake *WalletService) AuditorWalletArgsForCall(i int) driver.WalletLookupID {
 	fake.auditorWalletMutex.RLock()
 	defer fake.auditorWalletMutex.RUnlock()
 	argsForCall := fake.auditorWalletArgsForCall[i]
@@ -256,11 +255,11 @@ func (fake *WalletService) AuditorWalletReturnsOnCall(i int, result1 driver.Audi
 	}{result1, result2}
 }
 
-func (fake *WalletService) CertifierWallet(arg1 any) (driver.CertifierWallet, error) {
+func (fake *WalletService) CertifierWallet(arg1 driver.WalletLookupID) (driver.CertifierWallet, error) {
 	fake.certifierWalletMutex.Lock()
 	ret, specificReturn := fake.certifierWalletReturnsOnCall[len(fake.certifierWalletArgsForCall)]
 	fake.certifierWalletArgsForCall = append(fake.certifierWalletArgsForCall, struct {
-		arg1 any
+		arg1 driver.WalletLookupID
 	}{arg1})
 	stub := fake.CertifierWalletStub
 	fakeReturns := fake.certifierWalletReturns
@@ -281,13 +280,13 @@ func (fake *WalletService) CertifierWalletCallCount() int {
 	return len(fake.certifierWalletArgsForCall)
 }
 
-func (fake *WalletService) CertifierWalletCalls(stub func(any) (driver.CertifierWallet, error)) {
+func (fake *WalletService) CertifierWalletCalls(stub func(driver.WalletLookupID) (driver.CertifierWallet, error)) {
 	fake.certifierWalletMutex.Lock()
 	defer fake.certifierWalletMutex.Unlock()
 	fake.CertifierWalletStub = stub
 }
 
-func (fake *WalletService) CertifierWalletArgsForCall(i int) any {
+func (fake *WalletService) CertifierWalletArgsForCall(i int) driver.WalletLookupID {
 	fake.certifierWalletMutex.RLock()
 	defer fake.certifierWalletMutex.RUnlock()
 	argsForCall := fake.certifierWalletArgsForCall[i]
@@ -320,11 +319,11 @@ func (fake *WalletService) CertifierWalletReturnsOnCall(i int, result1 driver.Ce
 	}{result1, result2}
 }
 
-func (fake *WalletService) GetAuditInfo(arg1 view.Identity) ([]byte, error) {
+func (fake *WalletService) GetAuditInfo(arg1 driver.Identity) ([]byte, error) {
 	fake.getAuditInfoMutex.Lock()
 	ret, specificReturn := fake.getAuditInfoReturnsOnCall[len(fake.getAuditInfoArgsForCall)]
 	fake.getAuditInfoArgsForCall = append(fake.getAuditInfoArgsForCall, struct {
-		arg1 view.Identity
+		arg1 driver.Identity
 	}{arg1})
 	stub := fake.GetAuditInfoStub
 	fakeReturns := fake.getAuditInfoReturns
@@ -345,13 +344,13 @@ func (fake *WalletService) GetAuditInfoCallCount() int {
 	return len(fake.getAuditInfoArgsForCall)
 }
 
-func (fake *WalletService) GetAuditInfoCalls(stub func(view.Identity) ([]byte, error)) {
+func (fake *WalletService) GetAuditInfoCalls(stub func(driver.Identity) ([]byte, error)) {
 	fake.getAuditInfoMutex.Lock()
 	defer fake.getAuditInfoMutex.Unlock()
 	fake.GetAuditInfoStub = stub
 }
 
-func (fake *WalletService) GetAuditInfoArgsForCall(i int) view.Identity {
+func (fake *WalletService) GetAuditInfoArgsForCall(i int) driver.Identity {
 	fake.getAuditInfoMutex.RLock()
 	defer fake.getAuditInfoMutex.RUnlock()
 	argsForCall := fake.getAuditInfoArgsForCall[i]
@@ -384,7 +383,7 @@ func (fake *WalletService) GetAuditInfoReturnsOnCall(i int, result1 []byte, resu
 	}{result1, result2}
 }
 
-func (fake *WalletService) GetEIDAndRH(arg1 view.Identity, arg2 []byte) (string, string, error) {
+func (fake *WalletService) GetEIDAndRH(arg1 driver.Identity, arg2 []byte) (string, string, error) {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
@@ -393,7 +392,7 @@ func (fake *WalletService) GetEIDAndRH(arg1 view.Identity, arg2 []byte) (string,
 	fake.getEIDAndRHMutex.Lock()
 	ret, specificReturn := fake.getEIDAndRHReturnsOnCall[len(fake.getEIDAndRHArgsForCall)]
 	fake.getEIDAndRHArgsForCall = append(fake.getEIDAndRHArgsForCall, struct {
-		arg1 view.Identity
+		arg1 driver.Identity
 		arg2 []byte
 	}{arg1, arg2Copy})
 	stub := fake.GetEIDAndRHStub
@@ -415,13 +414,13 @@ func (fake *WalletService) GetEIDAndRHCallCount() int {
 	return len(fake.getEIDAndRHArgsForCall)
 }
 
-func (fake *WalletService) GetEIDAndRHCalls(stub func(view.Identity, []byte) (string, string, error)) {
+func (fake *WalletService) GetEIDAndRHCalls(stub func(driver.Identity, []byte) (string, string, error)) {
 	fake.getEIDAndRHMutex.Lock()
 	defer fake.getEIDAndRHMutex.Unlock()
 	fake.GetEIDAndRHStub = stub
 }
 
-func (fake *WalletService) GetEIDAndRHArgsForCall(i int) (view.Identity, []byte) {
+func (fake *WalletService) GetEIDAndRHArgsForCall(i int) (driver.Identity, []byte) {
 	fake.getEIDAndRHMutex.RLock()
 	defer fake.getEIDAndRHMutex.RUnlock()
 	argsForCall := fake.getEIDAndRHArgsForCall[i]
@@ -457,7 +456,7 @@ func (fake *WalletService) GetEIDAndRHReturnsOnCall(i int, result1 string, resul
 	}{result1, result2, result3}
 }
 
-func (fake *WalletService) GetEnrollmentID(arg1 view.Identity, arg2 []byte) (string, error) {
+func (fake *WalletService) GetEnrollmentID(arg1 driver.Identity, arg2 []byte) (string, error) {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
@@ -466,7 +465,7 @@ func (fake *WalletService) GetEnrollmentID(arg1 view.Identity, arg2 []byte) (str
 	fake.getEnrollmentIDMutex.Lock()
 	ret, specificReturn := fake.getEnrollmentIDReturnsOnCall[len(fake.getEnrollmentIDArgsForCall)]
 	fake.getEnrollmentIDArgsForCall = append(fake.getEnrollmentIDArgsForCall, struct {
-		arg1 view.Identity
+		arg1 driver.Identity
 		arg2 []byte
 	}{arg1, arg2Copy})
 	stub := fake.GetEnrollmentIDStub
@@ -488,13 +487,13 @@ func (fake *WalletService) GetEnrollmentIDCallCount() int {
 	return len(fake.getEnrollmentIDArgsForCall)
 }
 
-func (fake *WalletService) GetEnrollmentIDCalls(stub func(view.Identity, []byte) (string, error)) {
+func (fake *WalletService) GetEnrollmentIDCalls(stub func(driver.Identity, []byte) (string, error)) {
 	fake.getEnrollmentIDMutex.Lock()
 	defer fake.getEnrollmentIDMutex.Unlock()
 	fake.GetEnrollmentIDStub = stub
 }
 
-func (fake *WalletService) GetEnrollmentIDArgsForCall(i int) (view.Identity, []byte) {
+func (fake *WalletService) GetEnrollmentIDArgsForCall(i int) (driver.Identity, []byte) {
 	fake.getEnrollmentIDMutex.RLock()
 	defer fake.getEnrollmentIDMutex.RUnlock()
 	argsForCall := fake.getEnrollmentIDArgsForCall[i]
@@ -527,7 +526,7 @@ func (fake *WalletService) GetEnrollmentIDReturnsOnCall(i int, result1 string, r
 	}{result1, result2}
 }
 
-func (fake *WalletService) GetRevocationHandle(arg1 view.Identity, arg2 []byte) (string, error) {
+func (fake *WalletService) GetRevocationHandle(arg1 driver.Identity, arg2 []byte) (string, error) {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
@@ -536,7 +535,7 @@ func (fake *WalletService) GetRevocationHandle(arg1 view.Identity, arg2 []byte) 
 	fake.getRevocationHandleMutex.Lock()
 	ret, specificReturn := fake.getRevocationHandleReturnsOnCall[len(fake.getRevocationHandleArgsForCall)]
 	fake.getRevocationHandleArgsForCall = append(fake.getRevocationHandleArgsForCall, struct {
-		arg1 view.Identity
+		arg1 driver.Identity
 		arg2 []byte
 	}{arg1, arg2Copy})
 	stub := fake.GetRevocationHandleStub
@@ -558,13 +557,13 @@ func (fake *WalletService) GetRevocationHandleCallCount() int {
 	return len(fake.getRevocationHandleArgsForCall)
 }
 
-func (fake *WalletService) GetRevocationHandleCalls(stub func(view.Identity, []byte) (string, error)) {
+func (fake *WalletService) GetRevocationHandleCalls(stub func(driver.Identity, []byte) (string, error)) {
 	fake.getRevocationHandleMutex.Lock()
 	defer fake.getRevocationHandleMutex.Unlock()
 	fake.GetRevocationHandleStub = stub
 }
 
-func (fake *WalletService) GetRevocationHandleArgsForCall(i int) (view.Identity, []byte) {
+func (fake *WalletService) GetRevocationHandleArgsForCall(i int) (driver.Identity, []byte) {
 	fake.getRevocationHandleMutex.RLock()
 	defer fake.getRevocationHandleMutex.RUnlock()
 	argsForCall := fake.getRevocationHandleArgsForCall[i]
@@ -597,11 +596,11 @@ func (fake *WalletService) GetRevocationHandleReturnsOnCall(i int, result1 strin
 	}{result1, result2}
 }
 
-func (fake *WalletService) IssuerWallet(arg1 any) (driver.IssuerWallet, error) {
+func (fake *WalletService) IssuerWallet(arg1 driver.WalletLookupID) (driver.IssuerWallet, error) {
 	fake.issuerWalletMutex.Lock()
 	ret, specificReturn := fake.issuerWalletReturnsOnCall[len(fake.issuerWalletArgsForCall)]
 	fake.issuerWalletArgsForCall = append(fake.issuerWalletArgsForCall, struct {
-		arg1 any
+		arg1 driver.WalletLookupID
 	}{arg1})
 	stub := fake.IssuerWalletStub
 	fakeReturns := fake.issuerWalletReturns
@@ -622,13 +621,13 @@ func (fake *WalletService) IssuerWalletCallCount() int {
 	return len(fake.issuerWalletArgsForCall)
 }
 
-func (fake *WalletService) IssuerWalletCalls(stub func(any) (driver.IssuerWallet, error)) {
+func (fake *WalletService) IssuerWalletCalls(stub func(driver.WalletLookupID) (driver.IssuerWallet, error)) {
 	fake.issuerWalletMutex.Lock()
 	defer fake.issuerWalletMutex.Unlock()
 	fake.IssuerWalletStub = stub
 }
 
-func (fake *WalletService) IssuerWalletArgsForCall(i int) any {
+func (fake *WalletService) IssuerWalletArgsForCall(i int) driver.WalletLookupID {
 	fake.issuerWalletMutex.RLock()
 	defer fake.issuerWalletMutex.RUnlock()
 	argsForCall := fake.issuerWalletArgsForCall[i]
@@ -661,11 +660,11 @@ func (fake *WalletService) IssuerWalletReturnsOnCall(i int, result1 driver.Issue
 	}{result1, result2}
 }
 
-func (fake *WalletService) OwnerWallet(arg1 any) (driver.OwnerWallet, error) {
+func (fake *WalletService) OwnerWallet(arg1 driver.WalletLookupID) (driver.OwnerWallet, error) {
 	fake.ownerWalletMutex.Lock()
 	ret, specificReturn := fake.ownerWalletReturnsOnCall[len(fake.ownerWalletArgsForCall)]
 	fake.ownerWalletArgsForCall = append(fake.ownerWalletArgsForCall, struct {
-		arg1 any
+		arg1 driver.WalletLookupID
 	}{arg1})
 	stub := fake.OwnerWalletStub
 	fakeReturns := fake.ownerWalletReturns
@@ -686,13 +685,13 @@ func (fake *WalletService) OwnerWalletCallCount() int {
 	return len(fake.ownerWalletArgsForCall)
 }
 
-func (fake *WalletService) OwnerWalletCalls(stub func(any) (driver.OwnerWallet, error)) {
+func (fake *WalletService) OwnerWalletCalls(stub func(driver.WalletLookupID) (driver.OwnerWallet, error)) {
 	fake.ownerWalletMutex.Lock()
 	defer fake.ownerWalletMutex.Unlock()
 	fake.OwnerWalletStub = stub
 }
 
-func (fake *WalletService) OwnerWalletArgsForCall(i int) any {
+func (fake *WalletService) OwnerWalletArgsForCall(i int) driver.WalletLookupID {
 	fake.ownerWalletMutex.RLock()
 	defer fake.ownerWalletMutex.RUnlock()
 	argsForCall := fake.ownerWalletArgsForCall[i]
@@ -964,16 +963,16 @@ func (fake *WalletService) RegisterRecipientIdentityReturnsOnCall(i int, result1
 	}{result1}
 }
 
-func (fake *WalletService) SpentIDs(arg1 ...*token.ID) ([]string, error) {
-	fake.spentIDsMutex.Lock()
-	ret, specificReturn := fake.spentIDsReturnsOnCall[len(fake.spentIDsArgsForCall)]
-	fake.spentIDsArgsForCall = append(fake.spentIDsArgsForCall, struct {
+func (fake *WalletService) SpendIDs(arg1 ...*token.ID) ([]string, error) {
+	fake.spendIDsMutex.Lock()
+	ret, specificReturn := fake.spendIDsReturnsOnCall[len(fake.spendIDsArgsForCall)]
+	fake.spendIDsArgsForCall = append(fake.spendIDsArgsForCall, struct {
 		arg1 []*token.ID
 	}{arg1})
-	stub := fake.SpentIDsStub
-	fakeReturns := fake.spentIDsReturns
-	fake.recordInvocation("SpentIDs", []interface{}{arg1})
-	fake.spentIDsMutex.Unlock()
+	stub := fake.SpendIDsStub
+	fakeReturns := fake.spendIDsReturns
+	fake.recordInvocation("SpendIDs", []interface{}{arg1})
+	fake.spendIDsMutex.Unlock()
 	if stub != nil {
 		return stub(arg1...)
 	}
@@ -983,56 +982,56 @@ func (fake *WalletService) SpentIDs(arg1 ...*token.ID) ([]string, error) {
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *WalletService) SpentIDsCallCount() int {
-	fake.spentIDsMutex.RLock()
-	defer fake.spentIDsMutex.RUnlock()
-	return len(fake.spentIDsArgsForCall)
+func (fake *WalletService) SpendIDsCallCount() int {
+	fake.spendIDsMutex.RLock()
+	defer fake.spendIDsMutex.RUnlock()
+	return len(fake.spendIDsArgsForCall)
 }
 
-func (fake *WalletService) SpentIDsCalls(stub func(...*token.ID) ([]string, error)) {
-	fake.spentIDsMutex.Lock()
-	defer fake.spentIDsMutex.Unlock()
-	fake.SpentIDsStub = stub
+func (fake *WalletService) SpendIDsCalls(stub func(...*token.ID) ([]string, error)) {
+	fake.spendIDsMutex.Lock()
+	defer fake.spendIDsMutex.Unlock()
+	fake.SpendIDsStub = stub
 }
 
-func (fake *WalletService) SpentIDsArgsForCall(i int) []*token.ID {
-	fake.spentIDsMutex.RLock()
-	defer fake.spentIDsMutex.RUnlock()
-	argsForCall := fake.spentIDsArgsForCall[i]
+func (fake *WalletService) SpendIDsArgsForCall(i int) []*token.ID {
+	fake.spendIDsMutex.RLock()
+	defer fake.spendIDsMutex.RUnlock()
+	argsForCall := fake.spendIDsArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *WalletService) SpentIDsReturns(result1 []string, result2 error) {
-	fake.spentIDsMutex.Lock()
-	defer fake.spentIDsMutex.Unlock()
-	fake.SpentIDsStub = nil
-	fake.spentIDsReturns = struct {
+func (fake *WalletService) SpendIDsReturns(result1 []string, result2 error) {
+	fake.spendIDsMutex.Lock()
+	defer fake.spendIDsMutex.Unlock()
+	fake.SpendIDsStub = nil
+	fake.spendIDsReturns = struct {
 		result1 []string
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *WalletService) SpentIDsReturnsOnCall(i int, result1 []string, result2 error) {
-	fake.spentIDsMutex.Lock()
-	defer fake.spentIDsMutex.Unlock()
-	fake.SpentIDsStub = nil
-	if fake.spentIDsReturnsOnCall == nil {
-		fake.spentIDsReturnsOnCall = make(map[int]struct {
+func (fake *WalletService) SpendIDsReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.spendIDsMutex.Lock()
+	defer fake.spendIDsMutex.Unlock()
+	fake.SpendIDsStub = nil
+	if fake.spendIDsReturnsOnCall == nil {
+		fake.spendIDsReturnsOnCall = make(map[int]struct {
 			result1 []string
 			result2 error
 		})
 	}
-	fake.spentIDsReturnsOnCall[i] = struct {
+	fake.spendIDsReturnsOnCall[i] = struct {
 		result1 []string
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *WalletService) Wallet(arg1 view.Identity) driver.Wallet {
+func (fake *WalletService) Wallet(arg1 driver.Identity) driver.Wallet {
 	fake.walletMutex.Lock()
 	ret, specificReturn := fake.walletReturnsOnCall[len(fake.walletArgsForCall)]
 	fake.walletArgsForCall = append(fake.walletArgsForCall, struct {
-		arg1 view.Identity
+		arg1 driver.Identity
 	}{arg1})
 	stub := fake.WalletStub
 	fakeReturns := fake.walletReturns
@@ -1053,13 +1052,13 @@ func (fake *WalletService) WalletCallCount() int {
 	return len(fake.walletArgsForCall)
 }
 
-func (fake *WalletService) WalletCalls(stub func(view.Identity) driver.Wallet) {
+func (fake *WalletService) WalletCalls(stub func(driver.Identity) driver.Wallet) {
 	fake.walletMutex.Lock()
 	defer fake.walletMutex.Unlock()
 	fake.WalletStub = stub
 }
 
-func (fake *WalletService) WalletArgsForCall(i int) view.Identity {
+func (fake *WalletService) WalletArgsForCall(i int) driver.Identity {
 	fake.walletMutex.RLock()
 	defer fake.walletMutex.RUnlock()
 	argsForCall := fake.walletArgsForCall[i]
@@ -1116,8 +1115,8 @@ func (fake *WalletService) Invocations() map[string][][]interface{} {
 	defer fake.registerOwnerIdentityMutex.RUnlock()
 	fake.registerRecipientIdentityMutex.RLock()
 	defer fake.registerRecipientIdentityMutex.RUnlock()
-	fake.spentIDsMutex.RLock()
-	defer fake.spentIDsMutex.RUnlock()
+	fake.spendIDsMutex.RLock()
+	defer fake.spendIDsMutex.RUnlock()
 	fake.walletMutex.RLock()
 	defer fake.walletMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

@@ -127,8 +127,8 @@ type WalletService interface {
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
 	CertifierWallet(id WalletLookupID) (CertifierWallet, error)
 
-	// SpentIDs returns the spend ids for the passed token ids
-	SpentIDs(ids ...*token.ID) ([]string, error)
+    // SpendIDs returns the spend ids for the passed token ids
+    SpendIDs(ids ...*token.ID) ([]string, error)
 }
 ```
 

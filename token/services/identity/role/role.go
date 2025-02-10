@@ -53,9 +53,7 @@ func (r *Role) ID() identity.RoleType {
 
 // GetIdentityInfo returns the identity information for the given identity identifier
 func (r *Role) GetIdentityInfo(id string) (idriver.IdentityInfo, error) {
-	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf("[%s] getting info for [%s]", r.networkID, id)
-	}
+	r.logger.Debugf("[%s] getting info for [%s]", r.networkID, id)
 
 	info, err := r.localMembership.GetIdentityInfo(id, nil)
 	if err != nil {
@@ -95,9 +93,9 @@ func (r *Role) mapStringToID(v string) (driver.Identity, string, error) {
 		r.logger.Debugf("[%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
 			r.networkID,
 			v,
-			hash.Hashable(v).String(),
-			defaultNetworkIdentity.String(),
-			r.nodeIdentity.String(),
+			hash.Hashable(v),
+			defaultNetworkIdentity,
+			r.nodeIdentity,
 		)
 	}
 
@@ -151,8 +149,8 @@ func (r *Role) mapIdentityToID(v driver.Identity) (driver.Identity, string, erro
 		r.logger.Debugf("[%s] mapping driver.Identity identifier for [%s], default identities [%s:%s]",
 			r.networkID,
 			v,
-			defaultNetworkIdentity.String(),
-			r.nodeIdentity.String(),
+			defaultNetworkIdentity,
+			r.nodeIdentity,
 		)
 	}
 
