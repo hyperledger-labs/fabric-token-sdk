@@ -256,7 +256,7 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 		return nil, nil, errors.WithMessagef(err, "transaction [%s], failed to get request metadata", txID)
 	}
 
-	is, os, err := request.InputsAndOutputs()
+	is, os, err := request.InputsAndOutputsNoRecipients()
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get request's outputs")
 	}
