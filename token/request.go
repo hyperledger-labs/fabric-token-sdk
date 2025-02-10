@@ -578,7 +578,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 				Token:                *tok,
 				ActionIndex:          i,
 				Index:                counter,
-				Owner:                tok.Owner,
+				Owner:                recipient,
 				OwnerAuditInfo:       issueMeta.ReceiversAuditInfos[j],
 				EnrollmentID:         eID,
 				RevocationHandler:    rID,
@@ -590,8 +590,8 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 				LedgerOutputMetadata: issueMeta.OutputsMetadata[j],
 			})
 			recipientCounter++
-			counter++
 		}
+		counter++
 	}
 	return outputs, counter, nil
 }
@@ -669,7 +669,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 				Token:                *tok,
 				ActionIndex:          i,
 				Index:                counter,
-				Owner:                tok.Owner,
+				Owner:                recipient,
 				OwnerAuditInfo:       receiverAuditInfo,
 				EnrollmentID:         eID,
 				RevocationHandler:    rID,
@@ -680,9 +680,9 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 				LedgerOutputMetadata: transferMeta.OutputsMetadata[j],
 				Issuer:               issuer,
 			})
-			counter++
 			recipientCounter++
 		}
+		counter++
 	}
 
 	return outputs, counter, nil
