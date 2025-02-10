@@ -470,7 +470,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 			return nil, errors.Wrapf(err, "failed matching issue action with its metadata [%d]", i)
 		}
 
-		extractedOutputs, newCounter, err := r.extractIssueOutputs(i, counter, issueAction, issueMeta, failOnMissing)
+		extractedOutputs, newCounter, err := r.extractIssueOutputs(i, counter, issueAction, issueMeta, failOnMissing, false)
 		if err != nil {
 			return nil, err
 		}
@@ -497,7 +497,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]: invalid metadata", i)
 		}
 
-		extractedOutputs, newCounter, err := r.extractTransferOutputs(i, counter, transferAction, transferMeta, failOnMissing)
+		extractedOutputs, newCounter, err := r.extractTransferOutputs(i, counter, transferAction, transferMeta, failOnMissing, false)
 		if err != nil {
 			return nil, err
 		}
@@ -508,7 +508,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 	return NewOutputStream(outputs, tms.PublicParamsManager().PublicParameters().Precision()), nil
 }
 
-func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.IssueAction, issueMeta *IssueMetadata, failOnMissing bool) ([]*Output, uint64, error) {
+func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.IssueAction, issueMeta *IssueMetadata, failOnMissing, noOutputForRecipient bool) ([]*Output, uint64, error) {
 	// extract outputs for this action
 	tms := r.TokenService.tms
 	pp := tms.PublicParamsManager().PublicParameters()
@@ -561,27 +561,16 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 			return nil, 0, errors.Errorf("missing recipients [%d,%d]", i, j)
 		}
 
-		for _, recipient := range recipients {
-			if !recipient.Equal(issueMeta.Receivers[recipientCounter]) {
-				return nil, 0, errors.Errorf("invalid recipient [%d,%d]", i, j)
-			}
-			eID, rID, err := tms.WalletService().GetEIDAndRH(recipient, issueMeta.ReceiversAuditInfos[recipientCounter])
-			if err != nil {
-				return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
-			}
-			q, err := token.ToQuantity(tok.Quantity, precision)
-			if err != nil {
-				return nil, 0, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
-			}
-
+		q, err := token.ToQuantity(tok.Quantity, precision)
+		if err != nil {
+			return nil, 0, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
+		}
+		if noOutputForRecipient {
 			outputs = append(outputs, &Output{
 				Token:                *tok,
 				ActionIndex:          i,
 				Index:                counter,
-				Owner:                recipient,
-				OwnerAuditInfo:       issueMeta.ReceiversAuditInfos[j],
-				EnrollmentID:         eID,
-				RevocationHandler:    rID,
+				Owner:                tok.Owner,
 				Type:                 tok.Type,
 				Quantity:             q,
 				Issuer:               issuer,
@@ -589,14 +578,40 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 				LedgerOutputFormat:   format,
 				LedgerOutputMetadata: issueMeta.OutputsMetadata[j],
 			})
-			recipientCounter++
+		} else {
+			for _, recipient := range recipients {
+				if !recipient.Equal(issueMeta.Receivers[recipientCounter]) {
+					return nil, 0, errors.Errorf("invalid recipient [%d,%d]", i, j)
+				}
+				eID, rID, err := tms.WalletService().GetEIDAndRH(recipient, issueMeta.ReceiversAuditInfos[recipientCounter])
+				if err != nil {
+					return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
+				}
+
+				outputs = append(outputs, &Output{
+					Token:                *tok,
+					ActionIndex:          i,
+					Index:                counter,
+					Owner:                recipient,
+					OwnerAuditInfo:       issueMeta.ReceiversAuditInfos[j],
+					EnrollmentID:         eID,
+					RevocationHandler:    rID,
+					Type:                 tok.Type,
+					Quantity:             q,
+					Issuer:               issuer,
+					LedgerOutput:         raw,
+					LedgerOutputFormat:   format,
+					LedgerOutputMetadata: issueMeta.OutputsMetadata[j],
+				})
+				recipientCounter++
+			}
 		}
 		counter++
 	}
 	return outputs, counter, nil
 }
 
-func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction driver.TransferAction, transferMeta *TransferMetadata, failOnMissing bool) ([]*Output, uint64, error) {
+func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction driver.TransferAction, transferMeta *TransferMetadata, failOnMissing, noOutputForRecipient bool) ([]*Output, uint64, error) {
 	tms := r.TokenService.tms
 	if tms.PublicParamsManager() == nil || tms.PublicParamsManager().PublicParameters() == nil {
 		return nil, 0, errors.New("can't get inputs: invalid token service in request")
@@ -643,44 +658,59 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			recipients = append(recipients, Identity{})
 		}
 
-		for _, recipient := range recipients {
-			if !recipient.Equal(transferMeta.Receivers[recipientCounter]) {
-				return nil, 0, errors.Errorf("invalid recipient [%d,%d] [%s:%s]", i, j, recipient, transferMeta.Receivers[recipientCounter])
-			}
-			var eID string
-			var rID string
-			var receiverAuditInfo []byte
-			var ledgerOutput []byte
-			if len(tok.Owner) != 0 {
-				receiverAuditInfo = transferMeta.ReceiverAuditInfos[recipientCounter]
-				eID, rID, err = tms.WalletService().GetEIDAndRH(recipient, receiverAuditInfo)
-				if err != nil {
-					return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, recipientCounter)
-				}
-				ledgerOutput = raw
-			}
-
-			q, err := token.ToQuantity(tok.Quantity, precision)
-			if err != nil {
-				return nil, 0, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, recipientCounter)
-			}
-			r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
+		q, err := token.ToQuantity(tok.Quantity, precision)
+		if err != nil {
+			return nil, 0, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
+		}
+		if noOutputForRecipient {
 			outputs = append(outputs, &Output{
 				Token:                *tok,
 				ActionIndex:          i,
 				Index:                counter,
-				Owner:                recipient,
-				OwnerAuditInfo:       receiverAuditInfo,
-				EnrollmentID:         eID,
-				RevocationHandler:    rID,
+				Owner:                tok.Owner,
 				Type:                 tok.Type,
 				Quantity:             q,
-				LedgerOutput:         ledgerOutput,
+				LedgerOutput:         raw,
 				LedgerOutputFormat:   tokType,
 				LedgerOutputMetadata: transferMeta.OutputsMetadata[j],
 				Issuer:               issuer,
 			})
-			recipientCounter++
+		} else {
+			for _, recipient := range recipients {
+				if !recipient.Equal(transferMeta.Receivers[recipientCounter]) {
+					return nil, 0, errors.Errorf("invalid recipient [%d,%d] [%s:%s]", i, j, recipient, transferMeta.Receivers[recipientCounter])
+				}
+				var eID string
+				var rID string
+				var receiverAuditInfo []byte
+				var ledgerOutput []byte
+				if len(tok.Owner) != 0 {
+					receiverAuditInfo = transferMeta.ReceiverAuditInfos[recipientCounter]
+					eID, rID, err = tms.WalletService().GetEIDAndRH(recipient, receiverAuditInfo)
+					if err != nil {
+						return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, recipientCounter)
+					}
+					ledgerOutput = raw
+				}
+
+				r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
+				outputs = append(outputs, &Output{
+					Token:                *tok,
+					ActionIndex:          i,
+					Index:                counter,
+					Owner:                recipient,
+					OwnerAuditInfo:       receiverAuditInfo,
+					EnrollmentID:         eID,
+					RevocationHandler:    rID,
+					Type:                 tok.Type,
+					Quantity:             q,
+					LedgerOutput:         ledgerOutput,
+					LedgerOutputFormat:   tokType,
+					LedgerOutputMetadata: transferMeta.OutputsMetadata[j],
+					Issuer:               issuer,
+				})
+				recipientCounter++
+			}
 		}
 		counter++
 	}
@@ -778,10 +808,14 @@ func (r *Request) extractTransferInputs(actionIndex int, metadata *TransferMetad
 }
 
 func (r *Request) InputsAndOutputs() (*InputStream, *OutputStream, error) {
-	return r.inputsAndOutputs(false, false)
+	return r.inputsAndOutputs(false, false, false)
 }
 
-func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStream, *OutputStream, error) {
+func (r *Request) InputsAndOutputsNoRecipients() (*InputStream, *OutputStream, error) {
+	return r.inputsAndOutputs(false, false, true)
+}
+
+func (r *Request) inputsAndOutputs(failOnMissing, verifyActions, noOutputForRecipient bool) (*InputStream, *OutputStream, error) {
 	tms := r.TokenService.tms
 	if tms.PublicParamsManager() == nil || tms.PublicParamsManager().PublicParameters() == nil {
 		return nil, nil, errors.New("can't get inputs: invalid token service in request")
@@ -822,7 +856,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 		}
 		inputs = append(inputs, extractedInputs...)
 
-		extractedOutputs, newCounter, err := r.extractIssueOutputs(i, counter, issueAction, issueMeta, failOnMissing)
+		extractedOutputs, newCounter, err := r.extractIssueOutputs(i, counter, issueAction, issueMeta, failOnMissing, noOutputForRecipient)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -862,7 +896,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 		}
 		inputs = append(inputs, extractedInputs...)
 
-		extractedOutputs, newCounter, err := r.extractTransferOutputs(i, counter, transferAction, transferMeta, failOnMissing)
+		extractedOutputs, newCounter, err := r.extractTransferOutputs(i, counter, transferAction, transferMeta, failOnMissing, noOutputForRecipient)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -890,7 +924,7 @@ func (r *Request) IsValid() error {
 	}
 
 	// check inputs, outputs, and verify actions
-	if _, _, err := r.inputsAndOutputs(false, true); err != nil {
+	if _, _, err := r.inputsAndOutputs(false, true, false); err != nil {
 		return errors.WithMessagef(err, "failed verifying inputs and outputs")
 	}
 
@@ -1091,7 +1125,7 @@ func (r *Request) AuditCheck(ctx context.Context) error {
 // AuditRecord return the audit record of the request.
 // The audit record contains: The anchor, the audit inputs and outputs
 func (r *Request) AuditRecord() (*AuditRecord, error) {
-	inputs, outputs, err := r.inputsAndOutputs(true, false)
+	inputs, outputs, err := r.inputsAndOutputs(true, false, false)
 	if err != nil {
 		return nil, err
 	}

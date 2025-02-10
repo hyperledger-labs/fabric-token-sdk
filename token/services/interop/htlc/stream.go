@@ -31,7 +31,7 @@ func (o *OutputStream) Filter(f func(t *token.Output) bool) *OutputStream {
 // ByScript filters the OutputStream to only include outputs that are owned by an htlc script
 func (o *OutputStream) ByScript() *OutputStream {
 	return o.Filter(func(t *token.Output) bool {
-		owner, err := identity.UnmarshalTypedIdentity(t.Owner)
+		owner, err := identity.UnmarshalTypedIdentity(t.Token.Owner)
 		if err != nil {
 			return false
 		}
@@ -46,7 +46,7 @@ func (o *OutputStream) ByScript() *OutputStream {
 // ScriptAt returns an htlc script that is the owner of the output at the passed index of the OutputStream
 func (o *OutputStream) ScriptAt(i int) *Script {
 	tok := o.OutputStream.At(i)
-	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
+	owner, err := identity.UnmarshalTypedIdentity(tok.Token.Owner)
 	if err != nil {
 		logger.Debugf("failed unmarshalling raw owner [%s]: [%s]", tok, err)
 		return nil
