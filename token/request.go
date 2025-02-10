@@ -578,6 +578,12 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 				LedgerOutputFormat:   format,
 				LedgerOutputMetadata: issueMeta.OutputsMetadata[j],
 			})
+			for _, recipient := range recipients {
+				if !recipient.Equal(issueMeta.Receivers[recipientCounter]) {
+					return nil, 0, errors.Errorf("invalid recipient [%d,%d]", i, j)
+				}
+				recipientCounter++
+			}
 		} else {
 			for _, recipient := range recipients {
 				if !recipient.Equal(issueMeta.Receivers[recipientCounter]) {
@@ -678,6 +684,12 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 				LedgerOutputMetadata: transferMeta.OutputsMetadata[j],
 				Issuer:               issuer,
 			})
+			for _, recipient := range recipients {
+				if !recipient.Equal(transferMeta.Receivers[recipientCounter]) {
+					return nil, 0, errors.Errorf("invalid recipient [%d,%d]", i, j)
+				}
+				recipientCounter++
+			}
 		} else {
 			for _, recipient := range recipients {
 				if !recipient.Equal(transferMeta.Receivers[recipientCounter]) {
@@ -686,14 +698,14 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 				var eID string
 				var rID string
 				var receiverAuditInfo []byte
-				var ledgerOutput []byte
+				var targetLedgerOutput []byte
 				if len(tok.Owner) != 0 {
 					receiverAuditInfo = transferMeta.ReceiverAuditInfos[recipientCounter]
 					eID, rID, err = tms.WalletService().GetEIDAndRH(recipient, receiverAuditInfo)
 					if err != nil {
 						return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, recipientCounter)
 					}
-					ledgerOutput = ledgerOutput
+					targetLedgerOutput = ledgerOutput
 				}
 
 				r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
@@ -707,7 +719,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 					RevocationHandler:    rID,
 					Type:                 tok.Type,
 					Quantity:             q,
-					LedgerOutput:         ledgerOutput,
+					LedgerOutput:         targetLedgerOutput,
 					LedgerOutputFormat:   ledgerOutputFormat,
 					LedgerOutputMetadata: transferMeta.OutputsMetadata[j],
 					Issuer:               issuer,
