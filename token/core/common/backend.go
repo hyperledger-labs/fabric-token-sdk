@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -41,7 +42,7 @@ func (b *Backend) HasBeenSignedBy(id driver.Identity, verifier driver.Verifier) 
 	b.Cursor++
 
 	// if b.Logger.IsEnabledFor(zapcore.DebugLevel) {
-	b.Logger.Infof("verify signature [%s][%s][%s]", id, base64.StdEncoding.EncodeToString(sigma), Hashable(b.Message))
+	b.Logger.Infof("verify signature [%s][%s][%s]", id, base64.StdEncoding.EncodeToString(sigma), utils.Hashable(b.Message))
 	// }
 	return sigma, verifier.Verify(b.Message, sigma)
 }
