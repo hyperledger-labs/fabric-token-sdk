@@ -15,7 +15,6 @@ import (
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type localMembership interface {
@@ -89,15 +88,13 @@ func (r *Role) mapStringToID(v string) (driver.Identity, string, error) {
 	defaultNetworkIdentity := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
-	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf("[%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
-			r.networkID,
-			v,
-			hash.Hashable(v),
-			defaultNetworkIdentity,
-			r.nodeIdentity,
-		)
-	}
+	r.logger.Debugf("[%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
+		r.networkID,
+		v,
+		hash.Hashable(v),
+		defaultNetworkIdentity,
+		r.nodeIdentity,
+	)
 
 	label := v
 	labelAsIdentity := driver.Identity(label)
@@ -126,18 +123,14 @@ func (r *Role) mapStringToID(v string) (driver.Identity, string, error) {
 		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
 			return nil, idIdentifier, nil
 		}
-		if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-			r.logger.Debugf("failed getting identity info for [%s], returning the identity", id)
-		}
+		r.logger.Debugf("failed getting identity info for [%s], returning the identity", id)
 		return id, "", nil
 	}
 
 	if idIdentifier, err := r.localMembership.GetIdentifier(labelAsIdentity); err == nil {
 		return nil, idIdentifier, nil
 	}
-	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf("cannot find match for string [%s]", v)
-	}
+	r.logger.Debugf("cannot find match for string [%s]", v)
 	return nil, label, nil
 }
 
@@ -145,14 +138,12 @@ func (r *Role) mapIdentityToID(v driver.Identity) (driver.Identity, string, erro
 	defaultNetworkIdentity := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
-	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf("[%s] mapping driver.Identity identifier for [%s], default identities [%s:%s]",
-			r.networkID,
-			v,
-			defaultNetworkIdentity,
-			r.nodeIdentity,
-		)
-	}
+	r.logger.Debugf("[%s] mapping driver.Identity identifier for [%s], default identities [%s:%s]",
+		r.networkID,
+		v,
+		defaultNetworkIdentity,
+		r.nodeIdentity,
+	)
 
 	id := v
 	switch {
@@ -173,14 +164,10 @@ func (r *Role) mapIdentityToID(v driver.Identity) (driver.Identity, string, erro
 		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
 			return id, idIdentifier, nil
 		}
-		if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-			r.logger.Debugf("failed getting identity info for [%s], returning the identity", id)
-		}
+		r.logger.Debugf("failed getting identity info for [%s], returning the identity", id)
 		return id, "", nil
 	}
-	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf("looking up identifier for identity as label [%s]", hash.Hashable(id))
-	}
+	r.logger.Debugf("looking up identifier for identity as label [%s]", hash.Hashable(id))
 
 	label := string(id)
 	if info, err := r.localMembership.GetIdentityInfo(label, nil); err == nil {
@@ -190,8 +177,6 @@ func (r *Role) mapIdentityToID(v driver.Identity) (driver.Identity, string, erro
 		return nil, idIdentifier, nil
 	}
 
-	if r.logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.logger.Debugf("cannot find match for driver.Identity string [%s]", id)
-	}
+	r.logger.Debugf("cannot find match for driver.Identity string [%s]", id)
 	return nil, string(id), nil
 }

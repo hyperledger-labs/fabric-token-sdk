@@ -51,9 +51,7 @@ func (r *WalletRegistry) RegisterIdentity(config driver.IdentityConfiguration) e
 // If a wallet is found, Lookup returns the wallet and its identifier.
 // If no wallet is found, Lookup returns the identity info and a potential wallet identifier for the passed id, if anything is found
 func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, idriver.IdentityInfo, string, error) {
-	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.Logger.Debugf("lookup wallet by [%T]", id)
-	}
+	r.Logger.Debugf("lookup wallet by [%T]", id)
 	var walletIdentifiers []string
 
 	identity, walletID, err := r.Role.MapToIdentity(id)
@@ -111,15 +109,11 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, idrive
 	}
 	if len(identity) != 0 {
 		identityWID, err := r.GetWalletID(identity)
-		if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			r.Logger.Debugf("wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
-		}
+		r.Logger.Debugf("wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
 		if err == nil && len(identityWID) != 0 {
 			w, ok := r.Wallets[identityWID]
 			if ok {
-				if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
-					r.Logger.Debugf("found wallet [%s:%s:%s:%s]", identity, walletID, w.ID(), identityWID)
-				}
+				r.Logger.Debugf("found wallet [%s:%s:%s:%s]", identity, walletID, w.ID(), identityWID)
 				return w, nil, identityWID, nil
 			}
 		}
@@ -156,9 +150,7 @@ func (r *WalletRegistry) RegisterWallet(id string, w driver.Wallet) error {
 // BindIdentity binds the passed identity to the passed wallet identifier.
 // Additional metadata can be bound to the identity.
 func (r *WalletRegistry) BindIdentity(identity driver.Identity, eID string, wID string, meta any) error {
-	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.Logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
-	}
+	r.Logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
 	metaEncoded, err := json.Marshal(meta)
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal metadata")
@@ -199,9 +191,7 @@ func (r *WalletRegistry) WalletIDs() ([]string, error) {
 
 // GetIdentityMetadata loads metadata bound to the passed identity into the passed meta argument
 func (r *WalletRegistry) GetIdentityMetadata(identity driver.Identity, wID string, meta any) error {
-	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.Logger.Debugf("get recipient identity metadata [%s]->[%s]", identity, wID)
-	}
+	r.Logger.Debugf("get recipient identity metadata [%s]->[%s]", identity, wID)
 	raw, err := r.Storage.LoadMeta(identity, wID, int(r.Role.ID()))
 	if err != nil {
 		return errors.WithMessagef(err, "failed to retrieve identity's metadata [%s]", identity)
@@ -215,9 +205,7 @@ func (r *WalletRegistry) GetWalletID(identity driver.Identity) (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.Logger.Debugf("wallet [%s] is bound to identity [%s]", wID, identity)
-	}
+	r.Logger.Debugf("wallet [%s] is bound to identity [%s]", wID, identity)
 	return wID, nil
 }
 
