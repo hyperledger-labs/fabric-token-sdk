@@ -70,6 +70,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
 		SDKs:            []api2.SDK{&fdlog.SDK{}},
+		FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 	}))
 	return ts, selector
 }

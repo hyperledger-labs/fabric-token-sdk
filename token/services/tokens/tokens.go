@@ -307,7 +307,7 @@ func (t *Tokens) parse(
 		ownerWalletID, ids, mine := auth.IsMine(&output.Token)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			if mine {
-				logger.Debugf("transaction [%s], found a token and it is mine", txID)
+				logger.Debugf("transaction [%s], found a token and it is mine with [%s][%v]", txID, ownerWalletID, ids)
 			} else {
 				logger.Debugf("transaction [%s], found a token and it is NOT mine", txID)
 			}
