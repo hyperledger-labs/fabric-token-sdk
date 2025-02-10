@@ -181,7 +181,7 @@ func (s *Service) CertifierWallet(id driver.WalletLookupID) (driver.CertifierWal
 }
 
 // SpentIDs returns the spend ids for the passed token ids
-func (s *Service) SpentIDs(ids ...*token.ID) ([]string, error) {
+func (s *Service) SpendIDs(ids ...*token.ID) ([]string, error) {
 	return nil, nil
 }
 

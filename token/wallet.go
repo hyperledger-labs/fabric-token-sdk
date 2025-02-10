@@ -167,7 +167,7 @@ func (wm *WalletManager) GetRevocationHandle(identity Identity) (string, error) 
 
 // SpentIDs returns the spent keys corresponding to the passed token IDs
 func (wm *WalletManager) SpentIDs(ids []*token.ID) ([]string, error) {
-	return wm.walletService.SpentIDs(ids...)
+	return wm.walletService.SpendIDs(ids...)
 }
 
 // Wallet models a generic wallet that has an identifier and contains one or mode identities.
