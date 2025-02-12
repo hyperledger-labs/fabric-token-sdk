@@ -32,34 +32,64 @@ func testFilterByCase0(t *testing.T) {
 	// - Two transfers. One from Alice to Bob and one from Charlie to Dave.
 
 	// From Alice to Bob
-	aliceToBob := driver.TransferMetadata{
-		TokenIDs: []*token2.ID{
+	aliceToBob := &driver.TransferMetadata{
+		Inputs: []*driver.TransferInputMetadata{
 			{
-				TxId:  "pineapple",
-				Index: 0,
+				TokenID: &token2.ID{
+					TxId:  "pineapple",
+					Index: 0,
+				},
+				Senders: []*driver.AuditableIdentity{
+					{
+						Identity:  token.Identity("Alice"),
+						AuditInfo: []byte("Alice"),
+					},
+				},
 			},
 		},
-		Senders:            []token.Identity{token.Identity("Alice")},
-		SenderAuditInfos:   [][]byte{[]byte("Alice")},
-		OutputsMetadata:    [][]byte{[]byte("Bob's output's token metadata")},
-		OutputsAuditInfo:   [][]byte{[]byte("Bob's output's token audit info")},
-		Receivers:          []token.Identity{token.Identity("Bob")},
-		ReceiverAuditInfos: [][]byte{[]byte("Bob")},
+		Outputs: []*driver.TransferOutputMetadata{
+			{
+				OutputMetadata:  []byte("Bob's output's token metadata"),
+				OutputAuditInfo: []byte("Bob's output's token audit info"),
+				Receivers: []*driver.AuditableIdentity{
+					{
+						Identity:  token.Identity("Bob"),
+						AuditInfo: []byte("Bob"),
+					},
+				},
+			},
+		},
+		ExtraSigners: nil,
 	}
 	// From Charlie to Dave
-	charlieToDave := driver.TransferMetadata{
-		TokenIDs: []*token2.ID{
+	charlieToDave := &driver.TransferMetadata{
+		Inputs: []*driver.TransferInputMetadata{
 			{
-				TxId:  "avocado",
-				Index: 0,
+				TokenID: &token2.ID{
+					TxId:  "avocado",
+					Index: 0,
+				},
+				Senders: []*driver.AuditableIdentity{
+					{
+						Identity:  token.Identity("Charlie"),
+						AuditInfo: []byte("Charlie"),
+					},
+				},
 			},
 		},
-		Senders:            []token.Identity{token.Identity("Charlie")},
-		SenderAuditInfos:   [][]byte{[]byte("Charlie")},
-		OutputsMetadata:    [][]byte{[]byte("Dave's output's token metadata")},
-		OutputsAuditInfo:   [][]byte{[]byte("Dave's output's token audit info")},
-		Receivers:          []token.Identity{token.Identity("Dave")},
-		ReceiverAuditInfos: [][]byte{[]byte("Dave")},
+		Outputs: []*driver.TransferOutputMetadata{
+			{
+				OutputMetadata:  []byte("Dave's output's token metadata"),
+				OutputAuditInfo: []byte("Dave's output's token audit info"),
+				Receivers: []*driver.AuditableIdentity{
+					{
+						Identity:  token.Identity("Dave"),
+						AuditInfo: []byte("Dave"),
+					},
+				},
+			},
+		},
+		ExtraSigners: nil,
 	}
 	ws := &mock.WalletService{}
 	ws.GetEnrollmentIDReturnsOnCall(0, "Bob", nil)
@@ -75,7 +105,7 @@ func testFilterByCase0(t *testing.T) {
 		WalletService: ws,
 		TokenRequestMetadata: &driver.TokenRequestMetadata{
 			Issues: nil,
-			Transfers: []driver.TransferMetadata{
+			Transfers: []*driver.TransferMetadata{
 				aliceToBob,
 				charlieToDave,
 			},
@@ -96,8 +126,8 @@ func testFilterByCase0(t *testing.T) {
 	assert.Equal(t, metadata.TokenRequestMetadata.Application, filteredMetadata.TokenRequestMetadata.Application)
 	// Check that the transfers are filtered
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Transfers, 2)
-	assertEqualTransferMetadata(t, &aliceToBob, &filteredMetadata.TokenRequestMetadata.Transfers[0])
-	assertEmptyTransferMetadata(t, &charlieToDave, &filteredMetadata.TokenRequestMetadata.Transfers[1])
+	assertEqualTransferMetadata(t, aliceToBob, filteredMetadata.TokenRequestMetadata.Transfers[0], true)
+	assertEmptyTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1])
 
 	// Filter by Charlie
 	filteredMetadata, err = metadata.FilterBy("Charlie")
@@ -110,8 +140,8 @@ func testFilterByCase0(t *testing.T) {
 	assert.Equal(t, metadata.TokenRequestMetadata.Application, filteredMetadata.TokenRequestMetadata.Application)
 	// Check that the transfers are filtered
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Transfers, 2)
-	assertEmptyTransferMetadata(t, &aliceToBob, &filteredMetadata.TokenRequestMetadata.Transfers[0])
-	assertEqualTransferMetadata(t, &charlieToDave, &filteredMetadata.TokenRequestMetadata.Transfers[1])
+	assertEmptyTransferMetadata(t, aliceToBob, filteredMetadata.TokenRequestMetadata.Transfers[0])
+	assertEqualTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1], true)
 
 	// Filter by Eve
 	filteredMetadata, err = metadata.FilterBy("Eve")
@@ -124,8 +154,8 @@ func testFilterByCase0(t *testing.T) {
 	assert.Equal(t, metadata.TokenRequestMetadata.Application, filteredMetadata.TokenRequestMetadata.Application)
 	// Check that the transfers are filtered
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Transfers, 2)
-	assertEmptyTransferMetadata(t, &aliceToBob, &filteredMetadata.TokenRequestMetadata.Transfers[0])
-	assertEmptyTransferMetadata(t, &charlieToDave, &filteredMetadata.TokenRequestMetadata.Transfers[1])
+	assertEmptyTransferMetadata(t, aliceToBob, filteredMetadata.TokenRequestMetadata.Transfers[0])
+	assertEmptyTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1])
 
 	// Filter by Bob and Charlie
 	filteredMetadata, err = metadata.FilterBy("Bob", "Charlie")
@@ -138,8 +168,22 @@ func testFilterByCase0(t *testing.T) {
 	assert.Equal(t, metadata.TokenRequestMetadata.Application, filteredMetadata.TokenRequestMetadata.Application)
 	// Check that the transfers are filtered
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Transfers, 2)
-	assertEqualTransferMetadata(t, &aliceToBob, &filteredMetadata.TokenRequestMetadata.Transfers[0])
-	assertEqualTransferMetadata(t, &charlieToDave, &filteredMetadata.TokenRequestMetadata.Transfers[1])
+	assertEqualTransferMetadata(t, aliceToBob, filteredMetadata.TokenRequestMetadata.Transfers[0], true)
+	assertEqualTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1], true)
+
+	// No Filter
+	filteredMetadata, err = metadata.FilterBy()
+	assert.NoError(t, err)
+	// assert the calls to the TMS
+	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
+	// Check no issues were returned
+	assert.Len(t, filteredMetadata.TokenRequestMetadata.Issues, 0)
+	// Check that the application metadata is not filtered
+	assert.Equal(t, metadata.TokenRequestMetadata.Application, filteredMetadata.TokenRequestMetadata.Application)
+	// Check that the transfers are filtered
+	assert.Len(t, filteredMetadata.TokenRequestMetadata.Transfers, 2)
+	assertEqualTransferMetadata(t, aliceToBob, filteredMetadata.TokenRequestMetadata.Transfers[0], false)
+	assertEqualTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1], false)
 }
 
 func testFilterByCase1(t *testing.T) {
@@ -147,19 +191,38 @@ func testFilterByCase1(t *testing.T) {
 	// - Two issues. One for Alice and one for Bob.
 
 	// Alice's issue
-	aliceIssue := driver.IssueMetadata{
-		Issuer:              token.Identity("Issuer"),
-		OutputsMetadata:     [][]byte{[]byte("Alice's output's token info")},
-		Receivers:           []token.Identity{token.Identity("Alice")},
-		ReceiversAuditInfos: [][]byte{[]byte("Alice")},
+	aliceIssue := &driver.IssueMetadata{
+		Issuer: token.Identity("Issuer"),
+		Inputs: nil,
+		Outputs: []*driver.IssueOutputMetadata{
+			{
+				OutputMetadata: []byte("Alice's output's token info"),
+				Receivers: []*driver.AuditableIdentity{
+					{
+						Identity:  token.Identity("Alice"),
+						AuditInfo: []byte("Alice"),
+					},
+				},
+			},
+		},
+		ExtraSigners: nil,
 	}
-
 	// Bob's issue
-	bobIssue := driver.IssueMetadata{
-		Issuer:              token.Identity("Issuer"),
-		OutputsMetadata:     [][]byte{[]byte("Bob's output's token info")},
-		Receivers:           []token.Identity{token.Identity("Bob")},
-		ReceiversAuditInfos: [][]byte{[]byte("Bob")},
+	bobIssue := &driver.IssueMetadata{
+		Issuer: token.Identity("Issuer"),
+		Inputs: nil,
+		Outputs: []*driver.IssueOutputMetadata{
+			{
+				OutputMetadata: []byte("Bob's output's token info"),
+				Receivers: []*driver.AuditableIdentity{
+					{
+						Identity:  token.Identity("Bob"),
+						AuditInfo: []byte("Bob"),
+					},
+				},
+			},
+		},
+		ExtraSigners: nil,
 	}
 
 	ws := &mock.WalletService{}
@@ -175,7 +238,7 @@ func testFilterByCase1(t *testing.T) {
 	metadata := &token.Metadata{
 		WalletService: ws,
 		TokenRequestMetadata: &driver.TokenRequestMetadata{
-			Issues: []driver.IssueMetadata{
+			Issues: []*driver.IssueMetadata{
 				aliceIssue,
 				bobIssue,
 			},
@@ -194,8 +257,8 @@ func testFilterByCase1(t *testing.T) {
 	assert.Equal(t, metadata.TokenRequestMetadata.Application, filteredMetadata.TokenRequestMetadata.Application)
 	// Check that the issues are filtered
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Issues, 2)
-	assertEqualIssueMetadata(t, &aliceIssue, &filteredMetadata.TokenRequestMetadata.Issues[0])
-	assertEmptyIssueMetadata(t, &bobIssue, &filteredMetadata.TokenRequestMetadata.Issues[1])
+	assertEqualIssueMetadata(t, aliceIssue, filteredMetadata.TokenRequestMetadata.Issues[0])
+	assertEmptyIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 
 	// Filter by Bob
 	filteredMetadata, err = metadata.FilterBy("Bob")
@@ -208,8 +271,8 @@ func testFilterByCase1(t *testing.T) {
 	assert.Equal(t, metadata.TokenRequestMetadata.Application, filteredMetadata.TokenRequestMetadata.Application)
 	// Check that the issues are filtered
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Issues, 2)
-	assertEmptyIssueMetadata(t, &aliceIssue, &filteredMetadata.TokenRequestMetadata.Issues[0])
-	assertEqualIssueMetadata(t, &bobIssue, &filteredMetadata.TokenRequestMetadata.Issues[1])
+	assertEmptyIssueMetadata(t, aliceIssue, filteredMetadata.TokenRequestMetadata.Issues[0])
+	assertEqualIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 
 	// Filter by Charlie
 	filteredMetadata, err = metadata.FilterBy("Charlie")
@@ -222,8 +285,8 @@ func testFilterByCase1(t *testing.T) {
 	assert.Equal(t, metadata.TokenRequestMetadata.Application, filteredMetadata.TokenRequestMetadata.Application)
 	// Check that the issues are filtered
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Issues, 2)
-	assertEmptyIssueMetadata(t, &aliceIssue, &filteredMetadata.TokenRequestMetadata.Issues[0])
-	assertEmptyIssueMetadata(t, &bobIssue, &filteredMetadata.TokenRequestMetadata.Issues[1])
+	assertEmptyIssueMetadata(t, aliceIssue, filteredMetadata.TokenRequestMetadata.Issues[0])
+	assertEmptyIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 
 	// Filter by Alice and Bob
 	filteredMetadata, err = metadata.FilterBy("Alice", "Bob")
@@ -236,67 +299,63 @@ func testFilterByCase1(t *testing.T) {
 	assert.Equal(t, metadata.TokenRequestMetadata.Application, filteredMetadata.TokenRequestMetadata.Application)
 	// Check that the issues are filtered
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Issues, 2)
-	assertEqualIssueMetadata(t, &aliceIssue, &filteredMetadata.TokenRequestMetadata.Issues[0])
-	assertEqualIssueMetadata(t, &bobIssue, &filteredMetadata.TokenRequestMetadata.Issues[1])
+	assertEqualIssueMetadata(t, aliceIssue, filteredMetadata.TokenRequestMetadata.Issues[0])
+	assertEqualIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
+
+	// No Filter
+	filteredMetadata, err = metadata.FilterBy()
+	assert.NoError(t, err)
+	// assert the calls to the TMS
+	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
+	// Check no transfers were returned
+	assert.Len(t, filteredMetadata.TokenRequestMetadata.Transfers, 0)
+	// Check that the application metadata is not filtered
+	assert.Equal(t, metadata.TokenRequestMetadata.Application, filteredMetadata.TokenRequestMetadata.Application)
+	// Check that the issues are filtered
+	assert.Len(t, filteredMetadata.TokenRequestMetadata.Issues, 2)
+	assertEqualIssueMetadata(t, aliceIssue, filteredMetadata.TokenRequestMetadata.Issues[0])
+	assertEqualIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 }
 
 func assertEqualIssueMetadata(t *testing.T, original, filtered *driver.IssueMetadata) {
-	assert.Equal(t, original.Issuer, filtered.Issuer)
-	assert.Equal(t, original.OutputsMetadata, filtered.OutputsMetadata)
-	assert.Equal(t, original.Receivers, filtered.Receivers)
+	assert.Equal(t, original, filtered)
 }
 
 func assertEmptyIssueMetadata(t *testing.T, original, filtered *driver.IssueMetadata) {
 	// check equal issuer
 	assert.Equal(t, original.Issuer, filtered.Issuer)
 	// assert that the lengths are the same
-	assert.Len(t, original.OutputsMetadata, len(filtered.OutputsMetadata))
-	assert.Len(t, original.Receivers, len(filtered.Receivers))
-	assert.Len(t, original.ReceiversAuditInfos, len(filtered.ReceiversAuditInfos))
+	assert.Len(t, original.Outputs, len(filtered.Outputs))
 
 	// assert that the token info is empty
-	for i := 0; i < len(original.OutputsMetadata); i++ {
-		assert.Empty(t, filtered.OutputsMetadata[i])
-	}
-	// assert that the receivers are empty
-	for i := 0; i < len(original.Receivers); i++ {
-		assert.Equal(t, original.Receivers[i], filtered.Receivers[i])
-	}
-	// assert that the receivers audit infos are empty
-	for i := 0; i < len(original.ReceiversAuditInfos); i++ {
-		assert.Empty(t, filtered.ReceiversAuditInfos[i])
+	for i := 0; i < len(original.Outputs); i++ {
+		assert.Empty(t, filtered.Outputs[i])
 	}
 }
 
 func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.TransferMetadata) {
 	// assert tokenIDs, senders and senderAuditInfos are empty
-	assert.Nil(t, filtered.TokenIDs)
-	assert.Nil(t, filtered.Senders)
-	assert.Nil(t, filtered.SenderAuditInfos)
+	for _, input := range filtered.Inputs {
+		assert.Nil(t, input.TokenID)
+		assert.Nil(t, input.Senders)
+	}
 
 	// assert that the lengths are the same
-	assert.Len(t, original.OutputsMetadata, len(filtered.OutputsMetadata))
-	assert.Len(t, original.Receivers, len(filtered.Receivers))
-	assert.Len(t, original.ReceiverAuditInfos, len(filtered.ReceiverAuditInfos))
-	// assert each token info is empty
-	for i := 0; i < len(original.OutputsMetadata); i++ {
-		assert.Nil(t, filtered.OutputsMetadata[i])
-	}
-	// assert each receiver is empty
-	for i := 0; i < len(original.Receivers); i++ {
-		assert.NotNil(t, filtered.Receivers[i])
-	}
-	// assert each receiver audit info is empty
-	for i := 0; i < len(original.ReceiverAuditInfos); i++ {
-		assert.Nil(t, filtered.ReceiverAuditInfos[i])
+	assert.Len(t, original.Outputs, len(filtered.Outputs))
+	for i := 0; i < len(original.Outputs); i++ {
+		assert.Empty(t, filtered.Outputs[i])
 	}
 }
 
-func assertEqualTransferMetadata(t *testing.T, original, filtered *driver.TransferMetadata) {
-	assert.Nil(t, filtered.TokenIDs)
-	assert.Equal(t, original.Senders, filtered.Senders)
-	assert.Equal(t, original.SenderAuditInfos, filtered.SenderAuditInfos)
-	assert.Equal(t, original.OutputsMetadata, filtered.OutputsMetadata)
-	assert.Equal(t, original.Receivers, filtered.Receivers)
-	assert.Equal(t, original.ReceiverAuditInfos, filtered.ReceiverAuditInfos)
+func assertEqualTransferMetadata(t *testing.T, original, filtered *driver.TransferMetadata, noInputs bool) {
+	for i, input := range original.Inputs {
+		if noInputs {
+			assert.Nil(t, filtered.Inputs[i].TokenID)
+		} else {
+			assert.Equal(t, input.TokenID, filtered.Inputs[i].TokenID)
+		}
+		assert.Equal(t, input.Senders, filtered.Inputs[i].Senders)
+	}
+	assert.Equal(t, original.Outputs, filtered.Outputs)
+	assert.Equal(t, original.ExtraSigners, filtered.ExtraSigners)
 }

@@ -110,7 +110,7 @@ var _ = Describe("validator", func() {
 
 		// auditor inspect token
 		metadata := &driver.TokenRequestMetadata{}
-		metadata.Transfers = []driver.TransferMetadata{trmetadata.Transfers[0]}
+		metadata.Transfers = []*driver.TransferMetadata{trmetadata.Transfers[0]}
 
 		tokns := make([][]*tokn.Token, 1)
 		for i := 0; i < 2; i++ {
@@ -418,18 +418,21 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer) (*driver.TokenR
 	issue, inf, err := issuer.GenerateZKIssue(values, owners)
 	Expect(err).NotTo(HaveOccurred())
 
-	marshalledinf := make([][]byte, len(inf))
-	for i := 0; i < len(inf); i++ {
-		marshalledinf[i], err = inf[i].Serialize()
-		Expect(err).NotTo(HaveOccurred())
-	}
-
-	metadata := driver.IssueMetadata{}
-	metadata.OutputsMetadata = marshalledinf
-	metadata.ReceiversAuditInfos = make([][]byte, len(issue.Outputs))
+	auditInfoRaw, err := auditInfo.Bytes()
+	Expect(err).NotTo(HaveOccurred())
+	metadata := &driver.IssueMetadata{}
 	for i := 0; i < len(issue.Outputs); i++ {
-		metadata.ReceiversAuditInfos[i], err = auditInfo.Bytes()
+		marshalledinf, err := inf[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
+		metadata.Outputs = append(metadata.Outputs, &driver.IssueOutputMetadata{
+			OutputMetadata: marshalledinf,
+			Receivers: []*driver.AuditableIdentity{
+				{
+					Identity:  nil,
+					AuditInfo: auditInfoRaw,
+				},
+			},
+		})
 	}
 
 	// serialize token action
@@ -445,7 +448,7 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer) (*driver.TokenR
 	Expect(err).NotTo(HaveOccurred())
 	ir.Signatures = append(ir.Signatures, sig)
 
-	issueMetadata := &driver.TokenRequestMetadata{Issues: []driver.IssueMetadata{metadata}}
+	issueMetadata := &driver.TokenRequestMetadata{Issues: []*driver.IssueMetadata{metadata}}
 	err = auditor.Check(context.Background(), ir, issueMetadata, nil, "1")
 	Expect(err).NotTo(HaveOccurred())
 	sigma, err := auditor.Endorse(ir, "1")
@@ -506,28 +509,42 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 		marshalledInfo[i], err = metas[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 	}
-	metadata := driver.TransferMetadata{}
-	metadata.SenderAuditInfos = make([][]byte, len(transfer.Inputs))
+	auditInfoRaw, err := auditInfo.Bytes()
+	Expect(err).NotTo(HaveOccurred())
+	metadata := &driver.TransferMetadata{}
 	for i := 0; i < len(transfer.Inputs); i++ {
-		metadata.SenderAuditInfos[i], err = auditInfo.Bytes()
+		metadata.Inputs = append(metadata.Inputs, &driver.TransferInputMetadata{
+			TokenID: nil,
+			Senders: []*driver.AuditableIdentity{
+				{
+					Identity:  nil,
+					AuditInfo: auditInfoRaw,
+				},
+			},
+		})
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	metadata.OutputsMetadata = marshalledInfo
-	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
-	metadata.OutputsAuditInfo = make([][]byte, len(transfer.OutputTokens))
 	for i := 0; i < len(transfer.OutputTokens); i++ {
+		marshalledinf, err := metas[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
-		metadata.ReceiverAuditInfos[i], err = auditInfo.Bytes()
-		Expect(err).NotTo(HaveOccurred())
-		metadata.OutputsAuditInfo[i] = metadata.ReceiverAuditInfos[i]
+		metadata.Outputs = append(metadata.Outputs, &driver.TransferOutputMetadata{
+			OutputMetadata:  marshalledinf,
+			OutputAuditInfo: auditInfoRaw,
+			Receivers: []*driver.AuditableIdentity{
+				{
+					Identity:  nil,
+					AuditInfo: auditInfoRaw,
+				},
+			},
+		})
 	}
 
 	tokns := make([][]*tokn.Token, 1)
 	for i := 0; i < len(tokens); i++ {
 		tokns[0] = append(tokns[0], tokens[i])
 	}
-	transferMetadata := &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}
+	transferMetadata := &driver.TokenRequestMetadata{Transfers: []*driver.TransferMetadata{metadata}}
 	err = auditor.Check(context.Background(), tr, transferMetadata, tokns, "1")
 	Expect(err).NotTo(HaveOccurred())
 

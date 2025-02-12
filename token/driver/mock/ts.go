@@ -43,11 +43,11 @@ type TransferService struct {
 		result2 *driver.TransferMetadata
 		result3 error
 	}
-	VerifyTransferStub        func(driver.TransferAction, [][]byte) error
+	VerifyTransferStub        func(driver.TransferAction, []*driver.TransferOutputMetadata) error
 	verifyTransferMutex       sync.RWMutex
 	verifyTransferArgsForCall []struct {
 		arg1 driver.TransferAction
-		arg2 [][]byte
+		arg2 []*driver.TransferOutputMetadata
 	}
 	verifyTransferReturns struct {
 		result1 error
@@ -210,17 +210,17 @@ func (fake *TransferService) TransferReturnsOnCall(i int, result1 driver.Transfe
 	}{result1, result2, result3}
 }
 
-func (fake *TransferService) VerifyTransfer(arg1 driver.TransferAction, arg2 [][]byte) error {
-	var arg2Copy [][]byte
+func (fake *TransferService) VerifyTransfer(arg1 driver.TransferAction, arg2 []*driver.TransferOutputMetadata) error {
+	var arg2Copy []*driver.TransferOutputMetadata
 	if arg2 != nil {
-		arg2Copy = make([][]byte, len(arg2))
+		arg2Copy = make([]*driver.TransferOutputMetadata, len(arg2))
 		copy(arg2Copy, arg2)
 	}
 	fake.verifyTransferMutex.Lock()
 	ret, specificReturn := fake.verifyTransferReturnsOnCall[len(fake.verifyTransferArgsForCall)]
 	fake.verifyTransferArgsForCall = append(fake.verifyTransferArgsForCall, struct {
 		arg1 driver.TransferAction
-		arg2 [][]byte
+		arg2 []*driver.TransferOutputMetadata
 	}{arg1, arg2Copy})
 	stub := fake.VerifyTransferStub
 	fakeReturns := fake.verifyTransferReturns
@@ -241,13 +241,13 @@ func (fake *TransferService) VerifyTransferCallCount() int {
 	return len(fake.verifyTransferArgsForCall)
 }
 
-func (fake *TransferService) VerifyTransferCalls(stub func(driver.TransferAction, [][]byte) error) {
+func (fake *TransferService) VerifyTransferCalls(stub func(driver.TransferAction, []*driver.TransferOutputMetadata) error) {
 	fake.verifyTransferMutex.Lock()
 	defer fake.verifyTransferMutex.Unlock()
 	fake.VerifyTransferStub = stub
 }
 
-func (fake *TransferService) VerifyTransferArgsForCall(i int) (driver.TransferAction, [][]byte) {
+func (fake *TransferService) VerifyTransferArgsForCall(i int) (driver.TransferAction, []*driver.TransferOutputMetadata) {
 	fake.verifyTransferMutex.RLock()
 	defer fake.verifyTransferMutex.RUnlock()
 	argsForCall := fake.verifyTransferArgsForCall[i]

@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -40,40 +41,6 @@ func (r *TokenRequest) Bytes() ([]byte, error) {
 	return proto.Marshal(tr)
 }
 
-func (r *TokenRequest) ToProtos() (*request.TokenRequest, error) {
-	tr := &request.TokenRequest{
-		Version: Version,
-	}
-	for _, issue := range r.Issues {
-		tr.Actions = append(tr.Actions,
-			&request.Action{
-				Type: request.ActionType_ISSUE,
-				Raw:  issue,
-			},
-		)
-	}
-	for _, transfer := range r.Transfers {
-		tr.Actions = append(tr.Actions,
-			&request.Action{
-				Type: request.ActionType_TRANSFER,
-				Raw:  transfer,
-			},
-		)
-	}
-	for _, signature := range r.Signatures {
-		tr.Signatures = append(tr.Signatures, &request.Signature{
-			Raw: signature,
-		})
-	}
-	for _, signature := range r.AuditorSignatures {
-		tr.AuditorSignatures = append(tr.AuditorSignatures, &request.Signature{
-			Raw: signature,
-		})
-	}
-
-	return tr, nil
-}
-
 func (r *TokenRequest) FromBytes(raw []byte) error {
 	tr := &request.TokenRequest{}
 	err := proto.Unmarshal(raw, tr)
@@ -81,6 +48,19 @@ func (r *TokenRequest) FromBytes(raw []byte) error {
 		return errors.Wrap(err, "failed unmarshalling token request")
 	}
 	return r.FromProtos(tr)
+}
+
+func (r *TokenRequest) ToProtos() (*request.TokenRequest, error) {
+	tr := &request.TokenRequest{
+		Version: Version,
+	}
+	tr.Actions = append(
+		utils.ToActionSlice(request.ActionType_ISSUE, r.Issues),
+		utils.ToActionSlice(request.ActionType_TRANSFER, r.Transfers)...,
+	)
+	tr.Signatures = utils.ToSignatureSlice(r.Signatures)
+	tr.AuditorSignatures = utils.ToSignatureSlice(r.AuditorSignatures)
+	return tr, nil
 }
 
 func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
@@ -120,53 +100,225 @@ func (r *TokenRequest) MarshalToMessageToSign(anchor []byte) ([]byte, error) {
 	return append(bytes, anchor...), nil
 }
 
+type AuditableIdentity struct {
+	Identity  Identity
+	AuditInfo []byte
+}
+
+func (a *AuditableIdentity) ToProtos() (*request.AuditableIdentity, error) {
+	return &request.AuditableIdentity{
+		Identity: &request.Identity{
+			Raw: a.Identity,
+		},
+		AuditInfo: a.AuditInfo,
+	}, nil
+}
+
+func (a *AuditableIdentity) FromProtos(auditableIdentity *request.AuditableIdentity) error {
+	a.Identity = ToIdentity(auditableIdentity.Identity)
+	a.AuditInfo = auditableIdentity.AuditInfo
+	return nil
+}
+
+type IssueInputMetadata struct {
+	TokenID *token.ID
+}
+
+func (i *IssueInputMetadata) ToProtos() (*request.IssueInputMetadata, error) {
+	tokenID, err := utils.ToTokenID(i.TokenID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal token ID [%s]", i.TokenID)
+	}
+	return &request.IssueInputMetadata{
+		TokenId: tokenID,
+	}, nil
+}
+
+func (i *IssueInputMetadata) FromProtos(issueInputMetadata *request.IssueInputMetadata) error {
+	i.TokenID = ToTokenID(issueInputMetadata.TokenId)
+	return nil
+}
+
+// IssueOutputMetadata is the metadata of an output in an issue action
+type IssueOutputMetadata struct {
+	OutputMetadata []byte
+	// Receivers, for each output we have a receiver
+	Receivers []*AuditableIdentity
+}
+
+func (i *IssueOutputMetadata) ToProtos() (*request.OutputMetadata, error) {
+	receivers, err := utils.ToProtosSlice[request.AuditableIdentity, *AuditableIdentity](i.Receivers)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling receivers")
+	}
+	return &request.OutputMetadata{
+		Metadata:  i.OutputMetadata,
+		Receivers: receivers,
+	}, nil
+}
+
+func (i *IssueOutputMetadata) FromProtos(outputsMetadata *request.OutputMetadata) error {
+	if outputsMetadata == nil {
+		return nil
+	}
+	i.OutputMetadata = outputsMetadata.Metadata
+	i.Receivers = utils.GenericSliceOfPointers[AuditableIdentity](len(outputsMetadata.Receivers))
+	if err := utils.FromProtosSlice(outputsMetadata.Receivers, i.Receivers); err != nil {
+		return errors.Wrap(err, "failed unmarshalling receivers metadata")
+	}
+	return nil
+}
+
+func (i *IssueOutputMetadata) RecipientAt(index int) *AuditableIdentity {
+	if index < 0 || index >= len(i.Receivers) {
+		return nil
+	}
+	return i.Receivers[index]
+}
+
 // IssueMetadata contains the metadata of an issue action.
 // In more details, there is an issuer and a list of outputs.
 // For each output, there is a token info and a list of receivers with their audit info to recover their enrollment ID.
 type IssueMetadata struct {
 	// Issuer is the identity of the issuer
-	Issuer Identity
-
-	// TokenIDs is the list of TokenIDs spent by this action
-	TokenIDs []*token.ID
-
-	// OutputsMetadata, for each output we have a OutputsMetadata entry that contains secrets to de-obfuscate the output
-	OutputsMetadata [][]byte
-	// Receivers, for each output we have a receiver
-	Receivers []Identity
-	// ReceiversAuditInfos, for each receiver we have audit info to recover the enrollment ID of the receiver
-	ReceiversAuditInfos [][]byte
-
+	Issuer  Identity
+	Inputs  []*IssueInputMetadata
+	Outputs []*IssueOutputMetadata
 	// ExtraSigners is the list of extra identities that are not part of the issue action per se
 	// but needs to sign the request
 	ExtraSigners []Identity
 }
 
+func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
+	inputs, err := utils.ToProtosSlice(i.Inputs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling inputs")
+	}
+	outputs, err := utils.ToProtosSlice(i.Outputs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling outputs")
+	}
+	return &request.IssueMetadata{
+		Issuer:       &request.Identity{Raw: i.Issuer},
+		Inputs:       inputs,
+		Outputs:      outputs,
+		ExtraSigners: ToProtoIdentitySlice(i.ExtraSigners),
+	}, nil
+}
+
+func (i *IssueMetadata) FromProtos(issueMetadata *request.IssueMetadata) error {
+	i.Issuer = ToIdentity(issueMetadata.Issuer)
+	i.Inputs = utils.GenericSliceOfPointers[IssueInputMetadata](len(issueMetadata.Inputs))
+	err := utils.FromProtosSlice[request.IssueInputMetadata, *IssueInputMetadata](issueMetadata.Inputs, i.Inputs)
+	if err != nil {
+		return errors.Wrap(err, "failed unmarshalling input metadata")
+	}
+	i.Outputs = utils.GenericSliceOfPointers[IssueOutputMetadata](len(issueMetadata.Outputs))
+	err = utils.FromProtosSlice(issueMetadata.Outputs, i.Outputs)
+	if err != nil {
+		return errors.Wrap(err, "failed unmarshalling output metadata")
+	}
+	i.ExtraSigners = FromProtoIdentitySlice(issueMetadata.ExtraSigners)
+	return nil
+}
+
+func (i *IssueMetadata) Receivers() []Identity {
+	res := make([]Identity, 0, len(i.Outputs))
+	for _, output := range i.Outputs {
+		for _, receiver := range output.Receivers {
+			if receiver == nil {
+				res = append(res, nil)
+			} else {
+				res = append(res, receiver.Identity)
+			}
+		}
+	}
+	return res
+}
+
+type TransferInputMetadata struct {
+	TokenID *token.ID
+	Senders []*AuditableIdentity
+}
+
+func (t *TransferInputMetadata) ToProtos() (*request.TransferInputMetadata, error) {
+	senders, err := utils.ToProtosSlice(t.Senders)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling senders")
+	}
+	tokenID, err := utils.ToTokenID(t.TokenID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling tokenID")
+	}
+	return &request.TransferInputMetadata{
+		TokenId: tokenID,
+		Senders: senders,
+	}, nil
+}
+
+func (t *TransferInputMetadata) FromProtos(transferInputMetadata *request.TransferInputMetadata) error {
+	if transferInputMetadata == nil {
+		return nil
+	}
+	t.TokenID = ToTokenID(transferInputMetadata.TokenId)
+	t.Senders = utils.GenericSliceOfPointers[AuditableIdentity](len(transferInputMetadata.Senders))
+	if err := utils.FromProtosSlice(transferInputMetadata.Senders, t.Senders); err != nil {
+		return errors.Wrap(err, "failed unmarshalling token metadata")
+	}
+	return nil
+}
+
+// TransferOutputMetadata is the metadata of an output in a transfer action
+type TransferOutputMetadata struct {
+	OutputMetadata []byte
+	// OutputAuditInfo, for each output owner we have audit info
+	OutputAuditInfo []byte
+	// Receivers is the list of receivers
+	Receivers []*AuditableIdentity
+}
+
+func (t *TransferOutputMetadata) ToProtos() (*request.OutputMetadata, error) {
+	receivers, err := utils.ToProtosSlice(t.Receivers)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling receivers")
+	}
+	return &request.OutputMetadata{
+		Metadata:  t.OutputMetadata,
+		AuditInfo: t.OutputAuditInfo,
+		Receivers: receivers,
+	}, nil
+}
+
+func (t *TransferOutputMetadata) FromProtos(transferOutputMetadata *request.OutputMetadata) error {
+	if transferOutputMetadata == nil {
+		return nil
+	}
+	t.OutputMetadata = transferOutputMetadata.Metadata
+	t.OutputAuditInfo = transferOutputMetadata.AuditInfo
+	t.Receivers = utils.GenericSliceOfPointers[AuditableIdentity](len(transferOutputMetadata.Receivers))
+	if err := utils.FromProtosSlice(transferOutputMetadata.Receivers, t.Receivers); err != nil {
+		return errors.Wrap(err, "failed unmarshalling receivers metadata")
+	}
+	return nil
+}
+
+func (t *TransferOutputMetadata) RecipientAt(index int) *AuditableIdentity {
+	if index < 0 || index >= len(t.Receivers) {
+		return nil
+	}
+	return t.Receivers[index]
+}
+
 // TransferMetadata contains the metadata of a transfer action
 // For each TokenID there is a sender with its audit info to recover its enrollment ID,
 // For each Output there is:
-// - A OutputsMetadata entry to de-obfuscate the output;
+// - A OutputMetadata entry to de-obfuscate the output;
 // - A Receiver identity;
 // - A ReceiverAuditInfo entry to recover the enrollment ID of the receiver
 // - A Flag to indicate if the receiver is a sender in this very same action
 type TransferMetadata struct {
-	// TokenIDs is the list of TokenIDs spent by this action
-	TokenIDs []*token.ID
-	// Senders is the list of senders.
-	// For each input, a sender is the input's owner
-	Senders []Identity
-	// SendersAuditInfos, for each sender we have audit info
-	SenderAuditInfos [][]byte
-
-	// OutputsMetadata, for each output we have an OutputsMetadata entry that contains secrets to de-obfuscate the output
-	OutputsMetadata [][]byte
-	// OutputsAuditInfo, for each output owner we have audit info
-	OutputsAuditInfo [][]byte
-	// Receivers is the list of receivers
-	Receivers []Identity
-	// ReceiversAuditInfos, for each receiver we have audit info to recover the enrollment ID of the receiver
-	ReceiverAuditInfos [][]byte
-
+	Inputs  []*TransferInputMetadata
+	Outputs []*TransferOutputMetadata
 	// ExtraSigners is the list of extra identities that are not part of the transfer action per se
 	// but needs to sign the request
 	ExtraSigners []Identity
@@ -174,19 +326,89 @@ type TransferMetadata struct {
 
 // TokenIDAt returns the TokenID at the given index.
 // It returns nil if the index is out of bounds.
-func (tm *TransferMetadata) TokenIDAt(index int) *token.ID {
-	if index < 0 || index >= len(tm.TokenIDs) {
+func (t *TransferMetadata) TokenIDAt(index int) *token.ID {
+	if index < 0 || index >= len(t.Inputs) {
 		return nil
 	}
-	return tm.TokenIDs[index]
+	return t.Inputs[index].TokenID
+}
+
+func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
+	inputs, err := utils.ToProtosSlice[request.TransferInputMetadata, *TransferInputMetadata](t.Inputs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling inputs")
+	}
+	outputs, err := utils.ToProtosSlice(t.Outputs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling outputs")
+	}
+	return &request.TransferMetadata{
+		Inputs:       inputs,
+		Outputs:      outputs,
+		ExtraSigners: ToProtoIdentitySlice(t.ExtraSigners),
+	}, nil
+}
+
+func (t *TransferMetadata) FromProtos(transferMetadata *request.TransferMetadata) error {
+	t.Inputs = utils.GenericSliceOfPointers[TransferInputMetadata](len(transferMetadata.Inputs))
+	if err := utils.FromProtosSlice(transferMetadata.Inputs, t.Inputs); err != nil {
+		return errors.Wrap(err, "failed unmarshalling inputs")
+	}
+	t.Outputs = utils.GenericSliceOfPointers[TransferOutputMetadata](len(transferMetadata.Outputs))
+	if err := utils.FromProtosSlice(transferMetadata.Outputs, t.Outputs); err != nil {
+		return errors.Wrap(err, "failed unmarshalling outputs")
+	}
+	t.ExtraSigners = FromProtoIdentitySlice(transferMetadata.ExtraSigners)
+	return nil
+}
+
+func (t *TransferMetadata) Receivers() []Identity {
+	res := make([]Identity, 0, len(t.Outputs))
+	for _, output := range t.Outputs {
+		for _, receiver := range output.Receivers {
+			if receiver == nil {
+				res = append(res, nil)
+			} else {
+				res = append(res, receiver.Identity)
+			}
+		}
+	}
+	return res
+
+}
+
+func (t *TransferMetadata) Senders() []Identity {
+	res := make([]Identity, 0, len(t.Inputs))
+	for _, output := range t.Inputs {
+		for _, sender := range output.Senders {
+			if sender == nil {
+				res = append(res, nil)
+			} else {
+				res = append(res, sender.Identity)
+			}
+		}
+	}
+	return res
+
+}
+
+func (t *TransferMetadata) TokenIDs() []*token.ID {
+	res := make([]*token.ID, 0, len(t.Inputs))
+	for _, input := range t.Inputs {
+		if input == nil {
+			continue
+		}
+		res = append(res, input.TokenID)
+	}
+	return res
 }
 
 // TokenRequestMetadata is a collection of actions metadata
 type TokenRequestMetadata struct {
 	// Issues is the list of issue actions metadata
-	Issues []IssueMetadata
+	Issues []*IssueMetadata
 	// Transfers is the list of transfer actions metadata
-	Transfers []TransferMetadata
+	Transfers []*TransferMetadata
 	// Application enables attaching more info to the TokenRequestMetadata
 	Application map[string][]byte
 }
@@ -199,100 +421,6 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 	return proto.Marshal(trm)
 }
 
-func (m *TokenRequestMetadata) ToProtos() (*request.TokenRequestMetadata, error) {
-	trm := &request.TokenRequestMetadata{
-		Version:     Version,
-		Metadata:    nil,
-		Application: m.Application,
-	}
-
-	// marshal transfers
-	for _, transfer := range m.Transfers {
-		tokenIDs := make([]*request.TokenID, len(transfer.TokenIDs))
-		for j, tokenID := range transfer.TokenIDs {
-			if tokenID == nil {
-				return nil, errors.Errorf("nil token ID at index [%d]", j)
-			}
-			tokenIDs[j] = &request.TokenID{}
-			tokenIDs[j].TxId = tokenID.TxId
-			tokenIDs[j].Index = tokenID.Index
-		}
-		senders := make([]*request.Identity, len(transfer.Senders))
-		for j, sender := range transfer.Senders {
-			senders[j] = &request.Identity{
-				Raw: sender,
-			}
-		}
-		receivers := make([]*request.Identity, len(transfer.Receivers))
-		for j, receiver := range transfer.Receivers {
-			receivers[j] = &request.Identity{
-				Raw: receiver,
-			}
-		}
-		extraSigners := make([]*request.Identity, len(transfer.ExtraSigners))
-		for j, extraSigner := range transfer.ExtraSigners {
-			extraSigners[j] = &request.Identity{
-				Raw: extraSigner,
-			}
-		}
-		trm.Metadata = append(trm.Metadata, &request.ActionMetadata{
-			Metadata: &request.ActionMetadata_TransferMetadata{
-				TransferMetadata: &request.TransferMetadata{
-					TokenIds:           tokenIDs,
-					OutputAudit_Infos:  transfer.OutputsAuditInfo,
-					OutputsMetadata:    transfer.OutputsMetadata,
-					Senders:            senders,
-					SenderAuditInfos:   transfer.SenderAuditInfos,
-					Receivers:          receivers,
-					ReceiverAuditInfos: transfer.ReceiverAuditInfos,
-					ExtraSigners:       extraSigners,
-				},
-			},
-		})
-	}
-
-	// marshal issues
-	for _, issue := range m.Issues {
-		tokenIDs := make([]*request.TokenID, len(issue.TokenIDs))
-		for j, tokenID := range issue.TokenIDs {
-			if tokenID == nil {
-				return nil, errors.Errorf("nil token ID at index [%d]", j)
-			}
-			tokenIDs[j] = &request.TokenID{}
-			tokenIDs[j].TxId = tokenID.TxId
-			tokenIDs[j].Index = tokenID.Index
-		}
-		receivers := make([]*request.Identity, len(issue.Receivers))
-		for j, receiver := range issue.Receivers {
-			receivers[j] = &request.Identity{
-				Raw: receiver,
-			}
-		}
-		extraSigners := make([]*request.Identity, len(issue.ExtraSigners))
-		for j, extraSigner := range issue.ExtraSigners {
-			extraSigners[j] = &request.Identity{
-				Raw: extraSigner,
-			}
-		}
-		trm.Metadata = append(trm.Metadata, &request.ActionMetadata{
-			Metadata: &request.ActionMetadata_IssueMetadata{
-				IssueMetadata: &request.IssueMetadata{
-					Issuer: &request.Identity{
-						Raw: issue.Issuer,
-					},
-					TokenIds:           tokenIDs,
-					OutputsMetadata:    issue.OutputsMetadata,
-					Receivers:          receivers,
-					ReceiverAuditInfos: issue.ReceiversAuditInfos,
-					ExtraSigners:       extraSigners,
-				},
-			},
-		})
-	}
-
-	return trm, nil
-}
-
 func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 	trm := &request.TokenRequestMetadata{}
 	err := proto.Unmarshal(raw, trm)
@@ -303,83 +431,67 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 	return m.FromProtos(trm)
 }
 
+func (m *TokenRequestMetadata) ToProtos() (*request.TokenRequestMetadata, error) {
+	trm := &request.TokenRequestMetadata{
+		Version:     Version,
+		Metadata:    nil,
+		Application: m.Application,
+	}
+	trm.Metadata = make([]*request.ActionMetadata, 0, len(m.Issues)+len(m.Transfers))
+	for _, meta := range m.Issues {
+		if meta == nil {
+			return nil, errors.Errorf("failed unmarshalling issue metadata, it is nil")
+		}
+		metaProto, err := meta.ToProtos()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed marshalling issue metadata")
+		}
+		trm.Metadata = append(trm.Metadata, &request.ActionMetadata{
+			Metadata: &request.ActionMetadata_IssueMetadata{
+				IssueMetadata: metaProto,
+			},
+		})
+	}
+	for _, meta := range m.Transfers {
+		if meta == nil {
+			return nil, errors.Errorf("failed unmarshalling issue metadata, it is nil")
+		}
+		metaProto, err := meta.ToProtos()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed marshalling transfer metadata")
+		}
+		trm.Metadata = append(trm.Metadata, &request.ActionMetadata{
+			Metadata: &request.ActionMetadata_TransferMetadata{
+				TransferMetadata: metaProto,
+			},
+		})
+	}
+
+	return trm, nil
+}
+
 func (m *TokenRequestMetadata) FromProtos(trm *request.TokenRequestMetadata) error {
 	m.Application = trm.Application
-	for _, metadatum := range trm.Metadata {
-		im := metadatum.GetIssueMetadata()
+	for _, meta := range trm.Metadata {
+		im := meta.GetIssueMetadata()
 		if im != nil {
-			tokenIDs := make([]*token.ID, len(im.TokenIds))
-			for j, tokenID := range im.TokenIds {
-				if tokenID != nil {
-					tokenIDs[j] = &token.ID{}
-					tokenIDs[j].TxId = tokenID.TxId
-					tokenIDs[j].Index = tokenID.Index
-				}
+			issueMetadata := &IssueMetadata{}
+			if err := issueMetadata.FromProtos(im); err != nil {
+				return errors.Wrapf(err, "failed unmarshalling issue metadata")
 			}
-			receivers := make([]Identity, len(im.Receivers))
-			for j, receiver := range im.Receivers {
-				if receiver != nil {
-					receivers[j] = receiver.Raw
-				}
-			}
-			extraSigners := make([]Identity, len(im.ExtraSigners))
-			for j, extraSigner := range im.ExtraSigners {
-				if extraSigner != nil {
-					extraSigners[j] = extraSigner.Raw
-				}
-			}
-			m.Issues = append(m.Issues, IssueMetadata{
-				Issuer:              im.Issuer.Raw,
-				TokenIDs:            tokenIDs,
-				OutputsMetadata:     im.OutputsMetadata,
-				Receivers:           receivers,
-				ReceiversAuditInfos: im.ReceiverAuditInfos,
-				ExtraSigners:        extraSigners,
-			})
+			m.Issues = append(m.Issues, issueMetadata)
 			continue
 		}
-
-		tm := metadatum.GetTransferMetadata()
+		tm := meta.GetTransferMetadata()
 		if tm != nil {
-			tokenIDs := make([]*token.ID, len(tm.TokenIds))
-			for j, tokenID := range tm.TokenIds {
-				if tokenID != nil {
-					tokenIDs[j] = &token.ID{}
-					tokenIDs[j].TxId = tokenID.TxId
-					tokenIDs[j].Index = tokenID.Index
-				}
+			transferMetadata := &TransferMetadata{}
+			if err := transferMetadata.FromProtos(tm); err != nil {
+				return errors.Wrapf(err, "failed unmarshalling transfer metadata")
 			}
-			senders := make([]Identity, len(tm.Senders))
-			for j, sender := range tm.Senders {
-				if sender != nil {
-					senders[j] = sender.Raw
-				}
-			}
-			receivers := make([]Identity, len(tm.Receivers))
-			for j, receiver := range tm.Receivers {
-				if receiver != nil {
-					receivers[j] = receiver.Raw
-				}
-			}
-			extraSigners := make([]Identity, len(tm.ExtraSigners))
-			for j, extraSigner := range tm.ExtraSigners {
-				if extraSigner != nil {
-					extraSigners[j] = extraSigner.Raw
-				}
-			}
-
-			m.Transfers = append(m.Transfers, TransferMetadata{
-				TokenIDs:           tokenIDs,
-				Senders:            senders,
-				SenderAuditInfos:   tm.SenderAuditInfos,
-				OutputsMetadata:    tm.OutputsMetadata,
-				OutputsAuditInfo:   tm.OutputAudit_Infos,
-				Receivers:          receivers,
-				ReceiverAuditInfos: tm.ReceiverAuditInfos,
-				ExtraSigners:       extraSigners,
-			})
+			m.Transfers = append(m.Transfers, transferMetadata)
 			continue
 		}
+		return errors.Errorf("failed unmarshalling metadata, type not recognized")
 	}
 	return nil
 }

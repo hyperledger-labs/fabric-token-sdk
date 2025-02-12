@@ -69,8 +69,8 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 
 	tokenIDs := make([]*token2.ID, 0)
 	for i, transfer := range metadata.Transfers {
-		s.Logger.Debugf("[%s] transfer action [%d] contains [%d] inputs", txID, i, len(transfer.TokenIDs))
-		tokenIDs = append(tokenIDs, transfer.TokenIDs...)
+		s.Logger.Debugf("[%s] transfer action [%d] contains [%d] inputs", txID, i, len(transfer.Inputs))
+		tokenIDs = append(tokenIDs, transfer.TokenIDs()...)
 	}
 
 	span.AddEvent("load_token_outputs")

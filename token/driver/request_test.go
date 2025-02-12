@@ -33,22 +33,30 @@ func TestTokenRequestSerialization(t *testing.T) {
 }
 
 func TestTokenRequestMetadataSerialization(t *testing.T) {
-	reqMeta := TokenRequestMetadata{
-		Issues: []IssueMetadata{
+	reqMeta := &TokenRequestMetadata{
+		Issues: []*IssueMetadata{
 			{
-				Issuer:   []byte{1, 2, 3},
-				TokenIDs: []*token.ID{},
-				OutputsMetadata: [][]byte{
-					[]byte("token_info1"),
-					[]byte("token_info2"),
-				},
-				Receivers: []Identity{
-					[]byte("receiver1"),
-					[]byte("receiver2"),
-				},
-				ReceiversAuditInfos: [][]byte{
-					[]byte("audit_info1"),
-					[]byte("audit_info2"),
+				Issuer: []byte{1, 2, 3},
+				Inputs: []*IssueInputMetadata{},
+				Outputs: []*IssueOutputMetadata{
+					{
+						OutputMetadata: []byte("token_info1"),
+						Receivers: []*AuditableIdentity{
+							{
+								Identity:  []byte("receiver1"),
+								AuditInfo: []byte("audit_info1"),
+							},
+						},
+					},
+					{
+						OutputMetadata: []byte("token_info2"),
+						Receivers: []*AuditableIdentity{
+							{
+								Identity:  []byte("receiver2"),
+								AuditInfo: []byte("audit_info2"),
+							},
+						},
+					},
 				},
 				ExtraSigners: []Identity{
 					[]byte("issue_extra_signer1"),
@@ -56,41 +64,55 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 				},
 			},
 		},
-		Transfers: []TransferMetadata{
+		Transfers: []*TransferMetadata{
 			{
-				TokenIDs: []*token.ID{
+				Inputs: []*TransferInputMetadata{
 					{
-						TxId:  "",
-						Index: 1,
+						TokenID: &token.ID{
+							TxId:  "txid1",
+							Index: 1,
+						},
+						Senders: []*AuditableIdentity{
+							{
+								Identity:  []byte("sender1"),
+								AuditInfo: []byte("sender1_audit_info"),
+							},
+						},
 					},
 					{
-						TxId:  "txid2",
-						Index: 2,
+						TokenID: &token.ID{
+							TxId:  "txid2",
+							Index: 1,
+						},
+						Senders: []*AuditableIdentity{
+							{
+								Identity:  []byte("sender2"),
+								AuditInfo: []byte("sender2_audit_info"),
+							},
+						},
 					},
 				},
-				OutputsMetadata: [][]byte{
-					[]byte("token_info1"),
-					[]byte("token_info2"),
-				},
-				OutputsAuditInfo: [][]byte{
-					[]byte("output_token_audit_info1"),
-					[]byte("output_token_audit_info2"),
-				},
-				Senders: []Identity{
-					[]byte("sender1"),
-					[]byte("sender2"),
-				},
-				SenderAuditInfos: [][]byte{
-					[]byte("sender_audit_info1"),
-					[]byte("sender_audit_info2"),
-				},
-				Receivers: []Identity{
-					[]byte("receiver1"),
-					[]byte("receiver2"),
-				},
-				ReceiverAuditInfos: [][]byte{
-					[]byte("receiver_audit_info1"),
-					[]byte("receiver_audit_info2"),
+				Outputs: []*TransferOutputMetadata{
+					{
+						OutputAuditInfo: []byte("token_info_3"),
+						OutputMetadata:  []byte("token_meta_3"),
+						Receivers: []*AuditableIdentity{
+							{
+								Identity:  []byte("receiver3"),
+								AuditInfo: []byte("audit_info3"),
+							},
+						},
+					},
+					{
+						OutputAuditInfo: []byte("token_info_4"),
+						OutputMetadata:  []byte("token_meta_4"),
+						Receivers: []*AuditableIdentity{
+							{
+								Identity:  []byte("receiver4"),
+								AuditInfo: []byte("audit_info4"),
+							},
+						},
+					},
 				},
 				ExtraSigners: []Identity{
 					[]byte("extra_signer1"),
@@ -103,6 +125,7 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 			"key2": []byte("value2"),
 		},
 	}
+
 	raw, err := reqMeta.Bytes()
 	assert.NoError(t, err)
 
@@ -112,6 +135,6 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 	raw2, err := reqMeta2.Bytes()
 	assert.NoError(t, err)
 
-	assert.Equal(t, reqMeta, *reqMeta2)
+	assert.Equal(t, reqMeta, reqMeta2)
 	assert.Equal(t, raw, raw2)
 }

@@ -130,9 +130,6 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	}
 	var values []uint64
 	var owners [][]byte
-	var receivers []driver.Identity
-	var outputAuditInfos [][]byte
-
 	// get values and owners of outputs
 	span.AddEvent("prepare_output_tokens")
 	for i, output := range outputTokens {
@@ -142,21 +139,6 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		}
 		values = append(values, q.ToBigInt().Uint64())
 		owners = append(owners, output.Owner)
-		if len(output.Owner) == 0 { // redeem
-			receivers = append(receivers, output.Owner)
-			outputAuditInfos = append(outputAuditInfos, []byte{})
-			continue
-		}
-		recipients, err := s.IdentityDeserializer.Recipients(output.Owner)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed getting recipients")
-		}
-		receivers = append(receivers, recipients...)
-		auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(output.Owner, s.WalletService)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
-		}
-		outputAuditInfos = append(outputAuditInfos, auditInfo...)
 	}
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
@@ -180,71 +162,86 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	}
 
 	// prepare metadata
-	outputsMetadataRaw := make([][]byte, 0, len(outputMetadata))
-	for _, information := range outputMetadata {
-		raw, err := information.Serialize()
-		if err != nil {
-			return nil, nil, errors.WithMessage(err, "failed serializing token info for zkatdlog transfer action")
-		}
-		outputsMetadataRaw = append(outputsMetadataRaw, raw)
-	}
-	// audit info for receivers
 	ws := s.WalletService
-	receiverAuditInfos := make([][]byte, 0, len(receivers))
-	for _, receiver := range receivers {
-		if len(receiver) == 0 {
-			receiverAuditInfos = append(receiverAuditInfos, []byte{})
-			continue
-		}
-		auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(receiver, ws)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", receiver.String())
-		}
-		receiverAuditInfos = append(receiverAuditInfos, auditInfo...)
-	}
 
-	// audit info for senders
+	var inputsMetadata []*driver.TransferInputMetadata
 	tokens := prepareInputs.Tokens()
 	senderAuditInfos := make([][]byte, 0, len(tokens))
 	for i, t := range tokens {
 		auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(t.Owner, ws)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner))
 		}
 		if len(auditInfo) == 0 {
-			s.Logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", tokenIDs[i].String(), driver.Identity(t.Owner))
+			s.Logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", tokenIDs[i], driver.Identity(t.Owner))
 		}
-		senderAuditInfos = append(senderAuditInfos, auditInfo...)
+		inputsMetadata = append(inputsMetadata, &driver.TransferInputMetadata{
+			TokenID: tokenIDs[i],
+			Senders: []*driver.AuditableIdentity{
+				{
+					Identity:  t.Owner,
+					AuditInfo: auditInfo[0],
+				},
+			},
+		})
 	}
 
-	outputs, err := action.GetSerializedOutputs()
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed getting serialized outputs")
+	var outputsMetadata []*driver.TransferOutputMetadata
+	for i, output := range outputTokens {
+		transferOutputMetadata := &driver.TransferOutputMetadata{}
+		var receivers []driver.Identity
+		var receiversAuditInfo [][]byte
+		if len(output.Owner) == 0 { // redeem
+			receivers = append(receivers, output.Owner)
+			receiversAuditInfo = append(receiversAuditInfo, []byte{})
+		} else {
+			recipients, err := s.IdentityDeserializer.Recipients(output.Owner)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "failed getting recipients")
+			}
+			receivers = append(receivers, recipients...)
+			for _, receiver := range receivers {
+				auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(receiver, ws)
+				if err != nil {
+					return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(receiver))
+				}
+				receiversAuditInfo = append(receiversAuditInfo, auditInfo...)
+			}
+			auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(output.Owner, s.WalletService)
+			if err != nil {
+				return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
+			}
+			transferOutputMetadata.OutputAuditInfo = auditInfo[0]
+		}
+		for j, receiver := range receivers {
+			transferOutputMetadata.Receivers = append(transferOutputMetadata.Receivers, &driver.AuditableIdentity{
+				Identity:  receiver,
+				AuditInfo: receiversAuditInfo[j],
+			})
+		}
+
+		raw, err := outputMetadata[i].Serialize()
+		if err != nil {
+			return nil, nil, errors.WithMessage(err, "failed serializing token info for zkatdlog transfer action")
+		}
+		transferOutputMetadata.OutputMetadata = raw
+
+		outputsMetadata = append(outputsMetadata, transferOutputMetadata)
 	}
 
-	receiverIsSender := make([]bool, len(receivers))
-	for i, receiver := range receivers {
-		_, err := ws.OwnerWallet(receiver)
-		receiverIsSender[i] = err == nil
-	}
-
-	s.Logger.Debugf("Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(tokenIDs), len(senderAuditInfos), len(outputs))
+	s.Logger.Debugf("Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(tokenIDs), len(senderAuditInfos), action.NumOutputs())
 
 	metadata := &driver.TransferMetadata{
-		TokenIDs:           tokenIDs,
-		Senders:            prepareInputs.Owners(),
-		SenderAuditInfos:   senderAuditInfos,
-		OutputsMetadata:    outputsMetadataRaw,
-		OutputsAuditInfo:   outputAuditInfos,
-		Receivers:          receivers,
-		ReceiverAuditInfos: receiverAuditInfos,
+		Inputs:       inputsMetadata,
+		Outputs:      outputsMetadata,
+		ExtraSigners: nil,
 	}
 
 	return action, metadata, nil
 }
 
 // VerifyTransfer checks the outputs in the TransferActionMetadata against the passed metadata
-func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMetadata [][]byte) error {
+func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputMetadata []*driver.TransferOutputMetadata) error {
 	if action == nil {
 		return errors.New("failed to verify transfer: nil transfer action")
 	}
@@ -259,13 +256,13 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMe
 	for i := 0; i < len(tr.OutputTokens); i++ {
 		com[i] = tr.OutputTokens[i].Data
 
-		if len(outputsMetadata[i]) == 0 {
+		if outputMetadata[i] == nil || len(outputMetadata[i].OutputMetadata) == 0 {
 			continue
 		}
 		// TODO: complete this check...
 		// token information in cleartext
 		metadata := &token.Metadata{}
-		if err := metadata.Deserialize(outputsMetadata[i]); err != nil {
+		if err := metadata.Deserialize(outputMetadata[i].OutputMetadata); err != nil {
 			return errors.Wrap(err, "failed unmarshalling token information")
 		}
 
