@@ -74,7 +74,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 			Receivers: []*driver.AuditableIdentity{
 				{
 					Identity:  owners[i],
-					AuditInfo: auditInfo[0],
+					AuditInfo: auditInfo,
 				},
 			},
 		})

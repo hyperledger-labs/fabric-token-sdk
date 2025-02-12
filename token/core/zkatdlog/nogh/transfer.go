@@ -180,7 +180,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 			Senders: []*driver.AuditableIdentity{
 				{
 					Identity:  t.Owner,
-					AuditInfo: auditInfo[0],
+					AuditInfo: auditInfo,
 				},
 			},
 		})
@@ -205,13 +205,13 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 				if err != nil {
 					return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(receiver))
 				}
-				receiversAuditInfo = append(receiversAuditInfo, auditInfo...)
+				receiversAuditInfo = append(receiversAuditInfo, auditInfo)
 			}
 			auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(output.Owner, s.WalletService)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
 			}
-			transferOutputMetadata.OutputAuditInfo = auditInfo[0]
+			transferOutputMetadata.OutputAuditInfo = auditInfo
 		}
 		for j, receiver := range receivers {
 			transferOutputMetadata.Receivers = append(transferOutputMetadata.Receivers, &driver.AuditableIdentity{

@@ -69,6 +69,5 @@ func New(logger logging.Logger, pp *crypto.PublicParams, deserializer driver.Des
 		&ActionDeserializer{},
 		transferValidators,
 		issueValidators,
-		&common.Serializer{},
 	)
 }

@@ -66,7 +66,7 @@ func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ string, r
 	return []driver.Identity{script.Recipient}, nil
 }
 
-func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
+func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
 	if typ != htlc.ScriptType {
 		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, htlc.ScriptType)
 	}
@@ -91,7 +91,7 @@ func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ st
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshaling audit info for script")
 	}
-	return [][]byte{auditInfoRaw}, nil
+	return auditInfoRaw, nil
 }
 
 func (t *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
