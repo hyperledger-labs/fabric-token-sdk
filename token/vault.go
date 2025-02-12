@@ -187,3 +187,7 @@ func (u *UnspentTokensIterator) Sum(precision uint64) (token.Quantity, error) {
 
 	return sum, nil
 }
+
+func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
+	return u.UnspentTokensIterator.Next()
+}

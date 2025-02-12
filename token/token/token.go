@@ -21,8 +21,12 @@ func (id ID) Equal(right ID) bool {
 	return id.TxId == right.TxId && id.Index == right.Index
 }
 
-func (id ID) String() string {
+func (id ID) UniqueID() string {
 	return fmt.Sprintf("[%s:%d]", id.TxId, id.Index)
+}
+
+func (id ID) String() string {
+	return id.UniqueID()
 }
 
 type (

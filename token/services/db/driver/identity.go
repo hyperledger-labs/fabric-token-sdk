@@ -7,15 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-type Iterator[T any] interface {
-	HasNext() bool
-	Close() error
-	Next() (T, error)
-}
+type Iterator[T any] collections.Iterator[T]
 
 type WalletID = string
 
@@ -40,7 +37,7 @@ type IdentityDB interface {
 	// ConfigurationExists returns true if a configuration with the given id and type exists.
 	ConfigurationExists(id, typ, url string) (bool, error)
 	// IteratorConfigurations returns an iterator to all configurations stored
-	IteratorConfigurations(configurationType string) (Iterator[IdentityConfiguration], error)
+	IteratorConfigurations(configurationType string) (collections.Iterator[*IdentityConfiguration], error)
 	// StoreIdentityData stores the passed identity and token information
 	StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 	// GetAuditInfo retrieves the audit info bounded to the given identity

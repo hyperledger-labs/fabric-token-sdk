@@ -9,6 +9,7 @@ package kvs
 import (
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -148,7 +149,7 @@ func (s *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
 	return s.kvs.Put(k, wp.URL)
 }
 
-func (s *IdentityDB) IteratorConfigurations(configurationType string) (driver.Iterator[driver.IdentityConfiguration], error) {
+func (s *IdentityDB) IteratorConfigurations(configurationType string) (collections.Iterator[*driver.IdentityConfiguration], error) {
 	it, err := s.kvs.GetByPartialCompositeID("token-sdk", []string{"msp", s.tmsID.String(), "registeredIdentity", configurationType})
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get registered identities from kvs")
@@ -265,18 +266,25 @@ type IdentityConfigurationsIterator struct {
 	kvs.Iterator
 }
 
-func (w *IdentityConfigurationsIterator) Next() (driver.IdentityConfiguration, error) {
+func (w *IdentityConfigurationsIterator) Next() (*driver.IdentityConfiguration, error) {
 	var path string
+	if !w.HasNext() {
+		return nil, nil
+	}
 	k, err := w.Iterator.Next(&path)
 	if err != nil {
-		return driver.IdentityConfiguration{}, err
+		return nil, err
 	}
 	_, attrs, err := kvs.SplitCompositeKey(k)
 	if err != nil {
-		return driver.IdentityConfiguration{}, errors.WithMessagef(err, "failed to split key [%s]", k)
+		return nil, errors.WithMessagef(err, "failed to split key [%s]", k)
 	}
-	return driver.IdentityConfiguration{
+	return &driver.IdentityConfiguration{
 		ID:  attrs[3],
 		URL: path,
 	}, nil
+}
+
+func (w *IdentityConfigurationsIterator) Close() {
+	_ = w.Iterator.Close()
 }

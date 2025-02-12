@@ -96,29 +96,6 @@ type MovementRecord = driver.MovementRecord
 // in that action.
 type TransactionRecord = driver.TransactionRecord
 
-// TransactionIterator is an iterator over transaction records
-type TransactionIterator struct {
-	it driver.TransactionIterator
-}
-
-// Close closes the iterator. It must be called when done with the iterator.
-func (t *TransactionIterator) Close() {
-	t.it.Close()
-}
-
-// Next returns the next transaction record, if any.
-// It returns nil, nil if there are no more records.
-func (t *TransactionIterator) Next() (*TransactionRecord, error) {
-	next, err := t.it.Next()
-	if err != nil {
-		return nil, err
-	}
-	if next == nil {
-		return nil, nil
-	}
-	return next, nil
-}
-
 // QueryTransactionsParams defines the parameters for querying movements
 type QueryTransactionsParams = driver.QueryTransactionsParams
 

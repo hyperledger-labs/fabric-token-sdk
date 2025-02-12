@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -110,33 +111,15 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 	if err != nil {
 		return nil, err
 	}
-	defer Close(rows)
-
-	// Loop through rows, using Scan to assign column data to struct fields.
-	for rows.Next() {
-		var r driver.MovementRecord
+	return collections.ToSlice(common.QueryIterator(rows, func(r common.RowScanner, record *driver.MovementRecord) error {
 		var amount int64
-		var status int
-		err = rows.Scan(
-			&r.TxID,
-			&r.EnrollmentID,
-			&r.TokenType,
-			&amount,
-			&status,
-		)
-		if err != nil {
-			return res, err
+		if err := r.Scan(&record.TxID, &record.EnrollmentID, &record.TokenType, &amount, &record.Status); err != nil {
+			return err
 		}
-		r.Amount = big.NewInt(amount)
-		r.Status = driver.TxStatus(status)
-		logger.Debugf("movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
-
-		res = append(res, &r)
-	}
-	if err = rows.Err(); err != nil {
-		return res, err
-	}
-	return res, nil
+		record.Amount = big.NewInt(amount)
+		logger.Debugf("movement [%s:%s:%d]", record.TxID, record.Status, record.Amount)
+		return nil
+	}))
 }
 
 func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
@@ -194,7 +177,24 @@ func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsPa
 		return nil, err
 	}
 
-	return &ValidationRecordsIterator{txs: rows, filter: params.Filter}, nil
+	itr := common.QueryIterator(rows, func(r common.RowScanner, record *driver.ValidationRecord) error {
+		var meta []byte
+		record.Timestamp = time.Time{}
+		if err := r.Scan(&record.TxID, &record.TokenRequest, &meta, &record.Status, &record.Timestamp); err != nil {
+			return err
+		}
+		if err := unmarshal(meta, &record.Metadata); err != nil {
+			return err
+		}
+		if record.TokenRequest == nil {
+			record.TokenRequest = []byte{}
+		}
+		return nil
+	})
+	if params.Filter == nil {
+		return itr, nil
+	}
+	return collections.Filter(itr, params.Filter), nil
 }
 
 // QueryTokenRequests returns an iterator over the token requests matching the passed params
@@ -210,7 +210,16 @@ func (db *TransactionDB) QueryTokenRequests(params driver.QueryTokenRequestsPara
 	if err != nil {
 		return nil, err
 	}
-	return &TokenRequestIterator{txs: rows}, nil
+
+	return common.QueryIterator(rows, func(r common.RowScanner, record *driver.TokenRequestRecord) error {
+		if err := r.Scan(&record.TxID, &record.TokenRequest, &record.Status); err != nil {
+			return err
+		}
+		if record.TokenRequest == nil {
+			record.TokenRequest = []byte{}
+		}
+		return nil
+	}), nil
 }
 
 func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser token.Identity, sigma []byte) (err error) {
@@ -409,89 +418,6 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 	r.Status = driver.TxStatus(status)
 
 	return &r, err
-}
-
-type ValidationRecordsIterator struct {
-	txs *sql.Rows
-	// Filter defines a custom filter function.
-	// If specified, this filter will be applied.
-	// the filter returns true if the record must be selected, false otherwise.
-	filter func(record *driver.ValidationRecord) bool
-}
-
-func (t *ValidationRecordsIterator) Close() {
-	Close(t.txs)
-}
-
-func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
-	var r driver.ValidationRecord
-	if !t.txs.Next() {
-		return nil, nil
-	}
-
-	var meta []byte
-	var storedAt time.Time
-	var status int
-	// tx_id, request, metadata, status, stored_at
-	if err := t.txs.Scan(
-		&r.TxID,
-		&r.TokenRequest,
-		&meta,
-		&status,
-		&storedAt,
-	); err != nil {
-		return &r, err
-	}
-	if err := unmarshal(meta, &r.Metadata); err != nil {
-		return &r, err
-	}
-	r.Timestamp = storedAt
-	r.Status = driver.TxStatus(status)
-
-	// sqlite database returns nil for empty slice
-	if r.TokenRequest == nil {
-		r.TokenRequest = []byte{}
-	}
-
-	// no filter supplied, or filter matches
-	if t.filter == nil || t.filter(&r) {
-		return &r, nil
-	}
-
-	// Skipping this record causes a recursive call
-	// to this function to parse next record
-	return t.Next()
-}
-
-type TokenRequestIterator struct {
-	txs *sql.Rows
-}
-
-func (t *TokenRequestIterator) Close() {
-	Close(t.txs)
-}
-
-func (t *TokenRequestIterator) Next() (*driver.TokenRequestRecord, error) {
-	var r driver.TokenRequestRecord
-	if !t.txs.Next() {
-		return nil, nil
-	}
-
-	var status int
-	// tx_id, request, metadata, status, stored_at
-	if err := t.txs.Scan(
-		&r.TxID,
-		&r.TokenRequest,
-		&status,
-	); err != nil {
-		return nil, err
-	}
-	r.Status = driver.TxStatus(status)
-	// sqlite database returns nil for empty slice
-	if r.TokenRequest == nil {
-		r.TokenRequest = []byte{}
-	}
-	return &r, nil
 }
 
 func (db *TransactionDB) BeginAtomicWrite() (driver.AtomicWrite, error) {

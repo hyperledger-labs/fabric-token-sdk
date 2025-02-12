@@ -13,10 +13,12 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
 	sqlite2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -93,19 +95,21 @@ func TConfigurations(t *testing.T, db driver.IdentityDB) {
 
 	it, err := db.IteratorConfigurations("core")
 	assert.NoError(t, err)
-	assert.True(t, it.HasNext())
-	c, err := it.Next()
+	cs, err := collections.ReadAll(it)
 	assert.NoError(t, err)
-	assert.True(t, reflect.DeepEqual(expected, c))
-	assert.NoError(t, it.Close())
+	assert.Len(t, cs, 1)
+	fmt.Printf("[%v] [%v]", expected, slices.GetUnique(cs))
+	assert.True(t, reflect.DeepEqual(expected, slices.GetUnique(cs)))
 
 	exists, err := db.ConfigurationExists("pineapple", "core", "look here")
 	assert.NoError(t, err)
 	assert.True(t, exists)
 
-	_, err = db.IteratorConfigurations("no core")
+	it, err = db.IteratorConfigurations("no core")
 	assert.NoError(t, err)
-	assert.False(t, it.HasNext())
+	cs, err = collections.ReadAll(it)
+	assert.NoError(t, err)
+	assert.Empty(t, cs)
 
 	exists, err = db.ConfigurationExists("pineapple", "no core", "look here")
 	assert.NoError(t, err)

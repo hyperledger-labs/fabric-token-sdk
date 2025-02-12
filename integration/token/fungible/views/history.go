@@ -80,7 +80,7 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying transactions")
 	}
-	return ToSlice(it)
+	return collections.ToSlice(it)
 }
 
 type ListAuditedTransactionsViewFactory struct{}
@@ -123,7 +123,7 @@ func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, 
 		return nil, errors.Wrapf(err, "failed querying transactions")
 	}
 
-	return ToSlice(it)
+	return collections.ToSlice(it)
 }
 
 type ListAcceptedTransactionsViewFactory struct{}
@@ -164,19 +164,4 @@ func (p *TransactionInfoViewFactory) NewView(in []byte) (view.View, error) {
 		return nil, errors.Wrapf(err, "failed unmarshalling input")
 	}
 	return f, nil
-}
-
-func ToSlice[T any](it collections.Iterator[*T]) ([]*T, error) {
-	defer it.Close()
-	var items []*T
-	for {
-		if tx, err := it.Next(); err != nil {
-			return nil, errors.Wrapf(err, "failed iterating over transactions")
-		} else if tx == nil {
-			break
-		} else {
-			items = append(items, tx)
-		}
-	}
-	return items, nil
 }

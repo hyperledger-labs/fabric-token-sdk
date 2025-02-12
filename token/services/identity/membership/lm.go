@@ -489,17 +489,7 @@ func (l *LocalMembership) storedIdentityConfigurations() ([]dbdriver.IdentityCon
 	if err != nil {
 		return nil, errors2.WithMessagef(err, "failed to get registered identities from kvs")
 	}
-	defer it.Close()
-	// copy the iterator
-	items := make([]dbdriver.IdentityConfiguration, 0)
-	for it.HasNext() {
-		item, err := it.Next()
-		if err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, nil
+	return collections.ReadAll(it)
 }
 
 type TypedIdentityInfo struct {
