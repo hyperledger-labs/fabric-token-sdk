@@ -23,32 +23,46 @@ message Identity {
   bytes raw = 1; // Raw bytes representing the identity
 }
 
+// AuditableIdentity represents an identity with its audit info
+message AuditableIdentity {
+  Identity identity = 1; // The Identity
+  bytes audit_info = 2; // Its audit info
+}
+
 // Unique identifier for a token
 message TokenID {
   string tx_id = 1; // Transaction ID where this token was created
   uint64 index = 2; // Index of this token in the transaction output
 }
 
+message TransferInputMetadata {
+  TokenID token_id = 1; // The token ID being transferred
+  repeated AuditableIdentity senders = 2; // Senders of the token
+}
+
+message OutputMetadata {
+  bytes metadata = 1; // output's metadata
+  bytes audit_info = 2; // the audit information for the output's owner
+  repeated AuditableIdentity receivers = 3; // list of receivers
+}
+
 // Metadata for a transfer action containing multiple tokens
 message TransferMetadata {
-  repeated TokenID token_ids = 1; // List of token IDs being transferred
-  repeated bytes output_audit_Infos = 2; // Audit information for new token states
-  repeated bytes outputs_metadata = 3; // Additional metadata for new tokens
-  repeated Identity senders = 4; // Senders of the tokens
-  repeated bytes sender_audit_infos = 5; // Audit info from senders
-  repeated Identity receivers = 6; // Recipients of the tokens
-  repeated bytes receiver_audit_infos = 7; // Audit info from recipients
+  repeated TransferInputMetadata inputs = 1; // Inputs
+  repeated OutputMetadata outputs = 2; // Outputs
   repeated Identity extra_signers = 8; // Additional signers for the transfer
+}
+
+message IssueInputMetadata {
+  TokenID token_id = 2; // The Token ID being consumed by the issue
 }
 
 // Metadata for an issuance action containing multiple tokens
 message IssueMetadata {
   Identity issuer = 1; // Issuer of the tokens
-  repeated TokenID token_ids = 2; // List of token IDs being consumed
-  repeated bytes outputs_metadata = 3; // Additional metadata for new tokens
-  repeated Identity receivers = 4; // Recipients of the newly issued tokens
-  repeated bytes receiver_audit_infos = 5; // Audit info from recipients
-  repeated Identity extra_signers = 6; // Additional signers for the issuance
+  repeated IssueInputMetadata inputs = 2; // Inputs
+  repeated OutputMetadata outputs = 3; // Outputs
+  repeated Identity extra_signers = 4; // Additional signers for the issuance
 }
 
 // Union type containing either issue or transfer metadata

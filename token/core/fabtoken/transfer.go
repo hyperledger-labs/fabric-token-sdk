@@ -50,33 +50,96 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
 
-	var senders []driver.Identity
 	var inputs []*Output
 	for _, tok := range inputTokens {
 		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
-		senders = append(senders, tok.Owner)
 		t := Output(*tok)
 		inputs = append(inputs, &t)
 	}
 
 	// prepare outputs
 	var outs []*Output
-	var outputsMetadata [][]byte
 	for _, output := range Outputs {
 		outs = append(outs, &Output{
 			Owner:    output.Owner,
 			Type:     output.Type,
 			Quantity: output.Quantity,
 		})
-		metadata := &OutputMetadata{}
-		metaRaw, err := metadata.Serialize()
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed serializing token information")
-		}
-		outputsMetadata = append(outputsMetadata, metaRaw)
 	}
 
-	// assemble transfer action
+	// assemble transfer metadata
+	ws := s.WalletService
+	metadata := &driver.TransferMetadata{
+		Inputs:       nil,
+		Outputs:      nil,
+		ExtraSigners: nil,
+	}
+
+	// inputs
+	for i, t := range inputTokens {
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner, ws)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner).String())
+		}
+		metadata.Inputs = append(metadata.Inputs, &driver.TransferInputMetadata{
+			TokenID: tokenIDs[i],
+			Senders: []*driver.AuditableIdentity{
+				{
+					Identity:  t.Owner,
+					AuditInfo: auditInfo[0],
+				},
+			},
+		})
+	}
+
+	// outputs
+	outputMetadata := &OutputMetadata{}
+	outputMetadataRaw, err := outputMetadata.Serialize()
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed serializing output information")
+	}
+	for _, output := range outs {
+		var receivers []driver.Identity
+		var receiversAuditInfo [][]byte
+		transferOutputMetadata := &driver.TransferOutputMetadata{
+			OutputMetadata:  outputMetadataRaw,
+			OutputAuditInfo: nil,
+			Receivers:       nil,
+		}
+
+		if len(output.Owner) == 0 { // redeem
+			receivers = append(receivers, output.Owner)
+			receiversAuditInfo = append(receiversAuditInfo, []byte{})
+		} else {
+			recipients, err := s.Deserializer.Recipients(output.Owner)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "failed getting recipients")
+			}
+			receivers = append(receivers, recipients...)
+			receiversAuditInfo, err = s.Deserializer.GetOwnerAuditInfo(output.Owner, ws)
+			if err != nil {
+				return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
+			}
+		}
+		for i, receiver := range receivers {
+			transferOutputMetadata.Receivers = append(transferOutputMetadata.Receivers, &driver.AuditableIdentity{
+				Identity:  receiver,
+				AuditInfo: receiversAuditInfo[i],
+			})
+		}
+
+		metadata.Outputs = append(metadata.Outputs, transferOutputMetadata)
+	}
+
+	// receiverIsSender := make([]bool, len(receivers))
+	// for i, receiver := range receivers {
+	// 	_, err = ws.OwnerWallet(receiver)
+	// 	receiverIsSender[i] = err == nil
+	// }
+	//
+	// s.Logger.Debugf("Transfer metadata: [out:%d, rec:%d]", len(metadata.OutputsMetadata), len(metadata.Receivers))
+
+	// return
 	transfer := &TransferAction{
 		Inputs:      tokenIDs,
 		InputTokens: inputs,
@@ -84,74 +147,11 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		Metadata:    meta.TransferActionMetadata(opts.Attributes),
 	}
 
-	ws := s.WalletService
-
-	// assemble transfer metadata
-	var receivers []driver.Identity
-	var outputAuditInfos [][]byte
-	for _, output := range outs {
-		if len(output.Owner) == 0 { // redeem
-			receivers = append(receivers, output.Owner)
-			outputAuditInfos = append(outputAuditInfos, []byte{})
-			continue
-		}
-		recipients, err := s.Deserializer.Recipients(output.Owner)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed getting recipients")
-		}
-		receivers = append(receivers, recipients...)
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Owner, ws)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
-		}
-		outputAuditInfos = append(outputAuditInfos, auditInfo...)
-	}
-
-	senderAuditInfos := make([][]byte, 0, len(inputTokens))
-	for _, t := range inputTokens {
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner, ws)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner).String())
-		}
-		senderAuditInfos = append(senderAuditInfos, auditInfo...)
-	}
-
-	receiverAuditInfos := make([][]byte, 0, len(receivers))
-	for _, receiver := range receivers {
-		if len(receiver) == 0 {
-			receiverAuditInfos = append(receiverAuditInfos, []byte{})
-			continue
-		}
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(receiver, ws)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", receiver.String())
-		}
-		receiverAuditInfos = append(receiverAuditInfos, auditInfo...)
-	}
-	receiverIsSender := make([]bool, len(receivers))
-	for i, receiver := range receivers {
-		_, err = ws.OwnerWallet(receiver)
-		receiverIsSender[i] = err == nil
-	}
-
-	metadata := &driver.TransferMetadata{
-		TokenIDs:           tokenIDs,
-		Senders:            senders,
-		SenderAuditInfos:   senderAuditInfos,
-		OutputsMetadata:    outputsMetadata,
-		OutputsAuditInfo:   outputAuditInfos,
-		Receivers:          receivers,
-		ReceiverAuditInfos: receiverAuditInfos,
-	}
-
-	s.Logger.Debugf("Transfer metadata: [out:%d, rec:%d]", len(metadata.OutputsMetadata), len(metadata.Receivers))
-
-	// done
 	return transfer, metadata, nil
 }
 
 // VerifyTransfer checks the outputs in the TransferAction against the passed tokenInfos
-func (s *TransferService) VerifyTransfer(tr driver.TransferAction, outputsMetadata [][]byte) error {
+func (s *TransferService) VerifyTransfer(tr driver.TransferAction, outputMetadata []*driver.TransferOutputMetadata) error {
 	// TODO:
 	return nil
 }

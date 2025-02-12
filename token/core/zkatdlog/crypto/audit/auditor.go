@@ -43,10 +43,10 @@ type Deserializer interface {
 type InspectTokenOwnerFunc = func(des Deserializer, token *AuditableToken, index int) error
 
 // GetAuditInfoForIssuesFunc models a function to get auditable tokens from issue actions
-type GetAuditInfoForIssuesFunc = func(issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error)
+type GetAuditInfoForIssuesFunc = func(issues [][]byte, metadata []*driver.IssueMetadata) ([][]*AuditableToken, error)
 
 // GetAuditInfoForTransfersFunc models a function to get auditable tokens from transfer actions
-type GetAuditInfoForTransfersFunc = func(transfers [][]byte, metadata []driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error)
+type GetAuditInfoForTransfersFunc = func(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error)
 
 // AuditableToken contains a zkat token and the information that allows
 // an auditor to learn its content.
@@ -341,25 +341,28 @@ func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index in
 
 // GetAuditInfoForIssues returns an array of AuditableToken for each issue action
 // It takes a deserializer, an array of serialized issue actions and an array of issue metadata.
-func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error) {
-	if len(issues) != len(metadata) {
+func GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver.IssueMetadata) ([][]*AuditableToken, error) {
+	if len(issues) != len(issueMetadata) {
 		return nil, errors.Errorf("number of issues does not match number of provided metadata")
 	}
 	outputs := make([][]*AuditableToken, len(issues))
-	for k, md := range metadata {
+	for k, md := range issueMetadata {
 		ia := &issue.Action{}
 		err := json.Unmarshal(issues[k], ia)
 		if err != nil {
 			return nil, err
 		}
 
-		if len(ia.Outputs) != len(md.ReceiversAuditInfos) || len(ia.Outputs) != len(md.OutputsMetadata) {
+		if len(ia.Outputs) != len(md.Outputs) {
 			return nil, errors.Errorf("number of output does not match number of provided metadata")
 		}
-		outputs[k] = make([]*AuditableToken, len(md.ReceiversAuditInfos))
-		for i := 0; i < len(md.ReceiversAuditInfos); i++ {
-			ti := &token.Metadata{}
-			err = ti.Deserialize(md.OutputsMetadata[i])
+		outputs[k] = make([]*AuditableToken, len(md.Outputs))
+		for i, o := range md.Outputs {
+			if o == nil {
+				return nil, errors.Errorf("output at index [%d] is nil", i)
+			}
+			metadata := &token.Metadata{}
+			err = metadata.Deserialize(o.OutputMetadata)
 			if err != nil {
 				return nil, err
 			}
@@ -369,7 +372,17 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 			if ia.Outputs[i].IsRedeem() {
 				return nil, errors.Errorf("issue cannot redeem tokens")
 			}
-			outputs[k][i], err = NewAuditableToken(ia.Outputs[i], md.ReceiversAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
+			if len(o.Receivers) == 0 {
+				return nil, errors.Errorf("issue must have at least one receiver")
+			}
+			// TODO: check that o.Receivers contains not-nil elements
+			outputs[k][i], err = NewAuditableToken(
+				ia.Outputs[i],
+				o.Receivers[0].AuditInfo,
+				metadata.Type,
+				metadata.Value,
+				metadata.BlindingFactor,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -380,7 +393,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 
 // GetAuditInfoForTransfers returns an array of AuditableToken for each transfer action.
 // It takes a deserializer, an array of serialized transfer actions and an array of transfer metadata.
-func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
+func GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")
 	}
@@ -390,16 +403,16 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 	auditableInputs := make([][]*AuditableToken, len(inputs))
 	outputs := make([][]*AuditableToken, len(transfers))
 	for k, transferMetadata := range metadata {
-		if len(transferMetadata.SenderAuditInfos) != len(inputs[k]) {
-			return nil, nil, errors.Errorf("number of inputs does not match the number of senders [%d]!=[%d]", len(transferMetadata.SenderAuditInfos), len(inputs[k]))
+		if len(transferMetadata.Inputs) != len(inputs[k]) {
+			return nil, nil, errors.Errorf("number of inputs does not match the number of senders [%d]!=[%d]", len(transferMetadata.Inputs), len(inputs[k]))
 		}
-		auditableInputs[k] = make([]*AuditableToken, len(transferMetadata.SenderAuditInfos))
-		for i := 0; i < len(transferMetadata.SenderAuditInfos); i++ {
+		auditableInputs[k] = make([]*AuditableToken, len(transferMetadata.Inputs))
+		for i := 0; i < len(transferMetadata.Inputs); i++ {
 			var err error
 			if inputs[k][i] == nil {
 				return nil, nil, errors.Errorf("input[%d][%d] is nil", k, i)
 			}
-			auditableInputs[k][i], err = NewAuditableToken(inputs[k][i], transferMetadata.SenderAuditInfos[i], "", nil, nil)
+			auditableInputs[k][i], err = NewAuditableToken(inputs[k][i], transferMetadata.Inputs[i].Senders[0].AuditInfo, "", nil, nil)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -409,8 +422,8 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 		if err != nil {
 			return nil, nil, err
 		}
-		if len(ta.OutputTokens) != len(transferMetadata.OutputsMetadata) {
-			return nil, nil, errors.Errorf("number of outputs does not match the number of output metadata [%d]!=[%d]", len(ta.OutputTokens), len(transferMetadata.OutputsMetadata))
+		if len(ta.OutputTokens) != len(transferMetadata.Outputs) {
+			return nil, nil, errors.Errorf("number of outputs does not match the number of output metadata [%d]!=[%d]", len(ta.OutputTokens), len(transferMetadata.Outputs))
 		}
 		outputs[k] = make([]*AuditableToken, len(ta.OutputTokens))
 		for i := 0; i < len(ta.OutputTokens); i++ {
@@ -419,12 +432,12 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 			}
 
 			ti := &token.Metadata{}
-			err = ti.Deserialize(transferMetadata.OutputsMetadata[i])
+			err = ti.Deserialize(transferMetadata.Outputs[i].OutputMetadata)
 			if err != nil {
 				return nil, nil, err
 			}
 			// TODO: we need to check also how many recipients the output contains, and check them all in isolation and compatibility
-			outputs[k][i], err = NewAuditableToken(ta.OutputTokens[i], transferMetadata.OutputsAuditInfo[i], ti.Type, ti.Value, ti.BlindingFactor)
+			outputs[k][i], err = NewAuditableToken(ta.OutputTokens[i], transferMetadata.Outputs[i].OutputAuditInfo, ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, nil, err
 			}

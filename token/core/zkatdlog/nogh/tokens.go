@@ -205,7 +205,7 @@ func (s *TokensService) deserializeToken(outputRaw []byte, metadataRaw []byte, c
 	metadata := &token2.Metadata{}
 	err = metadata.Deserialize(metadataRaw)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to deserialize token metadata")
+		return nil, nil, nil, errors.Wrapf(err, "failed to deserialize token metadata [%d][%v]", len(metadataRaw), metadataRaw)
 	}
 	pp := s.PublicParametersManager.PublicParams()
 

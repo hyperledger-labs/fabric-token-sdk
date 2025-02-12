@@ -43,7 +43,7 @@ type IssueService interface {
 	Issue(ctx context.Context, issuerIdentity Identity, tokenType token.Type, values []uint64, owners [][]byte, opts *IssueOptions) (IssueAction, *IssueMetadata, error)
 
 	// VerifyIssue checks the well-formedness of the passed IssuerAction with the respect to the passed metadata
-	VerifyIssue(tr IssueAction, metadata [][]byte) error
+	VerifyIssue(ia IssueAction, metadata []*IssueOutputMetadata) error
 
 	// DeserializeIssueAction deserializes the passed bytes into an IssuerAction
 	DeserializeIssueAction(raw []byte) (IssueAction, error)

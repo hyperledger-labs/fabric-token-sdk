@@ -44,13 +44,9 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		}
 	}
 
+	precision := s.PublicParamsManager.PublicParameters().Precision()
 	var outs []*Output
-	var outputsMetadata [][]byte
-	pp := s.PublicParamsManager.PublicParameters()
-	if pp == nil {
-		return nil, nil, errors.Errorf("public paramenters not set")
-	}
-	precision := pp.Precision()
+	var outputsMetadata []*driver.IssueOutputMetadata
 	for i, v := range values {
 		q, err := token2.UInt64ToQuantity(v, precision)
 		if err != nil {
@@ -62,34 +58,41 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 			Quantity: q.Hex(),
 		})
 
-		meta := &OutputMetadata{
+		outputMetadata := &OutputMetadata{
 			Issuer: issuerIdentity,
 		}
-		metaRaw, err := meta.Serialize()
+		outputMetadataRaw, err := outputMetadata.Serialize()
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed serializing token information")
 		}
-		outputsMetadata = append(outputsMetadata, metaRaw)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owners[i], s.WalletService)
+		if err != nil {
+			return nil, nil, err
+		}
+		outputsMetadata = append(outputsMetadata, &driver.IssueOutputMetadata{
+			OutputMetadata: outputMetadataRaw,
+			Receivers: []*driver.AuditableIdentity{
+				{
+					Identity:  owners[i],
+					AuditInfo: auditInfo[0],
+				},
+			},
+		})
 	}
 
 	action := &IssueAction{Issuer: issuerIdentity, Outputs: outs}
-	auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owners[0], s.WalletService)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	meta := &driver.IssueMetadata{
-		Issuer:              issuerIdentity,
-		OutputsMetadata:     outputsMetadata,
-		Receivers:           []driver.Identity{driver.Identity(owners[0])},
-		ReceiversAuditInfos: auditInfo,
-		ExtraSigners:        nil,
+		Issuer:       issuerIdentity,
+		Inputs:       nil,
+		Outputs:      outputsMetadata,
+		ExtraSigners: nil,
 	}
 	return action, meta, nil
 }
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed tokenInfos
-func (s *IssueService) VerifyIssue(tr driver.IssueAction, tokenInfos [][]byte) error {
+func (s *IssueService) VerifyIssue(tr driver.IssueAction, metadata []*driver.IssueOutputMetadata) error {
 	// TODO:
 	return nil
 }

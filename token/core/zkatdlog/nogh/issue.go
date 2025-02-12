@@ -116,27 +116,9 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	}
 	s.Metrics.zkIssueDuration.Observe(float64(duration.Milliseconds()))
 
-	var outputsMetadata [][]byte
-	for _, meta := range zkOutputsMetadata {
-		raw, err := meta.Serialize()
-		if err != nil {
-			return nil, nil, errors.WithMessage(err, "failed serializing token info")
-		}
-		outputsMetadata = append(outputsMetadata, raw)
-	}
+	// metadata
 
-	issuerSerializedIdentity, err := issuer.Signer.Serialize()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owners[0], s.WalletService)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// prepare inputs to redeem, if any
-	var tokenIDs []*token.ID
+	var inputsMetadata []*driver.IssueInputMetadata
 	if opts != nil && opts.TokensUpgradeRequest != nil && len(opts.TokensUpgradeRequest.Tokens) > 0 {
 		tokens := opts.TokensUpgradeRequest.Tokens
 		action.Inputs = make([]issue.ActionInput, len(tokens))
@@ -145,26 +127,52 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 				ID:    tok.ID,
 				Token: tok.Token,
 			}
-			tokenIDs = append(tokenIDs, &tok.ID)
+			inputsMetadata = append(inputsMetadata, &driver.IssueInputMetadata{
+				TokenID: &tok.ID,
+			})
 		}
+	}
+
+	var outputsMetadata []*driver.IssueOutputMetadata
+	for _, meta := range zkOutputsMetadata {
+		raw, err := meta.Serialize()
+		if err != nil {
+			return nil, nil, errors.WithMessage(err, "failed serializing token info")
+		}
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owners[0], s.WalletService)
+		if err != nil {
+			return nil, nil, err
+		}
+		outputsMetadata = append(outputsMetadata, &driver.IssueOutputMetadata{
+			OutputMetadata: raw,
+			Receivers: []*driver.AuditableIdentity{
+				{
+					Identity:  owners[0],
+					AuditInfo: auditInfo[0],
+				},
+			},
+		})
+	}
+
+	issuerSerializedIdentity, err := issuer.Signer.Serialize()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	s.Logger.Debugf("issue with [%d] inputs", len(action.Inputs))
 
 	meta := &driver.IssueMetadata{
-		Issuer:              issuerSerializedIdentity,
-		TokenIDs:            tokenIDs,
-		OutputsMetadata:     outputsMetadata,
-		Receivers:           []driver.Identity{driver.Identity(owners[0])},
-		ReceiversAuditInfos: auditInfo,
-		ExtraSigners:        nil,
+		Issuer:       issuerSerializedIdentity,
+		Inputs:       inputsMetadata,
+		Outputs:      outputsMetadata,
+		ExtraSigners: nil,
 	}
 
 	return action, meta, err
 }
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed metadata
-func (s *IssueService) VerifyIssue(ia driver.IssueAction, outputsMetadata [][]byte) error {
+func (s *IssueService) VerifyIssue(ia driver.IssueAction, metadata []*driver.IssueOutputMetadata) error {
 	if ia == nil {
 		return errors.New("failed to verify issue: nil issue action")
 	}
