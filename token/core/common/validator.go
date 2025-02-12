@@ -55,7 +55,6 @@ type Validator[P driver.PublicParameters, T any, TA driver.TransferAction, IA dr
 	ActionDeserializer ActionDeserializer[TA, IA]
 	TransferValidators []ValidateTransferFunc[P, T, TA, IA, DS]
 	IssueValidators    []ValidateIssueFunc[P, T, TA, IA, DS]
-	Serializer         driver.Serializer
 }
 
 func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](
@@ -65,7 +64,6 @@ func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA
 	actionDeserializer ActionDeserializer[TA, IA],
 	transferValidators []ValidateTransferFunc[P, T, TA, IA, DS],
 	issueValidators []ValidateIssueFunc[P, T, TA, IA, DS],
-	serializer driver.Serializer,
 ) *Validator[P, T, TA, IA, DS] {
 	return &Validator[P, T, TA, IA, DS]{
 		Logger:             Logger,
@@ -74,7 +72,6 @@ func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA
 		ActionDeserializer: actionDeserializer,
 		TransferValidators: transferValidators,
 		IssueValidators:    issueValidators,
-		Serializer:         serializer,
 	}
 }
 

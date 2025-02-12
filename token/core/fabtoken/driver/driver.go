@@ -121,20 +121,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
-	service, err := fabtoken.NewService(
-		logger,
-		ws,
-		publicParamsManager,
-		ip,
-		common.NewSerializer(),
-		deserializer,
-		tmsConfig,
-		fabtoken.NewIssueService(publicParamsManager, ws, deserializer),
-		fabtoken.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
-		fabtoken.NewAuditorService(),
-		tokensService,
-		authorization,
-	)
+	service, err := fabtoken.NewService(logger, ws, publicParamsManager, ip, deserializer, tmsConfig, fabtoken.NewIssueService(publicParamsManager, ws, deserializer), fabtoken.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer), fabtoken.NewAuditorService(), tokensService, authorization)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}

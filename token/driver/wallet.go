@@ -238,14 +238,6 @@ type Deserializer interface {
 	// MatchOwnerIdentity returns nil if the given identity matches the given audit information.
 	// An error otherwise
 	MatchOwnerIdentity(identity Identity, info []byte) error
-	// GetOwnerAuditInfo returns the audit information for each identity contained in the given serialized representation
-	GetOwnerAuditInfo(id Identity, p AuditInfoProvider) ([][]byte, error)
-}
-
-// Serializer models the serialization needs of the Token Service
-type Serializer interface {
-	// MarshalTokenRequestToSign marshals the to token request to a byte array representation on which a signature must be produced
-	MarshalTokenRequestToSign(anchor string, request *TokenRequest, meta *TokenRequestMetadata) ([]byte, error)
-	// MarshalTokenRequestToAuditSign
-	MarshalTokenRequestToAuditSign(anchor string, request *TokenRequest, meta *TokenRequestMetadata) ([]byte, error)
+	// GetOwnerAuditInfo returns the audit information for the passed identity
+	GetOwnerAuditInfo(id Identity, p AuditInfoProvider) ([]byte, error)
 }

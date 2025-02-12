@@ -115,36 +115,23 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
-	service, err := zkatdlog.NewTokenService(
+	service, err := zkatdlog.NewTokenService(logger, ws, ppm, ip, deserializer, tmsConfig, zkatdlog.NewIssueService(logger, ppm, ws, deserializer, driverMetrics, tokensService), zkatdlog.NewTransferService(
 		logger,
-		ws,
 		ppm,
-		ip,
-		common.NewSerializer(),
+		ws,
+		common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
 		deserializer,
-		tmsConfig,
-		zkatdlog.NewIssueService(logger, ppm, ws, deserializer, driverMetrics, tokensService),
-		zkatdlog.NewTransferService(
-			logger,
-			ppm,
-			ws,
-			common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
-			deserializer,
-			driverMetrics,
-			d.tracerProvider,
-			tokensService,
-		),
-		zkatdlog.NewAuditorService(
-			logger,
-			ppm,
-			common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
-			deserializer,
-			driverMetrics,
-			d.tracerProvider,
-		),
+		driverMetrics,
+		d.tracerProvider,
 		tokensService,
-		authorization,
-	)
+	), zkatdlog.NewAuditorService(
+		logger,
+		ppm,
+		common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
+		deserializer,
+		driverMetrics,
+		d.tracerProvider,
+	), tokensService, authorization)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}

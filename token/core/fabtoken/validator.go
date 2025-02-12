@@ -64,6 +64,5 @@ func NewValidator(logger logging.Logger, pp *PublicParams, deserializer driver.D
 		&ActionDeserializer{},
 		transferValidators,
 		issueValidators,
-		&common.Serializer{},
 	)
 }

@@ -36,7 +36,6 @@ type TokenManagerService interface {
 	AuditorService() AuditorService
 	CertificationService() CertificationService
 	Deserializer() Deserializer
-	Serializer() Serializer
 	IdentityProvider() IdentityProvider
 	Validator() (Validator, error)
 	PublicParamsManager() PublicParamsManager

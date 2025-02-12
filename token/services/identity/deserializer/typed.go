@@ -23,7 +23,7 @@ var logger = logging.MustGetLogger("token-sdk.services.identity.deserializer")
 type TypedVerifierDeserializer interface {
 	DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error)
 	Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error)
-	GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([][]byte, error)
+	GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([]byte, error)
 	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
@@ -145,7 +145,7 @@ func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identi
 	return nil
 }
 
-func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([][]byte, error) {
+func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([]byte, error) {
 	si, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
@@ -183,12 +183,12 @@ func (t *TypedIdentityVerifierDeserializer) Recipients(id driver.Identity, typ s
 	return []driver.Identity{id}, nil
 }
 
-func (t *TypedIdentityVerifierDeserializer) GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
+func (t *TypedIdentityVerifierDeserializer) GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
 	auditInfo, err := p.GetAuditInfo(id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", id)
 	}
-	return [][]byte{auditInfo}, nil
+	return auditInfo, nil
 }
 
 func (t *TypedIdentityVerifierDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {

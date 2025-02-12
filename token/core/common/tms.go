@@ -20,7 +20,6 @@ type PublicParametersManager[T driver.PublicParameters] interface {
 type Service[T driver.PublicParameters] struct {
 	Logger                  logging.Logger
 	PublicParametersManager PublicParametersManager[T]
-	serializer              driver.Serializer
 	deserializer            driver.Deserializer
 	identityProvider        driver.IdentityProvider
 	configuration           driver.Configuration
@@ -38,7 +37,6 @@ func NewTokenService[T driver.PublicParameters](
 	ws *wallet.Service,
 	publicParametersManager PublicParametersManager[T],
 	identityProvider driver.IdentityProvider,
-	serializer driver.Serializer,
 	deserializer driver.Deserializer,
 	configManager driver.Configuration,
 	certificationService driver.CertificationService,
@@ -52,7 +50,6 @@ func NewTokenService[T driver.PublicParameters](
 		Logger:                  logger,
 		PublicParametersManager: publicParametersManager,
 		identityProvider:        identityProvider,
-		serializer:              serializer,
 		deserializer:            deserializer,
 		configuration:           configManager,
 		certificationService:    certificationService,
@@ -73,10 +70,6 @@ func (s *Service[T]) IdentityProvider() driver.IdentityProvider {
 
 func (s *Service[T]) Deserializer() driver.Deserializer {
 	return s.deserializer
-}
-
-func (s *Service[T]) Serializer() driver.Serializer {
-	return s.serializer
 }
 
 func (s *Service[T]) CertificationService() driver.CertificationService {
