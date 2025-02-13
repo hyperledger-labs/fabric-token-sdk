@@ -73,5 +73,6 @@ func (a *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditI
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal")
 	}
+	logger.Debugf("audit info [%s]", string(raw))
 	return ai, nil
 }
