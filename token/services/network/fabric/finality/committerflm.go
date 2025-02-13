@@ -146,7 +146,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 		time.Sleep(t.retryWaitDuration)
 	}
 	if err := qe.Done(); err != nil {
-		logger.Warnf("failed closing query executor for tx [%s]: [%s]", txID, err)
+		logger.Warnf("failed to close query executor for tx [%s]: [%s]", txID, err)
 	}
 	if err != nil {
 		panic(fmt.Sprintf("can't get state [%s][%s]", txID, key))
