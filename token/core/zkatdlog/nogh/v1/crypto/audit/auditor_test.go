@@ -13,8 +13,6 @@ import (
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
@@ -264,7 +262,7 @@ func getIdemixInfo(dir string) (driver.Identity, *msp3.AuditInfo) {
 	configService := &fakeProv{typ: "memory"}
 	Expect(registry.RegisterService(configService)).NotTo(HaveOccurred())
 
-	backend, err := kvs.NewWithConfig(&mem.Driver{}, "", configService)
+	backend, err := kvs2.NewInMemoryKVS()
 	Expect(err).NotTo(HaveOccurred())
 	err = registry.RegisterService(backend)
 	Expect(err).NotTo(HaveOccurred())

@@ -12,17 +12,16 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
-	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
-	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	. "github.com/onsi/gomega"
 )
@@ -110,9 +109,9 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	configProvider, err := config.NewProvider(filepath.Join(ctx.RootDir(), "fsc", "nodes", node.ReplicaUniqueName(user, 0)))
 	Expect(err).NotTo(HaveOccurred())
 	configService := config2.NewService(configProvider)
-	kvss, err := kvs.NewWithConfig(&mem.Driver{}, "", configProvider)
+	kvss, err := kvs2.NewInMemoryKVS()
 	Expect(err).ToNot(HaveOccurred())
-	storageProvider := identity2.NewKVSStorageProvider(kvss)
+	storageProvider := identity.NewKVSStorageProvider(kvss)
 	s := core.NewWalletServiceFactoryService(
 		fabtoken.NewWalletServiceFactory(storageProvider),
 		dlog.NewWalletServiceFactory(storageProvider))

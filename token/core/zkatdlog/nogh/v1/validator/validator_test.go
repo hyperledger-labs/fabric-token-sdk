@@ -13,8 +13,6 @@ import (
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
@@ -32,7 +30,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	msp3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
-	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -370,12 +368,12 @@ func getIdemixInfo(dir string) (driver.Identity, *msp3.AuditInfo, driver.Signing
 	configService := &fakeProv{typ: "memory"}
 	Expect(registry.RegisterService(configService)).NotTo(HaveOccurred())
 
-	backend, err := kvs.NewWithConfig(&mem.Driver{}, "", configService)
+	backend, err := kvs.NewInMemoryKVS()
 	Expect(err).NotTo(HaveOccurred())
 	err = registry.RegisterService(backend)
 	Expect(err).NotTo(HaveOccurred())
 
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	err = registry.RegisterService(sigService)
 	Expect(err).NotTo(HaveOccurred())
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")
