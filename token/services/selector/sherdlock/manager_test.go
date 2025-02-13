@@ -7,13 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
-	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/testutils"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -77,26 +78,22 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 }
 
 func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
-	db, err := postgres2.OpenDB(pgConnStr, 10, common.CopyPtr(common.DefaultMaxIdleConns), common.CopyPtr(common.DefaultMaxIdleTime))
-	if err != nil {
-		return nil, err
-	}
-	opts := common2.NewDBOpts{
+	opts := common.Opts{
 		DataSource:   pgConnStr,
 		TablePrefix:  "test",
-		CreateSchema: true,
+		MaxOpenConns: 10,
+	}
+	lockDB, err := sql.OpenPostgres(opts, postgres.NewTokenLockDB)
+	if err != nil {
+		return nil, err
+	}
+	tokenDB, err := sql.OpenPostgres(opts, postgres.NewTransactionDB)
+	if err != nil {
+		return nil, errors.Join(err, lockDB.Close())
 	}
 
-	lockDB, err := postgres.NewTokenLockDB(db, opts)
-	if err != nil {
-		return nil, err
-	}
-	tokenDB, err := postgres.NewTokenDB(db, opts)
-	if err != nil {
-		return nil, err
-	}
-	fetcher := newMixedFetcher(tokenDB, newMetrics(&disabled.Provider{}))
+	fetcher := newMixedFetcher(tokenDB.(common2.TestTokenDB), newMetrics(&disabled.Provider{}))
 	manager := NewManager(fetcher, lockDB, testutils.TokenQuantityPrecision, backoff, maxRetries, 0, 0)
 
-	return testutils.NewEnhancedManager(manager, tokenDB), nil
+	return testutils.NewEnhancedManager(manager, tokenDB.(common2.TestTokenDB)), nil
 }

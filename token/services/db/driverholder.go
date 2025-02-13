@@ -7,105 +7,63 @@ SPDX-License-Identifier: Apache-2.0
 package db
 
 import (
-	"reflect"
-
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
 )
 
-type ConfigProvider = driver.ConfigProvider
-
-type Config interface {
-	DriverFor(tmsID token.TMSID) (drivers.DriverName, error)
-}
-
-type serviceProvider interface {
-	// GetService returns an instance of the given type
-	GetService(v interface{}) (interface{}, error)
-}
-
-type DBDriver[D any] interface {
-	Open(cp ConfigProvider, tmsid token.TMSID) (D, error)
-}
-
-type dbInstantiator[S any, D any, O DBDriver[D]] func(D) S
-
-type dbOpener[S any, D any, O DBDriver[D]] struct {
-	driver O
-	newDB  dbInstantiator[S, D, O]
-}
-
-func (o *dbOpener[S, D, O]) New(cp ConfigProvider, id token.TMSID) (S, error) {
-	driverInstance, err := o.driver.Open(cp, id)
-	if err != nil {
-		return utils.Zero[S](), err
-	}
-	return o.newDB(driverInstance), nil
-}
-
-type NamedDriver[O any] driver3.NamedDriver[O]
-
-func NewDriverHolder[S any, D any, O DBDriver[D]](newDB dbInstantiator[S, D, O], ds ...NamedDriver[O]) *DriverHolder[S, D, O] {
-	h := &DriverHolder[S, D, O]{
-		Holder:      drivers.NewHolder[*dbOpener[S, D, O]](),
-		managerType: reflect.TypeOf((*Manager[S, D, O])(nil)),
-		zero:        utils.Zero[S](),
-		newDB:       newDB,
-	}
+func NewDriverHolder(cp driver.ConfigProvider, ds ...driver.NamedDriver) *DriverHolder {
+	drivers := make(map[driver3.PersistenceType]driver.Driver, len(ds))
 	for _, d := range ds {
-		h.Register(string(d.Name), d.Driver)
+		drivers[d.Name] = d.Driver
 	}
-	return h
+	return &DriverHolder{drivers: drivers, cp: cp}
 }
 
-type DriverHolder[S any, D any, O DBDriver[D]] struct {
-	*drivers.Holder[*dbOpener[S, D, O]]
-
-	managerType reflect.Type
-	zero        S
-
-	newDB dbInstantiator[S, D, O]
+type DriverHolder struct {
+	drivers map[driver3.PersistenceType]driver.Driver
+	cp      driver.ConfigProvider
 }
 
-func (h *DriverHolder[S, D, O]) Register(name drivers.DriverName, driver O) {
-	h.Holder.Register(name, &dbOpener[S, D, O]{driver: driver, newDB: h.newDB})
+func (h *DriverHolder) NewTokenLockManager(keys ...string) *Manager[driver.TokenLockDB] {
+	openers := transform(h.drivers, func(d driver.Driver) sql.Opener[driver.TokenLockDB] { return d.NewTokenLock })
+	return NewManager(h.cp, openers, keys...)
 }
 
-// NewManager creates a new DB manager.
-func (h *DriverHolder[S, D, O]) NewManager(cp ConfigProvider, config Config) *Manager[S, D, O] {
-	return &Manager[S, D, O]{
-		logger:  h.Logger,
-		drivers: h.Drivers,
-		cp:      cp,
-		config:  config,
-		dbs:     map[string]S{},
-
-		zero: h.zero,
-	}
+func (h *DriverHolder) NewWalletManager(keys ...string) *Manager[driver.WalletDB] {
+	openers := transform(h.drivers, func(d driver.Driver) sql.Opener[driver.WalletDB] { return d.NewWallet })
+	return NewManager(h.cp, openers, keys...)
 }
 
-// GetByTMSId returns the service for the given TMS id.
-// Nil might be returned if the wallet is not found or an error occurred.
-func (h *DriverHolder[S, D, O]) GetByTMSId(sp serviceProvider, tmsID token.TMSID) (S, error) {
-	s, err := h.GetProvider(sp)
-	if err != nil {
-		return h.zero, errors.Wrapf(err, "failed to get manager service")
-	}
-	c, err := s.DBByTMSId(tmsID)
-	if err != nil {
-		return h.zero, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
-	}
-	return c, nil
+func (h *DriverHolder) NewIdentityManager(keys ...string) *Manager[driver.IdentityDB] {
+	openers := transform(h.drivers, func(d driver.Driver) sql.Opener[driver.IdentityDB] { return d.NewIdentity })
+	return NewManager(h.cp, openers, keys...)
 }
 
-func (h *DriverHolder[S, D, O]) GetProvider(sp serviceProvider) (*Manager[S, D, O], error) {
-	s, err := sp.GetService(h.managerType)
-	if err != nil {
-		return utils.Zero[*Manager[S, D, O]](), errors.Wrapf(err, "failed to get manager service")
+func (h *DriverHolder) NewTokenManager(keys ...string) *Manager[driver.TokenDB] {
+	openers := transform(h.drivers, func(d driver.Driver) sql.Opener[driver.TokenDB] { return d.NewToken })
+	return NewManager(h.cp, openers, keys...)
+}
+
+func (h *DriverHolder) NewTokenNotifierManager(keys ...string) *Manager[driver.TokenNotifier] {
+	openers := transform(h.drivers, func(d driver.Driver) sql.Opener[driver.TokenNotifier] { return d.NewTokenNotifier })
+	return NewManager(h.cp, openers, keys...)
+}
+
+func (h *DriverHolder) NewAuditTransactionManager(keys ...string) *Manager[driver.AuditTransactionDB] {
+	openers := transform(h.drivers, func(d driver.Driver) sql.Opener[driver.AuditTransactionDB] { return d.NewAuditTransaction })
+	return NewManager(h.cp, openers, keys...)
+}
+
+func (h *DriverHolder) NewOwnerTransactionManager(keys ...string) *Manager[driver.TokenTransactionDB] {
+	openers := transform(h.drivers, func(d driver.Driver) sql.Opener[driver.TokenTransactionDB] { return d.NewOwnerTransaction })
+	return NewManager(h.cp, openers, keys...)
+}
+
+func transform[K comparable, S any, T any](ds map[K]S, transformer func(S) T) map[K]T {
+	r := make(map[K]T, len(ds))
+	for k, v := range ds {
+		r[k] = transformer(v)
 	}
-	return s.(*Manager[S, D, O]), nil
+	return r
 }

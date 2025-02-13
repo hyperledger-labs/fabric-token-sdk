@@ -10,22 +10,16 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/dbtest"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/memory"
 )
 
-type mockConfigProvider struct{}
-
-func (sp mockConfigProvider) UnmarshalKey(key string, rawVal interface{}) error { return nil }
-func (sp mockConfigProvider) GetString(key string) string                       { return "" }
-func (sp mockConfigProvider) GetBool(key string) bool                           { return false }
-func (sp mockConfigProvider) IsSet(key string) bool                             { return false }
-func (sp mockConfigProvider) TranslatePath(path string) string                  { return "" }
-
 func TestMemory(t *testing.T) {
-	d := NewDriver()
+	d := &memory.Driver{}
 
 	for _, c := range dbtest.TokenTransactionDBCases {
-		db, err := d.Driver.Open(new(mockConfigProvider), token.TMSID{Network: c.Name})
+		db, err := d.NewOwnerTransaction(db2.MemoryOpts(token.TMSID{Network: c.Name}))
 		if err != nil {
 			t.Fatal(err)
 		}

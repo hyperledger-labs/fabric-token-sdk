@@ -16,25 +16,22 @@ import (
 )
 
 type (
-	Holder  = db.DriverHolder[*DB, driver.TokenDB, driver.TokenDBDriver]
-	Manager = db.Manager[*DB, driver.TokenDB, driver.TokenDBDriver]
-
-	NotifierHolder  = db.DriverHolder[*Notifier, driver.TokenNotifier, driver.TokenNotifierDriver]
-	NotifierManager = db.Manager[*Notifier, driver.TokenNotifier, driver.TokenNotifierDriver]
+	Manager         = db.Manager[*DB]
+	NotifierManager = db.Manager[*Notifier]
 )
 
 type Notifier struct {
 	driver.TokenNotifier
 }
 
-func NewNotifierHolder(drivers []db.NamedDriver[driver.TokenNotifierDriver]) *NotifierHolder {
-	return db.NewDriverHolder(func(p driver.TokenNotifier) *Notifier { return &Notifier{p} }, drivers...)
-}
-
 var managerType = reflect.TypeOf((*Manager)(nil))
 
-func NewHolder(drivers []db.NamedDriver[driver.TokenDBDriver]) *Holder {
-	return db.NewDriverHolder(newDB, drivers...)
+func NewNotifierManager(dh *db.DriverHolder, keys ...string) *NotifierManager {
+	return db.MappedManager[driver.TokenNotifier, *Notifier](dh.NewTokenNotifierManager(keys...), func(p driver.TokenNotifier) (*Notifier, error) { return &Notifier{p}, nil })
+}
+
+func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
+	return db.MappedManager[driver.TokenDB, *DB](dh.NewTokenManager(keys...), newDB)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
@@ -68,8 +65,6 @@ func (d *DB) NewTransaction() (*Transaction, error) {
 	return &Transaction{TokenDBTransaction: tx}, nil
 }
 
-func newDB(p driver.TokenDB) *DB {
-	return &DB{
-		TokenDB: p,
-	}
+func newDB(p driver.TokenDB) (*DB, error) {
+	return &DB{TokenDB: p}, nil
 }

@@ -22,18 +22,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-type (
-	Holder  = db.DriverHolder[*DB, driver.TokenTransactionDB, driver.TTXDBDriver]
-	Manager = db.Manager[*DB, driver.TokenTransactionDB, driver.TTXDBDriver]
-)
+type Manager = db.Manager[*DB]
 
 var (
 	managerType = reflect.TypeOf((*Manager)(nil))
 	logger      = logging.MustGetLogger("token-sdk.ttxdb")
 )
 
-func NewHolder(drivers []db.NamedDriver[driver.TTXDBDriver]) *Holder {
-	return db.NewDriverHolder[*DB, driver.TokenTransactionDB, driver.TTXDBDriver](newDB, drivers...)
+func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
+	return db.MappedManager[driver.TokenTransactionDB, *DB](dh.NewOwnerTransactionManager(keys...), newDB)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
@@ -165,12 +162,12 @@ type DB struct {
 	cache Cache
 }
 
-func newDB(p driver.TokenTransactionDB) *DB {
+func newDB(p driver.TokenTransactionDB) (*DB, error) {
 	return &DB{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,
 		cache:         secondcache.NewTyped[[]byte](1000),
-	}
+	}, nil
 }
 
 // QueryTransactionsParams defines the parameters for querying movements

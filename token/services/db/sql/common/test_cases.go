@@ -22,6 +22,13 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
+type TestTokenDB interface {
+	driver.TokenDB
+
+	StoreToken(tr driver.TokenRecord, owners []string) error
+	GetAllTokenInfos(ids []*token.ID) ([][]byte, error)
+}
+
 const (
 	TST = token.Type("TST")
 	ABC = token.Type("ABC")
@@ -29,7 +36,7 @@ const (
 
 var TokenNotifierCases = []struct {
 	Name string
-	Fn   func(*testing.T, driver.TokenDB, driver.TokenNotifier)
+	Fn   func(*testing.T, TestTokenDB, driver.TokenNotifier)
 }{
 	{"SubscribeStore", TSubscribeStore},
 	{"SubscribeStoreDelete", TSubscribeStoreDelete},
@@ -60,7 +67,7 @@ func collectDBEvents(db driver.TokenNotifier) (*[]dbEvent, error) {
 	return &result, nil
 }
 
-func TSubscribeStore(t *testing.T, db driver.TokenDB, notifier driver.TokenNotifier) {
+func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
@@ -72,7 +79,7 @@ func TSubscribeStore(t *testing.T, db driver.TokenDB, notifier driver.TokenNotif
 	assert2.Eventually(t, func() bool { return len(*result) == 2 }, time.Second, 20*time.Millisecond)
 }
 
-func TSubscribeStoreDelete(t *testing.T, db driver.TokenDB, notifier driver.TokenNotifier) {
+func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
@@ -85,7 +92,7 @@ func TSubscribeStoreDelete(t *testing.T, db driver.TokenDB, notifier driver.Toke
 	assert2.Eventually(t, func() bool { return len(*result) == 3 }, time.Second, 20*time.Millisecond)
 }
 
-func TSubscribeStoreNoCommit(t *testing.T, db driver.TokenDB, notifier driver.TokenNotifier) {
+func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
@@ -96,7 +103,7 @@ func TSubscribeStoreNoCommit(t *testing.T, db driver.TokenDB, notifier driver.To
 	assert2.Eventually(t, func() bool { return len(*result) == 0 }, time.Second, 20*time.Millisecond)
 }
 
-func TSubscribeRead(t *testing.T, db driver.TokenDB, notifier driver.TokenNotifier) {
+func TSubscribeRead(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
@@ -111,7 +118,7 @@ func TSubscribeRead(t *testing.T, db driver.TokenDB, notifier driver.TokenNotifi
 
 var TokensCases = []struct {
 	Name string
-	Fn   func(*testing.T, *TokenDB)
+	Fn   func(*testing.T, TestTokenDB)
 }{
 	{"Transaction", TTransaction},
 	{"SaveAndGetToken", TSaveAndGetToken},
@@ -126,7 +133,7 @@ var TokensCases = []struct {
 	{"TTokenTypes", TTokenTypes},
 }
 
-func TTransaction(t *testing.T, db *TokenDB) {
+func TTransaction(t *testing.T, db TestTokenDB) {
 	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +200,7 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	assert.NoError(t, tx.Commit())
 }
 
-func TSaveAndGetToken(t *testing.T, db *TokenDB) {
+func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 	for i := 0; i < 20; i++ {
 		tr := driver.TokenRecord{
 			TxID:           fmt.Sprintf("tx%d", i),
@@ -322,7 +329,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 	assert.NoError(t, tx.Rollback())
 }
 
-func getTokensBy(t *testing.T, db *TokenDB, ownerEID string, typ token.Type) []*token.UnspentToken {
+func getTokensBy(t *testing.T, db TestTokenDB, ownerEID string, typ token.Type) []*token.UnspentToken {
 	it, err := db.UnspentTokensIteratorBy(context.TODO(), ownerEID, typ)
 	assert.NoError(t, err)
 	defer it.Close()
@@ -341,7 +348,7 @@ func getTokensBy(t *testing.T, db *TokenDB, ownerEID string, typ token.Type) []*
 	return tokens
 }
 
-func TDeleteAndMine(t *testing.T, db *TokenDB) {
+func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -420,7 +427,7 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 }
 
 // // ListAuditTokens returns the audited tokens associated to the passed ids
-func TListAuditTokens(t *testing.T, db *TokenDB) {
+func TListAuditTokens(t *testing.T, db TestTokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -492,7 +499,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 	assert.Len(t, tok, 0)
 }
 
-func TListIssuedTokens(t *testing.T, db *TokenDB) {
+func TListIssuedTokens(t *testing.T, db TestTokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -577,7 +584,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 
 // GetTokenMetadata retrieves the token information for the passed ids.
 // For each id, the callback is invoked to unmarshal the token information
-func TGetTokenInfos(t *testing.T, db *TokenDB) {
+func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -679,7 +686,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 	assert.Equal(t, "tx101l", string(toks[2]))
 }
 
-func TDeleteMultiple(t *testing.T, db *TokenDB) {
+func TDeleteMultiple(t *testing.T, db TestTokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -734,7 +741,7 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 	assert.True(t, mine, "expected existing token to be mine")
 }
 
-func TPublicParams(t *testing.T, db *TokenDB) {
+func TPublicParams(t *testing.T, db TestTokenDB) {
 	b := []byte("test bytes")
 	bHash := hash.Hashable(b).Raw()
 	b1 := []byte("test bytes1")
@@ -769,7 +776,7 @@ func TPublicParams(t *testing.T, db *TokenDB) {
 	assert.Equal(t, res, b1)
 }
 
-func TCertification(t *testing.T, db *TokenDB) {
+func TCertification(t *testing.T, db TestTokenDB) {
 	wg := sync.WaitGroup{}
 	wg.Add(40)
 	for i := 0; i < 40; i++ {
@@ -842,7 +849,7 @@ func TCertification(t *testing.T, db *TokenDB) {
 	assert.Empty(t, certifications)
 }
 
-func TQueryTokenDetails(t *testing.T, db *TokenDB) {
+func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
 		t.Fatal(err)
@@ -982,7 +989,7 @@ func TQueryTokenDetails(t *testing.T, db *TokenDB) {
 	assertEqual(t, tx2, res[1])
 }
 
-func TTokenTypes(t *testing.T, db *TokenDB) {
+func TTokenTypes(t *testing.T, db TestTokenDB) {
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
 	tx1 := driver.TokenRecord{
