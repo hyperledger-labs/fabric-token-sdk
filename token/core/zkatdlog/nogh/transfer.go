@@ -128,8 +128,8 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	if err != nil {
 		return nil, nil, err
 	}
-	var values []uint64
-	var owners [][]byte
+	values := make([]uint64, 0, len(outputTokens))
+	owners := make([][]byte, 0, len(outputTokens))
 	// get values and owners of outputs
 	span.AddEvent("prepare_output_tokens")
 	for i, output := range outputTokens {

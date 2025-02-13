@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
@@ -27,7 +28,7 @@ func NewTypedIdentityDeserializer(verifierDeserializer VerifierDES) *TypedIdenti
 	return &TypedIdentityDeserializer{VerifierDeserializer: verifierDeserializer}
 }
 
-func (t *TypedIdentityDeserializer) DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error) {
+func (t *TypedIdentityDeserializer) DeserializeVerifier(typ identity.Type, raw []byte) (driver.Verifier, error) {
 	if typ != htlc.ScriptType {
 		return nil, errors.Errorf("cannot deserializer type [%s], expected [%s]", typ, htlc.ScriptType)
 	}
@@ -53,7 +54,7 @@ func (t *TypedIdentityDeserializer) DeserializeVerifier(typ string, raw []byte) 
 	return v, nil
 }
 
-func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error) {
+func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error) {
 	if typ != htlc.ScriptType {
 		return nil, errors.New("unknown identity type")
 	}
@@ -66,7 +67,7 @@ func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ string, r
 	return []driver.Identity{script.Recipient}, nil
 }
 
-func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
+func (t *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
 	if typ != htlc.ScriptType {
 		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, htlc.ScriptType)
 	}

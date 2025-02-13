@@ -21,9 +21,9 @@ import (
 var logger = logging.MustGetLogger("token-sdk.services.identity.deserializer")
 
 type TypedVerifierDeserializer interface {
-	DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error)
-	Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error)
-	GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([]byte, error)
+	DeserializeVerifier(typ identity.Type, raw []byte) (driver.Verifier, error)
+	Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error)
+	GetOwnerAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error)
 	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
@@ -175,15 +175,15 @@ func NewTypedIdentityVerifierDeserializer(verifierDeserializer common.VerifierDe
 	return &TypedIdentityVerifierDeserializer{VerifierDeserializer: verifierDeserializer, MatcherDeserializer: matcherDeserializer}
 }
 
-func (t *TypedIdentityVerifierDeserializer) DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error) {
+func (t *TypedIdentityVerifierDeserializer) DeserializeVerifier(typ identity.Type, raw []byte) (driver.Verifier, error) {
 	return t.VerifierDeserializer.DeserializeVerifier(raw)
 }
 
-func (t *TypedIdentityVerifierDeserializer) Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error) {
+func (t *TypedIdentityVerifierDeserializer) Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error) {
 	return []driver.Identity{id}, nil
 }
 
-func (t *TypedIdentityVerifierDeserializer) GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
+func (t *TypedIdentityVerifierDeserializer) GetOwnerAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
 	auditInfo, err := p.GetAuditInfo(id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", id)
