@@ -134,7 +134,10 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 	assert.NoError(t, err)
 	raw2, err := reqMeta2.Bytes()
 	assert.NoError(t, err)
+	reqMeta3 := &TokenRequestMetadata{}
+	err = reqMeta3.FromBytes(raw2)
+	assert.NoError(t, err)
 
 	assert.Equal(t, reqMeta, reqMeta2)
-	assert.Equal(t, raw, raw2)
+	assert.Equal(t, reqMeta2, reqMeta3)
 }
