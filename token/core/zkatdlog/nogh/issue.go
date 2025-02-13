@@ -109,11 +109,11 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	}, pp)
 
 	start := time.Now()
-	action, zkOutputsMetadata, err := issuer.GenerateZKIssue(values, owners)
-	duration := time.Since(start)
+	issueAction, zkOutputsMetadata, err := issuer.GenerateZKIssue(values, owners)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithMessagef(err, "failed to generate zk issue")
 	}
+	duration := time.Since(start)
 	s.Metrics.zkIssueDuration.Observe(float64(duration.Milliseconds()))
 
 	// metadata
@@ -121,9 +121,9 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	var inputsMetadata []*driver.IssueInputMetadata
 	if opts != nil && opts.TokensUpgradeRequest != nil && len(opts.TokensUpgradeRequest.Tokens) > 0 {
 		tokens := opts.TokensUpgradeRequest.Tokens
-		action.Inputs = make([]issue.ActionInput, len(tokens))
+		issueAction.Inputs = make([]issue.ActionInput, len(tokens))
 		for i, tok := range tokens {
-			action.Inputs[i] = issue.ActionInput{
+			issueAction.Inputs[i] = issue.ActionInput{
 				ID:    tok.ID,
 				Token: tok.Token,
 			}
@@ -134,12 +134,12 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	}
 
 	var outputsMetadata []*driver.IssueOutputMetadata
-	for _, meta := range zkOutputsMetadata {
-		raw, err := meta.Serialize()
+	for i, owner := range owners {
+		raw, err := zkOutputsMetadata[i].Serialize()
 		if err != nil {
 			return nil, nil, errors.WithMessage(err, "failed serializing token info")
 		}
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owners[0], s.WalletService)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owner, s.WalletService)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -147,7 +147,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 			OutputMetadata: raw,
 			Receivers: []*driver.AuditableIdentity{
 				{
-					Identity:  owners[0],
+					Identity:  owner,
 					AuditInfo: auditInfo,
 				},
 			},
@@ -159,7 +159,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, err
 	}
 
-	s.Logger.Debugf("issue with [%d] inputs", len(action.Inputs))
+	s.Logger.Debugf("issue with [%d] inputs", len(issueAction.Inputs))
 
 	meta := &driver.IssueMetadata{
 		Issuer:       issuerSerializedIdentity,
@@ -168,7 +168,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		ExtraSigners: nil,
 	}
 
-	return action, meta, err
+	return issueAction, meta, err
 }
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed metadata

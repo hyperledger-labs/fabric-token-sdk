@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"slices"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -52,14 +54,38 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 		return m, nil
 	}
 
-	clonedMetadata := &Metadata{
-		TokenService:         m.TokenService,
-		WalletService:        m.WalletService,
-		TokenRequestMetadata: &driver.TokenRequestMetadata{},
-		Logger:               m.Logger,
-	}
 	eIDSet := collections.NewSet(eIDs...)
-	// filter issues
+
+	issues, err := m.filterIssues(m.TokenRequestMetadata.Issues, eIDSet)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed filtering issues")
+	}
+	transfers, err := m.filterTransfers(m.TokenRequestMetadata.Transfers, eIDSet)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed filtering transfers")
+	}
+	clone := &Metadata{
+		TokenService:  m.TokenService,
+		WalletService: m.WalletService,
+		TokenRequestMetadata: &driver.TokenRequestMetadata{
+			Issues:      issues,
+			Transfers:   transfers,
+			Application: m.TokenRequestMetadata.Application,
+		},
+		Logger: m.Logger,
+	}
+
+	// TODO: update this log
+	m.Logger.Debugf("filtered metadata for [% x] from [%d:%d] to [%d:%d]",
+		eIDs,
+		len(m.TokenRequestMetadata.Issues), len(m.TokenRequestMetadata.Transfers),
+		len(clone.TokenRequestMetadata.Issues), len(clone.TokenRequestMetadata.Transfers))
+
+	return clone, nil
+}
+
+func (m *Metadata) filterIssues(issues []*driver.IssueMetadata, eIDSet collections.Set[string]) ([]*driver.IssueMetadata, error) {
+	cloned := make([]*driver.IssueMetadata, 0, len(issues))
 	for _, issue := range m.TokenRequestMetadata.Issues {
 		clone := &driver.IssueMetadata{
 			Issuer:       issue.Issuer,
@@ -70,19 +96,9 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 
 		counter := 0
 		for _, output := range issue.Outputs {
-			found := false
-			for _, receiver := range output.Receivers {
-				// If the receiver has the given enrollment ID, add it
-				recipientEID, err := m.WalletService.GetEnrollmentID(receiver.Identity, receiver.AuditInfo)
-				if err != nil {
-					return nil, errors.Wrap(err, "failed getting enrollment ID")
-				}
-				if eIDSet.Contains(recipientEID) {
-					found = true
-					break
-				}
-			}
-			if found {
+			if found, err := m.contains(output.Receivers, eIDSet); err != nil {
+				return nil, errors.WithMessagef(err, "failed checking receivers")
+			} else if found {
 				clone.Outputs = append(clone.Outputs, output)
 				counter++
 			} else {
@@ -91,10 +107,13 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 		}
 
 		m.Logger.Debugf("keeping issue with [%d] out of [%d] outputs", counter, len(issue.Outputs))
-		clonedMetadata.TokenRequestMetadata.Issues = append(clonedMetadata.TokenRequestMetadata.Issues, clone)
+		cloned = append(cloned, clone)
 	}
+	return cloned, nil
+}
 
-	// filter transfers
+func (m *Metadata) filterTransfers(issues []*driver.TransferMetadata, eIDSet collections.Set[string]) ([]*driver.TransferMetadata, error) {
+	cloned := make([]*driver.TransferMetadata, 0, len(issues))
 	for _, transfer := range m.TokenRequestMetadata.Transfers {
 		clone := &driver.TransferMetadata{
 			Inputs:       nil,
@@ -104,26 +123,11 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 
 		// Filter outputs
 		// if the receiver has the given enrollment ID, add it. Otherwise, add empty entries
-		skip := true
 		counter := 0
 		for _, output := range transfer.Outputs {
-			found := false
-			for _, receiver := range output.Receivers {
-				// If the receiver has the given enrollment ID, add it
-				recipientEID, err := m.WalletService.GetEnrollmentID(receiver.Identity, receiver.AuditInfo)
-				if err != nil {
-					return nil, errors.Wrap(err, "failed getting enrollment ID")
-				}
-				if eIDSet.Contains(recipientEID) {
-					logger.Debugf("eid [%s] found in list [%v]", recipientEID, eIDs)
-					skip = false
-					found = true
-					break
-				} else {
-					logger.Debugf("eid [%s] not found in list [%v]", recipientEID, eIDs)
-				}
-			}
-			if found {
+			if found, err := m.contains(output.Receivers, eIDSet); err != nil {
+				return nil, errors.WithMessagef(err, "failed checking receivers")
+			} else if found {
 				clone.Outputs = append(clone.Outputs, output)
 				counter++
 			} else {
@@ -131,36 +135,40 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			}
 		}
 
-		// if skip = true, it means that this transfer does not contain any output for the given enrollment IDs.
+		// if counter == 0, it means that this transfer does not contain any output for the given enrollment IDs.
 		// Therefore, no metadata should be given to the passed enrollment IDs.
-		// if skip = false, it means that this transfer contains at least one output for the given enrollment IDs.
+		// if counter > 0, it means that this transfer contains at least one output for the given enrollment IDs.
 		// Append the senders to the transfer metadata.
 		for range transfer.Inputs {
-			clone.Inputs = append(clone.Inputs, &driver.TransferInputMetadata{
-				TokenID: nil,
-				Senders: nil,
-			})
+			clone.Inputs = append(clone.Inputs, &driver.TransferInputMetadata{})
 		}
-		if !skip {
+		if counter > 0 {
 			for i, input := range transfer.Inputs {
 				clone.Inputs[i].Senders = input.Senders
 			}
 		}
 
 		m.Logger.Debugf("keeping transfer with [%d] out of [%d] outputs", counter, len(transfer.Outputs))
-		clonedMetadata.TokenRequestMetadata.Transfers = append(clonedMetadata.TokenRequestMetadata.Transfers, clone)
+		cloned = append(cloned, clone)
 	}
+	return cloned, nil
+}
 
-	// application
-	clonedMetadata.TokenRequestMetadata.Application = m.TokenRequestMetadata.Application
-
-	// TODO: update this log
-	m.Logger.Debugf("filtered metadata for [% x] from [%d:%d] to [%d:%d]",
-		eIDs,
-		len(m.TokenRequestMetadata.Issues), len(m.TokenRequestMetadata.Transfers),
-		len(clonedMetadata.TokenRequestMetadata.Issues), len(clonedMetadata.TokenRequestMetadata.Transfers))
-
-	return clonedMetadata, nil
+func (m *Metadata) contains(receivers []*driver.AuditableIdentity, eIDSet collections.Set[string]) (bool, error) {
+	for _, receiver := range receivers {
+		// If the receiver has the given enrollment ID, add it
+		recipientEID, err := m.WalletService.GetEnrollmentID(receiver.Identity, receiver.AuditInfo)
+		if err != nil {
+			return false, errors.Wrap(err, "failed getting enrollment ID")
+		}
+		if eIDSet.Contains(recipientEID) {
+			logger.Debugf("eid [%s] found in list [%v]", recipientEID, eIDSet)
+			return true, nil
+		} else {
+			logger.Debugf("eid [%s] not found in list [%v]", recipientEID, eIDSet)
+		}
+	}
+	return false, nil
 }
 
 // Issue returns the i-th issue metadata, if present
@@ -212,7 +220,7 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	}
 	// check that the extra signers are the same
 	for i, signer := range extraSigner {
-		if !signer.Equal(m.ExtraSigners[i]) {
+		if !slices.ContainsFunc(m.ExtraSigners, signer.Equal) {
 			return errors.Errorf("expected extra signer [%s] but got [%s]", signer, m.ExtraSigners[i])
 		}
 	}
