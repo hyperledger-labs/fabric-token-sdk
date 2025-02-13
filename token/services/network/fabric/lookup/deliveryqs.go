@@ -11,9 +11,10 @@ import (
 	"encoding/json"
 	"slices"
 
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	slices2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
@@ -31,22 +32,22 @@ type DeliveryScanQueryByID struct {
 	Channel  *fabric.Channel
 }
 
-func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, startingBlock driver2.BlockNum, evicted map[driver2.TxID][]finality.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
+func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, startingBlock driver.BlockNum, evicted map[driver.TxID][]events.ListenerEntry[KeyInfo]) (<-chan []KeyInfo, error) {
 	// we are abusing TxID to carry the name of the keys we are looking for.
 	// Keys are supposed to be unique
 	keys := collections.Keys(evicted) // These are the state keys we are looking for
-	ch := make(chan []TxInfo, len(keys))
+	ch := make(chan []KeyInfo, len(keys))
 	go q.queryByID(ctx, keys, ch, startingBlock, evicted)
 	return ch, nil
 }
 
-func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver2.TxID, ch chan []TxInfo, lastBlock uint64, evicted map[driver2.TxID][]finality.ListenerEntry[TxInfo]) {
+func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxID, ch chan []KeyInfo, lastBlock uint64, evicted map[driver.TxID][]events.ListenerEntry[KeyInfo]) {
 	defer close(ch)
 
 	keySet := collections.NewSet(keys...)
 
 	// group keys by namespace
-	keysByNS := map[driver2.Namespace][]driver2.PKey{}
+	keysByNS := map[driver.Namespace][]driver.PKey{}
 	for k, v := range evicted {
 		ns := slices2.GetAny(v).Namespace()
 		_, ok := keysByNS[ns]
@@ -78,7 +79,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver2.Tx
 			logger.Errorf("failed unmarshalling results for query by ids [%v]: [%s]", keys, err)
 			return
 		}
-		found := make([]TxInfo, 0, len(values))
+		found := make([]KeyInfo, 0, len(values))
 		var notFound []string
 		for i, value := range values {
 			if len(value) == 0 {
@@ -86,7 +87,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver2.Tx
 				notFound = append(notFound, keys[i])
 				continue
 			}
-			found = append(found, TxInfo{
+			found = append(found, KeyInfo{
 				Namespace: ns,
 				Key:       keys[i],
 				Value:     value,
@@ -122,7 +123,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver2.Tx
 				return false, err
 			}
 
-			var txInfos []TxInfo
+			var txInfos []KeyInfo
 			for namespace, keys := range keysByNS {
 				if !slices.Contains(rws.Namespaces(), namespace) {
 					logger.Debugf("scanning [%s] does not contain namespace [%s]", tx.TxID(), namespace)
@@ -137,7 +138,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver2.Tx
 					}
 					if slices.Contains(keys, k) {
 						logger.Debugf("scanning [%s]: found key [%s]", tx.TxID(), k)
-						txInfos = append(txInfos, TxInfo{
+						txInfos = append(txInfos, KeyInfo{
 							Namespace: namespace,
 							Key:       k,
 							Value:     v,

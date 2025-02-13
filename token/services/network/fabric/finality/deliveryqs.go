@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	events2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 	"go.uber.org/zap"
 )
@@ -26,10 +27,10 @@ const (
 type DeliveryScanQueryByID struct {
 	Delivery *fabric.Delivery
 	Ledger   *fabric.Ledger
-	Mapper   finality.TxInfoMapper[TxInfo]
+	Mapper   events2.EventInfoMapper[TxInfo]
 }
 
-func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, lastBlock driver.BlockNum, evicted map[driver.TxID][]finality.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
+func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, lastBlock driver.BlockNum, evicted map[driver.TxID][]events2.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
 	keys := collections.Keys(evicted)
 	ch := make(chan []TxInfo, len(keys))
 	go q.queryByID(ctx, keys, ch, lastBlock)
