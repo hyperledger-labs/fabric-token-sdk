@@ -22,6 +22,8 @@ type ListenerManagerProvider interface {
 }
 
 type ListenerManager interface {
+	PermanentLookupListenerSupported() bool
+	AddPermanentLookupListener(namespace string, key string, listener Listener) error
 	AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener Listener) error
 	RemoveLookupListener(id string, listener Listener) error
 }

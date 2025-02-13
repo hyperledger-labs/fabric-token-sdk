@@ -66,6 +66,14 @@ type channelBasedLLM struct {
 	listeners      map[string]*Scanner
 }
 
+func (c *channelBasedLLM) PermanentLookupListenerSupported() bool {
+	return false
+}
+
+func (c *channelBasedLLM) AddPermanentLookupListener(namespace string, key string, listener Listener) error {
+	panic("implement me")
+}
+
 func (c *channelBasedLLM) AddLookupListener(namespace driver.Namespace, key driver.PKey, startingTxID string, stopOnLastTx bool, listener Listener) error {
 	s := &Scanner{
 		context:      context.Background(),

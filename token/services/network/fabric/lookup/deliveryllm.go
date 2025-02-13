@@ -30,6 +30,7 @@ import (
 type newTxInfoMapper = func(network, channel string) events.EventInfoMapper[KeyInfo]
 
 type EventsListenerManager interface {
+	AddPermanentEventListener(txID string, e events.ListenerEntry[KeyInfo]) error
 	AddEventListener(txID string, e events.ListenerEntry[KeyInfo]) error
 	RemoveEventListener(txID string, e events.ListenerEntry[KeyInfo]) error
 }
@@ -128,6 +129,14 @@ func (p *deliveryBasedLLMProvider) NewManager(network, channel string) (Listener
 
 type deliveryBasedLLM struct {
 	lm EventsListenerManager
+}
+
+func (c *deliveryBasedLLM) PermanentLookupListenerSupported() bool {
+	return true
+}
+
+func (m *deliveryBasedLLM) AddPermanentLookupListener(namespace string, key string, listener Listener) error {
+	return m.lm.AddPermanentEventListener(key, &listenerEntry{namespace, listener})
 }
 
 func (m *deliveryBasedLLM) AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener Listener) error {

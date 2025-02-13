@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
@@ -214,33 +215,54 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 		Namespace: ns,
 	}
 
-	if err := n.n.ProcessorManager().AddProcessor(
-		ns,
-		NewTokenRWSetProcessor(
-			n.Name(),
-			ns,
-			lazy.NewGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
-				return n.tokensProvider.Tokens(tmsID)
-			}).Get,
-			func() *token2.ManagementServiceProvider {
+	if n.llm.PermanentLookupListenerSupported() {
+		setUpKey, err := n.keyTranslator.CreateSetupKey()
+		if err != nil {
+			return nil, errors.Errorf("failed creating setup key")
+		}
+		if err := n.llm.AddPermanentLookupListener(ns, setUpKey, &setupListener{
+			GetTMSProvider: func() *token2.ManagementServiceProvider {
 				return n.tmsProvider
 			},
-			n.keyTranslator,
-		)); err != nil {
-		return nil, errors.WithMessagef(err, "failed to add processor to fabric network [%s]", n.n.Name())
-	}
-	transactionFilter, err := n.filterProvider.New(tmsID)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create transaction filter for [%s]", tmsID)
-	}
-	committer := n.ch.Committer()
-	if err := committer.AddTransactionFilter(transactionFilter); err != nil {
-		return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
+			GetTokens: lazy.NewGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
+				return n.tokensProvider.Tokens(tmsID)
+			}).Get,
+			TMSID: token2.TMSID{
+				Network:   n.Name(),
+				Channel:   n.Channel(),
+				Namespace: ns,
+			},
+		}); err != nil {
+			return nil, errors.Errorf("failed adding setup key listener")
+		}
+	} else {
+		if err := n.n.ProcessorManager().AddProcessor(
+			ns,
+			NewTokenRWSetProcessor(
+				n.Name(),
+				ns,
+				lazy.NewGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
+					return n.tokensProvider.Tokens(tmsID)
+				}).Get,
+				func() *token2.ManagementServiceProvider {
+					return n.tmsProvider
+				},
+				n.keyTranslator,
+			)); err != nil {
+			return nil, errors.WithMessagef(err, "failed to add processor to fabric network [%s]", n.n.Name())
+		}
+		transactionFilter, err := n.filterProvider.New(tmsID)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to create transaction filter for [%s]", tmsID)
+		}
+		committer := n.ch.Committer()
+		if err := committer.AddTransactionFilter(transactionFilter); err != nil {
+			return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
+		}
 	}
 
 	// Let the endorsement service initialize itself, if needed
-	_, err = n.endorsementServiceProvider.Get(tmsID)
-	if err != nil {
+	if _, err := n.endorsementServiceProvider.Get(tmsID); err != nil {
 		return nil, errors.WithMessagef(err, "failed to get endorsement service at [%s]", tmsID)
 	}
 	return nil, nil
@@ -398,4 +420,30 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) error {
 	case <-time.After(timeout):
 		return errors.Errorf("context done")
 	}
+}
+
+type setupListener struct {
+	GetTMSProvider GetTMSProviderFunc
+	GetTokens      GetTokensFunc
+	TMSID          token2.TMSID
+}
+
+func (s *setupListener) OnStatus(ctx context.Context, key string, value []byte) {
+	logger.Infof("update TMS [%s] with key-value [%s][%s]", s.TMSID, key, utils.Hashable(value))
+	tsmProvider := s.GetTMSProvider()
+	if err := tsmProvider.Update(s.TMSID, value); err != nil {
+		logger.Warnf("failed to update TMS [%s]: [%v]", key, err)
+	}
+	tokens, err := s.GetTokens()
+	if err != nil {
+		logger.Warnf("failed to get tokens db [%v]", err)
+	}
+	if err := tokens.StorePublicParams(value); err != nil {
+		logger.Warnf("failed to store public parameter key [%s]: [%v]", key, err)
+	}
+}
+
+func (s *setupListener) OnError(ctx context.Context, key string, err error) {
+	// TODO implement me
+	panic("implement me")
 }
