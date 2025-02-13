@@ -30,9 +30,9 @@ import (
 type newTxInfoMapper = func(network, channel string) events.EventInfoMapper[KeyInfo]
 
 type EventsListenerManager interface {
-	AddPermanentEventListener(txID string, e events.ListenerEntry[KeyInfo]) error
-	AddEventListener(txID string, e events.ListenerEntry[KeyInfo]) error
-	RemoveEventListener(txID string, e events.ListenerEntry[KeyInfo]) error
+	AddPermanentEventListener(key string, e events.ListenerEntry[KeyInfo]) error
+	AddEventListener(key string, e events.ListenerEntry[KeyInfo]) error
+	RemoveEventListener(key string, e events.ListenerEntry[KeyInfo]) error
 }
 
 type Listener interface {
