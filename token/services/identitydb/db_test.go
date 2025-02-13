@@ -11,12 +11,9 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
-	identitydb2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +22,8 @@ func TestDB(t *testing.T) {
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 
-	manager := identitydb.NewManager([]db2.NamedDriver[driver.IdentityDBDriver]{identitydb2.NewDriver()}, cp, db.NewConfig(config2.NewService(cp), "identitydb.persistence.type"))
+	dh := db2.NewDriverHolder(cp, sql.NewDriver())
+	manager := identitydb.NewManager(dh, "identitydb.persistence")
 	_, err = manager.IdentityDBByTMSId(token2.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	_, err = manager.WalletDBByTMSId(token2.TMSID{Network: "grapes"})

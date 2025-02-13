@@ -7,11 +7,7 @@ package certifier
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/drivers"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/drivers"
 )
 
-var holder = drivers.NewHolder[driver.Driver]()
-
-func Register(name string, driver driver.Driver) { holder.Register(name, driver) }
-
-func Drivers() []string { return holder.DriverNames() }
+var holder = drivers.NewHolder[string, driver.Driver]()

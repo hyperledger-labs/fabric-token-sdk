@@ -4,41 +4,27 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package common_test
 
 import (
 	"fmt"
 	"path"
 	"testing"
 
-	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	"github.com/stretchr/testify/assert"
 )
 
-func initWalletDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int) (*WalletDB, error) {
-	d := NewSQLDBOpener("", "")
-	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
-	if err != nil {
-		return nil, err
-	}
-	walletDB, err := NewWalletDB(sqlDB, NewDBOpts{
-		DataSource:   dataSourceName,
-		TablePrefix:  tablePrefix,
-		CreateSchema: true,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return walletDB.(*WalletDB), nil
-}
-
 func TestWalletSqlite(t *testing.T) {
-	tempDir := t.TempDir()
-
 	for _, c := range WalletCases {
-		db, err := initWalletDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := sql.OpenSqlite(common.Opts{
+			DataSource:   fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(t.TempDir(), "db.sqlite")),
+			TablePrefix:  c.Name,
+			MaxOpenConns: 10,
+		}, sqlite.NewWalletDB)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -50,7 +36,11 @@ func TestWalletSqlite(t *testing.T) {
 
 func TestWalletSqliteMemory(t *testing.T) {
 	for _, c := range WalletCases {
-		db, err := initWalletDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := sql.OpenSqlite(common.Opts{
+			DataSource:   "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared",
+			TablePrefix:  c.Name,
+			MaxOpenConns: 10,
+		}, sqlite.NewWalletDB)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -61,11 +51,15 @@ func TestWalletSqliteMemory(t *testing.T) {
 }
 
 func TestWalletPostgres(t *testing.T) {
-	terminate, pgConnStr := StartPostgresContainer(t)
+	terminate, pgConnStr := common.StartPostgresContainer(t)
 	defer terminate()
 
 	for _, c := range WalletCases {
-		db, err := initWalletDB(sql2.Postgres, pgConnStr, c.Name, 10)
+		db, err := sql.OpenPostgres(common.Opts{
+			DataSource:   pgConnStr,
+			TablePrefix:  c.Name,
+			MaxOpenConns: 10,
+		}, sqlite.NewWalletDB)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -77,13 +71,13 @@ func TestWalletPostgres(t *testing.T) {
 
 var WalletCases = []struct {
 	Name string
-	Fn   func(*testing.T, *WalletDB)
+	Fn   func(*testing.T, driver.WalletDB)
 }{
 	{"TDuplicate", TDuplicate},
 	{"TWalletIdentities", TWalletIdentities},
 }
 
-func TDuplicate(t *testing.T, db *WalletDB) {
+func TDuplicate(t *testing.T, db driver.WalletDB) {
 	id := []byte{254, 0, 155, 1}
 
 	err := db.StoreIdentity(id, "eID", "duplicate", 0, []byte("meta"))
@@ -101,7 +95,7 @@ func TDuplicate(t *testing.T, db *WalletDB) {
 	assert.Equal(t, "meta", string(meta))
 }
 
-func TWalletIdentities(t *testing.T, db *WalletDB) {
+func TWalletIdentities(t *testing.T, db driver.WalletDB) {
 	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 0, nil))
 	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 1, nil))
 	assert.NoError(t, db.StoreIdentity([]byte("bob"), "eID", "bob_wallet", 0, nil))

@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package common_test
 
 import (
 	"fmt"
@@ -13,29 +13,20 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
-	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
+	sqlite2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	"github.com/stretchr/testify/assert"
 )
 
-func initIdentityDB(driverName common.SQLDriverType, dataSourceName, tablePrefix string, maxOpenConns int, ci common.Interpreter) (*IdentityDB, error) {
-	d := NewSQLDBOpener("", "")
-	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
-	if err != nil {
-		return nil, err
-	}
-	return NewIdentityDB(sqlDB, tablePrefix, true, secondcache.NewTyped[bool](1000), secondcache.NewTyped[[]byte](1000), ci)
-}
-
 func TestIdentitySqlite(t *testing.T) {
-	tempDir := t.TempDir()
-
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB(sql2.SQLite, fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")), c.Name, 10, sqlite.NewInterpreter())
+		db, err := sql.OpenSqlite(common.Opts{
+			DataSource:   fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(t.TempDir(), "db.sqlite")),
+			TablePrefix:  c.Name,
+			MaxOpenConns: 10,
+		}, sqlite2.NewIdentityDB)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -47,7 +38,11 @@ func TestIdentitySqlite(t *testing.T) {
 
 func TestIdentitySqliteMemory(t *testing.T) {
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB(sql2.SQLite, "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared", c.Name, 10, sqlite.NewInterpreter())
+		db, err := sql.OpenSqlite(common.Opts{
+			DataSource:   "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared",
+			TablePrefix:  c.Name,
+			MaxOpenConns: 10,
+		}, sqlite2.NewIdentityDB)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -58,11 +53,15 @@ func TestIdentitySqliteMemory(t *testing.T) {
 }
 
 func TestIdentityPostgres(t *testing.T) {
-	terminate, pgConnStr := StartPostgresContainer(t)
+	terminate, pgConnStr := common.StartPostgresContainer(t)
 	defer terminate()
 
 	for _, c := range IdentityCases {
-		db, err := initIdentityDB(sql2.Postgres, pgConnStr, c.Name, 10, postgres.NewInterpreter())
+		db, err := sql.OpenPostgres(common.Opts{
+			DataSource:   pgConnStr,
+			TablePrefix:  c.Name,
+			MaxOpenConns: 10,
+		}, sqlite2.NewIdentityDB)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -74,7 +73,7 @@ func TestIdentityPostgres(t *testing.T) {
 
 var IdentityCases = []struct {
 	Name string
-	Fn   func(*testing.T, *IdentityDB)
+	Fn   func(*testing.T, driver.IdentityDB)
 }{
 	{"IdentityInfo", TIdentityInfo},
 	{"SignerInfo", TSignerInfo},
@@ -82,7 +81,7 @@ var IdentityCases = []struct {
 	{"SignerInfoConcurrent", TSignerInfoConcurrent},
 }
 
-func TConfigurations(t *testing.T, db *IdentityDB) {
+func TConfigurations(t *testing.T, db driver.IdentityDB) {
 	expected := driver.IdentityConfiguration{
 		ID:     "pineapple",
 		Type:   "core",
@@ -122,7 +121,7 @@ func TConfigurations(t *testing.T, db *IdentityDB) {
 	assert.NoError(t, db.AddConfiguration(expected))
 }
 
-func TIdentityInfo(t *testing.T, db *IdentityDB) {
+func TIdentityInfo(t *testing.T, db driver.IdentityDB) {
 	id := []byte("alice")
 	auditInfo := []byte("alice_audit_info")
 	tokMeta := []byte("tok_meta")
@@ -139,7 +138,7 @@ func TIdentityInfo(t *testing.T, db *IdentityDB) {
 	assert.Equal(t, tokMetaAudit, tokMetaAudit2)
 }
 
-func TSignerInfo(t *testing.T, db *IdentityDB) {
+func TSignerInfo(t *testing.T, db driver.IdentityDB) {
 	alice := []byte("alice")
 	bob := []byte("bob")
 	assert.NoError(t, db.StoreSignerInfo(alice, nil))
@@ -152,7 +151,7 @@ func TSignerInfo(t *testing.T, db *IdentityDB) {
 	assert.False(t, exists)
 }
 
-func TSignerInfoConcurrent(t *testing.T, db *IdentityDB) {
+func TSignerInfoConcurrent(t *testing.T, db driver.IdentityDB) {
 	wg := sync.WaitGroup{}
 	n := 100
 	wg.Add(n)

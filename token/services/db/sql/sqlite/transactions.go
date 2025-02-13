@@ -14,24 +14,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-func OpenAuditTransactionDB(k common.Opts) (driver.AuditTransactionDB, error) {
-	db, err := sqlite.OpenDB(k.DataSource, k.MaxOpenConns, k.MaxIdleConns, k.MaxIdleTime, k.SkipPragmas)
-	if err != nil {
-		return nil, err
-	}
-	return NewAuditTransactionDB(db, common.NewDBOptsFromOpts(k))
-}
-
 func NewAuditTransactionDB(db *sql.DB, opts common.NewDBOpts) (driver.AuditTransactionDB, error) {
 	return common.NewAuditTransactionDB(db, opts, common.NewTokenInterpreter(sqlite.NewInterpreter()))
-}
-
-func OpenTransactionDB(k common.Opts) (driver.TokenTransactionDB, error) {
-	db, err := sqlite.OpenDB(k.DataSource, k.MaxOpenConns, k.MaxIdleConns, k.MaxIdleTime, k.SkipPragmas)
-	if err != nil {
-		return nil, err
-	}
-	return NewTransactionDB(db, common.NewDBOptsFromOpts(k))
 }
 
 func NewTransactionDB(db *sql.DB, opts common.NewDBOpts) (driver.TokenTransactionDB, error) {

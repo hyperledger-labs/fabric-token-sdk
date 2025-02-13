@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -20,14 +19,6 @@ import (
 
 type TokenLockDB struct {
 	*common.TokenLockDB
-}
-
-func OpenTokenLockDB(k common.Opts) (driver.TokenLockDB, error) {
-	db, err := postgres.OpenDB(k.DataSource, k.MaxOpenConns, k.MaxIdleConns, k.MaxIdleTime)
-	if err != nil {
-		return nil, err
-	}
-	return NewTokenLockDB(db, common.NewDBOptsFromOpts(k))
 }
 
 func NewTokenLockDB(db *sql.DB, k common.NewDBOpts) (driver.TokenLockDB, error) {

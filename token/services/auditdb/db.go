@@ -30,18 +30,15 @@ type tokenRequest interface {
 	PublicParamsHash() token.PPHash
 }
 
-type (
-	Holder  = db.DriverHolder[*DB, driver.AuditTransactionDB, driver.AuditDBDriver]
-	Manager = db.Manager[*DB, driver.AuditTransactionDB, driver.AuditDBDriver]
-)
+type Manager = db.Manager[*DB]
 
 var (
 	managerType = reflect.TypeOf((*Manager)(nil))
 	logger      = logging.MustGetLogger("token-sdk.auditdb")
 )
 
-func NewHolder(drivers []db.NamedDriver[driver.AuditDBDriver]) *Holder {
-	return db.NewDriverHolder[*DB, driver.AuditTransactionDB, driver.AuditDBDriver](newDB, drivers...)
+func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
+	return db.MappedManager[driver.AuditTransactionDB, *DB](dh.NewAuditTransactionManager(keys...), newDB)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
@@ -146,13 +143,13 @@ type DB struct {
 	pendingTXs []string
 }
 
-func newDB(p driver.AuditTransactionDB) *DB {
+func newDB(p driver.AuditTransactionDB) (*DB, error) {
 	return &DB{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,
 		eIDsLocks:     sync.Map{},
 		pendingTXs:    make([]string, 0, 10000),
-	}
+	}, nil
 }
 
 // Append appends send and receive movements, and transaction records corresponding to the passed token request

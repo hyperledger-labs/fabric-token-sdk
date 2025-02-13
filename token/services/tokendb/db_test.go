@@ -9,16 +9,11 @@ package tokendb_test
 import (
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
-	tokendb2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
 	"github.com/stretchr/testify/assert"
 	_ "modernc.org/sqlite"
 )
@@ -27,10 +22,10 @@ func TestDB(t *testing.T) {
 	// create a new config service by loading the config file
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
-	manager := tokendb.NewHolder([]db2.NamedDriver[driver2.TokenDBDriver]{{Name: sql.SQLPersistence, Driver: tokendb2.NewDBDriver()}}).
-		NewManager(cp, db.NewConfig(config2.NewService(cp), "tokendb.persistence.type"))
-	_, err = manager.DBByTMSId(token2.TMSID{Network: "pineapple"})
+	dh := db.NewDriverHolder(cp, sql.NewDriver())
+	manager := tokendb.NewManager(dh, "tokendb.persistence")
+	_, err = manager.DBByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
-	_, err = manager.DBByTMSId(token2.TMSID{Network: "grapes"})
+	_, err = manager.DBByTMSId(token.TMSID{Network: "grapes"})
 	assert.NoError(t, err)
 }
