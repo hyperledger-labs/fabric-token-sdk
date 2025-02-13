@@ -144,7 +144,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	// return for each output its information in the clear
 	start := time.Now()
 	span.AddEvent("start_generate_zk_transfer")
-	action, outputMetadata, err := sender.GenerateZKTransfer(ctx, values, owners)
+	transfer, outputsMetadata, err := sender.GenerateZKTransfer(ctx, values, owners)
 	span.AddEvent("end_generate_zk_transfer")
 	duration := time.Since(start)
 	if err != nil {
@@ -152,19 +152,19 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	}
 	s.Metrics.zkTransferDuration.Observe(float64(duration.Milliseconds()))
 
-	// add transfer action's metadata
-	action.Metadata = meta.TransferActionMetadata(opts.Attributes)
+	// add transfer action's transferMetadata
+	transfer.Metadata = meta.TransferActionMetadata(opts.Attributes)
 
 	// add upgrade witness
-	action.InputUpgradeWitness = make([]*token.UpgradeWitness, len(action.InputTokens))
-	for i := range action.InputTokens {
-		action.InputUpgradeWitness[i] = prepareInputs[i].UpgradeWitness
+	transfer.InputUpgradeWitness = make([]*token.UpgradeWitness, len(transfer.InputTokens))
+	for i := range transfer.InputTokens {
+		transfer.InputUpgradeWitness[i] = prepareInputs[i].UpgradeWitness
 	}
 
-	// prepare metadata
+	// prepare transferMetadata
 	ws := s.WalletService
 
-	var inputsMetadata []*driver.TransferInputMetadata
+	var transferInputsMetadata []*driver.TransferInputMetadata
 	tokens := prepareInputs.Tokens()
 	senderAuditInfos := make([][]byte, 0, len(tokens))
 	for i, t := range tokens {
@@ -175,7 +175,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		if len(auditInfo) == 0 {
 			s.Logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", tokenIDs[i], driver.Identity(t.Owner))
 		}
-		inputsMetadata = append(inputsMetadata, &driver.TransferInputMetadata{
+		transferInputsMetadata = append(transferInputsMetadata, &driver.TransferInputMetadata{
 			TokenID: tokenIDs[i],
 			Senders: []*driver.AuditableIdentity{
 				{
@@ -186,58 +186,65 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 		})
 	}
 
-	var outputsMetadata []*driver.TransferOutputMetadata
+	var transferOutputsMetadata []*driver.TransferOutputMetadata
 	for i, output := range outputTokens {
-		transferOutputMetadata := &driver.TransferOutputMetadata{}
+		var outputAudiInfo []byte
 		var receivers []driver.Identity
 		var receiversAuditInfo [][]byte
+		var outputReceivers []*driver.AuditableIdentity
+
 		if len(output.Owner) == 0 { // redeem
+			outputAudiInfo = nil
 			receivers = append(receivers, output.Owner)
 			receiversAuditInfo = append(receiversAuditInfo, []byte{})
+			outputReceivers = make([]*driver.AuditableIdentity, 0, 1)
 		} else {
+			outputAudiInfo, err = s.IdentityDeserializer.GetOwnerAuditInfo(output.Owner, ws)
+			if err != nil {
+				return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner))
+			}
 			recipients, err := s.IdentityDeserializer.Recipients(output.Owner)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "failed getting recipients")
 			}
 			receivers = append(receivers, recipients...)
 			for _, receiver := range receivers {
-				auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(receiver, ws)
+				receiverAudiInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(receiver, ws)
 				if err != nil {
-					return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(receiver))
+					return nil, nil, errors.Wrapf(err, "failed getting audit info for receiver identity [%s]", receiver)
 				}
-				receiversAuditInfo = append(receiversAuditInfo, auditInfo)
+				receiversAuditInfo = append(receiversAuditInfo, receiverAudiInfo)
 			}
-			auditInfo, err := s.IdentityDeserializer.GetOwnerAuditInfo(output.Owner, s.WalletService)
-			if err != nil {
-				return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
-			}
-			transferOutputMetadata.OutputAuditInfo = auditInfo
+			outputReceivers = make([]*driver.AuditableIdentity, 0, len(recipients))
 		}
-		for j, receiver := range receivers {
-			transferOutputMetadata.Receivers = append(transferOutputMetadata.Receivers, &driver.AuditableIdentity{
+		for i, receiver := range receivers {
+			outputReceivers = append(outputReceivers, &driver.AuditableIdentity{
 				Identity:  receiver,
-				AuditInfo: receiversAuditInfo[j],
+				AuditInfo: receiversAuditInfo[i],
 			})
 		}
 
-		raw, err := outputMetadata[i].Serialize()
+		outputMetadata, err := outputsMetadata[i].Serialize()
 		if err != nil {
 			return nil, nil, errors.WithMessage(err, "failed serializing token info for zkatdlog transfer action")
 		}
-		transferOutputMetadata.OutputMetadata = raw
 
-		outputsMetadata = append(outputsMetadata, transferOutputMetadata)
+		transferOutputsMetadata = append(transferOutputsMetadata, &driver.TransferOutputMetadata{
+			OutputMetadata:  outputMetadata,
+			OutputAuditInfo: outputAudiInfo,
+			Receivers:       outputReceivers,
+		})
 	}
 
-	s.Logger.Debugf("Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(tokenIDs), len(senderAuditInfos), action.NumOutputs())
+	s.Logger.Debugf("Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(tokenIDs), len(senderAuditInfos), transfer.NumOutputs())
 
-	metadata := &driver.TransferMetadata{
-		Inputs:       inputsMetadata,
-		Outputs:      outputsMetadata,
+	transferMetadata := &driver.TransferMetadata{
+		Inputs:       transferInputsMetadata,
+		Outputs:      transferOutputsMetadata,
 		ExtraSigners: nil,
 	}
 
-	return action, metadata, nil
+	return transfer, transferMetadata, nil
 }
 
 // VerifyTransfer checks the outputs in the TransferActionMetadata against the passed metadata

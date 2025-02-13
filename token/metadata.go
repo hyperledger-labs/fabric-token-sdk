@@ -115,9 +115,12 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 					return nil, errors.Wrap(err, "failed getting enrollment ID")
 				}
 				if eIDSet.Contains(recipientEID) {
+					logger.Debugf("eid [%s] found in list [%v]", recipientEID, eIDs)
 					skip = false
 					found = true
 					break
+				} else {
+					logger.Debugf("eid [%s] not found in list [%v]", recipientEID, eIDs)
 				}
 			}
 			if found {
