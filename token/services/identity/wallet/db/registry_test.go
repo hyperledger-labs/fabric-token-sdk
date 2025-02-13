@@ -10,8 +10,6 @@ import (
 	"testing"
 
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -25,7 +23,7 @@ import (
 func TestGetWallet(t *testing.T) {
 	cp := &mock.ConfigProvider{}
 	cp.IsSetReturns(false)
-	kvsStorage, err := kvs.NewWithConfig(&mem.Driver{}, "_default", cp)
+	kvsStorage, err := kvs2.NewInMemoryKVS()
 	assert.NoError(t, err)
 
 	alice := driver.Identity("alice")

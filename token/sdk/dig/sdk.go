@@ -39,7 +39,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/unity"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -153,7 +152,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(func(dh *db2.DriverHolder) *tokenlockdb.Manager {
 			return tokenlockdb.NewManager(dh, "tokenlockdb.persistence", "db.persistence")
 		}),
-		p.Container().Provide(digutils.Identity[*kvs.KVS](), dig.As(new(kvs2.KVS))),
+		p.Container().Provide(digutils.Identity[*kvs.KVS](), dig.As(new(identity2.Keystore))),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(NewAuditorCheckServiceProvider),

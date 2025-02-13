@@ -16,9 +16,6 @@ import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs/mock"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
@@ -30,7 +27,7 @@ import (
 )
 
 func TestKeyManager(t *testing.T) {
-	backend, err := kvs.NewWithConfig(&mem.Driver{}, "", &mock.ConfigProvider{})
+	backend, err := kvs2.NewInMemoryKVS()
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 
@@ -61,7 +58,7 @@ func TestKeyManager(t *testing.T) {
 func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	registry := registry2.New()
 
-	backend, err := kvs.NewWithConfig(&mem.Driver{}, "", &mock.ConfigProvider{})
+	backend, err := kvs2.NewInMemoryKVS()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(backend))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
@@ -134,7 +131,7 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 func TestIdentityStandard(t *testing.T) {
 	registry := registry2.New()
 
-	backend, err := kvs.NewWithConfig(&mem.Driver{}, "", &mock.ConfigProvider{})
+	backend, err := kvs2.NewInMemoryKVS()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(backend))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
@@ -213,7 +210,7 @@ func TestIdentityStandard(t *testing.T) {
 func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	registry := registry2.New()
 
-	backend, err := kvs.NewWithConfig(&mem.Driver{}, "", &mock.ConfigProvider{})
+	backend, err := kvs2.NewInMemoryKVS()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(backend))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
@@ -263,7 +260,7 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 func TestKeyManager_DeserializeSigner(t *testing.T) {
 	registry := registry2.New()
 
-	backend, err := kvs.NewWithConfig(&mem.Driver{}, "", &mock.ConfigProvider{})
+	backend, err := kvs2.NewInMemoryKVS()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(backend))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
@@ -323,7 +320,7 @@ func TestKeyManager_DeserializeSigner(t *testing.T) {
 func TestIdentityFromFabricCA(t *testing.T) {
 	registry := registry2.New()
 
-	backend, err := kvs.NewWithConfig(&mem.Driver{}, "", &mock.ConfigProvider{})
+	backend, err := kvs2.NewInMemoryKVS()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(backend))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
@@ -404,7 +401,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	registry := registry2.New()
 
-	backend, err := kvs.NewWithConfig(&mem.Driver{}, "", &mock.ConfigProvider{})
+	backend, err := kvs2.NewInMemoryKVS()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(backend))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))

@@ -10,36 +10,15 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 )
 
-type KVSStorageProvider struct {
-	kvs kvs.KVS
-}
-
-func NewKVSStorageProvider(kvs kvs.KVS) *KVSStorageProvider {
-	return &KVSStorageProvider{kvs: kvs}
-}
-
-func (s *KVSStorageProvider) OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, error) {
-	return kvs.NewWalletDB(s.kvs, tmsID), nil
-}
-
-func (s *KVSStorageProvider) OpenIdentityDB(tmsID token.TMSID) (driver.IdentityDB, error) {
-	return kvs.NewIdentityDB(s.kvs, tmsID), nil
-}
-
-func (s *KVSStorageProvider) NewKeystore() (identity.Keystore, error) {
-	return s.kvs, nil
-}
-
 type DBStorageProvider struct {
-	kvs     kvs.KVS
+	kvs     identity.Keystore
 	manager *identitydb.Manager
 }
 
-func NewDBStorageProvider(kvs kvs.KVS, manager *identitydb.Manager) *DBStorageProvider {
+func NewDBStorageProvider(kvs identity.Keystore, manager *identitydb.Manager) *DBStorageProvider {
 	return &DBStorageProvider{kvs: kvs, manager: manager}
 }
 
