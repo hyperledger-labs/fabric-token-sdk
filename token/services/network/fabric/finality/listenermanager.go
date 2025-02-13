@@ -8,7 +8,7 @@ package finality
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -28,7 +28,7 @@ func NewListenerManagerProvider(fnsp *fabric.NetworkServiceProvider, tracerProvi
 	logger.Debugf("Create Finality Listener Manager provider with config: %s", lmConfig)
 	switch lmConfig.Type() {
 	case config.Delivery:
-		return newEndorserDeliveryBasedFLMProvider(fnsp, tracerProvider, keyTranslator, finality.DeliveryListenerManagerConfig{
+		return newEndorserDeliveryBasedFLMProvider(fnsp, tracerProvider, keyTranslator, events.DeliveryListenerManagerConfig{
 			MapperParallelism:       lmConfig.DeliveryMapperParallelism(),
 			BlockProcessParallelism: lmConfig.DeliveryBlockProcessParallelism(),
 			ListenerTimeout:         lmConfig.DeliveryListenerTimeout(),

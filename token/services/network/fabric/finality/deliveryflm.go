@@ -14,8 +14,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/committer"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/fabricutils"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/rwset"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/vault"
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
@@ -27,7 +27,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type newTxInfoMapper = func(network, channel string) finality.TxInfoMapper[TxInfo]
+type newTxInfoMapper = func(network, channel string) events.EventInfoMapper[TxInfo]
+
+type EventsListenerManager interface {
+	AddEventListener(txID string, e events.ListenerEntry[TxInfo]) error
+	RemoveEventListener(txID string, e events.ListenerEntry[TxInfo]) error
+}
 
 type listenerEntry struct {
 	namespace driver2.Namespace
@@ -48,7 +53,7 @@ func (e *listenerEntry) OnStatus(ctx context.Context, info TxInfo) {
 	}
 }
 
-func (e *listenerEntry) Equals(other finality.ListenerEntry[TxInfo]) bool {
+func (e *listenerEntry) Equals(other events.ListenerEntry[TxInfo]) bool {
 	return other != nil && other.(*listenerEntry).listener == e.listener
 }
 
@@ -60,18 +65,18 @@ type TxInfo struct {
 	RequestHash []byte
 }
 
-func (i TxInfo) TxID() driver2.TxID {
+func (i TxInfo) ID() driver2.TxID {
 	return i.TxId
 }
 
 type deliveryBasedFLMProvider struct {
 	fnsp           *fabric.NetworkServiceProvider
 	tracerProvider trace.TracerProvider
-	config         finality.DeliveryListenerManagerConfig
+	config         events.DeliveryListenerManagerConfig
 	newMapper      newTxInfoMapper
 }
 
-func NewDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, config finality.DeliveryListenerManagerConfig, newMapper newTxInfoMapper) *deliveryBasedFLMProvider {
+func NewDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, config events.DeliveryListenerManagerConfig, newMapper newTxInfoMapper) *deliveryBasedFLMProvider {
 	return &deliveryBasedFLMProvider{
 		fnsp:           fnsp,
 		tracerProvider: tracerProvider,
@@ -80,8 +85,8 @@ func NewDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProv
 	}
 }
 
-func newEndorserDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, config finality.DeliveryListenerManagerConfig) *deliveryBasedFLMProvider {
-	return NewDeliveryBasedFLMProvider(fnsp, tracerProvider, config, func(network, _ string) finality.TxInfoMapper[TxInfo] {
+func newEndorserDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, config events.DeliveryListenerManagerConfig) *deliveryBasedFLMProvider {
+	return NewDeliveryBasedFLMProvider(fnsp, tracerProvider, config, func(network, _ string) events.EventInfoMapper[TxInfo] {
 		return &endorserTxInfoMapper{
 			network:       network,
 			keyTranslator: keyTranslator,
@@ -99,7 +104,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 		return nil, err
 	}
 	mapper := p.newMapper(network, channel)
-	flm, err := finality.NewListenerManager[TxInfo](
+	flm, err := events.NewListenerManager[TxInfo](
 		p.config,
 		ch.Delivery(),
 		&DeliveryScanQueryByID{
@@ -119,15 +124,15 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 }
 
 type deliveryBasedFLM struct {
-	lm finality.ListenerManager[TxInfo]
+	lm EventsListenerManager
 }
 
 func (m *deliveryBasedFLM) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
-	return m.lm.AddFinalityListener(txID, &listenerEntry{namespace, listener})
+	return m.lm.AddEventListener(txID, &listenerEntry{namespace, listener})
 }
 
 func (m *deliveryBasedFLM) RemoveFinalityListener(txID string, listener driver.FinalityListener) error {
-	return m.lm.RemoveFinalityListener(txID, &listenerEntry{"", listener})
+	return m.lm.RemoveEventListener(txID, &listenerEntry{"", listener})
 }
 
 type endorserTxInfoMapper struct {

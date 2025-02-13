@@ -15,8 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/committer"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/fabricutils"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/rwset"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/vault"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
@@ -27,7 +27,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type newTxInfoMapper = func(network, channel string) finality.TxInfoMapper[TxInfo]
+type newTxInfoMapper = func(network, channel string) events.EventInfoMapper[KeyInfo]
+
+type EventsListenerManager interface {
+	AddEventListener(txID string, e events.ListenerEntry[KeyInfo]) error
+	RemoveEventListener(txID string, e events.ListenerEntry[KeyInfo]) error
+}
 
 type Listener interface {
 	// OnStatus is called when the key has been found
@@ -45,35 +50,35 @@ func (e *listenerEntry) Namespace() driver2.Namespace {
 	return e.namespace
 }
 
-func (e *listenerEntry) OnStatus(ctx context.Context, info TxInfo) {
+func (e *listenerEntry) OnStatus(ctx context.Context, info KeyInfo) {
 	logger.Debugf("notify info [%v] to namespace [%s]", info, e.namespace)
 	if len(e.namespace) == 0 || len(info.Namespace) == 0 || e.namespace == info.Namespace {
 		e.listener.OnStatus(ctx, info.Key, info.Value)
 	}
 }
 
-func (e *listenerEntry) Equals(other finality.ListenerEntry[TxInfo]) bool {
+func (e *listenerEntry) Equals(other events.ListenerEntry[KeyInfo]) bool {
 	return other != nil && other.(*listenerEntry).listener == e.listener
 }
 
-type TxInfo struct {
+type KeyInfo struct {
 	Namespace driver2.Namespace
-	Key       driver2.TxID
+	Key       driver2.PKey
 	Value     []byte
 }
 
-func (i TxInfo) TxID() driver2.TxID {
+func (i KeyInfo) ID() driver2.PKey {
 	return i.Key
 }
 
 type deliveryBasedLLMProvider struct {
 	fnsp           *fabric.NetworkServiceProvider
 	tracerProvider trace.TracerProvider
-	config         finality.DeliveryListenerManagerConfig
+	config         events.DeliveryListenerManagerConfig
 	newMapper      newTxInfoMapper
 }
 
-func NewDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, config finality.DeliveryListenerManagerConfig, newMapper newTxInfoMapper) *deliveryBasedLLMProvider {
+func NewDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, config events.DeliveryListenerManagerConfig, newMapper newTxInfoMapper) *deliveryBasedLLMProvider {
 	return &deliveryBasedLLMProvider{
 		fnsp:           fnsp,
 		tracerProvider: tracerProvider,
@@ -82,12 +87,12 @@ func NewDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProv
 	}
 }
 
-func newEndorserDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, config finality.DeliveryListenerManagerConfig) *deliveryBasedLLMProvider {
+func newEndorserDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, config events.DeliveryListenerManagerConfig) *deliveryBasedLLMProvider {
 	prefix, err := keyTranslator.TransferActionMetadataKeyPrefix()
 	if err != nil {
 		panic(err)
 	}
-	return NewDeliveryBasedLLMProvider(fnsp, tracerProvider, config, func(network, _ string) finality.TxInfoMapper[TxInfo] {
+	return NewDeliveryBasedLLMProvider(fnsp, tracerProvider, config, func(network, _ string) events.EventInfoMapper[KeyInfo] {
 		return &endorserTxInfoMapper{
 			network: network,
 			prefix:  prefix,
@@ -104,7 +109,7 @@ func (p *deliveryBasedLLMProvider) NewManager(network, channel string) (Listener
 	if err != nil {
 		return nil, err
 	}
-	flm, err := finality.NewListenerManager[TxInfo](
+	flm, err := events.NewListenerManager[KeyInfo](
 		p.config,
 		ch.Delivery(),
 		&DeliveryScanQueryByID{
@@ -122,15 +127,15 @@ func (p *deliveryBasedLLMProvider) NewManager(network, channel string) (Listener
 }
 
 type deliveryBasedLLM struct {
-	lm finality.ListenerManager[TxInfo]
+	lm EventsListenerManager
 }
 
 func (m *deliveryBasedLLM) AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener Listener) error {
-	return m.lm.AddFinalityListener(key, &listenerEntry{namespace, listener})
+	return m.lm.AddEventListener(key, &listenerEntry{namespace, listener})
 }
 
 func (m *deliveryBasedLLM) RemoveLookupListener(key string, listener Listener) error {
-	return m.lm.RemoveFinalityListener(key, &listenerEntry{"", listener})
+	return m.lm.RemoveEventListener(key, &listenerEntry{"", listener})
 }
 
 type endorserTxInfoMapper struct {
@@ -138,7 +143,7 @@ type endorserTxInfoMapper struct {
 	prefix  string
 }
 
-func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.BlockMetadata, blockNum driver2.BlockNum, txNum driver2.TxNum) (map[driver2.Namespace]TxInfo, error) {
+func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.BlockMetadata, blockNum driver2.BlockNum, txNum driver2.TxNum) (map[driver2.Namespace]KeyInfo, error) {
 	_, payl, chdr, err := fabricutils.UnmarshalTx(tx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshaling tx [%d:%d]", blockNum, txNum)
@@ -158,11 +163,11 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 	return m.mapTxInfo(rwSet, chdr.TxId)
 }
 
-func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]TxInfo, error) {
+func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]KeyInfo, error) {
 	logger.Debugf("Map processed tx [%s] with results of status [%v] and length [%d]", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
 	status, _ := committer.MapValidationCode(tx.ValidationCode())
 	if status == driver.Invalid {
-		return []TxInfo{}, nil
+		return []KeyInfo{}, nil
 	}
 	rwSet, err := vault.NewPopulator().Populate(tx.Results())
 	if err != nil {
@@ -175,15 +180,15 @@ func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) (
 	return collections.Values(infos), nil
 }
 
-func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string) (map[driver2.Namespace]TxInfo, error) {
-	txInfos := make(map[driver2.Namespace]TxInfo, len(rwSet.WriteSet.Writes))
+func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string) (map[driver2.Namespace]KeyInfo, error) {
+	txInfos := make(map[driver2.Namespace]KeyInfo, len(rwSet.WriteSet.Writes))
 	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.WriteSet.Writes))
 	for ns, writes := range rwSet.WriteSet.Writes {
 		logger.Debugf("TX [%s:%s] has %d writes", txID, ns, len(writes))
 		for key, value := range writes {
 			if strings.HasPrefix(key, m.prefix) {
 				logger.Debugf("TX [%s:%s] does have key [%s].", txID, ns, key)
-				txInfos[ns] = TxInfo{
+				txInfos[ns] = KeyInfo{
 					Namespace: ns,
 					Key:       key,
 					Value:     value,
