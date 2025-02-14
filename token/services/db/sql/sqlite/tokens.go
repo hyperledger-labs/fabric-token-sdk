@@ -15,10 +15,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-func NewTokenDB(db *sql.DB, opts common.NewDBOpts) (driver.TokenDB, error) {
-	return common.NewTokenDB(db, opts, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+func NewTokenDB(readDB, writeDB *sql.DB, opts common.NewDBOpts) (driver.TokenDB, error) {
+	return common.NewTokenDB(readDB, writeDB, opts, common.NewTokenInterpreter(sqlite.NewInterpreter()))
 }
 
-func NewTokenNotifier(*sql.DB, common.NewDBOpts) (driver.TokenNotifier, error) {
+func NewTokenNotifier(*sql.DB, *sql.DB, common.NewDBOpts) (driver.TokenNotifier, error) {
 	return notifier.NewNotifier(), nil
 }

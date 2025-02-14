@@ -22,26 +22,28 @@ type walletTables struct {
 }
 
 type WalletDB struct {
-	db    *sql.DB
-	table walletTables
+	readDB  *sql.DB
+	writeDB *sql.DB
+	table   walletTables
 }
 
-func newWalletDB(db *sql.DB, tables walletTables) *WalletDB {
+func newWalletDB(readDB, writeDB *sql.DB, tables walletTables) *WalletDB {
 	return &WalletDB{
-		db:    db,
-		table: tables,
+		readDB:  readDB,
+		writeDB: writeDB,
+		table:   tables,
 	}
 }
 
-func NewWalletDB(db *sql.DB, opts NewDBOpts) (driver.WalletDB, error) {
+func NewWalletDB(readDB, writeDB *sql.DB, opts NewDBOpts) (driver.WalletDB, error) {
 	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names [%s]", opts.TablePrefix)
 	}
 
-	walletDB := newWalletDB(db, walletTables{Wallets: tables.Wallets})
+	walletDB := newWalletDB(readDB, writeDB, walletTables{Wallets: tables.Wallets})
 	if opts.CreateSchema {
-		if err = common.InitSchema(db, []string{walletDB.GetSchema()}...); err != nil {
+		if err = common.InitSchema(writeDB, []string{walletDB.GetSchema()}...); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema")
 		}
 	}
@@ -50,7 +52,7 @@ func NewWalletDB(db *sql.DB, opts NewDBOpts) (driver.WalletDB, error) {
 
 func (db *WalletDB) GetWalletID(identity token.Identity, roleID int) (driver.WalletID, error) {
 	idHash := identity.UniqueID()
-	result, err := common.QueryUnique[driver.WalletID](db.db,
+	result, err := common.QueryUnique[driver.WalletID](db.readDB,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND role_id=$2", db.table.Wallets),
 		idHash, roleID,
 	)
@@ -67,7 +69,7 @@ func (db *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
 		return nil, errors.Wrapf(err, "failed compiling query")
 	}
 	logger.Debug(query)
-	rows, err := db.db.Query(query, roleID)
+	rows, err := db.readDB.Query(query, roleID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +102,7 @@ func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID drive
 	logger.Debug(query)
 
 	idHash := identity.UniqueID()
-	_, err = db.db.Exec(query, idHash, meta, wID, roleID, time.Now().UTC(), eID)
+	_, err = db.writeDB.Exec(query, idHash, meta, wID, roleID, time.Now().UTC(), eID)
 	if err != nil {
 		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%v]", wID, idHash)
 	}
@@ -110,7 +112,7 @@ func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID drive
 
 func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.UniqueID()
-	result, err := common.QueryUnique[[]byte](db.db,
+	result, err := common.QueryUnique[[]byte](db.readDB,
 		fmt.Sprintf("SELECT meta FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
 		idHash, wID, roleID,
 	)
@@ -123,7 +125,7 @@ func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleI
 
 func (db *WalletDB) IdentityExists(identity token.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.UniqueID()
-	result, err := common.QueryUnique[driver.WalletID](db.db,
+	result, err := common.QueryUnique[driver.WalletID](db.readDB,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
 		idHash, wID, roleID,
 	)

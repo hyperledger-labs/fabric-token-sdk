@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
-	sql2 "database/sql"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
@@ -81,32 +79,32 @@ func Combine[T any](openers map[common.SQLDriverType]Opener[T]) Opener[T] {
 	}
 }
 
-func newPostgresOpener[T any](newDB func(db *sql2.DB, opts common2.NewDBOpts) (T, error)) Opener[T] {
+func newPostgresOpener[T any](newDB common2.NewDBFunc[T]) Opener[T] {
 	return func(opts common2.Opts) (T, error) {
 		return OpenPostgres[T](opts, newDB)
 	}
 }
 
-func OpenPostgres[T any](opts common2.Opts, newDB func(db *sql2.DB, opts common2.NewDBOpts) (T, error)) (T, error) {
+func OpenPostgres[T any](opts common2.Opts, newDB common2.NewDBFunc[T]) (T, error) {
 	readWriteDB, err := postgres2.OpenDB(opts.DataSource, opts.MaxOpenConns, opts.MaxIdleConns, opts.MaxIdleTime)
 	if err != nil {
 		return utils.Zero[T](), err
 	}
-	return newDB(readWriteDB, common2.NewDBOptsFromOpts(opts))
+	return newDB(readWriteDB, readWriteDB, common2.NewDBOptsFromOpts(opts))
 }
 
-func newSqliteOpener[T any](newDB func(db *sql2.DB, opts common2.NewDBOpts) (T, error)) Opener[T] {
+func newSqliteOpener[T any](newDB common2.NewDBFunc[T]) Opener[T] {
 	return func(opts common2.Opts) (T, error) {
 		return OpenSqlite(opts, newDB)
 	}
 }
 
-func OpenSqlite[T any](opts common2.Opts, newDB func(db *sql2.DB, dbOpts common2.NewDBOpts) (T, error)) (T, error) {
-	_, writeDB, err := sqlite.OpenRWDBs(opts.DataSource, opts.MaxOpenConns, opts.MaxIdleConns, opts.MaxIdleTime, opts.SkipPragmas)
+func OpenSqlite[T any](opts common2.Opts, newDB common2.NewDBFunc[T]) (T, error) {
+	readDB, writeDB, err := sqlite.OpenRWDBs(opts.DataSource, opts.MaxOpenConns, opts.MaxIdleConns, opts.MaxIdleTime, opts.SkipPragmas)
 	if err != nil {
 		return utils.Zero[T](), err
 	}
-	return newDB(writeDB, common2.NewDBOptsFromOpts(opts))
+	return newDB(readDB, writeDB, common2.NewDBOptsFromOpts(opts))
 }
 
 func (d *Driver) NewTokenLock(opts common.Opts) (driver.TokenLockDB, error) {

@@ -14,10 +14,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-func NewAuditTransactionDB(db *sql.DB, opts common.NewDBOpts) (driver.AuditTransactionDB, error) {
-	return common.NewAuditTransactionDB(db, opts, common.NewTokenInterpreter(postgres.NewInterpreter()))
+func NewAuditTransactionDB(readDB, writeDB *sql.DB, opts common.NewDBOpts) (driver.AuditTransactionDB, error) {
+	return common.NewAuditTransactionDB(readDB, writeDB, opts, common.NewTokenInterpreter(postgres.NewInterpreter()))
 }
 
-func NewTransactionDB(db *sql.DB, opts common.NewDBOpts) (driver.TokenTransactionDB, error) {
-	return common.NewTransactionDB(db, opts, common.NewTokenInterpreter(postgres.NewInterpreter()))
+func NewTransactionDB(readDB, writeDB *sql.DB, opts common.NewDBOpts) (driver.TokenTransactionDB, error) {
+	return common.NewTransactionDB(readDB, writeDB, opts, common.NewTokenInterpreter(postgres.NewInterpreter()))
 }

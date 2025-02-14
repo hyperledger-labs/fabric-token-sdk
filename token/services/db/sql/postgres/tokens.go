@@ -16,22 +16,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewTokenDB(db *sql.DB, opts common.NewDBOpts) (driver.TokenDB, error) {
-	return common.NewTokenDB(db, opts, common.NewTokenInterpreter(postgres.NewInterpreter()))
+func NewTokenDB(readDB, writeDB *sql.DB, opts common.NewDBOpts) (driver.TokenDB, error) {
+	return common.NewTokenDB(readDB, writeDB, opts, common.NewTokenInterpreter(postgres.NewInterpreter()))
 }
 
 type TokenNotifier struct {
 	*postgres.Notifier
 }
 
-func NewTokenNotifier(db *sql.DB, opts common.NewDBOpts) (driver.TokenNotifier, error) {
+func NewTokenNotifier(_, writeDB *sql.DB, opts common.NewDBOpts) (driver.TokenNotifier, error) {
 	tables, err := common.GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
-	notifier := postgres.NewNotifier(db, tables.Tokens, opts.DataSource, postgres.AllOperations, *postgres.NewSimplePrimaryKey("tx_id"), *postgres.NewSimplePrimaryKey("idx"))
+	notifier := postgres.NewNotifier(writeDB, tables.Tokens, opts.DataSource, postgres.AllOperations, *postgres.NewSimplePrimaryKey("tx_id"), *postgres.NewSimplePrimaryKey("idx"))
 	if opts.CreateSchema {
-		if err = common2.InitSchema(db, notifier.GetSchema()); err != nil {
+		if err = common2.InitSchema(writeDB, notifier.GetSchema()); err != nil {
 			return nil, err
 		}
 	}

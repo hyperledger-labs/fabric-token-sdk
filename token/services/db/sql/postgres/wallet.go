@@ -13,6 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-func NewWalletDB(db *sql.DB, opts common.NewDBOpts) (driver.WalletDB, error) {
-	return common.NewWalletDB(db, opts)
+func NewWalletDB(readDB, writeDB *sql.DB, opts common.NewDBOpts) (driver.WalletDB, error) {
+	return common.NewWalletDB(readDB, writeDB, opts)
 }

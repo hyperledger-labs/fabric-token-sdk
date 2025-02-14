@@ -79,13 +79,13 @@ func NewUnityDriver() driver.NamedDriver {
 	}
 }
 
-func newOpener[T any](dbCache lazy.Provider[common.Opts, *rwDBs], newDB func(db *sql2.DB, opts common.NewDBOpts) (T, error)) sql3.Opener[T] {
+func newOpener[T any](dbCache lazy.Provider[common.Opts, *rwDBs], newDB common.NewDBFunc[T]) sql3.Opener[T] {
 	return func(opts common.Opts) (T, error) {
 		dbs, err := dbCache.Get(opts)
 		if err != nil {
 			return utils.Zero[T](), err
 		}
-		return newDB(dbs.writeDB, common.NewDBOptsFromOpts(opts))
+		return newDB(dbs.readDB, dbs.writeDB, common.NewDBOptsFromOpts(opts))
 	}
 }
 

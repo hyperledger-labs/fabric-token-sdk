@@ -8,6 +8,7 @@ package common
 
 import (
 	"database/sql"
+	errors2 "errors"
 	"fmt"
 	"time"
 
@@ -24,34 +25,37 @@ type tokenLockTables struct {
 }
 
 type TokenLockDB struct {
-	DB     *sql.DB
-	Table  tokenLockTables
-	Logger logging.Logger
+	ReadDB  *sql.DB
+	WriteDB *sql.DB
+	Table   tokenLockTables
+	Logger  logging.Logger
 }
 
-func newTokenLockDB(db *sql.DB, tables tokenLockTables) *TokenLockDB {
+func newTokenLockDB(readDB, writeDB *sql.DB, tables tokenLockTables) *TokenLockDB {
 	return &TokenLockDB{
-		DB:     db,
-		Table:  tables,
-		Logger: logger,
+		ReadDB:  readDB,
+		WriteDB: writeDB,
+		Table:   tables,
+		Logger:  logger,
 	}
 }
 
-func NewTokenLockDB(db *sql.DB, opts NewDBOpts) (*TokenLockDB, error) {
+func NewTokenLockDB(readDB, writeDB *sql.DB, opts NewDBOpts) (*TokenLockDB, error) {
 	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
 
 	tokenLockDB := newTokenLockDB(
-		db,
+		readDB,
+		writeDB,
 		tokenLockTables{
 			TokenLocks: tables.TokenLocks,
 			Requests:   tables.Requests,
 		},
 	)
 	if opts.CreateSchema {
-		if err = common.InitSchema(db, []string{tokenLockDB.GetSchema()}...); err != nil {
+		if err = common.InitSchema(writeDB, []string{tokenLockDB.GetSchema()}...); err != nil {
 			return nil, err
 		}
 	}
@@ -64,7 +68,7 @@ func (db *TokenLockDB) Lock(tokenID *token.ID, consumerTxID transaction.ID) erro
 		return errors.Wrap(err, "failed compiling query")
 	}
 	logger.Debug(query, tokenID, consumerTxID)
-	_, err = db.DB.Exec(query, consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC())
+	_, err = db.WriteDB.Exec(query, consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC())
 	return err
 }
 
@@ -75,7 +79,7 @@ func (db *TokenLockDB) UnlockByTxID(consumerTxID transaction.ID) error {
 	}
 	logger.Debug(query, consumerTxID)
 
-	_, err = db.DB.Exec(query, consumerTxID)
+	_, err = db.WriteDB.Exec(query, consumerTxID)
 	return err
 }
 
@@ -95,7 +99,10 @@ func (db *TokenLockDB) GetSchema() string {
 
 func (db *TokenLockDB) Close() error {
 	logger.Info("closing database")
-	err := db.DB.Close()
+	if db.ReadDB != db.WriteDB {
+		return errors2.Join(db.ReadDB.Close(), db.WriteDB.Close())
+	}
+	err := db.ReadDB.Close()
 	if err != nil {
 		return errors.Wrap(err, "could not close DB")
 	}

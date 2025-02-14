@@ -21,8 +21,8 @@ type TokenLockDB struct {
 	*common.TokenLockDB
 }
 
-func NewTokenLockDB(db *sql.DB, k common.NewDBOpts) (driver.TokenLockDB, error) {
-	tldb, err := common.NewTokenLockDB(db, k)
+func NewTokenLockDB(readDB, writeDB *sql.DB, k common.NewDBOpts) (driver.TokenLockDB, error) {
+	tldb, err := common.NewTokenLockDB(readDB, writeDB, k)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (db *TokenLockDB) Cleanup(leaseExpiry time.Duration) error {
 		db.Table.TokenLocks, int(leaseExpiry.Seconds()),
 	)
 	db.Logger.Debug(query)
-	_, err := db.DB.Exec(query)
+	_, err := db.WriteDB.Exec(query)
 	if err != nil {
 		db.Logger.Errorf("query failed: %s", query)
 	}
@@ -66,7 +66,7 @@ func (db *TokenLockDB) logStaleLocks(leaseExpiry time.Duration) error {
 	)
 	db.Logger.Debug(query)
 
-	rows, err := db.DB.Query(query)
+	rows, err := db.ReadDB.Query(query)
 	if err != nil {
 		return err
 	}
