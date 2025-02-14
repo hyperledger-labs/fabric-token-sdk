@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/multisig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/multisig"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 

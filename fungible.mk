@@ -124,3 +124,11 @@ integration-tests-dlogstress-t2:
 .PHONY: integration-tests-dlogstress
 integration-tests-dlogstress:
 	cd ./integration/token/fungible/dlogstress; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --label-filter="$(TEST_FILTER)" .
+
+.PHONY: integration-tests-multisig-t1
+integration-tests-multisig-t1:
+	make integration-tests-multisig TEST_FILTER="T1"
+
+.PHONY: integration-tests-multisig
+integration-tests-multisig:
+	cd ./integration/token/fungible/multisig; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --label-filter="$(TEST_FILTER)" .
