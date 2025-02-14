@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -19,7 +20,7 @@ import (
 
 type TransferService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common.PublicParametersManager[*PublicParams]
+	PublicParametersManager common.PublicParametersManager[*v1.PublicParams]
 	WalletService           driver.WalletService
 	TokenLoader             TokenLoader
 	Deserializer            driver.Deserializer
@@ -27,7 +28,7 @@ type TransferService struct {
 
 func NewTransferService(
 	logger logging.Logger,
-	publicParametersManager common.PublicParametersManager[*PublicParams],
+	publicParametersManager common.PublicParametersManager[*v1.PublicParams],
 	walletService driver.WalletService,
 	tokenLoader TokenLoader,
 	deserializer driver.Deserializer,
@@ -50,17 +51,17 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
 
-	var inputs []*Output
+	var inputs []*v1.Output
 	for _, tok := range inputTokens {
 		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
-		t := Output(*tok)
+		t := v1.Output(*tok)
 		inputs = append(inputs, &t)
 	}
 
 	// prepare outputs
-	var outs []*Output
+	var outs []*v1.Output
 	for _, output := range Outputs {
-		outs = append(outs, &Output{
+		outs = append(outs, &v1.Output{
 			Owner:    output.Owner,
 			Type:     output.Type,
 			Quantity: output.Quantity,
@@ -89,7 +90,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	}
 
 	// outputs
-	outputMetadata := &OutputMetadata{}
+	outputMetadata := &v1.OutputMetadata{}
 	outputMetadataRaw, err := outputMetadata.Serialize()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed serializing output information")
@@ -140,7 +141,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	}
 
 	// return
-	transfer := &TransferAction{
+	transfer := &v1.TransferAction{
 		Inputs:      tokenIDs,
 		InputTokens: inputs,
 		Outputs:     outs,
@@ -164,7 +165,7 @@ func (s *TransferService) VerifyTransfer(tr driver.TransferAction, outputMetadat
 // DeserializeTransferAction un-marshals a TransferAction from the passed array of bytes.
 // DeserializeTransferAction returns an error, if the un-marshalling fails.
 func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
-	t := &TransferAction{}
+	t := &v1.TransferAction{}
 	if err := t.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing transfer action")
 	}

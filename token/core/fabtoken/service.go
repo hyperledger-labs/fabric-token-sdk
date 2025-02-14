@@ -8,6 +8,7 @@ package fabtoken
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -19,13 +20,13 @@ type TokenLoader interface {
 }
 
 type Service struct {
-	*common.Service[*PublicParams]
+	*common.Service[*v1.PublicParams]
 }
 
 func NewService(
 	logger logging.Logger,
 	ws *wallet.Service,
-	ppm common.PublicParametersManager[*PublicParams],
+	ppm common.PublicParametersManager[*v1.PublicParams],
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
 	configuration driver.Configuration,
@@ -35,7 +36,7 @@ func NewService(
 	tokensService driver.TokensService,
 	authorization driver.Authorization,
 ) (*Service, error) {
-	root, err := common.NewTokenService[*PublicParams](
+	root, err := common.NewTokenService[*v1.PublicParams](
 		logger,
 		ws,
 		ppm,
@@ -60,5 +61,5 @@ func NewService(
 }
 
 func (s *Service) Validator() (driver.Validator, error) {
-	return NewValidator(s.Logger, s.PublicParametersManager.PublicParams(), s.Deserializer()), nil
+	return v1.NewValidator(s.Logger, s.PublicParametersManager.PublicParams(), s.Deserializer()), nil
 }

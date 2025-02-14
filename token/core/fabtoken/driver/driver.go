@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -46,7 +47,7 @@ func NewDriver(
 	networkProvider *network.Provider,
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
-		Name: fabtoken.PublicParameters,
+		Name: v1.PublicParameters,
 		Driver: &Driver{
 			base:             &base{},
 			metricsProvider:  metricsProvider,
@@ -87,9 +88,9 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	}
 
-	publicParamsManager, err := common.NewPublicParamsManager[*fabtoken.PublicParams](
+	publicParamsManager, err := common.NewPublicParamsManager[*v1.PublicParams](
 		&PublicParamsDeserializer{},
-		fabtoken.PublicParameters,
+		v1.PublicParameters,
 		publicParams,
 	)
 	if err != nil {
@@ -117,7 +118,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		common.NewTMSAuthorization(logger, publicParamsManager.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
 	)
-	tokensService, err := fabtoken.NewTokensService(publicParamsManager.PublicParams(), deserializer)
+	tokensService, err := v1.NewTokensService(publicParamsManager.PublicParams(), deserializer)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
@@ -129,7 +130,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 }
 
 func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Validator, error) {
-	pp, ok := params.(*fabtoken.PublicParams)
+	pp, ok := params.(*v1.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}

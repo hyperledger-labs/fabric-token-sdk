@@ -8,8 +8,8 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
@@ -25,7 +25,7 @@ type Deserializer struct {
 }
 
 // NewDeserializer returns a deserializer
-func NewDeserializer(pp *crypto.PublicParams) (*Deserializer, error) {
+func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 	if pp == nil {
 		return nil, errors.New("failed to get deserializer: nil public parameters")
 	}
@@ -76,8 +76,8 @@ func (d *TokenDeserializer) DeserializeToken(raw []byte) (*token.Token, error) {
 
 type PublicParamsDeserializer struct{}
 
-func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, label string) (*crypto.PublicParams, error) {
-	return crypto.NewPublicParamsFromBytes(raw, label)
+func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, label string) (*v1.PublicParams, error) {
+	return v1.NewPublicParamsFromBytes(raw, label)
 }
 
 // EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token

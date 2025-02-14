@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -123,7 +123,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	// Deserialize current params
 	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
 	Expect(err).NotTo(HaveOccurred())
-	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+	pp, err := dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogPublicParameters)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(pp.Validate()).NotTo(HaveOccurred())
 

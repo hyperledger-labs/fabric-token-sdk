@@ -13,9 +13,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -47,7 +47,7 @@ func NewDriver(
 	networkProvider *network.Provider,
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
-		Name: crypto.DLogPublicParameters,
+		Name: v1.DLogPublicParameters,
 		Driver: &Driver{
 			base:             &base{},
 			metricsProvider:  metricsProvider,
@@ -87,9 +87,9 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	}
 
-	ppm, err := common.NewPublicParamsManager[*crypto.PublicParams](
+	ppm, err := common.NewPublicParamsManager[*v1.PublicParams](
 		&PublicParamsDeserializer{},
-		crypto.DLogPublicParameters,
+		v1.DLogPublicParameters,
 		publicParams,
 	)
 	if err != nil {
@@ -115,23 +115,35 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
-	service, err := zkatdlog.NewTokenService(logger, ws, ppm, ip, deserializer, tmsConfig, zkatdlog.NewIssueService(logger, ppm, ws, deserializer, driverMetrics, tokensService), zkatdlog.NewTransferService(
+	service, err := zkatdlog.NewTokenService(
 		logger,
-		ppm,
 		ws,
-		common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
-		deserializer,
-		driverMetrics,
-		d.tracerProvider,
-		tokensService,
-	), zkatdlog.NewAuditorService(
-		logger,
 		ppm,
-		common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
+		ip,
 		deserializer,
-		driverMetrics,
-		d.tracerProvider,
-	), tokensService, authorization)
+		tmsConfig,
+		zkatdlog.NewIssueService(logger, ppm, ws, deserializer, driverMetrics, tokensService),
+		zkatdlog.NewTransferService(
+			logger,
+			ppm,
+			ws,
+			common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
+			deserializer,
+			driverMetrics,
+			d.tracerProvider,
+			tokensService,
+		),
+		zkatdlog.NewAuditorService(
+			logger,
+			ppm,
+			common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
+			deserializer,
+			driverMetrics,
+			d.tracerProvider,
+		),
+		tokensService,
+		authorization,
+	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}
@@ -140,7 +152,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 }
 
 func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Validator, error) {
-	pp, ok := params.(*crypto.PublicParams)
+	pp, ok := params.(*v1.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}

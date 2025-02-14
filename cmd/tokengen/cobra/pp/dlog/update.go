@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -79,7 +79,7 @@ func Update(args *UpdateArgs) error {
 		return errors.Wrapf(err, "failed to read input file at [%s]", args.InputFile)
 	}
 
-	pp, err := crypto.NewPublicParamsFromBytes(oldraw, "zkatdlog")
+	pp, err := v1.NewPublicParamsFromBytes(oldraw, "zkatdlog")
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal pp from [%s]", args.InputFile)
 	}
