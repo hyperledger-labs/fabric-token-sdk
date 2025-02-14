@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
+	"strconv"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	topology2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
@@ -17,7 +19,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
-	"strconv"
 )
 
 var (

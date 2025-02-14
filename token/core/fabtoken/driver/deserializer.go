@@ -26,10 +26,10 @@ func NewDeserializer() *Deserializer {
 	ownerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
 	ownerDeserializer.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
+	ownerDeserializer.AddTypedVerifierDeserializer(multisig.Escrow, multisig.NewTypedIdentityDeserializer(ownerDeserializer, ownerDeserializer))
 
 	auditorIssuerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
 	auditorIssuerDeserializer.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
-	m.AddTypedVerifierDeserializer(multisig.Escrow, multisig.NewTypedIdentityDeserializer(&x509.MSPIdentityDeserializer{}, nil))
 
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(
