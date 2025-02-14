@@ -152,7 +152,7 @@ type Transfer struct {
 	// Senders is the list of identities of the senders
 	Senders []Identity
 	// Receivers is the list of identities of the receivers
-	Receivers [][]Identity
+	Receivers []Identity
 	// ExtraSigners is the list of extra identities that must sign the token request to make it valid.
 	// This field is to be used by the token drivers to list any additional identities that must
 	// sign the token request.
@@ -655,7 +655,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			counter++
 			continue
 		}
-// is the j-th meta present? Yes
+		// is the j-th meta present? Yes
 		tok, issuer, recipients, ledgerOutputFormat, err := tms.TokensService().Deobfuscate(ledgerOutput, transferMeta.Outputs[j].OutputMetadata)
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
@@ -714,8 +714,8 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 						return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, recipientCounter)
 					}
 					targetLedgerOutput = ledgerOutput
-			}
-						r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
+				}
+				r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
 				outputs = append(outputs, &Output{
 					Token:                *tok,
 					ActionIndex:          i,

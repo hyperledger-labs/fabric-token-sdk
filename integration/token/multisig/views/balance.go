@@ -8,12 +8,12 @@ package views
 
 import (
 	"encoding/json"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/multisig"
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/multisig"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 

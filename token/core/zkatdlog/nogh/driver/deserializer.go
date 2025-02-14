@@ -38,13 +38,13 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 			return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", idemixIssuerPublicKey.Curve)
 		}
 		ownerDeserializer.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+		ownerDeserializer.AddTypedVerifierDeserializer(multisig.Escrow, multisig.NewTypedIdentityDeserializer(ownerDeserializer, ownerDeserializer))
 	}
 	ownerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
 
 	auditorIssuerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
 	auditorIssuerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
-	m.AddTypedVerifierDeserializer(multisig.Escrow, multisig.NewTypedIdentityDeserializer(idemixDes, idemixDes))
 
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(
