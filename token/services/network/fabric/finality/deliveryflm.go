@@ -108,7 +108,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 	flm, err := events.NewListenerManager[TxInfo](
 		logging.MustGetLogger("token-sdk.network.fabric.finality"),
 		p.config,
-		ch.Delivery(),
+		&Delivery{Delivery: ch.Delivery()},
 		&DeliveryScanQueryByID{
 			Delivery: ch.Delivery(),
 			Ledger:   ch.Ledger(),
