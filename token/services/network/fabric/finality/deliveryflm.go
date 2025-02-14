@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/vault"
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -105,6 +106,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 	}
 	mapper := p.newMapper(network, channel)
 	flm, err := events.NewListenerManager[TxInfo](
+		logging.MustGetLogger("token-sdk.network.fabric.finality"),
 		p.config,
 		ch.Delivery(),
 		&DeliveryScanQueryByID{
