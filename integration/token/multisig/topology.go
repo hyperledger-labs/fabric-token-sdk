@@ -69,7 +69,6 @@ func Topology(opts common.Opts) []api.Topology {
 	issuer.RegisterViewFactory("historyIssuedToken", &views.ListIssuedTokensViewFactory{})
 	issuer.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-	issuer.RegisterViewFactory("GetIssuerWalletIdentity", &views.GetIssuerWalletIdentityViewFactory{})
 	issuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
@@ -81,7 +80,6 @@ func Topology(opts common.Opts) []api.Topology {
 	auditor.AddOptions(opts.ReplicationOpts.For("auditor")...)
 	auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-	auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 	auditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
