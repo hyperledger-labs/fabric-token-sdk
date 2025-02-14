@@ -14,6 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-func NewIdentityDB(db *sql.DB, opts common.NewDBOpts) (driver.IdentityDB, error) {
-	return common.NewCachedIdentityDB(db, opts, postgres.NewInterpreter())
+func NewIdentityDB(readDB, writeDB *sql.DB, opts common.NewDBOpts) (driver.IdentityDB, error) {
+	return common.NewCachedIdentityDB(readDB, writeDB, opts, postgres.NewInterpreter())
 }

@@ -35,20 +35,20 @@ type tokenTables struct {
 	Certifications string
 }
 
-func NewTokenDB(db *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.TokenDB, error) {
+func NewTokenDB(readDB, writeDB *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.TokenDB, error) {
 	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
 
-	tokenDB := newTokenDB(db, tokenTables{
+	tokenDB := newTokenDB(readDB, writeDB, tokenTables{
 		Tokens:         tables.Tokens,
 		Ownership:      tables.Ownership,
 		PublicParams:   tables.PublicParams,
 		Certifications: tables.Certifications,
 	}, ci)
 	if opts.CreateSchema {
-		if err = common.InitSchema(db, tokenDB.GetSchema()); err != nil {
+		if err = common.InitSchema(writeDB, tokenDB.GetSchema()); err != nil {
 			return nil, err
 		}
 	}
@@ -56,19 +56,21 @@ func NewTokenDB(db *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.TokenDB
 }
 
 type TokenDB struct {
-	db    *sql.DB
-	table tokenTables
-	ci    TokenInterpreter
+	readDB  *sql.DB
+	writeDB *sql.DB
+	table   tokenTables
+	ci      TokenInterpreter
 
 	sttMutex              sync.RWMutex
 	supportedTokenFormats []token.Format
 }
 
-func newTokenDB(db *sql.DB, tables tokenTables, ci TokenInterpreter) *TokenDB {
+func newTokenDB(readDB, writeDB *sql.DB, tables tokenTables, ci TokenInterpreter) *TokenDB {
 	return &TokenDB{
-		db:    db,
-		table: tables,
-		ci:    ci,
+		readDB:  readDB,
+		writeDB: writeDB,
+		table:   tables,
+		ci:      ci,
 	}
 }
 
@@ -106,7 +108,7 @@ func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 	}
 	// query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE %s", db.table.Tokens, where)
 	logger.Debug(query, args)
-	if _, err := db.db.Exec(query, args...); err != nil {
+	if _, err := db.writeDB.Exec(query, args...); err != nil {
 		return errors.Wrapf(err, "error setting tokens to deleted [%v]", ids)
 	}
 	return nil
@@ -124,7 +126,7 @@ func (db *TokenDB) IsMine(txID string, index uint64) (bool, error) {
 	}
 	logger.Debug(query, txID, index)
 
-	row := db.db.QueryRow(query, txID, index)
+	row := db.readDB.QueryRow(query, txID, index)
 	if err := row.Scan(&id); err != nil {
 		if errors2.Is(err, sql.ErrNoRows) {
 			return false, nil
@@ -157,7 +159,7 @@ func (db *TokenDB) UnspentTokensIteratorBy(ctx context.Context, walletID string,
 	}
 	logger.Debug(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	span.AddEvent("end_query")
 
 	return &UnspentTokensIterator{txs: rows}, err
@@ -179,7 +181,7 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 	}
 	logger.Warn(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	span.AddEvent("end_query")
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
@@ -210,7 +212,7 @@ func (db *TokenDB) UnsupportedTokensIteratorBy(ctx context.Context, walletID str
 	}
 	logger.Debug(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	span.AddEvent("end_query")
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
@@ -235,7 +237,7 @@ func (db *TokenDB) balance(opts driver.QueryTokenDetailsParams) (uint64, error) 
 	}
 
 	logger.Debug(query, args)
-	row := db.db.QueryRow(query, args...)
+	row := db.readDB.QueryRow(query, args...)
 	var sum *uint64
 	if err := row.Scan(&sum); err != nil {
 		if errors.HasCause(err, sql.ErrNoRows) {
@@ -310,7 +312,7 @@ func (db *TokenDB) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
 	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +369,7 @@ func (db *TokenDB) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
 	logger.Debug(query)
-	rows, err := db.db.Query(query)
+	rows, err := db.readDB.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -445,7 +447,7 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
 	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +493,7 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 	}
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -546,7 +548,7 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
 	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -622,7 +624,7 @@ func (db *TokenDB) QueryTokenDetails(params driver.QueryTokenDetailsParams) ([]d
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
 	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -667,7 +669,7 @@ func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, erro
 		return nil, nil, errors.Wrapf(err, "failed to compile query")
 	}
 	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -724,7 +726,7 @@ func (db *TokenDB) TransactionExists(ctx context.Context, id string) (bool, erro
 	logger.Debug(query, id)
 
 	span.AddEvent("query", trace.WithAttributes(tracing.String(QueryLabel, query)))
-	row := db.db.QueryRow(query, id)
+	row := db.readDB.QueryRow(query, id)
 	var found string
 	span.AddEvent("scan_rows")
 	if err := row.Scan(&found); err != nil {
@@ -752,7 +754,7 @@ func (db *TokenDB) StorePublicParams(raw []byte) error {
 		return errors.Wrapf(err, "failed to compile query")
 	}
 	logger.Debugf(query, fmt.Sprintf("store public parameters (%d bytes) [%v], hash [%s]", len(raw), now, base64.StdEncoding.EncodeToString(rawHash)))
-	_, err = db.db.Exec(query, raw, rawHash, now)
+	_, err = db.writeDB.Exec(query, raw, rawHash, now)
 	return err
 }
 
@@ -764,7 +766,7 @@ func (db *TokenDB) PublicParams() ([]byte, error) {
 	}
 	logger.Debug(query)
 
-	row := db.db.QueryRow(query)
+	row := db.readDB.QueryRow(query)
 	err = row.Scan(&params)
 	if err != nil {
 		if errors.HasCause(err, sql.ErrNoRows) {
@@ -783,7 +785,7 @@ func (db *TokenDB) PublicParamsByHash(rawHash tdriver.PPHash) ([]byte, error) {
 	}
 	logger.Debug(query)
 
-	row := db.db.QueryRow(query, rawHash)
+	row := db.readDB.QueryRow(query, rawHash)
 	err = row.Scan(&params)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
@@ -791,6 +793,7 @@ func (db *TokenDB) PublicParamsByHash(rawHash tdriver.PPHash) ([]byte, error) {
 	return params, nil
 }
 
+// TODO Convert to multi-row query
 func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) (err error) {
 	now := time.Now().UTC()
 	query, err := NewInsertInto(db.table.Certifications).Rows("tx_id, idx, certification, stored_at").Compile()
@@ -798,7 +801,7 @@ func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) (err
 		return errors.Wrapf(err, "failed to compile query")
 	}
 
-	tx, err := db.db.Begin()
+	tx, err := db.writeDB.Begin()
 	if err != nil {
 		return errors.Errorf("failed starting a transaction")
 	}
@@ -836,7 +839,7 @@ func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {
 		return false
 	}
 	logger.Debug(query, args)
-	row := db.db.QueryRow(query, args...)
+	row := db.readDB.QueryRow(query, args...)
 
 	var certification []byte
 	if err := row.Scan(&certification); err != nil {
@@ -864,7 +867,7 @@ func (db *TokenDB) GetCertifications(ids []*token.ID) ([][]byte, error) {
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
 
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query")
 	}
@@ -963,15 +966,18 @@ func (db *TokenDB) GetSchema() string {
 }
 
 func (db *TokenDB) Close() {
-	Close(db.db)
+	if db.readDB != db.writeDB {
+		Close(db.writeDB)
+	}
+	Close(db.readDB)
 }
 
 func (db *TokenDB) NewTokenDBTransaction() (driver.TokenDBTransaction, error) {
-	tx, err := db.db.Begin()
+	tx, err := db.writeDB.Begin()
 	if err != nil {
 		return nil, errors.Errorf("failed starting a db transaction")
 	}
-	return &TokenTransaction{db: db, tx: tx}, nil
+	return &TokenTransaction{ci: db.ci, table: &db.table, tx: tx}, nil
 }
 
 func (db *TokenDB) SetSupportedTokenFormats(formats []token.Format) error {
@@ -1001,7 +1007,7 @@ func (db *TokenDB) unspendableTokenFormats(ctx context.Context, walletID string,
 	}
 	logger.Debug(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	span.AddEvent("end_query")
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
@@ -1037,21 +1043,22 @@ func (db *TokenDB) unspendableTokenFormats(ctx context.Context, walletID string,
 }
 
 type TokenTransaction struct {
-	db *TokenDB
-	tx *sql.Tx
+	table *tokenTables
+	ci    TokenInterpreter
+	tx    *sql.Tx
 }
 
 func (t *TokenTransaction) GetToken(ctx context.Context, tokenID token.ID, includeDeleted bool) (*token.Token, []string, error) {
 	span := trace.SpanFromContext(ctx)
-	where, args := common.Where(t.db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
+	where, args := common.Where(t.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
 		IDs:            []*token.ID{&tokenID},
 		IncludeDeleted: includeDeleted,
-	}, t.db.table.Tokens))
-	join := joinOnTokenID(t.db.table.Tokens, t.db.table.Ownership)
+	}, t.table.Tokens))
+	join := joinOnTokenID(t.table.Tokens, t.table.Ownership)
 
 	query, err := NewSelect(
-		fmt.Sprintf("owner_raw, token_type, quantity, %s.wallet_id, owner_wallet_id", t.db.table.Ownership),
-	).From(t.db.table.Tokens, join).Where(where).Compile()
+		fmt.Sprintf("owner_raw, token_type, quantity, %s.wallet_id, owner_wallet_id", t.table.Ownership),
+	).From(t.table.Tokens, join).Where(where).Compile()
 	if err != nil {
 		return nil, nil, errors.Errorf("failed building query")
 	}
@@ -1104,7 +1111,7 @@ func (t *TokenTransaction) Delete(ctx context.Context, tokenID token.ID, deleted
 	// logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
-	query, err := NewUpdate(t.db.table.Tokens).Set("is_deleted, spent_by, spent_at").Where("tx_id, idx").Compile()
+	query, err := NewUpdate(t.table.Tokens).Set("is_deleted, spent_by, spent_at").Where("tx_id, idx").Compile()
 	if err != nil {
 		return errors.Wrapf(err, "failed building query")
 	}
@@ -1128,7 +1135,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 	// Store token
 	now := time.Now().UTC()
-	query, err := NewInsertInto(t.db.table.Tokens).Rows(
+	query, err := NewInsertInto(t.table.Tokens).Rows(
 		"tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_type, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer").Compile()
 	if err != nil {
 		return errors.Wrapf(err, "failed building insert")
@@ -1170,14 +1177,14 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		tr.Owner,
 		tr.Auditor,
 		tr.Issuer); err != nil {
-		logger.Errorf("error storing token [%s] in table [%s]: [%s][%s]", tr.TxID, t.db.table.Tokens, err, string(debug.Stack()))
-		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, t.db.table.Tokens)
+		logger.Errorf("error storing token [%s] in table [%s]: [%s][%s]", tr.TxID, t.table.Tokens, err, string(debug.Stack()))
+		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, t.table.Tokens)
 	}
 
 	// Store ownership
 	span.AddEvent("store_ownerships")
 	for _, eid := range owners {
-		query, err := NewInsertInto(t.db.table.Ownership).Rows("tx_id, idx, wallet_id").Compile()
+		query, err := NewInsertInto(t.table.Ownership).Rows("tx_id, idx, wallet_id").Compile()
 		if err != nil {
 			return errors.Wrapf(err, "failed building insert")
 		}
@@ -1193,7 +1200,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 func (t *TokenTransaction) SetSpendable(ctx context.Context, tokenID token.ID, spendable bool) error {
 	span := trace.SpanFromContext(ctx)
-	query := fmt.Sprintf("UPDATE %s SET spendable = $1 WHERE tx_id = $2 AND idx = $3;", t.db.table.Tokens)
+	query := fmt.Sprintf("UPDATE %s SET spendable = $1 WHERE tx_id = $2 AND idx = $3;", t.table.Tokens)
 	logger.Infof(query, spendable, tokenID.TxId, tokenID.Index)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	if _, err := t.tx.Exec(query, spendable, tokenID.TxId, tokenID.Index); err != nil {
@@ -1209,7 +1216,7 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Conte
 	span := trace.SpanFromContext(ctx)
 
 	// first set all spendable flags to false
-	query := fmt.Sprintf("UPDATE %s SET spendable = $1;", t.db.table.Tokens)
+	query := fmt.Sprintf("UPDATE %s SET spendable = $1;", t.table.Tokens)
 	logger.Infof(query, false)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	if _, err := t.tx.Exec(query, false); err != nil {
@@ -1220,12 +1227,12 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Conte
 
 	// then set the spendable flags to true only for the supported token types
 
-	cond := t.db.ci.HasTokenFormats("ledger_type", formats...)
+	cond := t.ci.HasTokenFormats("ledger_type", formats...)
 	args := append([]any{true}, cond.Params()...)
 	offset := 2
 	where := cond.ToString(&offset)
 
-	query = fmt.Sprintf("UPDATE %s SET spendable = $1 WHERE %s;", t.db.table.Tokens, where)
+	query = fmt.Sprintf("UPDATE %s SET spendable = $1 WHERE %s;", t.table.Tokens, where)
 	logger.Infof(query, args)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	res, err := t.tx.Exec(query, args...)

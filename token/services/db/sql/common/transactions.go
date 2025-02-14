@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	errors2 "errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -33,33 +34,35 @@ type transactionTables struct {
 }
 
 type TransactionDB struct {
-	db    *sql.DB
-	table transactionTables
-	ci    TokenInterpreter
+	readDB  *sql.DB
+	writeDB *sql.DB
+	table   transactionTables
+	ci      TokenInterpreter
 }
 
-func newTransactionDB(db *sql.DB, tables transactionTables, ci TokenInterpreter) *TransactionDB {
+func newTransactionDB(readDB, writeDB *sql.DB, tables transactionTables, ci TokenInterpreter) *TransactionDB {
 	return &TransactionDB{
-		db:    db,
-		table: tables,
-		ci:    ci,
+		readDB:  readDB,
+		writeDB: writeDB,
+		table:   tables,
+		ci:      ci,
 	}
 }
 
-func NewAuditTransactionDB(sqlDB *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.AuditTransactionDB, error) {
-	return NewTransactionDB(sqlDB, NewDBOpts{
+func NewAuditTransactionDB(readDB, writeDB *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.AuditTransactionDB, error) {
+	return NewTransactionDB(readDB, writeDB, NewDBOpts{
 		DataSource:   opts.DataSource,
 		TablePrefix:  opts.TablePrefix + "_aud",
 		CreateSchema: opts.CreateSchema,
 	}, ci)
 }
 
-func NewTransactionDB(db *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.TokenTransactionDB, error) {
+func NewTransactionDB(readDB, writeDB *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.TokenTransactionDB, error) {
 	tables, err := GetTableNames(opts.TablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
-	transactionsDB := newTransactionDB(db, transactionTables{
+	transactionsDB := newTransactionDB(readDB, writeDB, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
@@ -67,7 +70,7 @@ func NewTransactionDB(db *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.T
 		TransactionEndorseAck: tables.TransactionEndorseAck,
 	}, ci)
 	if opts.CreateSchema {
-		if err = common.InitSchema(db, []string{transactionsDB.GetSchema()}...); err != nil {
+		if err = common.InitSchema(writeDB, []string{transactionsDB.GetSchema()}...); err != nil {
 			return nil, err
 		}
 	}
@@ -82,7 +85,7 @@ func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
 	}
 	logger.Debug(query, txID)
 
-	row := db.db.QueryRow(query, txID)
+	row := db.readDB.QueryRow(query, txID)
 	err = row.Scan(&tokenrequest)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -103,7 +106,7 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
 	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +151,7 @@ func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
 	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +168,7 @@ func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error)
 	}
 	logger.Debug(query, txID)
 
-	row := db.db.QueryRow(query, txID)
+	row := db.readDB.QueryRow(query, txID)
 	if err := row.Scan(&status, &statusMessage); err != nil {
 		if err == sql.ErrNoRows {
 			logger.Debugf("tried to get status for non-existent tx [%s], returning unknown", txID)
@@ -186,7 +189,7 @@ func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsPa
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
 	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +206,7 @@ func (db *TransactionDB) QueryTokenRequests(params driver.QueryTokenRequestsPara
 		return nil, errors.Wrapf(err, "error compiling query")
 	}
 	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +226,7 @@ func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser toke
 	if err != nil {
 		return errors.Wrapf(err, "error generating uuid")
 	}
-	if _, err = db.db.Exec(query, id, txID, endorser, sigma, now); err != nil {
+	if _, err = db.writeDB.Exec(query, id, txID, endorser, sigma, now); err != nil {
 		return ttxDBError(err)
 	}
 	return
@@ -236,7 +239,7 @@ func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string]
 	}
 	logger.Debug(query, txID)
 
-	rows, err := db.db.Query(query, txID)
+	rows, err := db.readDB.Query(query, txID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query")
 	}
@@ -263,7 +266,10 @@ func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string]
 
 func (db *TransactionDB) Close() error {
 	logger.Info("closing database")
-	err := db.db.Close()
+	if db.readDB != db.writeDB {
+		return errors2.Join(db.readDB.Close(), db.writeDB.Close())
+	}
+	err := db.readDB.Close()
 	if err != nil {
 		return errors.Wrap(err, "could not close DB")
 	}
@@ -279,11 +285,11 @@ func (db *TransactionDB) SetStatus(ctx context.Context, txID string, status driv
 	if len(message) != 0 {
 		query = fmt.Sprintf("UPDATE %s SET status = $1, status_message = $2 WHERE tx_id = $3;", db.table.Requests)
 		logger.Debug(query)
-		_, err = db.db.Exec(query, status, message, txID)
+		_, err = db.writeDB.Exec(query, status, message, txID)
 	} else {
 		query = fmt.Sprintf("UPDATE %s SET status = $1 WHERE tx_id = $2;", db.table.Requests)
 		logger.Debug(query)
-		_, err = db.db.Exec(query, status, txID)
+		_, err = db.writeDB.Exec(query, status, txID)
 	}
 	if err != nil {
 		return errors.Wrapf(err, "error updating tx [%s]", txID)
@@ -489,20 +495,20 @@ func (t *TokenRequestIterator) Next() (*driver.TokenRequestRecord, error) {
 }
 
 func (db *TransactionDB) BeginAtomicWrite() (driver.AtomicWrite, error) {
-	txn, err := db.db.Begin()
+	txn, err := db.writeDB.Begin()
 	if err != nil {
 		return nil, err
 	}
 
 	return &AtomicWrite{
-		txn: txn,
-		db:  db,
+		txn:   txn,
+		table: &db.table,
 	}, nil
 }
 
 type AtomicWrite struct {
-	txn *sql.Tx
-	db  *TransactionDB
+	txn   *sql.Tx
+	table *transactionTables
 }
 
 func (w *AtomicWrite) Commit() error {
@@ -539,7 +545,7 @@ func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 		return errors.Wrapf(err, "error generating uuid")
 	}
 
-	query, err := NewInsertInto(w.db.table.Transactions).Rows("id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, stored_at").Compile()
+	query, err := NewInsertInto(w.table.Transactions).Rows("id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, stored_at").Compile()
 	if err != nil {
 		return errors.Wrapf(err, "error compiling insert")
 	}
@@ -563,7 +569,7 @@ func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadat
 		return errors.New("error marshaling application metadata")
 	}
 
-	query, err := NewInsertInto(w.db.table.Requests).Rows("tx_id, request, status, status_message, application_metadata, pp_hash").Compile()
+	query, err := NewInsertInto(w.table.Requests).Rows("tx_id, request, status, status_message, application_metadata, pp_hash").Compile()
 	if err != nil {
 		return errors.Wrapf(err, "error compiling query")
 	}
@@ -589,7 +595,7 @@ func (w *AtomicWrite) AddMovement(r *driver.MovementRecord) error {
 	}
 	now := time.Now().UTC()
 
-	query, err := NewInsertInto(w.db.table.Movements).Rows("id, tx_id, enrollment_id, token_type, amount, stored_at").Compile()
+	query, err := NewInsertInto(w.table.Movements).Rows("id, tx_id, enrollment_id, token_type, amount, stored_at").Compile()
 	if err != nil {
 		return errors.Wrapf(err, "error compiling query")
 	}
@@ -611,7 +617,7 @@ func (w *AtomicWrite) AddValidationRecord(txID string, meta map[string][]byte) e
 	}
 	now := time.Now().UTC()
 
-	query, err := NewInsertInto(w.db.table.Validations).Rows("tx_id, metadata, stored_at").Compile()
+	query, err := NewInsertInto(w.table.Validations).Rows("tx_id, metadata, stored_at").Compile()
 	if err != nil {
 		return errors.Wrapf(err, "failed to compile query")
 	}
