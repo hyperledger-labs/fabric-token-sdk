@@ -133,6 +133,10 @@ clean:
 	rm -rf ./integration/token/interop/dlog/cmd/
 	rm -rf ./integration/token/fungible/update/cmd/
 	rm -rf ./integration/token/fungible/update/testdata/
+	rm -rf ./integration/token/fungible/multisig/dlog/cmd/
+	rm -rf ./integration/token/fungible/multisig/dlog/testdata/
+	rm -rf ./integration/token/fungible/multisig/fabtoken/cmd/
+	rm -rf ./integration/token/fungible/multisig/fabtoken/testdata/
 
 .PHONY: clean-fabric-peer-images
 clean-fabric-peer-images:

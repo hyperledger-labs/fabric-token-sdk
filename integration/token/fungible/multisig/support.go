@@ -11,11 +11,10 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
-	topology2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
+	views3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/multisig/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/multisig/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
@@ -36,27 +35,18 @@ func RegisterAuditorForTMSID(network *integration.Infrastructure, auditor *token
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func getFabricTopology(network *integration.Infrastructure) *topology2.Topology {
-	for _, t := range network.Topologies {
-		if t.Type() == "fabric" {
-			return t.(*topology2.Topology)
-		}
-	}
-	return nil
-}
-
 func CheckBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, owned uint64, coowned uint64) {
 	CheckBalanceForTMSID(network, ref, wallet, typ, owned, coowned, nil)
 }
 
 func CheckBalanceForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, owned uint64, coowned uint64, tmsID *token2.TMSID) {
-	res, err := network.Client(ref.ReplicaName()).CallView("balance", common.JSONMarshall(&views2.BalanceQuery{
+	res, err := network.Client(ref.ReplicaName()).CallView("balance", common.JSONMarshall(&views3.BalanceQuery{
 		Wallet: wallet,
 		Type:   typ,
 		TMSID:  tmsID,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	b := &views2.BalanceResult{}
+	b := &views3.BalanceResult{}
 	common.JSONUnmarshal(res.([]byte), b)
 	Expect(b.Type).To(BeEquivalentTo(typ))
 	q, err := token.ToQuantity(b.Quantity, 64)
@@ -102,7 +92,7 @@ func LockCashForTMSID(network *integration.Infrastructure, sender *token3.NodeRe
 		eids[i] = receivers[i].Id()
 		identities[i] = network.Identity(eids[i])
 	}
-	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("lock", common.JSONMarshall(&views2.Lock{
+	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("lock", common.JSONMarshall(&views3.Lock{
 		Auditor:    auditor.Id(),
 		Wallet:     wallet,
 		Type:       typ,
