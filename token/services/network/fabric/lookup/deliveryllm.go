@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/rwset"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/vault"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -93,10 +94,15 @@ func newEndorserDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tr
 	if err != nil {
 		panic(err)
 	}
+	setupKey, err := keyTranslator.CreateSetupKey()
+	if err != nil {
+		panic(err)
+	}
 	return NewDeliveryBasedLLMProvider(fnsp, tracerProvider, config, func(network, _ string) events.EventInfoMapper[KeyInfo] {
 		return &endorserTxInfoMapper{
 			network: network,
-			prefix:  prefix,
+			prefix1: prefix,
+			prefix2: setupKey,
 		}
 	})
 }
@@ -111,6 +117,7 @@ func (p *deliveryBasedLLMProvider) NewManager(network, channel string) (Listener
 		return nil, err
 	}
 	flm, err := events.NewListenerManager[KeyInfo](
+		logging.MustGetLogger("token-sdk.network.fabric.llm"),
 		p.config,
 		ch.Delivery(),
 		&DeliveryScanQueryByID{
@@ -149,7 +156,8 @@ func (m *deliveryBasedLLM) RemoveLookupListener(key string, listener Listener) e
 
 type endorserTxInfoMapper struct {
 	network string
-	prefix  string
+	prefix1 string
+	prefix2 string
 }
 
 func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.BlockMetadata, blockNum driver2.BlockNum, txNum driver2.TxNum) (map[driver2.Namespace]KeyInfo, error) {
@@ -193,9 +201,9 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string)
 	txInfos := make(map[driver2.Namespace]KeyInfo, len(rwSet.WriteSet.Writes))
 	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.WriteSet.Writes))
 	for ns, writes := range rwSet.WriteSet.Writes {
-		logger.Debugf("TX [%s:%s] has %d writes", txID, ns, len(writes))
+		logger.Debugf("TX [%s:%s] has [%d] writes", txID, ns, len(writes))
 		for key, value := range writes {
-			if strings.HasPrefix(key, m.prefix) {
+			if strings.HasPrefix(key, m.prefix1) || strings.HasPrefix(key, m.prefix2) {
 				logger.Debugf("TX [%s:%s] does have key [%s].", txID, ns, key)
 				txInfos[ns] = KeyInfo{
 					Namespace: ns,
