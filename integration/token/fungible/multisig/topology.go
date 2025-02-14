@@ -22,8 +22,8 @@ import (
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
+	views4 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/multisig/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	views3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/multisig/views"
 )
 
 func Topology(opts common.Opts) []api.Topology {
@@ -92,11 +92,11 @@ func Topology(opts common.Opts) []api.Topology {
 	)
 	alice.AddOptions(opts.ReplicationOpts.For("alice")...)
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
-	alice.RegisterResponder(&views3.AcceptCashView{}, &views3.LockView{})
-	alice.RegisterResponder(&views3.AcceptCashView{}, &views3.LockWithSelectorView{})
-	alice.RegisterViewFactory("lock", &views3.LockViewFactory{})
-	alice.RegisterViewFactory("lockWithSelector", &views3.LockWithSelectorViewFactory{})
-	alice.RegisterViewFactory("balance", &views3.BalanceViewFactory{})
+	alice.RegisterResponder(&views4.AcceptCashView{}, &views4.LockView{})
+	alice.RegisterResponder(&views4.AcceptCashView{}, &views4.LockWithSelectorView{})
+	alice.RegisterViewFactory("lock", &views4.LockViewFactory{})
+	alice.RegisterViewFactory("lockWithSelector", &views4.LockWithSelectorViewFactory{})
+	alice.RegisterViewFactory("balance", &views4.BalanceViewFactory{})
 	alice.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 	alice.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
 	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
@@ -111,11 +111,11 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithRemoteOwnerIdentity("bob_remote"),
 	)
 	bob.AddOptions(opts.ReplicationOpts.For("bob")...)
-	bob.RegisterResponder(&views3.AcceptCashView{}, &views3.LockView{})
-	bob.RegisterResponder(&views3.AcceptCashView{}, &views3.LockWithSelectorView{})
-	bob.RegisterViewFactory("lock", &views3.LockViewFactory{})
-	bob.RegisterViewFactory("lockWithSelector", &views3.LockWithSelectorViewFactory{})
-	bob.RegisterViewFactory("balance", &views3.BalanceViewFactory{})
+	bob.RegisterResponder(&views4.AcceptCashView{}, &views4.LockView{})
+	bob.RegisterResponder(&views4.AcceptCashView{}, &views4.LockWithSelectorView{})
+	bob.RegisterViewFactory("lock", &views4.LockViewFactory{})
+	bob.RegisterViewFactory("lockWithSelector", &views4.LockWithSelectorViewFactory{})
+	bob.RegisterViewFactory("balance", &views4.BalanceViewFactory{})
 	bob.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 	bob.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
 	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
@@ -129,11 +129,11 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithOwnerIdentity("charlie.id1"),
 	)
 	charlie.AddOptions(opts.ReplicationOpts.For("charlie")...)
-	charlie.RegisterResponder(&views3.AcceptCashView{}, &views3.LockView{})
-	charlie.RegisterResponder(&views3.AcceptCashView{}, &views3.LockWithSelectorView{})
-	charlie.RegisterViewFactory("lock", &views3.LockViewFactory{})
-	charlie.RegisterViewFactory("lockWithSelector", &views3.LockWithSelectorViewFactory{})
-	charlie.RegisterViewFactory("balance", &views3.BalanceViewFactory{})
+	charlie.RegisterResponder(&views4.AcceptCashView{}, &views4.LockView{})
+	charlie.RegisterResponder(&views4.AcceptCashView{}, &views4.LockWithSelectorView{})
+	charlie.RegisterViewFactory("lock", &views4.LockViewFactory{})
+	charlie.RegisterViewFactory("lockWithSelector", &views4.LockWithSelectorViewFactory{})
+	charlie.RegisterViewFactory("balance", &views4.BalanceViewFactory{})
 	charlie.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 	charlie.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
 	charlie.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
@@ -147,11 +147,11 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithRemoteOwnerIdentity("dasve_remote"),
 	)
 	dave.AddOptions(opts.ReplicationOpts.For("dave")...)
-	dave.RegisterResponder(&views3.AcceptCashView{}, &views3.LockView{})
-	dave.RegisterResponder(&views3.AcceptCashView{}, &views3.LockWithSelectorView{})
-	dave.RegisterViewFactory("lock", &views3.LockViewFactory{})
-	dave.RegisterViewFactory("lockWithSelector", &views3.LockWithSelectorViewFactory{})
-	dave.RegisterViewFactory("balance", &views3.BalanceViewFactory{})
+	dave.RegisterResponder(&views4.AcceptCashView{}, &views4.LockView{})
+	dave.RegisterResponder(&views4.AcceptCashView{}, &views4.LockWithSelectorView{})
+	dave.RegisterViewFactory("lock", &views4.LockViewFactory{})
+	dave.RegisterViewFactory("lockWithSelector", &views4.LockWithSelectorViewFactory{})
+	dave.RegisterViewFactory("balance", &views4.BalanceViewFactory{})
 	dave.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 	dave.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
 	dave.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
