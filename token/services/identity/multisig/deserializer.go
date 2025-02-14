@@ -8,6 +8,7 @@ package multisig
 
 import (
 	"encoding/json"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
@@ -65,7 +66,7 @@ func NewTypedIdentityDeserializer(verifierDeserializer VerifierDES, auditInfoDes
 	return &TypedIdentityDeserializer{VerifierDeserializer: verifierDeserializer, AuditInfoMatcher: auditInfoDeserializer}
 }
 
-func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
+func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
 	if typ != Escrow {
 		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, Escrow)
 	}
@@ -88,7 +89,7 @@ func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ st
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshaling audit info for mid")
 	}
-	return [][]byte{auditInfoRaw}, nil
+	return auditInfoRaw, nil
 }
 
 func (d *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
@@ -119,7 +120,7 @@ func (d *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, audit
 	return &EscrowInfoMatcher{AuditInfoMatcher: matchers}, nil
 }
 
-func (d *TypedIdentityDeserializer) DeserializeVerifier(typ string, id []byte) (driver.Verifier, error) {
+func (d *TypedIdentityDeserializer) DeserializeVerifier(typ identity.Type, id []byte) (driver.Verifier, error) {
 	escrow := &MultiIdentity{}
 	err := escrow.Deserialize(id)
 	if err != nil {
@@ -137,7 +138,7 @@ func (d *TypedIdentityDeserializer) DeserializeVerifier(typ string, id []byte) (
 	return verifier, nil
 }
 
-func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error) {
+func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error) {
 	mid := &MultiIdentity{}
 	err := mid.Deserialize(raw)
 	if err != nil {
@@ -161,6 +162,7 @@ func (a *EscrowInfoDeserializer) DeserializeAuditInfo(raw []byte) (driver2.Audit
 func (ei *EscrowInfo) EnrollmentID() string {
 	return ei.EID
 }
+
 func (ei *EscrowInfo) RevocationHandle() string {
 	return ei.RH
 }
