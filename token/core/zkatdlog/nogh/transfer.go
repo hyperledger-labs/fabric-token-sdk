@@ -14,9 +14,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
+	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -69,7 +69,7 @@ type TokenDeserializer interface {
 
 type TransferService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
+	PublicParametersManager common.PublicParametersManager[*v1.PublicParams]
 	WalletService           driver.WalletService
 	TokenLoader             TokenLoader
 	IdentityDeserializer    driver.Deserializer
@@ -80,7 +80,7 @@ type TransferService struct {
 
 func NewTransferService(
 	logger logging.Logger,
-	publicParametersManager common.PublicParametersManager[*crypto.PublicParams],
+	publicParametersManager common.PublicParametersManager[*v1.PublicParams],
 	walletService driver.WalletService,
 	tokenLoader TokenLoader,
 	identityDeserializer driver.Deserializer,
@@ -124,7 +124,7 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 
 	// get sender
 	pp := s.PublicParametersManager.PublicParams()
-	sender, err := transfer.NewSender(nil, prepareInputs.Tokens(), tokenIDs, prepareInputs.Metadata(), pp)
+	sender, err := transfer2.NewSender(nil, prepareInputs.Tokens(), tokenIDs, prepareInputs.Metadata(), pp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -252,7 +252,7 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputMet
 	if action == nil {
 		return errors.New("failed to verify transfer: nil transfer action")
 	}
-	tr, ok := action.(*transfer.Action)
+	tr, ok := action.(*transfer2.Action)
 	if !ok {
 		return errors.New("failed to verify transfer: expected *zkatdlog.TransferActionMetadata")
 	}
@@ -281,13 +281,13 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputMet
 		s.Logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
 	}
 
-	return transfer.NewVerifier(getTokenData(tr.InputTokens), com, pp).Verify(tr.Proof)
+	return transfer2.NewVerifier(getTokenData(tr.InputTokens), com, pp).Verify(tr.Proof)
 }
 
 // DeserializeTransferAction un-marshals a TransferActionMetadata from the passed array of bytes.
 // DeserializeTransferAction returns an error, if the un-marshalling fails.
 func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
-	transferAction := &transfer.Action{}
+	transferAction := &transfer2.Action{}
 	err := transferAction.Deserialize(raw)
 	if err != nil {
 		return nil, err

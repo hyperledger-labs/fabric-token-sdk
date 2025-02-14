@@ -8,7 +8,7 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
@@ -26,7 +26,7 @@ import (
 type base struct{}
 
 func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := fabtoken.NewPublicParamsFromBytes(params, fabtoken.PublicParameters)
+	pp, err := v1.NewPublicParamsFromBytes(params, v1.PublicParameters)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
@@ -36,7 +36,7 @@ func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", pp.Identifier())
 	deserializer := NewDeserializer()
-	return fabtoken.NewValidator(logger, pp.(*fabtoken.PublicParams), deserializer), nil
+	return v1.NewValidator(logger, pp.(*v1.PublicParams), deserializer), nil
 }
 
 func (d *base) newWalletService(

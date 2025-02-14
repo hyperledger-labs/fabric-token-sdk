@@ -11,12 +11,11 @@ import (
 	"os"
 	"path/filepath"
 
+	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/idemix"
-
-	math3 "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -126,7 +125,7 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 		curveID = math3.BLS12_381_BBS
 	}
 	// todo range is hardcoded, to be changed
-	pp, err := crypto.Setup(64, ipkBytes, curveID)
+	pp, err := v1.Setup(64, ipkBytes, curveID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}

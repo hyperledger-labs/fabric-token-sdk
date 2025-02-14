@@ -12,10 +12,10 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/audit"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -29,7 +29,7 @@ type TokenCommitmentLoader interface {
 
 type AuditorService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
+	PublicParametersManager common.PublicParametersManager[*v1.PublicParams]
 	TokenCommitmentLoader   TokenCommitmentLoader
 	Deserializer            driver.Deserializer
 	Metrics                 *Metrics
@@ -38,7 +38,7 @@ type AuditorService struct {
 
 func NewAuditorService(
 	logger logging.Logger,
-	publicParametersManager common.PublicParametersManager[*crypto.PublicParams],
+	publicParametersManager common.PublicParametersManager[*v1.PublicParams],
 	tokenCommitmentLoader TokenCommitmentLoader,
 	deserializer driver.Deserializer,
 	metrics *Metrics,

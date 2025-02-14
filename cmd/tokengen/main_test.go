@@ -15,8 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	. "github.com/onsi/gomega"
@@ -240,7 +240,7 @@ func validateOutputEquivalent(gt *WithT, tempOutput, auditorsMSPdir, issuersMSPd
 	ppRaw, err := os.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
 
-	pp, err := crypto.NewPublicParamsFromBytes(ppRaw, crypto.DLogPublicParameters)
+	pp, err := v1.NewPublicParamsFromBytes(ppRaw, v1.DLogPublicParameters)
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(pp.Validate()).NotTo(HaveOccurred())
 

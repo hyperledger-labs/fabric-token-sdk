@@ -8,8 +8,8 @@ package nogh
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -17,14 +17,14 @@ import (
 )
 
 type Service struct {
-	*common.Service[*crypto.PublicParams]
+	*common.Service[*v1.PublicParams]
 	validator *validator.Validator
 }
 
 func NewTokenService(
 	logger logging.Logger,
 	ws *wallet.Service,
-	ppm common.PublicParametersManager[*crypto.PublicParams],
+	ppm common.PublicParametersManager[*v1.PublicParams],
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
 	configuration driver.Configuration,
@@ -34,7 +34,7 @@ func NewTokenService(
 	tokensService driver.TokensService,
 	authorization driver.Authorization,
 ) (*Service, error) {
-	root, err := common.NewTokenService[*crypto.PublicParams](
+	root, err := common.NewTokenService[*v1.PublicParams](
 		logger,
 		ws,
 		ppm,

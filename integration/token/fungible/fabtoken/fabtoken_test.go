@@ -18,7 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -43,7 +43,7 @@ func UpdatePublicParams(network *integration.Infrastructure, selector *token2.Re
 	tms := fungible.GetTMSByNetworkName(network, "default")
 	auditorId := fungible.GetAuditorIdentity(tms, "newAuditor")
 	issuerId := fungible.GetIssuerIdentity(tms, "newIssuer.id1")
-	publicParam := fabtoken.PublicParams{
+	publicParam := fabtokenv1.PublicParams{
 		Label:             "fabtoken",
 		QuantityPrecision: uint64(64),
 		Auditor:           auditorId,

@@ -9,6 +9,7 @@ package fabtoken
 import (
 	"context"
 
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -45,20 +46,20 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	}
 
 	precision := s.PublicParamsManager.PublicParameters().Precision()
-	var outs []*Output
+	var outs []*v1.Output
 	var outputsMetadata []*driver.IssueOutputMetadata
 	for i, v := range values {
 		q, err := token2.UInt64ToQuantity(v, precision)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", v, precision)
 		}
-		outs = append(outs, &Output{
+		outs = append(outs, &v1.Output{
 			Owner:    owners[i],
 			Type:     tokenType,
 			Quantity: q.Hex(),
 		})
 
-		outputMetadata := &OutputMetadata{
+		outputMetadata := &v1.OutputMetadata{
 			Issuer: issuerIdentity,
 		}
 		outputMetadataRaw, err := outputMetadata.Serialize()
@@ -80,7 +81,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		})
 	}
 
-	action := &IssueAction{Issuer: issuerIdentity, Outputs: outs}
+	action := &v1.IssueAction{Issuer: issuerIdentity, Outputs: outs}
 
 	meta := &driver.IssueMetadata{
 		Issuer:       issuerIdentity,
@@ -100,7 +101,7 @@ func (s *IssueService) VerifyIssue(tr driver.IssueAction, metadata []*driver.Iss
 // DeserializeIssueAction un-marshals the passed bytes into an IssueAction
 // If unmarshalling fails, then DeserializeIssueAction returns an error
 func (s *IssueService) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
-	issue := &IssueAction{}
+	issue := &v1.IssueAction{}
 	if err := issue.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing issue action")
 	}

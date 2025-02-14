@@ -25,7 +25,7 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/dlogstress/support"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -1342,7 +1342,7 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	CheckBalanceAndHolding(network, bob, "", "EUR", 110, auditor)
 
 	// rotate issuer public key, bob should be able to spend his token
-	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+	pp, err := dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogPublicParameters)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(pp.Validate()).NotTo(HaveOccurred())
 
@@ -1350,7 +1350,7 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	ppBytesBis, err := os.ReadFile(tokenPlatform.PublicParametersFile(tmsBis))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(ppBytesBis).NotTo(BeNil())
-	ppBis, err := crypto.NewPublicParamsFromBytes(ppBytesBis, crypto.DLogPublicParameters)
+	ppBis, err := dlognoghv1.NewPublicParamsFromBytes(ppBytesBis, dlognoghv1.DLogPublicParameters)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(ppBis.Validate()).NotTo(HaveOccurred())
 

@@ -15,8 +15,8 @@ import (
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
-	cryptodlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
@@ -30,7 +30,7 @@ func NewFabTokenPublicParamsGenerator() *FabTokenPublicParamsGenerator {
 }
 
 func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topology.Wallets, args ...interface{}) ([]byte, error) {
-	precision := fabtoken.DefaultPrecision
+	precision := fabtokenv1.DefaultPrecision
 	if len(args) == 2 {
 		// First is empty
 
@@ -45,7 +45,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 			return nil, errors.Wrapf(err, "failed to parse max token value [%s] to uint64", precisionStr)
 		}
 	}
-	pp, err := fabtoken.Setup(precision)
+	pp, err := fabtokenv1.Setup(precision)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 			return nil, err
 		}
 	}
-	pp, err := cryptodlog.Setup(bits, ipkBytes, curveID)
+	pp, err := dlognoghv1.Setup(bits, ipkBytes, curveID)
 	if err != nil {
 		return nil, err
 	}

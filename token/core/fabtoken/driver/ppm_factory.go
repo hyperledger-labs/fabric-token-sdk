@@ -9,7 +9,7 @@ package driver
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -19,15 +19,15 @@ type PPMFactory struct{ *base }
 
 func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {
 	return core.NamedFactory[driver.PPMFactory]{
-		Name:   fabtoken.PublicParameters,
+		Name:   v1.PublicParameters,
 		Driver: &PPMFactory{},
 	}
 }
 
 func (d *PPMFactory) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
-	pp, ok := params.(*fabtoken.PublicParams)
+	pp, ok := params.(*v1.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return common.NewPublicParamsManagerFromParams[*fabtoken.PublicParams](pp)
+	return common.NewPublicParamsManagerFromParams[*v1.PublicParams](pp)
 }

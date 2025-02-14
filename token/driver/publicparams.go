@@ -36,6 +36,8 @@ type PublicParamsFetcher interface {
 type PublicParameters interface {
 	// Identifier returns the unique identifier of this public parameters.
 	Identifier() string
+	// Version identifies the version of this public parameters.
+	Version() string
 	// TokenDataHiding returns true if the token data is hidden
 	TokenDataHiding() bool
 	// GraphHiding returns true if the token graph is hidden

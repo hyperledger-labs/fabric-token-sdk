@@ -1,0 +1,89 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+package v1
+
+import (
+	errors2 "errors"
+
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/fabtoken"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+)
+
+type TokensService struct {
+	*common.TokensService
+	IdentityDeserializer driver.Deserializer
+	OutputTokenFormat    token2.Format
+}
+
+func NewTokensService(pp *PublicParams, identityDeserializer driver.Deserializer) (*TokensService, error) {
+	supportedTokens, err := SupportedTokenFormat(pp.QuantityPrecision)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting supported token types")
+	}
+	return &TokensService{
+		TokensService:        common.NewTokensService(),
+		IdentityDeserializer: identityDeserializer,
+		OutputTokenFormat:    supportedTokens,
+	}, nil
+}
+
+func (s *TokensService) Recipients(output []byte) ([]driver.Identity, error) {
+	tok := &Output{}
+	if err := tok.Deserialize(output); err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling token")
+	}
+	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get recipients")
+	}
+	return recipients, nil
+}
+
+// Deobfuscate returns a deserialized token and the identity of its issuer
+func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, driver.Identity, []driver.Identity, token2.Format, error) {
+	tok := &Output{}
+	if err := tok.Deserialize(output); err != nil {
+		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token")
+	}
+
+	metadata := &OutputMetadata{}
+	if err := metadata.Deserialize(outputMetadata); err != nil {
+		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
+	}
+
+	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	if err != nil {
+		return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
+	}
+
+	return &token2.Token{
+		Owner:    tok.Owner,
+		Type:     tok.Type,
+		Quantity: tok.Quantity,
+	}, metadata.Issuer, recipients, s.OutputTokenFormat, nil
+}
+
+func (s *TokensService) SupportedTokenFormats() []token2.Format {
+	return []token2.Format{s.OutputTokenFormat}
+}
+
+func SupportedTokenFormat(precision uint64) (token2.Format, error) {
+	hasher := utils.NewSHA256Hasher()
+	if err := errors2.Join(
+		hasher.AddInt32(fabtoken.Type),
+		hasher.AddString(msp.X509Identity),
+		hasher.AddUInt64(precision),
+	); err != nil {
+		return "", errors.Wrapf(err, "failed to generator token type")
+	}
+	return token2.Format(hasher.HexDigest()), nil
+}
