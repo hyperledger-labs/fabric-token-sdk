@@ -9,16 +9,16 @@ package math
 import (
 	"reflect"
 
-	math "github.com/IBM/mathlib"
+	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
 type Element interface {
 	IsInfinity() bool
-	CurveID() math.CurveID
+	CurveID() mathlib.CurveID
 }
 
-func CheckElements[E Element](elements []E, curveID math.CurveID, length uint64) error {
+func CheckElements[E Element](elements []E, curveID mathlib.CurveID, length uint64) error {
 	if uint64(len(elements)) != length {
 		return errors.Errorf("length of elements does not match length of curveID")
 	}
@@ -30,7 +30,7 @@ func CheckElements[E Element](elements []E, curveID math.CurveID, length uint64)
 	return nil
 }
 
-func CheckElement[E Element](element E, curveID math.CurveID) (err error) {
+func CheckElement[E Element](element E, curveID mathlib.CurveID) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = errors.Errorf("caught panic while checking element, err [%s]", e)

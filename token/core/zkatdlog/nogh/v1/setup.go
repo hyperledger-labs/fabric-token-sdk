@@ -12,11 +12,15 @@ import (
 	"strconv"
 
 	mathlib "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
+	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
 	"github.com/pkg/errors"
 )
 
@@ -70,18 +74,82 @@ func (rpp *RangeProofParams) Validate(curveID mathlib.CurveID) error {
 	return nil
 }
 
+func (rpp *RangeProofParams) ToProtos() (*pp.RangeProofParams, error) {
+	lefGenerators, err := utils2.ToProtoG1Slice(rpp.LeftGenerators)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to convert left generators to protos")
+	}
+	rightGenerators, err := utils2.ToProtoG1Slice(rpp.RightGenerators)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to convert right generators to protos")
+	}
+	p, err := utils2.ToProtoG1(rpp.P)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to convert p to proto")
+	}
+	q, err := utils2.ToProtoG1(rpp.Q)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to convert q to proto")
+	}
+
+	rangeProofParams := &pp.RangeProofParams{
+		LeftGenerators:  lefGenerators,
+		RightGenerators: rightGenerators,
+		P:               p,
+		Q:               q,
+		BitLength:       rpp.BitLength,
+		NumberOfRounds:  rpp.NumberOfRounds,
+	}
+	return rangeProofParams, nil
+}
+
+func (rpp *RangeProofParams) FromProto(curve mathlib.CurveID, params *pp.RangeProofParams) error {
+	rpp.NumberOfRounds = params.NumberOfRounds
+	rpp.BitLength = params.BitLength
+	var err error
+	rpp.LeftGenerators, err = utils2.FromG1ProtoSlice(curve, params.LeftGenerators)
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert left generators to protos")
+	}
+	rpp.RightGenerators, err = utils2.FromG1ProtoSlice(curve, params.RightGenerators)
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert right generators to protos")
+	}
+	rpp.P, err = utils2.FromG1Proto(curve, params.P)
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert p to proto")
+	}
+	rpp.Q, err = utils2.FromG1Proto(curve, params.Q)
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert q to proto")
+	}
+	return nil
+}
+
 type IdemixIssuerPublicKey struct {
 	PublicKey []byte
 	Curve     mathlib.CurveID
 }
 
-func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
-	pp := &PublicParams{}
-	pp.Label = label
-	if err := pp.Deserialize(raw); err != nil {
-		return nil, errors.Wrap(err, "failed parsing public parameters")
+func (i *IdemixIssuerPublicKey) ToProtos() (*pp.IdemixIssuerPublicKey, error) {
+	return &pp.IdemixIssuerPublicKey{
+		PublicKey: i.PublicKey,
+		CurverId: &pp.CurveID{
+			Id: uint64(i.Curve),
+		},
+	}, nil
+}
+
+func (i *IdemixIssuerPublicKey) FromProtos(s *pp.IdemixIssuerPublicKey) error {
+	if s.PublicKey == nil {
+		return errors.New("invalid idemix public key, it is nil")
 	}
-	return pp, nil
+	i.PublicKey = s.PublicKey
+	if s.CurverId == nil {
+		return errors.New("invalid idemix issuer public key")
+	}
+	i.Curve = mathlib.CurveID(s.CurverId.Id)
+	return nil
 }
 
 type PublicParams struct {
@@ -98,7 +166,7 @@ type PublicParams struct {
 	RangeProofParams *RangeProofParams
 	// IdemixIssuerPublicKeys contains the idemix issuer public keys
 	// Wallets should prefer the use of keys valid under the public key whose index in the array is the smallest.
-	IdemixIssuerPublicKeys []IdemixIssuerPublicKey
+	IdemixIssuerPublicKeys []*IdemixIssuerPublicKey
 	// Auditor is the public key of the auditor.
 	Auditor driver.Identity
 	// IssuerIDs is a list of public keys of the entities that can issue tokens.
@@ -107,6 +175,15 @@ type PublicParams struct {
 	MaxToken uint64
 	// QuantityPrecision is the precision used to represent quantities
 	QuantityPrecision uint64
+}
+
+func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
+	pp := &PublicParams{}
+	pp.Label = label
+	if err := pp.Deserialize(raw); err != nil {
+		return nil, errors.Wrap(err, "failed parsing public parameters")
+	}
+	return pp, nil
 }
 
 func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
@@ -124,7 +201,7 @@ func setup(bitLength uint64, idemixIssuerPK []byte, label string, idemixCurveID 
 		Label: label,
 		Curve: mathlib.BN254,
 		Ver:   Version,
-		IdemixIssuerPublicKeys: []IdemixIssuerPublicKey{
+		IdemixIssuerPublicKeys: []*IdemixIssuerPublicKey{
 			{
 				PublicKey: idemixIssuerPK,
 				Curve:     idemixCurveID,
@@ -144,119 +221,199 @@ func setup(bitLength uint64, idemixIssuerPK []byte, label string, idemixCurveID 
 	return pp, nil
 }
 
-func (pp *PublicParams) Identifier() string {
-	return pp.Label
+func (p *PublicParams) Identifier() string {
+	return p.Label
 }
 
-func (pp *PublicParams) Version() string {
-	return pp.Ver
+func (p *PublicParams) Version() string {
+	return p.Ver
 }
 
-func (pp *PublicParams) CertificationDriver() string {
-	return pp.Label
+func (p *PublicParams) CertificationDriver() string {
+	return p.Label
 }
 
-func (pp *PublicParams) TokenDataHiding() bool {
+func (p *PublicParams) TokenDataHiding() bool {
 	return true
 }
 
-func (pp *PublicParams) GraphHiding() bool {
+func (p *PublicParams) GraphHiding() bool {
 	return false
 }
 
-func (pp *PublicParams) MaxTokenValue() uint64 {
-	return pp.MaxToken
+func (p *PublicParams) MaxTokenValue() uint64 {
+	return p.MaxToken
 }
 
-func (pp *PublicParams) Bytes() ([]byte, error) {
-	return pp.Serialize()
+func (p *PublicParams) Bytes() ([]byte, error) {
+	return p.Serialize()
 }
 
-func (pp *PublicParams) Auditors() []driver.Identity {
-	if len(pp.Auditor) == 0 {
+func (p *PublicParams) Auditors() []driver.Identity {
+	if len(p.Auditor) == 0 {
 		return []driver.Identity{}
 	}
-	return []driver.Identity{pp.Auditor}
+	return []driver.Identity{p.Auditor}
 }
 
 // Issuers returns the list of authorized issuers
-func (pp *PublicParams) Issuers() []driver.Identity {
-	return pp.IssuerIDs
+func (p *PublicParams) Issuers() []driver.Identity {
+	return p.IssuerIDs
 }
 
-func (pp *PublicParams) Serialize() ([]byte, error) {
-	raw, err := json.Marshal(pp)
+func (p *PublicParams) Precision() uint64 {
+	return p.QuantityPrecision
+}
+
+func (p *PublicParams) Serialize() ([]byte, error) {
+	pg, err := utils2.ToProtoG1Slice(p.PedersenGenerators)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize public parameters")
+	}
+	rpp, err := p.RangeProofParams.ToProtos()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize range proof parameters")
+	}
+	issuers, err := utils.ToProtosSliceFunc(p.IssuerIDs, func(id driver.Identity) (*pp.Identity, error) {
+		return &pp.Identity{
+			Raw: id,
+		}, nil
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize issuer")
+	}
+	idemixIssuerPublicKeys, err := utils.ToProtosSlice[pp.IdemixIssuerPublicKey, *IdemixIssuerPublicKey](p.IdemixIssuerPublicKeys)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize idemix issuer public keys")
+	}
+
+	publicParams := &pp.PublicParameters{
+		Identifier: p.Label,
+		Version:    p.Ver,
+		CurveId: &pp.CurveID{
+			Id: uint64(p.Curve),
+		},
+		PedersenGenerators:     pg,
+		RangeProofParams:       rpp,
+		IdemixIssuerPublicKeys: idemixIssuerPublicKeys,
+		Auditor: &pp.Identity{
+			Raw: p.Auditor,
+		},
+		Issuers:           issuers,
+		MaxToken:          p.MaxToken,
+		QuantityPrecision: p.QuantityPrecision,
+	}
+	raw, err := proto.Marshal(publicParams)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(&pp2.PublicParameters{
-		Identifier: pp.Label,
+		Identifier: p.Label,
 		Raw:        raw,
 	})
 }
 
-func (pp *PublicParams) Precision() uint64 {
-	return pp.QuantityPrecision
-}
-
-func (pp *PublicParams) Deserialize(raw []byte) error {
-	publicParams := &pp2.PublicParameters{}
-	if err := json.Unmarshal(raw, publicParams); err != nil {
+func (p *PublicParams) Deserialize(raw []byte) error {
+	container := &pp2.PublicParameters{}
+	if err := json.Unmarshal(raw, container); err != nil {
 		return err
 	}
-	if publicParams.Identifier != pp.Label {
-		return errors.Errorf("invalid identifier, expecting [%s], got [%s]", pp.Label, publicParams.Identifier)
+	if container.Identifier != p.Label {
+		return errors.Errorf("invalid identifier, expecting [%s], got [%s]", p.Label, container.Identifier)
 	}
-	if err := json.Unmarshal(publicParams.Raw, pp); err != nil {
+
+	publicParams := &pp.PublicParameters{}
+	if err := proto.Unmarshal(container.Raw, publicParams); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling public parameters")
 	}
+
+	p.Label = publicParams.Identifier
+	p.Ver = publicParams.Version
+	if publicParams.CurveId == nil {
+		return errors.Errorf("invalid curve id, expecting curve id, got nil")
+	}
+	p.Curve = mathlib.CurveID(publicParams.CurveId.Id)
+	p.MaxToken = publicParams.MaxToken
+	p.QuantityPrecision = publicParams.QuantityPrecision
+	pg, err := utils.FromProtosSliceFunc(publicParams.PedersenGenerators, func(s *pp.G1) (*mathlib.G1, error) {
+		if s == nil {
+			return nil, nil
+		}
+		return mathlib.Curves[p.Curve].NewG1FromBytes(s.Raw)
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize public parameters")
+	}
+	p.PedersenGenerators = pg
+	issuers, err := utils.FromProtosSliceFunc2(publicParams.Issuers, func(id *pp.Identity) (driver.Identity, error) {
+		if id == nil {
+			return nil, nil
+		}
+		return id.Raw, nil
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize issuers")
+	}
+	p.IssuerIDs = issuers
+
+	p.IdemixIssuerPublicKeys = utils.GenericSliceOfPointers[IdemixIssuerPublicKey](len(publicParams.IdemixIssuerPublicKeys))
+	err = utils.FromProtosSlice[pp.IdemixIssuerPublicKey, *IdemixIssuerPublicKey](publicParams.IdemixIssuerPublicKeys, p.IdemixIssuerPublicKeys)
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize idemix issuer public keys")
+	}
+
+	p.RangeProofParams = &RangeProofParams{}
+	if err := p.RangeProofParams.FromProto(p.Curve, publicParams.RangeProofParams); err != nil {
+		return errors.Wrapf(err, "failed to deserialize range proof parameters")
+	}
+
 	return nil
 }
 
-func (pp *PublicParams) GeneratePedersenParameters() error {
-	curve := mathlib.Curves[pp.Curve]
+func (p *PublicParams) GeneratePedersenParameters() error {
+	curve := mathlib.Curves[p.Curve]
 	rand, err := curve.Rand()
 	if err != nil {
 		return errors.Errorf("failed to get RNG")
 	}
-	pp.PedersenGenerators = make([]*mathlib.G1, 3)
+	p.PedersenGenerators = make([]*mathlib.G1, 3)
 
-	for i := 0; i < len(pp.PedersenGenerators); i++ {
-		pp.PedersenGenerators[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
+	for i := 0; i < len(p.PedersenGenerators); i++ {
+		p.PedersenGenerators[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
 	}
 	return nil
 }
 
-func (pp *PublicParams) GenerateRangeProofParameters(bitLength uint64) error {
-	curve := mathlib.Curves[pp.Curve]
+func (p *PublicParams) GenerateRangeProofParameters(bitLength uint64) error {
+	curve := mathlib.Curves[p.Curve]
 
-	pp.RangeProofParams = &RangeProofParams{
+	p.RangeProofParams = &RangeProofParams{
 		P:              curve.HashToG1([]byte(strconv.Itoa(0))),
 		Q:              curve.HashToG1([]byte(strconv.Itoa(1))),
 		BitLength:      bitLength,
 		NumberOfRounds: log2(bitLength),
 	}
-	pp.RangeProofParams.LeftGenerators = make([]*mathlib.G1, bitLength)
-	pp.RangeProofParams.RightGenerators = make([]*mathlib.G1, bitLength)
+	p.RangeProofParams.LeftGenerators = make([]*mathlib.G1, bitLength)
+	p.RangeProofParams.RightGenerators = make([]*mathlib.G1, bitLength)
 
 	for i := uint64(0); i < bitLength; i++ {
-		pp.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.FormatUint(2*(i+1), 10)))
-		pp.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.FormatUint(2*(i+1)+1, 10)))
+		p.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.FormatUint(2*(i+1), 10)))
+		p.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.FormatUint(2*(i+1)+1, 10)))
 	}
 
 	return nil
 }
 
-func (pp *PublicParams) AddAuditor(auditor driver.Identity) {
-	pp.Auditor = auditor
+func (p *PublicParams) AddAuditor(auditor driver.Identity) {
+	p.Auditor = auditor
 }
 
-func (pp *PublicParams) AddIssuer(id driver.Identity) {
-	pp.IssuerIDs = append(pp.IssuerIDs, id)
+func (p *PublicParams) AddIssuer(id driver.Identity) {
+	p.IssuerIDs = append(p.IssuerIDs, id)
 }
 
-func (pp *PublicParams) ComputeHash() ([]byte, error) {
-	raw, err := pp.Bytes()
+func (p *PublicParams) ComputeHash() ([]byte, error) {
+	raw, err := p.Bytes()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to serialize public params")
 	}
@@ -271,55 +428,58 @@ func (pp *PublicParams) ComputeHash() ([]byte, error) {
 	return hash.Sum(nil), nil
 }
 
-func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
-	return 1<<pp.RangeProofParams.BitLength - 1
+func (p *PublicParams) ComputeMaxTokenValue() uint64 {
+	return 1<<p.RangeProofParams.BitLength - 1
 }
 
-func (pp *PublicParams) String() string {
-	res, err := json.MarshalIndent(pp, " ", "  ")
+func (p *PublicParams) String() string {
+	res, err := json.MarshalIndent(p, " ", "  ")
 	if err != nil {
 		return err.Error()
 	}
 	return string(res)
 }
 
-func (pp *PublicParams) Validate() error {
-	if int(pp.Curve) > len(mathlib.Curves)-1 {
-		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(pp.Curve), len(mathlib.Curves)-1)
+func (p *PublicParams) Validate() error {
+	if int(p.Curve) > len(mathlib.Curves)-1 {
+		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(p.Curve), len(mathlib.Curves)-1)
 	}
-	if len(pp.IdemixIssuerPublicKeys) != 1 {
-		return errors.Errorf("expected one idemix issuer public key, found [%d]", len(pp.IdemixIssuerPublicKeys))
+	if len(p.IdemixIssuerPublicKeys) != 1 {
+		return errors.Errorf("expected one idemix issuer public key, found [%d]", len(p.IdemixIssuerPublicKeys))
 	}
 
-	for _, issuer := range pp.IdemixIssuerPublicKeys {
+	for _, issuer := range p.IdemixIssuerPublicKeys {
+		if issuer == nil {
+			return errors.Errorf("invalid idemix issuer public key, it is nil")
+		}
 		if len(issuer.PublicKey) == 0 {
 			return errors.Errorf("expected idemix issuer public key to be non-empty")
 		}
 		if int(issuer.Curve) > len(mathlib.Curves)-1 {
-			return errors.Errorf("invalid public parameters: invalid idemix curveID [%d > %d]", int(pp.Curve), len(mathlib.Curves)-1)
+			return errors.Errorf("invalid public parameters: invalid idemix curveID [%d > %d]", int(p.Curve), len(mathlib.Curves)-1)
 		}
 	}
-	if err := math.CheckElements(pp.PedersenGenerators, pp.Curve, 3); err != nil {
+	if err := math.CheckElements(p.PedersenGenerators, p.Curve, 3); err != nil {
 		return errors.Wrapf(err, "invalid pedersen generators")
 	}
-	if pp.RangeProofParams == nil {
+	if p.RangeProofParams == nil {
 		return errors.New("invalid public parameters: nil range proof parameters")
 	}
-	bitLength := pp.RangeProofParams.BitLength
+	bitLength := p.RangeProofParams.BitLength
 	supportedPrecisions := collections.NewSet(SupportedPrecisions...)
 	if !supportedPrecisions.Contains(bitLength) {
 		return errors.Errorf("invalid bit length [%d], should be one of [%v]", bitLength, supportedPrecisions.ToSlice())
 	}
-	err := pp.RangeProofParams.Validate(pp.Curve)
+	err := p.RangeProofParams.Validate(p.Curve)
 	if err != nil {
 		return errors.Wrap(err, "invalid public parameters")
 	}
-	if pp.QuantityPrecision != pp.RangeProofParams.BitLength {
-		return errors.Errorf("invalid public parameters: quantity precision should be [%d] instead it is [%d]", pp.RangeProofParams.BitLength, pp.QuantityPrecision)
+	if p.QuantityPrecision != p.RangeProofParams.BitLength {
+		return errors.Errorf("invalid public parameters: quantity precision should be [%d] instead it is [%d]", p.RangeProofParams.BitLength, p.QuantityPrecision)
 	}
-	maxToken := pp.ComputeMaxTokenValue()
-	if maxToken != pp.MaxToken {
-		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, pp.MaxToken)
+	maxToken := p.ComputeMaxTokenValue()
+	if maxToken != p.MaxToken {
+		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, p.MaxToken)
 	}
 	// if len(pp.Issuers) == 0 {
 	//	return errors.New("invalid public parameters: empty list of issuers")
