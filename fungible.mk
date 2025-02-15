@@ -126,17 +126,17 @@ integration-tests-dlogstress:
 	cd ./integration/token/fungible/dlogstress; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --label-filter="$(TEST_FILTER)" .
 
 .PHONY: integration-tests-multisig-dlog-t1
-integration-tests-multisig-t1:
-	make integration-tests-multisig TEST_FILTER="T1"
+integration-tests-multisig-dlog-t1:
+	make integration-tests-multisig-dlog TEST_FILTER="T1"
 
 .PHONY: integration-tests-multisig-dlog
-integration-tests-multisig:
+integration-tests-multisig-dlog:
 	cd ./integration/token/fungible/multisig/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --label-filter="$(TEST_FILTER)" .
 
 .PHONY: integration-tests-multisig-fabtoken-t1
-integration-tests-multisig-t1:
-	make integration-tests-multisig TEST_FILTER="T1"
+integration-tests-multisig-fabtoken-t1:
+	make integration-tests-multisig-fabtoken TEST_FILTER="T1"
 
 .PHONY: integration-tests-multisig-fabtoken
-integration-tests-multisig:
+integration-tests-multisig-fabtoken:
 	cd ./integration/token/fungible/multisig/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --label-filter="$(TEST_FILTER)" .
