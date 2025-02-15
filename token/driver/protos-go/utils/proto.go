@@ -41,6 +41,26 @@ func ToProtosSlice[T any, S ProtoSource[T]](s []S) ([]*T, error) {
 	return res, nil
 }
 
+func ToProtosSliceFunc[T any, S any](s []S, convert func(S) (*T, error)) ([]*T, error) {
+	if len(s) == 0 {
+		return nil, nil
+	}
+	res := make([]*T, len(s))
+	var err error
+	for i, x := range s {
+		if IsNil(x) {
+			res[i] = nil
+			continue
+		}
+
+		res[i], err = convert(x)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
 func FromProtosSlice[T any, S ProtoDestination[T]](t []*T, s []S) error {
 	var err error
 	for i, x := range s {
@@ -55,6 +75,33 @@ func FromProtosSlice[T any, S ProtoDestination[T]](t []*T, s []S) error {
 		}
 	}
 	return nil
+}
+
+func FromProtosSliceFunc[T any, S any](s []S, convert func(S) (*T, error)) ([]*T, error) {
+	var err error
+	res := make([]*T, len(s))
+	for i, x := range s {
+		res[i], err = convert(x)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func FromProtosSliceFunc2[T any, S any](s []S, convert func(S) (T, error)) ([]T, error) {
+	if len(s) == 0 {
+		return nil, nil
+	}
+	var err error
+	res := make([]T, len(s))
+	for i, x := range s {
+		res[i], err = convert(x)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
 }
 
 func ToActionSlice(actionType request.ActionType, actions [][]byte) []*request.Action {

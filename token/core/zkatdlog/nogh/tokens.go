@@ -47,7 +47,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*v1
 	maxPrecision := pp.RangeProofParams.BitLength
 
 	// dlog without graph hiding
-	outputTokenFormat, err := supportedTokenFormat(pp, maxPrecision, &pp.IdemixIssuerPublicKeys[0])
+	outputTokenFormat, err := supportedTokenFormat(pp, maxPrecision, pp.IdemixIssuerPublicKeys[0])
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed computing comm token types")
 	}
@@ -57,7 +57,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*v1
 		for _, precision := range v1.SupportedPrecisions {
 			// these precisions are supported directly
 			if precision <= maxPrecision {
-				format, err := supportedTokenFormat(pp, precision, &key)
+				format, err := supportedTokenFormat(pp, precision, key)
 				if err != nil {
 					return nil, errors.Wrapf(err, "failed computing comm token types")
 				}
