@@ -107,7 +107,7 @@ func (db *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
 	return err
 }
 
-func (db *IdentityDB) IteratorConfigurations(configurationType string) (collections.Iterator[*driver.IdentityConfiguration], error) {
+func (db *IdentityDB) IteratorConfigurations(configurationType string) (driver.Iterator[driver.IdentityConfiguration], error) {
 	query, err := NewSelect("id, url, conf, raw").From(db.table.IdentityConfigurations).Where("type = $1").Compile()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed compiling query")
@@ -117,13 +117,7 @@ func (db *IdentityDB) IteratorConfigurations(configurationType string) (collecti
 	if err != nil {
 		return nil, err
 	}
-	return common.QueryIterator(rows, func(r common.RowScanner, c *driver.IdentityConfiguration) error {
-		if err := r.Scan(&c.ID, &c.URL, &c.Config, &c.Raw); err != nil {
-			return err
-		}
-		c.Type = configurationType
-		return nil
-	}), nil
+	return &IdentityConfigurationIterator{rows: rows, configurationType: configurationType}, nil
 }
 
 func (db *IdentityDB) ConfigurationExists(id, typ, url string) (bool, error) {
@@ -285,11 +279,15 @@ func (db *IdentityDB) GetExistingSignerInfo(ids ...driver2.Identity) ([]string, 
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
-	queried, err := collections.ReadAll(common.QueryIterator(rows, func(r common.RowScanner, h *string) error { return r.Scan(h) }))
-	if err != nil {
-		return nil, err
+	defer Close(rows)
+	found := collections.NewSet[string]()
+	for rows.Next() {
+		var idHash string
+		if err := rows.Scan(&idHash); err != nil {
+			return nil, err
+		}
+		found.Add(idHash)
 	}
-	found := collections.NewSet[string](queried...)
 	for _, idHash := range idHashes {
 		db.signerInfoCache.Add(idHash, found.Contains(idHash))
 	}
@@ -321,6 +319,26 @@ func (db *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
 	return info, nil
+}
+
+type IdentityConfigurationIterator struct {
+	rows              *sql.Rows
+	configurationType string
+}
+
+func (w *IdentityConfigurationIterator) Close() error {
+	return w.rows.Close()
+}
+
+func (w *IdentityConfigurationIterator) HasNext() bool {
+	return w.rows.Next()
+}
+
+func (w *IdentityConfigurationIterator) Next() (driver.IdentityConfiguration, error) {
+	var c driver.IdentityConfiguration
+	c.Type = w.configurationType
+	err := w.rows.Scan(&c.ID, &c.URL, &c.Config, &c.Raw)
+	return c, err
 }
 
 func (db *IdentityDB) GetSchema() string {
