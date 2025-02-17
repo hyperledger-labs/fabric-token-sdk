@@ -8,6 +8,7 @@ package lookup
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	vault2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/core/generic/vault"
@@ -32,16 +33,16 @@ import (
 type newTxInfoMapper = func(network, channel string) events.EventInfoMapper[KeyInfo]
 
 type EventsListenerManager interface {
-	AddPermanentEventListener(key string, e events.ListenerEntry[KeyInfo]) error
-	AddEventListener(key string, e events.ListenerEntry[KeyInfo]) error
-	RemoveEventListener(key string, e events.ListenerEntry[KeyInfo]) error
+	AddPermanentEventListener(key driver2.PKey, e events.ListenerEntry[KeyInfo]) error
+	AddEventListener(key driver2.PKey, e events.ListenerEntry[KeyInfo]) error
+	RemoveEventListener(key driver2.PKey, e events.ListenerEntry[KeyInfo]) error
 }
 
 type Listener interface {
 	// OnStatus is called when the key has been found
-	OnStatus(ctx context.Context, key string, value []byte)
+	OnStatus(ctx context.Context, key driver2.PKey, value []byte)
 	// OnError is called when an error occurs during the search of the key
-	OnError(ctx context.Context, key string, err error)
+	OnError(ctx context.Context, key driver2.PKey, err error)
 }
 
 type listenerEntry struct {
@@ -101,9 +102,8 @@ func newEndorserDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tr
 	}
 	return NewDeliveryBasedLLMProvider(fnsp, tracerProvider, config, func(network, _ string) events.EventInfoMapper[KeyInfo] {
 		return &endorserTxInfoMapper{
-			network: network,
-			prefix1: prefix,
-			prefix2: setupKey,
+			network:  network,
+			prefixes: []string{prefix, setupKey},
 		}
 	})
 }
@@ -156,9 +156,8 @@ func (m *deliveryBasedLLM) RemoveLookupListener(key string, listener Listener) e
 }
 
 type endorserTxInfoMapper struct {
-	network string
-	prefix1 string
-	prefix2 string
+	network  string
+	prefixes []string
 }
 
 func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.BlockMetadata, blockNum driver2.BlockNum, txNum driver2.TxNum) (map[driver2.Namespace]KeyInfo, error) {
@@ -204,7 +203,7 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string)
 	for ns, writes := range rwSet.WriteSet.Writes {
 		logger.Debugf("TX [%s:%s] has [%d] writes", txID, ns, len(writes))
 		for key, value := range writes {
-			if strings.HasPrefix(key, m.prefix1) || strings.HasPrefix(key, m.prefix2) {
+			if slices.ContainsFunc(m.prefixes, func(prefix string) bool { return strings.HasPrefix(key, prefix) }) {
 				logger.Debugf("TX [%s:%s] does have key [%s].", txID, ns, key)
 				txInfos[ns] = KeyInfo{
 					Namespace: ns,
