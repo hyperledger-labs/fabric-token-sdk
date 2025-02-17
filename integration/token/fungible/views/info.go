@@ -77,7 +77,7 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	assert.NoError(err, "failed deserializing public parameters")
 	assert.NotNil(pp)
 	assert.NoError(pp.Validate())
-	fetchedPPRawHash := utils.Hashable(fetchedPPRaw).Raw()
+	fetchedPPRawHash := token.PPHash(utils.Hashable(fetchedPPRaw).Raw())
 	assert.Equal(
 		fetchedPPRawHash,
 		tms.PublicParametersManager().PublicParamsHash(),
