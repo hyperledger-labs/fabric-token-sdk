@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
@@ -259,11 +258,20 @@ func (db *TokenDB) ListUnspentTokensBy(walletID string, typ token.Type) (*token.
 	if err != nil {
 		return nil, err
 	}
-	tokens, err := collections.ToSlice(it)
-	if err != nil {
-		return nil, err
+	defer it.Close()
+	tokens := make([]*token.UnspentToken, 0)
+	for {
+		next, err := it.Next()
+		switch {
+		case err != nil:
+			logger.Errorf("scan failed [%s]", err)
+			return nil, err
+		case next == nil:
+			return &token.UnspentTokens{Tokens: tokens}, nil
+		default:
+			tokens = append(tokens, next)
+		}
 	}
-	return &token.UnspentTokens{Tokens: tokens}, nil
 }
 
 // ListUnspentTokens returns the list of unspent tokens
@@ -273,28 +281,32 @@ func (db *TokenDB) ListUnspentTokens() (*token.UnspentTokens, error) {
 	if err != nil {
 		return nil, err
 	}
-	tokens, err := collections.ToSlice(it)
-	if err != nil {
-		return nil, err
+	defer it.Close()
+	tokens := make([]*token.UnspentToken, 0)
+	for {
+		next, err := it.Next()
+		switch {
+		case err != nil:
+			logger.Errorf("scan failed [%s]", err)
+			return nil, err
+		case next == nil:
+			return &token.UnspentTokens{Tokens: tokens}, nil
+		default:
+			tokens = append(tokens, next)
+		}
 	}
-	return &token.UnspentTokens{Tokens: tokens}, nil
 }
 
 // ListAuditTokens returns the audited tokens associated to the passed ids
 func (db *TokenDB) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
-	return db.listTokens(ids, common.ConstCondition("auditor = true"))
-}
-
-// GetTokens returns the owned tokens and their identifier keys for the passed ids.
-func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
-	return db.listTokens(inputs, common.ConstCondition("is_deleted = false"), common.ConstCondition("owner = true"))
-}
-
-func (db *TokenDB) listTokens(inputs []*token.ID, conds ...common.Condition) ([]*token.Token, error) {
-	if len(inputs) == 0 {
+	if len(ids) == 0 {
 		return []*token.Token{}, nil
 	}
-	where, args := common.Where(db.ci.And(append(conds, db.ci.HasTokens("tx_id", "idx", inputs...))...))
+	where, args := common.Where(db.ci.And(
+		db.ci.HasTokens("tx_id", "idx", ids...),
+		common.ConstCondition("auditor = true"),
+	))
+
 	query, err := NewSelect("tx_id, idx, owner_raw, token_type, quantity").From(db.table.Tokens).Where(where).Compile()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile query")
@@ -306,56 +318,43 @@ func (db *TokenDB) listTokens(inputs []*token.ID, conds ...common.Condition) ([]
 	}
 	defer Close(rows)
 
-	tokens := make([]*token.Token, len(inputs))
+	tokens := make([]*token.Token, len(ids))
 	counter := 0
 	for rows.Next() {
-		tokID := token.ID{}
-		var typ token.Type
-		var quantity string
-		var ownerRaw []byte
-		err := rows.Scan(
-			&tokID.TxId,
-			&tokID.Index,
-			&ownerRaw,
-			&typ,
-			&quantity,
-		)
-		if err != nil {
+		id := token.ID{}
+		tok := token.Token{
+			Owner:    []byte{},
+			Type:     "",
+			Quantity: "",
+		}
+		if err := rows.Scan(&id.TxId, &id.Index, &tok.Owner, &tok.Type, &tok.Quantity); err != nil {
 			return tokens, err
 		}
-		tok := &token.Token{
-			Owner:    ownerRaw,
-			Type:     typ,
-			Quantity: quantity,
-		}
 
-		// put in the right position
+		// the result is expected to be in order of the ids
 		found := false
-		for j := 0; j < len(inputs); j++ {
-			if inputs[j].Equal(tokID) {
-				tokens[j] = tok
-				logger.Debugf("set token at location [%s:%s]-[%d]", tok.Type, tok.Quantity, j)
+		for i := 0; i < len(ids); i++ {
+			if ids[i].Equal(id) {
+				tokens[i] = &tok
 				found = true
-				break
+				counter++
 			}
 		}
 		if !found {
-			return nil, errors.Errorf("retrieved wrong token [%v]", tokID)
+			return nil, errors.Errorf("retrieved wrong token [%s]", id)
 		}
-
-		counter++
 	}
-	logger.Debugf("found [%d] tokens, expected [%d]", counter, len(inputs))
-	if err = rows.Err(); err != nil {
-		return tokens, err
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
 	}
 	if counter == 0 {
-		return nil, errors.Errorf("token not found for key [%s:%d]", inputs[0].TxId, inputs[0].Index)
+		return nil, errors.Errorf("token not found for key [%s:%d]", ids[0].TxId, ids[0].Index)
 	}
-	if counter != len(inputs) {
+	if counter != len(ids) {
 		for j, t := range tokens {
 			if t == nil {
-				return nil, errors.Errorf("token not found for key [%s:%d]", inputs[j].TxId, inputs[j].Index)
+				return nil, errors.Errorf("token not found for key [%s:%d]", ids[j].TxId, ids[j].Index)
 			}
 		}
 		panic("programming error: should not reach this point")
@@ -531,6 +530,85 @@ func (db *TokenDB) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) (
 		}
 	}
 	return tokens, metas, types, nil
+}
+
+// GetTokens returns the owned tokens and their identifier keys for the passed ids.
+func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
+	if len(inputs) == 0 {
+		return []*token.Token{}, nil
+	}
+	where, args := common.Where(db.ci.And(
+		db.ci.HasTokens("tx_id", "idx", inputs...),
+		common.ConstCondition("is_deleted = false"),
+		common.ConstCondition("owner = true"),
+	))
+
+	query, err := NewSelect("tx_id, idx, owner_raw, token_type, quantity").From(db.table.Tokens).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
+	logger.Debug(query, args)
+	rows, err := db.readDB.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer Close(rows)
+
+	tokens := make([]*token.Token, len(inputs))
+	counter := 0
+	for rows.Next() {
+		tokID := token.ID{}
+		var typ token.Type
+		var quantity string
+		var ownerRaw []byte
+		err := rows.Scan(
+			&tokID.TxId,
+			&tokID.Index,
+			&ownerRaw,
+			&typ,
+			&quantity,
+		)
+		if err != nil {
+			return tokens, err
+		}
+		tok := &token.Token{
+			Owner:    ownerRaw,
+			Type:     typ,
+			Quantity: quantity,
+		}
+
+		// put in the right position
+		found := false
+		for j := 0; j < len(inputs); j++ {
+			if inputs[j].Equal(tokID) {
+				tokens[j] = tok
+				logger.Debugf("set token at location [%s:%s]-[%d]", tok.Type, tok.Quantity, j)
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, errors.Errorf("retrieved wrong token [%v]", tokID)
+		}
+
+		counter++
+	}
+	logger.Debugf("found [%d] tokens, expected [%d]", counter, len(inputs))
+	if err = rows.Err(); err != nil {
+		return tokens, err
+	}
+	if counter == 0 {
+		return nil, errors.Errorf("token not found for key [%s:%d]", inputs[0].TxId, inputs[0].Index)
+	}
+	if counter != len(inputs) {
+		for j, t := range tokens {
+			if t == nil {
+				return nil, errors.Errorf("token not found for key [%s:%d]", inputs[j].TxId, inputs[j].Index)
+			}
+		}
+		panic("programming error: should not reach this point")
+	}
+	return tokens, nil
 }
 
 // QueryTokenDetails returns details about owned tokens, regardless if they have been spent or not.
