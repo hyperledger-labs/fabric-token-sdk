@@ -12,13 +12,17 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
+
+var logger = logging.MustGetLogger("tokensdk.common-checks")
 
 type TokenTransactionDB interface {
 	GetTokenRequest(txID string) ([]byte, error)
@@ -168,24 +172,27 @@ func (a *DefaultCheckers) checkUnspentTokens(context context.Context) ([]string,
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed querying utxo engine")
 	}
-	defer uit.Close()
-	var unspentTokenIDs []*token2.ID
-	for {
-		tok, err := uit.Next()
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed querying next unspent token")
+	unspentTokenIDs, err := collections.ToSlice(collections.Map(uit, func(t *token2.UnspentToken) (*token2.ID, error) {
+		if t == nil {
+			return nil, nil
 		}
-		if tok == nil {
-			break
-		}
-		unspentTokenIDs = append(unspentTokenIDs, tok.Id)
+		return t.Id, nil
+	}))
+
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed querying next unspent token")
 	}
 	ledgerTokenContent, err := net.QueryTokens(context, tms.Namespace(), unspentTokenIDs)
 	if err != nil {
 		errorMessages = append(errorMessages, fmt.Sprintf("failed to query tokens: [%s]", err))
 	} else {
 		if len(unspentTokenIDs) != len(ledgerTokenContent) {
-			return nil, errors.Errorf("length diffrence")
+			for _, id := range unspentTokenIDs {
+				if id != nil {
+					logger.Infof("unspent token id: [%s]", *id)
+				}
+			}
+			return nil, errors.Errorf("length difference: %d:%d", len(unspentTokenIDs), len(ledgerTokenContent))
 		}
 		index := 0
 		if err := tv.QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {

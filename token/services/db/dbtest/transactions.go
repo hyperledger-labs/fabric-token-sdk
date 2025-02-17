@@ -15,9 +15,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	"github.com/test-go/testify/assert"
 )
 
@@ -389,86 +391,62 @@ func TTokenRequest(t *testing.T, db driver.TokenTransactionDB) {
 	// iterate over all
 	it, err := db.QueryTokenRequests(driver.QueryTokenRequestsParams{})
 	assert.NoError(t, err)
-	counter := 0
-	for {
-		record, err := it.Next()
-		assert.NoError(t, err)
-		if record == nil {
-			break
-		}
+	records, err := collections.ToSlice(it)
+	assert.NoError(t, err)
+
+	for _, record := range records {
 		if record.TxID == "id1" {
 			assert.Equal(t, tr1, record.TokenRequest)
 			assert.Equal(t, driver.Pending, record.Status)
-			counter++
-			continue
-		}
-		if record.TxID == "id2" {
+		} else if record.TxID == "id2" {
 			assert.Equal(t, tr2, record.TokenRequest)
 			assert.Equal(t, driver.Confirmed, record.Status)
-			counter++
-			continue
 		}
 	}
-	assert.Equal(t, 2, counter)
-	it.Close()
+	assert.Len(t, records, 2)
 
 	// iterate over pending and confirmed
 	it, err = db.QueryTokenRequests(driver.QueryTokenRequestsParams{Statuses: []driver.TxStatus{driver.Confirmed, driver.Pending}})
 	assert.NoError(t, err)
-	counter = 0
-	for {
-		record, err := it.Next()
-		assert.NoError(t, err)
-		if record == nil {
-			break
-		}
+	records, err = collections.ToSlice(it)
+	assert.NoError(t, err)
+	for _, record := range records {
 		if record.TxID == "id1" {
 			assert.Equal(t, tr1, record.TokenRequest)
 			assert.Equal(t, driver.Pending, record.Status)
-			counter++
-			continue
-		}
-		if record.TxID == "id2" {
+		} else if record.TxID == "id2" {
 			assert.Equal(t, tr2, record.TokenRequest)
 			assert.Equal(t, driver.Confirmed, record.Status)
-			counter++
-			continue
 		}
 	}
-	assert.Equal(t, 2, counter)
-	it.Close()
+	assert.Len(t, records, 2)
 
 	// iterator over confirmed
 	it, err = db.QueryTokenRequests(driver.QueryTokenRequestsParams{Statuses: []driver.TxStatus{driver.Confirmed}})
 	assert.NoError(t, err)
-	record, err := it.Next()
+	records, err = collections.ToSlice(it)
 	assert.NoError(t, err)
+	assert.Len(t, records, 1)
+	record := slices.GetUnique(records)
 	assert.Equal(t, tr2, record.TokenRequest)
 	assert.Equal(t, driver.Confirmed, record.Status)
-	record, err = it.Next()
-	assert.NoError(t, err)
-	assert.Nil(t, record)
-	it.Close()
 
 	// iterator over pending
 	it, err = db.QueryTokenRequests(driver.QueryTokenRequestsParams{Statuses: []driver.TxStatus{driver.Pending}})
 	assert.NoError(t, err)
-	record, err = it.Next()
+	records, err = collections.ToSlice(it)
 	assert.NoError(t, err)
+	assert.Len(t, records, 1)
+	record = slices.GetUnique(records)
 	assert.Equal(t, tr1, record.TokenRequest)
 	assert.Equal(t, driver.Pending, record.Status)
-	record, err = it.Next()
-	assert.NoError(t, err)
-	assert.Nil(t, record)
-	it.Close()
 
 	// iterator over deleted
 	it, err = db.QueryTokenRequests(driver.QueryTokenRequestsParams{Statuses: []driver.TxStatus{driver.Deleted}})
 	assert.NoError(t, err)
-	record, err = it.Next()
+	records, err = collections.ToSlice(it)
 	assert.NoError(t, err)
-	assert.Nil(t, record)
-	it.Close()
+	assert.Empty(t, records)
 }
 
 func TAllowsSameTxID(t *testing.T, db driver.TokenTransactionDB) {
@@ -778,16 +756,9 @@ func TTransactionQueries(t *testing.T, db driver.TokenTransactionDB) {
 func getTransactions(t *testing.T, db driver.TokenTransactionDB, params driver.QueryTransactionsParams) []*driver.TransactionRecord {
 	records, err := db.QueryTransactions(params)
 	assert.NoError(t, err)
-	defer records.Close()
-	var txs []*driver.TransactionRecord
-	for {
-		r, err := records.Next()
-		assert.NoError(t, err)
-		if r == nil {
-			return txs
-		}
-		txs = append(txs, r)
-	}
+	txs, err := collections.ToSlice(records)
+	assert.NoError(t, err)
+	return txs
 }
 
 func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
@@ -873,16 +844,9 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
 func getValidationRecords(t *testing.T, db driver.TokenTransactionDB, params driver.QueryValidationRecordsParams) []*driver.ValidationRecord {
 	records, err := db.QueryValidations(params)
 	assert.NoError(t, err)
-	defer records.Close()
-	var txs []*driver.ValidationRecord
-	for {
-		r, err := records.Next()
-		assert.NoError(t, err)
-		if r == nil {
-			return txs
-		}
-		txs = append(txs, r)
-	}
+	txs, err := collections.ToSlice(records)
+	assert.NoError(t, err)
+	return txs
 }
 
 func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {

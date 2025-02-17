@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -334,16 +335,9 @@ func getTokensBy(t *testing.T, db TestTokenDB, ownerEID string, typ token.Type) 
 	assert.NoError(t, err)
 	defer it.Close()
 
-	var tokens []*token.UnspentToken
-	for {
-		tok, err := it.Next()
-		if err != nil {
-			t.Errorf("error iterating over tokens: %s", err.Error())
-		}
-		if tok == nil {
-			break
-		}
-		tokens = append(tokens, tok)
+	tokens, err := collections.ToSlice[token.UnspentToken](it)
+	if err != nil {
+		t.Errorf("error iterating over tokens: %s", err.Error())
 	}
 	return tokens
 }

@@ -40,7 +40,7 @@ type IdentityDB interface {
 	// ConfigurationExists returns true if a configuration with the given id and type exists.
 	ConfigurationExists(id, typ, url string) (bool, error)
 	// IteratorConfigurations returns an iterator to all configurations stored
-	IteratorConfigurations(configurationType string) (Iterator[IdentityConfiguration], error)
+	IteratorConfigurations(configurationType string) (Iterator[driver.IdentityConfiguration], error)
 	// StoreIdentityData stores the passed identity and token information
 	StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 	// GetAuditInfo retrieves the audit info bounded to the given identity
