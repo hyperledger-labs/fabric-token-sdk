@@ -9,8 +9,8 @@ package token
 import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
-	v2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	noghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -50,7 +50,7 @@ func (t *Token) Deserialize(bytes []byte) error {
 }
 
 // ToClear returns Token in the clear
-func (t *Token) ToClear(meta *Metadata, pp *v1.PublicParams) (*token2.Token, error) {
+func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token2.Token, error) {
 	com, err := commit([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedersenGenerators, math.Curves[pp.Curve])
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve token in the clear: failed to check token data")
@@ -162,7 +162,7 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, 
 }
 
 type UpgradeWitness struct {
-	FabToken *v2.Output
+	FabToken *fabtokenv1.Output
 	// BlindingFactor is the blinding factor used to commit type and value
 	BlindingFactor *math.Zr
 }
