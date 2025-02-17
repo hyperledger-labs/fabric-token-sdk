@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"strings"
 
+	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
@@ -61,9 +62,10 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 		}
 
 		// which kind of error do we have here?
-		errorMsg := err.Error()
-		if strings.Contains(errorMsg, fmt.Sprintf("TXID [%s] not available", txID)) ||
-			strings.Contains(errorMsg, fmt.Sprintf("no such transaction ID [%s]", txID)) {
+		// TODO: AF In FSC, we have to map the error from Ledger.GetTransactionByID to TxNotFound instead of using substrings
+		if strings.Contains(err.Error(), fmt.Sprintf("TXID [%s] not available", txID)) ||
+			strings.Contains(err.Error(), fmt.Sprintf("no such transaction ID [%s]", txID)) ||
+			errors2.HasType(err, finality.TxNotFound) {
 			// transaction was not found
 			logger.Errorf("tx [%s] not found on the ledger [%s]", txID, err)
 			startDelivery = true
