@@ -8,24 +8,24 @@ package utils
 
 import (
 	mathlib "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
 )
 
-func ToProtoG1Slice(input []*mathlib.G1) ([]*pp.G1, error) {
-	return utils.ToProtosSliceFunc(input, func(s *mathlib.G1) (*pp.G1, error) {
+func ToProtoG1Slice(input []*mathlib.G1) ([]*math.G1, error) {
+	return utils.ToProtosSliceFunc(input, func(s *mathlib.G1) (*math.G1, error) {
 		return ToProtoG1(s)
 	})
 }
 
-func ToProtoG1(s *mathlib.G1) (*pp.G1, error) {
+func ToProtoG1(s *mathlib.G1) (*math.G1, error) {
 	if s == nil {
-		return &pp.G1{}, nil
+		return &math.G1{}, nil
 	}
-	return &pp.G1{Raw: s.Bytes()}, nil
+	return &math.G1{Raw: s.Bytes()}, nil
 }
 
-func FromG1ProtoSlice(curve mathlib.CurveID, generators []*pp.G1) ([]*mathlib.G1, error) {
+func FromG1ProtoSlice(curve mathlib.CurveID, generators []*math.G1) ([]*mathlib.G1, error) {
 	res := make([]*mathlib.G1, len(generators))
 	var err error
 	for i, g := range generators {
@@ -37,7 +37,7 @@ func FromG1ProtoSlice(curve mathlib.CurveID, generators []*pp.G1) ([]*mathlib.G1
 	return res, nil
 }
 
-func FromG1Proto(curve mathlib.CurveID, p *pp.G1) (*mathlib.G1, error) {
+func FromG1Proto(curve mathlib.CurveID, p *math.G1) (*mathlib.G1, error) {
 	if p == nil {
 		return nil, nil
 	}

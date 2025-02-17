@@ -6,17 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 syntax = "proto3";
 
-package noghpp;
+package nogh;
 
-option go_package = "../protos-go/pp";
+import "noghmath.proto";
 
-message G1 {
-  bytes raw = 1;
-}
-
-message CurveID {
-  uint64 id = 1;
-}
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp";
 
 message Identity {
   bytes raw = 1;

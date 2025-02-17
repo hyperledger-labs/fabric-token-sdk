@@ -1,0 +1,50 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+syntax = "proto3";
+
+package nogh;
+
+import "noghmath.proto";
+import "ftactions.proto";
+
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions";
+
+message Token {
+  bytes owner = 1; // Owner is the owner of the token
+  G1 data = 2; // Data is the Pedersen commitment to type and value
+}
+
+message TokenID {
+    string id = 1;
+    uint64 index = 2;
+}
+
+message TransferActionInput {
+  TokenID token_id = 1;
+  Token input = 2;
+  TransferActionInputUpgradeWitness upgrade_witness = 3;
+}
+
+message TransferActionInputUpgradeWitness {
+  fabtoken.Token output = 1;
+   Zr blinding_factor = 2;
+}
+
+message TransferActionOutput {
+  Token token = 1; // Token is the new token
+}
+
+message Proof {
+  bytes proof = 1;
+}
+
+message TransferAction {
+  repeated TransferActionInput inputs = 1; // inputs
+  repeated TransferActionOutput outputs = 2; // outputs
+  Proof proof = 3; // ZK Proof that shows that the transfer is correct
+  map<string, bytes> metadata = 4; // Metadata contains the transfer action's metadata
+}

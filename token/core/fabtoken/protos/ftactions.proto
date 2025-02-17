@@ -1,0 +1,17 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+syntax = "proto3";
+
+package fabtoken;
+
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions";
+
+message Token {
+  bytes owner = 1; // is the token owner
+  string type = 2; // is the type of the token
+  string quantity = 3; // is the number of units of Type carried in the token. It is encoded as a string containing a number in base 16. The string has prefix ``0x''.
+}
