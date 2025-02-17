@@ -361,6 +361,9 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize idemix issuer public keys")
 	}
+	if publicParams.Auditor != nil {
+		p.Auditor = publicParams.Auditor.Raw
+	}
 
 	p.RangeProofParams = &RangeProofParams{}
 	if err := p.RangeProofParams.FromProto(p.Curve, publicParams.RangeProofParams); err != nil {

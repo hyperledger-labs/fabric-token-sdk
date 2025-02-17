@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
+	"encoding/base64"
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -18,6 +18,7 @@ import (
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -68,7 +69,6 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	assert.NotNil(tms, "failed to get TMS")
 
 	assert.NotNil(tms.PublicParametersManager().PublicParameters(), "failed to validate local public parameters")
-	ppRaw := GetTMSPublicParams(tms)
 
 	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
 	assert.NoError(err, "failed to fetch public params")
@@ -77,7 +77,14 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	assert.NoError(err, "failed deserializing public parameters")
 	assert.NotNil(pp)
 	assert.NoError(pp.Validate())
-	assert.Equal(fetchedPPRaw, ppRaw, "public params do not match [%s]!=[%s]", hash.Hashable(fetchedPPRaw), hash.Hashable(ppRaw))
+	fetchedPPRawHash := utils.Hashable(fetchedPPRaw).Raw()
+	assert.Equal(
+		fetchedPPRawHash,
+		tms.PublicParametersManager().PublicParamsHash(),
+		"public params do not match [%s]!=[%s]",
+		base64.StdEncoding.EncodeToString(fetchedPPRawHash),
+		string(tms.PublicParametersManager().PublicParamsHash()),
+	)
 
 	return nil, nil
 }
