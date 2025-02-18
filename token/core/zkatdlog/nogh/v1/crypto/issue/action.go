@@ -10,7 +10,6 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
@@ -228,7 +227,7 @@ func (i *Action) Serialize() ([]byte, error) {
 }
 
 // Deserialize un-marshals IssueAction
-func (i *Action) Deserialize(curveID math.CurveID, raw []byte) error {
+func (i *Action) Deserialize(raw []byte) error {
 	issueAction := &actions.IssueAction{}
 	err := proto.Unmarshal(raw, issueAction)
 	if err != nil {
@@ -248,7 +247,7 @@ func (i *Action) Deserialize(curveID math.CurveID, raw []byte) error {
 		if output == nil || output.Token == nil {
 			continue
 		}
-		data, err := utils.FromG1Proto(curveID, output.Token.Data)
+		data, err := utils.FromG1Proto(output.Token.Data)
 		if err != nil {
 			return errors.Wrapf(err, "failed to deserialize output")
 		}
@@ -266,7 +265,7 @@ func (i *Action) Deserialize(curveID math.CurveID, raw []byte) error {
 	}
 	i.Metadata = issueAction.Metadata
 
-	return json.Unmarshal(raw, i)
+	return nil
 }
 
 // GetCommitments return the Pedersen commitment of (type, value) in the Outputs

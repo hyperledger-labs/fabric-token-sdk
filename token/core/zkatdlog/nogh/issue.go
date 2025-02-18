@@ -194,7 +194,7 @@ func (s *IssueService) VerifyIssue(ia driver.IssueAction, metadata []*driver.Iss
 // DeserializeIssueAction un-marshals raw bytes into a zkatdlog IssueAction
 func (s *IssueService) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
 	issue := &issue2.Action{}
-	err := issue.Deserialize(s.PublicParametersManager.PublicParams().Curve, raw)
+	err := issue.Deserialize(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize issue action")
 	}
