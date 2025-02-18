@@ -65,7 +65,7 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*Action, []*
 		return nil, nil, err
 	}
 
-	issue, err := NewIssue(signerRaw, tokens, owners, proof)
+	issue, err := NewAction(signerRaw, tokens, owners, proof)
 	if err != nil {
 		return nil, nil, err
 	}
