@@ -104,23 +104,23 @@ func (rpp *RangeProofParams) ToProtos() (*pp.RangeProofParams, error) {
 	return rangeProofParams, nil
 }
 
-func (rpp *RangeProofParams) FromProto(curve mathlib.CurveID, params *pp.RangeProofParams) error {
+func (rpp *RangeProofParams) FromProto(params *pp.RangeProofParams) error {
 	rpp.NumberOfRounds = params.NumberOfRounds
 	rpp.BitLength = params.BitLength
 	var err error
-	rpp.LeftGenerators, err = utils2.FromG1ProtoSlice(curve, params.LeftGenerators)
+	rpp.LeftGenerators, err = utils2.FromG1ProtoSlice(params.LeftGenerators)
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert left generators to protos")
 	}
-	rpp.RightGenerators, err = utils2.FromG1ProtoSlice(curve, params.RightGenerators)
+	rpp.RightGenerators, err = utils2.FromG1ProtoSlice(params.RightGenerators)
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert right generators to protos")
 	}
-	rpp.P, err = utils2.FromG1Proto(curve, params.P)
+	rpp.P, err = utils2.FromG1Proto(params.P)
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert p to proto")
 	}
-	rpp.Q, err = utils2.FromG1Proto(curve, params.Q)
+	rpp.Q, err = utils2.FromG1Proto(params.Q)
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert q to proto")
 	}
@@ -336,12 +336,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	p.Curve = mathlib.CurveID(publicParams.CurveId.Id)
 	p.MaxToken = publicParams.MaxToken
 	p.QuantityPrecision = publicParams.QuantityPrecision
-	pg, err := utils.FromProtosSliceFunc(publicParams.PedersenGenerators, func(s *math2.G1) (*mathlib.G1, error) {
-		if s == nil {
-			return nil, nil
-		}
-		return mathlib.Curves[p.Curve].NewG1FromBytes(s.Raw)
-	})
+	pg, err := utils2.FromG1ProtoSlice(publicParams.PedersenGenerators)
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
@@ -367,7 +362,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	}
 
 	p.RangeProofParams = &RangeProofParams{}
-	if err := p.RangeProofParams.FromProto(p.Curve, publicParams.RangeProofParams); err != nil {
+	if err := p.RangeProofParams.FromProto(publicParams.RangeProofParams); err != nil {
 		return errors.Wrapf(err, "failed to deserialize range proof parameters")
 	}
 

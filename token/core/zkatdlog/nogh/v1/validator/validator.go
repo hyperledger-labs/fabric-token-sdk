@@ -30,7 +30,7 @@ func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*iss
 	issueActions := make([]*issue.Action, len(tr.Issues))
 	for i := 0; i < len(tr.Issues); i++ {
 		ia := &issue.Action{}
-		if err := ia.Deserialize(a.PublicParams.Curve, tr.Issues[i]); err != nil {
+		if err := ia.Deserialize(tr.Issues[i]); err != nil {
 			return nil, nil, err
 		}
 		issueActions[i] = ia

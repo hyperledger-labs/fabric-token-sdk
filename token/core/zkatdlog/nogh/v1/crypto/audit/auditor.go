@@ -348,9 +348,9 @@ func GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver.IssueMetadat
 	outputs := make([][]*AuditableToken, len(issues))
 	for k, md := range issueMetadata {
 		ia := &issue.Action{}
-		err := json.Unmarshal(issues[k], ia)
+		err := ia.Deserialize(issues[k])
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to deserialize issue action at index [%d]", k)
 		}
 
 		if len(ia.Outputs) != len(md.Outputs) {
@@ -384,7 +384,7 @@ func GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver.IssueMetadat
 				metadata.BlindingFactor,
 			)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "failed to create auditable token at index [%d]", i)
 			}
 		}
 	}
@@ -418,7 +418,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMet
 			}
 		}
 		ta := &transfer.Action{}
-		err := json.Unmarshal(transfers[k], ta)
+		err := ta.Deserialize(transfers[k])
 		if err != nil {
 			return nil, nil, err
 		}
