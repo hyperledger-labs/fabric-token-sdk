@@ -121,9 +121,9 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	var inputsMetadata []*driver.IssueInputMetadata
 	if opts != nil && opts.TokensUpgradeRequest != nil && len(opts.TokensUpgradeRequest.Tokens) > 0 {
 		tokens := opts.TokensUpgradeRequest.Tokens
-		issueAction.Inputs = make([]issue2.ActionInput, len(tokens))
+		issueAction.Inputs = make([]*issue2.ActionInput, len(tokens))
 		for i, tok := range tokens {
-			issueAction.Inputs[i] = issue2.ActionInput{
+			issueAction.Inputs[i] = &issue2.ActionInput{
 				ID:    tok.ID,
 				Token: tok.Token,
 			}
@@ -194,7 +194,7 @@ func (s *IssueService) VerifyIssue(ia driver.IssueAction, metadata []*driver.Iss
 // DeserializeIssueAction un-marshals raw bytes into a zkatdlog IssueAction
 func (s *IssueService) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
 	issue := &issue2.Action{}
-	err := issue.Deserialize(raw)
+	err := issue.Deserialize(s.PublicParametersManager.PublicParams().Curve, raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize issue action")
 	}

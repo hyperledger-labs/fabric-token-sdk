@@ -26,15 +26,9 @@ func ToProtoG1(s *mathlib.G1) (*math.G1, error) {
 }
 
 func FromG1ProtoSlice(curve mathlib.CurveID, generators []*math.G1) ([]*mathlib.G1, error) {
-	res := make([]*mathlib.G1, len(generators))
-	var err error
-	for i, g := range generators {
-		res[i], err = FromG1Proto(curve, g)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
+	return utils.FromProtosSliceFunc(generators, func(s *math.G1) (*mathlib.G1, error) {
+		return FromG1Proto(curve, s)
+	})
 }
 
 func FromG1Proto(curve mathlib.CurveID, p *math.G1) (*mathlib.G1, error) {

@@ -9,9 +9,13 @@ package issue
 import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -20,12 +24,31 @@ type ActionInput struct {
 	Token []byte
 }
 
+func (i *ActionInput) ToProtos() (*actions.IssueActionInput, error) {
+	return &actions.IssueActionInput{
+		Id: &actions.TokenID{
+			Id:    i.ID.TxId,
+			Index: i.ID.Index,
+		},
+		Token: i.Token,
+	}, nil
+}
+
+func (i *ActionInput) FromProtos(p *actions.IssueActionInput) error {
+	if p.Id == nil {
+		i.ID.TxId = p.Id.Id
+		i.ID.Index = p.Id.Index
+	}
+	i.Token = p.Token
+	return nil
+}
+
 // Action specifies an issue of one or more tokens
 type Action struct {
 	// Issuer is the identity of issuer
 	Issuer driver.Identity
 	// Inputs are the tokens to be redeemed by this issue action
-	Inputs []ActionInput
+	Inputs []*ActionInput
 	// Outputs are the newly issued tokens
 	Outputs []*token.Token `protobuf:"bytes,1,rep,name=outputs,proto3" json:"outputs,omitempty"`
 	// Proof carries the ZKP of IssueAction validity
@@ -59,6 +82,10 @@ func (i *Action) NumInputs() int {
 func (i *Action) GetInputs() []*token2.ID {
 	res := make([]*token2.ID, len(i.Inputs))
 	for i, input := range i.Inputs {
+		if input == nil {
+			res[i] = nil
+			continue
+		}
 		res[i] = &input.ID
 	}
 	return res
@@ -67,6 +94,10 @@ func (i *Action) GetInputs() []*token2.ID {
 func (i *Action) GetSerializedInputs() ([][]byte, error) {
 	res := make([][]byte, len(i.Inputs))
 	for i, input := range i.Inputs {
+		if input == nil {
+			res[i] = nil
+			continue
+		}
 		res[i] = input.Token
 	}
 	return res, nil
@@ -131,8 +162,14 @@ func (i *Action) Validate() error {
 		return errors.Errorf("issuer is not set")
 	}
 	for _, input := range i.Inputs {
+		if input == nil {
+			return errors.Errorf("nil input in issue action")
+		}
 		if len(input.Token) == 0 {
 			return errors.Errorf("nil input token in issue action")
+		}
+		if len(input.ID.TxId) == 0 {
+			return errors.Errorf("nil input id in issue action")
 		}
 	}
 	if len(i.Outputs) == 0 {
@@ -152,11 +189,82 @@ func (i *Action) ExtraSigners() []driver.Identity {
 
 // Serialize marshal IssueAction
 func (i *Action) Serialize() ([]byte, error) {
-	return json.Marshal(i)
+	// inputs
+	inputs, err := utils2.ToProtosSlice[actions.IssueActionInput, *ActionInput](i.Inputs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to serialize inputs")
+	}
+
+	// outputs
+	outputs, err := utils2.ToProtosSliceFunc(i.Outputs, func(output *token.Token) (*actions.IssueActionOutput, error) {
+		data, err := utils.ToProtoG1(output.Data)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to serialize output")
+		}
+		return &actions.IssueActionOutput{
+			Token: &actions.Token{
+				Owner: output.Owner,
+				Data:  data,
+			},
+		}, nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to serialize outputs")
+	}
+
+	issueAction := &actions.IssueAction{
+		Issuer: &actions.Identity{
+			Raw: i.Issuer,
+		},
+		Inputs:  inputs,
+		Outputs: outputs,
+		Proof: &actions.Proof{
+			Proof: i.Proof,
+		},
+		Metadata: i.Metadata,
+	}
+	return proto.Marshal(issueAction)
 }
 
 // Deserialize un-marshals IssueAction
-func (i *Action) Deserialize(raw []byte) error {
+func (i *Action) Deserialize(curveID math.CurveID, raw []byte) error {
+	issueAction := &actions.IssueAction{}
+	err := proto.Unmarshal(raw, issueAction)
+	if err != nil {
+		return errors.Wrap(err, "failed to deserialize issue action")
+	}
+
+	// inputs
+	i.Inputs = make([]*ActionInput, len(issueAction.Inputs))
+	i.Inputs = utils2.GenericSliceOfPointers[ActionInput](len(issueAction.Inputs))
+	if err := utils2.FromProtosSlice(issueAction.Inputs, i.Inputs); err != nil {
+		return errors.Wrap(err, "failed unmarshalling receivers metadata")
+	}
+
+	// outputs
+	i.Outputs = make([]*token.Token, len(issueAction.Outputs))
+	for j, output := range issueAction.Outputs {
+		if output == nil || output.Token == nil {
+			continue
+		}
+		data, err := utils.FromG1Proto(curveID, output.Token.Data)
+		if err != nil {
+			return errors.Wrapf(err, "failed to deserialize output")
+		}
+		i.Outputs[j] = &token.Token{
+			Owner: output.Token.Owner,
+			Data:  data,
+		}
+	}
+
+	if issueAction.Proof != nil {
+		i.Proof = issueAction.Proof.Proof
+	}
+	if issueAction.Issuer != nil {
+		i.Issuer = issueAction.Issuer.Raw
+	}
+	i.Metadata = issueAction.Metadata
+
 	return json.Unmarshal(raw, i)
 }
 
