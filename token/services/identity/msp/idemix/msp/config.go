@@ -14,7 +14,7 @@ import (
 	"github.com/IBM/idemix"
 	"github.com/IBM/idemix/idemixmsp"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger/fabric-protos-go/msp"
+	"github.com/hyperledger/fabric-protos-go-apiv2/msp"
 	"github.com/pkg/errors"
 )
 

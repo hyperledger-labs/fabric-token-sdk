@@ -25,7 +25,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	finality2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
-	"github.com/hyperledger/fabric-protos-go/common"
+	"github.com/hyperledger/fabric-protos-go-apiv2/common"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
