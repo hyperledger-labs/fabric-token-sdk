@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
@@ -134,7 +135,7 @@ type IdemixIssuerPublicKey struct {
 func (i *IdemixIssuerPublicKey) ToProtos() (*pp.IdemixIssuerPublicKey, error) {
 	return &pp.IdemixIssuerPublicKey{
 		PublicKey: i.PublicKey,
-		CurverId: &pp.CurveID{
+		CurverId: &math2.CurveID{
 			Id: uint64(i.Curve),
 		},
 	}, nil
@@ -290,7 +291,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 	publicParams := &pp.PublicParameters{
 		Identifier: p.Label,
 		Version:    p.Ver,
-		CurveId: &pp.CurveID{
+		CurveId: &math2.CurveID{
 			Id: uint64(p.Curve),
 		},
 		PedersenGenerators:     pg,
@@ -335,7 +336,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	p.Curve = mathlib.CurveID(publicParams.CurveId.Id)
 	p.MaxToken = publicParams.MaxToken
 	p.QuantityPrecision = publicParams.QuantityPrecision
-	pg, err := utils.FromProtosSliceFunc(publicParams.PedersenGenerators, func(s *pp.G1) (*mathlib.G1, error) {
+	pg, err := utils.FromProtosSliceFunc(publicParams.PedersenGenerators, func(s *math2.G1) (*mathlib.G1, error) {
 		if s == nil {
 			return nil, nil
 		}
