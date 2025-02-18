@@ -61,7 +61,9 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	defer span.AddEvent("end_auditor_check")
 	s.Logger.Debugf("[%s] check token request validity, number of transfer actions [%d]...", txID, len(metadata.Transfers))
 
-	actionDes := &validator.ActionDeserializer{}
+	actionDes := &validator.ActionDeserializer{
+		PublicParams: s.PublicParametersManager.PublicParams(),
+	}
 	_, transfers, err := actionDes.DeserializeActions(request)
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize actions")

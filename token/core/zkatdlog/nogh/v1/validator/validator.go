@@ -22,13 +22,15 @@ type ValidateIssueFunc = common.ValidateIssueFunc[*v1.PublicParams, *token.Token
 
 type Context = common.Context[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer]
 
-type ActionDeserializer struct{}
+type ActionDeserializer struct {
+	PublicParams *v1.PublicParams
+}
 
 func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*issue.Action, []*transfer.Action, error) {
 	issueActions := make([]*issue.Action, len(tr.Issues))
 	for i := 0; i < len(tr.Issues); i++ {
 		ia := &issue.Action{}
-		if err := ia.Deserialize(tr.Issues[i]); err != nil {
+		if err := ia.Deserialize(a.PublicParams.Curve, tr.Issues[i]); err != nil {
 			return nil, nil, err
 		}
 		issueActions[i] = ia

@@ -13,6 +13,10 @@ import "ftactions.proto";
 
 option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions";
 
+message Identity {
+  bytes raw = 1;
+}
+
 message Token {
   bytes owner = 1; // Owner is the owner of the token
   G1 data = 2; // Data is the Pedersen commitment to type and value
@@ -47,4 +51,21 @@ message TransferAction {
   repeated TransferActionOutput outputs = 2; // outputs
   Proof proof = 3; // ZK Proof that shows that the transfer is correct
   map<string, bytes> metadata = 4; // Metadata contains the transfer action's metadata
+}
+
+message IssueActionInput {
+  TokenID id = 1; // is the token id of the token to be redeemed
+  bytes token = 2; // is the actual token to be redeemed
+}
+
+message IssueActionOutput {
+  Token token = 1; // is the newly issued token
+}
+
+message IssueAction {
+  Identity issuer = 1; // is the identity of issuer
+  repeated IssueActionInput inputs = 2; // are the tokens to be redeemed by this issue action
+  repeated IssueActionOutput outputs = 3; // are the newly issued tokens
+  Proof proof = 4; // carries the ZKP of IssueAction validity
+  map<string, bytes> metadata = 5; // Metadata of the issue action
 }
