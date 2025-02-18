@@ -33,6 +33,20 @@ type Verifier struct {
 	RangeCorrectness *rp.RangeCorrectnessVerifier
 }
 
+// NewVerifier returns a Action Verifier as a function of the passed parameters
+func NewVerifier(inputs, outputs []*math.G1, pp *v1.PublicParams) *Verifier {
+	v := &Verifier{}
+	v.TypeAndSum = NewTypeAndSumVerifier(pp.PedersenGenerators, inputs, outputs, math.Curves[pp.Curve])
+
+	// check if this is an ownership transfer
+	// if so, skip range proof, well-formedness proof is enough
+	if len(inputs) != 1 || len(outputs) != 1 {
+		v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
+	}
+
+	return v
+}
+
 // Prover produces a proof that a Action is valid
 type Prover struct {
 	TypeAndSum       *TypeAndSumProver
@@ -85,20 +99,6 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 
 	}
 	return p, nil
-}
-
-// NewVerifier returns a Action Verifier as a function of the passed parameters
-func NewVerifier(inputs, outputs []*math.G1, pp *v1.PublicParams) *Verifier {
-	v := &Verifier{}
-	v.TypeAndSum = NewTypeAndSumVerifier(pp.PedersenGenerators, inputs, outputs, math.Curves[pp.Curve])
-
-	// check if this is an ownership transfer
-	// if so, skip range proof, well-formedness proof is enough
-	if len(inputs) != 1 || len(outputs) != 1 {
-		v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
-	}
-
-	return v
 }
 
 // Serialize marshals Proof

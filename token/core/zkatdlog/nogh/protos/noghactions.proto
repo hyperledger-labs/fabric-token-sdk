@@ -10,12 +10,9 @@ package nogh;
 
 import "noghmath.proto";
 import "ftactions.proto";
+import "noghpp.proto";
 
 option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions";
-
-message Identity {
-  bytes raw = 1;
-}
 
 message Token {
   bytes owner = 1; // Owner is the owner of the token

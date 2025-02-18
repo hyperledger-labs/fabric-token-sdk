@@ -17,6 +17,7 @@ import (
 
 	actions "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
 	math "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math"
+	pp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
@@ -27,53 +28,6 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
-
-type Identity struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Raw []byte `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty"`
-}
-
-func (x *Identity) Reset() {
-	*x = Identity{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_noghactions_proto_msgTypes[0]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Identity) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Identity) ProtoMessage() {}
-
-func (x *Identity) ProtoReflect() protoreflect.Message {
-	mi := &file_noghactions_proto_msgTypes[0]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Identity.ProtoReflect.Descriptor instead.
-func (*Identity) Descriptor() ([]byte, []int) {
-	return file_noghactions_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *Identity) GetRaw() []byte {
-	if x != nil {
-		return x.Raw
-	}
-	return nil
-}
 
 type Token struct {
 	state         protoimpl.MessageState
@@ -87,7 +41,7 @@ type Token struct {
 func (x *Token) Reset() {
 	*x = Token{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_noghactions_proto_msgTypes[1]
+		mi := &file_noghactions_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -100,7 +54,7 @@ func (x *Token) String() string {
 func (*Token) ProtoMessage() {}
 
 func (x *Token) ProtoReflect() protoreflect.Message {
-	mi := &file_noghactions_proto_msgTypes[1]
+	mi := &file_noghactions_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -113,7 +67,7 @@ func (x *Token) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Token.ProtoReflect.Descriptor instead.
 func (*Token) Descriptor() ([]byte, []int) {
-	return file_noghactions_proto_rawDescGZIP(), []int{1}
+	return file_noghactions_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Token) GetOwner() []byte {
@@ -142,7 +96,7 @@ type TokenID struct {
 func (x *TokenID) Reset() {
 	*x = TokenID{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_noghactions_proto_msgTypes[2]
+		mi := &file_noghactions_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -155,7 +109,7 @@ func (x *TokenID) String() string {
 func (*TokenID) ProtoMessage() {}
 
 func (x *TokenID) ProtoReflect() protoreflect.Message {
-	mi := &file_noghactions_proto_msgTypes[2]
+	mi := &file_noghactions_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -168,7 +122,7 @@ func (x *TokenID) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TokenID.ProtoReflect.Descriptor instead.
 func (*TokenID) Descriptor() ([]byte, []int) {
-	return file_noghactions_proto_rawDescGZIP(), []int{2}
+	return file_noghactions_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *TokenID) GetId() string {
@@ -198,7 +152,7 @@ type TransferActionInput struct {
 func (x *TransferActionInput) Reset() {
 	*x = TransferActionInput{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_noghactions_proto_msgTypes[3]
+		mi := &file_noghactions_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -211,7 +165,7 @@ func (x *TransferActionInput) String() string {
 func (*TransferActionInput) ProtoMessage() {}
 
 func (x *TransferActionInput) ProtoReflect() protoreflect.Message {
-	mi := &file_noghactions_proto_msgTypes[3]
+	mi := &file_noghactions_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -224,7 +178,7 @@ func (x *TransferActionInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferActionInput.ProtoReflect.Descriptor instead.
 func (*TransferActionInput) Descriptor() ([]byte, []int) {
-	return file_noghactions_proto_rawDescGZIP(), []int{3}
+	return file_noghactions_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *TransferActionInput) GetTokenId() *TokenID {
@@ -260,7 +214,7 @@ type TransferActionInputUpgradeWitness struct {
 func (x *TransferActionInputUpgradeWitness) Reset() {
 	*x = TransferActionInputUpgradeWitness{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_noghactions_proto_msgTypes[4]
+		mi := &file_noghactions_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -273,7 +227,7 @@ func (x *TransferActionInputUpgradeWitness) String() string {
 func (*TransferActionInputUpgradeWitness) ProtoMessage() {}
 
 func (x *TransferActionInputUpgradeWitness) ProtoReflect() protoreflect.Message {
-	mi := &file_noghactions_proto_msgTypes[4]
+	mi := &file_noghactions_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -286,7 +240,7 @@ func (x *TransferActionInputUpgradeWitness) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use TransferActionInputUpgradeWitness.ProtoReflect.Descriptor instead.
 func (*TransferActionInputUpgradeWitness) Descriptor() ([]byte, []int) {
-	return file_noghactions_proto_rawDescGZIP(), []int{4}
+	return file_noghactions_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *TransferActionInputUpgradeWitness) GetOutput() *actions.Token {
@@ -314,7 +268,7 @@ type TransferActionOutput struct {
 func (x *TransferActionOutput) Reset() {
 	*x = TransferActionOutput{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_noghactions_proto_msgTypes[5]
+		mi := &file_noghactions_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -327,7 +281,7 @@ func (x *TransferActionOutput) String() string {
 func (*TransferActionOutput) ProtoMessage() {}
 
 func (x *TransferActionOutput) ProtoReflect() protoreflect.Message {
-	mi := &file_noghactions_proto_msgTypes[5]
+	mi := &file_noghactions_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -340,7 +294,7 @@ func (x *TransferActionOutput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferActionOutput.ProtoReflect.Descriptor instead.
 func (*TransferActionOutput) Descriptor() ([]byte, []int) {
-	return file_noghactions_proto_rawDescGZIP(), []int{5}
+	return file_noghactions_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *TransferActionOutput) GetToken() *Token {
@@ -361,7 +315,7 @@ type Proof struct {
 func (x *Proof) Reset() {
 	*x = Proof{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_noghactions_proto_msgTypes[6]
+		mi := &file_noghactions_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -374,7 +328,7 @@ func (x *Proof) String() string {
 func (*Proof) ProtoMessage() {}
 
 func (x *Proof) ProtoReflect() protoreflect.Message {
-	mi := &file_noghactions_proto_msgTypes[6]
+	mi := &file_noghactions_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -387,7 +341,7 @@ func (x *Proof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Proof.ProtoReflect.Descriptor instead.
 func (*Proof) Descriptor() ([]byte, []int) {
-	return file_noghactions_proto_rawDescGZIP(), []int{6}
+	return file_noghactions_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Proof) GetProof() []byte {
@@ -411,7 +365,7 @@ type TransferAction struct {
 func (x *TransferAction) Reset() {
 	*x = TransferAction{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_noghactions_proto_msgTypes[7]
+		mi := &file_noghactions_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -424,7 +378,7 @@ func (x *TransferAction) String() string {
 func (*TransferAction) ProtoMessage() {}
 
 func (x *TransferAction) ProtoReflect() protoreflect.Message {
-	mi := &file_noghactions_proto_msgTypes[7]
+	mi := &file_noghactions_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -437,7 +391,7 @@ func (x *TransferAction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferAction.ProtoReflect.Descriptor instead.
 func (*TransferAction) Descriptor() ([]byte, []int) {
-	return file_noghactions_proto_rawDescGZIP(), []int{7}
+	return file_noghactions_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *TransferAction) GetInputs() []*TransferActionInput {
@@ -480,7 +434,7 @@ type IssueActionInput struct {
 func (x *IssueActionInput) Reset() {
 	*x = IssueActionInput{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_noghactions_proto_msgTypes[8]
+		mi := &file_noghactions_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -493,7 +447,7 @@ func (x *IssueActionInput) String() string {
 func (*IssueActionInput) ProtoMessage() {}
 
 func (x *IssueActionInput) ProtoReflect() protoreflect.Message {
-	mi := &file_noghactions_proto_msgTypes[8]
+	mi := &file_noghactions_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -506,7 +460,7 @@ func (x *IssueActionInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IssueActionInput.ProtoReflect.Descriptor instead.
 func (*IssueActionInput) Descriptor() ([]byte, []int) {
-	return file_noghactions_proto_rawDescGZIP(), []int{8}
+	return file_noghactions_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *IssueActionInput) GetId() *TokenID {
@@ -534,7 +488,7 @@ type IssueActionOutput struct {
 func (x *IssueActionOutput) Reset() {
 	*x = IssueActionOutput{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_noghactions_proto_msgTypes[9]
+		mi := &file_noghactions_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -547,7 +501,7 @@ func (x *IssueActionOutput) String() string {
 func (*IssueActionOutput) ProtoMessage() {}
 
 func (x *IssueActionOutput) ProtoReflect() protoreflect.Message {
-	mi := &file_noghactions_proto_msgTypes[9]
+	mi := &file_noghactions_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -560,7 +514,7 @@ func (x *IssueActionOutput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IssueActionOutput.ProtoReflect.Descriptor instead.
 func (*IssueActionOutput) Descriptor() ([]byte, []int) {
-	return file_noghactions_proto_rawDescGZIP(), []int{9}
+	return file_noghactions_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *IssueActionOutput) GetToken() *Token {
@@ -575,7 +529,7 @@ type IssueAction struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Issuer   *Identity            `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                                             // is the identity of issuer
+	Issuer   *pp.Identity         `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                                             // is the identity of issuer
 	Inputs   []*IssueActionInput  `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                                             // are the tokens to be redeemed by this issue action
 	Outputs  []*IssueActionOutput `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                                           // are the newly issued tokens
 	Proof    *Proof               `protobuf:"bytes,4,opt,name=proof,proto3" json:"proof,omitempty"`                                                                                               // carries the ZKP of IssueAction validity
@@ -585,7 +539,7 @@ type IssueAction struct {
 func (x *IssueAction) Reset() {
 	*x = IssueAction{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_noghactions_proto_msgTypes[10]
+		mi := &file_noghactions_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -598,7 +552,7 @@ func (x *IssueAction) String() string {
 func (*IssueAction) ProtoMessage() {}
 
 func (x *IssueAction) ProtoReflect() protoreflect.Message {
-	mi := &file_noghactions_proto_msgTypes[10]
+	mi := &file_noghactions_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -611,10 +565,10 @@ func (x *IssueAction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IssueAction.ProtoReflect.Descriptor instead.
 func (*IssueAction) Descriptor() ([]byte, []int) {
-	return file_noghactions_proto_rawDescGZIP(), []int{10}
+	return file_noghactions_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *IssueAction) GetIssuer() *Identity {
+func (x *IssueAction) GetIssuer() *pp.Identity {
 	if x != nil {
 		return x.Issuer
 	}
@@ -655,9 +609,8 @@ var file_noghactions_proto_rawDesc = []byte{
 	0x0a, 0x11, 0x6e, 0x6f, 0x67, 0x68, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x2e, 0x70, 0x72,
 	0x6f, 0x74, 0x6f, 0x12, 0x04, 0x6e, 0x6f, 0x67, 0x68, 0x1a, 0x0e, 0x6e, 0x6f, 0x67, 0x68, 0x6d,
 	0x61, 0x74, 0x68, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x0f, 0x66, 0x74, 0x61, 0x63, 0x74,
-	0x69, 0x6f, 0x6e, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x1c, 0x0a, 0x08, 0x49, 0x64,
-	0x65, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x72, 0x61, 0x77, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x0c, 0x52, 0x03, 0x72, 0x61, 0x77, 0x22, 0x3b, 0x0a, 0x05, 0x54, 0x6f, 0x6b, 0x65,
+	0x69, 0x6f, 0x6e, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x0c, 0x6e, 0x6f, 0x67, 0x68,
+	0x70, 0x70, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x3b, 0x0a, 0x05, 0x54, 0x6f, 0x6b, 0x65,
 	0x6e, 0x12, 0x14, 0x0a, 0x05, 0x6f, 0x77, 0x6e, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c,
 	0x52, 0x05, 0x6f, 0x77, 0x6e, 0x65, 0x72, 0x12, 0x1c, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18,
 	0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x08, 0x2e, 0x6e, 0x6f, 0x67, 0x68, 0x2e, 0x47, 0x31, 0x52,
@@ -755,44 +708,44 @@ func file_noghactions_proto_rawDescGZIP() []byte {
 	return file_noghactions_proto_rawDescData
 }
 
-var file_noghactions_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_noghactions_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_noghactions_proto_goTypes = []interface{}{
-	(*Identity)(nil),                          // 0: nogh.Identity
-	(*Token)(nil),                             // 1: nogh.Token
-	(*TokenID)(nil),                           // 2: nogh.TokenID
-	(*TransferActionInput)(nil),               // 3: nogh.TransferActionInput
-	(*TransferActionInputUpgradeWitness)(nil), // 4: nogh.TransferActionInputUpgradeWitness
-	(*TransferActionOutput)(nil),              // 5: nogh.TransferActionOutput
-	(*Proof)(nil),                             // 6: nogh.Proof
-	(*TransferAction)(nil),                    // 7: nogh.TransferAction
-	(*IssueActionInput)(nil),                  // 8: nogh.IssueActionInput
-	(*IssueActionOutput)(nil),                 // 9: nogh.IssueActionOutput
-	(*IssueAction)(nil),                       // 10: nogh.IssueAction
-	nil,                                       // 11: nogh.TransferAction.MetadataEntry
-	nil,                                       // 12: nogh.IssueAction.MetadataEntry
-	(*math.G1)(nil),                           // 13: nogh.G1
-	(*actions.Token)(nil),                     // 14: fabtoken.Token
-	(*math.Zr)(nil),                           // 15: nogh.Zr
+	(*Token)(nil),                             // 0: nogh.Token
+	(*TokenID)(nil),                           // 1: nogh.TokenID
+	(*TransferActionInput)(nil),               // 2: nogh.TransferActionInput
+	(*TransferActionInputUpgradeWitness)(nil), // 3: nogh.TransferActionInputUpgradeWitness
+	(*TransferActionOutput)(nil),              // 4: nogh.TransferActionOutput
+	(*Proof)(nil),                             // 5: nogh.Proof
+	(*TransferAction)(nil),                    // 6: nogh.TransferAction
+	(*IssueActionInput)(nil),                  // 7: nogh.IssueActionInput
+	(*IssueActionOutput)(nil),                 // 8: nogh.IssueActionOutput
+	(*IssueAction)(nil),                       // 9: nogh.IssueAction
+	nil,                                       // 10: nogh.TransferAction.MetadataEntry
+	nil,                                       // 11: nogh.IssueAction.MetadataEntry
+	(*math.G1)(nil),                           // 12: nogh.G1
+	(*actions.Token)(nil),                     // 13: fabtoken.Token
+	(*math.Zr)(nil),                           // 14: nogh.Zr
+	(*pp.Identity)(nil),                       // 15: nogh.Identity
 }
 var file_noghactions_proto_depIdxs = []int32{
-	13, // 0: nogh.Token.data:type_name -> nogh.G1
-	2,  // 1: nogh.TransferActionInput.token_id:type_name -> nogh.TokenID
-	1,  // 2: nogh.TransferActionInput.input:type_name -> nogh.Token
-	4,  // 3: nogh.TransferActionInput.upgrade_witness:type_name -> nogh.TransferActionInputUpgradeWitness
-	14, // 4: nogh.TransferActionInputUpgradeWitness.output:type_name -> fabtoken.Token
-	15, // 5: nogh.TransferActionInputUpgradeWitness.blinding_factor:type_name -> nogh.Zr
-	1,  // 6: nogh.TransferActionOutput.token:type_name -> nogh.Token
-	3,  // 7: nogh.TransferAction.inputs:type_name -> nogh.TransferActionInput
-	5,  // 8: nogh.TransferAction.outputs:type_name -> nogh.TransferActionOutput
-	6,  // 9: nogh.TransferAction.proof:type_name -> nogh.Proof
-	11, // 10: nogh.TransferAction.metadata:type_name -> nogh.TransferAction.MetadataEntry
-	2,  // 11: nogh.IssueActionInput.id:type_name -> nogh.TokenID
-	1,  // 12: nogh.IssueActionOutput.token:type_name -> nogh.Token
-	0,  // 13: nogh.IssueAction.issuer:type_name -> nogh.Identity
-	8,  // 14: nogh.IssueAction.inputs:type_name -> nogh.IssueActionInput
-	9,  // 15: nogh.IssueAction.outputs:type_name -> nogh.IssueActionOutput
-	6,  // 16: nogh.IssueAction.proof:type_name -> nogh.Proof
-	12, // 17: nogh.IssueAction.metadata:type_name -> nogh.IssueAction.MetadataEntry
+	12, // 0: nogh.Token.data:type_name -> nogh.G1
+	1,  // 1: nogh.TransferActionInput.token_id:type_name -> nogh.TokenID
+	0,  // 2: nogh.TransferActionInput.input:type_name -> nogh.Token
+	3,  // 3: nogh.TransferActionInput.upgrade_witness:type_name -> nogh.TransferActionInputUpgradeWitness
+	13, // 4: nogh.TransferActionInputUpgradeWitness.output:type_name -> fabtoken.Token
+	14, // 5: nogh.TransferActionInputUpgradeWitness.blinding_factor:type_name -> nogh.Zr
+	0,  // 6: nogh.TransferActionOutput.token:type_name -> nogh.Token
+	2,  // 7: nogh.TransferAction.inputs:type_name -> nogh.TransferActionInput
+	4,  // 8: nogh.TransferAction.outputs:type_name -> nogh.TransferActionOutput
+	5,  // 9: nogh.TransferAction.proof:type_name -> nogh.Proof
+	10, // 10: nogh.TransferAction.metadata:type_name -> nogh.TransferAction.MetadataEntry
+	1,  // 11: nogh.IssueActionInput.id:type_name -> nogh.TokenID
+	0,  // 12: nogh.IssueActionOutput.token:type_name -> nogh.Token
+	15, // 13: nogh.IssueAction.issuer:type_name -> nogh.Identity
+	7,  // 14: nogh.IssueAction.inputs:type_name -> nogh.IssueActionInput
+	8,  // 15: nogh.IssueAction.outputs:type_name -> nogh.IssueActionOutput
+	5,  // 16: nogh.IssueAction.proof:type_name -> nogh.Proof
+	11, // 17: nogh.IssueAction.metadata:type_name -> nogh.IssueAction.MetadataEntry
 	18, // [18:18] is the sub-list for method output_type
 	18, // [18:18] is the sub-list for method input_type
 	18, // [18:18] is the sub-list for extension type_name
@@ -807,18 +760,6 @@ func file_noghactions_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_noghactions_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Identity); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_noghactions_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Token); i {
 			case 0:
 				return &v.state
@@ -830,7 +771,7 @@ func file_noghactions_proto_init() {
 				return nil
 			}
 		}
-		file_noghactions_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_noghactions_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*TokenID); i {
 			case 0:
 				return &v.state
@@ -842,7 +783,7 @@ func file_noghactions_proto_init() {
 				return nil
 			}
 		}
-		file_noghactions_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_noghactions_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*TransferActionInput); i {
 			case 0:
 				return &v.state
@@ -854,7 +795,7 @@ func file_noghactions_proto_init() {
 				return nil
 			}
 		}
-		file_noghactions_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_noghactions_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*TransferActionInputUpgradeWitness); i {
 			case 0:
 				return &v.state
@@ -866,7 +807,7 @@ func file_noghactions_proto_init() {
 				return nil
 			}
 		}
-		file_noghactions_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+		file_noghactions_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*TransferActionOutput); i {
 			case 0:
 				return &v.state
@@ -878,7 +819,7 @@ func file_noghactions_proto_init() {
 				return nil
 			}
 		}
-		file_noghactions_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_noghactions_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Proof); i {
 			case 0:
 				return &v.state
@@ -890,7 +831,7 @@ func file_noghactions_proto_init() {
 				return nil
 			}
 		}
-		file_noghactions_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+		file_noghactions_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*TransferAction); i {
 			case 0:
 				return &v.state
@@ -902,7 +843,7 @@ func file_noghactions_proto_init() {
 				return nil
 			}
 		}
-		file_noghactions_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_noghactions_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*IssueActionInput); i {
 			case 0:
 				return &v.state
@@ -914,7 +855,7 @@ func file_noghactions_proto_init() {
 				return nil
 			}
 		}
-		file_noghactions_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+		file_noghactions_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*IssueActionOutput); i {
 			case 0:
 				return &v.state
@@ -926,7 +867,7 @@ func file_noghactions_proto_init() {
 				return nil
 			}
 		}
-		file_noghactions_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_noghactions_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*IssueAction); i {
 			case 0:
 				return &v.state
@@ -945,7 +886,7 @@ func file_noghactions_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_noghactions_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
