@@ -7,47 +7,68 @@ SPDX-License-Identifier: Apache-2.0
 package token_test
 
 import (
+	"testing"
+
 	math "github.com/IBM/mathlib"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 )
 
-var _ = Describe("Token", func() {
+func TestToClear(t *testing.T) {
 	var (
 		inf   *token2.Metadata
 		token *token2.Token
 		pp    *v1.PublicParams
+		err   error
 	)
+	pp, err = v1.Setup(64, nil, math.FP256BN_AMCL)
+	assert.NoError(t, err)
+	c := math.Curves[pp.Curve]
+	rand, err := c.Rand()
+	assert.NoError(t, err)
+	inf = &token2.Metadata{
+		Value:          c.NewZrFromInt(50),
+		Type:           "ABC",
+		BlindingFactor: c.NewRandomZr(rand),
+	}
+	token = &token2.Token{}
+	token.Data = c.NewG1()
+	token.Data.Add(pp.PedersenGenerators[1].Mul(inf.Value))
+	token.Data.Add(pp.PedersenGenerators[2].Mul(inf.BlindingFactor))
+	token.Data.Add(pp.PedersenGenerators[0].Mul(c.HashToZr([]byte("ABC"))))
+	tok, err := token.ToClear(inf, pp)
+	assert.NoError(t, err)
+	assert.Equal(t, token3.Type("ABC"), tok.Type)
+	assert.Equal(t, "0x"+inf.Value.String(), tok.Quantity)
+}
 
-	BeforeEach(func() {
-		var err error
-		pp, err = v1.Setup(64, nil, math.FP256BN_AMCL)
-		Expect(err).NotTo(HaveOccurred())
-		c := math.Curves[pp.Curve]
-		rand, err := c.Rand()
-		Expect(err).NotTo(HaveOccurred())
-		inf = &token2.Metadata{
-			Value:          c.NewZrFromInt(50),
-			Type:           "ABC",
-			BlindingFactor: c.NewRandomZr(rand),
+func FuzzSerializeDeserializer(f *testing.F) {
+	testcases := [][]any{
+		{[]byte("Alice"), false},
+		{[]byte("Charlie"), true},
+	}
+	for _, tc := range testcases {
+		f.Add(tc[0], tc[1])
+	}
+	f.Fuzz(func(t *testing.T, owner []byte, putData bool) {
+		token := &token2.Token{
+			Owner: owner,
 		}
-		token = &token2.Token{}
-		token.Data = c.NewG1()
-		token.Data.Add(pp.PedersenGenerators[1].Mul(inf.Value))
-		token.Data.Add(pp.PedersenGenerators[2].Mul(inf.BlindingFactor))
-		token.Data.Add(pp.PedersenGenerators[0].Mul(c.HashToZr([]byte("ABC"))))
+		if putData {
+			token.Data = math.Curves[math.FP256BN_AMCL].NewG1()
+		}
+		raw, err := token.Serialize()
+		assert.NoError(f, err)
+		assert.NotNil(t, raw)
+
+		token2 := &token2.Token{}
+		err = token2.Deserialize(raw)
+		if err != nil {
+			t.Errorf("failed to deserialize token [owner: %s, putData: %v]: [%v]", owner, putData, err)
+		}
+		assert.Equal(t, len(token.Owner), len(token2.Owner), "owner mismatch [owner: %s, putData: %v]", owner, putData)
+		assert.Equal(t, token.Data, token2.Data)
 	})
-	Describe("get token in the clear", func() {
-		When("token is computed correctly", func() {
-			It("succeeds", func() {
-				t, err := token.ToClear(inf, pp)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(t.Type).To(Equal(token3.Type("ABC")))
-				Expect(t.Quantity).To(Equal("0x" + inf.Value.String()))
-			})
-		})
-	})
-})
+}
