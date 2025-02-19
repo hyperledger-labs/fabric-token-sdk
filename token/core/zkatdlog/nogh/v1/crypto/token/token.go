@@ -8,8 +8,11 @@ package token
 
 import (
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	noghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -30,7 +33,14 @@ func (t *Token) IsRedeem() bool {
 
 // Serialize marshals Token
 func (t *Token) Serialize() ([]byte, error) {
-	raw, err := json.Marshal(t)
+	data, err := utils.ToProtoG1(t.Data)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize output")
+	}
+	raw, err := proto.Marshal(&actions.Token{
+		Owner: t.Owner,
+		Data:  data,
+	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed serializing token")
 	}
@@ -46,7 +56,13 @@ func (t *Token) Deserialize(bytes []byte) error {
 	if typed.Type != comm.Type {
 		return errors.Errorf("invalid token type [%v]", typed.Type)
 	}
-	return json.Unmarshal(typed.Token, t)
+	token := &actions.Token{}
+	if err := proto.Unmarshal(typed.Token, token); err != nil {
+		return errors.Wrapf(err, "failed unmarshalling token")
+	}
+	t.Owner = token.Owner
+	t.Data, err = utils.FromG1Proto(token.Data)
+	return err
 }
 
 // ToClear returns Token in the clear
@@ -112,12 +128,41 @@ func (m *Metadata) Deserialize(b []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed deserializing metadata")
 	}
-	return json.Unmarshal(typed.Token, m)
+	metadata := &actions.TokenMetadata{}
+	if err := proto.Unmarshal(typed.Token, metadata); err != nil {
+		return errors.Wrapf(err, "failed unmarshalling metadata")
+	}
+	m.Type = token2.Type(metadata.Type)
+	m.Value, err = utils.FromZrProto(metadata.Value)
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize metadata")
+	}
+	m.BlindingFactor, err = utils.FromZrProto(metadata.BlindingFactor)
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize metadata")
+	}
+	if metadata.Issuer != nil {
+		m.Issuer = metadata.Issuer.Raw
+	}
+	return nil
 }
 
 // Serialize un-marshals Metadata
 func (m *Metadata) Serialize() ([]byte, error) {
-	raw, err := json.Marshal(m)
+	value, err := utils.ToProtoZr(m.Value)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to deserialize metadata")
+	}
+	blindingFactor, err := utils.ToProtoZr(m.BlindingFactor)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to deserialize metadata")
+	}
+	raw, err := proto.Marshal(&actions.TokenMetadata{
+		Type:           string(m.Type),
+		Value:          value,
+		BlindingFactor: blindingFactor,
+		Issuer:         &pp.Identity{Raw: m.Issuer},
+	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed serializing token")
 	}
