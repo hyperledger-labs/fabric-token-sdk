@@ -47,3 +47,26 @@ func FromG1Proto(p *math.G1) (*mathlib.G1, error) {
 	}
 	return g1, nil
 }
+
+func ToProtoZr(s *mathlib.Zr) (*math.Zr, error) {
+	if s == nil {
+		return &math.Zr{}, nil
+	}
+	raw, err := s.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return &math.Zr{Raw: raw}, nil
+}
+
+func FromZrProto(p *math.Zr) (*mathlib.Zr, error) {
+	if p == nil {
+		return nil, nil
+	}
+	zr := &mathlib.Zr{}
+	err := zr.UnmarshalJSON(p.Raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal Zr")
+	}
+	return zr, nil
+}

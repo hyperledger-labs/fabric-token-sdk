@@ -84,9 +84,13 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 
 	inputTokens := make([][]*token.Token, len(metadata.Transfers))
 	for i, transfer := range transfers {
+		if err := transfer.Validate(); err != nil {
+			span.AddEvent("failed_to_validate_transfer")
+			return errors.Wrapf(err, "failed to validate transfer")
+		}
 		inputTokens[i] = make([]*token.Token, len(transfer.Inputs))
 		for j := range transfer.Inputs {
-			inputTokens[i][j] = transfer.InputTokens[j]
+			inputTokens[i][j] = transfer.Inputs[j].Token
 		}
 	}
 

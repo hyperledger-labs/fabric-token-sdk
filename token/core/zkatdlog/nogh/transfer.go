@@ -105,12 +105,26 @@ func NewTransferService(
 
 // Transfer returns a TransferActionMetadata as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.OwnerWallet, tokenIDs []*token2.ID, outputTokens []*token2.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *TransferService) Transfer(
+	ctx context.Context,
+	txID string,
+	_ driver.OwnerWallet,
+	tokenIDs []*token2.ID,
+	outputTokens []*token2.Token,
+	opts *driver.TransferOptions,
+) (driver.TransferAction, *driver.TransferMetadata, error) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent("start_transfer")
 	defer span.AddEvent("end_transfer")
 
 	s.Logger.Debugf("Prepare Transfer Action [%s,%v]", txID, tokenIDs)
+	if common.IsAnyNil(tokenIDs...) {
+		return nil, nil, errors.New("failed to prepare transfer action: nil token id")
+	}
+	if common.IsAnyNil(outputTokens...) {
+		return nil, nil, errors.New("failed to prepare transfer action: nil output token")
+	}
+
 	// load tokens with the passed token identifiers
 	span.AddEvent("load_tokens")
 	loadedTokens, err := s.TokenLoader.LoadTokens(ctx, tokenIDs)
@@ -153,12 +167,13 @@ func (s *TransferService) Transfer(ctx context.Context, txID string, _ driver.Ow
 	s.Metrics.zkTransferDuration.Observe(float64(duration.Milliseconds()))
 
 	// add transfer action's transferMetadata
-	transfer.Metadata = meta.TransferActionMetadata(opts.Attributes)
+	if opts != nil {
+		transfer.Metadata = meta.TransferActionMetadata(opts.Attributes)
+	}
 
 	// add upgrade witness
-	transfer.InputUpgradeWitness = make([]*token.UpgradeWitness, len(transfer.InputTokens))
-	for i := range transfer.InputTokens {
-		transfer.InputUpgradeWitness[i] = prepareInputs[i].UpgradeWitness
+	for i, input := range transfer.Inputs {
+		input.UpgradeWitness = prepareInputs[i].UpgradeWitness
 	}
 
 	// prepare transferMetadata
@@ -259,9 +274,9 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputMet
 
 	// get commitments from outputs
 	pp := s.PublicParametersManager.PublicParams()
-	com := make([]*math.G1, len(tr.OutputTokens))
-	for i := 0; i < len(tr.OutputTokens); i++ {
-		com[i] = tr.OutputTokens[i].Data
+	com := make([]*math.G1, len(tr.Outputs))
+	for i := 0; i < len(tr.Outputs); i++ {
+		com[i] = tr.Outputs[i].Data
 
 		if outputMetadata[i] == nil || len(outputMetadata[i].OutputMetadata) == 0 {
 			continue
@@ -274,14 +289,14 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputMet
 		}
 
 		// check that token info matches output. If so, return token in cleartext. Else return an error.
-		tok, err := tr.OutputTokens[i].ToClear(metadata, pp)
+		tok, err := tr.Outputs[i].ToClear(metadata, pp)
 		if err != nil {
 			return errors.Wrap(err, "failed getting token in the clear")
 		}
 		s.Logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
 	}
 
-	return transfer2.NewVerifier(getTokenData(tr.InputTokens), com, pp).Verify(tr.Proof)
+	return transfer2.NewVerifier(getTokenData(tr.InputTokens()), com, pp).Verify(tr.Proof)
 }
 
 // DeserializeTransferAction un-marshals a TransferActionMetadata from the passed array of bytes.

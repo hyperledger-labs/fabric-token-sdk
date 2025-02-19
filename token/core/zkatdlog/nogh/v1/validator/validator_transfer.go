@@ -28,14 +28,17 @@ func TransferActionValidate(ctx *Context) error {
 }
 
 func TransferSignatureValidate(ctx *Context) error {
+	// recall that TransferActionValidate has been called before this function
 	var signatures [][]byte
 
-	if len(ctx.TransferAction.Inputs) != len(ctx.TransferAction.InputTokens) {
-		return errors.Errorf("invalid number of token inputs")
+	if len(ctx.TransferAction.Inputs) == 0 {
+		return errors.Errorf("invalid number of token inputs, expected at least 1")
 	}
 
+	var inputToken []*token.Token
 	for i, in := range ctx.TransferAction.Inputs {
-		tok := ctx.TransferAction.InputTokens[i]
+		tok := in.Token
+		inputToken = append(inputToken, tok)
 
 		// TODO check witness
 
@@ -43,24 +46,27 @@ func TransferSignatureValidate(ctx *Context) error {
 		ctx.Logger.Debugf("check sender [%d][%s]", i, driver.Identity(tok.Owner).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner)
 		if err != nil {
-			return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
+			return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
 		}
-		ctx.Logger.Debugf("signature verification [%d][%s][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
+		ctx.Logger.Debugf("signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
 		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(tok.Owner, verifier)
 		if err != nil {
-			return errors.Wrapf(err, "failed signature verification [%d][%s][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
+			return errors.Wrapf(err, "failed signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
 		}
 		signatures = append(signatures, sigma)
 	}
 
-	ctx.InputTokens = ctx.TransferAction.InputTokens
+	ctx.InputTokens = inputToken
 	ctx.Signatures = signatures
 
 	return nil
 }
 
 func TransferUpgradeWitnessValidate(ctx *Context) error {
-	for i, witness := range ctx.TransferAction.InputUpgradeWitness {
+	// recall that TransferActionValidate has been called before this function
+
+	for _, input := range ctx.TransferAction.Inputs {
+		witness := input.UpgradeWitness
 		if witness != nil {
 			// check that the corresponding input is compatible with the witness
 			if witness.FabToken == nil {
@@ -76,11 +82,11 @@ func TransferUpgradeWitnessValidate(ctx *Context) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to compute commitment")
 			}
-			if !ctx.TransferAction.InputTokens[i].Data.Equals(tokens[0]) {
+			if !input.Token.Data.Equals(tokens[0]) {
 				return errors.Wrapf(err, "recomputed commitment does not match")
 			}
 			// check owner
-			if !bytes.Equal(ctx.TransferAction.InputTokens[i].Owner, witness.FabToken.Owner) {
+			if !bytes.Equal(input.Token.Owner, witness.FabToken.Owner) {
 				return errors.Errorf("owners do not correspond")
 			}
 		}
