@@ -6,43 +6,26 @@ SPDX-License-Identifier: Apache-2.0
 package issue_test
 
 import (
+	"testing"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/issue"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 )
 
-var _ = Describe("Issued Token Correctness", func() {
-	var (
-		verifier *issue.SameTypeVerifier
-		prover   *issue.SameTypeProver
-	)
-	BeforeEach(func() {
-		prover, verifier = GetSameTypeProverAndVerifier()
-	})
-	Describe("Prove", func() {
-		Context("parameters and witness are initialized correctly", func() {
-			It("Succeeds", func() {
-				proof, err := prover.Prove()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(proof).NotTo(BeNil())
-			})
-		})
-	})
-	Describe("Verify", func() {
-		It("Succeeds", func() {
-			proof, err := prover.Prove()
-			Expect(err).NotTo(HaveOccurred())
-			err = verifier.Verify(proof)
-			Expect(err).NotTo(HaveOccurred())
-		})
-	})
-})
+func TestSameTypeProof(t *testing.T) {
+	prover, verifier := GetSameTypeProverAndVerifier(t)
+	proof, err := prover.Prove()
+	assert.NoError(t, err)
+	assert.NotNil(t, proof)
+	err = verifier.Verify(proof)
+	assert.NoError(t, err)
+}
 
-func prepareTokens(pp []*math.G1) []*math.G1 {
+func prepareTokens(t *testing.T, pp []*math.G1) []*math.G1 {
 	curve := math.Curves[1]
 	rand, err := curve.Rand()
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 
 	bf := make([]*math.Zr, 2)
 	values := make([]uint64, 2)
@@ -60,24 +43,24 @@ func prepareTokens(pp []*math.G1) []*math.G1 {
 	return tokens
 }
 
-func GetSameTypeProverAndVerifier() (*issue.SameTypeProver, *issue.SameTypeVerifier) {
-	pp := preparePedersenParameters()
+func GetSameTypeProverAndVerifier(t *testing.T) (*issue.SameTypeProver, *issue.SameTypeVerifier) {
+	pp := preparePedersenParameters(t)
 	curve := math.Curves[1]
 
 	rand, err := curve.Rand()
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 	blindingFactor := curve.NewRandomZr(rand)
 	com := pp[0].Mul(curve.HashToZr([]byte("ABC")))
 	com.Add(pp[2].Mul(blindingFactor))
 
-	tokens := prepareTokens(pp)
+	tokens := prepareTokens(t, pp)
 	return issue.NewSameTypeProver("ABC", blindingFactor, com, pp, math.Curves[1]), issue.NewSameTypeVerifier(tokens, pp, math.Curves[1])
 }
 
-func preparePedersenParameters() []*math.G1 {
+func preparePedersenParameters(t *testing.T) []*math.G1 {
 	curve := math.Curves[1]
 	rand, err := curve.Rand()
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 
 	pp := make([]*math.G1, 3)
 
@@ -87,9 +70,9 @@ func preparePedersenParameters() []*math.G1 {
 	return pp
 }
 
-func NewToken(value *math.Zr, rand *math.Zr, ttype string, pp []*math.G1, curve *math.Curve) *math.G1 {
+func NewToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1, curve *math.Curve) *math.G1 {
 	token := curve.NewG1()
-	token.Add(pp[0].Mul(curve.HashToZr([]byte(ttype))))
+	token.Add(pp[0].Mul(curve.HashToZr([]byte(tokenType))))
 	token.Add(pp[1].Mul(value))
 	token.Add(pp[2].Mul(rand))
 	return token
