@@ -13,8 +13,8 @@ import (
 	math2 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	v2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	noghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -25,15 +25,15 @@ import (
 )
 
 var precisions = map[token.Format]uint64{
-	utils.MustGet(v2.SupportedTokenFormat(16)): 16,
-	utils.MustGet(v2.SupportedTokenFormat(32)): 32,
-	utils.MustGet(v2.SupportedTokenFormat(64)): 64,
+	utils.MustGet(fabtokenv1.SupportedTokenFormat(16)): 16,
+	utils.MustGet(fabtokenv1.SupportedTokenFormat(32)): 32,
+	utils.MustGet(fabtokenv1.SupportedTokenFormat(64)): 64,
 }
 
 type TokensService struct {
 	*common.TokensService
 
-	PublicParametersManager common.PublicParametersManager[*v1.PublicParams]
+	PublicParametersManager common.PublicParametersManager[*noghv1.PublicParams]
 	IdentityDeserializer    driver.Deserializer
 
 	OutputTokenFormat               token.Format
@@ -41,7 +41,7 @@ type TokensService struct {
 	UpgradeSupportedTokenFormatList []token.Format
 }
 
-func NewTokensService(publicParametersManager common.PublicParametersManager[*v1.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
+func NewTokensService(publicParametersManager common.PublicParametersManager[*noghv1.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
 	// compute supported tokens
 	pp := publicParametersManager.PublicParams()
 	maxPrecision := pp.RangeProofParams.BitLength
@@ -54,7 +54,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*v1
 
 	supportedTokenFormatList := make([]token.Format, 0, 3*len(pp.IdemixIssuerPublicKeys))
 	for _, key := range pp.IdemixIssuerPublicKeys {
-		for _, precision := range v1.SupportedPrecisions {
+		for _, precision := range noghv1.SupportedPrecisions {
 			// these precisions are supported directly
 			if precision <= maxPrecision {
 				format, err := supportedTokenFormat(pp, precision, key)
@@ -69,7 +69,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*v1
 	// in addition, we support all fabtoken with precision less than maxPrecision
 	var upgradeSupportedTokenFormatList []token.Format
 	for _, precision := range []uint64{16, 32, 64} {
-		format, err := v2.SupportedTokenFormat(precision)
+		format, err := fabtokenv1.SupportedTokenFormat(precision)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed computing fabtoken token format with precision [%d]", precision)
 		}
@@ -230,7 +230,7 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 	return output, nil
 }
 
-func supportedTokenFormat(pp *v1.PublicParams, precision uint64, ipk *v1.IdemixIssuerPublicKey) (token.Format, error) {
+func supportedTokenFormat(pp *noghv1.PublicParams, precision uint64, ipk *noghv1.IdemixIssuerPublicKey) (token.Format, error) {
 	hasher := utils2.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
@@ -284,13 +284,13 @@ func (s *TokensService) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequ
 	return tokenTypes, tokenValue, nil
 }
 
-func (s *TokensService) checkFabtokenToken(tok []byte, precision uint64) (*v2.Output, uint64, error) {
+func (s *TokensService) checkFabtokenToken(tok []byte, precision uint64) (*fabtokenv1.Output, uint64, error) {
 	maxPrecision := s.PublicParametersManager.PublicParams().RangeProofParams.BitLength
 	if precision < maxPrecision {
 		return nil, 0, errors.Errorf("unsupported precision [%d], max [%d]", precision, maxPrecision)
 	}
 
-	output := &v2.Output{}
+	output := &fabtokenv1.Output{}
 	err := output.Deserialize(tok)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed to unmarshal fabtoken")
