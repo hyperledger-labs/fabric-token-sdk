@@ -59,7 +59,7 @@ message IssueActionOutput {
   Token token = 1; // is the newly issued token
 }
 
-message IssueAction {
+message TransferActionIssueAction {
   Identity issuer = 1; // is the identity of issuer
   repeated IssueActionInput inputs = 2; // are the tokens to be redeemed by this issue action
   repeated IssueActionOutput outputs = 3; // are the newly issued tokens

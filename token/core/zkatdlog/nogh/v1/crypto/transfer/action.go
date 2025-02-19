@@ -9,21 +9,113 @@ package transfer
 import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	factions "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
+	fv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
+
+type ActionInput struct {
+	ID             *token2.ID
+	Token          *token.Token
+	UpgradeWitness *token.UpgradeWitness
+}
+
+func (a *ActionInput) ToProtos() (*actions.TransferActionInput, error) {
+	var id *actions.TokenID
+	if a.ID != nil {
+		id = &actions.TokenID{
+			Id:    a.ID.TxId,
+			Index: a.ID.Index,
+		}
+	}
+	var input *actions.Token
+	if a.Token != nil {
+		data, err := utils.ToProtoG1(a.Token.Data)
+		if err != nil {
+			return nil, err
+		}
+		input = &actions.Token{
+			Owner: a.Token.Owner,
+			Data:  data,
+		}
+	}
+	var witness *actions.TransferActionInputUpgradeWitness
+	if a.UpgradeWitness != nil {
+		blindingFactor, err := utils.ToProtoZr(a.UpgradeWitness.BlindingFactor)
+		if err != nil {
+			return nil, err
+		}
+		var fabtoken *factions.Token
+		if a.UpgradeWitness.FabToken != nil {
+			fabtoken = &factions.Token{
+				Owner:    a.UpgradeWitness.FabToken.Owner,
+				Type:     string(a.UpgradeWitness.FabToken.Type),
+				Quantity: a.UpgradeWitness.FabToken.Quantity,
+			}
+		}
+		witness = &actions.TransferActionInputUpgradeWitness{
+			Output:         fabtoken,
+			BlindingFactor: blindingFactor,
+		}
+	}
+
+	return &actions.TransferActionInput{
+		TokenId:        id,
+		Input:          input,
+		UpgradeWitness: witness,
+	}, nil
+}
+
+func (a *ActionInput) FromProtos(input *actions.TransferActionInput) error {
+	if input.TokenId != nil {
+		a.ID = &token2.ID{
+			TxId:  input.TokenId.Id,
+			Index: input.TokenId.Index,
+		}
+	}
+	if input.Input != nil {
+		data, err := utils.FromG1Proto(input.Input.Data)
+		if err != nil {
+			return err
+		}
+		a.Token = &token.Token{
+			Owner: input.Input.Owner,
+			Data:  data,
+		}
+	}
+	if input.UpgradeWitness != nil {
+		blindingFactor, err := utils.FromZrProto(input.UpgradeWitness.BlindingFactor)
+		if err != nil {
+			return err
+		}
+		var fabtoken *fv1.Output
+		if input.UpgradeWitness.Output != nil {
+			fabtoken = &fv1.Output{
+				Owner:    input.UpgradeWitness.Output.Owner,
+				Type:     token2.Type(input.UpgradeWitness.Output.Type),
+				Quantity: input.UpgradeWitness.Output.Quantity,
+			}
+		}
+		a.UpgradeWitness = &token.UpgradeWitness{
+			FabToken:       fabtoken,
+			BlindingFactor: blindingFactor,
+		}
+	}
+	return nil
+}
 
 // Action specifies a transfer of one or more tokens
 type Action struct {
 	// Inputs specify the identifiers in of the tokens to be spent
-	Inputs []*token2.ID
-	// InputCommitments are the PedersenCommitments in the inputs
-	InputTokens         []*token.Token
-	InputUpgradeWitness []*token.UpgradeWitness
-	// OutputTokens are the new tokens resulting from the transfer
-	OutputTokens []*token.Token
+	Inputs []*ActionInput
+	// Outputs are the new tokens resulting from the transfer
+	Outputs []*token.Token
 	// ZK Proof that shows that the transfer is correct
 	Proof []byte
 	// Metadata contains the transfer action's metadata
@@ -31,23 +123,31 @@ type Action struct {
 }
 
 // NewTransfer returns the Action that matches the passed arguments
-func NewTransfer(inputs []*token2.ID, inputToken []*token.Token, outputs []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
-	if len(outputs) != len(owners) {
-		return nil, errors.Errorf("number of recipients [%d] does not match number of outputs [%d]", len(outputs), len(owners))
+func NewTransfer(tokenIDs []*token2.ID, inputToken []*token.Token, commitments []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
+	if len(commitments) != len(owners) {
+		return nil, errors.Errorf("number of recipients [%d] does not match number of outputs [%d]", len(commitments), len(owners))
 	}
-	if len(inputs) != len(inputToken) {
-		return nil, errors.Errorf("number of inputs [%d] does not match number of input tokens [%d]", len(inputs), len(inputToken))
+	if len(tokenIDs) != len(inputToken) {
+		return nil, errors.Errorf("number of inputs [%d] does not match number of input tokens [%d]", len(tokenIDs), len(inputToken))
 	}
+
+	inputs := make([]*ActionInput, len(tokenIDs))
+	for i, id := range tokenIDs {
+		inputs[i] = &ActionInput{
+			ID:    id,
+			Token: inputToken[i],
+		}
+	}
+
 	tokens := make([]*token.Token, len(owners))
-	for i, o := range outputs {
+	for i, o := range commitments {
 		tokens[i] = &token.Token{Data: o, Owner: owners[i]}
 	}
 	return &Action{
-		Inputs:       inputs,
-		InputTokens:  inputToken,
-		OutputTokens: tokens,
-		Proof:        proof,
-		Metadata:     map[string][]byte{},
+		Inputs:   inputs,
+		Outputs:  tokens,
+		Proof:    proof,
+		Metadata: map[string][]byte{},
 	}, nil
 }
 
@@ -57,13 +157,21 @@ func (t *Action) NumInputs() int {
 
 // GetInputs returns the inputs in the Action
 func (t *Action) GetInputs() []*token2.ID {
-	return t.Inputs
+	res := make([]*token2.ID, len(t.Inputs))
+	for i, input := range t.Inputs {
+		res[i] = input.ID
+	}
+	return res
 }
 
 func (t *Action) GetSerializedInputs() ([][]byte, error) {
 	var res [][]byte
-	for i, token := range t.InputTokens {
-		if w := t.InputUpgradeWitness[i]; w != nil {
+	for _, input := range t.Inputs {
+		if input == nil {
+			res = append(res, nil)
+			continue
+		}
+		if w := input.UpgradeWitness; w != nil {
 			ser, err := w.FabToken.Serialize()
 			if err != nil {
 				return nil, err
@@ -71,7 +179,7 @@ func (t *Action) GetSerializedInputs() ([][]byte, error) {
 			res = append(res, ser)
 			continue
 		}
-		r, err := token.Serialize()
+		r, err := input.Token.Serialize()
 		if err != nil {
 			return nil, err
 		}
@@ -86,13 +194,13 @@ func (t *Action) GetSerialNumbers() []string {
 
 // NumOutputs returns the number of outputs in the Action
 func (t *Action) NumOutputs() int {
-	return len(t.OutputTokens)
+	return len(t.Outputs)
 }
 
 // GetOutputs returns the outputs in the Action
 func (t *Action) GetOutputs() []driver.Output {
-	res := make([]driver.Output, len(t.OutputTokens))
-	for i, outputToken := range t.OutputTokens {
+	res := make([]driver.Output, len(t.Outputs))
+	for i, outputToken := range t.Outputs {
 		res[i] = outputToken
 	}
 	return res
@@ -100,49 +208,25 @@ func (t *Action) GetOutputs() []driver.Output {
 
 // IsRedeemAt checks if output in the Action at the passed index is redeemed
 func (t *Action) IsRedeemAt(index int) bool {
-	return t.OutputTokens[index].IsRedeem()
+	return t.Outputs[index].IsRedeem()
 }
 
 // SerializeOutputAt marshals the output in the Action at the passed index
 func (t *Action) SerializeOutputAt(index int) ([]byte, error) {
-	return t.OutputTokens[index].Serialize()
-}
-
-// Serialize marshals the Action
-func (t *Action) Serialize() ([]byte, error) {
-	return json.Marshal(t)
-}
-
-// GetProof returns the proof in the Action
-func (t *Action) GetProof() []byte {
-	return t.Proof
-}
-
-// Deserialize unmarshals the Action
-func (t *Action) Deserialize(raw []byte) error {
-	return json.Unmarshal(raw, t)
+	return t.Outputs[index].Serialize()
 }
 
 // GetSerializedOutputs returns the outputs in the Action serialized
 func (t *Action) GetSerializedOutputs() ([][]byte, error) {
-	res := make([][]byte, len(t.OutputTokens))
+	res := make([][]byte, len(t.Outputs))
 	var err error
-	for i, token := range t.OutputTokens {
+	for i, token := range t.Outputs {
 		res[i], err = token.Serialize()
 		if err != nil {
 			return nil, err
 		}
 	}
 	return res, nil
-}
-
-// GetOutputCommitments returns the Pedersen commitments in the Action
-func (t *Action) GetOutputCommitments() []*math.G1 {
-	com := make([]*math.G1, len(t.OutputTokens))
-	for i := 0; i < len(com); i++ {
-		com[i] = t.OutputTokens[i].Data
-	}
-	return com
 }
 
 // IsGraphHiding returns false
@@ -157,9 +241,128 @@ func (t *Action) GetMetadata() map[string][]byte {
 }
 
 func (t *Action) Validate() error {
+	if len(t.Inputs) == 0 {
+		return errors.Errorf("invalid number of token inputs, expected at least 1")
+	}
+	for i, in := range t.Inputs {
+		if in == nil {
+			return errors.Errorf("invalid input token at index [%d]", i)
+		}
+		if in.Token == nil {
+			return errors.Errorf("invalid input token at index [%d]", i)
+		}
+		if in.Token.Data == nil {
+			return errors.Errorf("invalid input token at index [%d]", i)
+		}
+	}
+	if len(t.Outputs) == 0 {
+		return errors.Errorf("invalid number of token outputs, expected at least 1")
+	}
+	for i, out := range t.Outputs {
+		if out == nil {
+			return errors.Errorf("invalid output token at index [%d]", i)
+		}
+	}
 	return nil
 }
 
 func (t *Action) ExtraSigners() []driver.Identity {
 	return nil
+}
+
+// Serialize marshal TransferAction
+func (t *Action) Serialize() ([]byte, error) {
+	// inputs
+	inputs, err := utils2.ToProtosSlice[actions.TransferActionInput, *ActionInput](t.Inputs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to serialize inputs")
+	}
+
+	// outputs
+	outputs, err := utils2.ToProtosSliceFunc(t.Outputs, func(output *token.Token) (*actions.TransferActionOutput, error) {
+		data, err := utils.ToProtoG1(output.Data)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to serialize output")
+		}
+		return &actions.TransferActionOutput{
+			Token: &actions.Token{
+				Owner: output.Owner,
+				Data:  data,
+			},
+		}, nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to serialize outputs")
+	}
+
+	action := &actions.TransferAction{
+		Inputs:  inputs,
+		Outputs: outputs,
+		Proof: &actions.Proof{
+			Proof: t.Proof,
+		},
+		Metadata: t.Metadata,
+	}
+	return proto.Marshal(action)
+}
+
+// Deserialize un-marshals TransferAction
+func (t *Action) Deserialize(raw []byte) error {
+	action := &actions.TransferAction{}
+	err := proto.Unmarshal(raw, action)
+	if err != nil {
+		return errors.Wrap(err, "failed to deserialize issue action")
+	}
+
+	// inputs
+	t.Inputs = make([]*ActionInput, len(action.Inputs))
+	t.Inputs = utils2.GenericSliceOfPointers[ActionInput](len(action.Inputs))
+	if err := utils2.FromProtosSlice(action.Inputs, t.Inputs); err != nil {
+		return errors.Wrap(err, "failed unmarshalling receivers metadata")
+	}
+
+	// outputs
+	t.Outputs = make([]*token.Token, len(action.Outputs))
+	for j, output := range action.Outputs {
+		if output == nil || output.Token == nil {
+			continue
+		}
+		data, err := utils.FromG1Proto(output.Token.Data)
+		if err != nil {
+			return errors.Wrapf(err, "failed to deserialize output")
+		}
+		t.Outputs[j] = &token.Token{
+			Owner: output.Token.Owner,
+			Data:  data,
+		}
+	}
+
+	if action.Proof != nil {
+		t.Proof = action.Proof.Proof
+	}
+	t.Metadata = action.Metadata
+
+	return nil
+}
+
+// GetProof returns the proof in the Action
+func (t *Action) GetProof() []byte {
+	return t.Proof
+}
+
+// GetOutputCommitments returns the Pedersen commitments in the Action
+func (t *Action) GetOutputCommitments() []*math.G1 {
+	com := make([]*math.G1, len(t.Outputs))
+	for i := 0; i < len(com); i++ {
+		com[i] = t.Outputs[i].Data
+	}
+	return com
+}
+
+func (t *Action) InputTokens() []*token.Token {
+	tokens := make([]*token.Token, len(t.Inputs))
+	for i, in := range t.Inputs {
+		tokens[i] = in.Token
+	}
+	return tokens
 }

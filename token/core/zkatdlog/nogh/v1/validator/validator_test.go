@@ -523,7 +523,7 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	for i := 0; i < len(transfer.OutputTokens); i++ {
+	for i := 0; i < len(transfer.Outputs); i++ {
 		marshalledinf, err := metas[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		metadata.Outputs = append(metadata.Outputs, &driver.TransferOutputMetadata{

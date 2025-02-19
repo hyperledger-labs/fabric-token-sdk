@@ -140,7 +140,7 @@ func createTransfer(pp *v1.PublicParams) (*transfer2.Action, *driver.TransferMet
 		})
 	}
 
-	for i := 0; i < len(transfer.OutputTokens); i++ {
+	for i := 0; i < len(transfer.Outputs); i++ {
 		marshalledMeta, err := meta[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		metadata.Outputs = append(metadata.Outputs, &driver.TransferOutputMetadata{
@@ -190,7 +190,7 @@ func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer2.Action, *dri
 		})
 	}
 
-	for i := 0; i < len(transfer.OutputTokens); i++ {
+	for i := 0; i < len(transfer.Outputs); i++ {
 		marshalledMeta, err := json.Marshal(inf[i])
 		Expect(err).NotTo(HaveOccurred())
 		metadata.Outputs = append(metadata.Outputs, &driver.TransferOutputMetadata{

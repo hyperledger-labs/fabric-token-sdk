@@ -254,3 +254,12 @@ func (v *Validator[P, T, TA, IA, DS]) verifyTransfer(tr TA, ledger driver.Ledger
 
 	return nil
 }
+
+func IsAnyNil[T any](args ...*T) bool {
+	for _, arg := range args {
+		if arg == nil {
+			return true
+		}
+	}
+	return false
+}

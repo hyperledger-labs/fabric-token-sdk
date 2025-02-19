@@ -422,12 +422,12 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMet
 		if err != nil {
 			return nil, nil, err
 		}
-		if len(ta.OutputTokens) != len(transferMetadata.Outputs) {
-			return nil, nil, errors.Errorf("number of outputs does not match the number of output metadata [%d]!=[%d]", len(ta.OutputTokens), len(transferMetadata.Outputs))
+		if len(ta.Outputs) != len(transferMetadata.Outputs) {
+			return nil, nil, errors.Errorf("number of outputs does not match the number of output metadata [%d]!=[%d]", len(ta.Outputs), len(transferMetadata.Outputs))
 		}
-		outputs[k] = make([]*AuditableToken, len(ta.OutputTokens))
-		for i := 0; i < len(ta.OutputTokens); i++ {
-			if ta.OutputTokens[i] == nil {
+		outputs[k] = make([]*AuditableToken, len(ta.Outputs))
+		for i := 0; i < len(ta.Outputs); i++ {
+			if ta.Outputs[i] == nil {
 				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
 
@@ -437,7 +437,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMet
 				return nil, nil, err
 			}
 			// TODO: we need to check also how many recipients the output contains, and check them all in isolation and compatibility
-			outputs[k][i], err = NewAuditableToken(ta.OutputTokens[i], transferMetadata.Outputs[i].OutputAuditInfo, ti.Type, ti.Value, ti.BlindingFactor)
+			outputs[k][i], err = NewAuditableToken(ta.Outputs[i], transferMetadata.Outputs[i].OutputAuditInfo, ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, nil, err
 			}

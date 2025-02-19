@@ -57,6 +57,9 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 			return nil, nil, errors.Errorf("all recipients should be defined")
 		}
 	}
+	if opts == nil {
+		opts = &driver.IssueOptions{}
+	}
 
 	if issuerIdentity.IsNone() && len(tokenType) == 0 && values == nil {
 		// this is a special case where the issue contains also redemption
