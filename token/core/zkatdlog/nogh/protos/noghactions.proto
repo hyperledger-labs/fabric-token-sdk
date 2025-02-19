@@ -19,6 +19,13 @@ message Token {
   G1 data = 2; // Data is the Pedersen commitment to type and value
 }
 
+message TokenMetadata {
+  string type = 1; // Type is the type of the token
+  Zr value = 2; // Value is the quantity of the token
+  Zr blinding_factor = 3; // BlindingFactor is the blinding factor used to commit type and value
+  Identity issuer = 4; // Issuer is the issuer of the token, if defined
+}
+
 message TokenID {
     string id = 1;
     uint64 index = 2;
@@ -59,7 +66,7 @@ message IssueActionOutput {
   Token token = 1; // is the newly issued token
 }
 
-message TransferActionIssueAction {
+message IssueAction {
   Identity issuer = 1; // is the identity of issuer
   repeated IssueActionInput inputs = 2; // are the tokens to be redeemed by this issue action
   repeated IssueActionOutput outputs = 3; // are the newly issued tokens

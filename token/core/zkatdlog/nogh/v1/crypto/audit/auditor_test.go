@@ -15,7 +15,6 @@ import (
 	math "github.com/IBM/mathlib"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/audit/mock"
@@ -171,7 +170,7 @@ func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer2.Action, *dri
 	marshalledInfo := make([][]byte, len(inf))
 	var err error
 	for i := 0; i < len(inf); i++ {
-		marshalledInfo[i], err = json.Marshal(inf[i])
+		marshalledInfo[i], err = inf[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 	}
 	auditInfoRaw, err := auditInfo.Bytes()
@@ -191,7 +190,7 @@ func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer2.Action, *dri
 	}
 
 	for i := 0; i < len(transfer.Outputs); i++ {
-		marshalledMeta, err := json.Marshal(inf[i])
+		marshalledMeta, err := inf[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		metadata.Outputs = append(metadata.Outputs, &driver.TransferOutputMetadata{
 			OutputMetadata:  marshalledMeta,
