@@ -32,6 +32,7 @@ func TestSerialization(t *testing.T) {
 
 	action3 := &Action{}
 	err = action3.Deserialize(raw2)
+	assert.NoError(t, err, "failed to deserialize a new transfer action")
 	assert.Equal(t, action2, action3, "deserialized action is not equal to the original one")
 }
 
