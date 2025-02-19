@@ -4,18 +4,16 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package transfer
+package issue
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"io"
 	"testing"
 
 	math "github.com/IBM/mathlib"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -74,26 +72,7 @@ func getRandomBytes(b assert.TestingT, len int) []byte {
 
 func randomAction(curve *math.Curve, rand io.Reader, b assert.TestingT) *Action {
 	// generate an action at random
-	tokenIDs := []*token.ID{
-		{
-			TxId:  base64.StdEncoding.EncodeToString(getRandomBytes(b, 32)),
-			Index: 0,
-		},
-		{
-			TxId:  base64.StdEncoding.EncodeToString(getRandomBytes(b, 32)),
-			Index: 0,
-		},
-	}
-	inputToken := []*token2.Token{
-		{
-			Owner: getRandomBytes(b, 32),
-			Data:  curve.GenG1.Mul(curve.NewRandomZr(rand)),
-		},
-		{
-			Owner: getRandomBytes(b, 32),
-			Data:  curve.GenG1.Mul(curve.NewRandomZr(rand)),
-		},
-	}
+	issuer := getRandomBytes(b, 32)
 	commitments := []*math.G1{
 		curve.GenG1.Mul(curve.NewRandomZr(rand)),
 		curve.GenG1.Mul(curve.NewRandomZr(rand)),
@@ -103,8 +82,18 @@ func randomAction(curve *math.Curve, rand io.Reader, b assert.TestingT) *Action 
 		getRandomBytes(b, 32),
 	}
 	proof := getRandomBytes(b, 32)
-	action, err := NewTransfer(tokenIDs, inputToken, commitments, owners, proof)
+	action, err := NewAction(issuer, commitments, owners, proof)
 	assert.NoError(b, err, "failed to create a new transfer action")
+	action.Inputs = []*ActionInput{
+		{ID: token2.ID{
+			TxId:  "txid1",
+			Index: 0,
+		}, Token: curve.GenG1.Mul(curve.NewRandomZr(rand)).Bytes()},
+		{ID: token2.ID{
+			TxId:  "txid2",
+			Index: 1,
+		}, Token: curve.GenG1.Mul(curve.NewRandomZr(rand)).Bytes()},
+	}
 	action.Metadata = map[string][]byte{
 		"key1": getRandomBytes(b, 32),
 		"key2": getRandomBytes(b, 32),

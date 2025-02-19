@@ -35,7 +35,7 @@ func (i *ActionInput) ToProtos() (*actions.IssueActionInput, error) {
 }
 
 func (i *ActionInput) FromProtos(p *actions.IssueActionInput) error {
-	if p.Id == nil {
+	if p.Id != nil {
 		i.ID.TxId = p.Id.Id
 		i.ID.Index = p.Id.Index
 	}

@@ -44,7 +44,7 @@ func TestToClear(t *testing.T) {
 	assert.Equal(t, "0x"+inf.Value.String(), tok.Quantity)
 }
 
-func FuzzSerializeDeserializer(f *testing.F) {
+func FuzzSerialization(f *testing.F) {
 	testcases := [][]any{
 		{[]byte("Alice"), false},
 		{[]byte("Charlie"), true},
