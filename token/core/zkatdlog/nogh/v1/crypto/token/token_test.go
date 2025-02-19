@@ -50,7 +50,7 @@ func FuzzSerializeDeserializer(f *testing.F) {
 		{[]byte("Charlie"), true},
 	}
 	for _, tc := range testcases {
-		f.Add(tc[0], tc[1])
+		f.Add(tc[0].([]byte), tc[1].(bool))
 	}
 	f.Fuzz(func(t *testing.T, owner []byte, putData bool) {
 		token := &token2.Token{
