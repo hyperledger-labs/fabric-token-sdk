@@ -37,7 +37,7 @@ func FromG1ProtoSlice(generators []*math.G1) ([]*mathlib.G1, error) {
 }
 
 func FromG1Proto(p *math.G1) (*mathlib.G1, error) {
-	if p == nil {
+	if p == nil || len(p.Raw) == 0 {
 		return nil, nil
 	}
 	g1 := &mathlib.G1{}
