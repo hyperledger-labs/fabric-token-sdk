@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/pkg/errors"
 )
 
@@ -118,21 +117,4 @@ func (d *Driver) NewCertificationService(tms *token.ManagementService, wallet st
 	d.CertificationService.SetWallet(tms, wallet)
 
 	return d.CertificationService, nil
-}
-
-type ChaincodeBackend struct{}
-
-func (c *ChaincodeBackend) Load(context view.Context, cr *CertificationRequest) ([][]byte, error) {
-	logger.Debugf("invoke chaincode to get commitments for [%v]", cr.IDs)
-	// TODO: if the certifier fetches all token transactions, it might have the tokens in its on vault.
-	tokensBoxed, err := context.RunView(tcc.NewGetTokensView(cr.Channel, cr.Namespace, cr.IDs...))
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting tokens [%s:%s][%v]", cr.Channel, cr.Namespace, cr.IDs)
-	}
-
-	tokens, ok := tokensBoxed.([][]byte)
-	if !ok {
-		return nil, errors.Errorf("expected [][]byte, got [%T]", tokens)
-	}
-	return tokens, nil
 }

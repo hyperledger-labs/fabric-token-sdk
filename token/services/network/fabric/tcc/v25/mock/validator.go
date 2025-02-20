@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
+	v25 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/v25"
 )
 
 type Validator struct {
@@ -131,4 +131,4 @@ func (fake *Validator) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ tcc.Validator = new(Validator)
+var _ v25.Validator = new(Validator)

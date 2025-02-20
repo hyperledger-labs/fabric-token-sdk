@@ -15,9 +15,7 @@ require (
 	github.com/hyperledger-labs/orion-sdk-go v0.2.10
 	github.com/hyperledger-labs/orion-server v0.2.10
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20240918034325-94590aa4332b
-	github.com/hyperledger/fabric-chaincode-go v0.0.0-20230731094759-d626e9ab09b9
 	github.com/hyperledger/fabric-lib-go v1.1.3-0.20240523144151-25edd1eaf5f5
-	github.com/hyperledger/fabric-protos-go v0.3.3
 	github.com/hyperledger/fabric-protos-go-apiv2 v0.3.3
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/json-iterator/go v1.1.12

@@ -29,7 +29,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/config"
 	logger2 "github.com/hyperledger-labs/orion-server/pkg/logger"
@@ -38,6 +37,14 @@ import (
 )
 
 var logger = logging.MustGetLogger("token-sdk.integration.token.orion")
+
+type SetupAction struct {
+	SetupParameters []byte
+}
+
+func (a *SetupAction) GetSetupParameters() ([]byte, error) {
+	return a.SetupParameters, nil
+}
 
 type Entry struct {
 	TMS     *topology2.TMS
@@ -421,7 +428,7 @@ func (p *PPInitConfig) Init() error {
 	if err != nil {
 		return err
 	}
-	action := &tcc.SetupAction{
+	action := &SetupAction{
 		SetupParameters: ppRaw,
 	}
 	if err := w.Write(action); err != nil {
