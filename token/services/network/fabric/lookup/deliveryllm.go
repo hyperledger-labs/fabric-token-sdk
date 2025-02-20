@@ -117,10 +117,15 @@ func (p *deliveryBasedLLMProvider) NewManager(network, channel string) (Listener
 	if err != nil {
 		return nil, err
 	}
+	logger := logging.MustGetLogger("token-sdk.network.fabric.llm")
 	flm, err := events.NewListenerManager[KeyInfo](
-		logging.MustGetLogger("token-sdk.network.fabric.llm"),
+		logger,
 		p.config,
-		&finality2.Delivery{Delivery: ch.Delivery()},
+		&finality2.Delivery{
+			Delivery: ch.Delivery(),
+			Ledger:   ch.Ledger(),
+			Logger:   logger,
+		},
 		&DeliveryScanQueryByID{
 			Channel: ch,
 		},
