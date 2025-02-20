@@ -7,7 +7,7 @@ toolchain go1.23.6
 //replace github.com/hyperledger-labs/fabric-token-sdk => ./../../../../../../
 
 require (
-	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250218052943-f92d41e5e37a
+	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250220060658-66882cda14fd
 	github.com/hyperledger-labs/fabric-token-sdk v0.4.1-0.20250218092030-4bd126cc913d
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20240704073638-9fb89180dc17
 	github.com/hyperledger/fabric-protos-go v0.3.3
