@@ -25,7 +25,7 @@ type TxOptions struct {
 	NoCachingRequest          bool
 }
 
-func compile(opts ...TxOption) (*TxOptions, error) {
+func CompileOpts(opts ...TxOption) (*TxOptions, error) {
 	txOptions := &TxOptions{}
 	for _, opt := range opts {
 		if err := opt(txOptions); err != nil {

@@ -53,10 +53,11 @@ func ServiceOpts(tmsId *token.TMSID, opts ...token.ServiceOption) []token.Servic
 	return append(serviceOpts, opts...)
 }
 
-func TxOpts(tmsId *token.TMSID) []ttx.TxOption {
+func TxOpts(tmsId *token.TMSID, opts ...ttx.TxOption) []ttx.TxOption {
 	var txOpts []ttx.TxOption
 	if tmsId != nil {
 		txOpts = append(txOpts, ttx.WithTMSID(*tmsId))
+		txOpts = append(txOpts, opts...)
 	}
 	return txOpts
 }
