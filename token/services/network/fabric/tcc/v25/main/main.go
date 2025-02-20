@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
+	v25 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/v25"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 )
 
@@ -65,8 +65,8 @@ func main() {
 			fmt.Println("starting up in devmode...")
 		}
 		err := shim.Start(
-			&tcc.TokenChaincode{
-				TokenServicesFactory: func(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
+			&v25.TokenChaincode{
+				TokenServicesFactory: func(bytes []byte) (v25.PublicParameters, v25.Validator, error) {
 					ppm, err := is.PublicParametersFromBytes(bytes)
 					if err != nil {
 						return nil, nil, err
@@ -109,8 +109,8 @@ func main() {
 		server := &shim.ChaincodeServer{
 			CCID:    config.CCID,
 			Address: config.CCaddress,
-			CC: &tcc.TokenChaincode{
-				TokenServicesFactory: func(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
+			CC: &v25.TokenChaincode{
+				TokenServicesFactory: func(bytes []byte) (v25.PublicParameters, v25.Validator, error) {
 					ppm, err := is.PublicParametersFromBytes(bytes)
 					if err != nil {
 						return nil, nil, err

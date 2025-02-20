@@ -4,7 +4,7 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
+	v25 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/v25"
 )
 
 type PublicParametersManager struct {
@@ -99,4 +99,4 @@ func (fake *PublicParametersManager) recordInvocation(key string, args []interfa
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ tcc.PublicParameters = new(PublicParametersManager)
+var _ v25.PublicParameters = new(PublicParametersManager)
