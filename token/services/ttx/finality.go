@@ -49,7 +49,7 @@ func NewFinalityWithOpts(opts ...TxOption) *finalityView {
 // If the transaction is final, the vault is updated.
 func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 	// Compile options
-	options, err := compile(f.opts...)
+	options, err := CompileOpts(f.opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}

@@ -35,7 +35,7 @@ func NewOrderingViewWithOpts(opts ...TxOption) *orderingView {
 // 1. It broadcasts the token transaction to the proper backend.
 func (o *orderingView) Call(context view.Context) (interface{}, error) {
 	// Compile options
-	options, err := compile(o.opts...)
+	options, err := CompileOpts(o.opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
