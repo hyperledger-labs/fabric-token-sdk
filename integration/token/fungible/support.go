@@ -260,6 +260,26 @@ func CheckBalanceForTMSID(network *integration.Infrastructure, ref *token3.NodeR
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
 }
 
+func CheckCoOwnedBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64) {
+	CheckCoOwnedBalanceForTMSID(network, ref, wallet, typ, expected, nil)
+}
+
+func CheckCoOwnedBalanceForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64, tmsID *token2.TMSID) {
+	res, err := network.Client(ref.ReplicaName()).CallView("CoOwnedBalance", common.JSONMarshall(&views.CoOwnedBalanceQuery{
+		Wallet: wallet,
+		Type:   typ,
+		TMSID:  tmsID,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	b := &views.Balance{}
+	common.JSONUnmarshal(res.([]byte), b)
+	Expect(b.Type).To(BeEquivalentTo(typ))
+	q, err := token.ToQuantity(b.Quantity, 64)
+	Expect(err).NotTo(HaveOccurred())
+	expectedQ := token.NewQuantityFromUInt64(expected)
+	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+}
+
 func CheckHolding(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected int64, auditor *token3.NodeReference) {
 	CheckHoldingForTMSID(network, ref, wallet, typ, expected, auditor, nil)
 }
@@ -1288,4 +1308,48 @@ func TokensUpgrade(network *integration.Infrastructure, wpm *WalletManagerProvid
 		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	return ""
+}
+
+func MultiSigLockCash(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, receivers []*token3.NodeReference, auditor *token3.NodeReference) string {
+	return MultiSigLockCashForTMSID(network, sender, wallet, typ, amount, receivers, auditor, nil)
+}
+
+func MultiSigLockCashForTMSID(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, receivers []*token3.NodeReference, auditor *token3.NodeReference, tmsId *token2.TMSID) string {
+	identities := make([]view.Identity, len(receivers))
+	eids := make([]string, len(receivers))
+	for i := 0; i < len(receivers); i++ {
+		eids[i] = receivers[i].Id()
+		identities[i] = network.Identity(eids[i])
+	}
+	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("MultiSigLock", common.JSONMarshall(&views.MultiSigLock{
+		Auditor:    auditor.Id(),
+		Wallet:     wallet,
+		Type:       typ,
+		Amount:     amount,
+		Escrow:     identities,
+		EscrowEIDs: eids,
+		TMSID:      tmsId,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	txID := common.JSONUnmarshalString(txidBoxed)
+	return txID
+
+}
+
+func MultiSigSpendCash(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, receiver *token3.NodeReference, auditor *token3.NodeReference) string {
+	return MultiSigSpendCashForTMSID(network, sender, wallet, typ, receiver, auditor, nil)
+}
+
+func MultiSigSpendCashForTMSID(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, receiver *token3.NodeReference, auditor *token3.NodeReference, tmsId *token2.TMSID) string {
+	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("MultiSigSpend", common.JSONMarshall(&views.MultiSigSpend{
+		Auditor:   auditor.Id(),
+		Wallet:    wallet,
+		TMSID:     tmsId,
+		Recipient: network.Identity(receiver.Id()),
+		TokenType: typ,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	txID := common.JSONUnmarshalString(txidBoxed)
+	return txID
+
 }

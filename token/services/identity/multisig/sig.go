@@ -7,27 +7,39 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
-	"encoding/json"
+	"encoding/asn1"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
-type MultiIdentity struct {
-	Identities []driver.Identity
+type MultiSignature struct {
+	Signatures [][]byte
+}
+
+func (m *MultiSignature) Bytes() ([]byte, error) {
+	return asn1.Marshal(m)
+}
+
+func (m *MultiSignature) FromBytes(raw []byte) error {
+	_, err := asn1.Unmarshal(raw, m)
+	return err
+}
+
+func JoinSignatures(sigmas [][]byte) ([]byte, error) {
+	sig := &MultiSignature{
+		Signatures: sigmas,
+	}
+	return sig.Bytes()
 }
 
 type MultiVerifier struct {
 	Verifiers []driver.Verifier
 }
 
-type MultiSignature struct {
-	Signatures [][]byte
-}
-
 func (v *MultiVerifier) Verify(msg, raw []byte) error {
 	sig := &MultiSignature{}
-	err := json.Unmarshal(raw, sig)
+	err := sig.FromBytes(raw)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal multisig")
 	}
@@ -40,22 +52,6 @@ func (v *MultiVerifier) Verify(msg, raw []byte) error {
 			return errors.Errorf("Invalid multisig: signature at index "+
 				"%d does not verify", k)
 		}
-	}
-	return nil
-}
-
-func (id *MultiIdentity) Serialize() ([]byte, error) {
-	raw, err := json.Marshal(id)
-	if err != nil {
-		return nil, err
-	}
-	return raw, nil
-}
-
-func (id *MultiIdentity) Deserialize(raw []byte) error {
-	err := json.Unmarshal(raw, id)
-	if err != nil {
-		return err
 	}
 	return nil
 }

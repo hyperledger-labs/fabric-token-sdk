@@ -94,16 +94,23 @@ var _ = Describe("EndToEnd", func() {
 			It("Malicious Transactions", Label("T9"), func() { fungible.TestMaliciousTransactions(ts.II, selector) })
 		})
 
-		Describe("T10 Fungible with Auditor ne Issuer and Endorsers", t.Label, func() {
+		Describe("Fungible with Auditor ne Issuer and Endorsers", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, Aries|WithEndorsers, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
 			It("succeeded", Label("T10"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
 		})
+
+		Describe("Multisig", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T12"), func() { fungible.TestMultiSig(ts.II, selector) })
+		})
 	}
 
 	for _, tokenSelector := range integration2.TokenSelectors {
-		Describe("T11 TokenSelector Test", integration2.WebSocketNoReplication.Label, Label(tokenSelector), func() {
+		Describe("TokenSelector Test", integration2.WebSocketNoReplication.Label, Label(tokenSelector), func() {
 			ts, replicaSelector := newTestSuite(integration2.WebSocketNoReplication.CommType, Aries, integration2.WebSocketNoReplication.ReplicationFactor, tokenSelector, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)

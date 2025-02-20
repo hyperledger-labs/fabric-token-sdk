@@ -15,8 +15,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const Escrow = "Multisig"
-
 type VerifierDES interface {
 	DeserializeVerifier(id driver.Identity) (driver.Verifier, error)
 }
