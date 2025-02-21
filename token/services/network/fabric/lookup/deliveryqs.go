@@ -32,7 +32,7 @@ type DeliveryScanQueryByID struct {
 	Channel  *fabric.Channel
 }
 
-func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, startingBlock driver.BlockNum, evicted map[driver.TxID][]events.ListenerEntry[KeyInfo]) (<-chan []KeyInfo, error) {
+func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, startingBlock driver.BlockNum, evicted map[driver.PKey][]events.ListenerEntry[KeyInfo]) (<-chan []KeyInfo, error) {
 	// we are abusing TxID to carry the name of the keys we are looking for.
 	// Keys are supposed to be unique
 	keys := collections.Keys(evicted) // These are the state keys we are looking for
@@ -41,7 +41,7 @@ func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, startingBlock dri
 	return ch, nil
 }
 
-func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxID, ch chan []KeyInfo, lastBlock uint64, evicted map[driver.TxID][]events.ListenerEntry[KeyInfo]) {
+func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKey, ch chan []KeyInfo, lastBlock uint64, evicted map[driver.PKey][]events.ListenerEntry[KeyInfo]) {
 	defer close(ch)
 
 	keySet := collections.NewSet(keys...)
