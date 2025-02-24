@@ -9,7 +9,6 @@ package views
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -159,6 +158,12 @@ func (f *MultiSigLockViewFactory) NewView(in []byte) (view.View, error) {
 	return v, nil
 }
 
+type MultiSigRequestSpend struct{}
+
+func (m *MultiSigRequestSpend) Call(context view.Context) (interface{}, error) {
+	return nil, nil
+}
+
 // MultiSigSpend contains the input information to spend a token
 type MultiSigSpend struct {
 	// Auditor is the name of the auditor that must be contacted to approve the operation
@@ -177,21 +182,6 @@ type MultiSigSpendView struct {
 }
 
 func (r *MultiSigSpendView) Call(context view.Context) (res interface{}, err error) {
-	var tx *ttx.Transaction
-	defer func() {
-		if e := recover(); e != nil {
-			txID := "none"
-			if tx != nil {
-				txID = tx.ID()
-			}
-			if err == nil {
-				err = errors.Errorf("<<<[%s]>>>: %s", txID, e)
-			} else {
-				err = errors.Errorf("<<<[%s]>>>: %s", txID, err)
-			}
-		}
-	}()
-
 	serviceOpts := ServiceOpts(r.TMSID)
 	recipient, err := ttx.RequestRecipientIdentity(context, r.Recipient, serviceOpts...)
 	assert.NoError(err, "failed getting recipient")
@@ -205,10 +195,11 @@ func (r *MultiSigSpendView) Call(context view.Context) (res interface{}, err err
 	assert.True(matched.Count() == 1, "expected only one multisig script to match, got [%d]", matched.Count())
 
 	// contact the co-owners about the intention to spend the multisig token
-	_, err = context.RunView(multisig.NewRequestSpendView(matched.At(0)))
+	_, err = context.RunView(multisig.NewRequestSpendView(matched.At(0), append(serviceOpts, token2.WithInitiator(&MultiSigRequestSpend{}))...))
+	assert.NoError(err, "failed to request spend")
 
 	// generate the transaction
-	tx, err = ttx.NewAnonymousTransaction(
+	tx, err := ttx.NewAnonymousTransaction(
 		context,
 		TxOpts(r.TMSID, ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(r.Auditor)))...,
 	)
