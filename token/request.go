@@ -494,9 +494,8 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 		if len(transferAction.GetOutputs()) != len(transferMeta.Outputs) {
-			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]: invalid metadata", i)
+			return nil, errors.Errorf("failed matching transfer action with its metadata [%d]: invalid metadata", i)
 		}
-
 		extractedOutputs, newCounter, err := r.extractTransferOutputs(i, counter, transferAction, transferMeta, failOnMissing, false)
 		if err != nil {
 			return nil, err
@@ -504,7 +503,6 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 		outputs = append(outputs, extractedOutputs...)
 		counter = newCounter
 	}
-
 	return NewOutputStream(outputs, tms.PublicParamsManager().PublicParameters().Precision()), nil
 }
 
@@ -634,7 +632,6 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed deserializing transfer action output [%d,%d]", i, j)
 		}
-
 		// is the j-th meta present? It might have been filtered out
 		if transferMeta.IsOutputAbsent(j) || len(transferMeta.Outputs[j].OutputMetadata) == 0 {
 			r.TokenService.logger.Debugf("Transfer Action Output [%d,%d] is absent", i, j)
@@ -658,7 +655,6 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			counter++
 			continue
 		}
-
 		// is the j-th meta present? Yes
 		tok, issuer, recipients, ledgerOutputFormat, err := tms.TokensService().Deobfuscate(ledgerOutput, transferMeta.Outputs[j].OutputMetadata)
 		if err != nil {
@@ -719,7 +715,6 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 					}
 					targetLedgerOutput = ledgerOutput
 				}
-
 				r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
 				outputs = append(outputs, &Output{
 					Token:                *tok,
@@ -741,7 +736,6 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		}
 		counter++
 	}
-
 	return outputs, counter, nil
 }
 

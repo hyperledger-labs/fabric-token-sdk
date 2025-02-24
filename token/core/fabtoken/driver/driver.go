@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/multisig"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -117,6 +118,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	authorization := common.NewAuthorizationMultiplexer(
 		common.NewTMSAuthorization(logger, publicParamsManager.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
+		multisig.NewEscrowAuth(ws),
 	)
 	tokensService, err := v1.NewTokensService(publicParamsManager.PublicParams(), deserializer)
 	if err != nil {

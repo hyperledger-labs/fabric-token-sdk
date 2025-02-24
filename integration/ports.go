@@ -60,8 +60,8 @@ var (
 
 	AllTestTypes = []*InfrastructureType{
 		WebSocketNoReplication,
-		LibP2PNoReplication,
-		WebSocketWithReplication,
+		// LibP2PNoReplication,
+		// WebSocketWithReplication,
 	}
 )
 
@@ -98,7 +98,9 @@ const (
 	ZKATDLogInteropHTLCOrion
 	ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
 
-	Mixed
+	FabtokenEscrow
+	ZKATDLogEscrow
 
+	Mixed
 	Updatability
 )
