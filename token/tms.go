@@ -9,6 +9,7 @@ package token
 import (
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
@@ -39,6 +40,8 @@ type ServiceOptions struct {
 	PublicParams []byte
 	// Params is used to store any application specific parameter
 	Params map[string]interface{}
+	// Initiator is the view initiating the service
+	Initiator view.View
 }
 
 // TMSID returns the TMSID for the given ServiceOptions
@@ -138,6 +141,14 @@ func WithTMSID(id TMSID) ServiceOption {
 		o.Network = id.Network
 		o.Channel = id.Channel
 		o.Namespace = id.Namespace
+		return nil
+	}
+}
+
+// WithInitiator sets the view initiating the service
+func WithInitiator(initiator view.View) ServiceOption {
+	return func(o *ServiceOptions) error {
+		o.Initiator = initiator
 		return nil
 	}
 }
