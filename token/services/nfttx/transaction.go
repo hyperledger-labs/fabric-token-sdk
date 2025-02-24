@@ -57,7 +57,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 		logger.Debugf("receive a new transaction...")
 	}
 
-	txBoxed, err := context.RunView(ttx.NewReceiveTransactionView(""), view.WithSameContext())
+	txBoxed, err := context.RunView(ttx.NewReceiveTransactionView(), view.WithSameContext())
 	if err != nil {
 		return nil, err
 	}
