@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttx
 
 import (
@@ -10,17 +11,13 @@ import (
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
-	"go.uber.org/zap/zapcore"
-
-	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type Actions struct {
@@ -169,7 +166,7 @@ func ReceiveAction(context view.Context) (*Transaction, *ActionTransfer, error) 
 
 func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
 	// transaction
-	txBoxed, err := context.RunView(NewReceiveTransactionView(""), view.WithSameContext())
+	txBoxed, err := context.RunView(NewReceiveTransactionView(), view.WithSameContext())
 	if err != nil {
 		return nil, err
 	}
