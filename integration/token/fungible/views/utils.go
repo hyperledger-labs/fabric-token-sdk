@@ -57,8 +57,8 @@ func TxOpts(tmsId *token.TMSID, opts ...ttx.TxOption) []ttx.TxOption {
 	var txOpts []ttx.TxOption
 	if tmsId != nil {
 		txOpts = append(txOpts, ttx.WithTMSID(*tmsId))
-		txOpts = append(txOpts, opts...)
 	}
+	txOpts = append(txOpts, opts...)
 	return txOpts
 }
 

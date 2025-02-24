@@ -668,12 +668,10 @@ func (c *CollectEndorsementsView) getSession(context view.Context, p view.Identi
 	return context.GetSession(context.Initiator(), p)
 }
 
-type ReceiveTransactionView struct {
-	network string
-}
+type ReceiveTransactionView struct{}
 
-func NewReceiveTransactionView(network string) *ReceiveTransactionView {
-	return &ReceiveTransactionView{network: network}
+func NewReceiveTransactionView() *ReceiveTransactionView {
+	return &ReceiveTransactionView{}
 }
 
 func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error) {

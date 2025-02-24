@@ -1381,15 +1381,18 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 
 func TestMultiSig(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
 	auditor := sel.Get("auditor")
-	RegisterAuditor(network, auditor)
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
 	bob := sel.Get("bob")
 	charlie := sel.Get("charlie")
 	manager := sel.Get("manager")
+	RegisterAuditor(network, auditor)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditor.Id())
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
 	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
 	CheckBalance(network, alice, "", "USD", 110)
