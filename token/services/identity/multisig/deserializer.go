@@ -7,8 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
-	"encoding/json"
-
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
@@ -23,38 +22,6 @@ type AuditInfoMatcher interface {
 	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
-type EscrowInfoMatcher struct {
-	AuditInfoMatcher []driver.Matcher
-}
-
-func (e *EscrowInfoMatcher) Match(raw []byte) error {
-	mid := MultiIdentity{}
-	err := mid.Deserialize(raw)
-	if err != nil {
-		return err
-	}
-	if len(e.AuditInfoMatcher) != len(mid.Identities) {
-		return errors.Errorf("expected [%d] identities, received [%d]", len(e.AuditInfoMatcher), len(mid.Identities))
-	}
-	for k, id := range mid.Identities {
-		tid, err := identity.UnmarshalTypedIdentity(id)
-		if err != nil {
-			return err
-		}
-		err = e.AuditInfoMatcher[k].Match(tid.Identity)
-		if err != nil {
-			return errors.Wrapf(err, "identity at index %d does not match the audit info", k)
-		}
-	}
-	return nil
-}
-
-type EscrowInfo struct {
-	AuditInfo [][]byte
-	EID       string
-	RH        string
-}
-
 type TypedIdentityDeserializer struct {
 	VerifierDeserializer VerifierDES
 	AuditInfoMatcher     AuditInfoMatcher
@@ -64,34 +31,39 @@ func NewTypedIdentityDeserializer(verifierDeserializer VerifierDES, auditInfoDes
 	return &TypedIdentityDeserializer{VerifierDeserializer: verifierDeserializer, AuditInfoMatcher: auditInfoDeserializer}
 }
 
-func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
+func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ identity.Type, rawIdentity []byte, p driver.AuditInfoProvider) ([]byte, error) {
 	if typ != Escrow {
 		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, Escrow)
 	}
+
+	// if there is already some audit info for id, return it
+	auditInfoRaw, err := p.GetAuditInfo(id)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting audit info for id [%s]", id.String())
+	}
+	if len(auditInfoRaw) != 0 {
+		return auditInfoRaw, nil
+	}
+
+	// otherwise, build it
 	mid := MultiIdentity{}
-	var err error
-	err = mid.Deserialize(raw)
+	err = mid.Deserialize(rawIdentity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal mid")
 	}
-	ei := &EscrowInfo{}
-	ei.AuditInfo = make([][]byte, len(mid.Identities))
-
+	auditInfo := &MultiIdentityAuditInfo{}
+	auditInfo.AuditInfoIdentities = make([]AuditInfoIdentity, len(mid.Identities))
 	for k, identity := range mid.Identities {
-		ei.AuditInfo[k], err = p.GetAuditInfo(identity)
+		auditInfo.AuditInfoIdentities[k].AuditInfo, err = p.GetAuditInfo(identity)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting audit info for mid [%s]", id.String())
 		}
 	}
-	auditInfoRaw, err := json.Marshal(ei)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshaling audit info for mid")
-	}
-	return auditInfoRaw, nil
+	return auditInfo.Bytes()
 }
 
 func (d *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
-	ei := &EscrowInfo{}
+	ei := &MultiIdentityAuditInfo{}
 	err := json.Unmarshal(auditInfo, ei)
 	if err != nil {
 		return nil, err
@@ -105,17 +77,17 @@ func (d *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, audit
 	if err != nil {
 		return nil, err
 	}
-	if len(mid.Identities) != len(ei.AuditInfo) {
-		return nil, errors.Errorf("expected %d audit info but received %d", len(mid.Identities), len(ei.AuditInfo))
+	if len(mid.Identities) != len(ei.AuditInfoIdentities) {
+		return nil, errors.Errorf("expected %d audit info but received %d", len(mid.Identities), len(ei.AuditInfoIdentities))
 	}
-	matchers := make([]driver.Matcher, len(ei.AuditInfo))
-	for k, info := range ei.AuditInfo {
-		matchers[k], err = d.AuditInfoMatcher.GetOwnerMatcher(mid.Identities[k], info)
+	matchers := make([]driver.Matcher, len(ei.AuditInfoIdentities))
+	for k, info := range ei.AuditInfoIdentities {
+		matchers[k], err = d.AuditInfoMatcher.GetOwnerMatcher(mid.Identities[k], info.AuditInfo)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return &EscrowInfoMatcher{AuditInfoMatcher: matchers}, nil
+	return &InfoMatcher{AuditInfoMatcher: matchers}, nil
 }
 
 func (d *TypedIdentityDeserializer) DeserializeVerifier(typ identity.Type, id []byte) (driver.Verifier, error) {
@@ -124,19 +96,18 @@ func (d *TypedIdentityDeserializer) DeserializeVerifier(typ identity.Type, id []
 	if err != nil {
 		return nil, errors.New("failed to unmarshal multisig identity")
 	}
-	verifier := &MultiVerifier{}
+	verifier := &Verifier{}
 	verifier.Verifiers = make([]driver.Verifier, len(escrow.Identities))
 	for k, i := range escrow.Identities {
 		verifier.Verifiers[k], err = d.VerifierDeserializer.DeserializeVerifier(i)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to unmarshal "+
-				"multisig identity")
+			return nil, errors.Wrapf(err, "failed to unmarshal multisig identity")
 		}
 	}
 	return verifier, nil
 }
 
-func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error) {
+func (d *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error) {
 	mid := &MultiIdentity{}
 	err := mid.Deserialize(raw)
 	if err != nil {
@@ -145,22 +116,14 @@ func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.
 	return mid.Identities, nil
 }
 
-type EscrowInfoDeserializer struct {
+type AuditInfoDeserializer struct {
 }
 
-func (a *EscrowInfoDeserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
-	ei := &EscrowInfo{}
+func (a *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
+	ei := &MultiIdentityAuditInfo{}
 	err := json.Unmarshal(raw, ei)
 	if err != nil {
 		return nil, err
 	}
 	return ei, nil
-}
-
-func (ei *EscrowInfo) EnrollmentID() string {
-	return ei.EID
-}
-
-func (ei *EscrowInfo) RevocationHandle() string {
-	return ei.RH
 }

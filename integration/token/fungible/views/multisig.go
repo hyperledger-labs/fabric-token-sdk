@@ -72,61 +72,30 @@ func (lv *MultiSigLockView) Call(context view.Context) (txID interface{}, err er
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
 	// identity the escrow wants to use.
-	recipients := make([]view.Identity, len(lv.Escrow))
-	for k, eid := range lv.Escrow {
-		if lv.TMSID != nil {
-			recipients[k], err = ttx.RequestRecipientIdentity(context, eid, token2.WithTMSID(*lv.TMSID))
-		} else {
-			recipients[k], err = ttx.RequestRecipientIdentity(context, eid)
-		}
-		assert.NoError(err, "failed getting recipient")
-	}
+	recipient, err := multisig.RequestRecipientIdentity(context, lv.Escrow, token2.WithTMSIDPointer(lv.TMSID))
+	assert.NoError(err, "failed requesting recipients")
 
 	// The sender will select tokens owned by this wallet
-	var senderWallet *token2.OwnerWallet
-	if lv.TMSID != nil {
-		senderWallet = ttx.GetWallet(context, lv.Wallet, token2.WithTMSID(*lv.TMSID))
-	} else {
-		senderWallet = ttx.GetWallet(context, lv.Wallet)
-	}
+	senderWallet := ttx.GetWallet(context, lv.Wallet, token2.WithTMSIDPointer(lv.TMSID))
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", lv.Wallet)
 
 	// At this point, the sender is ready to prepare the token transaction.
 	// If NotAnonymous == false, then the sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
 	var tx *ttx.Transaction
-	var txOpts []ttx.TxOption
-	if lv.TMSID != nil {
-		txOpts = []ttx.TxOption{
-			ttx.WithTMSID(*lv.TMSID),
-			ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(lv.Auditor)),
-		}
-	} else {
-		txOpts = []ttx.TxOption{
-			ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(lv.Auditor)),
-		}
+	txOpts := []ttx.TxOption{
+		ttx.WithTMSIDPointer(lv.TMSID),
+		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(lv.Auditor)),
+		ttx.WithAnonymousTransaction(!lv.NotAnonymous),
 	}
-
-	if !lv.NotAnonymous {
-		// create an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
-		tx, err = ttx.NewAnonymousTransaction(context, txOpts...)
-	} else {
-		// create a nominal transaction using the default identity
-		tx, err = ttx.NewTransaction(context, nil, txOpts...)
-	}
+	tx, err = ttx.NewTransaction(context, nil, txOpts...)
 	assert.NoError(err, "failed creating transaction")
 
-	// append metadata, if any
-	for k, v := range lv.Metadata {
-		tx.SetApplicationMetadata(k, v)
-	}
-
 	// lock
-	err = multisig.Wrap(tx).Lock(senderWallet, lv.Type, lv.Amount, recipients)
-	assert.NoError(err, "failed adding transfer action [%d:%v]", lv.Amount, recipients)
+	err = multisig.Wrap(tx).Lock(senderWallet, lv.Type, lv.Amount, recipient)
+	assert.NoError(err, "failed adding transfer action [%d:%v]", lv.Amount, recipient)
 
-	var endorserOpts []ttx.EndorsementsOpt
-	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx, endorserOpts...))
+	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign transaction [<<<%s>>>]", tx.ID())
 
 	// Sanity checks:
@@ -195,7 +164,10 @@ func (r *MultiSigSpendView) Call(context view.Context) (res interface{}, err err
 	assert.True(matched.Count() == 1, "expected only one multisig script to match, got [%d]", matched.Count())
 
 	// contact the co-owners about the intention to spend the multisig token
-	_, err = context.RunView(multisig.NewRequestSpendView(matched.At(0), append(serviceOpts, token2.WithInitiator(&MultiSigRequestSpend{}))...))
+	_, err = context.RunView(multisig.NewRequestSpendView(
+		matched.At(0),
+		append(serviceOpts, token2.WithInitiator(&MultiSigRequestSpend{}))...,
+	))
 	assert.NoError(err, "failed to request spend")
 
 	// generate the transaction
@@ -236,7 +208,7 @@ func (m *MultiSigAcceptSpendView) Call(context view.Context) (interface{}, error
 	assert.NotNil(request.Token, "request doesn't contain a token")
 
 	// approve
-	tx, err := multisig.ApproveSpend(context, request)
+	tx, err := multisig.EndorseSpend(context, request)
 	assert.NoError(err, "failed approving spend")
 
 	// Sanity checks:

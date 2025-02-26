@@ -7,14 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	"fmt"
-	"time"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
-	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -101,20 +97,28 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 		logger.Debugf("collect remote from [%s]", party)
 	}
 
-	session, err := context.GetSession(context.Initiator(), party)
+	session, err := session2.NewJSON(context, context.Initiator(), party)
 	if err != nil {
 		return errors.Wrap(err, "failed getting session")
 	}
 
 	// Send transaction, actions, action
 	txRaw, err := c.tx.Bytes()
-	assert.NoError(err)
-	assert.NoError(session.Send(txRaw), "failed sending transaction")
-	assert.NoError(session.Send(marshalOrPanic(c.actions)), "failed sending actions")
-	assert.NoError(session.Send(marshalOrPanic(actionTransfer)), "failed sending transfer action")
+	if err != nil {
+		return errors.Wrap(err, "failed marshalling transaction")
+	}
+	if err := session.SendRaw(context.Context(), txRaw); err != nil {
+		return errors.Wrap(err, "failed sending transaction")
+	}
+	if err := session.Send(c.actions); err != nil {
+		return errors.Wrapf(err, "failed sending actions")
+	}
+	if err := session.Send(actionTransfer); err != nil {
+		return errors.Wrapf(err, "failed sending action")
+	}
 
 	// Wait to receive a content back
-	msg, err := ReadMessage(session, time.Minute)
+	msg, err := session.ReceiveRaw()
 	if err != nil {
 		return errors.Wrap(err, "failed reading message")
 	}
@@ -178,20 +182,17 @@ func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// actions
-	payload, err := session2.ReadMessageWithTimeout(context.Session(), 120*time.Second)
-	if err != nil {
-		return nil, err
-	}
+	s := session2.JSON(context)
 	actions := &Actions{}
-	unmarshalOrPanic(payload, actions)
+	if err := s.Receive(actions); err != nil {
+		return nil, errors.Wrap(err, "failed receiving actions")
+	}
 
 	// action
-	payload, err = session2.ReadMessageWithTimeout(context.Session(), 120*time.Second)
-	if err != nil {
-		return nil, err
-	}
 	action := &ActionTransfer{}
-	unmarshalOrPanic(payload, action)
+	if err := s.Receive(action); err != nil {
+		return nil, errors.Wrap(err, "failed receiving action")
+	}
 
 	return []interface{}{cctx, action}, nil
 }
@@ -219,19 +220,4 @@ func (s *collectActionsResponderView) Call(context view.Context) (interface{}, e
 	}
 
 	return nil, nil
-}
-
-func marshalOrPanic(state interface{}) []byte {
-	raw, err := Marshal(state)
-	if err != nil {
-		panic(fmt.Sprintf("failed marshalling state [%s]", err))
-	}
-	return raw
-}
-
-func unmarshalOrPanic(raw []byte, state interface{}) {
-	err := Unmarshal(raw, state)
-	if err != nil {
-		panic(fmt.Sprintf("failed unmarshalling state [%s]", err))
-	}
 }
