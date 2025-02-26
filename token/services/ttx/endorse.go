@@ -782,37 +782,36 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("expect [%d] requests to sign for txid [%s]", len(requestsToBeSigned), s.tx.ID())
 
 	session := context.Session()
+	k, err := kvs.CreateCompositeKey("signatureRequest", []string{s.tx.ID()})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate key to store signature request")
+	}
+	kvss, err := context.GetService(&kvs.KVS{})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get KVS from context")
+	}
+	storage := kvss.(*kvs.KVS)
 	for i := range requestsToBeSigned {
+		var srRaw []byte
 		signatureRequest := &SignatureRequest{}
 
-		if i == 0 {
-			k, err := kvs.CreateCompositeKey("signatureRequest", []string{s.tx.ID()})
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to generate key to store signature request")
-			}
-			var srRaw []byte
-			if kvss, err := context.GetService(&kvs.KVS{}); err != nil {
-				return nil, errors.Wrap(err, "failed to get KVS from context")
-			} else if err := kvss.(*kvs.KVS).Get(k, &srRaw); err != nil {
+		if i == 0 && storage.Exists(k) {
+			if err := kvss.(*kvs.KVS).Get(k, &srRaw); err != nil {
 				return nil, errors.Wrap(err, "failed to to store signature request")
-			}
-			if err := Unmarshal(srRaw, signatureRequest); err != nil {
-				return nil, errors.Wrap(err, "failed unmarshalling signature request")
 			}
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Receiving signature request...")
 			}
-
-			msg, err := ReadMessage(session, time.Minute)
+			srRaw, err = ReadMessage(session, time.Minute)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed reading signature request")
 			}
-			// TODO: check what is signed...
-			err = Unmarshal(msg, signatureRequest)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed unmarshalling signature request")
-			}
+		}
+		// TODO: check what is signed...
+		err = Unmarshal(srRaw, signatureRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed unmarshalling signature request")
 		}
 
 		sigService := s.tx.TokenService().SigService()
