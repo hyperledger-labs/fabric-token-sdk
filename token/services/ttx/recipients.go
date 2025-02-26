@@ -28,6 +28,27 @@ func CompileServiceOptions(opts ...token.ServiceOption) (*token.ServiceOptions, 
 	return txOptions, nil
 }
 
+func WithRecipientWalletID(walletID string) token.ServiceOption {
+	return func(options *token.ServiceOptions) error {
+		if len(walletID) == 0 {
+			return nil
+		}
+		if options.Params == nil {
+			options.Params = map[string]interface{}{}
+		}
+		options.Params["RecipientWalletID"] = walletID
+		return nil
+	}
+}
+
+func getRecipientWalletID(opts *token.ServiceOptions) string {
+	wBoxed, ok := opts.Params["RecipientWalletID"]
+	if !ok {
+		return ""
+	}
+	return wBoxed.(string)
+}
+
 // WithRecipientData is used to add a RecipientData to the service options
 func WithRecipientData(recipientData *RecipientData) token.ServiceOption {
 	return func(options *token.ServiceOptions) error {
@@ -80,6 +101,7 @@ func (r *RecipientRequest) FromBytes(raw []byte) error {
 type RequestRecipientIdentityView struct {
 	TMSID              token.TMSID
 	Other              view.Identity
+	OtherWalletID      string
 	OtherRecipientData *RecipientData
 }
 
@@ -94,6 +116,7 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 	pseudonymBoxed, err := context.RunView(&RequestRecipientIdentityView{
 		TMSID:              options.TMSID(),
 		Other:              recipient,
+		OtherWalletID:      getRecipientWalletID(options),
 		OtherRecipientData: getRecipientData(options),
 	})
 	if err != nil {
@@ -126,9 +149,13 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	}
 
 	// Ask for identity
+	wID := []byte(f.OtherWalletID)
+	if len(wID) == 0 {
+		wID = f.Other
+	}
 	rr := &RecipientRequest{
 		TMSID:         f.TMSID,
-		WalletID:      f.Other,
+		WalletID:      wID,
 		RecipientData: f.OtherRecipientData,
 	}
 	rrRaw, err := rr.Bytes()
