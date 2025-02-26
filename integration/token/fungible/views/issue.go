@@ -34,6 +34,8 @@ type IssueCash struct {
 	Quantity uint64
 	// Recipient is the identity of the recipient's FSC node
 	Recipient view.Identity
+	// RecipientWalletID specifies the wallet ID of the recipient
+	RecipientWalletID string
 	// RecipientEID is the expected enrolment id of the recipient
 	RecipientEID string
 }
@@ -47,7 +49,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
-	recipient, err := ttx.RequestRecipientIdentity(context, p.Recipient, ServiceOpts(p.TMSID)...)
+	recipient, err := ttx.RequestRecipientIdentity(context, p.Recipient, ServiceOpts(p.TMSID, ttx.WithRecipientWalletID(p.RecipientWalletID))...)
 	assert.NoError(err, "failed getting recipient identity")
 
 	// match recipient EID
