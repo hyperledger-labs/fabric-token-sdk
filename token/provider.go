@@ -135,8 +135,8 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 		certificationClientProvider: p.certificationClientProvider,
 		selectorManagerProvider:     p.selectorManagerProvider,
 		signatureService: &SignatureService{
-			deserializer: tokenService.Deserializer(),
-			ip:           tokenService.IdentityProvider(),
+			deserializer:     tokenService.Deserializer(),
+			identityProvider: tokenService.IdentityProvider(),
 		},
 	}
 	if err := ms.init(); err != nil {

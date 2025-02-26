@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
@@ -37,6 +38,7 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 			return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", idemixIssuerPublicKey.Curve)
 		}
 		ownerDeserializer.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+		ownerDeserializer.AddTypedVerifierDeserializer(multisig.Escrow, multisig.NewTypedIdentityDeserializer(ownerDeserializer, ownerDeserializer))
 	}
 	ownerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.MSPIdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
@@ -89,5 +91,6 @@ func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d.AddDeserializer(msp.IdemixIdentity, &idemix.AuditInfoDeserializer{})
 	d.AddDeserializer(msp.X509Identity, &x509.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix.AuditInfoDeserializer{}))
+	d.AddDeserializer(multisig.Escrow, &multisig.AuditInfoDeserializer{})
 	return d
 }
