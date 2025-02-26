@@ -19,10 +19,9 @@ import (
 )
 
 const (
-	EIDIndex                  = 2
-	RHIndex                   = 3
-	SignerConfigFull          = "SignerConfigFull"
-	IdentityConfigurationType = "idemix"
+	EIDIndex         = 2
+	RHIndex          = 3
+	SignerConfigFull = "SignerConfigFull"
 )
 
 var logger = logging.MustGetLogger("token-sdk.services.identity.msp.idemix")
@@ -170,8 +169,8 @@ func (id *Identity) verifyProof() error {
 		&bccsp.IdemixSignerOpts{
 			RevocationPublicKey: id.Idemix.RevocationPK,
 			Attributes: []bccsp.IdemixAttribute{
-				{Type: bccsp.IdemixBytesAttribute, Value: []byte(id.OU.OrganizationalUnitIdentifier)},
-				{Type: bccsp.IdemixIntAttribute, Value: GetIdemixRoleFromMSPRole(id.Role)},
+				{Type: bccsp.IdemixHiddenAttribute},
+				{Type: bccsp.IdemixHiddenAttribute},
 				{Type: bccsp.IdemixHiddenAttribute},
 				{Type: bccsp.IdemixHiddenAttribute},
 			},
@@ -198,8 +197,6 @@ type SigningIdentity struct {
 }
 
 func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
-	// logger.Debugf("Idemix identity %s is signing", id.GetIdentifier())
-
 	sig, err := id.Idemix.Csp.Sign(
 		id.UserKey,
 		msg,
