@@ -8,6 +8,7 @@ package ttx
 
 import (
 	"encoding/base64"
+	errors2 "errors"
 	"reflect"
 	"time"
 
@@ -104,7 +105,9 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	}
 
 	// Add the signatures to the token request
-	c.tx.TokenRequest.SetSignatures(mergeSigmas(issueSigmas, transferSigmas))
+	if !c.tx.TokenRequest.SetSignatures(mergeSigmas(issueSigmas, transferSigmas)) {
+		return nil, errors.New("failed setting signatures on token request, some signatures are missing")
+	}
 
 	// 2. Audit
 	var auditors []view.Identity
@@ -200,6 +203,27 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 		}
 		logger.Debugf("collecting signature on request from [%s]", signerIdentity)
 
+		// Case: the identity is a multi-sig identity
+		ok, multiSigners, err := multisig.Unwrap(signerIdentity)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unwrapping multi-sig identity [%s]", signerIdentity)
+		}
+		if ok {
+			logger.Debugf("found multi-sig identity [%s], request multi-sig signature to [%d] parties", signerIdentity, len(multiSigners))
+			// collect the signatures from multiSigners
+			multiSignersSigmas, err := c.requestSignatures(multiSigners, verifierGetter, context, externalWallets)
+			if err != nil {
+				return nil, errors.WithMessage(err, "failed requesting signatures")
+			}
+			logger.Debugf("collected [%d] signatures for multi-sig identity [%s]", len(multiSignersSigmas), signerIdentity)
+			sigma, err := multisig.JoinSignatures(collections.Values(multiSignersSigmas))
+			if err != nil {
+				return nil, errors.WithMessage(err, "failed joining multi-sig signatures")
+			}
+			sigmas[signerIdentity.UniqueID()] = sigma
+			continue
+		}
+
 		// Case: there is a signer locally bound to the party, use it to generate the signature
 		if signer, err := c.tx.TokenService().SigService().GetSigner(signerIdentity); err == nil {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -230,25 +254,6 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			sigma, err := c.signExternal(signerIdentity, ews, signatureRequest)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed signing external for party [%s]", signerIdentity)
-			}
-			sigmas[signerIdentity.UniqueID()] = sigma
-			continue
-		}
-
-		// Case: the identity is a multi-sig identity
-		ok, multiSigners, err := multisig.Unwrap(signerIdentity)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed unwrapping multi-sig identity [%s]", signerIdentity)
-		}
-		if ok {
-			// collect the signatures from multiSigners
-			multiSignersSigmas, err := c.requestSignatures(multiSigners, verifierGetter, context, externalWallets)
-			if err != nil {
-				return nil, errors.WithMessage(err, "failed requesting signatures")
-			}
-			sigma, err := multisig.JoinSignatures(collections.Values(multiSignersSigmas))
-			if err != nil {
-				return nil, errors.WithMessage(err, "failed joining multi-sig signatures")
 			}
 			sigmas[signerIdentity.UniqueID()] = sigma
 			continue
@@ -542,7 +547,22 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, auditors []view.Identity, distributionList []view.Identity) ([]distributionListEntry, error) {
 	// Compress distributionList by removing duplicates
 
-	allIds := append(distributionList, auditors...)
+	// check if there are multisig identities, if yes, unwrap them
+	allIds := make([]view.Identity, 0, len(distributionList)+len(auditors))
+	for _, id := range distributionList {
+		ok, multiSigners, err := multisig.Unwrap(id)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unwrapping multi-sig identity [%s]", id)
+		}
+		if ok {
+			allIds = append(allIds, multiSigners...)
+		} else {
+			allIds = append(allIds, id)
+		}
+	}
+	distributionList = allIds
+	allIds = append(allIds, auditors...)
+
 	mine := collections.NewSet(view2.GetSigService(context).AreMe(allIds...)...)
 	remainingIds := make([]view.Identity, 0, len(allIds)-mine.Length())
 	for _, id := range allIds {
@@ -646,7 +666,6 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 			Auditor:  true,
 			LongTerm: longTermIdentity,
 		})
-
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -696,9 +715,10 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	if err != nil {
 		logger.Warnf("failed creating transaction from bytes: [%v], try to unmarshal as signature request...", err)
 		// try to unmarshal as SignatureRequest
-		tx, err = f.unmarshalAsSignatureRequest(context, msg)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to receive transaction")
+		var err2 error
+		tx, err2 = f.unmarshalAsSignatureRequest(context, msg)
+		if err2 != nil {
+			return nil, errors.Wrap(errors2.Join(err, err2), "failed to receive transaction")
 		}
 	}
 	return tx, nil
@@ -753,7 +773,7 @@ func NewEndorseView(tx *Transaction) *EndorseView {
 // 4. It sends back an ack.
 func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	// Process signature requests
-	logger.Debugf("chec expected numer of requests to sign for txid [%s]", s.tx.ID())
+	logger.Debugf("check expected numer of requests to sign for txid [%s]", s.tx.ID())
 	requestsToBeSigned, err := requestsToBeSigned(s.tx.Request())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed collecting requests of signature")
@@ -762,20 +782,37 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("expect [%d] requests to sign for txid [%s]", len(requestsToBeSigned), s.tx.ID())
 
 	session := context.Session()
-	for range requestsToBeSigned {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("Receiving signature request...")
-		}
-
-		msg, err := ReadMessage(session, time.Minute)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed receiving signature response")
-		}
-
-		// TODO: check what is signed...
+	for i := range requestsToBeSigned {
 		signatureRequest := &SignatureRequest{}
-		if err := Unmarshal(msg, signatureRequest); err != nil {
-			return nil, errors.Wrapf(err, "failed unmarshalling signature request, got [%s]", string(msg))
+
+		if i == 0 {
+			k, err := kvs.CreateCompositeKey("signatureRequest", []string{s.tx.ID()})
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to generate key to store signature request")
+			}
+			var srRaw []byte
+			if kvss, err := context.GetService(&kvs.KVS{}); err != nil {
+				return nil, errors.Wrap(err, "failed to get KVS from context")
+			} else if err := kvss.(*kvs.KVS).Get(k, &srRaw); err != nil {
+				return nil, errors.Wrap(err, "failed to to store signature request")
+			}
+			if err := Unmarshal(srRaw, signatureRequest); err != nil {
+				return nil, errors.Wrap(err, "failed unmarshalling signature request")
+			}
+		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("Receiving signature request...")
+			}
+
+			msg, err := ReadMessage(session, time.Minute)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed reading signature request")
+			}
+			// TODO: check what is signed...
+			err = Unmarshal(msg, signatureRequest)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed unmarshalling signature request")
+			}
 		}
 
 		sigService := s.tx.TokenService().SigService()

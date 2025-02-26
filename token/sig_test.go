@@ -18,8 +18,8 @@ func TestSignatureService_AuditorVerifier(t *testing.T) {
 	ip := &mock.IdentityProvider{}
 
 	service := &SignatureService{
-		deserializer: deserializer,
-		ip:           ip,
+		deserializer:     deserializer,
+		identityProvider: ip,
 	}
 
 	expectedVerifier := &mock.Verifier{}
@@ -37,8 +37,8 @@ func TestSignatureService_IssuerVerifier(t *testing.T) {
 	ip := &mock.IdentityProvider{}
 
 	service := &SignatureService{
-		deserializer: deserializer,
-		ip:           ip,
+		deserializer:     deserializer,
+		identityProvider: ip,
 	}
 
 	expectedVerifier := &mock.Verifier{}
@@ -56,8 +56,8 @@ func TestSignatureService_OwnerVerifier(t *testing.T) {
 	ip := &mock.IdentityProvider{}
 
 	service := &SignatureService{
-		deserializer: deserializer,
-		ip:           ip,
+		deserializer:     deserializer,
+		identityProvider: ip,
 	}
 
 	expectedVerifier := &mock.Verifier{}
@@ -75,8 +75,8 @@ func TestSignatureService_GetSigner(t *testing.T) {
 	ip := &mock.IdentityProvider{}
 
 	service := &SignatureService{
-		deserializer: deserializer,
-		ip:           ip,
+		deserializer:     deserializer,
+		identityProvider: ip,
 	}
 
 	expectedSigner := &mock.Signer{}
@@ -94,8 +94,8 @@ func TestSignatureService_RegisterSigner(t *testing.T) {
 	ip := &mock.IdentityProvider{}
 
 	service := &SignatureService{
-		deserializer: deserializer,
-		ip:           ip,
+		deserializer:     deserializer,
+		identityProvider: ip,
 	}
 
 	id := []byte("identity")
@@ -114,8 +114,8 @@ func TestSignatureService_IsMe(t *testing.T) {
 	ip := &mock.IdentityProvider{}
 
 	service := &SignatureService{
-		deserializer: deserializer,
-		ip:           ip,
+		deserializer:     deserializer,
+		identityProvider: ip,
 	}
 
 	ip.IsMeReturns(true)

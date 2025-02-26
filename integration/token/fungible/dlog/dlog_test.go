@@ -160,9 +160,9 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			Monitoring:          false,
 			ReplicationOpts:     opts,
 			FSCBasedEndorsement: mask&WithEndorsers > 0,
-			FSCLogSpec:          "token-sdk=debug:fabric-sdk=debug:info",
-			OnlyUnity:           true,
-			TokenSelector:       tokenSelector,
+			// FSCLogSpec:          "token-sdk=debug:fabric-sdk=debug:info",
+			OnlyUnity:     true,
+			TokenSelector: tokenSelector,
 		},
 	))
 	return ts, selector

@@ -12,23 +12,20 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
+// SpendRequest is the request to spend a token
 type SpendRequest struct {
 	Token *token.UnspentToken
-}
-
-func (r *SpendRequest) Bytes() ([]byte, error) {
-	return json.Marshal(r)
 }
 
 func NewSpendRequestFromBytes(msg []byte) (*SpendRequest, error) {
@@ -53,6 +50,11 @@ func ReceiveSpendRequest(context view.Context, opts ...ttx.TxOption) (*SpendRequ
 	return request, nil
 }
 
+func (r *SpendRequest) Bytes() ([]byte, error) {
+	return json.Marshal(r)
+}
+
+// ReceiveSpendRequestView receives a SpendRequest from the context's session.
 type ReceiveSpendRequestView struct{}
 
 func NewReceiveSpendRequestView() *ReceiveSpendRequestView {
@@ -84,16 +86,18 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	return tx, nil
 }
 
-type Response struct {
+// SpendResponse is the response to a SpendRequest
+type SpendResponse struct {
 	Err error
 }
 
 type answer struct {
-	response *Response
+	response *SpendResponse
 	err      error
 	party    view.Identity
 }
 
+// RequestSpendView sends a SpendRequest to all parties and waits for their responses
 type RequestSpendView struct {
 	unspentToken *token.UnspentToken
 	parties      []view.Identity
@@ -194,7 +198,10 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 	}
 	s, err := session.NewJSON(context, initiator, party)
 	if err != nil {
-		answerChan <- &answer{err: err, party: party}
+		answerChan <- &answer{
+			err:   errors.Wrapf(err, "failed to create session with [%s]", party),
+			party: party,
+		}
 		return
 	}
 
@@ -202,58 +209,72 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 	logger.Debugf("send request to [%v]", party)
 	err = s.SendRaw(context.Context(), raw)
 	if err != nil {
-		answerChan <- &answer{err: err, party: party}
+		answerChan <- &answer{
+			err:   errors.Wrapf(err, "failed to send request to [%s]", party),
+			party: party,
+		}
 		return
 	}
-	r := &Response{}
-	if err := s.ReceiveWithTimeout(r, c.timeout); err != nil {
-		answerChan <- &answer{err: err, party: party}
+	response := &SpendResponse{}
+	if err := s.Receive(response); err != nil {
+		answerChan <- &answer{
+			err:   errors.Wrapf(err, "failed to receive response from [%s]", party),
+			party: party,
+		}
 		return
 	}
-	answerChan <- &answer{response: r, party: party}
+	logger.Debugf("received response from [%v]: [%v]", party, response.Err)
+
+	answerChan <- &answer{response: response, party: party}
 }
 
-type ApproveSpendView struct {
+// EndorseSpendView endorses a SpendRequest
+type EndorseSpendView struct {
 	request *SpendRequest
 }
 
-func NewApproveSpendView(request *SpendRequest) *ApproveSpendView {
-	return &ApproveSpendView{request: request}
+func NewEndorseSpendView(request *SpendRequest) *EndorseSpendView {
+	return &EndorseSpendView{request: request}
 }
 
-func ApproveSpend(context view.Context, request *SpendRequest) (*Transaction, error) {
-	resultBoxed, err := context.RunView(NewApproveSpendView(request))
+func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, error) {
+	resultBoxed, err := context.RunView(NewEndorseSpendView(request))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to approve spend")
 	}
-	result, ok := resultBoxed.(*Transaction)
+	result, ok := resultBoxed.(*ttx.Transaction)
 	if !ok {
 		return nil, errors.Errorf("received result of wrong type [%T]", result)
 	}
-	return result, nil
+	return &Transaction{Transaction: result}, nil
 }
 
-func (a *ApproveSpendView) Call(context view.Context) (interface{}, error) {
+func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
 	// - send back the response
-	if err := session.JSON(context).Send(&Response{}); err != nil {
+	if err := session.JSON(context).Send(&SpendResponse{}); err != nil {
 		return nil, errors.Wrap(err, "failed to send response")
 	}
 
+	logger.Debugf("endorse spend response sent")
 	// At some point, the recipient receives the token transaction that in the meantime has been assembled
 	tx, err := ttx.ReceiveTransaction(context)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to receive transaction")
 	}
+	logger.Debugf("multisig tx received with id [%s]", tx.ID())
 
 	// TODO: check tx matches request
 
 	// If everything is fine, the recipient accepts and sends back her signature.
 	// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
 	// This depends on the driver implementation.
-	_, err = context.RunView(ttx.NewAcceptView(tx))
+	logger.Debugf("endorse multisig tx received with id [%s]", tx.ID())
+	_, err = context.RunView(ttx.NewEndorseView(tx))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to accept transaction")
 	}
+
+	logger.Debugf("endorse multisig tx received with id [%s] done", tx.ID())
 
 	return tx, nil
 }
