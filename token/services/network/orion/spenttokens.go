@@ -11,9 +11,9 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/pkg/errors"
 )
 

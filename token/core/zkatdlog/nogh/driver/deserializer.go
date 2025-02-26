@@ -90,6 +90,6 @@ func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d.AddDeserializer(idemix2.IdentityType, &idemix2.AuditInfoDeserializer{})
 	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix2.AuditInfoDeserializer{}))
-	d.AddDeserializer(multisig.Escrow, &multisig.EscrowInfoDeserializer{})
+	d.AddDeserializer(multisig.Escrow, &multisig.AuditInfoDeserializer{})
 	return d
 }

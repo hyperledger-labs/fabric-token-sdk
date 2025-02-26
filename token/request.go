@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
@@ -1024,17 +1025,21 @@ func (r *Request) AddAuditorSignature(sigma []byte) {
 	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, sigma)
 }
 
-func (r *Request) SetSignatures(sigmas map[string][]byte) {
+func (r *Request) SetSignatures(sigmas map[string][]byte) bool {
 	signers := append(r.IssueSigners(), r.TransferSigners()...)
 	signatures := make([][]byte, len(signers))
+	all := true
 	for i, signer := range signers {
 		if sigma, ok := sigmas[signer.UniqueID()]; ok {
 			signatures[i] = sigma
+			r.TokenService.logger.Warnf("signature [%d] for signer [%s] is [%s]", i, signer, hash.Hashable(sigma))
 		} else {
-			r.TokenService.logger.Warnf("Signature %d for signer %s not found.", i, signer.UniqueID())
+			all = false
+			r.TokenService.logger.Warnf("signature [%d] for signer [%s] not found", i, signer)
 		}
 	}
 	r.Actions.Signatures = signatures
+	return all
 }
 
 func (r *Request) TransferSigners() []Identity {

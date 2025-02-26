@@ -113,7 +113,7 @@ func (l *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
 		r := l.getLocalIdentity(label)
 		if r == nil {
 			if l.logger.IsEnabledFor(zapcore.DebugLevel) {
-				l.logger.Debugf("local identity not found for label [%s][%v]", collections.Keys(l.localIdentitiesByName))
+				l.logger.Debugf("local identity not found for label [%s][%v]", collections.Keys(l.localIdentitiesByName), label)
 			}
 			continue
 		}

@@ -75,6 +75,23 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 		return nil, errors.WithMessage(err, "failed compiling tx options")
 	}
 
+	if txOpts.AnonymousTransaction && signer == nil {
+		// set the signer to anonymous
+		tms := token.GetManagementService(
+			context,
+			token.WithTMSID(txOpts.TMSID),
+		)
+		net := network.GetInstance(context, tms.Network(), tms.Channel())
+		if net == nil {
+			return nil, errors.New("failed to get network")
+		}
+		id, err := net.AnonymousIdentity()
+		if err != nil {
+			return nil, errors.WithMessage(err, "failed getting anonymous identity for transaction")
+		}
+		signer = id
+	}
+
 	tms := token.GetManagementService(
 		context,
 		token.WithTMSID(txOpts.TMSID),
@@ -161,7 +178,7 @@ func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, e
 
 	txBoxed, err := context.RunView(NewReceiveTransactionView(), view.WithSameContext())
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed to receive transaction")
 	}
 
 	cctx, ok := txBoxed.(*Transaction)
