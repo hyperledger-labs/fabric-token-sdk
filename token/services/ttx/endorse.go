@@ -550,6 +550,10 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 	// check if there are multisig identities, if yes, unwrap them
 	allIds := make([]view.Identity, 0, len(distributionList)+len(auditors))
 	for _, id := range distributionList {
+		if id.IsNone() {
+			// This is a redeem, nothing to do here.
+			continue
+		}
 		ok, multiSigners, err := multisig.Unwrap(id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed unwrapping multi-sig identity [%s]", id)
@@ -581,10 +585,6 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		// - extract the corresponding long term identity
 		// If the long term identity has not been added yet, add it to the list.
 		// If the party is me or an auditor, no need to extract the enrollment ID.
-		if party.IsNone() {
-			// This is a redeem, nothing to do here.
-			continue
-		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to [%s]?", party.UniqueID())
 		}
