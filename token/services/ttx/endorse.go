@@ -743,7 +743,7 @@ func (f *ReceiveTransactionView) unmarshalAsSignatureRequest(context view.Contex
 	}
 	if kvss, err := context.GetService(&kvs.KVS{}); err != nil {
 		return nil, errors.Wrap(err, "failed to get KVS from context")
-	} else if err := kvss.(*kvs.KVS).Put(k, raw); err != nil {
+	} else if err := kvss.(*kvs.KVS).Put(k, base64.StdEncoding.EncodeToString(raw)); err != nil {
 		return nil, errors.Wrap(err, "failed to to store signature request")
 	}
 	return tx, nil
