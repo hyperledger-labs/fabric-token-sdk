@@ -218,8 +218,8 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 		Nym:        nymKey,
 		IssuerPK:   p.IssuerPublicKey,
 		Attributes: []bccsp.IdemixAttribute{
-			{Type: bccsp.IdemixBytesAttribute},
-			{Type: bccsp.IdemixIntAttribute},
+			{Type: bccsp.IdemixHiddenAttribute},
+			{Type: bccsp.IdemixHiddenAttribute},
 			{Type: bccsp.IdemixHiddenAttribute},
 			{Type: bccsp.IdemixHiddenAttribute},
 		},
