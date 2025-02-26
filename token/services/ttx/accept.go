@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"encoding/base64"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -101,11 +102,15 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to generate key to store signature request")
 			}
-			var srRaw []byte
+			var srStr string
 			if kvss, err := context.GetService(&kvs.KVS{}); err != nil {
 				return errors.Wrap(err, "failed to get KVS from context")
-			} else if err := kvss.(*kvs.KVS).Get(k, &srRaw); err != nil {
+			} else if err := kvss.(*kvs.KVS).Get(k, &srStr); err != nil {
 				return errors.Wrap(err, "failed to to store signature request")
+			}
+			srRaw, err := base64.StdEncoding.DecodeString(srStr)
+			if err != nil {
+				return errors.Wrap(err, "failed to decode signature request")
 			}
 			if err := Unmarshal(srRaw, signatureRequest); err != nil {
 				return errors.Wrap(err, "failed unmarshalling signature request")
