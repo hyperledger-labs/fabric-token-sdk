@@ -8,23 +8,21 @@ package ttx
 
 import (
 	"encoding/asn1"
+	"encoding/json"
 	"sort"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"go.uber.org/zap/zapcore"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 func Marshal(v interface{}) ([]byte, error) {
-	return jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(v)
+	return json.Marshal(v)
 }
 
 func Unmarshal(data []byte, v interface{}) error {
-	return jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, v)
+	return json.Unmarshal(data, v)
 }
 
 func MarshalMeta(v map[string][]byte) ([]byte, error) {
@@ -63,18 +61,6 @@ func UnmarshalMeta(raw []byte) (map[string][]byte, error) {
 type metaSer struct {
 	Keys []string
 	Vals [][]byte
-}
-
-func RecipientDataBytes(r *token.RecipientData) ([]byte, error) {
-	return Marshal(r)
-}
-
-func RecipientDataFromBytes(raw []byte) (*token.RecipientData, error) {
-	rd := &token.RecipientData{}
-	if err := Unmarshal(raw, rd); err != nil {
-		return nil, err
-	}
-	return rd, nil
 }
 
 type GetNetworkFunc = func(network string, channel string) (*network.Network, error)
