@@ -48,6 +48,8 @@ type Transfer struct {
 	Recipient view.Identity
 	// RecipientEID is the expected enrolment id of the recipient
 	RecipientEID string
+	// RecipientWalletID specifies the wallet ID for the recipient
+	RecipientWalletID string
 	// Retry tells if a retry must happen in case of a failure
 	Retry bool
 	// FailToRelease if true, it fails after transfer to trigger the Release function on the token transaction
@@ -83,7 +85,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// If t.RecipientData is different from nil, then this recipient data will be advertised to the recipient
 	// to make sure the recipient is aware of this identity the will be used to transfer tokens to
 	span.AddEvent("receive_recipient_identity")
-	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient, ServiceOpts(t.TMSID, ttx.WithRecipientData(t.RecipientData))...)
+	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient, ServiceOpts(t.TMSID, ttx.WithRecipientData(t.RecipientData), ttx.WithRecipientWalletID(t.RecipientWalletID))...)
 	assert.NoError(err, "failed getting recipient")
 
 	span.AddEvent("add_additional_recipients")
