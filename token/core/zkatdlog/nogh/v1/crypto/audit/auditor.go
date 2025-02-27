@@ -295,7 +295,7 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 		return nil
 	case htlc2.ScriptType:
 		return inspectTokenOwnerOfScript(des, token, index)
-	case multisig.Escrow:
+	case multisig.Multisig:
 		return inspectTokenOwnerOfEscrow(des, token, index)
 	default:
 		return errors.Errorf("identity type [%s] not recognized", ro.Type)

@@ -216,7 +216,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 				return nil, errors.WithMessage(err, "failed requesting signatures")
 			}
 			logger.Debugf("collected [%d] signatures for multi-sig identity [%s]", len(multiSignersSigmas), signerIdentity)
-			sigma, err := multisig.JoinSignatures(collections.Values(multiSignersSigmas))
+			sigma, err := multisig.JoinSignatures(multiSigners, multiSignersSigmas)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed joining multi-sig signatures")
 			}
