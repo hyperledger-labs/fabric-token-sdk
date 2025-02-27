@@ -138,12 +138,6 @@ func TestUnwrapAuditInfo_Error(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func mulsigIdentities(t *testing.T, names ...string) token.Identity {
-	id, err := WrapIdentities(identities(t, names...)...)
-	assert.NoError(t, err)
-	return id
-}
-
 func identities(t *testing.T, names ...string) []token.Identity {
 	identities := make([]token.Identity, len(names))
 	var err error
