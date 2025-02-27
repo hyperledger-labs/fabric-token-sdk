@@ -32,8 +32,8 @@ func NewTypedIdentityDeserializer(verifierDeserializer VerifierDES, auditInfoDes
 }
 
 func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ identity.Type, rawIdentity []byte, p driver.AuditInfoProvider) ([]byte, error) {
-	if typ != Escrow {
-		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, Escrow)
+	if typ != Multisig {
+		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, Multisig)
 	}
 
 	// if there is already some audit info for id, return it
@@ -51,10 +51,10 @@ func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ id
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal mid")
 	}
-	auditInfo := &MultiIdentityAuditInfo{}
-	auditInfo.AuditInfoIdentities = make([]AuditInfoIdentity, len(mid.Identities))
+	auditInfo := &AuditInfo{}
+	auditInfo.IdentityAuditInfos = make([]IdentityAuditInfo, len(mid.Identities))
 	for k, identity := range mid.Identities {
-		auditInfo.AuditInfoIdentities[k].AuditInfo, err = p.GetAuditInfo(identity)
+		auditInfo.IdentityAuditInfos[k].AuditInfo, err = p.GetAuditInfo(identity)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting audit info for mid [%s]", id.String())
 		}
@@ -63,7 +63,7 @@ func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ id
 }
 
 func (d *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
-	ei := &MultiIdentityAuditInfo{}
+	ei := &AuditInfo{}
 	err := json.Unmarshal(auditInfo, ei)
 	if err != nil {
 		return nil, err
@@ -77,11 +77,11 @@ func (d *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, audit
 	if err != nil {
 		return nil, err
 	}
-	if len(mid.Identities) != len(ei.AuditInfoIdentities) {
-		return nil, errors.Errorf("expected %d audit info but received %d", len(mid.Identities), len(ei.AuditInfoIdentities))
+	if len(mid.Identities) != len(ei.IdentityAuditInfos) {
+		return nil, errors.Errorf("expected %d audit info but received %d", len(mid.Identities), len(ei.IdentityAuditInfos))
 	}
-	matchers := make([]driver.Matcher, len(ei.AuditInfoIdentities))
-	for k, info := range ei.AuditInfoIdentities {
+	matchers := make([]driver.Matcher, len(ei.IdentityAuditInfos))
+	for k, info := range ei.IdentityAuditInfos {
 		matchers[k], err = d.AuditInfoMatcher.GetOwnerMatcher(mid.Identities[k], info.AuditInfo)
 		if err != nil {
 			return nil, err
@@ -91,14 +91,14 @@ func (d *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, audit
 }
 
 func (d *TypedIdentityDeserializer) DeserializeVerifier(typ identity.Type, id []byte) (driver.Verifier, error) {
-	escrow := &MultiIdentity{}
-	err := escrow.Deserialize(id)
+	multisigIdentity := &MultiIdentity{}
+	err := multisigIdentity.Deserialize(id)
 	if err != nil {
 		return nil, errors.New("failed to unmarshal multisig identity")
 	}
 	verifier := &Verifier{}
-	verifier.Verifiers = make([]driver.Verifier, len(escrow.Identities))
-	for k, i := range escrow.Identities {
+	verifier.Verifiers = make([]driver.Verifier, len(multisigIdentity.Identities))
+	for k, i := range multisigIdentity.Identities {
 		verifier.Verifiers[k], err = d.VerifierDeserializer.DeserializeVerifier(i)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to unmarshal multisig identity")
@@ -120,7 +120,7 @@ type AuditInfoDeserializer struct {
 }
 
 func (a *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
-	ei := &MultiIdentityAuditInfo{}
+	ei := &AuditInfo{}
 	err := json.Unmarshal(raw, ei)
 	if err != nil {
 		return nil, err

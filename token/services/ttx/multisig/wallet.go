@@ -156,7 +156,7 @@ func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
 			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
 			continue
 		}
-		if owner.Type == multisig.Escrow {
+		if owner.Type == multisig.Multisig {
 			escrow := &multisig.MultiIdentity{}
 			if err := escrow.Deserialize(owner.Identity); err != nil {
 				logger.Debugf("token [%s,%s,%s,%s] contains an escrow? No", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)

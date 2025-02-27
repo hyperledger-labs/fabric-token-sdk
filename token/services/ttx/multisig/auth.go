@@ -39,8 +39,8 @@ func (s *EscrowAuth) IsMine(tok *token3.Token) (string, []string, bool) {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
 		return "", nil, false
 	}
-	if owner.Type != multisig.Escrow {
-		logger.Debugf("Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, owner.Type, multisig.Escrow)
+	if owner.Type != multisig.Multisig {
+		logger.Debugf("Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, owner.Type, multisig.Multisig)
 		return "", nil, false
 	}
 	escrow := &multisig.MultiIdentity{}
