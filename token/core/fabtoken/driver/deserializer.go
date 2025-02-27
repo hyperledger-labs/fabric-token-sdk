@@ -26,7 +26,7 @@ func NewDeserializer() *Deserializer {
 	ownerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
 	ownerDeserializer.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
-	ownerDeserializer.AddTypedVerifierDeserializer(multisig.Escrow, multisig.NewTypedIdentityDeserializer(ownerDeserializer, ownerDeserializer))
+	ownerDeserializer.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(ownerDeserializer, ownerDeserializer))
 
 	auditorIssuerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
 	auditorIssuerDeserializer.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
@@ -57,6 +57,6 @@ func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
 	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&x509.AuditInfoDeserializer{}))
-	d.AddDeserializer(multisig.Escrow, &multisig.AuditInfoDeserializer{})
+	d.AddDeserializer(multisig.Multisig, &multisig.AuditInfoDeserializer{})
 	return d
 }
