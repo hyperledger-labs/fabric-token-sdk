@@ -37,7 +37,7 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 			return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", idemixIssuerPublicKey.Curve)
 		}
 		ownerDeserializer.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
-		ownerDeserializer.AddTypedVerifierDeserializer(multisig.Escrow, multisig.NewTypedIdentityDeserializer(ownerDeserializer, ownerDeserializer))
+		ownerDeserializer.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(ownerDeserializer, ownerDeserializer))
 	}
 	ownerDeserializer.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
@@ -90,6 +90,6 @@ func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d.AddDeserializer(idemix2.IdentityType, &idemix2.AuditInfoDeserializer{})
 	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix2.AuditInfoDeserializer{}))
-	d.AddDeserializer(multisig.Escrow, &multisig.AuditInfoDeserializer{})
+	d.AddDeserializer(multisig.Multisig, &multisig.AuditInfoDeserializer{})
 	return d
 }
