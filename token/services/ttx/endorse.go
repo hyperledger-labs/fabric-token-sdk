@@ -741,6 +741,7 @@ func (f *ReceiveTransactionView) unmarshalAsSignatureRequest(context view.Contex
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate key to store signature request")
 	}
+	k = base64.StdEncoding.EncodeToString([]byte(k))
 	if kvss, err := context.GetService(&kvs.KVS{}); err != nil {
 		return nil, errors.Wrap(err, "failed to get KVS from context")
 	} else if err := kvss.(*kvs.KVS).Put(k, base64.StdEncoding.EncodeToString(raw)); err != nil {
@@ -786,6 +787,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate key to store signature request")
 	}
+	k = base64.StdEncoding.EncodeToString([]byte(k))
 	kvss, err := context.GetService(&kvs.KVS{})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get KVS from context")
