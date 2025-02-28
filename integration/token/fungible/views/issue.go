@@ -88,7 +88,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	} else {
 		auditorID = view2.GetIdentityProvider(context).Identity(p.Auditor)
 	}
-	opts := append(TxOpts(p.TMSID), ttx.WithAuditor(auditorID))
+	opts := TxOpts(p.TMSID, ttx.WithAuditor(auditorID))
 	if p.Anonymous {
 		// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 		tx, err = ttx.NewAnonymousTransaction(context, opts...)

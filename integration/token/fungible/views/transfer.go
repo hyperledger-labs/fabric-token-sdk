@@ -110,7 +110,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
 	var tx *ttx.Transaction
-	txOpts := append(TxOpts(t.TMSID), ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))
+	txOpts := TxOpts(t.TMSID, ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))
 	span.AddEvent("create_transfer")
 	if !t.NotAnonymous {
 		// create an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
@@ -572,7 +572,7 @@ func (t *MaliciousTransferView) Call(context view.Context) (txID interface{}, er
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
 	var tx *ttx.Transaction
-	txOpts := append(TxOpts(t.TMSID), ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))
+	txOpts := TxOpts(t.TMSID, ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))
 	if !t.NotAnonymous {
 		// create an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 		tx, err = ttx.NewAnonymousTransaction(context, txOpts...)

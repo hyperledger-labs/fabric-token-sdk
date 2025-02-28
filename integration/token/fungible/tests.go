@@ -1378,3 +1378,43 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
 	CopyDBsTo(network, "./testdata", alice)
 }
+
+func TestMultiSig(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
+	auditor := sel.Get("auditor")
+	issuer := sel.Get("issuer")
+	alice := sel.Get("alice")
+	bob := sel.Get("bob")
+	charlie := sel.Get("charlie")
+	manager := sel.Get("manager")
+	RegisterAuditor(network, auditor)
+
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditor.Id())
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+
+	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
+	CheckBalance(network, alice, "", "USD", 110)
+	CheckHolding(network, alice, "", "USD", 110, auditor)
+
+	MultiSigLockCash(network, alice, "", "USD", 50, []*token3.NodeReference{bob, charlie}, auditor)
+	CheckBalance(network, alice, "", "USD", 60)
+	CheckBalance(network, bob, "", "USD", 0)
+	CheckBalance(network, charlie, "", "USD", 0)
+	CheckBalance(network, manager, "", "USD", 0)
+	CheckCoOwnedBalance(network, alice, "", "USD", 0)
+	CheckCoOwnedBalance(network, bob, "", "USD", 50)
+	CheckCoOwnedBalance(network, charlie, "", "USD", 50)
+	CheckCoOwnedBalance(network, manager, "", "USD", 0)
+
+	MultiSigSpendCash(network, bob, "", "USD", manager, auditor)
+	CheckBalance(network, alice, "", "USD", 60)
+	CheckBalance(network, bob, "", "USD", 0)
+	CheckBalance(network, charlie, "", "USD", 0)
+	CheckBalance(network, manager, "", "USD", 50)
+	CheckCoOwnedBalance(network, alice, "", "USD", 0)
+	CheckCoOwnedBalance(network, bob, "", "USD", 0)
+	CheckCoOwnedBalance(network, charlie, "", "USD", 0)
+	CheckCoOwnedBalance(network, manager, "", "USD", 0)
+}

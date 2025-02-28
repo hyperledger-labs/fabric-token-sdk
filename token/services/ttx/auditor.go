@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
@@ -260,7 +261,7 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 		return nil, errors.Wrapf(err, "failed to get auditor view")
 	}
 	// Run the view in a new goroutine
-	RunView(context, responderView, view.AsResponder(right))
+	view3.RunView(logger, context, responderView, view.AsResponder(right))
 
 	return left, nil
 }

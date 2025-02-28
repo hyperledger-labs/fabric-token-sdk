@@ -23,9 +23,10 @@ type TxOptions struct {
 	Transaction               *Transaction
 	NetworkTxID               network.TxID
 	NoCachingRequest          bool
+	AnonymousTransaction      bool
 }
 
-func compile(opts ...TxOption) (*TxOptions, error) {
+func CompileOpts(opts ...TxOption) (*TxOptions, error) {
 	txOptions := &TxOptions{}
 	for _, opt := range opts {
 		if err := opt(txOptions); err != nil {
@@ -91,6 +92,17 @@ func WithTMSID(id token.TMSID) TxOption {
 	}
 }
 
+// WithTMSIDPointer filters by TMS identifier, if passed
+func WithTMSIDPointer(id *token.TMSID) TxOption {
+	return func(o *TxOptions) error {
+		if id == nil {
+			return nil
+		}
+		o.TMSID = *id
+		return nil
+	}
+}
+
 func WithNoTransactionVerification() TxOption {
 	return func(o *TxOptions) error {
 		o.NoTransactionVerification = true
@@ -124,4 +136,56 @@ func WithNetworkTxID(id network.TxID) TxOption {
 		o.NetworkTxID = id
 		return nil
 	}
+}
+
+// WithAnonymousTransaction is used to tell if the transaction needs to be anonymous or not
+func WithAnonymousTransaction(v bool) TxOption {
+	return func(o *TxOptions) error {
+		o.AnonymousTransaction = v
+		return nil
+	}
+}
+
+// CompileServiceOptions compiles the service options
+func CompileServiceOptions(opts ...token.ServiceOption) (*token.ServiceOptions, error) {
+	txOptions := &token.ServiceOptions{}
+	for _, opt := range opts {
+		if err := opt(txOptions); err != nil {
+			return nil, err
+		}
+	}
+	return txOptions, nil
+}
+
+// WithRecipientData is used to add a RecipientData to the service options
+func WithRecipientData(recipientData *RecipientData) token.ServiceOption {
+	return func(options *token.ServiceOptions) error {
+		if options.Params == nil {
+			options.Params = map[string]interface{}{}
+		}
+		options.Params["RecipientData"] = recipientData
+		return nil
+	}
+}
+
+// WithRecipientWalletID is used to add a recipient wallet id to the service options
+func WithRecipientWalletID(walletID string) token.ServiceOption {
+	return func(options *token.ServiceOptions) error {
+		if len(walletID) == 0 {
+			return nil
+		}
+		if options.Params == nil {
+			options.Params = map[string]interface{}{}
+		}
+		options.Params["RecipientWalletID"] = walletID
+		return nil
+	}
+}
+
+func getRecipientWalletID(opts *token.ServiceOptions) string {
+	wBoxed, ok := opts.Params["RecipientWalletID"]
+	if !ok {
+		return ""
+	}
+	return wBoxed.(string)
 }
