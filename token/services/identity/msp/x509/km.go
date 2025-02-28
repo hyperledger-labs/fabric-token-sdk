@@ -38,8 +38,8 @@ type KeyManager struct {
 // NewKeyManager returns a new X509 provider with the passed BCCSP configuration.
 // If the configuration path contains the secret key,
 // then the provider can generate also signatures, otherwise it cannot.
-func NewKeyManager(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*KeyManager, *msp.MSPConfig, error) {
-	conf, err := msp2.GetLocalMspConfig(mspConfigPath, mspID)
+func NewKeyManager(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*KeyManager, *msp2.Config, error) {
+	conf, err := msp2.GetConfig(mspConfigPath, mspID)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", mspConfigPath)
 	}
@@ -50,11 +50,11 @@ func NewKeyManager(mspConfigPath, keyStorePath, mspID string, signerService Sign
 	return p, conf, nil
 }
 
-func NewKeyManagerFromConf(conf *msp.MSPConfig, mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*KeyManager, *msp.MSPConfig, error) {
+func NewKeyManagerFromConf(conf *msp2.Config, mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*KeyManager, *msp2.Config, error) {
 	if conf == nil {
 		logger.Debugf("load msp config from [%s:%s]", mspConfigPath, mspID)
 		var err error
-		conf, err = msp2.GetLocalMspConfig(mspConfigPath, mspID)
+		conf, err = msp2.GetConfig(mspConfigPath, mspID)
 		if err != nil {
 			return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", mspConfigPath)
 		}
@@ -72,7 +72,7 @@ func NewKeyManagerFromConf(conf *msp.MSPConfig, mspConfigPath, keyStorePath, msp
 	return p, conf, err
 }
 
-func newSigningKeyManager(conf *msp.MSPConfig, mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*KeyManager, error) {
+func newSigningKeyManager(conf *msp2.Config, mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*KeyManager, error) {
 	sID, err := msp2.GetSigningIdentity(conf, mspConfigPath, keyStorePath, bccspConfig)
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func newSigningKeyManager(conf *msp.MSPConfig, mspConfigPath, keyStorePath, mspI
 	return newKeyManager(sID, idRaw)
 }
 
-func newVerifyingKeyManager(conf *msp.MSPConfig, mspConfigPath, mspID string) (*KeyManager, *msp.MSPConfig, error) {
+func newVerifyingKeyManager(conf *msp2.Config, mspConfigPath, mspID string) (*KeyManager, *msp2.Config, error) {
 	conf, err := msp2.RemoveSigningIdentityInfo(conf)
 	if err != nil {
 		return nil, nil, err

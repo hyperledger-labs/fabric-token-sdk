@@ -8,9 +8,12 @@ package msp
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp/pkcs11"
+	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 )
+
+type Config = msp.MSPConfig
 
 type MSPOpts struct {
 	BCCSP *BCCSP `yaml:"BCCSP,omitempty"`
