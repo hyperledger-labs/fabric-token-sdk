@@ -13,14 +13,13 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger/fabric-protos-go/msp"
 )
 
 func DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
-	si := &msp.SerializedIdentity{}
+	si := &SerializedIdentity{}
 	err := proto.Unmarshal(id, si)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
+		return nil, errors.Wrap(err, "failed to unmarshal to SerializedIdentity{}")
 	}
 	genericPublicKey, err := PemDecodeKey(si.IdBytes)
 	if err != nil {
@@ -34,7 +33,7 @@ func DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
 }
 
 func Info(raw []byte) (string, error) {
-	si := &msp.SerializedIdentity{}
+	si := &SerializedIdentity{}
 	err := proto.Unmarshal(raw, si)
 	if err != nil {
 		return "", err
