@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package msp
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
@@ -26,18 +27,42 @@ const (
 const (
 	CACerts   = "cacerts"
 	SignCerts = "signcerts"
+	KeyStore  = "keystore"
+	PrivSK    = "priv_sk"
 )
 
-func LoadConfig(dir string, ID string) (*msp.MSPConfig, error) {
+func LoadConfig(dir string, keyStoreDirName string, ID string) (*Config, error) {
 	signcertDir := filepath.Join(dir, SignCerts)
 	signcert, err := getPemMaterialFromDir(signcertDir)
 	if err != nil || len(signcert) == 0 {
 		return nil, errors.Wrapf(err, "could not load a valid signer certificate from directory %s", signcertDir)
 	}
-	return LoadConfigWithIdentityInfo(dir, ID, &msp.SigningIdentityInfo{PublicSigner: signcert[0], PrivateSigner: nil})
+	// load secret key, if available. If not available, the public's key SKI will be used to load the secret key from the key store
+	if len(keyStoreDirName) == 0 {
+		keyStoreDirName = KeyStore
+	}
+	secretKeyFile := filepath.Join(dir, keyStoreDirName, PrivSK)
+	var skRaw []byte
+	if _, err := os.Stat(secretKeyFile); err == nil {
+		skRaw, err = readPemFile(secretKeyFile)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not load private key from file %s", secretKeyFile)
+		}
+	}
+	return LoadConfigWithIdentityInfo(
+		dir,
+		ID,
+		&msp.SigningIdentityInfo{
+			PublicSigner: signcert[0],
+			PrivateSigner: &msp.KeyInfo{
+				KeyIdentifier: "",
+				KeyMaterial:   skRaw,
+			},
+		},
+	)
 }
 
-func LoadConfigWithIdentityInfo(dir string, ID string, signingIdentityInfo *msp.SigningIdentityInfo) (*msp.MSPConfig, error) {
+func LoadConfigWithIdentityInfo(dir string, ID string, signingIdentityInfo *msp.SigningIdentityInfo) (*Config, error) {
 	cacertDir := filepath.Join(dir, CACerts)
 	cacerts, err := getPemMaterialFromDir(cacertDir)
 	if err != nil || len(cacerts) == 0 {

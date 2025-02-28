@@ -1026,7 +1026,7 @@ func getIdentity(identities []topology.Identity, id string, mspID string) []byte
 	for _, topologyIdentity := range identities {
 		if topologyIdentity.ID == id {
 			// Build an MSP Identity
-			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, "", mspID, nil, topologyIdentity.Opts)
+			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, mspID, nil, topologyIdentity.Opts)
 			Expect(err).NotTo(HaveOccurred())
 			newIdentity, _, err := kmp.Identity(nil)
 			Expect(err).NotTo(HaveOccurred())

@@ -39,8 +39,8 @@ func SerializeFromMSP(conf *msp2.MSPConfig, mspID string, path string) ([]byte, 
 
 // GetSigningIdentity retrieves a signing identity from the passed arguments.
 // If keyStorePath is empty, then it is assumed that the key is at mspConfigPath/keystore
-func GetSigningIdentity(conf *msp2.MSPConfig, mspConfigPath, keyStorePath string, bccspConfig *BCCSP) (driver.FullIdentity, error) {
-	mspInstance, err := loadLocalMSPAt(conf, mspConfigPath, keyStorePath, bccspConfig)
+func GetSigningIdentity(conf *msp2.MSPConfig, mspConfigPath string, bccspConfig *BCCSP) (driver.FullIdentity, error) {
+	mspInstance, err := loadLocalMSPAt(conf, mspConfigPath, bccspConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func GetSigningIdentity(conf *msp2.MSPConfig, mspConfigPath, keyStorePath string
 // loadVerifyingMSPAt loads a verifying MSP whose configuration is stored at 'dir', and whose
 // id and type are the passed as arguments.
 func loadVerifyingMSPAt(conf *msp2.MSPConfig, dir string) (msp.MSP, error) {
-	cp, _, err := GetBCCSPFromConf(dir, "", nil)
+	cp, _, err := GetBCCSPFromConf(nil)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get bccsp")
 	}
@@ -101,8 +101,8 @@ func serializeRaw(mspID string, raw []byte) ([]byte, error) {
 
 // loadLocalMSPAt loads an MSP whose configuration is stored at 'dir', and whose
 // id and type are the passed as arguments.
-func loadLocalMSPAt(conf *msp2.MSPConfig, dir, keyStorePath string, bccspConfig *BCCSP) (msp.MSP, error) {
-	cp, _, err := GetBCCSPFromConf(dir, keyStorePath, bccspConfig)
+func loadLocalMSPAt(conf *msp2.MSPConfig, dir string, bccspConfig *BCCSP) (msp.MSP, error) {
+	cp, _, err := GetBCCSPFromConf(bccspConfig)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get bccsp from config [%v]", bccspConfig)
 	}
