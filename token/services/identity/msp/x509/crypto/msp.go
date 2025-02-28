@@ -12,7 +12,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/signer"
 	"github.com/pkg/errors"
@@ -32,15 +31,7 @@ func (f *verifyingIdentity) Serialize() ([]byte, error) {
 	if pemBytes == nil {
 		return nil, errors.New("encoding of identity failed")
 	}
-
-	// We serialize identities by prepending the MSPID and appending the ASN.1 DER content of the cert
-	sId := &SerializedIdentity{Mspid: f.Mspid, IdBytes: pemBytes}
-	idBytes, err := proto.Marshal(sId)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed serializing identity")
-	}
-
-	return idBytes, nil
+	return pemBytes, nil
 }
 
 func (f *verifyingIdentity) Verify(message, sigma []byte) error {
@@ -91,15 +82,7 @@ func (f *fullIdentity) Serialize() ([]byte, error) {
 	if pemBytes == nil {
 		return nil, errors.New("encoding of identity failed")
 	}
-
-	// We serialize identities by prepending the MSPID and appending the ASN.1 DER content of the cert
-	sId := &SerializedIdentity{Mspid: f.Mspid, IdBytes: pemBytes}
-	idBytes, err := proto.Marshal(sId)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed serializing identity")
-	}
-
-	return idBytes, nil
+	return pemBytes, nil
 }
 
 func (f *fullIdentity) Verify(message, sigma []byte) error {

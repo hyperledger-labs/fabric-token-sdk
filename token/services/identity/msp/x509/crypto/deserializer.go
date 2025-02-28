@@ -11,17 +11,11 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 func DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
-	si := &SerializedIdentity{}
-	err := proto.Unmarshal(id, si)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to SerializedIdentity{}")
-	}
-	genericPublicKey, err := PemDecodeKey(si.IdBytes)
+	genericPublicKey, err := PemDecodeKey(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing received public key")
 	}
@@ -33,14 +27,9 @@ func DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
 }
 
 func Info(raw []byte) (string, error) {
-	si := &SerializedIdentity{}
-	err := proto.Unmarshal(raw, si)
+	cert, err := PemDecodeCert(raw)
 	if err != nil {
 		return "", err
 	}
-	cert, err := PemDecodeCert(si.IdBytes)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("MSP.x509: [%s][%s][%s]", driver.Identity(raw).UniqueID(), si.Mspid, cert.Subject.CommonName), nil
+	return fmt.Sprintf("MSP.x509: [%s][%s]", driver.Identity(raw).UniqueID(), cert.Subject.CommonName), nil
 }

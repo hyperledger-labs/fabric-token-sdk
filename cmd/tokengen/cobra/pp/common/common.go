@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	msp3 "github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
 )
 
@@ -57,12 +56,7 @@ func GetMSPIdentity(entry string, mspID string) (driver.Identity, error) {
 		return nil, errors.Errorf("no certificates found in %s", signcertDir)
 	}
 
-	id, err := msp3.NewSerializedIdentity(mspID, content[0])
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create x509 identity for [%s]", entry)
-	}
-
-	wrap, err := identity.WrapWithType(msp.X509Identity, id)
+	wrap, err := identity.WrapWithType(msp.X509Identity, content[0])
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to wrap x509 identity for [%s]", entry)
 	}

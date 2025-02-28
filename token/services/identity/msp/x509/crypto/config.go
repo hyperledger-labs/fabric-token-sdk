@@ -20,7 +20,6 @@ type (
 	KeyInfo             = msp.KeyInfo
 	FabricCryptoConfig  = msp.FabricCryptoConfig
 	FabricMSPConfig     = msp.FabricMSPConfig
-	SerializedIdentity  = msp.SerializedIdentity
 )
 
 func UnmarshalConfig(data []byte) (*Config, error) {
