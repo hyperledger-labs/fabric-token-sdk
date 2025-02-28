@@ -95,11 +95,11 @@ func (k *KeyManagerProvider) registerProvider(conf *msp.Config, identityConfig *
 	keyStorePath := k.keyStorePath()
 	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
 	// Try without "msp"
-	provider, conf, err := NewKeyManagerFromConf(conf, translatedPath, keyStorePath, k.mspID, k.signerService, opts)
+	provider, conf, err := NewKeyManagerFromConf(conf, translatedPath, keyStorePath, k.mspID, k.signerService, opts, nil)
 	if err != nil {
 		logger.Debugf("failed loading provider at [%s]: [%s]", translatedPath, err)
 		// Try with "msp"
-		provider, conf, err = NewKeyManagerFromConf(conf, filepath.Join(translatedPath, "msp"), keyStorePath, k.mspID, k.signerService, opts)
+		provider, conf, err = NewKeyManagerFromConf(conf, filepath.Join(translatedPath, "msp"), keyStorePath, k.mspID, k.signerService, opts, nil)
 		if err != nil {
 			logger.Debugf("failed loading provider at [%s]: [%s]", filepath.Join(translatedPath, "msp"), err)
 			return nil, err

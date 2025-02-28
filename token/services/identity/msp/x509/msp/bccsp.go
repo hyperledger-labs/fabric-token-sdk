@@ -17,32 +17,34 @@ import (
 
 // GetBCCSPFromConf returns a BCCSP instance and its relative key store from the passed configuration.
 // If no configuration is passed, the default one is used, namely the `SW` provider.
-func GetBCCSPFromConf(conf *BCCSP) (bccsp.BCCSP, bccsp.KeyStore, error) {
+func GetBCCSPFromConf(conf *BCCSP, keyStore bccsp.KeyStore) (bccsp.BCCSP, error) {
 	if conf == nil {
-		return GetSWBCCSP()
+		return GetDefaultBCCSP(keyStore)
 	}
 	switch conf.Default {
 	case "SW":
-		return GetSWBCCSP()
+		return GetDefaultBCCSP(keyStore)
 	case "PKCS11":
-		return GetPKCS11BCCSP(conf)
+		return GetPKCS11BCCSP(conf, keyStore)
 	default:
-		return nil, nil, errors.Errorf("invalid BCCSP.Default.%s", conf.Default)
+		return nil, errors.Errorf("invalid BCCSP.Default.%s", conf.Default)
 	}
 }
 
 // GetPKCS11BCCSP returns a new instance of the HSM-based BCCSP
-func GetPKCS11BCCSP(conf *BCCSP) (bccsp.BCCSP, bccsp.KeyStore, error) {
+func GetPKCS11BCCSP(conf *BCCSP, keyStore bccsp.KeyStore) (bccsp.BCCSP, error) {
 	if conf.PKCS11 == nil {
-		return nil, nil, errors.New("invalid BCCSP.PKCS11. missing configuration")
+		return nil, errors.New("invalid BCCSP.PKCS11. missing configuration")
 	}
 
 	p11Opts := conf.PKCS11
-	ks := sw.NewDummyKeyStore()
+	if keyStore == nil {
+		keyStore = sw.NewDummyKeyStore()
+	}
 	opts := ToPKCS11OptsOpts(p11Opts)
-	csp, err := pkcs11.NewProvider(*opts, ks, skiMapper(*p11Opts))
+	csp, err := pkcs11.NewProvider(*opts, keyStore, skiMapper(*p11Opts))
 
-	return csp, ks, err
+	return csp, err
 }
 
 func skiMapper(p11Opts PKCS11) func([]byte) []byte {
@@ -63,12 +65,14 @@ func skiMapper(p11Opts PKCS11) func([]byte) []byte {
 	}
 }
 
-// GetSWBCCSP returns a new instance of the software-based BCCSP
-func GetSWBCCSP() (bccsp.BCCSP, bccsp.KeyStore, error) {
-	ks := sw.NewDummyKeyStore()
-	cryptoProvider, err := sw.NewDefaultSecurityLevelWithKeystore(ks)
-	if err != nil {
-		return nil, nil, err
+// GetDefaultBCCSP returns a new instance of the software-based BCCSP
+func GetDefaultBCCSP(keyStore bccsp.KeyStore) (bccsp.BCCSP, error) {
+	if keyStore == nil {
+		keyStore = sw.NewDummyKeyStore()
 	}
-	return cryptoProvider, ks, nil
+	cryptoProvider, err := sw.NewDefaultSecurityLevelWithKeystore(keyStore)
+	if err != nil {
+		return nil, err
+	}
+	return cryptoProvider, nil
 }

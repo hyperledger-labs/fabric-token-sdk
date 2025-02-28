@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	msp2 "github.com/hyperledger/fabric-protos-go/msp"
+	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
 )
@@ -38,8 +39,8 @@ func SerializeFromMSP(conf *msp2.MSPConfig, mspID string) ([]byte, error) {
 
 // GetSigningIdentity retrieves a signing identity from the passed arguments.
 // If keyStorePath is empty, then it is assumed that the key is at mspConfigPath/keystore
-func GetSigningIdentity(conf *msp2.MSPConfig, bccspConfig *BCCSP) (driver.FullIdentity, error) {
-	mspInstance, err := loadLocalMSPAt(conf, bccspConfig)
+func GetSigningIdentity(conf *msp2.MSPConfig, bccspConfig *BCCSP, keyStore bccsp.KeyStore) (driver.FullIdentity, error) {
+	mspInstance, err := loadLocalMSPAt(conf, bccspConfig, keyStore)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func GetSigningIdentity(conf *msp2.MSPConfig, bccspConfig *BCCSP) (driver.FullId
 // loadVerifyingMSPAt loads a verifying MSP whose configuration is stored at 'dir', and whose
 // id and type are the passed as arguments.
 func loadVerifyingMSPAt(conf *msp2.MSPConfig) (msp.MSP, error) {
-	cp, _, err := GetBCCSPFromConf(nil)
+	cp, err := GetBCCSPFromConf(nil, nil)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get bccsp")
 	}
@@ -100,8 +101,8 @@ func serializeRaw(mspID string, raw []byte) ([]byte, error) {
 
 // loadLocalMSPAt loads an MSP whose configuration is stored at 'dir', and whose
 // id and type are the passed as arguments.
-func loadLocalMSPAt(conf *msp2.MSPConfig, bccspConfig *BCCSP) (msp.MSP, error) {
-	cp, _, err := GetBCCSPFromConf(bccspConfig)
+func loadLocalMSPAt(conf *msp2.MSPConfig, bccspConfig *BCCSP, keyStore bccsp.KeyStore) (msp.MSP, error) {
+	cp, err := GetBCCSPFromConf(bccspConfig, keyStore)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get bccsp from config [%v]", bccspConfig)
 	}
