@@ -167,3 +167,25 @@ func WithRecipientData(recipientData *RecipientData) token.ServiceOption {
 		return nil
 	}
 }
+
+// WithRecipientWalletID is used to add a recipient wallet id to the service options
+func WithRecipientWalletID(walletID string) token.ServiceOption {
+	return func(options *token.ServiceOptions) error {
+		if len(walletID) == 0 {
+			return nil
+		}
+		if options.Params == nil {
+			options.Params = map[string]interface{}{}
+		}
+		options.Params["RecipientWalletID"] = walletID
+		return nil
+	}
+}
+
+func getRecipientWalletID(opts *token.ServiceOptions) string {
+	wBoxed, ok := opts.Params["RecipientWalletID"]
+	if !ok {
+		return ""
+	}
+	return wBoxed.(string)
+}
