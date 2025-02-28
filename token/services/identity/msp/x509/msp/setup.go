@@ -17,10 +17,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	SignCerts = "signcerts"
-)
-
 func SerializeRaw(mspID string, raw []byte) ([]byte, error) {
 	cert, err := getCertFromPem(raw)
 	if err != nil {

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package msp
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp/pkcs11"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/mitchellh/mapstructure"
@@ -14,6 +15,22 @@ import (
 )
 
 type Config = msp.MSPConfig
+
+func UnmarshalConfig(data []byte) (*Config, error) {
+	config := &Config{}
+	if err := proto.Unmarshal(data, config); err != nil {
+		return nil, errors.Wrapf(err, "failed to unamrshal msp config")
+	}
+	return config, nil
+}
+
+func MarshalConfig(config *Config) ([]byte, error) {
+	data, err := proto.Marshal(config)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal msp config")
+	}
+	return data, nil
+}
 
 type MSPOpts struct {
 	BCCSP *BCCSP `yaml:"BCCSP,omitempty"`
