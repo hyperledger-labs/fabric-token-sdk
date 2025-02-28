@@ -8,7 +8,6 @@ package msp
 
 import (
 	"encoding/pem"
-	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -17,30 +16,30 @@ import (
 	"github.com/pkg/errors"
 )
 
-func SerializeFromMSP(conf *msp2.MSPConfig, mspID string, path string) ([]byte, error) {
-	msp, err := loadVerifyingMSPAt(conf, path)
+func SerializeFromMSP(conf *msp2.MSPConfig, mspID string) ([]byte, error) {
+	msp, err := loadVerifyingMSPAt(conf)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to load msp at [%s:%s]", mspID, path)
+		return nil, errors.Wrapf(err, "failed to load msp at [%s]", mspID)
 	}
-	certRaw, err := loadLocalMSPSignerCert(path)
+	certRaw, err := loadLocalMSPSignerCert(conf)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to load certificate at [%s:%s]", mspID, path)
+		return nil, errors.Wrapf(err, "failed to load certificate at [%s]", mspID)
 	}
 	serRaw, err := serializeRaw(mspID, certRaw)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to generate msp serailization at [%s:%s]", mspID, path)
+		return nil, errors.WithMessagef(err, "failed to generate msp serailization at [%s]", mspID)
 	}
 	id, err := msp.DeserializeIdentity(serRaw)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to deserialize certificate at [%s:%s]", mspID, path)
+		return nil, errors.Wrapf(err, "failed to deserialize certificate at [%s]", mspID)
 	}
 	return id.Serialize()
 }
 
 // GetSigningIdentity retrieves a signing identity from the passed arguments.
 // If keyStorePath is empty, then it is assumed that the key is at mspConfigPath/keystore
-func GetSigningIdentity(conf *msp2.MSPConfig, mspConfigPath string, bccspConfig *BCCSP) (driver.FullIdentity, error) {
-	mspInstance, err := loadLocalMSPAt(conf, mspConfigPath, bccspConfig)
+func GetSigningIdentity(conf *msp2.MSPConfig, bccspConfig *BCCSP) (driver.FullIdentity, error) {
+	mspInstance, err := loadLocalMSPAt(conf, bccspConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +54,7 @@ func GetSigningIdentity(conf *msp2.MSPConfig, mspConfigPath string, bccspConfig 
 
 // loadVerifyingMSPAt loads a verifying MSP whose configuration is stored at 'dir', and whose
 // id and type are the passed as arguments.
-func loadVerifyingMSPAt(conf *msp2.MSPConfig, dir string) (msp.MSP, error) {
+func loadVerifyingMSPAt(conf *msp2.MSPConfig) (msp.MSP, error) {
 	cp, _, err := GetBCCSPFromConf(nil)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get bccsp")
@@ -68,11 +67,11 @@ func loadVerifyingMSPAt(conf *msp2.MSPConfig, dir string) (msp.MSP, error) {
 	}
 	thisMSP, err := msp.New(mspOpts, cp)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create new BCCSPMSP instance at [%s]", dir)
+		return nil, errors.WithMessagef(err, "failed to create new BCCSPMSP instance")
 	}
 	err = thisMSP.Setup(conf)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to setup the new BCCSPMSP instance at [%s]", dir)
+		return nil, errors.WithMessagef(err, "failed to setup the new BCCSPMSP instance")
 	}
 	return thisMSP, nil
 }
@@ -101,7 +100,7 @@ func serializeRaw(mspID string, raw []byte) ([]byte, error) {
 
 // loadLocalMSPAt loads an MSP whose configuration is stored at 'dir', and whose
 // id and type are the passed as arguments.
-func loadLocalMSPAt(conf *msp2.MSPConfig, dir string, bccspConfig *BCCSP) (msp.MSP, error) {
+func loadLocalMSPAt(conf *msp2.MSPConfig, bccspConfig *BCCSP) (msp.MSP, error) {
 	cp, _, err := GetBCCSPFromConf(bccspConfig)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get bccsp from config [%v]", bccspConfig)
@@ -114,20 +113,22 @@ func loadLocalMSPAt(conf *msp2.MSPConfig, dir string, bccspConfig *BCCSP) (msp.M
 	}
 	thisMSP, err := msp.New(mspOpts, cp)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create new BCCSPMSP instance at [%s]", dir)
+		return nil, errors.WithMessagef(err, "failed to create new BCCSPMSP instance")
 	}
 	err = thisMSP.Setup(conf)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to setup the new BCCSPMSP instance at [%s]", dir)
+		return nil, errors.WithMessagef(err, "failed to setup the new BCCSPMSP instance")
 	}
 	return thisMSP, nil
 }
 
-func loadLocalMSPSignerCert(dir string) ([]byte, error) {
-	signCertsPath := filepath.Join(dir, SignCerts)
-	signCerts, err := getPemMaterialFromDir(signCertsPath)
-	if err != nil || len(signCerts) == 0 {
-		return nil, errors.Wrapf(err, "could not load a valid signer certificate from directory %s", signCertsPath)
+func loadLocalMSPSignerCert(conf *msp2.MSPConfig) ([]byte, error) {
+	c := &msp2.FabricMSPConfig{}
+	if err := proto.Unmarshal(conf.Config, c); err != nil {
+		return nil, errors.WithMessagef(err, "failed to load provider config [%v]", conf.Config)
 	}
-	return signCerts[0], nil
+	if c.SigningIdentity == nil {
+		return nil, errors.Errorf("signing identity is missing")
+	}
+	return c.SigningIdentity.PublicSigner, nil
 }

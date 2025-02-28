@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
@@ -27,12 +28,25 @@ type KeyManagerProvider struct {
 	config        idriver.Config
 	mspID         string
 	signerService idriver.SigService
+	keyStore      identity.Keystore
 	// ignoreVerifyOnlyWallet when set to true, for each wallet the service will force the load of the secrets
 	ignoreVerifyOnlyWallet bool
 }
 
-func NewKeyManagerProvider(config idriver.Config, mspID string, signerService idriver.SigService, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
-	return &KeyManagerProvider{config: config, mspID: mspID, signerService: signerService, ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet}
+func NewKeyManagerProvider(
+	config idriver.Config,
+	mspID string,
+	signerService idriver.SigService,
+	keyStore identity.Keystore,
+	ignoreVerifyOnlyWallet bool,
+) *KeyManagerProvider {
+	return &KeyManagerProvider{
+		config:                 config,
+		mspID:                  mspID,
+		signerService:          signerService,
+		keyStore:               keyStore,
+		ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet,
+	}
 }
 
 func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
