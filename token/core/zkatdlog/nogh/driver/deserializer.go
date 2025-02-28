@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	x510 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
@@ -38,11 +38,11 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 		}
 		ownerDeserializer.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 	}
-	ownerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
+	ownerDeserializer.AddTypedVerifierDeserializer(x510.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x510.IdentityDeserializer{}, &x510.AuditMatcherDeserializer{}))
 	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
 
 	auditorIssuerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
-	auditorIssuerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
+	auditorIssuerDeserializer.AddTypedVerifierDeserializer(x510.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x510.IdentityDeserializer{}, &x510.AuditMatcherDeserializer{}))
 
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(
@@ -87,7 +87,7 @@ type EIDRHDeserializer = deserializer.EIDRHDeserializer
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
 	d.AddDeserializer(msp.IdemixIdentity, &idemix.AuditInfoDeserializer{})
-	d.AddDeserializer(msp.X509Identity, &x509.AuditInfoDeserializer{})
+	d.AddDeserializer(x510.IdentityType, &x510.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix.AuditInfoDeserializer{}))
 	return d
 }

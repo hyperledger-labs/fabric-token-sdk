@@ -4,7 +4,7 @@
 
 syntax = "proto3";
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto/protos-go/config";
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/protos-go/config";
 
 package identity_x509;
 

@@ -15,7 +15,7 @@ import (
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/stretchr/testify/assert"
 )
 

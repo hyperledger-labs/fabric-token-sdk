@@ -28,8 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -1030,7 +1029,7 @@ func getIdentity(identities []topology.Identity, id string) []byte {
 			Expect(err).NotTo(HaveOccurred())
 			newIdentity, _, err := kmp.Identity(nil)
 			Expect(err).NotTo(HaveOccurred())
-			wrap, err := identity.WrapWithType(msp2.X509Identity, newIdentity)
+			wrap, err := identity.WrapWithType(x509.IdentityType, newIdentity)
 			Expect(err).NotTo(HaveOccurred())
 			return wrap
 		}
