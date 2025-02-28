@@ -17,7 +17,6 @@ require (
 	github.com/hyperledger/fabric-lib-go v1.1.2
 	github.com/hyperledger/fabric-protos-go v0.3.3
 	github.com/jackc/pgx/v5 v5.7.1
-	github.com/json-iterator/go v1.1.12
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onsi/ginkgo/v2 v2.22.1
 	github.com/onsi/gomega v1.36.2
@@ -142,6 +141,7 @@ require (
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/jellydator/ttlcache/v2 v2.11.1 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kilic/bls12-381 v0.1.0 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect

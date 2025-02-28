@@ -36,6 +36,12 @@ var _ = Describe("EndToEnd", func() {
 			It("Test Remote Wallet (GRPC)", Label("T4"), func() { fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, false) })
 			It("Test Remote Wallet (WebSocket)", Label("T5"), func() { fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, true) })
 		})
+		Describe("Multisig", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "", "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T12"), func() { fungible.TestMultiSig(ts.II, selector) })
+		})
 	}
 })
 
