@@ -76,7 +76,7 @@ const (
 	tlsintermediatecerts = "tlsintermediatecerts"
 )
 
-func GetLocalMspConfig(dir string, ID string) (*msp.MSPConfig, error) {
+func GetConfig(dir string, ID string) (*msp.MSPConfig, error) {
 	signcertDir := filepath.Join(dir, signcerts)
 	signcert, err := getPemMaterialFromDir(signcertDir)
 	if err != nil || len(signcert) == 0 {
