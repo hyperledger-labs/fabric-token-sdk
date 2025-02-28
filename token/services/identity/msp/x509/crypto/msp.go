@@ -235,69 +235,6 @@ func (f *IdentityFactory) getCertFromPem(idBytes []byte) (*x509.Certificate, err
 	return cert, nil
 }
 
-func (f *IdentityFactory) SanitizeCert(cert *x509.Certificate) (*x509.Certificate, error) {
-	return cert, nil
-	// var err error
-	// if IsECDSASignedCert(cert) {
-	// 	isRootCACert := false
-	// 	validityOpts := f.GetValidityOptsForCert(cert)
-	// 	if cert.IsCA && cert.CheckSignatureFrom(cert) == nil {
-	// 		// this is a root CA we can already sanitize it
-	// 		cert, err = SanitizeECDSASignedCert(cert, cert)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		isRootCACert = true
-	// 		validityOpts.Roots = x509.NewCertPool()
-	// 		validityOpts.Roots.AddCert(cert)
-	// 	}
-	// 	// Lookup for a parent certificate to perform the sanitization
-	// 	// run cert validation at any rate, if this is a root CA
-	// 	// we will validate already sanitized cert
-	// 	chain, err := f.getUniqueValidationChain(cert, validityOpts)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	//
-	// 	// once we finish validation and this is already
-	// 	// sanitized certificate, there is no need to
-	// 	// sanitize it once again hence we can just return it
-	// 	if isRootCACert {
-	// 		return cert, nil
-	// 	}
-	//
-	// 	// ok, this is no a root CA cert, and now we
-	// 	// have chain of certs and can extract parent
-	// 	// to sanitize the cert whenever it's intermediate or leaf certificate
-	// 	var parentCert *x509.Certificate
-	// 	if len(chain) <= 1 {
-	// 		return nil, fmt.Errorf("failed to traverse certificate verification chain"+
-	// 			" for leaf or intermediate certificate, with subject %s", cert.Subject)
-	// 	}
-	// 	parentCert = chain[1]
-	//
-	// 	// Sanitize
-	// 	return SanitizeECDSASignedCert(cert, parentCert)
-	// }
-	// return cert, nil
-}
-
-func (f *IdentityFactory) GetValidityOptsForCert(cert *x509.Certificate) x509.VerifyOptions {
-	// First copy the opts to override the CurrentTime field
-	// in order to make the certificate passing the expiration test
-	// independently from the real local current time.
-	// This is a temporary workaround for FAB-3678
-
-	var tempOpts x509.VerifyOptions
-	// tempOpts.Roots = f.opts.Roots
-	// tempOpts.DNSName = f.opts.DNSName
-	// tempOpts.Intermediates = f.opts.Intermediates
-	// tempOpts.KeyUsages = f.opts.KeyUsages
-	// tempOpts.CurrentTime = cert.NotBefore.Add(time.Second)
-
-	return tempOpts
-}
-
 func getHashOpt(hashFamily string) (bccsp.HashOpts, error) {
 	switch hashFamily {
 	case bccsp.SHA2:
