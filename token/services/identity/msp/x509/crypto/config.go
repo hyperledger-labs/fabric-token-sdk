@@ -15,11 +15,10 @@ import (
 )
 
 type (
-	Config              = msp.MSPConfig
+	Config              = msp.FabricMSPConfig
 	SigningIdentityInfo = msp.SigningIdentityInfo
 	KeyInfo             = msp.KeyInfo
-	FabricCryptoConfig  = msp.FabricCryptoConfig
-	FabricMSPConfig     = msp.FabricMSPConfig
+	CryptoConfig        = msp.FabricCryptoConfig
 )
 
 func UnmarshalConfig(data []byte) (*Config, error) {

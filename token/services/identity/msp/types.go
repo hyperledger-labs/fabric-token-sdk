@@ -18,18 +18,4 @@ const (
 const (
 	// OwnerMSPID is the default MSP ID for the owner wallet
 	OwnerMSPID = "OwnerMSPID"
-	// IssuerMSPID is the default MSP ID for the issuer wallet
-	IssuerMSPID = "IssuerMSPID"
-	// AuditorMSPID is the default MSP ID for the auditor wallet
-	AuditorMSPID = "AuditorMSPID"
-	// CertifierMSPID is the default MSP ID for the certifier wallet
-	CertifierMSPID = "CertifierMSPID"
 )
-
-// RoleToMSPID maps the role to the MSP ID
-var RoleToMSPID = map[identity.RoleType]string{
-	identity.OwnerRole:     OwnerMSPID,
-	identity.IssuerRole:    IssuerMSPID,
-	identity.AuditorRole:   AuditorMSPID,
-	identity.CertifierRole: CertifierMSPID,
-}

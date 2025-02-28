@@ -1015,18 +1015,18 @@ func WhoDeletedToken(network *integration.Infrastructure, id *token3.NodeReferen
 }
 
 func GetAuditorIdentity(tms *topology.TMS, id string) []byte {
-	return getIdentity(tms.Wallets.Auditors, id, msp2.AuditorMSPID)
+	return getIdentity(tms.Wallets.Auditors, id)
 }
 
 func GetIssuerIdentity(tms *topology.TMS, id string) []byte {
-	return getIdentity(tms.Wallets.Issuers, id, msp2.IssuerMSPID)
+	return getIdentity(tms.Wallets.Issuers, id)
 }
 
-func getIdentity(identities []topology.Identity, id string, mspID string) []byte {
+func getIdentity(identities []topology.Identity, id string) []byte {
 	for _, topologyIdentity := range identities {
 		if topologyIdentity.ID == id {
 			// Build an MSP Identity
-			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, mspID, nil, topologyIdentity.Opts)
+			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, nil, topologyIdentity.Opts)
 			Expect(err).NotTo(HaveOccurred())
 			newIdentity, _, err := kmp.Identity(nil)
 			Expect(err).NotTo(HaveOccurred())

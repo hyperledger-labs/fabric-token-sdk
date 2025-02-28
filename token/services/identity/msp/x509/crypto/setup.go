@@ -7,22 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 package crypto
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
 )
 
-func SerializeFromMSP(conf *Config, mspID string) ([]byte, error) {
-	factory, err := getIdentityFactory(nil, nil)
+func SerializeIdentity(conf *Config) ([]byte, error) {
+	factory, err := getIdentityFactory(conf, nil, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get identity factory")
 	}
-	identityInfo, err := getSigningIdentityInfo(conf)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get signing identity info")
-	}
-	signingIdentity, err := factory.GetIdentity(identityInfo)
+	signingIdentity, err := factory.GetIdentity(conf.SigningIdentity)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get signing identity")
 	}
@@ -32,15 +27,11 @@ func SerializeFromMSP(conf *Config, mspID string) ([]byte, error) {
 // GetSigningIdentity retrieves a signing identity from the passed arguments.
 // If keyStorePath is empty, then it is assumed that the key is at mspConfigPath/keystore
 func GetSigningIdentity(conf *Config, bccspConfig *BCCSP, keyStore bccsp.KeyStore) (driver.FullIdentity, error) {
-	factory, err := getIdentityFactory(bccspConfig, keyStore)
+	factory, err := getIdentityFactory(conf, bccspConfig, keyStore)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get identity factory")
 	}
-	identityInfo, err := getSigningIdentityInfo(conf)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get signing identity info")
-	}
-	signingIdentity, err := factory.GetFullIdentity(identityInfo)
+	signingIdentity, err := factory.GetFullIdentity(conf.SigningIdentity)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get signing identity")
 	}
@@ -49,21 +40,10 @@ func GetSigningIdentity(conf *Config, bccspConfig *BCCSP, keyStore bccsp.KeyStor
 
 // getIdentityFactory loads an MSP whose configuration is stored at 'dir', and whose
 // id and type are the passed as arguments.
-func getIdentityFactory(bccspConfig *BCCSP, keyStore bccsp.KeyStore) (*IdentityFactory, error) {
+func getIdentityFactory(conf *Config, bccspConfig *BCCSP, keyStore bccsp.KeyStore) (*IdentityFactory, error) {
 	csp, err := GetBCCSPFromConf(bccspConfig, keyStore)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get bccsp from config [%v]", bccspConfig)
 	}
-	return NewIdentityFactory(csp, bccsp.SHA2), nil
-}
-
-func getSigningIdentityInfo(conf *Config) (*SigningIdentityInfo, error) {
-	c := &FabricMSPConfig{}
-	if err := proto.Unmarshal(conf.Config, c); err != nil {
-		return nil, errors.WithMessagef(err, "failed to load provider config [%v]", conf.Config)
-	}
-	if c.SigningIdentity == nil {
-		return nil, errors.Errorf("signing identity is missing")
-	}
-	return c.SigningIdentity, nil
+	return NewIdentityFactory(csp, conf.CryptoConfig.SignatureHashFamily), nil
 }
