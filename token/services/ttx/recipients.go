@@ -57,6 +57,7 @@ func (r *RecipientRequest) FromBytes(raw []byte) error {
 
 type Recipient struct {
 	Identity      view.Identity
+	WalletID      string
 	RecipientData *RecipientData
 }
 
@@ -91,6 +92,7 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 				{
 					Identity:      recipient,
 					RecipientData: getRecipientData(options),
+					WalletID:      getRecipientWalletID(options),
 				},
 			},
 		},
@@ -184,9 +186,13 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	}
 
 	// Ask for identity
+	wID := []byte(recipient.WalletID)
+	if len(wID) == 0 {
+		wID = recipient.Identity
+	}
 	recipientRequest := &RecipientRequest{
 		TMSID:         f.TMSID,
-		WalletID:      recipient.Identity,
+		WalletID:      wID,
 		RecipientData: recipient.RecipientData,
 		MultiSig:      multiSig,
 	}
