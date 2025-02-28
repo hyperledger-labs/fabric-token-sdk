@@ -51,8 +51,7 @@ func LoadConfigWithIdentityInfo(signingIdentityInfo *SigningIdentityInfo) (*Conf
 	config := &Config{
 		SigningIdentity: signingIdentityInfo,
 		CryptoConfig: &CryptoConfig{
-			SignatureHashFamily:            bccsp.SHA2,
-			IdentityIdentifierHashFunction: bccsp.SHA256,
+			SignatureHashFamily: bccsp.SHA2,
 		},
 	}
 	return config, nil
