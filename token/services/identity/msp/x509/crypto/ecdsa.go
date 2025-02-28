@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package msp
+package crypto
 
 import (
 	"bytes"
@@ -35,7 +35,7 @@ var (
 	}
 )
 
-func isECDSASignedCert(cert *x509.Certificate) bool {
+func IsECDSASignedCert(cert *x509.Certificate) bool {
 	return cert.SignatureAlgorithm == x509.ECDSAWithSHA1 ||
 		cert.SignatureAlgorithm == x509.ECDSAWithSHA256 ||
 		cert.SignatureAlgorithm == x509.ECDSAWithSHA384 ||
@@ -144,6 +144,7 @@ func SignatureToLowS(k *ecdsa.PublicKey, signature []byte) ([]byte, error) {
 
 	return MarshalECDSASignature(r, s)
 }
+
 func ToLowS(k *ecdsa.PublicKey, s *big.Int) (*big.Int, error) {
 	lowS, err := IsLowS(k, s)
 	if err != nil {
@@ -191,11 +192,11 @@ func UnmarshalECDSASignature(raw []byte) (*big.Int, *big.Int, error) {
 	return sig.R, sig.S, nil
 }
 
-// sanitizeECDSASignedCert checks that the signatures signing a cert
+// SanitizeECDSASignedCert checks that the signatures signing a cert
 // is in low-S. This is checked against the public key of parentCert.
 // If the signature is not in low-S, then a new certificate is generated
 // that is equals to cert but the signature that is in low-S.
-func sanitizeECDSASignedCert(cert *x509.Certificate, parentCert *x509.Certificate) (*x509.Certificate, error) {
+func SanitizeECDSASignedCert(cert *x509.Certificate, parentCert *x509.Certificate) (*x509.Certificate, error) {
 	if cert == nil {
 		return nil, errors.New("certificate must be different from nil")
 	}

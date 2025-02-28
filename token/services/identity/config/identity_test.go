@@ -15,7 +15,7 @@ import (
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -67,7 +67,7 @@ func TestIdentitiesForRole(t *testing.T) {
 	identities, err = identityConfig.IdentitiesForRole(idriver.IssuerRole)
 	assert.NoError(t, err, "failed getting identities for issuer role")
 	assert.Equal(t, 2, len(identities), "should have 2 issuer identity")
-	iss, err := msp.ToBCCSPOpts(identities[1].Opts)
+	iss, err := crypto.ToBCCSPOpts(identities[1].Opts)
 	assert.NoError(t, err, "failed converting to bccsp opts")
 	assert.Equal(t, "SW", iss.Default)
 	assert.Equal(t, "1234", iss.PKCS11.Pin)
