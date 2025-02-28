@@ -8,7 +8,6 @@ package msp
 
 import (
 	"encoding/hex"
-	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp/pkcs11"
 	"github.com/hyperledger/fabric/bccsp"
@@ -18,17 +17,13 @@ import (
 
 // GetBCCSPFromConf returns a BCCSP instance and its relative key store from the passed configuration.
 // If no configuration is passed, the default one is used, namely the `SW` provider.
-func GetBCCSPFromConf(dir string, keyStorePath string, conf *BCCSP) (bccsp.BCCSP, bccsp.KeyStore, error) {
-	if len(keyStorePath) == 0 {
-		keyStorePath = filepath.Join(dir, "keystore")
-	}
+func GetBCCSPFromConf(conf *BCCSP) (bccsp.BCCSP, bccsp.KeyStore, error) {
 	if conf == nil {
-		return GetSWBCCSP(keyStorePath)
+		return GetSWBCCSP()
 	}
-
 	switch conf.Default {
 	case "SW":
-		return GetSWBCCSP(keyStorePath)
+		return GetSWBCCSP()
 	case "PKCS11":
 		return GetPKCS11BCCSP(conf)
 	default:
@@ -69,11 +64,8 @@ func skiMapper(p11Opts PKCS11) func([]byte) []byte {
 }
 
 // GetSWBCCSP returns a new instance of the software-based BCCSP
-func GetSWBCCSP(dir string) (bccsp.BCCSP, bccsp.KeyStore, error) {
-	ks, err := sw.NewFileBasedKeyStore(nil, dir, true)
-	if err != nil {
-		return nil, nil, err
-	}
+func GetSWBCCSP() (bccsp.BCCSP, bccsp.KeyStore, error) {
+	ks := sw.NewDummyKeyStore()
 	cryptoProvider, err := sw.NewDefaultSecurityLevelWithKeystore(ks)
 	if err != nil {
 		return nil, nil, err
