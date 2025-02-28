@@ -57,20 +57,20 @@ func NewKeyManagerFromConf(conf *msp.Config, mspConfigPath, keyStoreDirName, msp
 		}
 	}
 	logger.Debugf("msp config [%d]", conf.Type)
-	p, err := newSigningKeyManager(conf, mspConfigPath, mspID, signerService, bccspConfig)
+	p, err := newSigningKeyManager(conf, mspID, signerService, bccspConfig)
 	if err == nil {
 		return p, conf, nil
 	}
 	// load as verify only
-	p, conf, err = newVerifyingKeyManager(conf, mspConfigPath, mspID)
+	p, conf, err = newVerifyingKeyManager(conf, mspID)
 	if err != nil {
 		return nil, nil, err
 	}
 	return p, conf, err
 }
 
-func newSigningKeyManager(conf *msp.Config, mspConfigPath, mspID string, signerService SignerService, bccspConfig *msp.BCCSP) (*KeyManager, error) {
-	sID, err := msp.GetSigningIdentity(conf, mspConfigPath, bccspConfig)
+func newSigningKeyManager(conf *msp.Config, mspID string, signerService SignerService, bccspConfig *msp.BCCSP) (*KeyManager, error) {
+	sID, err := msp.GetSigningIdentity(conf, bccspConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -88,14 +88,14 @@ func newSigningKeyManager(conf *msp.Config, mspConfigPath, mspID string, signerS
 	return newKeyManager(sID, idRaw)
 }
 
-func newVerifyingKeyManager(conf *msp.Config, mspConfigPath, mspID string) (*KeyManager, *msp.Config, error) {
+func newVerifyingKeyManager(conf *msp.Config, mspID string) (*KeyManager, *msp.Config, error) {
 	conf, err := msp.RemoveSigningIdentityInfo(conf)
 	if err != nil {
 		return nil, nil, err
 	}
-	idRaw, err := msp.SerializeFromMSP(conf, mspID, mspConfigPath)
+	idRaw, err := msp.SerializeFromMSP(conf, mspID)
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to load msp identity at [%s]", mspConfigPath)
+		return nil, nil, errors.WithMessagef(err, "failed to load msp identity")
 	}
 	p, err := newKeyManager(nil, idRaw)
 	if err != nil {

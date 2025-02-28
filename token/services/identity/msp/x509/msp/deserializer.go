@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package msp
 
 import (
-	ecdsa2 "crypto/ecdsa"
+	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -26,7 +26,7 @@ func DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing received public key")
 	}
-	publicKey, ok := genericPublicKey.(*ecdsa2.PublicKey)
+	publicKey, ok := genericPublicKey.(*ecdsa.PublicKey)
 	if !ok {
 		return nil, errors.New("expected *ecdsa.PublicKey")
 	}
