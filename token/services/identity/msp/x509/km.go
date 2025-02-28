@@ -7,15 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
-	"crypto/ecdsa"
 	"fmt"
 
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
 
@@ -38,12 +35,12 @@ type KeyManager struct {
 // NewKeyManager returns a new X509 provider with the passed BCCSP configuration.
 // If the configuration path contains the secret key,
 // then the provider can generate also signatures, otherwise it cannot.
-func NewKeyManager(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*KeyManager, *msp2.Config, error) {
-	conf, err := msp2.GetConfig(mspConfigPath, mspID)
+func NewKeyManager(path, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*KeyManager, *msp2.Config, error) {
+	conf, err := msp2.LoadConfig(path, mspID)
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", mspConfigPath)
+		return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", path)
 	}
-	p, conf, err := NewKeyManagerFromConf(conf, mspConfigPath, keyStorePath, mspID, signerService, bccspConfig)
+	p, conf, err := NewKeyManagerFromConf(conf, path, keyStorePath, mspID, signerService, bccspConfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -54,7 +51,7 @@ func NewKeyManagerFromConf(conf *msp2.Config, mspConfigPath, keyStorePath, mspID
 	if conf == nil {
 		logger.Debugf("load msp config from [%s:%s]", mspConfigPath, mspID)
 		var err error
-		conf, err = msp2.GetConfig(mspConfigPath, mspID)
+		conf, err = msp2.LoadConfig(mspConfigPath, mspID)
 		if err != nil {
 			return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", mspConfigPath)
 		}
@@ -141,23 +138,7 @@ func (p *KeyManager) EnrollmentID() string {
 }
 
 func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	si := &msp.SerializedIdentity{}
-	err := proto.Unmarshal(raw, si)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
-	}
-	genericPublicKey, err := msp2.PemDecodeKey(si.IdBytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed parsing received public key")
-	}
-	publicKey, ok := genericPublicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, errors.New("expected *ecdsa.PublicKey")
-	}
-
-	// TODO: check the validity of the identity against the msp
-
-	return msp2.NewECDSAVerifier(publicKey), nil
+	return msp2.DeserializeVerifier(raw)
 }
 
 func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
@@ -165,16 +146,7 @@ func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
 }
 
 func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
-	si := &msp.SerializedIdentity{}
-	err := proto.Unmarshal(raw, si)
-	if err != nil {
-		return "", err
-	}
-	cert, err := msp2.PemDecodeCert(si.IdBytes)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("MSP.x509: [%s][%s][%s]", driver.Identity(raw).UniqueID(), si.Mspid, cert.Subject.CommonName), nil
+	return msp2.Info(raw)
 }
 
 func (p *KeyManager) Anonymous() bool {

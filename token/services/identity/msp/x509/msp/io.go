@@ -90,21 +90,6 @@ func getPemMaterialFromDir(dir string) ([][]byte, error) {
 	return content, nil
 }
 
-func loadCertificateAt(dir, certificatePath string, ouType string) []byte {
-	if certificatePath == "" {
-		return nil
-	}
-
-	f := filepath.Join(dir, certificatePath)
-	raw, err := readFile(f)
-	if err != nil {
-	} else {
-		return raw
-	}
-
-	return nil
-}
-
 func PemDecodeCert(pemBytes []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
