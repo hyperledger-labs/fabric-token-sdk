@@ -14,7 +14,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Config = msp.MSPConfig
+type (
+	Config              = msp.MSPConfig
+	SigningIdentityInfo = msp.SigningIdentityInfo
+	KeyInfo             = msp.KeyInfo
+	FabricCryptoConfig  = msp.FabricCryptoConfig
+	FabricMSPConfig     = msp.FabricMSPConfig
+	SerializedIdentity  = msp.SerializedIdentity
+)
 
 func UnmarshalConfig(data []byte) (*Config, error) {
 	config := &Config{}

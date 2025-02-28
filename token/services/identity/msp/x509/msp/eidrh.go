@@ -12,15 +12,14 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
 
 func GetEnrollmentID(id []byte) (string, error) {
-	si := &msp.SerializedIdentity{}
+	si := &SerializedIdentity{}
 	err := proto.Unmarshal(id, si)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
+		return "", errors.Wrap(err, "failed to unmarshal to SerializedIdentity{}")
 	}
 	cert, err := PemDecodeCert(si.IdBytes)
 	if err != nil {
@@ -36,10 +35,10 @@ func GetEnrollmentID(id []byte) (string, error) {
 }
 
 func GetRevocationHandle(id []byte) ([]byte, error) {
-	si := &msp.SerializedIdentity{}
+	si := &SerializedIdentity{}
 	err := proto.Unmarshal(id, si)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
+		return nil, errors.Wrap(err, "failed to unmarshal to SerializedIdentity{}")
 	}
 	cert, err := PemDecodeCert(si.IdBytes)
 	if err != nil {

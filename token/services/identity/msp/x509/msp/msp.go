@@ -7,7 +7,6 @@ import (
 	"encoding/pem"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/signer"
 	"github.com/pkg/errors"
@@ -29,7 +28,7 @@ func (f *verifyingIdentity) Serialize() ([]byte, error) {
 	}
 
 	// We serialize identities by prepending the MSPID and appending the ASN.1 DER content of the cert
-	sId := &m.SerializedIdentity{Mspid: f.Mspid, IdBytes: pemBytes}
+	sId := &SerializedIdentity{Mspid: f.Mspid, IdBytes: pemBytes}
 	idBytes, err := proto.Marshal(sId)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed serializing identity")
@@ -88,7 +87,7 @@ func (f *fullIdentity) Serialize() ([]byte, error) {
 	}
 
 	// We serialize identities by prepending the MSPID and appending the ASN.1 DER content of the cert
-	sId := &m.SerializedIdentity{Mspid: f.Mspid, IdBytes: pemBytes}
+	sId := &SerializedIdentity{Mspid: f.Mspid, IdBytes: pemBytes}
 	idBytes, err := proto.Marshal(sId)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed serializing identity")
@@ -127,7 +126,7 @@ func NewIdentityFactory(bccsp bccsp.BCCSP, signatureHashFamily string) *Identity
 	return &IdentityFactory{bccsp: bccsp, SignatureHashFamily: signatureHashFamily}
 }
 
-func (f *IdentityFactory) GetFullIdentity(sidInfo *m.SigningIdentityInfo) (*fullIdentity, error) {
+func (f *IdentityFactory) GetFullIdentity(sidInfo *SigningIdentityInfo) (*fullIdentity, error) {
 	if sidInfo == nil {
 		return nil, errors.New("getIdentityFromBytes error: nil sidInfo")
 	}
@@ -173,7 +172,7 @@ func (f *IdentityFactory) GetFullIdentity(sidInfo *m.SigningIdentityInfo) (*full
 	}, nil
 }
 
-func (f *IdentityFactory) GetIdentity(sidInfo *m.SigningIdentityInfo) (*verifyingIdentity, error) {
+func (f *IdentityFactory) GetIdentity(sidInfo *SigningIdentityInfo) (*verifyingIdentity, error) {
 	if sidInfo == nil {
 		return nil, errors.New("getIdentityFromBytes error: nil sidInfo")
 	}

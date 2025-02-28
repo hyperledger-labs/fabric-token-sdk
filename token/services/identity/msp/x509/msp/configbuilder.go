@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
 )
@@ -52,9 +51,9 @@ func LoadConfig(dir string, keyStoreDirName string, ID string) (*Config, error) 
 	return LoadConfigWithIdentityInfo(
 		dir,
 		ID,
-		&msp.SigningIdentityInfo{
+		&SigningIdentityInfo{
 			PublicSigner: signcert[0],
-			PrivateSigner: &msp.KeyInfo{
+			PrivateSigner: &KeyInfo{
 				KeyIdentifier: "",
 				KeyMaterial:   skRaw,
 			},
@@ -62,7 +61,7 @@ func LoadConfig(dir string, keyStoreDirName string, ID string) (*Config, error) 
 	)
 }
 
-func LoadConfigWithIdentityInfo(dir string, ID string, signingIdentityInfo *msp.SigningIdentityInfo) (*Config, error) {
+func LoadConfigWithIdentityInfo(dir string, ID string, signingIdentityInfo *SigningIdentityInfo) (*Config, error) {
 	cacertDir := filepath.Join(dir, CACerts)
 	cacerts, err := getPemMaterialFromDir(cacertDir)
 	if err != nil || len(cacerts) == 0 {
@@ -70,13 +69,13 @@ func LoadConfigWithIdentityInfo(dir string, ID string, signingIdentityInfo *msp.
 	}
 
 	// Set FabricCryptoConfig
-	cryptoConfig := &msp.FabricCryptoConfig{
+	cryptoConfig := &FabricCryptoConfig{
 		SignatureHashFamily:            bccsp.SHA2,
 		IdentityIdentifierHashFunction: bccsp.SHA256,
 	}
 
 	// Compose FabricMSPConfig
-	fmspconf := &msp.FabricMSPConfig{
+	fmspconf := &FabricMSPConfig{
 		RootCerts:       cacerts,
 		SigningIdentity: signingIdentityInfo,
 		Name:            ID,
@@ -88,11 +87,11 @@ func LoadConfigWithIdentityInfo(dir string, ID string, signingIdentityInfo *msp.
 		return nil, err
 	}
 
-	return &msp.MSPConfig{Config: fmpsjs, Type: int32(FABRIC)}, nil
+	return &Config{Config: fmpsjs, Type: int32(FABRIC)}, nil
 }
 
-func RemoveSigningIdentityInfo(c *msp.MSPConfig) (*msp.MSPConfig, error) {
-	fabricMSPConfig := &msp.FabricMSPConfig{}
+func RemoveSigningIdentityInfo(c *Config) (*Config, error) {
+	fabricMSPConfig := &FabricMSPConfig{}
 	if err := proto.Unmarshal(c.Config, fabricMSPConfig); err != nil {
 		return nil, err
 	}
@@ -102,5 +101,5 @@ func RemoveSigningIdentityInfo(c *msp.MSPConfig) (*msp.MSPConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &msp.MSPConfig{Config: raw, Type: int32(FABRIC)}, nil
+	return &Config{Config: raw, Type: int32(FABRIC)}, nil
 }

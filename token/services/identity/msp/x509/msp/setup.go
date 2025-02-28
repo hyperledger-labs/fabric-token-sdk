@@ -9,12 +9,11 @@ package msp
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	msp2 "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
 )
 
-func SerializeFromMSP(conf *msp2.MSPConfig, mspID string) ([]byte, error) {
+func SerializeFromMSP(conf *Config, mspID string) ([]byte, error) {
 	factory, err := getIdentityFactory(nil, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get identity factory")
@@ -32,7 +31,7 @@ func SerializeFromMSP(conf *msp2.MSPConfig, mspID string) ([]byte, error) {
 
 // GetSigningIdentity retrieves a signing identity from the passed arguments.
 // If keyStorePath is empty, then it is assumed that the key is at mspConfigPath/keystore
-func GetSigningIdentity(conf *msp2.MSPConfig, bccspConfig *BCCSP, keyStore bccsp.KeyStore) (driver.FullIdentity, error) {
+func GetSigningIdentity(conf *Config, bccspConfig *BCCSP, keyStore bccsp.KeyStore) (driver.FullIdentity, error) {
 	factory, err := getIdentityFactory(bccspConfig, keyStore)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get identity factory")
@@ -58,8 +57,8 @@ func getIdentityFactory(bccspConfig *BCCSP, keyStore bccsp.KeyStore) (*IdentityF
 	return NewIdentityFactory(csp, bccsp.SHA2), nil
 }
 
-func getSigningIdentityInfo(conf *msp2.MSPConfig) (*msp2.SigningIdentityInfo, error) {
-	c := &msp2.FabricMSPConfig{}
+func getSigningIdentityInfo(conf *Config) (*SigningIdentityInfo, error) {
+	c := &FabricMSPConfig{}
 	if err := proto.Unmarshal(conf.Config, c); err != nil {
 		return nil, errors.WithMessagef(err, "failed to load provider config [%v]", conf.Config)
 	}
