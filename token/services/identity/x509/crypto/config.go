@@ -4,15 +4,40 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package msp
+package crypto
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp/pkcs11"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/pkcs11"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/protos-go/config"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 )
 
-type MSPOpts struct {
+type (
+	Config              = config.Config
+	SigningIdentityInfo = config.SigningIdentityInfo
+	KeyInfo             = config.KeyInfo
+	CryptoConfig        = config.CryptoConfig
+)
+
+func UnmarshalConfig(data []byte) (*Config, error) {
+	config := &Config{}
+	if err := proto.Unmarshal(data, config); err != nil {
+		return nil, errors.Wrapf(err, "failed to unamrshal config")
+	}
+	return config, nil
+}
+
+func MarshalConfig(config *Config) ([]byte, error) {
+	data, err := proto.Marshal(config)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal config")
+	}
+	return data, nil
+}
+
+type Opts struct {
 	BCCSP *BCCSP `yaml:"BCCSP,omitempty"`
 }
 
@@ -49,7 +74,7 @@ type KeyIDMapping struct {
 
 // ToBCCSPOpts converts the passed opts to `config.BCCSP`
 func ToBCCSPOpts(boxed interface{}) (*BCCSP, error) {
-	opts := &MSPOpts{}
+	opts := &Opts{}
 	config := &mapstructure.DecoderConfig{
 		WeaklyTypedInput: true, // allow pin to be a string
 		Result:           &opts,

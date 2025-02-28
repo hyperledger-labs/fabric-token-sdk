@@ -17,7 +17,6 @@ import (
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -159,14 +158,14 @@ func TestGenFailure(t *testing.T) {
 				Args: []string{
 					"gen",
 					driver,
-					"--auditors", "a:Org1MSP,b:Org2MSP"},
-				ErrMsg: "Error: failed to generate public parameters: failed to get auditor identity [a:Org1MSP]",
+					"--auditors", "a,b"},
+				ErrMsg: "Error: failed to generate public parameters: failed to get auditor identity [a]",
 			},
 			{
 				Args: []string{
 					"gen",
 					driver,
-					"--auditors", "aOrg1MSP,b:Org2MSP",
+					"--auditors", "aOrg1MSP,b",
 				},
 				ErrMsg: "Error: failed to generate public parameters: failed to get auditor identity [aOrg1MSP]: failed to load certificates from aOrg1MSP/signcerts: stat aOrg1MSP/signcerts: no such file or directory",
 			},
@@ -174,15 +173,15 @@ func TestGenFailure(t *testing.T) {
 				Args: []string{
 					"gen",
 					driver,
-					"--issuers", "a:Org1MSP,b:Org2MSP",
+					"--issuers", "a,b",
 				},
-				ErrMsg: "Error: failed to generate public parameters: failed to get issuer identity [a:Org1MSP]",
+				ErrMsg: "Error: failed to generate public parameters: failed to get issuer identity [a]",
 			},
 			{
 				Args: []string{
 					"gen",
 					driver,
-					"--issuers", "aOrg1MSP,b:Org2MSP",
+					"--issuers", "aOrg1MSP,b",
 				},
 				ErrMsg: "Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: failed to load certificates from aOrg1MSP/signcerts: stat aOrg1MSP/signcerts: no such file or directory",
 			},
@@ -194,7 +193,7 @@ func TestGenFailure(t *testing.T) {
 			Args: []string{
 				"gen",
 				"dlog",
-				"--issuers", "aOrg1MSP,b:Org2MSP",
+				"--issuers", "aOrg1MSP,b",
 			},
 			ErrMsg: "Error: failed to generate public parameters: failed reading idemix issuer public key [msp/IssuerPublicKey]: open msp/IssuerPublicKey: no such file or directory",
 		},
@@ -205,7 +204,7 @@ func TestGenFailure(t *testing.T) {
 				"--idemix", "./testdata/idemix",
 				"--issuers", "Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]",
 			},
-			ErrMsg: "Error: failed to generate public parameters: failed to get issuer identity [Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]]: invalid input [Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]]",
+			ErrMsg: "Error: failed to generate public parameters: failed to get issuer identity [Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]]:",
 		},
 	}...,
 	)
@@ -245,12 +244,12 @@ func validateOutputEquivalent(gt *WithT, tempOutput, auditorsMSPdir, issuersMSPd
 	gt.Expect(pp.Validate()).NotTo(HaveOccurred())
 
 	auditors := pp.Auditors()
-	auditor, err := common.GetMSPIdentity(auditorsMSPdir, msp.AuditorMSPID)
+	auditor, err := common.GetX509Identity(auditorsMSPdir)
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(auditors[0]).To(Equal(auditor))
 
 	issuers := pp.IssuerIDs
-	issuer, err := common.GetMSPIdentity(issuersMSPdir, msp.IssuerMSPID)
+	issuer, err := common.GetX509Identity(issuersMSPdir)
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(issuers[0]).To(BeEquivalentTo(issuer))
 

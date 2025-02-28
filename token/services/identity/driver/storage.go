@@ -17,7 +17,7 @@ type Keystore interface {
 }
 
 type StorageProvider interface {
-	OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, error)
-	OpenIdentityDB(tmsID token.TMSID) (driver.IdentityDB, error)
-	NewKeystore() (Keystore, error)
+	WalletDB(tmsID token.TMSID) (driver.WalletDB, error)
+	IdentityDB(tmsID token.TMSID) (driver.IdentityDB, error)
+	Keystore() (Keystore, error)
 }

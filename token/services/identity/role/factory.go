@@ -26,7 +26,7 @@ var toString = map[identity.RoleType]string{
 }
 
 type StorageProvider interface {
-	OpenIdentityDB(tmsID token.TMSID) (driver2.IdentityDB, error)
+	IdentityDB(tmsID token.TMSID) (driver2.IdentityDB, error)
 }
 
 // Factory is the factory for creating wallets, idemix and x509
@@ -71,7 +71,7 @@ func NewFactory(
 }
 
 func (f *Factory) NewRole(role identity.RoleType, defaultAnon bool, targets []driver.Identity, kmps ...membership.KeyManagerProvider) (identity.Role, error) {
-	identityDB, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
+	identityDB, err := f.StorageProvider.IdentityDB(f.TMSID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}

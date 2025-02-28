@@ -21,14 +21,14 @@ func NewKVSStorageProvider(kvs kvs.KVS) *KVSStorageProvider {
 	return &KVSStorageProvider{kvs: kvs}
 }
 
-func (s *KVSStorageProvider) OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, error) {
+func (s *KVSStorageProvider) WalletDB(tmsID token.TMSID) (driver.WalletDB, error) {
 	return kvs.NewWalletDB(s.kvs, tmsID), nil
 }
 
-func (s *KVSStorageProvider) OpenIdentityDB(tmsID token.TMSID) (driver.IdentityDB, error) {
+func (s *KVSStorageProvider) IdentityDB(tmsID token.TMSID) (driver.IdentityDB, error) {
 	return kvs.NewIdentityDB(s.kvs, tmsID), nil
 }
 
-func (s *KVSStorageProvider) NewKeystore() (identity.Keystore, error) {
+func (s *KVSStorageProvider) Keystore() (identity.Keystore, error) {
 	return s.kvs, nil
 }

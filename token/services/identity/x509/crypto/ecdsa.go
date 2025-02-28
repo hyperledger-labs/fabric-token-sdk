@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package msp
+package crypto
 
 import (
 	"crypto/ecdsa"
@@ -31,7 +31,7 @@ var (
 	}
 )
 
-type ecdsaSignature struct {
+type ECDSASignature struct {
 	R, S *big.Int
 }
 
@@ -44,7 +44,7 @@ func NewECDSAVerifier(pk *ecdsa.PublicKey) *ecdsaVerifier {
 }
 
 func (d *ecdsaVerifier) Verify(message, sigma []byte) error {
-	signature := &ecdsaSignature{}
+	signature := &ECDSASignature{}
 	_, err := asn1.Unmarshal(sigma, signature)
 	if err != nil {
 		return err

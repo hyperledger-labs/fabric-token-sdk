@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ecdsa
 
 import (
@@ -17,10 +18,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger/fabric-protos-go/msp"
+	x510 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/pkg/errors"
 )
@@ -119,16 +118,7 @@ func (v *Verifier) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed marshalling public key")
 	}
 
-	mspSI := &msp.SerializedIdentity{
-		// Type:    msp.SerializedIdentity_PK,
-		IdBytes: pkRaw,
-	}
-	raw, err := proto.Marshal(mspSI)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed marshalling msp serialized identity")
-	}
-
-	wrap, err := identity.WrapWithType(msp2.X509Identity, raw)
+	wrap, err := identity.WrapWithType(x510.IdentityType, pkRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed wrapping identity")
 	}

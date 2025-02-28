@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
-
 	"github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
@@ -26,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/commands"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/onsi/ginkgo/v2"

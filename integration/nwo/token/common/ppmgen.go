@@ -18,8 +18,7 @@ import (
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/pkg/errors"
 )
 
@@ -56,7 +55,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			km, _, err := x509.NewKeyManager(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
+			km, _, err := x509.NewKeyManager(auditor.Path, nil, auditor.Opts)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
@@ -65,7 +64,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
 			if tms.Auditors[0] == auditor.ID {
-				wrap, err := identity.WrapWithType(msp2.X509Identity, id)
+				wrap, err := identity.WrapWithType(x509.IdentityType, id)
 				if err != nil {
 					return nil, errors.WithMessagef(err, "failed to create x509 identity for auditor [%v]", auditor)
 				}
@@ -80,7 +79,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 		}
 		for _, issuer := range wallets.Issuers {
 			// Build an MSP Identity
-			km, _, err := x509.NewKeyManager(issuer.Path, "", msp2.IssuerMSPID, nil, issuer.Opts)
+			km, _, err := x509.NewKeyManager(issuer.Path, nil, issuer.Opts)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
@@ -89,7 +88,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
 			if tms.Issuers[0] == issuer.ID {
-				wrap, err := identity.WrapWithType(msp2.X509Identity, id)
+				wrap, err := identity.WrapWithType(x509.IdentityType, id)
 				if err != nil {
 					return nil, errors.WithMessagef(err, "failed to create x509 identity for auditor [%v]", issuer)
 				}
@@ -161,7 +160,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			km, _, err := x509.NewKeyManager(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
+			km, _, err := x509.NewKeyManager(auditor.Path, nil, auditor.Opts)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
@@ -170,7 +169,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
 			if tms.Auditors[0] == auditor.ID {
-				wrap, err := identity.WrapWithType(msp2.X509Identity, id)
+				wrap, err := identity.WrapWithType(x509.IdentityType, id)
 				if err != nil {
 					return nil, errors.WithMessagef(err, "failed to create x509 identity for auditor [%v]", auditor)
 				}
@@ -185,7 +184,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 		}
 		for _, issuer := range wallets.Issuers {
 			// Build an MSP Identity
-			km, _, err := x509.NewKeyManager(issuer.Path, "", msp2.IssuerMSPID, nil, issuer.Opts)
+			km, _, err := x509.NewKeyManager(issuer.Path, nil, issuer.Opts)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
@@ -194,7 +193,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
 			if tms.Issuers[0] == issuer.ID {
-				wrap, err := identity.WrapWithType(msp2.X509Identity, id)
+				wrap, err := identity.WrapWithType(x509.IdentityType, id)
 				if err != nil {
 					return nil, errors.WithMessagef(err, "failed to create x509 identity for issuer [%v]", issuer)
 				}

@@ -28,8 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -1015,22 +1014,22 @@ func WhoDeletedToken(network *integration.Infrastructure, id *token3.NodeReferen
 }
 
 func GetAuditorIdentity(tms *topology.TMS, id string) []byte {
-	return getIdentity(tms.Wallets.Auditors, id, msp2.AuditorMSPID)
+	return getIdentity(tms.Wallets.Auditors, id)
 }
 
 func GetIssuerIdentity(tms *topology.TMS, id string) []byte {
-	return getIdentity(tms.Wallets.Issuers, id, msp2.IssuerMSPID)
+	return getIdentity(tms.Wallets.Issuers, id)
 }
 
-func getIdentity(identities []topology.Identity, id string, mspID string) []byte {
+func getIdentity(identities []topology.Identity, id string) []byte {
 	for _, topologyIdentity := range identities {
 		if topologyIdentity.ID == id {
 			// Build an MSP Identity
-			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, "", mspID, nil, topologyIdentity.Opts)
+			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, nil, topologyIdentity.Opts)
 			Expect(err).NotTo(HaveOccurred())
 			newIdentity, _, err := kmp.Identity(nil)
 			Expect(err).NotTo(HaveOccurred())
-			wrap, err := identity.WrapWithType(msp2.X509Identity, newIdentity)
+			wrap, err := identity.WrapWithType(x509.IdentityType, newIdentity)
 			Expect(err).NotTo(HaveOccurred())
 			return wrap
 		}

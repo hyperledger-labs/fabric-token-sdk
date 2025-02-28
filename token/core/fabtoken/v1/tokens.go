@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -80,7 +80,7 @@ func SupportedTokenFormat(precision uint64) (token2.Format, error) {
 	hasher := utils.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(fabtoken.Type),
-		hasher.AddString(msp.X509Identity),
+		hasher.AddString(x509.IdentityType),
 		hasher.AddUInt64(precision),
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")

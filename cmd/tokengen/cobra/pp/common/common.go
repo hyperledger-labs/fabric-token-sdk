@@ -15,8 +15,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	msp3 "github.com/hyperledger/fabric/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/pkg/errors"
 )
 
@@ -32,23 +31,10 @@ type PP interface {
 	AddIssuer(raw driver.Identity)
 }
 
-// GetMSPIdentity returns the MSP identity from the passed entry formatted as <MSPConfigPath>:<MSPID>.
-// If mspID is not empty, it will be used instead of the MSPID in the entry.
-func GetMSPIdentity(entry string, mspID string) (driver.Identity, error) {
-	entries := strings.Split(entry, ":")
-	if len(mspID) == 0 {
-		if len(entries) != 2 {
-			return nil, errors.Errorf("invalid input [%s], expected <MSPConfigPath>:<MSPID>", entry)
-		}
-		mspID = entries[1]
-	} else {
-		if len(entries) <= 0 || len(entries) > 2 {
-			return nil, errors.Errorf("invalid input [%s], expected <MSPConfigPath>:<MSPID> or <MSPConfigPath>", entry)
-		}
-	}
-
+// GetX509Identity returns the x509 identity from the passed entry.
+func GetX509Identity(entry string) (driver.Identity, error) {
 	// read certificate from entries[0]/signcerts
-	signcertDir := filepath.Join(entries[0], signcerts)
+	signcertDir := filepath.Join(entry, signcerts)
 	content, err := GetCertificatesFromDir(signcertDir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to load certificates from %s", signcertDir)
@@ -57,12 +43,7 @@ func GetMSPIdentity(entry string, mspID string) (driver.Identity, error) {
 		return nil, errors.Errorf("no certificates found in %s", signcertDir)
 	}
 
-	id, err := msp3.NewSerializedIdentity(mspID, content[0])
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create x509 identity for [%s]", entry)
-	}
-
-	wrap, err := identity.WrapWithType(msp.X509Identity, id)
+	wrap, err := identity.WrapWithType(x509.IdentityType, content[0])
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to wrap x509 identity for [%s]", entry)
 	}
@@ -73,7 +54,7 @@ func GetMSPIdentity(entry string, mspID string) (driver.Identity, error) {
 func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 	// Auditors
 	for _, auditor := range Auditors {
-		id, err := GetMSPIdentity(auditor, msp.AuditorMSPID)
+		id, err := GetX509Identity(auditor)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get auditor identity [%s]", auditor)
 		}
@@ -81,7 +62,7 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 	}
 	// Issuers
 	for _, issuer := range Issuers {
-		id, err := GetMSPIdentity(issuer, msp.IssuerMSPID)
+		id, err := GetX509Identity(issuer)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get issuer identity [%s]", issuer)
 		}
