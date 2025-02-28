@@ -93,7 +93,7 @@ func (d *base) newWalletService(
 		kmp := idemix.NewKeyManagerProvider(
 			key.PublicKey,
 			key.Curve,
-			msp.RoleToMSPID[identity.OwnerRole],
+			msp.OwnerMSPID,
 			keyStore,
 			sigService,
 			identityConfig,
@@ -102,24 +102,24 @@ func (d *base) newWalletService(
 		)
 		kmps = append(kmps, kmp)
 	}
-	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.OwnerRole], identityProvider, keyStore, ignoreRemote))
+	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 
 	role, err := roleFactory.NewRole(identity.OwnerRole, true, nil, kmps...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
 	roles.Register(identity.OwnerRole, role)
-	role, err = roleFactory.NewRole(identity.IssuerRole, false, pp.Issuers(), x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.IssuerRole], identityProvider, keyStore, ignoreRemote))
+	role, err = roleFactory.NewRole(identity.IssuerRole, false, pp.Issuers(), x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create issuer role")
 	}
 	roles.Register(identity.IssuerRole, role)
-	role, err = roleFactory.NewRole(identity.AuditorRole, false, pp.Auditors(), x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.AuditorRole], identityProvider, keyStore, ignoreRemote))
+	role, err = roleFactory.NewRole(identity.AuditorRole, false, pp.Auditors(), x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create auditor role")
 	}
 	roles.Register(identity.AuditorRole, role)
-	role, err = roleFactory.NewRole(identity.CertifierRole, false, nil, x509.NewKeyManagerProvider(identityConfig, msp.RoleToMSPID[identity.CertifierRole], identityProvider, keyStore, ignoreRemote))
+	role, err = roleFactory.NewRole(identity.CertifierRole, false, nil, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create certifier role")
 	}

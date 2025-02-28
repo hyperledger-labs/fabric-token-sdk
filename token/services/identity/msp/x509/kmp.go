@@ -26,23 +26,15 @@ const (
 
 type KeyManagerProvider struct {
 	config        idriver.Config
-	mspID         string
 	signerService idriver.SigService
 	keyStore      identity.Keystore
 	// ignoreVerifyOnlyWallet when set to true, for each wallet the service will force the load of the secrets
 	ignoreVerifyOnlyWallet bool
 }
 
-func NewKeyManagerProvider(
-	config idriver.Config,
-	mspID string,
-	signerService idriver.SigService,
-	keyStore identity.Keystore,
-	ignoreVerifyOnlyWallet bool,
-) *KeyManagerProvider {
+func NewKeyManagerProvider(config idriver.Config, signerService idriver.SigService, keyStore identity.Keystore, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
 	return &KeyManagerProvider{
 		config:                 config,
-		mspID:                  mspID,
 		signerService:          signerService,
 		keyStore:               keyStore,
 		ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet,
@@ -95,11 +87,11 @@ func (k *KeyManagerProvider) registerProvider(conf *crypto.Config, identityConfi
 	keyStorePath := k.keyStorePath()
 	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
 	// Try without "msp"
-	provider, conf, err := NewKeyManagerFromConf(conf, translatedPath, keyStorePath, k.mspID, k.signerService, opts, nil)
+	provider, conf, err := NewKeyManagerFromConf(conf, translatedPath, keyStorePath, k.signerService, opts, nil)
 	if err != nil {
 		logger.Debugf("failed loading provider at [%s]: [%s]", translatedPath, err)
 		// Try with "msp"
-		provider, conf, err = NewKeyManagerFromConf(conf, filepath.Join(translatedPath, "msp"), keyStorePath, k.mspID, k.signerService, opts, nil)
+		provider, conf, err = NewKeyManagerFromConf(conf, filepath.Join(translatedPath, "msp"), keyStorePath, k.signerService, opts, nil)
 		if err != nil {
 			logger.Debugf("failed loading provider at [%s]: [%s]", filepath.Join(translatedPath, "msp"), err)
 			return nil, err

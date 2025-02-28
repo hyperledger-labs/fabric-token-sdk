@@ -21,7 +21,6 @@ type verifyingIdentity struct {
 	bccsp               bccsp.BCCSP
 	SignatureHashFamily string
 	cert                *x509.Certificate
-	Mspid               string
 	pk                  bccsp.Key
 }
 
@@ -153,7 +152,6 @@ func (f *IdentityFactory) GetFullIdentity(sidInfo *SigningIdentityInfo) (*fullId
 		verifyingIdentity: &verifyingIdentity{
 			bccsp:               f.bccsp,
 			SignatureHashFamily: f.SignatureHashFamily,
-			Mspid:               "",
 			cert:                idPub,
 			pk:                  pubKey,
 		},
@@ -175,7 +173,6 @@ func (f *IdentityFactory) GetIdentity(sidInfo *SigningIdentityInfo) (*verifyingI
 	return &verifyingIdentity{
 		bccsp:               f.bccsp,
 		SignatureHashFamily: f.SignatureHashFamily,
-		Mspid:               "",
 		cert:                idPub,
 		pk:                  pubKey,
 	}, nil

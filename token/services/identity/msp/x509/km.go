@@ -36,12 +36,12 @@ type KeyManager struct {
 // NewKeyManager returns a new X509 provider with the passed BCCSP configuration.
 // If the configuration path contains the secret key,
 // then the provider can generate also signatures, otherwise it cannot.
-func NewKeyManager(path, mspID string, signerService SignerService, bccspConfig *crypto.BCCSP) (*KeyManager, *crypto.Config, error) {
-	conf, err := crypto.LoadConfig(path, "", mspID)
+func NewKeyManager(path string, signerService SignerService, bccspConfig *crypto.BCCSP) (*KeyManager, *crypto.Config, error) {
+	conf, err := crypto.LoadConfig(path, "")
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", path)
 	}
-	p, conf, err := NewKeyManagerFromConf(conf, path, "", mspID, signerService, bccspConfig, nil)
+	p, conf, err := NewKeyManagerFromConf(conf, path, "", signerService, bccspConfig, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -50,39 +50,32 @@ func NewKeyManager(path, mspID string, signerService SignerService, bccspConfig 
 
 func NewKeyManagerFromConf(
 	conf *crypto.Config,
-	mspConfigPath, keyStoreDirName, mspID string,
+	mspConfigPath, keyStoreDirName string,
 	signerService SignerService,
 	bccspConfig *crypto.BCCSP,
 	keyStore bccsp.KeyStore,
 ) (*KeyManager, *crypto.Config, error) {
 	if conf == nil {
-		logger.Debugf("load msp config from [%s:%s]", mspConfigPath, mspID)
+		logger.Debugf("load x509 config from [%s]", mspConfigPath)
 		var err error
-		conf, err = crypto.LoadConfig(mspConfigPath, keyStoreDirName, mspID)
+		conf, err = crypto.LoadConfig(mspConfigPath, keyStoreDirName)
 		if err != nil {
 			return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", mspConfigPath)
 		}
 	}
-	logger.Debugf("msp config [%d]", conf.Type)
-	p, err := newSigningKeyManager(conf, mspID, signerService, bccspConfig, keyStore)
+	p, err := newSigningKeyManager(conf, signerService, bccspConfig, keyStore)
 	if err == nil {
 		return p, conf, nil
 	}
 	// load as verify only
-	p, conf, err = newVerifyingKeyManager(conf, mspID)
+	p, conf, err = newVerifyingKeyManager(conf)
 	if err != nil {
 		return nil, nil, err
 	}
 	return p, conf, err
 }
 
-func newSigningKeyManager(
-	conf *crypto.Config,
-	mspID string,
-	signerService SignerService,
-	bccspConfig *crypto.BCCSP,
-	keyStore bccsp.KeyStore,
-) (*KeyManager, error) {
+func newSigningKeyManager(conf *crypto.Config, signerService SignerService, bccspConfig *crypto.BCCSP, keyStore bccsp.KeyStore) (*KeyManager, error) {
 	sID, err := crypto.GetSigningIdentity(conf, bccspConfig, keyStore)
 	if err != nil {
 		return nil, err
@@ -92,7 +85,7 @@ func newSigningKeyManager(
 		return nil, err
 	}
 	if signerService != nil {
-		logger.Debugf("register signer [%s][%s]", mspID, driver.Identity(idRaw))
+		logger.Debugf("register signer [%s]", driver.Identity(idRaw))
 		err = signerService.RegisterSigner(idRaw, sID, sID, nil)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed registering x509 signer")
@@ -101,12 +94,12 @@ func newSigningKeyManager(
 	return newKeyManager(sID, idRaw)
 }
 
-func newVerifyingKeyManager(conf *crypto.Config, mspID string) (*KeyManager, *crypto.Config, error) {
+func newVerifyingKeyManager(conf *crypto.Config) (*KeyManager, *crypto.Config, error) {
 	conf, err := crypto.RemoveSigningIdentityInfo(conf)
 	if err != nil {
 		return nil, nil, err
 	}
-	idRaw, err := crypto.SerializeFromMSP(conf, mspID)
+	idRaw, err := crypto.SerializeIdentity(conf)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to load msp identity")
 	}
