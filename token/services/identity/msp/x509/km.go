@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
@@ -35,29 +35,29 @@ type KeyManager struct {
 // NewKeyManager returns a new X509 provider with the passed BCCSP configuration.
 // If the configuration path contains the secret key,
 // then the provider can generate also signatures, otherwise it cannot.
-func NewKeyManager(path, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*KeyManager, *msp2.Config, error) {
-	conf, err := msp2.LoadConfig(path, mspID)
+func NewKeyManager(path, mspID string, signerService SignerService, bccspConfig *msp.BCCSP) (*KeyManager, *msp.Config, error) {
+	conf, err := msp.LoadConfig(path, "", mspID)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", path)
 	}
-	p, conf, err := NewKeyManagerFromConf(conf, path, keyStorePath, mspID, signerService, bccspConfig)
+	p, conf, err := NewKeyManagerFromConf(conf, path, "", mspID, signerService, bccspConfig)
 	if err != nil {
 		return nil, nil, err
 	}
 	return p, conf, nil
 }
 
-func NewKeyManagerFromConf(conf *msp2.Config, mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*KeyManager, *msp2.Config, error) {
+func NewKeyManagerFromConf(conf *msp.Config, mspConfigPath, keyStoreDirName, mspID string, signerService SignerService, bccspConfig *msp.BCCSP) (*KeyManager, *msp.Config, error) {
 	if conf == nil {
 		logger.Debugf("load msp config from [%s:%s]", mspConfigPath, mspID)
 		var err error
-		conf, err = msp2.LoadConfig(mspConfigPath, mspID)
+		conf, err = msp.LoadConfig(mspConfigPath, keyStoreDirName, mspID)
 		if err != nil {
 			return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", mspConfigPath)
 		}
 	}
 	logger.Debugf("msp config [%d]", conf.Type)
-	p, err := newSigningKeyManager(conf, mspConfigPath, keyStorePath, mspID, signerService, bccspConfig)
+	p, err := newSigningKeyManager(conf, mspConfigPath, mspID, signerService, bccspConfig)
 	if err == nil {
 		return p, conf, nil
 	}
@@ -69,8 +69,8 @@ func NewKeyManagerFromConf(conf *msp2.Config, mspConfigPath, keyStorePath, mspID
 	return p, conf, err
 }
 
-func newSigningKeyManager(conf *msp2.Config, mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*KeyManager, error) {
-	sID, err := msp2.GetSigningIdentity(conf, mspConfigPath, keyStorePath, bccspConfig)
+func newSigningKeyManager(conf *msp.Config, mspConfigPath, mspID string, signerService SignerService, bccspConfig *msp.BCCSP) (*KeyManager, error) {
+	sID, err := msp.GetSigningIdentity(conf, mspConfigPath, bccspConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -88,12 +88,12 @@ func newSigningKeyManager(conf *msp2.Config, mspConfigPath, keyStorePath, mspID 
 	return newKeyManager(sID, idRaw)
 }
 
-func newVerifyingKeyManager(conf *msp2.Config, mspConfigPath, mspID string) (*KeyManager, *msp2.Config, error) {
-	conf, err := msp2.RemoveSigningIdentityInfo(conf)
+func newVerifyingKeyManager(conf *msp.Config, mspConfigPath, mspID string) (*KeyManager, *msp.Config, error) {
+	conf, err := msp.RemoveSigningIdentityInfo(conf)
 	if err != nil {
 		return nil, nil, err
 	}
-	idRaw, err := msp2.SerializeFromMSP(conf, mspID, mspConfigPath)
+	idRaw, err := msp.SerializeFromMSP(conf, mspID, mspConfigPath)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to load msp identity at [%s]", mspConfigPath)
 	}
@@ -105,7 +105,7 @@ func newVerifyingKeyManager(conf *msp2.Config, mspConfigPath, mspID string) (*Ke
 }
 
 func newKeyManager(sID driver.SigningIdentity, id []byte) (*KeyManager, error) {
-	enrollmentID, err := msp2.GetEnrollmentID(id)
+	enrollmentID, err := msp.GetEnrollmentID(id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get enrollment id")
 	}
@@ -117,7 +117,7 @@ func (p *KeyManager) IsRemote() bool {
 }
 
 func (p *KeyManager) Identity([]byte) (driver.Identity, []byte, error) {
-	revocationHandle, err := msp2.GetRevocationHandle(p.id)
+	revocationHandle, err := msp.GetRevocationHandle(p.id)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting revocation handle")
 	}
@@ -138,7 +138,7 @@ func (p *KeyManager) EnrollmentID() string {
 }
 
 func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	return msp2.DeserializeVerifier(raw)
+	return msp.DeserializeVerifier(raw)
 }
 
 func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
@@ -146,7 +146,7 @@ func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
 }
 
 func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
-	return msp2.Info(raw)
+	return msp.Info(raw)
 }
 
 func (p *KeyManager) Anonymous() bool {
@@ -157,10 +157,10 @@ func (p *KeyManager) String() string {
 	return fmt.Sprintf("X509 KeyManager for EID [%s]", p.enrollmentID)
 }
 
-func (p *KeyManager) SerializedIdentity() (driver.SigningIdentity, error) {
-	return p.sID, nil
-}
-
 func (p *KeyManager) IdentityType() identity.Type {
 	return IdentityType
+}
+
+func (p *KeyManager) SigningIdentity() (driver.SigningIdentity, error) {
+	return p.sID, nil
 }

@@ -7,12 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -36,7 +35,7 @@ func NewKeyManagerProvider(config idriver.Config, mspID string, signerService id
 	return &KeyManagerProvider{config: config, mspID: mspID, signerService: signerService, ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet}
 }
 
-func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
+func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	identityConfig := &idriver.ConfiguredIdentity{
 		ID:   idConfig.ID,
 		Path: idConfig.URL,
@@ -59,7 +58,7 @@ func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (common
 	return k.registerIdentity(mspConfig, identityConfig, idConfig)
 }
 
-func (k *KeyManagerProvider) registerIdentity(conf *msp.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
+func (k *KeyManagerProvider) registerIdentity(conf *msp.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	p, err := k.registerProvider(conf, identityConfig, idConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to register MSP provider")
@@ -67,7 +66,7 @@ func (k *KeyManagerProvider) registerIdentity(conf *msp.Config, identityConfig *
 	return p, nil
 }
 
-func (k *KeyManagerProvider) registerProvider(conf *msp.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
+func (k *KeyManagerProvider) registerProvider(conf *msp.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	opts, err := msp.ToBCCSPOpts(identityConfig.Opts)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to extract BCCSP options")
@@ -79,7 +78,7 @@ func (k *KeyManagerProvider) registerProvider(conf *msp.Config, identityConfig *
 	}
 
 	translatedPath := k.config.TranslatePath(identityConfig.Path)
-	keyStorePath := k.keyStorePath(translatedPath)
+	keyStorePath := k.keyStorePath()
 	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
 	// Try without "msp"
 	provider, conf, err := NewKeyManagerFromConf(conf, translatedPath, keyStorePath, k.mspID, k.signerService, opts)
@@ -107,20 +106,9 @@ func (k *KeyManagerProvider) registerProvider(conf *msp.Config, identityConfig *
 	return provider, nil
 }
 
-func (k *KeyManagerProvider) keyStorePath(translatedPath string) string {
+func (k *KeyManagerProvider) keyStorePath() string {
 	if !k.ignoreVerifyOnlyWallet {
 		return ""
 	}
-
-	path := filepath.Join(translatedPath, KeystoreFullFolder)
-	if _, err := os.Stat(path); err == nil {
-		return path
-	}
-
-	path = filepath.Join(translatedPath, "msp", KeystoreFullFolder)
-	if _, err := os.Stat(path); err == nil {
-		return path
-	}
-
-	return ""
+	return KeystoreFullFolder
 }

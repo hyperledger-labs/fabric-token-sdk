@@ -13,7 +13,7 @@ import (
 )
 
 func TestDeserializer(t *testing.T) {
-	p, _, err := NewKeyManager("./testdata/msp", "", "apple", nil, nil)
+	p, _, err := NewKeyManager("./testdata/msp", "apple", nil, nil)
 	assert.NoError(t, err)
 	assert.False(t, p.Anonymous())
 
@@ -28,6 +28,16 @@ func TestDeserializer(t *testing.T) {
 	assert.Equal(t, "auditor.org1.example.com", eID)
 
 	des := &MSPIdentityDeserializer{}
-	_, err = des.DeserializeVerifier(id)
+	verifier, err := des.DeserializeVerifier(id)
+	assert.NoError(t, err)
+
+	signingIdentity, err := p.SigningIdentity()
+	assert.NoError(t, err)
+
+	sigma, err := signingIdentity.Sign([]byte("hello worlds"))
+	assert.NoError(t, err)
+	assert.NotNil(t, sigma)
+
+	err = verifier.Verify([]byte("hello worlds"), sigma)
 	assert.NoError(t, err)
 }
