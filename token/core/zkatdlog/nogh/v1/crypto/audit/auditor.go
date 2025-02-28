@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -273,7 +274,7 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 		return errors.Errorf("owner at index [%d] cannot be unwrapped", index)
 	}
 	switch ro.Type {
-	case msp.X509Identity:
+	case x509.IdentityType:
 		matcher, err := des.GetOwnerMatcher(token.Token.Owner, token.Owner.OwnerInfo)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get owner matcher for output [%d]", index)

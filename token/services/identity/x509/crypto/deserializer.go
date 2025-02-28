@@ -31,5 +31,5 @@ func Info(raw []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("MSP.x509: [%s][%s]", driver.Identity(raw).UniqueID(), cert.Subject.CommonName), nil
+	return fmt.Sprintf("X509: [%s][%s]", driver.Identity(raw).UniqueID(), cert.Subject.CommonName), nil
 }

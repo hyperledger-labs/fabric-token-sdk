@@ -15,7 +15,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/pkg/errors"
 )
 
@@ -43,7 +43,7 @@ func GetX509Identity(entry string) (driver.Identity, error) {
 		return nil, errors.Errorf("no certificates found in %s", signcertDir)
 	}
 
-	wrap, err := identity.WrapWithType(msp.X509Identity, content[0])
+	wrap, err := identity.WrapWithType(x509.IdentityType, content[0])
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to wrap x509 identity for [%s]", entry)
 	}
