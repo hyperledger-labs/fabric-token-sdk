@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package topology
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto"
 )
 
 type Identity struct {
@@ -15,7 +15,7 @@ type Identity struct {
 	Type    string
 	Path    string
 	Default bool
-	Opts    *msp.BCCSP
+	Opts    *crypto.BCCSP
 	Raw     []byte
 }
 

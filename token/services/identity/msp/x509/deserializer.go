@@ -9,14 +9,14 @@ package x509
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto"
 	"github.com/pkg/errors"
 )
 
-// MSPIdentityDeserializer takes as MSP identity and returns an ECDSA verifier
-type MSPIdentityDeserializer struct{}
+// IdentityDeserializer takes as MSP identity and returns an ECDSA verifier
+type IdentityDeserializer struct{}
 
-func (d *MSPIdentityDeserializer) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
+func (d *IdentityDeserializer) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
 	return msp2.DeserializeVerifier(id)
 }
 

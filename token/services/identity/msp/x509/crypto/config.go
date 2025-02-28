@@ -4,11 +4,11 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package msp
+package crypto
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp/pkcs11"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto/pkcs11"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
