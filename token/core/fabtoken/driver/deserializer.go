@@ -11,8 +11,7 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	x510 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
@@ -24,15 +23,15 @@ type Deserializer struct {
 // NewDeserializer returns a deserializer
 func NewDeserializer() *Deserializer {
 	ownerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
-	ownerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
+	ownerDeserializer.AddTypedVerifierDeserializer(x510.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x510.IdentityDeserializer{}, &x510.AuditMatcherDeserializer{}))
 	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
 
 	auditorIssuerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
-	auditorIssuerDeserializer.AddTypedVerifierDeserializer(msp.X509Identity, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
+	auditorIssuerDeserializer.AddTypedVerifierDeserializer(x510.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x510.IdentityDeserializer{}, &x510.AuditMatcherDeserializer{}))
 
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(
-			msp.X509Identity,
+			x510.IdentityType,
 			auditorIssuerDeserializer,
 			ownerDeserializer, // owner
 			auditorIssuerDeserializer,
@@ -54,7 +53,7 @@ type EIDRHDeserializer = deserializer.EIDRHDeserializer
 // NewEIDRHDeserializer returns an enrollmentService
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
-	d.AddDeserializer(msp.X509Identity, &x509.AuditInfoDeserializer{})
-	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&x509.AuditInfoDeserializer{}))
+	d.AddDeserializer(x510.IdentityType, &x510.AuditInfoDeserializer{})
+	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&x510.AuditInfoDeserializer{}))
 	return d
 }

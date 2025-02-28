@@ -9,7 +9,7 @@ package crypto
 import (
 	"encoding/hex"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto/pkcs11"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/pkcs11"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/sw"
 	"github.com/pkg/errors"

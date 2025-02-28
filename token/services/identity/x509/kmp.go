@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -22,6 +22,7 @@ const (
 	KeystoreFullFolder = "keystoreFull"
 	PrivateKeyFileName = "priv_sk"
 	KeystoreFolder     = "keystore"
+	ExtraPathElement   = "msp"
 )
 
 type KeyManagerProvider struct {
@@ -52,22 +53,22 @@ func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (member
 			return nil, errors.Wrapf(err, "failed to load options for [%s]", idConfig.ID)
 		}
 	}
-	var mspConfig *crypto.Config
+	var config *crypto.Config
 	if len(idConfig.Raw) != 0 {
-		// load raw as mspConfig
+		// load raw as config
 		var err error
-		mspConfig, err = crypto.UnmarshalConfig(idConfig.Raw)
+		config, err = crypto.UnmarshalConfig(idConfig.Raw)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to load msp config [%s]", idConfig.ID)
+			return nil, errors.Wrapf(err, "failed to load config [%s]", idConfig.ID)
 		}
 	}
-	return k.registerIdentity(mspConfig, identityConfig, idConfig)
+	return k.registerIdentity(config, identityConfig, idConfig)
 }
 
 func (k *KeyManagerProvider) registerIdentity(conf *crypto.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	p, err := k.registerProvider(conf, identityConfig, idConfig)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to register MSP provider")
+		return nil, errors.WithMessage(err, "failed to register provider")
 	}
 	return p, nil
 }
@@ -86,14 +87,14 @@ func (k *KeyManagerProvider) registerProvider(conf *crypto.Config, identityConfi
 	translatedPath := k.config.TranslatePath(identityConfig.Path)
 	keyStorePath := k.keyStorePath()
 	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
-	// Try without "msp"
+	// Try without ExtraPathElement
 	provider, conf, err := NewKeyManagerFromConf(conf, translatedPath, keyStorePath, k.signerService, opts, nil)
 	if err != nil {
 		logger.Debugf("failed loading provider at [%s]: [%s]", translatedPath, err)
-		// Try with "msp"
-		provider, conf, err = NewKeyManagerFromConf(conf, filepath.Join(translatedPath, "msp"), keyStorePath, k.signerService, opts, nil)
+		// Try with ExtraPathElement
+		provider, conf, err = NewKeyManagerFromConf(conf, filepath.Join(translatedPath, ExtraPathElement), keyStorePath, k.signerService, opts, nil)
 		if err != nil {
-			logger.Debugf("failed loading provider at [%s]: [%s]", filepath.Join(translatedPath, "msp"), err)
+			logger.Debugf("failed loading provider at [%s]: [%s]", filepath.Join(translatedPath, ExtraPathElement), err)
 			return nil, err
 		}
 	}
@@ -104,7 +105,7 @@ func (k *KeyManagerProvider) registerProvider(conf *crypto.Config, identityConfi
 	}
 	confRaw, err := crypto.MarshalConfig(conf)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to marshal msp config [%v]", identityConfig)
+		return nil, errors.Wrapf(err, "failed to marshal config [%v]", identityConfig)
 	}
 	idConfig.Config = optsRaw
 	idConfig.Raw = confRaw

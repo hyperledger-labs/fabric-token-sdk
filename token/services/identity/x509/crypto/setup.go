@@ -25,7 +25,7 @@ func SerializeIdentity(conf *Config) ([]byte, error) {
 }
 
 // GetSigningIdentity retrieves a signing identity from the passed arguments.
-// If keyStorePath is empty, then it is assumed that the key is at mspConfigPath/keystore
+// If keyStorePath is empty, then it is assumed that the key is at configPath/keystore
 func GetSigningIdentity(conf *Config, bccspConfig *BCCSP, keyStore bccsp.KeyStore) (driver.FullIdentity, error) {
 	factory, err := getIdentityFactory(conf, bccspConfig, keyStore)
 	if err != nil {
@@ -38,8 +38,7 @@ func GetSigningIdentity(conf *Config, bccspConfig *BCCSP, keyStore bccsp.KeyStor
 	return signingIdentity, nil
 }
 
-// getIdentityFactory loads an MSP whose configuration is stored at 'dir', and whose
-// id and type are the passed as arguments.
+// getIdentityFactory instantiate a new IdentityFactory for the passed parameters
 func getIdentityFactory(conf *Config, bccspConfig *BCCSP, keyStore bccsp.KeyStore) (*IdentityFactory, error) {
 	csp, err := GetBCCSPFromConf(bccspConfig, keyStore)
 	if err != nil {

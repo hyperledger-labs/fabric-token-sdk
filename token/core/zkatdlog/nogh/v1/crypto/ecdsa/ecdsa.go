@@ -19,7 +19,7 @@ import (
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	x510 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/pkg/errors"
 )
@@ -118,7 +118,7 @@ func (v *Verifier) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed marshalling public key")
 	}
 
-	wrap, err := identity.WrapWithType(msp2.X509Identity, pkRaw)
+	wrap, err := identity.WrapWithType(x510.IdentityType, pkRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed wrapping identity")
 	}

@@ -9,15 +9,15 @@ package x509
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/pkg/errors"
 )
 
-// IdentityDeserializer takes as MSP identity and returns an ECDSA verifier
+// IdentityDeserializer takes an identity and returns an ECDSA verifier
 type IdentityDeserializer struct{}
 
 func (d *IdentityDeserializer) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
-	return msp2.DeserializeVerifier(id)
+	return crypto.DeserializeVerifier(id)
 }
 
 type AuditMatcherDeserializer struct{}
@@ -36,7 +36,7 @@ type AuditInfoMatcher struct {
 }
 
 func (a *AuditInfoMatcher) Match(id []byte) error {
-	eid, err := msp2.GetEnrollmentID(id)
+	eid, err := crypto.GetEnrollmentID(id)
 	if err != nil {
 		return errors.Wrap(err, "failed to get enrollment ID")
 	}
