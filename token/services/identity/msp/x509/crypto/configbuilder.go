@@ -24,7 +24,6 @@ const (
 )
 
 const (
-	CACerts   = "cacerts"
 	SignCerts = "signcerts"
 	KeyStore  = "keystore"
 	PrivSK    = "priv_sk"
@@ -48,26 +47,16 @@ func LoadConfig(dir string, keyStoreDirName string, ID string) (*Config, error) 
 			return nil, errors.Wrapf(err, "could not load private key from file %s", secretKeyFile)
 		}
 	}
-	return LoadConfigWithIdentityInfo(
-		dir,
-		ID,
-		&SigningIdentityInfo{
-			PublicSigner: signcert[0],
-			PrivateSigner: &KeyInfo{
-				KeyIdentifier: "",
-				KeyMaterial:   skRaw,
-			},
+	return LoadConfigWithIdentityInfo(ID, &SigningIdentityInfo{
+		PublicSigner: signcert[0],
+		PrivateSigner: &KeyInfo{
+			KeyIdentifier: "",
+			KeyMaterial:   skRaw,
 		},
-	)
+	})
 }
 
-func LoadConfigWithIdentityInfo(dir string, ID string, signingIdentityInfo *SigningIdentityInfo) (*Config, error) {
-	cacertDir := filepath.Join(dir, CACerts)
-	cacerts, err := getPemMaterialFromDir(cacertDir)
-	if err != nil || len(cacerts) == 0 {
-		return nil, errors.WithMessagef(err, "could not load a valid ca certificate from directory %s", cacertDir)
-	}
-
+func LoadConfigWithIdentityInfo(ID string, signingIdentityInfo *SigningIdentityInfo) (*Config, error) {
 	// Set FabricCryptoConfig
 	cryptoConfig := &FabricCryptoConfig{
 		SignatureHashFamily:            bccsp.SHA2,
@@ -76,7 +65,6 @@ func LoadConfigWithIdentityInfo(dir string, ID string, signingIdentityInfo *Sign
 
 	// Compose FabricMSPConfig
 	fmspconf := &FabricMSPConfig{
-		RootCerts:       cacerts,
 		SigningIdentity: signingIdentityInfo,
 		Name:            ID,
 		CryptoConfig:    cryptoConfig,
