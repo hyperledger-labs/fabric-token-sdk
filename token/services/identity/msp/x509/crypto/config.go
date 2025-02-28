@@ -9,16 +9,16 @@ package crypto
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto/pkcs11"
-	"github.com/hyperledger/fabric-protos-go/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto/protos-go/config"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 )
 
 type (
-	Config              = msp.FabricMSPConfig
-	SigningIdentityInfo = msp.SigningIdentityInfo
-	KeyInfo             = msp.KeyInfo
-	CryptoConfig        = msp.FabricCryptoConfig
+	Config              = config.Config
+	SigningIdentityInfo = config.SigningIdentityInfo
+	KeyInfo             = config.KeyInfo
+	CryptoConfig        = config.CryptoConfig
 )
 
 func UnmarshalConfig(data []byte) (*Config, error) {
