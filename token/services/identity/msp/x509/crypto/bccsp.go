@@ -4,12 +4,12 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package msp
+package crypto
 
 import (
 	"encoding/hex"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp/pkcs11"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto/pkcs11"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/sw"
 	"github.com/pkg/errors"

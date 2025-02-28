@@ -1,4 +1,10 @@
-package msp
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+package crypto
 
 import (
 	"crypto"
@@ -229,15 +235,15 @@ func (f *IdentityFactory) getCertFromPem(idBytes []byte) (*x509.Certificate, err
 	return cert, nil
 }
 
-func (f *IdentityFactory) sanitizeCert(cert *x509.Certificate) (*x509.Certificate, error) {
+func (f *IdentityFactory) SanitizeCert(cert *x509.Certificate) (*x509.Certificate, error) {
 	return cert, nil
 	// var err error
-	// if isECDSASignedCert(cert) {
+	// if IsECDSASignedCert(cert) {
 	// 	isRootCACert := false
-	// 	validityOpts := f.getValidityOptsForCert(cert)
+	// 	validityOpts := f.GetValidityOptsForCert(cert)
 	// 	if cert.IsCA && cert.CheckSignatureFrom(cert) == nil {
 	// 		// this is a root CA we can already sanitize it
-	// 		cert, err = sanitizeECDSASignedCert(cert, cert)
+	// 		cert, err = SanitizeECDSASignedCert(cert, cert)
 	// 		if err != nil {
 	// 			return nil, err
 	// 		}
@@ -271,12 +277,12 @@ func (f *IdentityFactory) sanitizeCert(cert *x509.Certificate) (*x509.Certificat
 	// 	parentCert = chain[1]
 	//
 	// 	// Sanitize
-	// 	return sanitizeECDSASignedCert(cert, parentCert)
+	// 	return SanitizeECDSASignedCert(cert, parentCert)
 	// }
 	// return cert, nil
 }
 
-func (f *IdentityFactory) getValidityOptsForCert(cert *x509.Certificate) x509.VerifyOptions {
+func (f *IdentityFactory) GetValidityOptsForCert(cert *x509.Certificate) x509.VerifyOptions {
 	// First copy the opts to override the CurrentTime field
 	// in order to make the certificate passing the expiration test
 	// independently from the real local current time.

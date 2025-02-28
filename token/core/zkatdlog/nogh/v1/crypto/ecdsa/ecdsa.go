@@ -21,7 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	msp3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+	msp3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto"
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/pkg/errors"
 )

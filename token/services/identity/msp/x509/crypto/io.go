@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package msp
+package crypto
 
 import (
 	"crypto/x509"
@@ -36,27 +36,6 @@ func readPemFile(file string) ([]byte, error) {
 	}
 
 	return bytes, nil
-}
-
-func getCertFromPem(idBytes []byte) (*x509.Certificate, error) {
-	if idBytes == nil {
-		return nil, errors.New("getCertFromPem error: nil idBytes")
-	}
-
-	// Decode the pem bytes
-	pemCert, _ := pem.Decode(idBytes)
-	if pemCert == nil {
-		return nil, errors.Errorf("getCertFromPem error: could not decode pem bytes [%v]", idBytes)
-	}
-
-	// get a cert
-	var cert *x509.Certificate
-	cert, err := x509.ParseCertificate(pemCert.Bytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "getCertFromPem error: failed to parse x509 cert")
-	}
-
-	return cert, nil
 }
 
 func getPemMaterialFromDir(dir string) ([][]byte, error) {

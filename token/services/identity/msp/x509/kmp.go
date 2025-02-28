@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -60,11 +60,11 @@ func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (member
 			return nil, errors.Wrapf(err, "failed to load options for [%s]", idConfig.ID)
 		}
 	}
-	var mspConfig *msp.Config
+	var mspConfig *crypto.Config
 	if len(idConfig.Raw) != 0 {
 		// load raw as mspConfig
 		var err error
-		mspConfig, err = msp.UnmarshalConfig(idConfig.Raw)
+		mspConfig, err = crypto.UnmarshalConfig(idConfig.Raw)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to load msp config [%s]", idConfig.ID)
 		}
@@ -72,7 +72,7 @@ func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (member
 	return k.registerIdentity(mspConfig, identityConfig, idConfig)
 }
 
-func (k *KeyManagerProvider) registerIdentity(conf *msp.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
+func (k *KeyManagerProvider) registerIdentity(conf *crypto.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	p, err := k.registerProvider(conf, identityConfig, idConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to register MSP provider")
@@ -80,8 +80,8 @@ func (k *KeyManagerProvider) registerIdentity(conf *msp.Config, identityConfig *
 	return p, nil
 }
 
-func (k *KeyManagerProvider) registerProvider(conf *msp.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
-	opts, err := msp.ToBCCSPOpts(identityConfig.Opts)
+func (k *KeyManagerProvider) registerProvider(conf *crypto.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
+	opts, err := crypto.ToBCCSPOpts(identityConfig.Opts)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to extract BCCSP options")
 	}
@@ -110,7 +110,7 @@ func (k *KeyManagerProvider) registerProvider(conf *msp.Config, identityConfig *
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal config [%v]", identityConfig)
 	}
-	confRaw, err := msp.MarshalConfig(conf)
+	confRaw, err := crypto.MarshalConfig(conf)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal msp config [%v]", identityConfig)
 	}

@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
@@ -36,8 +36,8 @@ type KeyManager struct {
 // NewKeyManager returns a new X509 provider with the passed BCCSP configuration.
 // If the configuration path contains the secret key,
 // then the provider can generate also signatures, otherwise it cannot.
-func NewKeyManager(path, mspID string, signerService SignerService, bccspConfig *msp.BCCSP) (*KeyManager, *msp.Config, error) {
-	conf, err := msp.LoadConfig(path, "", mspID)
+func NewKeyManager(path, mspID string, signerService SignerService, bccspConfig *crypto.BCCSP) (*KeyManager, *crypto.Config, error) {
+	conf, err := crypto.LoadConfig(path, "", mspID)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", path)
 	}
@@ -49,16 +49,16 @@ func NewKeyManager(path, mspID string, signerService SignerService, bccspConfig 
 }
 
 func NewKeyManagerFromConf(
-	conf *msp.Config,
+	conf *crypto.Config,
 	mspConfigPath, keyStoreDirName, mspID string,
 	signerService SignerService,
-	bccspConfig *msp.BCCSP,
+	bccspConfig *crypto.BCCSP,
 	keyStore bccsp.KeyStore,
-) (*KeyManager, *msp.Config, error) {
+) (*KeyManager, *crypto.Config, error) {
 	if conf == nil {
 		logger.Debugf("load msp config from [%s:%s]", mspConfigPath, mspID)
 		var err error
-		conf, err = msp.LoadConfig(mspConfigPath, keyStoreDirName, mspID)
+		conf, err = crypto.LoadConfig(mspConfigPath, keyStoreDirName, mspID)
 		if err != nil {
 			return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", mspConfigPath)
 		}
@@ -77,13 +77,13 @@ func NewKeyManagerFromConf(
 }
 
 func newSigningKeyManager(
-	conf *msp.Config,
+	conf *crypto.Config,
 	mspID string,
 	signerService SignerService,
-	bccspConfig *msp.BCCSP,
+	bccspConfig *crypto.BCCSP,
 	keyStore bccsp.KeyStore,
 ) (*KeyManager, error) {
-	sID, err := msp.GetSigningIdentity(conf, bccspConfig, keyStore)
+	sID, err := crypto.GetSigningIdentity(conf, bccspConfig, keyStore)
 	if err != nil {
 		return nil, err
 	}
@@ -101,12 +101,12 @@ func newSigningKeyManager(
 	return newKeyManager(sID, idRaw)
 }
 
-func newVerifyingKeyManager(conf *msp.Config, mspID string) (*KeyManager, *msp.Config, error) {
-	conf, err := msp.RemoveSigningIdentityInfo(conf)
+func newVerifyingKeyManager(conf *crypto.Config, mspID string) (*KeyManager, *crypto.Config, error) {
+	conf, err := crypto.RemoveSigningIdentityInfo(conf)
 	if err != nil {
 		return nil, nil, err
 	}
-	idRaw, err := msp.SerializeFromMSP(conf, mspID)
+	idRaw, err := crypto.SerializeFromMSP(conf, mspID)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to load msp identity")
 	}
@@ -118,7 +118,7 @@ func newVerifyingKeyManager(conf *msp.Config, mspID string) (*KeyManager, *msp.C
 }
 
 func newKeyManager(sID driver.SigningIdentity, id []byte) (*KeyManager, error) {
-	enrollmentID, err := msp.GetEnrollmentID(id)
+	enrollmentID, err := crypto.GetEnrollmentID(id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get enrollment id")
 	}
@@ -130,7 +130,7 @@ func (p *KeyManager) IsRemote() bool {
 }
 
 func (p *KeyManager) Identity([]byte) (driver.Identity, []byte, error) {
-	revocationHandle, err := msp.GetRevocationHandle(p.id)
+	revocationHandle, err := crypto.GetRevocationHandle(p.id)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting revocation handle")
 	}
@@ -151,7 +151,7 @@ func (p *KeyManager) EnrollmentID() string {
 }
 
 func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	return msp.DeserializeVerifier(raw)
+	return crypto.DeserializeVerifier(raw)
 }
 
 func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
@@ -159,7 +159,7 @@ func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
 }
 
 func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
-	return msp.Info(raw)
+	return crypto.Info(raw)
 }
 
 func (p *KeyManager) Anonymous() bool {

@@ -27,7 +27,7 @@ func TestDeserializer(t *testing.T) {
 	assert.Equal(t, eID, ai.EID)
 	assert.Equal(t, "auditor.org1.example.com", eID)
 
-	des := &MSPIdentityDeserializer{}
+	des := &IdentityDeserializer{}
 	verifier, err := des.DeserializeVerifier(id)
 	assert.NoError(t, err)
 

@@ -16,7 +16,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/crypto"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -219,10 +219,10 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 			var err error
 			if userSpecs[i].HSM {
 				// PKCS11
-				id.Opts, err = msp.BCCSPOpts("PKCS11")
+				id.Opts, err = crypto.BCCSPOpts("PKCS11")
 			} else {
 				// SW
-				id.Opts, err = msp.BCCSPOpts("SW")
+				id.Opts, err = crypto.BCCSPOpts("SW")
 			}
 			Expect(err).NotTo(HaveOccurred(), "failed generating identity [%s]", userSpecs[i])
 		}
