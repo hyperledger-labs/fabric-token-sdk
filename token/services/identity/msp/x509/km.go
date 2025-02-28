@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
 )
 
@@ -40,14 +41,20 @@ func NewKeyManager(path, mspID string, signerService SignerService, bccspConfig 
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", path)
 	}
-	p, conf, err := NewKeyManagerFromConf(conf, path, "", mspID, signerService, bccspConfig)
+	p, conf, err := NewKeyManagerFromConf(conf, path, "", mspID, signerService, bccspConfig, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 	return p, conf, nil
 }
 
-func NewKeyManagerFromConf(conf *msp.Config, mspConfigPath, keyStoreDirName, mspID string, signerService SignerService, bccspConfig *msp.BCCSP) (*KeyManager, *msp.Config, error) {
+func NewKeyManagerFromConf(
+	conf *msp.Config,
+	mspConfigPath, keyStoreDirName, mspID string,
+	signerService SignerService,
+	bccspConfig *msp.BCCSP,
+	keyStore bccsp.KeyStore,
+) (*KeyManager, *msp.Config, error) {
 	if conf == nil {
 		logger.Debugf("load msp config from [%s:%s]", mspConfigPath, mspID)
 		var err error
@@ -57,7 +64,7 @@ func NewKeyManagerFromConf(conf *msp.Config, mspConfigPath, keyStoreDirName, msp
 		}
 	}
 	logger.Debugf("msp config [%d]", conf.Type)
-	p, err := newSigningKeyManager(conf, mspID, signerService, bccspConfig)
+	p, err := newSigningKeyManager(conf, mspID, signerService, bccspConfig, keyStore)
 	if err == nil {
 		return p, conf, nil
 	}
@@ -69,8 +76,14 @@ func NewKeyManagerFromConf(conf *msp.Config, mspConfigPath, keyStoreDirName, msp
 	return p, conf, err
 }
 
-func newSigningKeyManager(conf *msp.Config, mspID string, signerService SignerService, bccspConfig *msp.BCCSP) (*KeyManager, error) {
-	sID, err := msp.GetSigningIdentity(conf, bccspConfig)
+func newSigningKeyManager(
+	conf *msp.Config,
+	mspID string,
+	signerService SignerService,
+	bccspConfig *msp.BCCSP,
+	keyStore bccsp.KeyStore,
+) (*KeyManager, error) {
+	sID, err := msp.GetSigningIdentity(conf, bccspConfig, keyStore)
 	if err != nil {
 		return nil, err
 	}
