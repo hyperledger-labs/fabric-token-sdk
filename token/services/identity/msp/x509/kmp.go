@@ -10,12 +10,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
-	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -49,29 +47,27 @@ func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (common
 			return nil, errors.Wrapf(err, "failed to load options for [%s]", idConfig.ID)
 		}
 	}
-	var mspConfig *m.MSPConfig
+	var mspConfig *msp.Config
 	if len(idConfig.Raw) != 0 {
 		// load raw as mspConfig
-		mspConfig = &m.MSPConfig{}
-		if err := proto.Unmarshal(idConfig.Raw, mspConfig); err != nil {
+		var err error
+		mspConfig, err = msp.UnmarshalConfig(idConfig.Raw)
+		if err != nil {
 			return nil, errors.Wrapf(err, "failed to load msp config [%s]", idConfig.ID)
 		}
 	}
 	return k.registerIdentity(mspConfig, identityConfig, idConfig)
 }
 
-func (k *KeyManagerProvider) registerIdentity(conf *m.MSPConfig, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
-	// Try to register the MSP provider
-	translatedPath := k.config.TranslatePath(identityConfig.Path)
-	p, err := k.registerProvider(conf, identityConfig, translatedPath, idConfig)
+func (k *KeyManagerProvider) registerIdentity(conf *msp.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
+	p, err := k.registerProvider(conf, identityConfig, idConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to register MSP provider")
 	}
-
 	return p, nil
 }
 
-func (k *KeyManagerProvider) registerProvider(conf *m.MSPConfig, identityConfig *idriver.ConfiguredIdentity, translatedPath string, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
+func (k *KeyManagerProvider) registerProvider(conf *msp.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (common2.KeyManager, error) {
 	opts, err := msp.ToBCCSPOpts(identityConfig.Opts)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to extract BCCSP options")
@@ -82,6 +78,7 @@ func (k *KeyManagerProvider) registerProvider(conf *m.MSPConfig, identityConfig 
 		logger.Debugf("BCCSP options set for [%s] to [%v:%v:%v]", identityConfig.ID, opts, opts.PKCS11, opts.SW)
 	}
 
+	translatedPath := k.config.TranslatePath(identityConfig.Path)
 	keyStorePath := k.keyStorePath(translatedPath)
 	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
 	// Try without "msp"
@@ -100,7 +97,7 @@ func (k *KeyManagerProvider) registerProvider(conf *m.MSPConfig, identityConfig 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal config [%v]", identityConfig)
 	}
-	confRaw, err := proto.Marshal(conf)
+	confRaw, err := msp.MarshalConfig(conf)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal msp config [%v]", identityConfig)
 	}

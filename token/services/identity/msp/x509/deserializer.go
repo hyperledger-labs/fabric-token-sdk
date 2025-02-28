@@ -7,14 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
-	ecdsa2 "crypto/ecdsa"
-
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
-	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
 
@@ -22,20 +17,7 @@ import (
 type MSPIdentityDeserializer struct{}
 
 func (d *MSPIdentityDeserializer) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
-	si := &msp.SerializedIdentity{}
-	err := proto.Unmarshal(id, si)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
-	}
-	genericPublicKey, err := msp2.PemDecodeKey(si.IdBytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed parsing received public key")
-	}
-	publicKey, ok := genericPublicKey.(*ecdsa2.PublicKey)
-	if !ok {
-		return nil, errors.New("expected *ecdsa.PublicKey")
-	}
-	return msp2.NewECDSAVerifier(publicKey), nil
+	return msp2.DeserializeVerifier(id)
 }
 
 type AuditMatcherDeserializer struct{}
