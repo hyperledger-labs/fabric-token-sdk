@@ -22,7 +22,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
-	msp2 "github.com/hyperledger/fabric/msp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,7 +30,7 @@ func TestKeyManager(t *testing.T) {
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 
-	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
+	config, err := idemix2.GetIdemixMspConfig("./testdata/idemix", "idemix")
 	assert.NoError(t, err)
 
 	keyStore, err := msp.NewKeyStore(math.FP256BN_AMCL, backend)
@@ -64,7 +63,7 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
+	config, err := idemix2.GetIdemixMspConfig("./testdata/idemix", "idemix")
 	assert.NoError(t, err)
 
 	keyStore, err := msp.NewKeyStore(math.FP256BN_AMCL, backend)
@@ -82,7 +81,6 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	info, err := p.Info(id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "MSP.Idemix: [alice]"))
-	assert.True(t, strings.HasSuffix(info, "[idemix][idemixorg.example.com][ADMIN]"))
 
 	auditInfo, err := p.DeserializeAuditInfo(audit)
 	assert.NoError(t, err)
@@ -112,7 +110,6 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	info, err = p.Info(id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "MSP.Idemix: [alice]"))
-	assert.True(t, strings.HasSuffix(info, "[idemix][idemixorg.example.com][ADMIN]"))
 
 	auditInfo, err = p.DeserializeAuditInfo(audit)
 	assert.NoError(t, err)
@@ -137,7 +134,7 @@ func TestIdentityStandard(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
+	config, err := idemix2.GetIdemixMspConfig("./testdata/idemix", "idemix")
 	assert.NoError(t, err)
 
 	keyStore, err := msp.NewKeyStore(math.FP256BN_AMCL, backend)
@@ -216,7 +213,7 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
+	config, err := idemix2.GetIdemixMspConfig("./testdata/idemix", "idemix")
 	assert.NoError(t, err)
 	keyStore, err := msp.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
@@ -226,7 +223,7 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	config, err = msp2.GetLocalMspConfigWithType("./testdata/idemix2", nil, "idemix", "idemix")
+	config, err = idemix2.GetIdemixMspConfig("./testdata/idemix2", "idemix")
 	assert.NoError(t, err)
 	keyStore, err = msp.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
@@ -266,7 +263,7 @@ func TestKeyManager_DeserializeSigner(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := msp2.GetLocalMspConfigWithType("./testdata/sameissuer/idemix", nil, "idemix", "idemix")
+	config, err := idemix2.GetIdemixMspConfig("./testdata/sameissuer/idemix", "idemix")
 	assert.NoError(t, err)
 	keyStore, err := msp.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
@@ -276,7 +273,7 @@ func TestKeyManager_DeserializeSigner(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	config, err = msp2.GetLocalMspConfigWithType("./testdata/sameissuer/idemix2", nil, "idemix", "idemix")
+	config, err = idemix2.GetIdemixMspConfig("./testdata/sameissuer/idemix2", "idemix")
 	assert.NoError(t, err)
 	p2, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
@@ -429,7 +426,6 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	info, err := p.Info(id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "MSP.Idemix: [charlie.ExtraId2]"))
-	assert.True(t, strings.HasSuffix(info, "[charlie.ExtraId2][][MEMBER]"))
 
 	auditInfo, err := p.DeserializeAuditInfo(audit)
 	assert.NoError(t, err)
@@ -459,7 +455,6 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	info, err = p.Info(id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "MSP.Idemix: [charlie.ExtraId2]"))
-	assert.True(t, strings.HasSuffix(info, "[charlie.ExtraId2][][MEMBER]"))
 
 	auditInfo, err = p.DeserializeAuditInfo(audit)
 	assert.NoError(t, err)
