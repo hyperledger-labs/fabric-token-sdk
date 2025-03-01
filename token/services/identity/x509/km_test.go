@@ -13,31 +13,45 @@ import (
 )
 
 func TestDeserializer(t *testing.T) {
-	p, _, err := NewKeyManager("./testdata/msp", nil, nil)
+	// load a full identity capable of signing as well
+	fullIdentityProvider, _, err := NewKeyManager("./testdata/msp", nil, nil)
 	assert.NoError(t, err)
-	assert.False(t, p.Anonymous())
-
-	id, auditInfo, err := p.Identity(nil)
+	assert.False(t, fullIdentityProvider.Anonymous())
+	// load a full identity capable of signing as well with a custom keystore path
+	fullIdentityProvider2, _, err := NewKeyManagerFromConf(nil, "./testdata/msp2", KeystoreFullFolder, nil, nil, nil)
 	assert.NoError(t, err)
-	eID := p.EnrollmentID()
-	ai := &AuditInfo{}
-	err = ai.FromBytes(auditInfo)
-	assert.NoError(t, err)
-
-	assert.Equal(t, eID, ai.EID)
-	assert.Equal(t, "auditor.org1.example.com", eID)
-
-	des := &IdentityDeserializer{}
-	verifier, err := des.DeserializeVerifier(id)
+	assert.False(t, fullIdentityProvider.Anonymous())
+	// load a verifying only provider
+	verifyingIdentityProvider, _, err := NewKeyManager("./testdata/msp1", nil, nil)
 	assert.NoError(t, err)
 
-	signingIdentity, err := p.SigningIdentity()
-	assert.NoError(t, err)
+	for _, provider := range []*KeyManager{fullIdentityProvider, fullIdentityProvider2} {
+		id, auditInfo, err := provider.Identity(nil)
+		assert.NoError(t, err)
+		eID := provider.EnrollmentID()
+		ai := &AuditInfo{}
+		err = ai.FromBytes(auditInfo)
+		assert.NoError(t, err)
+		assert.Equal(t, eID, ai.EID)
+		assert.Equal(t, "auditor.org1.example.com", eID)
+		des := &IdentityDeserializer{}
+		verifier, err := des.DeserializeVerifier(id)
+		assert.NoError(t, err)
+		signingIdentity := provider.SigningIdentity()
+		assert.NotNil(t, signingIdentity)
+		sigma, err := signingIdentity.Sign([]byte("hello worlds"))
+		assert.NoError(t, err)
+		assert.NotNil(t, sigma)
+		err = verifier.Verify([]byte("hello worlds"), sigma)
+		assert.NoError(t, err)
 
-	sigma, err := signingIdentity.Sign([]byte("hello worlds"))
-	assert.NoError(t, err)
-	assert.NotNil(t, sigma)
+		// check again a verifying identity
+		verifyingIdentity, _, err := verifyingIdentityProvider.Identity(nil)
+		assert.NoError(t, err)
+		verifier2, err := provider.DeserializeVerifier(verifyingIdentity)
+		assert.NoError(t, err)
+		err = verifier2.Verify([]byte("hello worlds"), sigma)
+		assert.NoError(t, err)
+	}
 
-	err = verifier.Verify([]byte("hello worlds"), sigma)
-	assert.NoError(t, err)
 }

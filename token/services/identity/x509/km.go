@@ -95,7 +95,7 @@ func newSigningKeyManager(conf *crypto2.Config, signerService SignerService, bcc
 }
 
 func newVerifyingKeyManager(conf *crypto2.Config) (*KeyManager, *crypto2.Config, error) {
-	conf, err := crypto2.RemoveSigningIdentityInfo(conf)
+	conf, err := crypto2.RemovePrivateSigner(conf)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -167,6 +167,6 @@ func (p *KeyManager) IdentityType() identity.Type {
 	return IdentityType
 }
 
-func (p *KeyManager) SigningIdentity() (driver.SigningIdentity, error) {
-	return p.sID, nil
+func (p *KeyManager) SigningIdentity() driver.SigningIdentity {
+	return p.sID
 }
