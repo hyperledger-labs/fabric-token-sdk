@@ -14,8 +14,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto/protos-go/config"
+	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -30,7 +30,7 @@ type SignerService interface {
 }
 
 type KeyManager struct {
-	*crypto.Deserializer
+	*crypto2.Deserializer
 	userKey       bccsp.Key
 	conf          *config.IdemixConfig
 	SignerService SignerService
@@ -39,12 +39,12 @@ type KeyManager struct {
 	verType bccsp.VerificationType
 }
 
-func NewKeyManager(conf *crypto.Config, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*KeyManager, error) {
-	logger.Debugf("Setting up Idemix-based MSP instance")
+func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*KeyManager, error) {
+	logger.Debugf("Setting up Idemix-based key manager instance")
 	if conf == nil {
 		return nil, errors.Errorf("setup error: nil conf reference")
 	}
-	logger.Debugf("Setting up Idemix MSP instance %s", conf.Name)
+	logger.Debugf("Setting up Idemix key manager instance %s", conf.Name)
 
 	// Import Issuer Public Key
 	issuerPublicKey, err := cryptoProvider.KeyImport(
@@ -131,7 +131,7 @@ func NewKeyManager(conf *crypto.Config, signerService SignerService, sigType bcc
 	}
 
 	return &KeyManager{
-		Deserializer: &crypto.Deserializer{
+		Deserializer: &crypto2.Deserializer{
 			Name:            conf.Name,
 			Csp:             cryptoProvider,
 			IssuerPublicKey: issuerPublicKey,
@@ -191,8 +191,8 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 			{Type: bccsp.IdemixHiddenAttribute},
 			{Type: bccsp.IdemixHiddenAttribute},
 		},
-		RhIndex:  crypto.RHIndex,
-		EidIndex: crypto.EIDIndex,
+		RhIndex:  crypto2.RHIndex,
+		EidIndex: crypto2.EIDIndex,
 		CRI:      p.conf.Signer.CredentialRevocationInformation,
 		SigType:  sigType,
 		Metadata: signerMetadata,
@@ -207,11 +207,11 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	// Set up default signer
-	id, err := crypto.NewIdentity(p.Deserializer, NymPublicKey, proof, p.verType)
+	id, err := crypto2.NewIdentity(p.Deserializer, NymPublicKey, proof, p.verType)
 	if err != nil {
 		return nil, nil, err
 	}
-	sID := &crypto.SigningIdentity{
+	sID := &crypto2.SigningIdentity{
 		Identity:     id,
 		Cred:         p.conf.Signer.Cred,
 		UserKey:      p.userKey,
@@ -234,7 +234,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	case bccsp.Standard:
 		infoRaw = nil
 	case bccsp.EidNymRhNym:
-		auditInfo := &crypto.AuditInfo{
+		auditInfo := &crypto2.AuditInfo{
 			Csp:             p.Csp,
 			IssuerPublicKey: p.IssuerPublicKey,
 			EidNymAuditData: sigOpts.Metadata.EidNymAuditData,
@@ -279,7 +279,7 @@ func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
 func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
 	eid := ""
 	if len(auditInfo) != 0 {
-		ai := &crypto.AuditInfo{
+		ai := &crypto2.AuditInfo{
 			Csp:             p.Csp,
 			IssuerPublicKey: p.IssuerPublicKey,
 		}
@@ -292,7 +292,7 @@ func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
 		eid = ai.EnrollmentID()
 	}
 
-	return fmt.Sprintf("MSP.Idemix: [%s][%s]", eid, driver.Identity(raw).UniqueID()), nil
+	return fmt.Sprintf("Idemix: [%s][%s]", eid, driver.Identity(raw).UniqueID()), nil
 }
 
 func (p *KeyManager) String() string {
@@ -318,7 +318,7 @@ func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdent
 		return nil, errors.Wrap(err, "cannot find nym secret key")
 	}
 
-	si := &crypto.SigningIdentity{
+	si := &crypto2.SigningIdentity{
 		Identity:     r.Identity,
 		Cred:         p.conf.Signer.Cred,
 		UserKey:      p.userKey,

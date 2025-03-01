@@ -9,24 +9,24 @@ package idemix
 import (
 	"fmt"
 
-	msp "github.com/IBM/idemix"
+	idemix2 "github.com/IBM/idemix"
 	csp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto"
+	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/pkg/errors"
 )
 
 type Deserializer struct {
-	*msp2.Deserializer
+	*crypto2.Deserializer
 }
 
 // NewDeserializer returns a new deserializer for the idemix ExpectEidNymRhNym verification strategy
 func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
 	logger.Debugf("new deserialized for dlog idemix")
-	cryptoProvider, err := msp2.NewBCCSPWithDummyKeyStore(curveID, curveID == math.BLS12_381_BBS)
+	cryptoProvider, err := crypto2.NewBCCSPWithDummyKeyStore(curveID, curveID == math.BLS12_381_BBS)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
 	}
@@ -44,7 +44,7 @@ func NewDeserializerWithProvider(
 }
 
 func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID []byte, cryptoProvider csp.BCCSP) (*Deserializer, error) {
-	logger.Debugf("Setting up Idemix-based MSP instance")
+	logger.Debugf("Setting up Idemix-based deserailizer instance")
 
 	// Import Issuer Public Key
 	var issuerPublicKey csp.Key
@@ -55,10 +55,10 @@ func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID [
 			&csp.IdemixIssuerPublicKeyImportOpts{
 				Temporary: true,
 				AttributeNames: []string{
-					msp.AttributeNameOU,
-					msp.AttributeNameRole,
-					msp.AttributeNameEnrollmentId,
-					msp.AttributeNameRevocationHandle,
+					idemix2.AttributeNameOU,
+					idemix2.AttributeNameRole,
+					idemix2.AttributeNameEnrollmentId,
+					idemix2.AttributeNameRevocationHandle,
 				},
 			})
 		if err != nil {
@@ -67,7 +67,7 @@ func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID [
 	}
 
 	return &Deserializer{
-		Deserializer: &msp2.Deserializer{
+		Deserializer: &crypto2.Deserializer{
 			Ipk:             ipk,
 			Csp:             cryptoProvider,
 			IssuerPublicKey: issuerPublicKey,
@@ -83,7 +83,7 @@ func (i *Deserializer) DeserializeVerifier(raw driver.Identity) (driver.Verifier
 		return nil, err
 	}
 
-	return &msp2.NymSignatureVerifier{
+	return &crypto2.NymSignatureVerifier{
 		CSP:   i.Deserializer.Csp,
 		IPK:   i.Deserializer.IssuerPublicKey,
 		NymPK: identity.NymPublicKey,
@@ -96,7 +96,7 @@ func (i *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byt
 		return nil, err
 	}
 
-	return &msp2.NymSignatureVerifier{
+	return &crypto2.NymSignatureVerifier{
 		CSP:   i.Deserializer.Csp,
 		IPK:   i.Deserializer.IssuerPublicKey,
 		NymPK: identity.NymPublicKey,
@@ -126,7 +126,7 @@ func (i *Deserializer) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider)
 func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
 	eid := ""
 	if len(auditInfo) != 0 {
-		ai, err := msp2.DeserializeAuditInfo(auditInfo)
+		ai, err := crypto2.DeserializeAuditInfo(auditInfo)
 		if err != nil {
 			return "", err
 		}
@@ -136,7 +136,7 @@ func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
 		eid = ai.EnrollmentID()
 	}
 
-	return fmt.Sprintf("MSP.Idemix: [%s][%s]", eid, driver.Identity(raw).UniqueID()), nil
+	return fmt.Sprintf("Idemix: [%s][%s]", eid, driver.Identity(raw).UniqueID()), nil
 }
 
 func (i *Deserializer) String() string {
@@ -146,7 +146,7 @@ func (i *Deserializer) String() string {
 type AuditInfoDeserializer struct{}
 
 func (c *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
-	ai, err := msp2.DeserializeAuditInfo(raw)
+	ai, err := crypto2.DeserializeAuditInfo(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))
 	}

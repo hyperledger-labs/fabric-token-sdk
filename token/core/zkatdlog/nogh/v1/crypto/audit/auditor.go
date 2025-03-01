@@ -17,8 +17,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -283,7 +283,7 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 			return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
 		}
 		return nil
-	case msp.IdemixIdentity:
+	case idemix.IdentityType:
 		matcher, err := des.GetOwnerMatcher(token.Token.Owner, token.Owner.OwnerInfo)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get owner matcher for output [%d]", index)

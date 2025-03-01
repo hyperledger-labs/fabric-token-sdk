@@ -15,10 +15,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
@@ -90,16 +89,7 @@ func (d *base) newWalletService(
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
 		}
-		kmp := idemix.NewKeyManagerProvider(
-			key.PublicKey,
-			key.Curve,
-			msp.OwnerMSPID,
-			keyStore,
-			sigService,
-			identityConfig,
-			identityConfig.DefaultCacheSize(),
-			ignoreRemote,
-		)
+		kmp := idemix.NewKeyManagerProvider(key.PublicKey, key.Curve, keyStore, sigService, identityConfig, identityConfig.DefaultCacheSize(), ignoreRemote)
 		kmps = append(kmps, kmp)
 	}
 	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
