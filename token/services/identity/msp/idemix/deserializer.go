@@ -124,11 +124,6 @@ func (i *Deserializer) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider)
 }
 
 func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
-	r, err := i.Deserialize(raw, false)
-	if err != nil {
-		return "", err
-	}
-
 	eid := ""
 	if len(auditInfo) != 0 {
 		ai, err := msp2.DeserializeAuditInfo(auditInfo)
@@ -141,7 +136,7 @@ func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
 		eid = ai.EnrollmentID()
 	}
 
-	return fmt.Sprintf("MSP.Idemix: [%s][%s][%s][%s][%s]", eid, driver.Identity(raw).UniqueID(), r.SerializedIdentity.Mspid, r.OU.OrganizationalUnitIdentifier, r.Role.Role.String()), nil
+	return fmt.Sprintf("MSP.Idemix: [%s][%s]", eid, driver.Identity(raw).UniqueID()), nil
 }
 
 func (i *Deserializer) String() string {

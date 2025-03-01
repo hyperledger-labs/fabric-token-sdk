@@ -14,9 +14,8 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/cache"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
 
@@ -40,23 +39,23 @@ func NewKeyManagerProvider(issuerPublicKey []byte, curveID math.CurveID, mspID s
 }
 
 func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
-	var conf *msp.MSPConfig
+	var conf *msp.Config
 	var err error
 	if len(identityConfig.Raw) != 0 {
 		// load the msp config directly from identityConfig.Raw
 		logger.Infof("load the msp config directly from identityConfig.Raw [%s][%s]", identityConfig.ID, hash.Hashable(identityConfig.Raw))
-		conf, err = msp2.NewMSPConfigFromRawSigner(l.issuerPublicKey, identityConfig.Raw, l.mspID)
+		conf, err = msp.NewMSPConfigFromRawSigner(l.issuerPublicKey, identityConfig.Raw, l.mspID)
 	} else {
 		// load from URL
 		logger.Infof("load the msp config form identityConfig.URL [%s][%s]", identityConfig.ID, identityConfig.URL)
-		conf, err = msp2.NewMSPConfigFromURL(l.issuerPublicKey, identityConfig.URL, l.mspID, l.ignoreVerifyOnlyWallet)
+		conf, err = msp.NewMSPConfigFromURL(l.issuerPublicKey, identityConfig.URL, l.mspID, l.ignoreVerifyOnlyWallet)
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	// instantiate provider from configuration
-	cryptoProvider, err := msp2.NewBCCSP(l.keyStore, l.curveID, l.curveID == math.BLS12_381_BBS)
+	cryptoProvider, err := msp.NewBCCSP(l.keyStore, l.curveID, l.curveID == math.BLS12_381_BBS)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to instantiate crypto provider")
 	}

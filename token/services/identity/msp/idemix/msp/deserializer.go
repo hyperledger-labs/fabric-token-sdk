@@ -9,16 +9,13 @@ package msp
 import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
 
 type DeserializedIdentity struct {
 	Identity           *Identity
 	NymPublicKey       bccsp.Key
-	SerializedIdentity *m.SerializedIdentity
-	OU                 *m.OrganizationUnit
-	Role               *m.MSPRole
+	SerializedIdentity *SerializedIdentity
 }
 
 type Deserializer struct {
@@ -38,13 +35,13 @@ func (c *Deserializer) Deserialize(raw []byte, checkValidity bool) (*Deserialize
 }
 
 func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID []byte) (*DeserializedIdentity, error) {
-	si := &m.SerializedIdentity{}
+	si := &SerializedIdentity{}
 	err := proto.Unmarshal(raw, si)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
 
-	serialized := new(m.SerializedIdemixIdentity)
+	serialized := new(SerializedIdemixIdentity)
 	err = proto.Unmarshal(si.IdBytes, serialized)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
@@ -65,20 +62,6 @@ func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 		return nil, errors.WithMessage(err, "failed to import nym public key")
 	}
 
-	// OU
-	ou := &m.OrganizationUnit{}
-	err = proto.Unmarshal(serialized.Ou, ou)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot deserialize the OU of the identity")
-	}
-
-	// RoleAttribute
-	role := &m.MSPRole{}
-	err = proto.Unmarshal(serialized.Role, role)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot deserialize the role of the identity")
-	}
-
 	idemix := c
 	if len(nymEID) != 0 {
 		idemix = &Deserializer{
@@ -93,14 +76,7 @@ func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 		}
 	}
 
-	id, err := NewIdentity(
-		idemix,
-		NymPublicKey,
-		role,
-		ou,
-		serialized.Proof,
-		c.VerType,
-	)
+	id, err := NewIdentity(idemix, NymPublicKey, serialized.Proof, c.VerType)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot deserialize")
 	}
@@ -114,8 +90,6 @@ func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 		Identity:           id,
 		NymPublicKey:       NymPublicKey,
 		SerializedIdentity: si,
-		OU:                 ou,
-		Role:               role,
 	}, nil
 }
 
