@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = logging.MustGetLogger("token-sdk.services.identity.msp.idemix")
+var logger = logging.MustGetLogger("token-sdk.services.identity.idemix")
 
 type IdentityCacheBackendFunc func(auditInfo []byte) (driver.Identity, []byte, error)
 

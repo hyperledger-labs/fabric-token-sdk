@@ -6,4 +6,4 @@ SPDX-License-Identifier: Apache-2.0
 
 package protos
 
-//go:generate protoc config.proto --go_out=../protos-go/config --go_opt=paths=source_relative
+//go:generate protoc x509_config.proto --go_out=../protos-go/config --go_opt=paths=source_relative
