@@ -13,9 +13,8 @@ import (
 )
 
 type DeserializedIdentity struct {
-	Identity           *Identity
-	NymPublicKey       bccsp.Key
-	SerializedIdentity *SerializedIdentity
+	Identity     *Identity
+	NymPublicKey bccsp.Key
 }
 
 type Deserializer struct {
@@ -35,14 +34,8 @@ func (c *Deserializer) Deserialize(raw []byte, checkValidity bool) (*Deserialize
 }
 
 func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID []byte) (*DeserializedIdentity, error) {
-	si := &SerializedIdentity{}
-	err := proto.Unmarshal(raw, si)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
-	}
-
 	serialized := new(SerializedIdemixIdentity)
-	err = proto.Unmarshal(si.IdBytes, serialized)
+	err := proto.Unmarshal(raw, serialized)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
 	}
@@ -87,9 +80,8 @@ func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 	}
 
 	return &DeserializedIdentity{
-		Identity:           id,
-		NymPublicKey:       NymPublicKey,
-		SerializedIdentity: si,
+		Identity:     id,
+		NymPublicKey: NymPublicKey,
 	}, nil
 }
 

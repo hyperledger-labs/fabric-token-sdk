@@ -11,9 +11,8 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
+	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	x510 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
@@ -32,11 +31,11 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 
 	ownerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
 	for _, idemixIssuerPublicKey := range pp.IdemixIssuerPublicKeys {
-		idemixDes, err := idemix.NewDeserializer(idemixIssuerPublicKey.PublicKey, idemixIssuerPublicKey.Curve)
+		idemixDes, err := idemix2.NewDeserializer(idemixIssuerPublicKey.PublicKey, idemixIssuerPublicKey.Curve)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", idemixIssuerPublicKey.Curve)
 		}
-		ownerDeserializer.AddTypedVerifierDeserializer(msp.IdemixIdentity, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+		ownerDeserializer.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 	}
 	ownerDeserializer.AddTypedVerifierDeserializer(x510.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x510.IdentityDeserializer{}, &x510.AuditMatcherDeserializer{}))
 	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
@@ -46,7 +45,7 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 
 	return &Deserializer{
 		Deserializer: common.NewDeserializer(
-			msp.IdemixIdentity,
+			idemix2.IdentityType,
 			auditorIssuerDeserializer,
 			ownerDeserializer,
 			auditorIssuerDeserializer,
@@ -86,8 +85,8 @@ type EIDRHDeserializer = deserializer.EIDRHDeserializer
 // NewEIDRHDeserializer returns an enrollmentService
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
-	d.AddDeserializer(msp.IdemixIdentity, &idemix.AuditInfoDeserializer{})
+	d.AddDeserializer(idemix2.IdentityType, &idemix2.AuditInfoDeserializer{})
 	d.AddDeserializer(x510.IdentityType, &x510.AuditInfoDeserializer{})
-	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix.AuditInfoDeserializer{}))
+	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix2.AuditInfoDeserializer{}))
 	return d
 }

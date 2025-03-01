@@ -22,9 +22,8 @@ import (
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
-	msp3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto"
+	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -48,7 +47,7 @@ var _ = Describe("Auditor", func() {
 		Expect(err).NotTo(HaveOccurred())
 		pp, err = v1.Setup(32, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		des, err := idemix.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.FP256BN_AMCL)
+		des, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), &noop.Tracer{}, des, pp.PedersenGenerators, fakeSigningIdentity, math.Curves[pp.Curve])
 		fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)
@@ -255,7 +254,7 @@ func (f *fakeProv) TranslatePath(path string) string {
 	return ""
 }
 
-func getIdemixInfo(dir string) (driver.Identity, *msp3.AuditInfo) {
+func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
 	registry := registry2.New()
 	configService := &fakeProv{typ: "memory"}
 	Expect(registry.RegisterService(configService)).NotTo(HaveOccurred())
@@ -268,14 +267,14 @@ func getIdemixInfo(dir string) (driver.Identity, *msp3.AuditInfo) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token2.TMSID{Network: "pineapple"}))
 	err = registry.RegisterService(sigService)
 	Expect(err).NotTo(HaveOccurred())
-	config, err := msp3.NewConfig(dir, "idemix")
+	config, err := crypto.NewConfig(dir)
 	Expect(err).NotTo(HaveOccurred())
 
-	keyStore, err := msp3.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, backend)
 	Expect(err).NotTo(HaveOccurred())
-	cryptoProvider, err := msp3.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	Expect(err).NotTo(HaveOccurred())
-	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix2.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
@@ -289,7 +288,7 @@ func getIdemixInfo(dir string) (driver.Identity, *msp3.AuditInfo) {
 	err = auditInfo.Match(id)
 	Expect(err).NotTo(HaveOccurred())
 
-	id, err = identity.WrapWithType(msp.IdemixIdentity, id)
+	id, err = identity.WrapWithType(idemix2.IdentityType, id)
 	Expect(err).NotTo(HaveOccurred())
 
 	return id, auditInfo

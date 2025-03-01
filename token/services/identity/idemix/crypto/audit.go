@@ -39,14 +39,8 @@ func (a *AuditInfo) RevocationHandle() string {
 }
 
 func (a *AuditInfo) Match(id []byte) error {
-	si := &SerializedIdentity{}
-	err := proto.Unmarshal(id, si)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
-	}
-
 	serialized := new(SerializedIdemixIdentity)
-	err = proto.Unmarshal(si.IdBytes, serialized)
+	err := proto.Unmarshal(id, serialized)
 	if err != nil {
 		return errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
 	}

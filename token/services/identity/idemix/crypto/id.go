@@ -19,22 +19,20 @@ const (
 	SignerConfigFull = "SignerConfigFull"
 )
 
-var logger = logging.MustGetLogger("token-sdk.services.identity.msp.idemix")
+var logger = logging.MustGetLogger("token-sdk.services.identity.idemix")
 
 type Identity struct {
 	NymPublicKey bccsp.Key
 	Idemix       *Deserializer
-	// AssociationProof contains cryptographic proof that this identity
-	// belongs to the MSP id.provider, i.e., it proves that the pseudonym
-	// is constructed from a secret key on which the CA issued a credential.
+	// AssociationProof contains cryptographic proof that this identity is valid.
 	AssociationProof []byte
 	VerificationType bccsp.VerificationType
 }
 
-func NewIdentity(idemix *Deserializer, NymPublicKey bccsp.Key, proof []byte, verificationType bccsp.VerificationType) (*Identity, error) {
+func NewIdentity(idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, verificationType bccsp.VerificationType) (*Identity, error) {
 	id := &Identity{}
 	id.Idemix = idemix
-	id.NymPublicKey = NymPublicKey
+	id.NymPublicKey = nymPublicKey
 	id.AssociationProof = proof
 	id.VerificationType = verificationType
 	return id, nil
@@ -73,14 +71,7 @@ func (id *Identity) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	sID := &SerializedIdentity{IdBytes: idemixIDBytes}
-	idBytes, err := proto.Marshal(sID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not marshal a SerializedIdentity structure")
-	}
-
-	return idBytes, nil
+	return idemixIDBytes, nil
 }
 
 func (id *Identity) verifyProof() error {

@@ -12,19 +12,18 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/cache"
+	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/cache"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-sdk.services.identity.msp.idemix")
+var logger = logging.MustGetLogger("token-sdk.services.identity.idemix")
 
 type KeyManagerProvider struct {
 	issuerPublicKey []byte
 	curveID         math.CurveID
-	mspID           string
 	keyStore        bccsp.KeyStore
 	signerService   SignerService
 	config          driver2.Config
@@ -34,34 +33,34 @@ type KeyManagerProvider struct {
 	ignoreVerifyOnlyWallet bool
 }
 
-func NewKeyManagerProvider(issuerPublicKey []byte, curveID math.CurveID, mspID string, keyStore bccsp.KeyStore, signerService SignerService, config driver2.Config, cacheSize int, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
-	return &KeyManagerProvider{issuerPublicKey: issuerPublicKey, curveID: curveID, mspID: mspID, keyStore: keyStore, signerService: signerService, config: config, cacheSize: cacheSize, ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet}
+func NewKeyManagerProvider(issuerPublicKey []byte, curveID math.CurveID, keyStore bccsp.KeyStore, signerService SignerService, config driver2.Config, cacheSize int, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
+	return &KeyManagerProvider{issuerPublicKey: issuerPublicKey, curveID: curveID, keyStore: keyStore, signerService: signerService, config: config, cacheSize: cacheSize, ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet}
 }
 
 func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
-	var conf *crypto.Config
+	var conf *crypto2.Config
 	var err error
 	if len(identityConfig.Raw) != 0 {
-		// load the msp config directly from identityConfig.Raw
-		logger.Infof("load the msp config directly from identityConfig.Raw [%s][%s]", identityConfig.ID, hash.Hashable(identityConfig.Raw))
-		conf, err = crypto.NewConfigFromRawSigner(l.issuerPublicKey, identityConfig.Raw, l.mspID)
+		// load the config directly from identityConfig.Raw
+		logger.Infof("load the config directly from identityConfig.Raw [%s][%s]", identityConfig.ID, hash.Hashable(identityConfig.Raw))
+		conf, err = crypto2.NewConfigFromRawSigner(l.issuerPublicKey, identityConfig.Raw)
 	} else {
 		// load from URL
-		logger.Infof("load the msp config form identityConfig.URL [%s][%s]", identityConfig.ID, identityConfig.URL)
-		conf, err = crypto.NewConfigWithIPK(l.issuerPublicKey, identityConfig.URL, l.mspID, l.ignoreVerifyOnlyWallet)
+		logger.Infof("load the config form identityConfig.URL [%s][%s]", identityConfig.ID, identityConfig.URL)
+		conf, err = crypto2.NewConfigWithIPK(l.issuerPublicKey, identityConfig.URL, l.ignoreVerifyOnlyWallet)
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	// instantiate provider from configuration
-	cryptoProvider, err := crypto.NewBCCSP(l.keyStore, l.curveID, l.curveID == math.BLS12_381_BBS)
+	cryptoProvider, err := crypto2.NewBCCSP(l.keyStore, l.curveID, l.curveID == math.BLS12_381_BBS)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to instantiate crypto provider")
 	}
 	provider, err := NewKeyManager(conf, l.signerService, bccsp.EidNymRhNym, cryptoProvider)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", identityConfig.URL)
+		return nil, errors.Wrapf(err, "failed instantiating idemix key manager provider from [%s]", identityConfig.URL)
 	}
 
 	cacheSize, err := l.cacheSizeForID(identityConfig.ID)
