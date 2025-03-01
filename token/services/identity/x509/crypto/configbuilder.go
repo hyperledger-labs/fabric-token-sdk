@@ -57,7 +57,7 @@ func LoadConfigWithIdentityInfo(signingIdentityInfo *SigningIdentityInfo) (*Conf
 	return config, nil
 }
 
-func RemoveSigningIdentityInfo(c *Config) (*Config, error) {
-	c.SigningIdentity = nil
+func RemovePrivateSigner(c *Config) (*Config, error) {
+	c.SigningIdentity.PrivateSigner = nil
 	return c, nil
 }
