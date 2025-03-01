@@ -11,12 +11,11 @@ import (
 
 	"github.com/IBM/idemix"
 	bccsp "github.com/IBM/idemix/bccsp/types"
-	"github.com/IBM/idemix/idemixmsp"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto/protos-go/config"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -31,28 +30,20 @@ type SignerService interface {
 }
 
 type KeyManager struct {
-	*msp.Deserializer
+	*crypto.Deserializer
 	userKey       bccsp.Key
-	conf          idemixmsp.IdemixMSPConfig
+	conf          *config.IdemixConfig
 	SignerService SignerService
 
 	sigType bccsp.SignatureType
 	verType bccsp.VerificationType
 }
 
-func NewKeyManager(conf1 *msp.Config, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*KeyManager, error) {
+func NewKeyManager(conf *crypto.Config, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*KeyManager, error) {
 	logger.Debugf("Setting up Idemix-based MSP instance")
-
-	if conf1 == nil {
+	if conf == nil {
 		return nil, errors.Errorf("setup error: nil conf reference")
 	}
-
-	var conf idemixmsp.IdemixMSPConfig
-	err := proto.Unmarshal(conf1.Config, &conf)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed unmarshalling idemix provider config")
-	}
-
 	logger.Debugf("Setting up Idemix MSP instance %s", conf.Name)
 
 	// Import Issuer Public Key
@@ -140,7 +131,7 @@ func NewKeyManager(conf1 *msp.Config, signerService SignerService, sigType bccsp
 	}
 
 	return &KeyManager{
-		Deserializer: &msp.Deserializer{
+		Deserializer: &crypto.Deserializer{
 			Name:            conf.Name,
 			Csp:             cryptoProvider,
 			IssuerPublicKey: issuerPublicKey,
@@ -200,8 +191,8 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 			{Type: bccsp.IdemixHiddenAttribute},
 			{Type: bccsp.IdemixHiddenAttribute},
 		},
-		RhIndex:  msp.RHIndex,
-		EidIndex: msp.EIDIndex,
+		RhIndex:  crypto.RHIndex,
+		EidIndex: crypto.EIDIndex,
 		CRI:      p.conf.Signer.CredentialRevocationInformation,
 		SigType:  sigType,
 		Metadata: signerMetadata,
@@ -216,11 +207,11 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	// Set up default signer
-	id, err := msp.NewIdentity(p.Deserializer, NymPublicKey, proof, p.verType)
+	id, err := crypto.NewIdentity(p.Deserializer, NymPublicKey, proof, p.verType)
 	if err != nil {
 		return nil, nil, err
 	}
-	sID := &msp.SigningIdentity{
+	sID := &crypto.SigningIdentity{
 		Identity:     id,
 		Cred:         p.conf.Signer.Cred,
 		UserKey:      p.userKey,
@@ -243,7 +234,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	case bccsp.Standard:
 		infoRaw = nil
 	case bccsp.EidNymRhNym:
-		auditInfo := &msp.AuditInfo{
+		auditInfo := &crypto.AuditInfo{
 			Csp:             p.Csp,
 			IssuerPublicKey: p.IssuerPublicKey,
 			EidNymAuditData: sigOpts.Metadata.EidNymAuditData,
@@ -288,7 +279,7 @@ func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
 func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
 	eid := ""
 	if len(auditInfo) != 0 {
-		ai := &msp.AuditInfo{
+		ai := &crypto.AuditInfo{
 			Csp:             p.Csp,
 			IssuerPublicKey: p.IssuerPublicKey,
 		}
@@ -327,7 +318,7 @@ func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdent
 		return nil, errors.Wrap(err, "cannot find nym secret key")
 	}
 
-	si := &msp.SigningIdentity{
+	si := &crypto.SigningIdentity{
 		Identity:     r.Identity,
 		Cred:         p.conf.Signer.Cred,
 		UserKey:      p.userKey,
