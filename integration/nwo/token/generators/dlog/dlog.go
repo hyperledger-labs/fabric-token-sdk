@@ -24,7 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/commands"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/onsi/ginkgo/v2"

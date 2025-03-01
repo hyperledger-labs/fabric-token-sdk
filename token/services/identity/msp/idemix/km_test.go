@@ -19,7 +19,7 @@ import (
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/stretchr/testify/assert"
@@ -30,12 +30,12 @@ func TestKeyManager(t *testing.T) {
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 
-	config, err := idemix2.GetIdemixMspConfig("./testdata/idemix", "idemix")
+	config, err := crypto.NewConfig("./testdata/idemix", "idemix")
 	assert.NoError(t, err)
 
-	keyStore, err := msp.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err := msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 
 	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
@@ -63,12 +63,12 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := idemix2.GetIdemixMspConfig("./testdata/idemix", "idemix")
+	config, err := crypto.NewConfig("./testdata/idemix", "idemix")
 	assert.NoError(t, err)
 
-	keyStore, err := msp.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err := msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
@@ -95,9 +95,9 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = msp.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err = crypto.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err = msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 	p, err = idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
@@ -134,12 +134,12 @@ func TestIdentityStandard(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := idemix2.GetIdemixMspConfig("./testdata/idemix", "idemix")
+	config, err := crypto.NewConfig("./testdata/idemix", "idemix")
 	assert.NoError(t, err)
 
-	keyStore, err := msp.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err := msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 	p, err := idemix.NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
@@ -159,9 +159,9 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = msp.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err = crypto.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err = msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 	p, err = idemix.NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
@@ -181,9 +181,9 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = msp.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err = crypto.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err = msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 	p, err = idemix.NewKeyManager(config, sigService, idemix.Any, cryptoProvider)
 	assert.NoError(t, err)
@@ -213,21 +213,21 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := idemix2.GetIdemixMspConfig("./testdata/idemix", "idemix")
+	config, err := crypto.NewConfig("./testdata/idemix", "idemix")
 	assert.NoError(t, err)
-	keyStore, err := msp.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err := msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	config, err = idemix2.GetIdemixMspConfig("./testdata/idemix2", "idemix")
+	config, err = crypto.NewConfig("./testdata/idemix2", "idemix")
 	assert.NoError(t, err)
-	keyStore, err = msp.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err = crypto.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err = msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 	p2, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
@@ -263,17 +263,17 @@ func TestKeyManager_DeserializeSigner(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := idemix2.GetIdemixMspConfig("./testdata/sameissuer/idemix", "idemix")
+	config, err := crypto.NewConfig("./testdata/sameissuer/idemix", "idemix")
 	assert.NoError(t, err)
-	keyStore, err := msp.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err := msp.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	config, err = idemix2.GetIdemixMspConfig("./testdata/sameissuer/idemix2", "idemix")
+	config, err = crypto.NewConfig("./testdata/sameissuer/idemix2", "idemix")
 	assert.NoError(t, err)
 	p2, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
@@ -323,14 +323,14 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	ipkBytes, err := msp.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
+	ipkBytes, err := crypto.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
 	assert.NoError(t, err)
-	config, err := msp.NewMSPConfigFromURL(ipkBytes, "./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
+	config, err := crypto.NewConfigWithIPK(ipkBytes, "./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
-	keyStore, err := msp.NewKeyStore(math.BN254, backend)
+	keyStore, err := crypto.NewKeyStore(math.BN254, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err := msp.NewBCCSP(keyStore, math.BN254, false)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
 	p, err := idemix.NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
@@ -350,9 +350,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = msp.NewKeyStore(math.BN254, backend)
+	keyStore, err = crypto.NewKeyStore(math.BN254, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err = msp.NewBCCSP(keyStore, math.BN254, false)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
 	p, err = idemix.NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
@@ -372,9 +372,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = msp.NewKeyStore(math.BN254, backend)
+	keyStore, err = crypto.NewKeyStore(math.BN254, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err = msp.NewBCCSP(keyStore, math.BN254, false)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
 	p, err = idemix.NewKeyManager(config, sigService, idemix.Any, cryptoProvider)
 	assert.NoError(t, err)
@@ -404,14 +404,14 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	ipkBytes, err := msp.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
+	ipkBytes, err := crypto.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
 	assert.NoError(t, err)
-	config, err := msp.NewMSPConfigFromURL(ipkBytes, "./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
+	config, err := crypto.NewConfigWithIPK(ipkBytes, "./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
-	keyStore, err := msp.NewKeyStore(math.BN254, backend)
+	keyStore, err := crypto.NewKeyStore(math.BN254, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err := msp.NewBCCSP(keyStore, math.BN254, false)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
 	p, err := idemix.NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
@@ -440,9 +440,9 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = msp.NewKeyStore(math.BN254, backend)
+	keyStore, err = crypto.NewKeyStore(math.BN254, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err = msp.NewBCCSP(keyStore, math.BN254, false)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
 	p, err = idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)

@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto"
 	"github.com/pkg/errors"
 )
 
