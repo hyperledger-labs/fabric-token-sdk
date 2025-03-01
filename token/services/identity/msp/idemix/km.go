@@ -8,7 +8,6 @@ package idemix
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/IBM/idemix"
 	bccsp "github.com/IBM/idemix/bccsp/types"
@@ -18,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
-	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -42,7 +40,7 @@ type KeyManager struct {
 	verType bccsp.VerificationType
 }
 
-func NewKeyManager(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*KeyManager, error) {
+func NewKeyManager(conf1 *msp.Config, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*KeyManager, error) {
 	logger.Debugf("Setting up Idemix-based MSP instance")
 
 	if conf1 == nil {
@@ -104,13 +102,6 @@ func NewKeyManager(conf1 *m.MSPConfig, signerService SignerService, sigType bccs
 		}
 
 		// Verify credential
-		role := &m.MSPRole{
-			MspIdentifier: conf.Name,
-			Role:          m.MSPRole_MEMBER,
-		}
-		if msp.CheckRole(int(conf.Signer.Role), msp.ADMIN) {
-			role.Role = m.MSPRole_ADMIN
-		}
 		valid, err := cryptoProvider.Verify(
 			userKey,
 			conf.Signer.Cred,
@@ -118,8 +109,8 @@ func NewKeyManager(conf1 *m.MSPConfig, signerService SignerService, sigType bccs
 			&bccsp.IdemixCredentialSignerOpts{
 				IssuerPK: issuerPublicKey,
 				Attributes: []bccsp.IdemixAttribute{
-					{Type: bccsp.IdemixBytesAttribute, Value: []byte(conf.Signer.OrganizationalUnitIdentifier)},
-					{Type: bccsp.IdemixIntAttribute, Value: msp.GetIdemixRoleFromMSPRole(role)},
+					{Type: bccsp.IdemixHiddenAttribute},
+					{Type: bccsp.IdemixHiddenAttribute},
 					{Type: bccsp.IdemixBytesAttribute, Value: []byte(conf.Signer.EnrollmentId)},
 					{Type: bccsp.IdemixHiddenAttribute},
 				},
@@ -182,20 +173,6 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 		return nil, nil, errors.Wrapf(err, "failed getting public nym key")
 	}
 
-	role := &m.MSPRole{
-		MspIdentifier: p.Name,
-		Role:          m.MSPRole_MEMBER,
-	}
-	if msp.CheckRole(int(p.conf.Signer.Role), msp.ADMIN) {
-		role.Role = m.MSPRole_ADMIN
-	}
-
-	ou := &m.OrganizationUnit{
-		MspIdentifier:                p.Name,
-		OrganizationalUnitIdentifier: p.conf.Signer.OrganizationalUnitIdentifier,
-		CertifiersIdentifier:         p.IssuerPublicKey.SKI(),
-	}
-
 	enrollmentID := p.conf.Signer.EnrollmentId
 	rh := p.conf.Signer.RevocationHandle
 	sigType := p.sigType
@@ -239,7 +216,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	// Set up default signer
-	id, err := msp.NewIdentity(p.Deserializer, NymPublicKey, role, ou, proof, p.verType)
+	id, err := msp.NewIdentity(p.Deserializer, NymPublicKey, proof, p.verType)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -272,8 +249,8 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 			EidNymAuditData: sigOpts.Metadata.EidNymAuditData,
 			RhNymAuditData:  sigOpts.Metadata.RhNymAuditData,
 			Attributes: [][]byte{
-				[]byte(p.conf.Signer.OrganizationalUnitIdentifier),
-				[]byte(strconv.Itoa(msp.GetIdemixRoleFromMSPRole(role))),
+				nil,
+				nil,
 				[]byte(enrollmentID),
 				[]byte(rh),
 			},
@@ -305,6 +282,41 @@ func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
 }
 
 func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
+	return p.DeserializeSigningIdentity(raw)
+}
+
+func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
+	eid := ""
+	if len(auditInfo) != 0 {
+		ai := &msp.AuditInfo{
+			Csp:             p.Csp,
+			IssuerPublicKey: p.IssuerPublicKey,
+		}
+		if err := ai.FromBytes(auditInfo); err != nil {
+			return "", err
+		}
+		if err := ai.Match(raw); err != nil {
+			return "", err
+		}
+		eid = ai.EnrollmentID()
+	}
+
+	return fmt.Sprintf("MSP.Idemix: [%s][%s]", eid, driver.Identity(raw).UniqueID()), nil
+}
+
+func (p *KeyManager) String() string {
+	return fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(p.Ipk).String())
+}
+
+func (p *KeyManager) EnrollmentID() string {
+	return p.conf.Signer.EnrollmentId
+}
+
+func (p *KeyManager) Anonymous() bool {
+	return true
+}
+
+func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentity, error) {
 	r, err := p.Deserialize(raw, true)
 	if err != nil {
 		return nil, err
@@ -331,102 +343,6 @@ func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
 		return nil, errors.Wrap(err, "failed verifying verification signature")
 	}
 	return si, nil
-}
-
-func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
-	r, err := p.Deserialize(raw, true)
-	if err != nil {
-		return "", err
-	}
-
-	eid := ""
-	if len(auditInfo) != 0 {
-		ai := &msp.AuditInfo{
-			Csp:             p.Csp,
-			IssuerPublicKey: p.IssuerPublicKey,
-		}
-		if err := ai.FromBytes(auditInfo); err != nil {
-			return "", err
-		}
-		if err := ai.Match(raw); err != nil {
-			return "", err
-		}
-		eid = ai.EnrollmentID()
-	}
-
-	return fmt.Sprintf("MSP.Idemix: [%s][%s][%s][%s][%s]", eid, driver.Identity(raw).UniqueID(), r.SerializedIdentity.Mspid, r.OU.OrganizationalUnitIdentifier, r.Role.Role.String()), nil
-}
-
-func (p *KeyManager) String() string {
-	return fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(p.Ipk).String())
-}
-
-func (p *KeyManager) EnrollmentID() string {
-	return p.conf.Signer.EnrollmentId
-}
-
-func (p *KeyManager) Anonymous() bool {
-	return true
-}
-
-func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentity, error) {
-	si := &m.SerializedIdentity{}
-	err := proto.Unmarshal(raw, si)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
-	}
-
-	serialized := new(m.SerializedIdemixIdentity)
-	err = proto.Unmarshal(si.IdBytes, serialized)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
-	}
-	if serialized.NymX == nil || serialized.NymY == nil {
-		return nil, errors.Errorf("unable to deserialize idemix identity: pseudonym is invalid")
-	}
-
-	// Import NymPublicKey
-	var rawNymPublicKey []byte
-	rawNymPublicKey = append(rawNymPublicKey, serialized.NymX...)
-	rawNymPublicKey = append(rawNymPublicKey, serialized.NymY...)
-	NymPublicKey, err := p.Csp.KeyImport(
-		rawNymPublicKey,
-		&bccsp.IdemixNymPublicKeyImportOpts{Temporary: true},
-	)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to import nym public key")
-	}
-
-	// OU
-	ou := &m.OrganizationUnit{}
-	err = proto.Unmarshal(serialized.Ou, ou)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot deserialize the OU of the identity")
-	}
-
-	// RoleAttribute
-	role := &m.MSPRole{}
-	err = proto.Unmarshal(serialized.Role, role)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot deserialize the role of the identity")
-	}
-
-	id, _ := msp.NewIdentity(p.Deserializer, NymPublicKey, role, ou, serialized.Proof, p.verType)
-	if err := id.Validate(); err != nil {
-		return nil, errors.Wrap(err, "cannot deserialize, invalid identity")
-	}
-	nymKey, err := p.Csp.GetKey(NymPublicKey.SKI())
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot find nym secret key")
-	}
-
-	return &msp.SigningIdentity{
-		Identity:     id,
-		Cred:         p.conf.Signer.Cred,
-		UserKey:      p.userKey,
-		NymKey:       nymKey,
-		EnrollmentId: p.conf.Signer.EnrollmentId,
-	}, nil
 }
 
 func (p *KeyManager) IdentityType() identity.Type {

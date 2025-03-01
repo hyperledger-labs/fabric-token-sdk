@@ -11,7 +11,6 @@ import (
 
 	csp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
 
@@ -40,13 +39,13 @@ func (a *AuditInfo) RevocationHandle() string {
 }
 
 func (a *AuditInfo) Match(id []byte) error {
-	si := &m.SerializedIdentity{}
+	si := &SerializedIdentity{}
 	err := proto.Unmarshal(id, si)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
 
-	serialized := new(m.SerializedIdemixIdentity)
+	serialized := new(SerializedIdemixIdentity)
 	err = proto.Unmarshal(si.IdBytes, serialized)
 	if err != nil {
 		return errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
