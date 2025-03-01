@@ -28,13 +28,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
-	msp3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+	msp3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	msp2 "github.com/hyperledger/fabric/msp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -376,7 +375,7 @@ func getIdemixInfo(dir string) (driver.Identity, *msp3.AuditInfo, driver.Signing
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	err = registry.RegisterService(sigService)
 	Expect(err).NotTo(HaveOccurred())
-	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")
+	config, err := msp3.NewConfig(dir, "idemix")
 	Expect(err).NotTo(HaveOccurred())
 
 	keyStore, err := msp3.NewKeyStore(math.FP256BN_AMCL, backend)
