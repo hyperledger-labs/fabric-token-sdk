@@ -36,7 +36,10 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 	reqMeta := &TokenRequestMetadata{
 		Issues: []*IssueMetadata{
 			{
-				Issuer: []byte{1, 2, 3},
+				Issuer: AuditableIdentity{
+					Identity:  []byte("issuer1"),
+					AuditInfo: []byte("issuer_auditinfo1"),
+				},
 				Inputs: []*IssueInputMetadata{},
 				Outputs: []*IssueOutputMetadata{
 					{

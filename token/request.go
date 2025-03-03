@@ -1120,7 +1120,7 @@ func (r *Request) Issues() []*Issue {
 	var issues []*Issue
 	for _, issue := range r.Metadata.Issues {
 		issues = append(issues, &Issue{
-			Issuer:       issue.Issuer,
+			Issuer:       issue.Issuer.Identity,
 			Receivers:    issue.Receivers(),
 			ExtraSigners: issue.ExtraSigners,
 		})
