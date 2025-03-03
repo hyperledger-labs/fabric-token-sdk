@@ -774,7 +774,7 @@ func NewEndorseView(tx *Transaction) *EndorseView {
 // 4. It sends back an ack.
 func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	// Process signature requests
-	logger.Debugf("check expected numer of requests to sign for txid [%s]", s.tx.ID())
+	logger.Debugf("check expected number of requests to sign for txid [%s]", s.tx.ID())
 	requestsToBeSigned, err := requestsToBeSigned(s.tx.Request())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed collecting requests of signature")
