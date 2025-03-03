@@ -7,7 +7,7 @@
 // versions:
 // 	protoc-gen-go v1.33.0
 // 	protoc        v5.28.1
-// source: noghpp.proto
+// source: pp.proto
 
 package pp
 

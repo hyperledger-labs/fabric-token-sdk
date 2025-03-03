@@ -181,7 +181,7 @@ func (i *IssueOutputMetadata) RecipientAt(index int) *AuditableIdentity {
 // For each output, there is a token info and a list of receivers with their audit info to recover their enrollment ID.
 type IssueMetadata struct {
 	// Issuer is the identity of the issuer
-	Issuer  Identity
+	Issuer  AuditableIdentity
 	Inputs  []*IssueInputMetadata
 	Outputs []*IssueOutputMetadata
 	// ExtraSigners is the list of extra identities that are not part of the issue action per se
@@ -190,6 +190,10 @@ type IssueMetadata struct {
 }
 
 func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
+	issuer, err := i.Issuer.ToProtos()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling issuer [%v]", i.Issuer)
+	}
 	inputs, err := utils.ToProtosSlice(i.Inputs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling inputs")
@@ -199,7 +203,7 @@ func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
 	return &request.IssueMetadata{
-		Issuer:       &request.Identity{Raw: i.Issuer},
+		Issuer:       issuer,
 		Inputs:       inputs,
 		Outputs:      outputs,
 		ExtraSigners: ToProtoIdentitySlice(i.ExtraSigners),
@@ -207,7 +211,11 @@ func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
 }
 
 func (i *IssueMetadata) FromProtos(issueMetadata *request.IssueMetadata) error {
-	i.Issuer = ToIdentity(issueMetadata.Issuer)
+	issuer := &AuditableIdentity{}
+	if err := issuer.FromProtos(issueMetadata.Issuer); err != nil {
+		return errors.Wrapf(err, "failed unmarshalling issuer [%v]", issueMetadata.Issuer)
+	}
+	i.Issuer = *issuer
 	i.Inputs = utils.GenericSliceOfPointers[IssueInputMetadata](len(issueMetadata.Inputs))
 	err := utils.FromProtosSlice[request.IssueInputMetadata, *IssueInputMetadata](issueMetadata.Inputs, i.Inputs)
 	if err != nil {
