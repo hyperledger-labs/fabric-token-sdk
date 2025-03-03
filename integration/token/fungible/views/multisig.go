@@ -159,8 +159,9 @@ func (r *MultiSigSpendView) Call(context view.Context) (res interface{}, err err
 	spendWallet := multisig.GetWallet(context, r.Wallet, serviceOpts...)
 	assert.NotNil(spendWallet, "wallet [%s] not found", r.Wallet)
 
+	// TODO: provides more ways to select multisig token
 	matched, err := multisig.Wallet(context, spendWallet).ListTokens()
-	assert.NoError(err, "multisig script has expired")
+	assert.NoError(err, "failed to fetch multisig tokens")
 	assert.True(matched.Count() == 1, "expected only one multisig script to match, got [%d]", matched.Count())
 
 	// contact the co-owners about the intention to spend the multisig token
