@@ -59,7 +59,7 @@ message IssueInputMetadata {
 
 // Metadata for an issuance action containing multiple tokens
 message IssueMetadata {
-  Identity issuer = 1; // Issuer of the tokens
+  AuditableIdentity issuer = 1; // Issuer of the tokens
   repeated IssueInputMetadata inputs = 2; // Inputs
   repeated OutputMetadata outputs = 3; // Outputs
   repeated Identity extra_signers = 4; // Additional signers for the issuance

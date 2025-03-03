@@ -192,7 +192,10 @@ func testFilterByCase1(t *testing.T) {
 
 	// Alice's issue
 	aliceIssue := &driver.IssueMetadata{
-		Issuer: token.Identity("Issuer"),
+		Issuer: driver.AuditableIdentity{
+			Identity:  token.Identity("Issuer"),
+			AuditInfo: []byte("Issuer Audit Info"),
+		},
 		Inputs: nil,
 		Outputs: []*driver.IssueOutputMetadata{
 			{
@@ -209,7 +212,10 @@ func testFilterByCase1(t *testing.T) {
 	}
 	// Bob's issue
 	bobIssue := &driver.IssueMetadata{
-		Issuer: token.Identity("Issuer"),
+		Issuer: driver.AuditableIdentity{
+			Identity:  token.Identity("Issuer"),
+			AuditInfo: []byte("Issuer Audit Info"),
+		},
 		Inputs: nil,
 		Outputs: []*driver.IssueOutputMetadata{
 			{

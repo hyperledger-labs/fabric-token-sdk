@@ -161,11 +161,18 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	if err != nil {
 		return nil, nil, err
 	}
+	issuerAuditInfo, err := s.Deserializer.GetOwnerAuditInfo(issuerIdentity, s.WalletService)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to get audit info for issuer identity")
+	}
 
 	s.Logger.Debugf("issue with [%d] inputs", len(issueAction.Inputs))
 
 	meta := &driver.IssueMetadata{
-		Issuer:       issuerSerializedIdentity,
+		Issuer: driver.AuditableIdentity{
+			Identity:  issuerSerializedIdentity,
+			AuditInfo: issuerAuditInfo,
+		},
 		Inputs:       inputsMetadata,
 		Outputs:      outputsMetadata,
 		ExtraSigners: nil,
