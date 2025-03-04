@@ -111,11 +111,11 @@ func (i *Deserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, erro
 	return i.Deserializer.DeserializeAuditInfo(raw)
 }
 
-func (i *Deserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (i *Deserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	return i.Deserializer.DeserializeAuditInfo(auditInfo)
 }
 
-func (i *Deserializer) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
+func (i *Deserializer) GetAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
 	auditInfo, err := p.GetAuditInfo(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", driver.Identity(raw).String())

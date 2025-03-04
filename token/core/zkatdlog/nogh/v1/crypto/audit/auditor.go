@@ -11,7 +11,6 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
@@ -35,14 +34,13 @@ type SigningIdentity interface {
 	driver.SigningIdentity
 }
 
-// Deserializer deserialize audit information
-type Deserializer interface {
-	// GetOwnerMatcher returns the owner matcher for the given audit info
-	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
+// InfoMatcher deserialize audit information
+type InfoMatcher interface {
+	MatchIdentity(id driver.Identity, ai []byte) error
 }
 
 // InspectTokenOwnerFunc models a function to inspect the owner field
-type InspectTokenOwnerFunc = func(des Deserializer, token *AuditableToken, index int) error
+type InspectTokenOwnerFunc = func(matcher InfoMatcher, token *AuditableToken, index int) error
 
 // GetAuditInfoForIssuesFunc models a function to get auditable tokens from issue actions
 type GetAuditInfoForIssuesFunc = func(issues [][]byte, metadata []*driver.IssueMetadata) ([][]*AuditableToken, error)
@@ -89,8 +87,8 @@ type OwnerOpening struct {
 type Auditor struct {
 	Logger logging.Logger
 	tracer trace.Tracer
-	// Owner Identity Deserializer
-	Des Deserializer
+	// Owner Identity InfoMatcher
+	Des InfoMatcher
 	// Auditor's signing identity
 	Signer SigningIdentity
 	// Pedersen generators used to compute TokenData
@@ -104,7 +102,7 @@ type Auditor struct {
 	GetAuditInfoForTransfersFunc GetAuditInfoForTransfersFunc
 }
 
-func NewAuditor(logger logging.Logger, tracer trace.Tracer, des Deserializer, pp []*math.G1, signer SigningIdentity, c *math.Curve) *Auditor {
+func NewAuditor(logger logging.Logger, tracer trace.Tracer, des InfoMatcher, pp []*math.G1, signer SigningIdentity, c *math.Curve) *Auditor {
 	a := &Auditor{
 		Logger:         logger,
 		tracer:         tracer,
@@ -263,83 +261,16 @@ func (a *Auditor) InspectInputs(inputs []*AuditableToken) error {
 }
 
 // InspectTokenOwner verifies that the audit info matches the token owner
-func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error {
+func InspectTokenOwner(matcher InfoMatcher, token *AuditableToken, index int) error {
 	if token.Token.IsRedeem() {
 		return errors.Errorf("token at index [%d] is a redeem token, cannot inspect ownership", index)
 	}
 	if len(token.Owner.OwnerInfo) == 0 {
 		return errors.Errorf("failed to inspect owner at index [%d]: owner info is nil", index)
 	}
-	ro, err := identity.UnmarshalTypedIdentity(token.Token.GetOwner())
-	if err != nil {
-		return errors.Errorf("owner at index [%d] cannot be unwrapped", index)
+	if err := matcher.MatchIdentity(token.Token.Owner, token.Owner.OwnerInfo); err != nil {
+		return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
 	}
-	switch ro.Type {
-	case x509.IdentityType:
-		matcher, err := des.GetOwnerMatcher(token.Token.Owner, token.Owner.OwnerInfo)
-		if err != nil {
-			return errors.Wrapf(err, "failed to get owner matcher for output [%d]", index)
-		}
-		if err := matcher.Match(ro.Identity); err != nil {
-			return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
-		}
-		return nil
-	case idemix.IdentityType:
-		matcher, err := des.GetOwnerMatcher(token.Token.Owner, token.Owner.OwnerInfo)
-		if err != nil {
-			return errors.Wrapf(err, "failed to get owner matcher for output [%d]", index)
-		}
-		if err := matcher.Match(ro.Identity); err != nil {
-			return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
-		}
-		return nil
-	case htlc2.ScriptType:
-		return inspectTokenOwnerOfScript(des, token, index)
-	case multisig.Multisig:
-		return inspectTokenOwnerOfEscrow(des, token, index)
-	default:
-		return errors.Errorf("identity type [%s] not recognized", ro.Type)
-	}
-}
-
-func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index int) error {
-	owner, err := identity.UnmarshalTypedIdentity(token.Token.GetOwner())
-	if err != nil {
-		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
-	}
-	scriptInf := &htlc.ScriptInfo{}
-	if err := json.Unmarshal(token.Owner.OwnerInfo, scriptInf); err != nil {
-		return errors.Wrapf(err, "failed to unmarshal script info")
-	}
-	scriptSender, scriptRecipient, err := htlc.GetScriptSenderAndRecipient(owner)
-	if err != nil {
-		return errors.Wrap(err, "failed getting script sender and recipient")
-	}
-
-	sender, err := des.GetOwnerMatcher(scriptSender, scriptInf.Sender)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal audit info from script sender [%s]", string(scriptInf.Sender))
-	}
-	ro, err := identity.UnmarshalTypedIdentity(scriptSender)
-	if err != nil {
-		return errors.Wrapf(err, "failed to retrieve raw owner from sender in script")
-	}
-	if err := sender.Match(ro.Identity); err != nil {
-		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Sender))
-	}
-
-	recipient, err := des.GetOwnerMatcher(scriptRecipient, scriptInf.Recipient)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal audit info from script recipient [%s]", string(scriptInf.Recipient))
-	}
-	ro, err = identity.UnmarshalTypedIdentity(scriptRecipient)
-	if err != nil {
-		return errors.Wrapf(err, "failed to retrieve raw owner from recipien in script")
-	}
-	if err := recipient.Match(ro.Identity); err != nil {
-		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Recipient))
-	}
-
 	return nil
 }
 
