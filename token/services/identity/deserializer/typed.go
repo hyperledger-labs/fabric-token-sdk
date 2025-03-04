@@ -23,13 +23,13 @@ var logger = logging.MustGetLogger("token-sdk.services.identity.deserializer")
 type TypedVerifierDeserializer interface {
 	DeserializeVerifier(typ identity.Type, raw []byte) (driver.Verifier, error)
 	Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error)
-	GetOwnerAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error)
-	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
+	GetAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error)
+	GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
 // AuditMatcherDeserializer deserializes raw bytes into a matcher, which allows an auditor to match an identity to an enrollment ID
 type AuditMatcherDeserializer interface {
-	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
+	GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
 type TypedVerifierDeserializerMultiplex struct {
@@ -98,7 +98,7 @@ func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]d
 	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserializer recipients for [%s]", si.Type)
 }
 
-func (v *TypedVerifierDeserializerMultiplex) GetOwnerMatcher(id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (v *TypedVerifierDeserializerMultiplex) GetAuditInfoMatcher(id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	if id.IsNone() {
 		return nil, nil
 	}
@@ -106,10 +106,14 @@ func (v *TypedVerifierDeserializerMultiplex) GetOwnerMatcher(id driver.Identity,
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
 	}
-	return v.getOwnerMatcher(si.Type, id, auditInfo)
+	matcher, err := v.getMatcher(si.Type, id, auditInfo)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting matcher for [%s]", si.Type)
+	}
+	return &TypedAuditInfoMatcher{matcher: matcher}, nil
 }
 
-func (v *TypedVerifierDeserializerMultiplex) getOwnerMatcher(idType string, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (v *TypedVerifierDeserializerMultiplex) getMatcher(idType string, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	dess, ok := v.deserializers[idType]
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", idType)
@@ -117,7 +121,7 @@ func (v *TypedVerifierDeserializerMultiplex) getOwnerMatcher(idType string, id d
 
 	var errs []error
 	for _, deserializer := range dess {
-		matcher, err := deserializer.GetOwnerMatcher(id, auditInfo)
+		matcher, err := deserializer.GetAuditInfoMatcher(id, auditInfo)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -128,13 +132,13 @@ func (v *TypedVerifierDeserializerMultiplex) getOwnerMatcher(idType string, id d
 	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid owner matcher for [%s]", idType)
 }
 
-func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identity, ai []byte) error {
+func (v *TypedVerifierDeserializerMultiplex) MatchIdentity(id driver.Identity, ai []byte) error {
 	// match identity and audit info
 	recipient, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
 	}
-	matcher, err := v.getOwnerMatcher(recipient.Type, id, ai)
+	matcher, err := v.getMatcher(recipient.Type, id, ai)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info matcher for [%s]", id)
 	}
@@ -145,7 +149,7 @@ func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identi
 	return nil
 }
 
-func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([]byte, error) {
+func (v *TypedVerifierDeserializerMultiplex) GetAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([]byte, error) {
 	si, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
@@ -156,7 +160,7 @@ func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(id driver.Identit
 	}
 	var errs []error
 	for _, deserializer := range dess {
-		info, err := deserializer.GetOwnerAuditInfo(id, si.Type, si.Identity, p)
+		info, err := deserializer.GetAuditInfo(id, si.Type, si.Identity, p)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -183,7 +187,7 @@ func (t *TypedIdentityVerifierDeserializer) Recipients(id driver.Identity, typ i
 	return []driver.Identity{id}, nil
 }
 
-func (t *TypedIdentityVerifierDeserializer) GetOwnerAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
+func (t *TypedIdentityVerifierDeserializer) GetAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
 	auditInfo, err := p.GetAuditInfo(id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", id)
@@ -191,6 +195,23 @@ func (t *TypedIdentityVerifierDeserializer) GetOwnerAuditInfo(id driver.Identity
 	return auditInfo, nil
 }
 
-func (t *TypedIdentityVerifierDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
-	return t.MatcherDeserializer.GetOwnerMatcher(owner, auditInfo)
+func (t *TypedIdentityVerifierDeserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+	return t.MatcherDeserializer.GetAuditInfoMatcher(owner, auditInfo)
+}
+
+type TypedAuditInfoMatcher struct {
+	matcher driver.Matcher
+}
+
+func (t *TypedAuditInfoMatcher) Match(id []byte) error {
+	// match identity and audit info
+	recipient, err := identity.UnmarshalTypedIdentity(id)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
+	}
+	err = t.matcher.Match(recipient.Identity)
+	if err != nil {
+		return errors.Wrapf(err, "failed to match identity [%s] to audit infor", id)
+	}
+	return nil
 }

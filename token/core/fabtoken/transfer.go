@@ -74,7 +74,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	// inputs
 	transferInputsMetadata := make([]*driver.TransferInputMetadata, 0, len(inputTokens))
 	for i, t := range inputTokens {
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner, ws)
+		auditInfo, err := s.Deserializer.GetAuditInfo(t.Owner, ws)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner).String())
 		}
@@ -108,7 +108,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 			receiversAuditInfo = append(receiversAuditInfo, []byte{})
 			outputReceivers = make([]*driver.AuditableIdentity, 0, 1)
 		} else {
-			outputAudiInfo, err = s.Deserializer.GetOwnerAuditInfo(output.Owner, ws)
+			outputAudiInfo, err = s.Deserializer.GetAuditInfo(output.Owner, ws)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
 			}
@@ -118,7 +118,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 			}
 			receivers = append(receivers, recipients...)
 			for _, receiver := range receivers {
-				receiverAudiInfo, err := s.Deserializer.GetOwnerAuditInfo(receiver, ws)
+				receiverAudiInfo, err := s.Deserializer.GetAuditInfo(receiver, ws)
 				if err != nil {
 					return nil, nil, errors.Wrapf(err, "failed getting audit info for receiver identity [%s]", receiver)
 				}

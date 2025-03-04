@@ -22,7 +22,7 @@ func (d *IdentityDeserializer) DeserializeVerifier(id driver.Identity) (driver.V
 
 type AuditMatcherDeserializer struct{}
 
-func (a *AuditMatcherDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (a *AuditMatcherDeserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	ai := &AuditInfo{}
 	err := ai.FromBytes(auditInfo)
 	if err != nil {

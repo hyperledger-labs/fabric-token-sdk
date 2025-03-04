@@ -211,7 +211,7 @@ type WalletServiceFactory interface {
 // Matcher models a matcher that can be used to match identities
 type Matcher interface {
 	// Match returns true if the passed identity matches this matcher
-	Match([]byte) error
+	Match(identity []byte) error
 }
 
 // AuditInfoProvider models a provider of audit information
@@ -231,13 +231,13 @@ type Deserializer interface {
 	GetIssuerVerifier(id Identity) (Verifier, error)
 	// GetAuditorVerifier returns the verifier associated to the passed auditor identity
 	GetAuditorVerifier(id Identity) (Verifier, error)
-	// GetOwnerMatcher returns an identity matcher for the passed identity audit data
-	GetOwnerMatcher(owner Identity, auditInfo []byte) (Matcher, error)
 	// Recipients returns the recipient identities from the given serialized representation
 	Recipients(raw Identity) ([]Identity, error)
-	// MatchOwnerIdentity returns nil if the given identity matches the given audit information.
-	// An error otherwise
-	MatchOwnerIdentity(identity Identity, info []byte) error
-	// GetOwnerAuditInfo returns the audit information for the passed identity
-	GetOwnerAuditInfo(id Identity, p AuditInfoProvider) ([]byte, error)
+	// GetAuditInfoMatcher returns an identity matcher for the passed identity audit data
+	GetAuditInfoMatcher(owner Identity, auditInfo []byte) (Matcher, error)
+	// MatchIdentity returns nil if the given identity matches the given audit information.
+	// An error otherwise.
+	MatchIdentity(identity Identity, info []byte) error
+	// GetAuditInfo returns the audit information for the passed identity
+	GetAuditInfo(id Identity, p AuditInfoProvider) ([]byte, error)
 }

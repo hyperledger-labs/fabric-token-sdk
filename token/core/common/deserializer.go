@@ -11,7 +11,7 @@ import (
 )
 
 type MatcherDeserializer interface {
-	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
+	GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
 // VerifierDeserializer is the interface for verifiers' deserializer.
@@ -23,8 +23,8 @@ type VerifierDeserializer interface {
 // AuditMatcherProvider provides audit related deserialization functionalities
 type AuditMatcherProvider interface {
 	MatcherDeserializer
-	MatchOwnerIdentity(id driver.Identity, ai []byte) error
-	GetOwnerAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([]byte, error)
+	MatchIdentity(id driver.Identity, ai []byte) error
+	GetAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([]byte, error)
 }
 
 // RecipientExtractor extracts the recipients from an identity
@@ -76,14 +76,14 @@ func (d *Deserializer) Recipients(id driver.Identity) ([]driver.Identity, error)
 	return d.recipientExtractor.Recipients(id)
 }
 
-func (d *Deserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
-	return d.auditMatcherProvider.GetOwnerMatcher(owner, auditInfo)
+func (d *Deserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+	return d.auditMatcherProvider.GetAuditInfoMatcher(owner, auditInfo)
 }
 
-func (d *Deserializer) MatchOwnerIdentity(id driver.Identity, ai []byte) error {
-	return d.auditMatcherProvider.MatchOwnerIdentity(id, ai)
+func (d *Deserializer) MatchIdentity(id driver.Identity, ai []byte) error {
+	return d.auditMatcherProvider.MatchIdentity(id, ai)
 }
 
-func (d *Deserializer) GetOwnerAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([]byte, error) {
-	return d.auditMatcherProvider.GetOwnerAuditInfo(id, p)
+func (d *Deserializer) GetAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([]byte, error) {
+	return d.auditMatcherProvider.GetAuditInfo(id, p)
 }
