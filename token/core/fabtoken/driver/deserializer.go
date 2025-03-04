@@ -23,24 +23,12 @@ type Deserializer struct {
 
 // NewDeserializer returns a deserializer
 func NewDeserializer() *Deserializer {
-	ownerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
-	ownerDeserializer.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
-	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
-	ownerDeserializer.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(ownerDeserializer, ownerDeserializer))
+	des := deserializer.NewTypedVerifierDeserializerMultiplex()
+	des.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
+	des.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(des))
+	des.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(des, des))
 
-	auditorIssuerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
-	auditorIssuerDeserializer.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
-
-	return &Deserializer{
-		Deserializer: common.NewDeserializer(
-			x509.IdentityType,
-			auditorIssuerDeserializer,
-			ownerDeserializer, // owner
-			auditorIssuerDeserializer,
-			ownerDeserializer,
-			ownerDeserializer,
-		),
-	}
+	return &Deserializer{Deserializer: common.NewDeserializer(x509.IdentityType, des, des, des, des, des)}
 }
 
 type PublicParamsDeserializer struct{}

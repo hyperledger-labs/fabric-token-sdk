@@ -8,6 +8,34 @@ import (
 )
 
 type Deserializer struct {
+	GetAuditInfoStub        func(driver.Identity, driver.AuditInfoProvider) ([]byte, error)
+	getAuditInfoMutex       sync.RWMutex
+	getAuditInfoArgsForCall []struct {
+		arg1 driver.Identity
+		arg2 driver.AuditInfoProvider
+	}
+	getAuditInfoReturns struct {
+		result1 []byte
+		result2 error
+	}
+	getAuditInfoReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
+	GetAuditInfoMatcherStub        func(driver.Identity, []byte) (driver.Matcher, error)
+	getAuditInfoMatcherMutex       sync.RWMutex
+	getAuditInfoMatcherArgsForCall []struct {
+		arg1 driver.Identity
+		arg2 []byte
+	}
+	getAuditInfoMatcherReturns struct {
+		result1 driver.Matcher
+		result2 error
+	}
+	getAuditInfoMatcherReturnsOnCall map[int]struct {
+		result1 driver.Matcher
+		result2 error
+	}
 	GetAuditorVerifierStub        func(driver.Identity) (driver.Verifier, error)
 	getAuditorVerifierMutex       sync.RWMutex
 	getAuditorVerifierArgsForCall []struct {
@@ -34,34 +62,6 @@ type Deserializer struct {
 		result1 driver.Verifier
 		result2 error
 	}
-	GetOwnerAuditInfoStub        func(driver.Identity, driver.AuditInfoProvider) ([]byte, error)
-	getOwnerAuditInfoMutex       sync.RWMutex
-	getOwnerAuditInfoArgsForCall []struct {
-		arg1 driver.Identity
-		arg2 driver.AuditInfoProvider
-	}
-	getOwnerAuditInfoReturns struct {
-		result1 []byte
-		result2 error
-	}
-	getOwnerAuditInfoReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
-	GetOwnerMatcherStub        func(driver.Identity, []byte) (driver.Matcher, error)
-	getOwnerMatcherMutex       sync.RWMutex
-	getOwnerMatcherArgsForCall []struct {
-		arg1 driver.Identity
-		arg2 []byte
-	}
-	getOwnerMatcherReturns struct {
-		result1 driver.Matcher
-		result2 error
-	}
-	getOwnerMatcherReturnsOnCall map[int]struct {
-		result1 driver.Matcher
-		result2 error
-	}
 	GetOwnerVerifierStub        func(driver.Identity) (driver.Verifier, error)
 	getOwnerVerifierMutex       sync.RWMutex
 	getOwnerVerifierArgsForCall []struct {
@@ -75,16 +75,16 @@ type Deserializer struct {
 		result1 driver.Verifier
 		result2 error
 	}
-	MatchOwnerIdentityStub        func(driver.Identity, []byte) error
-	matchOwnerIdentityMutex       sync.RWMutex
-	matchOwnerIdentityArgsForCall []struct {
+	MatchIdentityStub        func(driver.Identity, []byte) error
+	matchIdentityMutex       sync.RWMutex
+	matchIdentityArgsForCall []struct {
 		arg1 driver.Identity
 		arg2 []byte
 	}
-	matchOwnerIdentityReturns struct {
+	matchIdentityReturns struct {
 		result1 error
 	}
-	matchOwnerIdentityReturnsOnCall map[int]struct {
+	matchIdentityReturnsOnCall map[int]struct {
 		result1 error
 	}
 	RecipientsStub        func(driver.Identity) ([]driver.Identity, error)
@@ -102,6 +102,141 @@ type Deserializer struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *Deserializer) GetAuditInfo(arg1 driver.Identity, arg2 driver.AuditInfoProvider) ([]byte, error) {
+	fake.getAuditInfoMutex.Lock()
+	ret, specificReturn := fake.getAuditInfoReturnsOnCall[len(fake.getAuditInfoArgsForCall)]
+	fake.getAuditInfoArgsForCall = append(fake.getAuditInfoArgsForCall, struct {
+		arg1 driver.Identity
+		arg2 driver.AuditInfoProvider
+	}{arg1, arg2})
+	stub := fake.GetAuditInfoStub
+	fakeReturns := fake.getAuditInfoReturns
+	fake.recordInvocation("GetAuditInfo", []interface{}{arg1, arg2})
+	fake.getAuditInfoMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *Deserializer) GetAuditInfoCallCount() int {
+	fake.getAuditInfoMutex.RLock()
+	defer fake.getAuditInfoMutex.RUnlock()
+	return len(fake.getAuditInfoArgsForCall)
+}
+
+func (fake *Deserializer) GetAuditInfoCalls(stub func(driver.Identity, driver.AuditInfoProvider) ([]byte, error)) {
+	fake.getAuditInfoMutex.Lock()
+	defer fake.getAuditInfoMutex.Unlock()
+	fake.GetAuditInfoStub = stub
+}
+
+func (fake *Deserializer) GetAuditInfoArgsForCall(i int) (driver.Identity, driver.AuditInfoProvider) {
+	fake.getAuditInfoMutex.RLock()
+	defer fake.getAuditInfoMutex.RUnlock()
+	argsForCall := fake.getAuditInfoArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *Deserializer) GetAuditInfoReturns(result1 []byte, result2 error) {
+	fake.getAuditInfoMutex.Lock()
+	defer fake.getAuditInfoMutex.Unlock()
+	fake.GetAuditInfoStub = nil
+	fake.getAuditInfoReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *Deserializer) GetAuditInfoReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.getAuditInfoMutex.Lock()
+	defer fake.getAuditInfoMutex.Unlock()
+	fake.GetAuditInfoStub = nil
+	if fake.getAuditInfoReturnsOnCall == nil {
+		fake.getAuditInfoReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.getAuditInfoReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *Deserializer) GetAuditInfoMatcher(arg1 driver.Identity, arg2 []byte) (driver.Matcher, error) {
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.getAuditInfoMatcherMutex.Lock()
+	ret, specificReturn := fake.getAuditInfoMatcherReturnsOnCall[len(fake.getAuditInfoMatcherArgsForCall)]
+	fake.getAuditInfoMatcherArgsForCall = append(fake.getAuditInfoMatcherArgsForCall, struct {
+		arg1 driver.Identity
+		arg2 []byte
+	}{arg1, arg2Copy})
+	stub := fake.GetAuditInfoMatcherStub
+	fakeReturns := fake.getAuditInfoMatcherReturns
+	fake.recordInvocation("GetAuditInfoMatcher", []interface{}{arg1, arg2Copy})
+	fake.getAuditInfoMatcherMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *Deserializer) GetAuditInfoMatcherCallCount() int {
+	fake.getAuditInfoMatcherMutex.RLock()
+	defer fake.getAuditInfoMatcherMutex.RUnlock()
+	return len(fake.getAuditInfoMatcherArgsForCall)
+}
+
+func (fake *Deserializer) GetAuditInfoMatcherCalls(stub func(driver.Identity, []byte) (driver.Matcher, error)) {
+	fake.getAuditInfoMatcherMutex.Lock()
+	defer fake.getAuditInfoMatcherMutex.Unlock()
+	fake.GetAuditInfoMatcherStub = stub
+}
+
+func (fake *Deserializer) GetAuditInfoMatcherArgsForCall(i int) (driver.Identity, []byte) {
+	fake.getAuditInfoMatcherMutex.RLock()
+	defer fake.getAuditInfoMatcherMutex.RUnlock()
+	argsForCall := fake.getAuditInfoMatcherArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *Deserializer) GetAuditInfoMatcherReturns(result1 driver.Matcher, result2 error) {
+	fake.getAuditInfoMatcherMutex.Lock()
+	defer fake.getAuditInfoMatcherMutex.Unlock()
+	fake.GetAuditInfoMatcherStub = nil
+	fake.getAuditInfoMatcherReturns = struct {
+		result1 driver.Matcher
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *Deserializer) GetAuditInfoMatcherReturnsOnCall(i int, result1 driver.Matcher, result2 error) {
+	fake.getAuditInfoMatcherMutex.Lock()
+	defer fake.getAuditInfoMatcherMutex.Unlock()
+	fake.GetAuditInfoMatcherStub = nil
+	if fake.getAuditInfoMatcherReturnsOnCall == nil {
+		fake.getAuditInfoMatcherReturnsOnCall = make(map[int]struct {
+			result1 driver.Matcher
+			result2 error
+		})
+	}
+	fake.getAuditInfoMatcherReturnsOnCall[i] = struct {
+		result1 driver.Matcher
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *Deserializer) GetAuditorVerifier(arg1 driver.Identity) (driver.Verifier, error) {
@@ -232,141 +367,6 @@ func (fake *Deserializer) GetIssuerVerifierReturnsOnCall(i int, result1 driver.V
 	}{result1, result2}
 }
 
-func (fake *Deserializer) GetOwnerAuditInfo(arg1 driver.Identity, arg2 driver.AuditInfoProvider) ([]byte, error) {
-	fake.getOwnerAuditInfoMutex.Lock()
-	ret, specificReturn := fake.getOwnerAuditInfoReturnsOnCall[len(fake.getOwnerAuditInfoArgsForCall)]
-	fake.getOwnerAuditInfoArgsForCall = append(fake.getOwnerAuditInfoArgsForCall, struct {
-		arg1 driver.Identity
-		arg2 driver.AuditInfoProvider
-	}{arg1, arg2})
-	stub := fake.GetOwnerAuditInfoStub
-	fakeReturns := fake.getOwnerAuditInfoReturns
-	fake.recordInvocation("GetOwnerAuditInfo", []interface{}{arg1, arg2})
-	fake.getOwnerAuditInfoMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *Deserializer) GetOwnerAuditInfoCallCount() int {
-	fake.getOwnerAuditInfoMutex.RLock()
-	defer fake.getOwnerAuditInfoMutex.RUnlock()
-	return len(fake.getOwnerAuditInfoArgsForCall)
-}
-
-func (fake *Deserializer) GetOwnerAuditInfoCalls(stub func(driver.Identity, driver.AuditInfoProvider) ([]byte, error)) {
-	fake.getOwnerAuditInfoMutex.Lock()
-	defer fake.getOwnerAuditInfoMutex.Unlock()
-	fake.GetOwnerAuditInfoStub = stub
-}
-
-func (fake *Deserializer) GetOwnerAuditInfoArgsForCall(i int) (driver.Identity, driver.AuditInfoProvider) {
-	fake.getOwnerAuditInfoMutex.RLock()
-	defer fake.getOwnerAuditInfoMutex.RUnlock()
-	argsForCall := fake.getOwnerAuditInfoArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *Deserializer) GetOwnerAuditInfoReturns(result1 []byte, result2 error) {
-	fake.getOwnerAuditInfoMutex.Lock()
-	defer fake.getOwnerAuditInfoMutex.Unlock()
-	fake.GetOwnerAuditInfoStub = nil
-	fake.getOwnerAuditInfoReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *Deserializer) GetOwnerAuditInfoReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.getOwnerAuditInfoMutex.Lock()
-	defer fake.getOwnerAuditInfoMutex.Unlock()
-	fake.GetOwnerAuditInfoStub = nil
-	if fake.getOwnerAuditInfoReturnsOnCall == nil {
-		fake.getOwnerAuditInfoReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.getOwnerAuditInfoReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *Deserializer) GetOwnerMatcher(arg1 driver.Identity, arg2 []byte) (driver.Matcher, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
-	}
-	fake.getOwnerMatcherMutex.Lock()
-	ret, specificReturn := fake.getOwnerMatcherReturnsOnCall[len(fake.getOwnerMatcherArgsForCall)]
-	fake.getOwnerMatcherArgsForCall = append(fake.getOwnerMatcherArgsForCall, struct {
-		arg1 driver.Identity
-		arg2 []byte
-	}{arg1, arg2Copy})
-	stub := fake.GetOwnerMatcherStub
-	fakeReturns := fake.getOwnerMatcherReturns
-	fake.recordInvocation("GetOwnerMatcher", []interface{}{arg1, arg2Copy})
-	fake.getOwnerMatcherMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *Deserializer) GetOwnerMatcherCallCount() int {
-	fake.getOwnerMatcherMutex.RLock()
-	defer fake.getOwnerMatcherMutex.RUnlock()
-	return len(fake.getOwnerMatcherArgsForCall)
-}
-
-func (fake *Deserializer) GetOwnerMatcherCalls(stub func(driver.Identity, []byte) (driver.Matcher, error)) {
-	fake.getOwnerMatcherMutex.Lock()
-	defer fake.getOwnerMatcherMutex.Unlock()
-	fake.GetOwnerMatcherStub = stub
-}
-
-func (fake *Deserializer) GetOwnerMatcherArgsForCall(i int) (driver.Identity, []byte) {
-	fake.getOwnerMatcherMutex.RLock()
-	defer fake.getOwnerMatcherMutex.RUnlock()
-	argsForCall := fake.getOwnerMatcherArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *Deserializer) GetOwnerMatcherReturns(result1 driver.Matcher, result2 error) {
-	fake.getOwnerMatcherMutex.Lock()
-	defer fake.getOwnerMatcherMutex.Unlock()
-	fake.GetOwnerMatcherStub = nil
-	fake.getOwnerMatcherReturns = struct {
-		result1 driver.Matcher
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *Deserializer) GetOwnerMatcherReturnsOnCall(i int, result1 driver.Matcher, result2 error) {
-	fake.getOwnerMatcherMutex.Lock()
-	defer fake.getOwnerMatcherMutex.Unlock()
-	fake.GetOwnerMatcherStub = nil
-	if fake.getOwnerMatcherReturnsOnCall == nil {
-		fake.getOwnerMatcherReturnsOnCall = make(map[int]struct {
-			result1 driver.Matcher
-			result2 error
-		})
-	}
-	fake.getOwnerMatcherReturnsOnCall[i] = struct {
-		result1 driver.Matcher
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *Deserializer) GetOwnerVerifier(arg1 driver.Identity) (driver.Verifier, error) {
 	fake.getOwnerVerifierMutex.Lock()
 	ret, specificReturn := fake.getOwnerVerifierReturnsOnCall[len(fake.getOwnerVerifierArgsForCall)]
@@ -431,22 +431,22 @@ func (fake *Deserializer) GetOwnerVerifierReturnsOnCall(i int, result1 driver.Ve
 	}{result1, result2}
 }
 
-func (fake *Deserializer) MatchOwnerIdentity(arg1 driver.Identity, arg2 []byte) error {
+func (fake *Deserializer) MatchIdentity(arg1 driver.Identity, arg2 []byte) error {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
 		copy(arg2Copy, arg2)
 	}
-	fake.matchOwnerIdentityMutex.Lock()
-	ret, specificReturn := fake.matchOwnerIdentityReturnsOnCall[len(fake.matchOwnerIdentityArgsForCall)]
-	fake.matchOwnerIdentityArgsForCall = append(fake.matchOwnerIdentityArgsForCall, struct {
+	fake.matchIdentityMutex.Lock()
+	ret, specificReturn := fake.matchIdentityReturnsOnCall[len(fake.matchIdentityArgsForCall)]
+	fake.matchIdentityArgsForCall = append(fake.matchIdentityArgsForCall, struct {
 		arg1 driver.Identity
 		arg2 []byte
 	}{arg1, arg2Copy})
-	stub := fake.MatchOwnerIdentityStub
-	fakeReturns := fake.matchOwnerIdentityReturns
-	fake.recordInvocation("MatchOwnerIdentity", []interface{}{arg1, arg2Copy})
-	fake.matchOwnerIdentityMutex.Unlock()
+	stub := fake.MatchIdentityStub
+	fakeReturns := fake.matchIdentityReturns
+	fake.recordInvocation("MatchIdentity", []interface{}{arg1, arg2Copy})
+	fake.matchIdentityMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -456,44 +456,44 @@ func (fake *Deserializer) MatchOwnerIdentity(arg1 driver.Identity, arg2 []byte) 
 	return fakeReturns.result1
 }
 
-func (fake *Deserializer) MatchOwnerIdentityCallCount() int {
-	fake.matchOwnerIdentityMutex.RLock()
-	defer fake.matchOwnerIdentityMutex.RUnlock()
-	return len(fake.matchOwnerIdentityArgsForCall)
+func (fake *Deserializer) MatchIdentityCallCount() int {
+	fake.matchIdentityMutex.RLock()
+	defer fake.matchIdentityMutex.RUnlock()
+	return len(fake.matchIdentityArgsForCall)
 }
 
-func (fake *Deserializer) MatchOwnerIdentityCalls(stub func(driver.Identity, []byte) error) {
-	fake.matchOwnerIdentityMutex.Lock()
-	defer fake.matchOwnerIdentityMutex.Unlock()
-	fake.MatchOwnerIdentityStub = stub
+func (fake *Deserializer) MatchIdentityCalls(stub func(driver.Identity, []byte) error) {
+	fake.matchIdentityMutex.Lock()
+	defer fake.matchIdentityMutex.Unlock()
+	fake.MatchIdentityStub = stub
 }
 
-func (fake *Deserializer) MatchOwnerIdentityArgsForCall(i int) (driver.Identity, []byte) {
-	fake.matchOwnerIdentityMutex.RLock()
-	defer fake.matchOwnerIdentityMutex.RUnlock()
-	argsForCall := fake.matchOwnerIdentityArgsForCall[i]
+func (fake *Deserializer) MatchIdentityArgsForCall(i int) (driver.Identity, []byte) {
+	fake.matchIdentityMutex.RLock()
+	defer fake.matchIdentityMutex.RUnlock()
+	argsForCall := fake.matchIdentityArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *Deserializer) MatchOwnerIdentityReturns(result1 error) {
-	fake.matchOwnerIdentityMutex.Lock()
-	defer fake.matchOwnerIdentityMutex.Unlock()
-	fake.MatchOwnerIdentityStub = nil
-	fake.matchOwnerIdentityReturns = struct {
+func (fake *Deserializer) MatchIdentityReturns(result1 error) {
+	fake.matchIdentityMutex.Lock()
+	defer fake.matchIdentityMutex.Unlock()
+	fake.MatchIdentityStub = nil
+	fake.matchIdentityReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *Deserializer) MatchOwnerIdentityReturnsOnCall(i int, result1 error) {
-	fake.matchOwnerIdentityMutex.Lock()
-	defer fake.matchOwnerIdentityMutex.Unlock()
-	fake.MatchOwnerIdentityStub = nil
-	if fake.matchOwnerIdentityReturnsOnCall == nil {
-		fake.matchOwnerIdentityReturnsOnCall = make(map[int]struct {
+func (fake *Deserializer) MatchIdentityReturnsOnCall(i int, result1 error) {
+	fake.matchIdentityMutex.Lock()
+	defer fake.matchIdentityMutex.Unlock()
+	fake.MatchIdentityStub = nil
+	if fake.matchIdentityReturnsOnCall == nil {
+		fake.matchIdentityReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.matchOwnerIdentityReturnsOnCall[i] = struct {
+	fake.matchIdentityReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -565,18 +565,18 @@ func (fake *Deserializer) RecipientsReturnsOnCall(i int, result1 []driver.Identi
 func (fake *Deserializer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.getAuditInfoMutex.RLock()
+	defer fake.getAuditInfoMutex.RUnlock()
+	fake.getAuditInfoMatcherMutex.RLock()
+	defer fake.getAuditInfoMatcherMutex.RUnlock()
 	fake.getAuditorVerifierMutex.RLock()
 	defer fake.getAuditorVerifierMutex.RUnlock()
 	fake.getIssuerVerifierMutex.RLock()
 	defer fake.getIssuerVerifierMutex.RUnlock()
-	fake.getOwnerAuditInfoMutex.RLock()
-	defer fake.getOwnerAuditInfoMutex.RUnlock()
-	fake.getOwnerMatcherMutex.RLock()
-	defer fake.getOwnerMatcherMutex.RUnlock()
 	fake.getOwnerVerifierMutex.RLock()
 	defer fake.getOwnerVerifierMutex.RUnlock()
-	fake.matchOwnerIdentityMutex.RLock()
-	defer fake.matchOwnerIdentityMutex.RUnlock()
+	fake.matchIdentityMutex.RLock()
+	defer fake.matchIdentityMutex.RUnlock()
 	fake.recipientsMutex.RLock()
 	defer fake.recipientsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

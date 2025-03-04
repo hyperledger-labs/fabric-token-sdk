@@ -66,7 +66,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed serializing token information")
 		}
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owners[i], s.WalletService)
+		auditInfo, err := s.Deserializer.GetAuditInfo(owners[i], s.WalletService)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -80,7 +80,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 			},
 		})
 	}
-	issuerAuditInfo, err := s.Deserializer.GetOwnerAuditInfo(issuerIdentity, s.WalletService)
+	issuerAuditInfo, err := s.Deserializer.GetAuditInfo(issuerIdentity, s.WalletService)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to get audit info for issuer identity")
 	}

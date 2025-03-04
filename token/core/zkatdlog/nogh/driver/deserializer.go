@@ -30,31 +30,19 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 		return nil, errors.New("failed to get deserializer: nil public parameters")
 	}
 
-	ownerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
+	des := deserializer.NewTypedVerifierDeserializerMultiplex()
 	for _, idemixIssuerPublicKey := range pp.IdemixIssuerPublicKeys {
 		idemixDes, err := idemix2.NewDeserializer(idemixIssuerPublicKey.PublicKey, idemixIssuerPublicKey.Curve)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", idemixIssuerPublicKey.Curve)
 		}
-		ownerDeserializer.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
-		ownerDeserializer.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(ownerDeserializer, ownerDeserializer))
+		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 	}
-	ownerDeserializer.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
-	ownerDeserializer.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(ownerDeserializer))
+	des.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
+	des.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(des))
+	des.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(des, des))
 
-	auditorIssuerDeserializer := deserializer.NewTypedVerifierDeserializerMultiplex()
-	auditorIssuerDeserializer.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
-
-	return &Deserializer{
-		Deserializer: common.NewDeserializer(
-			idemix2.IdentityType,
-			auditorIssuerDeserializer,
-			ownerDeserializer,
-			auditorIssuerDeserializer,
-			ownerDeserializer,
-			ownerDeserializer,
-		),
-	}, nil
+	return &Deserializer{Deserializer: common.NewDeserializer(idemix2.IdentityType, des, des, des, des, des)}, nil
 }
 
 type TokenDeserializer struct{}

@@ -348,7 +348,7 @@ func (w *AnonymousOwnerWallet) RegisterRecipient(data *driver.RecipientData) err
 
 	// recognize identity and register it
 	// match identity and audit info
-	err := w.Deserializer.MatchOwnerIdentity(data.Identity, data.AuditInfo)
+	err := w.Deserializer.MatchIdentity(data.Identity, data.AuditInfo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, utils.Hashable(data.AuditInfo))
 	}
