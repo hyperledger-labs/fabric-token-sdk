@@ -115,6 +115,14 @@ func (i *Deserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []by
 	return i.Deserializer.DeserializeAuditInfo(auditInfo)
 }
 
+func (i *Deserializer) MatchIdentity(id driver.Identity, auditInfo []byte) error {
+	matcher, err := i.Deserializer.DeserializeAuditInfo(auditInfo)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to deserialize audit info")
+	}
+	return matcher.Match(id)
+}
+
 func (i *Deserializer) GetAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
 	auditInfo, err := p.GetAuditInfo(raw)
 	if err != nil {
