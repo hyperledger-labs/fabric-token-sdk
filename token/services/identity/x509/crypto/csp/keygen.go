@@ -14,24 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sw
+package csp
 
 import (
-	"hash"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 
 	"github.com/hyperledger/fabric/bccsp"
+	"github.com/pkg/errors"
 )
 
-type hasher struct {
-	hash func() hash.Hash
+type ecdsaKeyGenerator struct {
+	curve elliptic.Curve
 }
 
-func (c *hasher) Hash(msg []byte, opts bccsp.HashOpts) ([]byte, error) {
-	h := c.hash()
-	h.Write(msg)
-	return h.Sum(nil), nil
-}
+func (kg *ecdsaKeyGenerator) KeyGen(opts bccsp.KeyGenOpts) (bccsp.Key, error) {
+	privKey, err := ecdsa.GenerateKey(kg.curve, rand.Reader)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed generating ECDSA key for [%v]", kg.curve)
+	}
 
-func (c *hasher) GetHash(opts bccsp.HashOpts) (hash.Hash, error) {
-	return c.hash(), nil
+	return &ecdsaPrivateKey{privKey}, nil
 }
