@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sw
+package csp
 
 import (
 	"crypto/elliptic"
@@ -26,7 +26,7 @@ type CSP struct {
 func NewCSP(keyStore bccsp.KeyStore) (*CSP, error) {
 	base, err := sw.New(keyStore)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed instantiating base crypto sw.CSP")
+		return nil, errors.Wrap(err, "failed instantiating base crypto csp")
 	}
 
 	// Notice that errors are ignored here because some test will fail if one
@@ -66,7 +66,7 @@ func NewCSP(keyStore bccsp.KeyStore) (*CSP, error) {
 		base.AddWrapper(reflect.TypeOf(&bccsp.X509PublicKeyImportOpts{}), &x509PublicKeyImportOptsKeyImporter{csp: base}),
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed instantiating base crypto sw.CSP")
+		return nil, errors.Wrap(err, "failed instantiating base crypto csp")
 	}
 
 	return &CSP{
