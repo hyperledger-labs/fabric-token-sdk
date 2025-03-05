@@ -11,8 +11,8 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
