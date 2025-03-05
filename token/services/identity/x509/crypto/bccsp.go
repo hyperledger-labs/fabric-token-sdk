@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/pkcs11"
+	sw2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/sw"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/sw"
 	"github.com/pkg/errors"
@@ -70,7 +71,7 @@ func GetDefaultBCCSP(keyStore bccsp.KeyStore) (bccsp.BCCSP, error) {
 	if keyStore == nil {
 		keyStore = sw.NewDummyKeyStore()
 	}
-	cryptoProvider, err := sw.NewDefaultSecurityLevelWithKeystore(keyStore)
+	cryptoProvider, err := sw2.NewCSP(keyStore)
 	if err != nil {
 		return nil, err
 	}
