@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
@@ -69,8 +70,10 @@ var _ = Describe("validator", func() {
 		c := math.Curves[pp.Curve]
 
 		asigner, _ := prepareECDSASigner()
-		des, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.FP256BN_AMCL)
+		idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
+		des := deserializer.NewTypedVerifierDeserializerMultiplex()
+		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), &noop.Tracer{}, des, pp.PedersenGenerators, asigner, c)
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
