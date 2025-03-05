@@ -13,6 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
