@@ -22,6 +22,7 @@ import (
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
@@ -47,9 +48,18 @@ var _ = Describe("Auditor", func() {
 		Expect(err).NotTo(HaveOccurred())
 		pp, err = v1.Setup(32, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		des, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.FP256BN_AMCL)
+		idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), &noop.Tracer{}, des, pp.PedersenGenerators, fakeSigningIdentity, math.Curves[pp.Curve])
+		des := deserializer.NewTypedVerifierDeserializerMultiplex()
+		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+		auditor = audit.NewAuditor(
+			logging.MustGetLogger("auditor"),
+			&noop.Tracer{},
+			des,
+			pp.PedersenGenerators,
+			fakeSigningIdentity,
+			math.Curves[pp.Curve],
+		)
 		fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)
 
 	})
