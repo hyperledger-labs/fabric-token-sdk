@@ -106,6 +106,7 @@ integration-tests-dvp-dlog:
 tidy:
 	@go mod tidy
 	cd tools; go mod tidy
+	cd token/services/network/fabric/tcc/fabricv25; go mod tidy
 
 .PHONY: clean
 clean:
