@@ -17,7 +17,6 @@ package sw
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/sha256"
 	"crypto/x509"
 	"errors"
@@ -33,7 +32,7 @@ type ecdsaPrivateKey struct {
 // Bytes converts this key to its byte representation,
 // if this operation is allowed.
 func (k *ecdsaPrivateKey) Bytes() ([]byte, error) {
-	return nil, errors.New("Not supported.")
+	return nil, errors.New("not supported")
 }
 
 // SKI returns the subject key identifier of this key.
@@ -43,7 +42,11 @@ func (k *ecdsaPrivateKey) SKI() []byte {
 	}
 
 	// Marshall the public key
-	raw := elliptic.Marshal(k.privKey.Curve, k.privKey.PublicKey.X, k.privKey.PublicKey.Y)
+	ecdh, err := k.privKey.PublicKey.ECDH()
+	if err != nil {
+		return nil
+	}
+	raw := ecdh.Bytes()
 
 	// Hash it
 	hash := sha256.New()
@@ -78,7 +81,7 @@ type ecdsaPublicKey struct {
 func (k *ecdsaPublicKey) Bytes() (raw []byte, err error) {
 	raw, err = x509.MarshalPKIXPublicKey(k.pubKey)
 	if err != nil {
-		return nil, fmt.Errorf("Failed marshalling key [%s]", err)
+		return nil, fmt.Errorf("failed marshalling key [%s]", err)
 	}
 	return
 }
@@ -90,7 +93,11 @@ func (k *ecdsaPublicKey) SKI() []byte {
 	}
 
 	// Marshall the public key
-	raw := elliptic.Marshal(k.pubKey.Curve, k.pubKey.X, k.pubKey.Y)
+	ecdh, err := k.pubKey.ECDH()
+	if err != nil {
+		return nil
+	}
+	raw := ecdh.Bytes()
 
 	// Hash it
 	hash := sha256.New()
