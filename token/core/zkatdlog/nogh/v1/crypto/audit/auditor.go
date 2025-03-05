@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package audit
 
 import (
+	"bytes"
 	"context"
 
 	math "github.com/IBM/mathlib"
@@ -15,12 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
-	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -49,8 +44,9 @@ type GetAuditInfoForIssuesFunc = func(issues [][]byte, metadata []*driver.IssueM
 type GetAuditInfoForTransfersFunc = func(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error)
 
 type InspectableIdentity struct {
-	Identity  driver.Identity
-	AuditInfo []byte
+	Identity         driver.Identity
+	IdentityFromMeta driver.Identity
+	AuditInfo        []byte
 }
 
 type InspectableData struct {
@@ -291,6 +287,12 @@ func InspectIdentity(matcher InfoMatcher, identity *InspectableIdentity, index i
 	if len(identity.AuditInfo) == 0 {
 		return errors.Errorf("failed to inspect identity at index [%d]: audit info is nil", index)
 	}
+	if len(identity.IdentityFromMeta) != 0 {
+		// enforce equality
+		if !bytes.Equal(identity.IdentityFromMeta, identity.Identity) {
+			return errors.Errorf("failed to inspect identity at index [%d]: identity does not match the identity form metadata", index)
+		}
+	}
 	if err := matcher.MatchIdentity(identity.Identity, identity.AuditInfo); err != nil {
 		return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
 	}
@@ -347,8 +349,9 @@ func GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver.IssueMetadat
 			}
 		}
 		identities[k] = InspectableIdentity{
-			Identity:  ia.Issuer,
-			AuditInfo: md.Issuer.AuditInfo,
+			Identity:         ia.Issuer,
+			IdentityFromMeta: md.Issuer.Identity,
+			AuditInfo:        md.Issuer.AuditInfo,
 		}
 	}
 	return outputs, identities, nil
@@ -400,7 +403,13 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMet
 				return nil, nil, err
 			}
 			// TODO: we need to check also how many recipients the output contains, and check them all in isolation and compatibility
-			outputs[k][i], err = NewInspectableToken(ta.Outputs[i], transferMetadata.Outputs[i].OutputAuditInfo, ti.Type, ti.Value, ti.BlindingFactor)
+			outputs[k][i], err = NewInspectableToken(
+				ta.Outputs[i],
+				transferMetadata.Outputs[i].OutputAuditInfo,
+				ti.Type,
+				ti.Value,
+				ti.BlindingFactor,
+			)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -415,20 +424,4 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) *math.G1 {
 		com.Add(generators[i].Mul(vector[i]))
 	}
 	return com
-}
-
-func inspectTokenOwnerOfEscrow(des Deserializer, token *AuditableToken, index int) error {
-	owner, err := identity.UnmarshalTypedIdentity(token.Token.Owner)
-	if err != nil {
-		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
-	}
-	matcher, err := des.GetOwnerMatcher(token.Token.Owner, token.Owner.OwnerInfo)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get matcher for owner at index [%d]", index)
-	}
-	if err := matcher.Match(owner.Identity); err != nil {
-		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%v]", index, matcher)
-	}
-
-	return nil
 }

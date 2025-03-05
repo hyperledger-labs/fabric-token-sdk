@@ -19,7 +19,7 @@ type VerifierDES interface {
 }
 
 type AuditInfoMatcher interface {
-	GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
+	GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
 type TypedIdentityDeserializer struct {
@@ -31,7 +31,7 @@ func NewTypedIdentityDeserializer(verifierDeserializer VerifierDES, auditInfoDes
 	return &TypedIdentityDeserializer{VerifierDeserializer: verifierDeserializer, AuditInfoMatcher: auditInfoDeserializer}
 }
 
-func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ identity.Type, rawIdentity []byte, p driver.AuditInfoProvider) ([]byte, error) {
+func (d *TypedIdentityDeserializer) GetAuditInfo(id driver.Identity, typ identity.Type, rawIdentity []byte, p driver.AuditInfoProvider) ([]byte, error) {
 	if typ != Multisig {
 		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, Multisig)
 	}
@@ -62,7 +62,7 @@ func (d *TypedIdentityDeserializer) GetOwnerAuditInfo(id driver.Identity, typ id
 	return auditInfo.Bytes()
 }
 
-func (d *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (d *TypedIdentityDeserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	ei := &AuditInfo{}
 	err := json.Unmarshal(auditInfo, ei)
 	if err != nil {
@@ -82,7 +82,7 @@ func (d *TypedIdentityDeserializer) GetOwnerMatcher(owner driver.Identity, audit
 	}
 	matchers := make([]driver.Matcher, len(ei.IdentityAuditInfos))
 	for k, info := range ei.IdentityAuditInfos {
-		matchers[k], err = d.AuditInfoMatcher.GetOwnerMatcher(mid.Identities[k], info.AuditInfo)
+		matchers[k], err = d.AuditInfoMatcher.GetAuditInfoMatcher(mid.Identities[k], info.AuditInfo)
 		if err != nil {
 			return nil, err
 		}
