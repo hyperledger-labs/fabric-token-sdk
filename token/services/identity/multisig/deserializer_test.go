@@ -59,12 +59,12 @@ func TestGetOwnerAuditInfo_Success(t *testing.T) {
 	rawIdentity := []byte("valid_raw_identity")
 	provider := &mockAuditInfoProvider{}
 
-	auditInfo, err := deserializer.GetOwnerAuditInfo(id, Multisig, rawIdentity, provider)
+	auditInfo, err := deserializer.GetAuditInfo(id, Multisig, rawIdentity, provider)
 	require.NoError(t, err)
 	assert.NotNil(t, auditInfo)
 }
 
-func TestGetOwnerAuditInfo_InvalidType(t *testing.T) {
+func TestGetAuditInfo_InvalidType(t *testing.T) {
 	verifierDES := &mockVerifierDES{}
 	auditInfoMatcher := &mockAuditInfoMatcher{}
 	deserializer := NewTypedIdentityDeserializer(verifierDES, auditInfoMatcher)
@@ -72,7 +72,7 @@ func TestGetOwnerAuditInfo_InvalidType(t *testing.T) {
 	rawIdentity := []byte("valid_raw_identity")
 	provider := &mockAuditInfoProvider{}
 
-	auditInfo, err := deserializer.GetOwnerAuditInfo(id, identity.Type("InvalidType"), rawIdentity, provider)
+	auditInfo, err := deserializer.GetAuditInfo(id, identity.Type("InvalidType"), rawIdentity, provider)
 	require.Error(t, err)
 	assert.Nil(t, auditInfo)
 }
@@ -84,7 +84,7 @@ func TestGetOwnerMatcher_InvalidAuditInfo(t *testing.T) {
 	owner := []byte("valid_owner")
 	auditInfo := []byte("invalid")
 
-	matcher, err := deserializer.GetOwnerMatcher(owner, auditInfo)
+	matcher, err := deserializer.GetAuditInfoMatcher(owner, auditInfo)
 	require.Error(t, err)
 	assert.Nil(t, matcher)
 }
@@ -122,7 +122,7 @@ func (m *mockVerifierDES) DeserializeVerifier(id token.Identity) (driver.Verifie
 
 type mockAuditInfoMatcher struct{}
 
-func (m *mockAuditInfoMatcher) GetOwnerMatcher(owner token.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (m *mockAuditInfoMatcher) GetAuditInfoMatcher(owner token.Identity, auditInfo []byte) (driver.Matcher, error) {
 	if string(auditInfo) == "valid_audit_info" {
 		return &mockMatcher{}, nil
 	}
