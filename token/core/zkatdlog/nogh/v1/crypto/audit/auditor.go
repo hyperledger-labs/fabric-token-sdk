@@ -40,29 +40,47 @@ type InfoMatcher interface {
 }
 
 // InspectTokenOwnerFunc models a function to inspect the owner field
-type InspectTokenOwnerFunc = func(matcher InfoMatcher, token *AuditableToken, index int) error
+type InspectTokenOwnerFunc = func(matcher InfoMatcher, identity *InspectableIdentity, index int) error
 
 // GetAuditInfoForIssuesFunc models a function to get auditable tokens from issue actions
-type GetAuditInfoForIssuesFunc = func(issues [][]byte, metadata []*driver.IssueMetadata) ([][]*AuditableToken, error)
+type GetAuditInfoForIssuesFunc = func(issues [][]byte, metadata []*driver.IssueMetadata) ([][]*InspectableToken, []InspectableIdentity, error)
 
 // GetAuditInfoForTransfersFunc models a function to get auditable tokens from transfer actions
-type GetAuditInfoForTransfersFunc = func(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error)
+type GetAuditInfoForTransfersFunc = func(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error)
 
-// AuditableToken contains a zkat token and the information that allows
-// an auditor to learn its content.
-type AuditableToken struct {
-	Token *token.Token
-	Data  *TokenDataOpening
-	Owner *OwnerOpening
+type InspectableIdentity struct {
+	Identity  driver.Identity
+	AuditInfo []byte
 }
 
-func NewAuditableToken(token *token.Token, ownerInfo []byte, tokenType token2.Type, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
-	return &AuditableToken{
-		Token: token,
-		Owner: &OwnerOpening{
-			OwnerInfo: ownerInfo,
+type InspectableData struct {
+	Data      *math.G1
+	TokenType token2.Type
+	Value     *math.Zr
+	BF        *math.Zr
+}
+
+// InspectableToken contains a zkat token and the information that allows
+// an auditor to learn its content.
+type InspectableToken struct {
+	Identity InspectableIdentity
+	Data     InspectableData
+}
+
+func NewInspectableToken(
+	token *token.Token,
+	ownerAuditInfo []byte,
+	tokenType token2.Type,
+	value *math.Zr,
+	bf *math.Zr,
+) (*InspectableToken, error) {
+	return &InspectableToken{
+		Identity: InspectableIdentity{
+			Identity:  token.Owner,
+			AuditInfo: ownerAuditInfo,
 		},
-		Data: &TokenDataOpening{
+		Data: InspectableData{
+			Data:      token.Data,
 			TokenType: tokenType,
 			Value:     value,
 			BF:        bf,
@@ -86,9 +104,9 @@ type OwnerOpening struct {
 // Auditor inspects zkat tokens and their owners.
 type Auditor struct {
 	Logger logging.Logger
-	tracer trace.Tracer
+	Tracer trace.Tracer
 	// Owner Identity InfoMatcher
-	Des InfoMatcher
+	InfoMatcher InfoMatcher
 	// Auditor's signing identity
 	Signer SigningIdentity
 	// Pedersen generators used to compute TokenData
@@ -102,16 +120,16 @@ type Auditor struct {
 	GetAuditInfoForTransfersFunc GetAuditInfoForTransfersFunc
 }
 
-func NewAuditor(logger logging.Logger, tracer trace.Tracer, des InfoMatcher, pp []*math.G1, signer SigningIdentity, c *math.Curve) *Auditor {
+func NewAuditor(logger logging.Logger, tracer trace.Tracer, infoMatcher InfoMatcher, pp []*math.G1, signer SigningIdentity, c *math.Curve) *Auditor {
 	a := &Auditor{
 		Logger:         logger,
-		tracer:         tracer,
-		Des:            des,
+		Tracer:         tracer,
+		InfoMatcher:    infoMatcher,
 		PedersenParams: pp,
 		Signer:         signer,
 		Curve:          c,
 	}
-	a.InspectTokenOwnerFunc = InspectTokenOwner
+	a.InspectTokenOwnerFunc = InspectIdentity
 	a.GetAuditInfoForIssuesFunc = GetAuditInfoForIssues
 	a.GetAuditInfoForTransfersFunc = GetAuditInfoForTransfers
 	return a
@@ -149,7 +167,7 @@ func (a *Auditor) Check(
 	defer span.AddEvent("end_check")
 	// De-obfuscate issue requests
 	span.AddEvent("get_issue_audit_info")
-	outputsFromIssue, err := a.GetAuditInfoForIssuesFunc(tokenRequest.Issues, tokenRequestMetadata.Issues)
+	outputsFromIssue, identitiesFromIssue, err := a.GetAuditInfoForIssuesFunc(tokenRequest.Issues, tokenRequestMetadata.Issues)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for issues for [%s]", txID)
 	}
@@ -158,6 +176,12 @@ func (a *Auditor) Check(
 	err = a.CheckIssueRequests(outputsFromIssue, txID)
 	if err != nil {
 		return errors.Wrapf(err, "failed checking issues for [%s]", txID)
+	}
+	for i, id := range identitiesFromIssue {
+		err = a.InspectTokenOwnerFunc(a.InfoMatcher, &id, i)
+		if err != nil {
+			return errors.Wrapf(err, "failed checking identity for issue [%s]", txID)
+		}
 	}
 	// De-obfuscate transfer requests
 	span.AddEvent("get_transfer_audit_info")
@@ -175,7 +199,7 @@ func (a *Auditor) Check(
 }
 
 // CheckTransferRequests verifies that the commitments in transfer inputs and outputs match the information provided in the clear.
-func (a *Auditor) CheckTransferRequests(inputs [][]*AuditableToken, outputsFromTransfer [][]*AuditableToken, txID string) error {
+func (a *Auditor) CheckTransferRequests(inputs [][]*InspectableToken, outputsFromTransfer [][]*InspectableToken, txID string) error {
 
 	for k, transferred := range outputsFromTransfer {
 		err := a.InspectOutputs(transferred)
@@ -195,7 +219,7 @@ func (a *Auditor) CheckTransferRequests(inputs [][]*AuditableToken, outputsFromT
 }
 
 // CheckIssueRequests verifies that the commitments in issue outputs match the information provided in the clear.
-func (a *Auditor) CheckIssueRequests(outputsFromIssue [][]*AuditableToken, txID string) error {
+func (a *Auditor) CheckIssueRequests(outputsFromIssue [][]*InspectableToken, txID string) error {
 	// Inspect
 	for k, issued := range outputsFromIssue {
 		err := a.InspectOutputs(issued)
@@ -207,7 +231,7 @@ func (a *Auditor) CheckIssueRequests(outputsFromIssue [][]*AuditableToken, txID 
 }
 
 // InspectOutputs verifies that the commitments in an array of outputs matches the information provided in the clear.
-func (a *Auditor) InspectOutputs(tokens []*AuditableToken) error {
+func (a *Auditor) InspectOutputs(tokens []*InspectableToken) error {
 	for i, t := range tokens {
 		err := a.InspectOutput(t, i)
 		if err != nil {
@@ -220,39 +244,38 @@ func (a *Auditor) InspectOutputs(tokens []*AuditableToken) error {
 
 // InspectOutput verifies that the commitments in an output token of a given index
 // match the information provided in the clear.
-func (a *Auditor) InspectOutput(output *AuditableToken, index int) error {
+func (a *Auditor) InspectOutput(output *InspectableToken, index int) error {
 	if len(a.PedersenParams) != 3 {
 		return errors.Errorf("length of Pedersen basis != 3")
 	}
-	if output == nil || output.Data == nil {
+	if output == nil || output.Data.Data == nil {
 		return errors.Errorf("invalid output at index [%d]", index)
 	}
-	tokenComm := commit([]*math.Zr{a.Curve.HashToZr([]byte(output.Data.TokenType)), output.Data.Value, output.Data.BF}, a.PedersenParams, a.Curve)
-	if output.Token == nil || output.Token.Data == nil {
-		return errors.Errorf("invalid output at index [%d]", index)
-	}
-	if !tokenComm.Equals(output.Token.Data) {
+	tokenComm := commit([]*math.Zr{
+		a.Curve.HashToZr([]byte(output.Data.TokenType)),
+		output.Data.Value,
+		output.Data.BF,
+	}, a.PedersenParams, a.Curve)
+	if !tokenComm.Equals(output.Data.Data) {
 		return errors.Errorf("output at index [%d] does not match the provided opening", index)
 	}
-
-	if !output.Token.IsRedeem() { // this is not a redeemed output
-		if err := a.InspectTokenOwnerFunc(a.Des, output, index); err != nil {
+	if !output.Identity.Identity.IsNone() { // this is not a redeemed output
+		if err := a.InspectTokenOwnerFunc(a.InfoMatcher, &output.Identity, index); err != nil {
 			return errors.Wrapf(err, "failed inspecting output at index [%d]", index)
 		}
 	}
-
 	return nil
 }
 
-// InspectInputs verifies that the commitments in an array of inputs matches the information provided in the clear.
-func (a *Auditor) InspectInputs(inputs []*AuditableToken) error {
+// InspectInputs verifies that the commitment in an array of inputs matches the information provided in the clear.
+func (a *Auditor) InspectInputs(inputs []*InspectableToken) error {
 	for i, input := range inputs {
-		if input == nil || input.Token == nil {
+		if input == nil {
 			return errors.Errorf("invalid input at index [%d]", i)
 		}
 
-		if !input.Token.IsRedeem() {
-			if err := a.InspectTokenOwnerFunc(a.Des, input, i); err != nil {
+		if !input.Identity.Identity.IsNone() {
+			if err := a.InspectTokenOwnerFunc(a.InfoMatcher, &input.Identity, i); err != nil {
 				return errors.Wrapf(err, "failed inspecting input at index [%d]", i)
 			}
 		}
@@ -260,58 +283,59 @@ func (a *Auditor) InspectInputs(inputs []*AuditableToken) error {
 	return nil
 }
 
-// InspectTokenOwner verifies that the audit info matches the token owner
-func InspectTokenOwner(matcher InfoMatcher, token *AuditableToken, index int) error {
-	if token.Token.IsRedeem() {
-		return errors.Errorf("token at index [%d] is a redeem token, cannot inspect ownership", index)
+// InspectIdentity verifies that the audit info matches the token owner
+func InspectIdentity(matcher InfoMatcher, identity *InspectableIdentity, index int) error {
+	if identity.Identity.IsNone() {
+		return errors.Errorf("identity at index [%d] is nil, cannot inspect it", index)
 	}
-	if len(token.Owner.OwnerInfo) == 0 {
-		return errors.Errorf("failed to inspect owner at index [%d]: owner info is nil", index)
+	if len(identity.AuditInfo) == 0 {
+		return errors.Errorf("failed to inspect identity at index [%d]: audit info is nil", index)
 	}
-	if err := matcher.MatchIdentity(token.Token.Owner, token.Owner.OwnerInfo); err != nil {
+	if err := matcher.MatchIdentity(identity.Identity, identity.AuditInfo); err != nil {
 		return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
 	}
 	return nil
 }
 
-// GetAuditInfoForIssues returns an array of AuditableToken for each issue action
+// GetAuditInfoForIssues returns an array of InspectableToken for each issue action
 // It takes a deserializer, an array of serialized issue actions and an array of issue metadata.
-func GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver.IssueMetadata) ([][]*AuditableToken, error) {
+func GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver.IssueMetadata) ([][]*InspectableToken, []InspectableIdentity, error) {
 	if len(issues) != len(issueMetadata) {
-		return nil, errors.Errorf("number of issues does not match number of provided metadata")
+		return nil, nil, errors.Errorf("number of issues does not match number of provided metadata")
 	}
-	outputs := make([][]*AuditableToken, len(issues))
+	outputs := make([][]*InspectableToken, len(issues))
+	identities := make([]InspectableIdentity, len(issues))
 	for k, md := range issueMetadata {
 		ia := &issue.Action{}
 		err := ia.Deserialize(issues[k])
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to deserialize issue action at index [%d]", k)
+			return nil, nil, errors.Wrapf(err, "failed to deserialize issue action at index [%d]", k)
 		}
 
 		if len(ia.Outputs) != len(md.Outputs) {
-			return nil, errors.Errorf("number of output does not match number of provided metadata")
+			return nil, nil, errors.Errorf("number of output does not match number of provided metadata")
 		}
-		outputs[k] = make([]*AuditableToken, len(md.Outputs))
+		outputs[k] = make([]*InspectableToken, len(md.Outputs))
 		for i, o := range md.Outputs {
 			if o == nil {
-				return nil, errors.Errorf("output at index [%d] is nil", i)
+				return nil, nil, errors.Errorf("output at index [%d] is nil", i)
 			}
 			metadata := &token.Metadata{}
 			err = metadata.Deserialize(o.OutputMetadata)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if ia.Outputs[i] == nil {
-				return nil, errors.Errorf("output token at index [%d] is nil", i)
+				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
 			if ia.Outputs[i].IsRedeem() {
-				return nil, errors.Errorf("issue cannot redeem tokens")
+				return nil, nil, errors.Errorf("issue cannot redeem tokens")
 			}
 			if len(o.Receivers) == 0 {
-				return nil, errors.Errorf("issue must have at least one receiver")
+				return nil, nil, errors.Errorf("issue must have at least one receiver")
 			}
 			// TODO: check that o.Receivers contains not-nil elements
-			outputs[k][i], err = NewAuditableToken(
+			outputs[k][i], err = NewInspectableToken(
 				ia.Outputs[i],
 				o.Receivers[0].AuditInfo,
 				metadata.Type,
@@ -319,35 +343,39 @@ func GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver.IssueMetadat
 				metadata.BlindingFactor,
 			)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to create auditable token at index [%d]", i)
+				return nil, nil, errors.Wrapf(err, "failed to create auditable token at index [%d]", i)
 			}
 		}
+		identities[k] = InspectableIdentity{
+			Identity:  ia.Issuer,
+			AuditInfo: md.Issuer.AuditInfo,
+		}
 	}
-	return outputs, nil
+	return outputs, identities, nil
 }
 
-// GetAuditInfoForTransfers returns an array of AuditableToken for each transfer action.
+// GetAuditInfoForTransfers returns an array of InspectableToken for each transfer action.
 // It takes a deserializer, an array of serialized transfer actions and an array of transfer metadata.
-func GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
+func GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")
 	}
 	if len(inputs) != len(metadata) {
 		return nil, nil, errors.Errorf("number of inputs does not match the number of provided metadata")
 	}
-	auditableInputs := make([][]*AuditableToken, len(inputs))
-	outputs := make([][]*AuditableToken, len(transfers))
+	auditableInputs := make([][]*InspectableToken, len(inputs))
+	outputs := make([][]*InspectableToken, len(transfers))
 	for k, transferMetadata := range metadata {
 		if len(transferMetadata.Inputs) != len(inputs[k]) {
 			return nil, nil, errors.Errorf("number of inputs does not match the number of senders [%d]!=[%d]", len(transferMetadata.Inputs), len(inputs[k]))
 		}
-		auditableInputs[k] = make([]*AuditableToken, len(transferMetadata.Inputs))
+		auditableInputs[k] = make([]*InspectableToken, len(transferMetadata.Inputs))
 		for i := 0; i < len(transferMetadata.Inputs); i++ {
 			var err error
 			if inputs[k][i] == nil {
 				return nil, nil, errors.Errorf("input[%d][%d] is nil", k, i)
 			}
-			auditableInputs[k][i], err = NewAuditableToken(inputs[k][i], transferMetadata.Inputs[i].Senders[0].AuditInfo, "", nil, nil)
+			auditableInputs[k][i], err = NewInspectableToken(inputs[k][i], transferMetadata.Inputs[i].Senders[0].AuditInfo, "", nil, nil)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -360,7 +388,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMet
 		if len(ta.Outputs) != len(transferMetadata.Outputs) {
 			return nil, nil, errors.Errorf("number of outputs does not match the number of output metadata [%d]!=[%d]", len(ta.Outputs), len(transferMetadata.Outputs))
 		}
-		outputs[k] = make([]*AuditableToken, len(ta.Outputs))
+		outputs[k] = make([]*InspectableToken, len(ta.Outputs))
 		for i := 0; i < len(ta.Outputs); i++ {
 			if ta.Outputs[i] == nil {
 				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
@@ -372,7 +400,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMet
 				return nil, nil, err
 			}
 			// TODO: we need to check also how many recipients the output contains, and check them all in isolation and compatibility
-			outputs[k][i], err = NewAuditableToken(ta.Outputs[i], transferMetadata.Outputs[i].OutputAuditInfo, ti.Type, ti.Value, ti.BlindingFactor)
+			outputs[k][i], err = NewInspectableToken(ta.Outputs[i], transferMetadata.Outputs[i].OutputAuditInfo, ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, nil, err
 			}

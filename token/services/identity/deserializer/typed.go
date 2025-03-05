@@ -144,7 +144,7 @@ func (v *TypedVerifierDeserializerMultiplex) MatchIdentity(id driver.Identity, a
 	}
 	err = matcher.Match(recipient.Identity)
 	if err != nil {
-		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", id, hash.Hashable(ai))
+		return errors.Wrapf(err, "failed to match identity to audit infor for [%s]:[%s]", id, hash.Hashable(ai))
 	}
 	return nil
 }

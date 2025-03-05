@@ -18,11 +18,11 @@ import (
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/audit"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/ecdsa"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/issue"
 	tokn "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
 	enginedlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/ecdsa"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -31,6 +31,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
+	ix509 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -74,6 +75,7 @@ var _ = Describe("validator", func() {
 		Expect(err).NotTo(HaveOccurred())
 		des := deserializer.NewTypedVerifierDeserializerMultiplex()
 		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+		des.AddTypedVerifierDeserializer(ix509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&ecdsa.Deserializer{}, &ecdsa.Deserializer{}))
 		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), &noop.Tracer{}, des, pp.PedersenGenerators, asigner, c)
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
@@ -282,7 +284,9 @@ func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor
 
 	issuer := &issue2.Issuer{}
 	issuer.New("ABC", signer, pp)
-	ir, metadata := prepareIssue(auditor, issuer)
+	issuerIdentity, err := signer.Serialize()
+	Expect(err).NotTo(HaveOccurred())
+	ir, metadata := prepareIssue(auditor, issuer, issuerIdentity)
 
 	return issuer, ir, metadata
 }
@@ -407,7 +411,7 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.Signi
 	return id, auditInfo, signer
 }
 
-func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer) (*driver.TokenRequest, *driver.TokenRequestMetadata) {
+func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte) (*driver.TokenRequest, *driver.TokenRequestMetadata) {
 	id, auditInfo, _ := getIdemixInfo("./testdata/idemix")
 	ir := &driver.TokenRequest{}
 	owners := make([][]byte, 1)
@@ -419,7 +423,12 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer) (*driver.TokenR
 
 	auditInfoRaw, err := auditInfo.Bytes()
 	Expect(err).NotTo(HaveOccurred())
-	metadata := &driver.IssueMetadata{}
+	metadata := &driver.IssueMetadata{
+		Issuer: driver.AuditableIdentity{
+			Identity:  issuerIdentity,
+			AuditInfo: issuerIdentity,
+		},
+	}
 	for i := 0; i < len(issue.Outputs); i++ {
 		marshalledinf, err := inf[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())

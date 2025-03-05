@@ -160,7 +160,7 @@ func (x *AuditableIdentity) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use AuditableIdentity.ProtoReflect.Descriptor instead.
+// Deprecated: Use Identity.ProtoReflect.Descriptor instead.
 func (*AuditableIdentity) Descriptor() ([]byte, []int) {
 	return file_request_proto_rawDescGZIP(), []int{1}
 }
@@ -1071,7 +1071,7 @@ var file_request_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_request_proto_goTypes = []interface{}{
 	(ActionType)(0),                  // 0: protos.ActionType
 	(*Identity)(nil),                 // 1: protos.Identity
-	(*AuditableIdentity)(nil),        // 2: protos.AuditableIdentity
+	(*AuditableIdentity)(nil),        // 2: protos.Identity
 	(*TokenID)(nil),                  // 3: protos.TokenID
 	(*TransferInputMetadata)(nil),    // 4: protos.TransferInputMetadata
 	(*OutputMetadata)(nil),           // 5: protos.OutputMetadata
@@ -1087,15 +1087,15 @@ var file_request_proto_goTypes = []interface{}{
 	nil,                              // 15: protos.TokenRequestMetadata.ApplicationEntry
 }
 var file_request_proto_depIdxs = []int32{
-	1,  // 0: protos.AuditableIdentity.identity:type_name -> protos.Identity
+	1,  // 0: protos.Identity.identity:type_name -> protos.Identity
 	3,  // 1: protos.TransferInputMetadata.token_id:type_name -> protos.TokenID
-	2,  // 2: protos.TransferInputMetadata.senders:type_name -> protos.AuditableIdentity
-	2,  // 3: protos.OutputMetadata.receivers:type_name -> protos.AuditableIdentity
+	2,  // 2: protos.TransferInputMetadata.senders:type_name -> protos.Identity
+	2,  // 3: protos.OutputMetadata.receivers:type_name -> protos.Identity
 	4,  // 4: protos.TransferMetadata.inputs:type_name -> protos.TransferInputMetadata
 	5,  // 5: protos.TransferMetadata.outputs:type_name -> protos.OutputMetadata
 	1,  // 6: protos.TransferMetadata.extra_signers:type_name -> protos.Identity
 	3,  // 7: protos.IssueInputMetadata.token_id:type_name -> protos.TokenID
-	2,  // 8: protos.IssueMetadata.issuer:type_name -> protos.AuditableIdentity
+	2,  // 8: protos.IssueMetadata.issuer:type_name -> protos.Identity
 	7,  // 9: protos.IssueMetadata.inputs:type_name -> protos.IssueInputMetadata
 	5,  // 10: protos.IssueMetadata.outputs:type_name -> protos.OutputMetadata
 	1,  // 11: protos.IssueMetadata.extra_signers:type_name -> protos.Identity
