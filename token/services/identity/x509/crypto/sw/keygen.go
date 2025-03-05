@@ -20,9 +20,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"fmt"
 
 	"github.com/hyperledger/fabric/bccsp"
+	"github.com/pkg/errors"
 )
 
 type ecdsaKeyGenerator struct {
@@ -32,7 +32,7 @@ type ecdsaKeyGenerator struct {
 func (kg *ecdsaKeyGenerator) KeyGen(opts bccsp.KeyGenOpts) (bccsp.Key, error) {
 	privKey, err := ecdsa.GenerateKey(kg.curve, rand.Reader)
 	if err != nil {
-		return nil, fmt.Errorf("Failed generating ECDSA key for [%v]: [%s]", kg.curve, err)
+		return nil, errors.Wrapf(err, "failed generating ECDSA key for [%v]", kg.curve)
 	}
 
 	return &ecdsaPrivateKey{privKey}, nil

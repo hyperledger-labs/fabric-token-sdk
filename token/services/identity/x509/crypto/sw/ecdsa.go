@@ -18,8 +18,8 @@ package sw
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-	"fmt"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/utils"
 )
@@ -41,7 +41,7 @@ func signECDSA(k *ecdsa.PrivateKey, digest []byte, opts bccsp.SignerOpts) ([]byt
 func verifyECDSA(k *ecdsa.PublicKey, signature, digest []byte, opts bccsp.SignerOpts) (bool, error) {
 	r, s, err := utils.UnmarshalECDSASignature(signature)
 	if err != nil {
-		return false, fmt.Errorf("Failed unmashalling signature [%s]", err)
+		return false, errors.Errorf("Failed unmashalling signature [%s]", err)
 	}
 
 	lowS, err := utils.IsLowS(k, s)
@@ -50,7 +50,7 @@ func verifyECDSA(k *ecdsa.PublicKey, signature, digest []byte, opts bccsp.Signer
 	}
 
 	if !lowS {
-		return false, fmt.Errorf("Invalid S. Must be smaller than half the order [%s][%s].", s, utils.GetCurveHalfOrdersAt(k.Curve))
+		return false, errors.Errorf("invalid s, must be smaller than half the order [%s][%s]", s, utils.GetCurveHalfOrdersAt(k.Curve))
 	}
 
 	return ecdsa.Verify(k, digest, r, s), nil
