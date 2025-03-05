@@ -3,7 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
-package tcc_test
+package fabricv25_test
 
 import (
 	"testing"

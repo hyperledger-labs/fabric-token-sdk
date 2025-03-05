@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package tcc
+package fabricv25
 
 import (
 	"github.com/hyperledger/fabric-chaincode-go/shim"

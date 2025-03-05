@@ -3,14 +3,14 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
-package tcc_test
+package fabricv25_test
 
 import (
 	"encoding/base64"
 	"os"
 
-	chaincode2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/mock"
+	chaincode2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fabricv25"
+	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fabricv25/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
@@ -18,15 +18,15 @@ import (
 
 var _ = Describe("ccvalidator", func() {
 	var (
-		fakestub      *mock.ChaincodeStubInterface
+		fakestub      *mock2.ChaincodeStubInterface
 		chaincode     *chaincode2.TokenChaincode
-		fakeValidator *mock.Validator
-		fakePPM       *mock.PublicParametersManager
+		fakeValidator *mock2.Validator
+		fakePPM       *mock2.PublicParametersManager
 		ppFile        *os.File
 	)
 	BeforeEach(func() {
-		fakeValidator = &mock.Validator{}
-		fakePPM = &mock.PublicParametersManager{}
+		fakeValidator = &mock2.Validator{}
+		fakePPM = &mock2.PublicParametersManager{}
 		chaincode = &chaincode2.TokenChaincode{
 			TokenServicesFactory: func(i []byte) (chaincode2.PublicParameters, chaincode2.Validator, error) {
 				return fakePPM, fakeValidator, nil
@@ -43,7 +43,7 @@ var _ = Describe("ccvalidator", func() {
 		Expect(err).NotTo(HaveOccurred())
 		_, err = ppFile.WriteString(pp)
 		Expect(err).NotTo(HaveOccurred())
-		fakestub = &mock.ChaincodeStubInterface{}
+		fakestub = &mock2.ChaincodeStubInterface{}
 		fakestub.GetTxIDReturns("txid")
 		err = os.Setenv(chaincode2.PublicParamsPathVarEnv, ppFile.Name())
 		Expect(err).NotTo(HaveOccurred())
