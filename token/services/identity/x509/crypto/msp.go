@@ -12,8 +12,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 
-	"github.com/hyperledger/fabric/bccsp"
-	"github.com/hyperledger/fabric/bccsp/signer"
+	"github.com/hyperledger/fabric-lib-go/bccsp"
+	"github.com/hyperledger/fabric-lib-go/bccsp/signer"
 	"github.com/pkg/errors"
 )
 
