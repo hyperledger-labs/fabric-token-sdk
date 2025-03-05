@@ -114,7 +114,7 @@ func (s *Service) RegisterRecipientIdentity(data *driver.RecipientData) error {
 	// match identity and audit info
 	err := s.Deserializer.MatchIdentity(data.Identity, data.AuditInfo)
 	if err != nil {
-		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, utils.Hashable(data.AuditInfo))
+		return errors.Wrapf(err, "failed to match identity to audit infor for [%s]:[%s]", data.Identity, utils.Hashable(data.AuditInfo))
 	}
 
 	// register verifier and audit info
