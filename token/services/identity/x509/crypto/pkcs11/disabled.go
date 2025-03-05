@@ -9,7 +9,7 @@ SPDX-License-Identifier: Apache-2.0
 package pkcs11
 
 import (
-	"github.com/hyperledger/fabric/bccsp"
+	"github.com/hyperledger/fabric-lib-go/bccsp"
 )
 
 type KeyIDMapping struct {

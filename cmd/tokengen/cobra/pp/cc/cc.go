@@ -33,7 +33,7 @@ func GeneratePackage(raw []byte, outputDir string) error {
 	}
 
 	err = packager.New().PackageChaincode(
-		"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main",
+		"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fabricv25/main",
 		"golang",
 		"tcc",
 		filepath.Join(outputDir, "tcc.tar"),

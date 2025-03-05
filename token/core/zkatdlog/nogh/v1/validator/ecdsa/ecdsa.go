@@ -20,7 +20,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	ix509 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
-	"github.com/hyperledger/fabric/bccsp/utils"
+	"github.com/hyperledger/fabric-lib-go/bccsp/utils"
 	"github.com/pkg/errors"
 )
 

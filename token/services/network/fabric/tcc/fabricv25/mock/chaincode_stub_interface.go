@@ -4,7 +4,7 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fabricv25"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-protos-go/peer"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -2991,4 +2991,4 @@ func (fake *ChaincodeStubInterface) recordInvocation(key string, args []interfac
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ tcc.ChaincodeStubInterface = new(ChaincodeStubInterface)
+var _ fabricv25.ChaincodeStubInterface = new(ChaincodeStubInterface)
