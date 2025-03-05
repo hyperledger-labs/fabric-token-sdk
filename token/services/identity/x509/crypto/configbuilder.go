@@ -15,22 +15,22 @@ import (
 )
 
 const (
-	SignCerts = "signcerts"
-	KeyStore  = "keystore"
-	PrivSK    = "priv_sk"
+	SignCertsDirName = "signcerts"
+	KeyStoreDirName  = "keystore"
+	PrivSKFileName   = "priv_sk"
 )
 
 func LoadConfig(dir string, keyStoreDirName string) (*Config, error) {
-	signcertDir := filepath.Join(dir, SignCerts)
+	signcertDir := filepath.Join(dir, SignCertsDirName)
 	signcert, err := getPemMaterialFromDir(signcertDir)
 	if err != nil || len(signcert) == 0 {
 		return nil, errors.Wrapf(err, "could not load a valid signer certificate from directory %s", signcertDir)
 	}
 	// load secret key, if available. If not available, the public's key SKI will be used to load the secret key from the key store
 	if len(keyStoreDirName) == 0 {
-		keyStoreDirName = KeyStore
+		keyStoreDirName = KeyStoreDirName
 	}
-	secretKeyFile := filepath.Join(dir, keyStoreDirName, PrivSK)
+	secretKeyFile := filepath.Join(dir, keyStoreDirName, PrivSKFileName)
 	var skRaw []byte
 	if _, err := os.Stat(secretKeyFile); err == nil {
 		skRaw, err = readPemFile(secretKeyFile)

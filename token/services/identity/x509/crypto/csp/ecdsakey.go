@@ -72,6 +72,14 @@ func (k *ecdsaPrivateKey) PublicKey() (bccsp.Key, error) {
 	return &ecdsaPublicKey{&k.privKey.PublicKey}, nil
 }
 
+func (k *ecdsaPrivateKey) marshall() ([]byte, error) {
+	panic("not supported")
+}
+
+func (k *ecdsaPrivateKey) unmarshall(raw []byte) error {
+	panic("not supported")
+}
+
 type ecdsaPublicKey struct {
 	pubKey *ecdsa.PublicKey
 }
@@ -121,4 +129,12 @@ func (k *ecdsaPublicKey) Private() bool {
 // This method returns an error in symmetric key schemes.
 func (k *ecdsaPublicKey) PublicKey() (bccsp.Key, error) {
 	return k, nil
+}
+
+func (k *ecdsaPublicKey) marshall() ([]byte, error) {
+	panic("not supported")
+}
+
+func (k *ecdsaPublicKey) unmarshall(raw []byte) error {
+	panic("not supported")
 }
