@@ -14,6 +14,7 @@ import (
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/csp"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -25,20 +26,24 @@ const (
 	ExtraPathElement   = "msp"
 )
 
+func NewKeyStore(kvs identity.Keystore) (crypto.KeyStore, error) {
+	return csp.NewKVSStore(kvs), nil
+}
+
 type KeyManagerProvider struct {
 	config        idriver.Config
 	signerService idriver.SigService
-	keyStore      identity.Keystore
+	keyStore      crypto.KeyStore
 	// ignoreVerifyOnlyWallet when set to true, for each wallet the service will force the load of the secrets
 	ignoreVerifyOnlyWallet bool
 }
 
-func NewKeyManagerProvider(config idriver.Config, signerService idriver.SigService, keyStore identity.Keystore, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
+func NewKeyManagerProvider(config idriver.Config, signerService idriver.SigService, keyStore crypto.KeyStore, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
 	return &KeyManagerProvider{
 		config:                 config,
 		signerService:          signerService,
-		keyStore:               keyStore,
 		ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet,
+		keyStore:               keyStore,
 	}
 }
 
