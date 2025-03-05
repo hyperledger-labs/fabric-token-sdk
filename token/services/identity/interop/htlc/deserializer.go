@@ -7,8 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
-	"encoding/json"
-
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
@@ -133,15 +132,11 @@ type AuditInfoMatcher struct {
 }
 
 func (a *AuditInfoMatcher) Match(id []byte) error {
-	owner, err := identity.UnmarshalTypedIdentity(id)
-	if err != nil {
-		return errors.Wrapf(err, "failed unmarshaling identity [%s]", id)
-	}
 	scriptInf := &ScriptInfo{}
 	if err := json.Unmarshal(a.auditInfo, scriptInf); err != nil {
 		return errors.Wrapf(err, "failed to unmarshal script info")
 	}
-	scriptSender, scriptRecipient, err := GetScriptSenderAndRecipient(owner)
+	scriptSender, scriptRecipient, err := GetScriptSenderAndRecipient(id)
 	if err != nil {
 		return errors.Wrap(err, "failed getting script sender and recipient")
 	}
@@ -154,4 +149,14 @@ func (a *AuditInfoMatcher) Match(id []byte) error {
 		return errors.Wrapf(err, "failed matching recipient identity [%s]", scriptRecipient.String())
 	}
 	return nil
+}
+
+// GetScriptSenderAndRecipient returns the script's sender and recipient according to the type of the given owner
+func GetScriptSenderAndRecipient(id []byte) (sender, recipient driver.Identity, err error) {
+	script := &htlc.Script{}
+	err = json.Unmarshal(id, script)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to unmarshal htlc script")
+	}
+	return script.Sender, script.Recipient, nil
 }
