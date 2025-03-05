@@ -10,11 +10,13 @@ import (
 	"strconv"
 	"time"
 
+	vault "github.com/hashicorp/vault/api"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	hashicorp "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs/hashicorp"
 	"github.com/pkg/errors"
 )
 
@@ -286,6 +288,10 @@ func (w *IdentityConfigurationsIterator) Next() (driver.IdentityConfiguration, e
 func NewInMemoryKVS() (KVS, error) {
 	configService := &fakeProv{typ: "memory"}
 	return kvs.NewWithConfig(&mem.Driver{}, "", configService)
+}
+
+func NewHashicorpVaultKVS(client *vault.Client) (KVS, error) {
+	return hashicorp.NewWithClient(client)
 }
 
 type fakeProv struct {
