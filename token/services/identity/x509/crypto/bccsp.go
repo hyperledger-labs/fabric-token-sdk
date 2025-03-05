@@ -16,6 +16,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+type (
+	KeyStore = bccsp.KeyStore
+)
+
 // GetBCCSPFromConf returns a BCCSP instance and its relative key store from the passed configuration.
 // If no configuration is passed, the default one is used, namely the `SW` provider.
 func GetBCCSPFromConf(conf *BCCSP, keyStore bccsp.KeyStore) (bccsp.BCCSP, error) {

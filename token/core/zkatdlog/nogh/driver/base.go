@@ -64,7 +64,7 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
-	keyStore, err := storageProvider.Keystore()
+	baseKeyStore, err := storageProvider.Keystore()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open keystore for tms [%s]", tmsID)
 	}
@@ -91,6 +91,10 @@ func (d *base) newWalletService(
 		}
 		kmp := idemix.NewKeyManagerProvider(key.PublicKey, key.Curve, keyStore, sigService, identityConfig, identityConfig.DefaultCacheSize(), ignoreRemote)
 		kmps = append(kmps, kmp)
+	}
+	keyStore, err := x509.NewKeyStore(baseKeyStore)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create keystore")
 	}
 	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 

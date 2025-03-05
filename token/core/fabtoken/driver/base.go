@@ -56,7 +56,7 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
-	keyStore, err := storageProvider.Keystore()
+	baseKeyStore, err := storageProvider.Keystore()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open keystore for tms [%s]", tmsID)
 	}
@@ -68,6 +68,10 @@ func (d *base) newWalletService(
 	}
 
 	// Prepare roles
+	keyStore, err := x509.NewKeyStore(baseKeyStore)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create key store")
+	}
 	roleFactory := role.NewFactory(logger, tmsID, identityConfig, fscIdentity, networkDefaultIdentity, identityProvider, identityProvider, identityProvider, storageProvider, deserializerManager)
 	role, err := roleFactory.NewRole(identity.OwnerRole, false, nil, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
