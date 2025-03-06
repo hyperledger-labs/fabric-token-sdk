@@ -290,8 +290,8 @@ func NewInMemoryKVS() (KVS, error) {
 	return kvs.NewWithConfig(&mem.Driver{}, "", configService)
 }
 
-func NewHashicorpVaultKVS(client *vault.Client) (KVS, error) {
-	return hashicorp.NewWithClient(client)
+func NewHashicorpVaultKVS(client *vault.Client, path string) (KVS, error) {
+	return hashicorp.NewWithClient(client, path)
 }
 
 type fakeProv struct {
