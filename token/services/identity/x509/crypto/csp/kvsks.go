@@ -75,11 +75,11 @@ func (ks *KVSStore) GetKey(ski []byte) (bccsp.Key, error) {
 // StoreKey stores the key k in this KeyStore.
 // If this KeyStore is read only then the method will fail.
 func (ks *KVSStore) StoreKey(k bccsp.Key) error {
-	var value *KeyEntry
+	value := &KeyEntry{}
 	var id string
 
 	ser, ok := k.(serializer)
-	if ok {
+	if !ok {
 		return errors.Errorf("key type not supported [%s]", k)
 	}
 

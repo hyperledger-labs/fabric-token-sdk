@@ -68,10 +68,7 @@ func (d *base) newWalletService(
 	}
 
 	// Prepare roles
-	keyStore, err := x509.NewKeyStore(baseKeyStore)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create key store")
-	}
+	keyStore := x509.NewKeyStore(baseKeyStore)
 	roleFactory := role.NewFactory(logger, tmsID, identityConfig, fscIdentity, networkDefaultIdentity, identityProvider, identityProvider, identityProvider, storageProvider, deserializerManager)
 	role, err := roleFactory.NewRole(identity.OwnerRole, false, nil, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {

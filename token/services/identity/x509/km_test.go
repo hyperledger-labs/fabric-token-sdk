@@ -9,20 +9,23 @@ package x509
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/csp/kvs"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDeserializer(t *testing.T) {
+	keyStore := NewKeyStore(kvs.NewMemoryKVS())
+
 	// load a full identity capable of signing as well
-	fullIdentityProvider, _, err := NewKeyManager("./testdata/msp", nil, nil)
+	fullIdentityProvider, _, err := NewKeyManager("./testdata/msp", nil, nil, keyStore)
 	assert.NoError(t, err)
 	assert.False(t, fullIdentityProvider.Anonymous())
 	// load a full identity capable of signing as well with a custom keystore path
-	fullIdentityProvider2, _, err := NewKeyManagerFromConf(nil, "./testdata/msp2", KeystoreFullFolder, nil, nil, nil)
+	fullIdentityProvider2, _, err := NewKeyManagerFromConf(nil, "./testdata/msp2", KeystoreFullFolder, nil, nil, keyStore)
 	assert.NoError(t, err)
 	assert.False(t, fullIdentityProvider.Anonymous())
 	// load a verifying only provider
-	verifyingIdentityProvider, _, err := NewKeyManager("./testdata/msp1", nil, nil)
+	verifyingIdentityProvider, _, err := NewKeyManager("./testdata/msp1", nil, nil, keyStore)
 	assert.NoError(t, err)
 
 	for _, provider := range []*KeyManager{fullIdentityProvider, fullIdentityProvider2} {
