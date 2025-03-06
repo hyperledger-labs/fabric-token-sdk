@@ -30,6 +30,9 @@ func NewSKIBasedSigner(csp bccsp.BCCSP, ski []byte, pk crypto.PublicKey) (crypto
 	if len(ski) == 0 {
 		return nil, errors.New("SKI is empty")
 	}
+	if pk == nil {
+		return nil, errors.New("PK is nil")
+	}
 
 	return &SKIBasedSigner{csp: csp, SKI: ski, pk: pk}, nil
 }
