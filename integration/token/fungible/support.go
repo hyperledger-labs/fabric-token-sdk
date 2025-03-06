@@ -1322,13 +1322,13 @@ func MultiSigLockCashForTMSID(network *integration.Infrastructure, sender *token
 		identities[i] = network.Identity(eids[i])
 	}
 	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("MultiSigLock", common.JSONMarshall(&views.MultiSigLock{
-		Auditor:    auditor.Id(),
-		Wallet:     wallet,
-		Type:       typ,
-		Amount:     amount,
-		Escrow:     identities,
-		EscrowEIDs: eids,
-		TMSID:      tmsId,
+		Auditor:            auditor.Id(),
+		Wallet:             wallet,
+		Type:               typ,
+		Amount:             amount,
+		MultisigIdentities: identities,
+		MultisigEIDs:       eids,
+		TMSID:              tmsId,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	txID := common.JSONUnmarshalString(txidBoxed)

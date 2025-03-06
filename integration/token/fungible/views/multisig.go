@@ -18,49 +18,24 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// MultiSigLockAction defines a policy-based multiSigLock action
-type MultiSigLockAction struct {
-	// Amount to multiSigLock
-	Amount uint64
-	// Escrow is array that carries the identities of the FSC nodes of the multisig escrow
-	Escrow []view.Identity
-	// EscrowEIDs are the expected enrolment ids of the multisig escrow
-	EscrowEIDs []string
-}
-
 // MultiSigLock contains the input information for a multisig-based escrow
 type MultiSigLock struct {
 	// Auditor is the name of the auditor that must be contacted to approve the operation
 	Auditor string
 	// Wallet is the identifier of the wallet that owns the tokens to transfer
 	Wallet string
-	// TokenIDs contains a list of token ids to transfer. If empty, tokens are selected on the spot.
-	TokenIDs []*token.ID
 	// Type of tokens to transfer
 	Type token.Type
 	// Amount to transfer
 	Amount uint64
-	// Escrow contains the identities of the FSC nodes of the multisig escrow
-	Escrow []view.Identity
-	// EscrowEIDs contains the expected enrolment ids of the multisig escrow
-	EscrowEIDs []string
-	// Retry tells if a retry must happen in case of a failure
-	Retry bool
-	// FailToRelease if true, it fails after transfer to trigger the Release function on the token transaction
-	FailToRelease bool
-	// SenderChangeRecipientData contains the recipient data that needs to be used by sender to receive the change of the transfer operation, if needed.
-	// If this field is set to nil, then the token sdk generates this information as needed.
-	SenderChangeRecipientData *token2.RecipientData
-	// EscrowData contains the recipient data of the recipient of the transfer.
-	// If nil, the view will ask the remote part to generate it, otherwise the view will notify the recipient
-	// about the recipient data that will be used to the transfer.
-	EscrowData []*token2.RecipientData
+	// MultisigIdentities contains the identities of the FSC nodes of the multisig escrow
+	MultisigIdentities []view.Identity
+	// MultisigEIDs contains the expected enrolment ids of the multisig escrow
+	MultisigEIDs []string
 	// The TMS to pick in case of multiple TMSIDs
 	TMSID *token2.TMSID
 	// NotAnonymous true if the transaction must be anonymous, false otherwise
 	NotAnonymous bool
-	// Metadata contains application metadata to append to the transaction
-	Metadata map[string][]byte
 }
 
 type MultiSigLockView struct {
@@ -72,7 +47,7 @@ func (lv *MultiSigLockView) Call(context view.Context) (txID interface{}, err er
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
 	// identity the escrow wants to use.
-	recipient, err := multisig.RequestRecipientIdentity(context, lv.Escrow, token2.WithTMSIDPointer(lv.TMSID))
+	recipient, err := multisig.RequestRecipientIdentity(context, lv.MultisigIdentities, token2.WithTMSIDPointer(lv.TMSID))
 	assert.NoError(err, "failed requesting recipients")
 
 	// The sender will select tokens owned by this wallet
@@ -139,7 +114,7 @@ type MultiSigSpend struct {
 	Auditor string
 	// Wallet is the identifier of the wallet that owns the tokens to transfer
 	Wallet string
-	// Escrow contains the identities of the FSC nodes of the multisig escrow
+	// MultisigIdentities contains the identities of the FSC nodes of the multisig escrow
 	Recipient view.Identity
 	// The TMS to pick in case of multiple TMSIDs
 	TMSID     *token2.TMSID
