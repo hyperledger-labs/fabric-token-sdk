@@ -39,16 +39,13 @@ func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
 	}
-	if serialized.NymX == nil || serialized.NymY == nil {
-		return nil, errors.Errorf("unable to deserialize idemix identity: pseudonym is invalid")
+	if len(serialized.NymPublicKey) == 0 {
+		return nil, errors.Errorf("unable to deserialize idemix identity: pseudonym's public key is empty")
 	}
 
 	// Import NymPublicKey
-	var rawNymPublicKey []byte
-	rawNymPublicKey = append(rawNymPublicKey, serialized.NymX...)
-	rawNymPublicKey = append(rawNymPublicKey, serialized.NymY...)
 	NymPublicKey, err := c.Csp.KeyImport(
-		rawNymPublicKey,
+		serialized.NymPublicKey,
 		&bccsp.IdemixNymPublicKeyImportOpts{Temporary: true},
 	)
 	if err != nil {

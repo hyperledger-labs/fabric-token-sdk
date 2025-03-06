@@ -61,15 +61,12 @@ func (id *Identity) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not serialize nym")
 	}
-	// This is an assumption on how the underlying idemix implementation work.
-	// TODO: change this in future version
-	serialized.NymX = raw[:len(raw)/2]
-	serialized.NymY = raw[len(raw)/2:]
+	serialized.NymPublicKey = raw
 	serialized.Proof = id.AssociationProof
 
 	idemixIDBytes, err := proto.Marshal(serialized)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "could not serialize idemix identity")
 	}
 	return idemixIDBytes, nil
 }
