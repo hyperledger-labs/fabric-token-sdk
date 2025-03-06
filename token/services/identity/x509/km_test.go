@@ -14,7 +14,7 @@ import (
 )
 
 func TestDeserializer(t *testing.T) {
-	keyStore := NewKeyStore(kvs.NewMemoryKVS())
+	keyStore := NewKeyStore(kvs.NewMemory())
 
 	// load a full identity capable of signing as well
 	fullIdentityProvider, _, err := NewKeyManager("./testdata/msp", nil, nil, keyStore)

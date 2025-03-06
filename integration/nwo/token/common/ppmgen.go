@@ -50,7 +50,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 		return nil, err
 	}
 
-	keyStore := x509.NewKeyStore(kvs.NewMemoryKVS())
+	keyStore := x509.NewKeyStore(kvs.NewMemory())
 	if len(tms.Auditors) != 0 {
 		if len(wallets.Auditors) == 0 {
 			return nil, errors.Errorf("no auditor wallets provided")
@@ -156,7 +156,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 		return nil, errors.Wrapf(err, "failed to validate public parameters")
 	}
 
-	keyStore := x509.NewKeyStore(kvs.NewMemoryKVS())
+	keyStore := x509.NewKeyStore(kvs.NewMemory())
 	if len(tms.Auditors) != 0 {
 		if len(wallets.Auditors) == 0 {
 			return nil, errors.Errorf("no auditor wallets provided")
