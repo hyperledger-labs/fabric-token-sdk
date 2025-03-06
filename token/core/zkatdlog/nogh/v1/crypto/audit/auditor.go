@@ -34,15 +34,6 @@ type InfoMatcher interface {
 	MatchIdentity(id driver.Identity, ai []byte) error
 }
 
-// InspectTokenOwnerFunc models a function to inspect the owner field
-type InspectTokenOwnerFunc = func(matcher InfoMatcher, identity *InspectableIdentity, index int) error
-
-// GetAuditInfoForIssuesFunc models a function to get auditable tokens from issue actions
-type GetAuditInfoForIssuesFunc = func(issues [][]byte, metadata []*driver.IssueMetadata) ([][]*InspectableToken, []InspectableIdentity, error)
-
-// GetAuditInfoForTransfersFunc models a function to get auditable tokens from transfer actions
-type GetAuditInfoForTransfersFunc = func(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error)
-
 type InspectableIdentity struct {
 	Identity         driver.Identity
 	IdentityFromMeta driver.Identity
@@ -109,15 +100,10 @@ type Auditor struct {
 	PedersenParams []*math.G1
 	// Elliptic curve
 	Curve *math.Curve
-
-	// InspectTokenOwnerFunc is a function that inspects the owner field
-	InspectTokenOwnerFunc        InspectTokenOwnerFunc
-	GetAuditInfoForIssuesFunc    GetAuditInfoForIssuesFunc
-	GetAuditInfoForTransfersFunc GetAuditInfoForTransfersFunc
 }
 
 func NewAuditor(logger logging.Logger, tracer trace.Tracer, infoMatcher InfoMatcher, pp []*math.G1, signer SigningIdentity, c *math.Curve) *Auditor {
-	a := &Auditor{
+	return &Auditor{
 		Logger:         logger,
 		Tracer:         tracer,
 		InfoMatcher:    infoMatcher,
@@ -125,10 +111,6 @@ func NewAuditor(logger logging.Logger, tracer trace.Tracer, infoMatcher InfoMatc
 		Signer:         signer,
 		Curve:          c,
 	}
-	a.InspectTokenOwnerFunc = InspectIdentity
-	a.GetAuditInfoForIssuesFunc = GetAuditInfoForIssues
-	a.GetAuditInfoForTransfersFunc = GetAuditInfoForTransfers
-	return a
 }
 
 // Endorse is called to sign a valid token request
@@ -163,7 +145,7 @@ func (a *Auditor) Check(
 	defer span.AddEvent("end_check")
 	// De-obfuscate issue requests
 	span.AddEvent("get_issue_audit_info")
-	outputsFromIssue, identitiesFromIssue, err := a.GetAuditInfoForIssuesFunc(tokenRequest.Issues, tokenRequestMetadata.Issues)
+	outputsFromIssue, identitiesFromIssue, err := a.GetAuditInfoForIssues(tokenRequest.Issues, tokenRequestMetadata.Issues)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for issues for [%s]", txID)
 	}
@@ -174,14 +156,14 @@ func (a *Auditor) Check(
 		return errors.Wrapf(err, "failed checking issues for [%s]", txID)
 	}
 	for i, id := range identitiesFromIssue {
-		err = a.InspectTokenOwnerFunc(a.InfoMatcher, &id, i)
+		err = a.InspectIdentity(a.InfoMatcher, &id, i)
 		if err != nil {
 			return errors.Wrapf(err, "failed checking identity for issue [%s]", txID)
 		}
 	}
 	// De-obfuscate transfer requests
 	span.AddEvent("get_transfer_audit_info")
-	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfersFunc(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
+	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfers(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for transfers for [%s]", txID)
 	}
@@ -256,7 +238,7 @@ func (a *Auditor) InspectOutput(output *InspectableToken, index int) error {
 		return errors.Errorf("output at index [%d] does not match the provided opening", index)
 	}
 	if !output.Identity.Identity.IsNone() { // this is not a redeemed output
-		if err := a.InspectTokenOwnerFunc(a.InfoMatcher, &output.Identity, index); err != nil {
+		if err := a.InspectIdentity(a.InfoMatcher, &output.Identity, index); err != nil {
 			return errors.Wrapf(err, "failed inspecting output at index [%d]", index)
 		}
 	}
@@ -271,7 +253,7 @@ func (a *Auditor) InspectInputs(inputs []*InspectableToken) error {
 		}
 
 		if !input.Identity.Identity.IsNone() {
-			if err := a.InspectTokenOwnerFunc(a.InfoMatcher, &input.Identity, i); err != nil {
+			if err := a.InspectIdentity(a.InfoMatcher, &input.Identity, i); err != nil {
 				return errors.Wrapf(err, "failed inspecting input at index [%d]", i)
 			}
 		}
@@ -280,7 +262,7 @@ func (a *Auditor) InspectInputs(inputs []*InspectableToken) error {
 }
 
 // InspectIdentity verifies that the audit info matches the token owner
-func InspectIdentity(matcher InfoMatcher, identity *InspectableIdentity, index int) error {
+func (a *Auditor) InspectIdentity(matcher InfoMatcher, identity *InspectableIdentity, index int) error {
 	if identity.Identity.IsNone() {
 		return errors.Errorf("identity at index [%d] is nil, cannot inspect it", index)
 	}
@@ -301,7 +283,7 @@ func InspectIdentity(matcher InfoMatcher, identity *InspectableIdentity, index i
 
 // GetAuditInfoForIssues returns an array of InspectableToken for each issue action
 // It takes a deserializer, an array of serialized issue actions and an array of issue metadata.
-func GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver.IssueMetadata) ([][]*InspectableToken, []InspectableIdentity, error) {
+func (a *Auditor) GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver.IssueMetadata) ([][]*InspectableToken, []InspectableIdentity, error) {
 	if len(issues) != len(issueMetadata) {
 		return nil, nil, errors.Errorf("number of issues does not match number of provided metadata")
 	}
@@ -359,7 +341,7 @@ func GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver.IssueMetadat
 
 // GetAuditInfoForTransfers returns an array of InspectableToken for each transfer action.
 // It takes a deserializer, an array of serialized transfer actions and an array of transfer metadata.
-func GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error) {
+func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")
 	}
