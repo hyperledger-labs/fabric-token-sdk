@@ -82,6 +82,16 @@ func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token2.Token,
 	}, nil
 }
 
+func (t *Token) Validate(checkOwner bool) error {
+	if checkOwner && len(t.Owner) == 0 {
+		return errors.Errorf("token owner cannot be empty")
+	}
+	if t.Data == nil {
+		return errors.Errorf("token data cannot be empty")
+	}
+	return nil
+}
+
 func computeTokens(tw []*TokenDataWitness, pp []*math.G1, c *math.Curve) ([]*math.G1, error) {
 	tokens := make([]*math.G1, len(tw))
 	var err error
@@ -210,4 +220,23 @@ type UpgradeWitness struct {
 	FabToken *fabtokenv1.Output
 	// BlindingFactor is the blinding factor used to commit type and value
 	BlindingFactor *math.Zr
+}
+
+func (u *UpgradeWitness) Validate() error {
+	if u.FabToken == nil {
+		return errors.New("missing FabToken")
+	}
+	if len(u.FabToken.Owner) == 0 {
+		return errors.New("missing FabToken.Owner")
+	}
+	if len(u.FabToken.Type) == 0 {
+		return errors.New("missing FabToken.Type")
+	}
+	if len(u.FabToken.Quantity) == 0 {
+		return errors.New("missing FabToken.Quantity")
+	}
+	if u.BlindingFactor == nil {
+		return errors.New("missing BlindingFactor")
+	}
+	return nil
 }
