@@ -47,7 +47,7 @@ func TestKeyManager(t *testing.T) {
 	backend, err := kvs2.NewInMemoryKVS()
 	client, err := NewVaultClient("http://localhoat:8200", "root")
 	assert.NoError(t, err)
-	backend, err = kvs2.NewHashicorpVaultKVS(client)
+	backend, err = kvs2.NewHashicorpVaultKVS(client, "secret/data/token-sdk/")
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 
@@ -82,7 +82,7 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 
 	client, err := NewVaultClient("http://localhoat:8200", "root")
 	assert.NoError(t, err)
-	backend, err = kvs2.NewHashicorpVaultKVS(client)
+	backend, err = kvs2.NewHashicorpVaultKVS(client, "secret/data/token-sdk/")
 
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(backend))
