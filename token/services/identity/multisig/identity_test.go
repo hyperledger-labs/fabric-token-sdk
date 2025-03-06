@@ -56,8 +56,8 @@ func TestInfoMatcher_Match(t *testing.T) {
 	assert.NoError(t, err)
 
 	matchers := []driver.Matcher{
-		&mockMatcher{expected: []byte("id1")},
-		&mockMatcher{expected: []byte("id2")},
+		&mockMatcher{expected: wrapIdentity(t, "id1")},
+		&mockMatcher{expected: wrapIdentity(t, "id2")},
 	}
 	infoMatcher := &InfoMatcher{AuditInfoMatcher: matchers}
 
@@ -139,13 +139,17 @@ func TestUnwrapAuditInfo_Error(t *testing.T) {
 }
 
 func identities(t *testing.T, names ...string) []token.Identity {
-	identities := make([]token.Identity, len(names))
-	var err error
+	ids := make([]token.Identity, len(names))
 	for i, name := range names {
-		identities[i], err = identity.WrapWithType("name", []byte(name))
-		assert.NoError(t, err)
+		ids[i] = wrapIdentity(t, name)
 	}
-	return identities
+	return ids
+}
+
+func wrapIdentity(t *testing.T, name string) token.Identity {
+	id, err := identity.WrapWithType("name", []byte(name))
+	assert.NoError(t, err)
+	return id
 }
 
 type mockMatcher struct {
