@@ -29,6 +29,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/csp/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -1042,10 +1043,11 @@ func GetIssuerIdentity(tms *topology.TMS, id string) []byte {
 }
 
 func getIdentity(identities []topology.Identity, id string) []byte {
+	keyStore := x509.NewKeyStore(kvs.NewMemoryKVS())
 	for _, topologyIdentity := range identities {
 		if topologyIdentity.ID == id {
 			// Build an MSP Identity
-			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, nil, topologyIdentity.Opts)
+			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, nil, topologyIdentity.Opts, keyStore)
 			Expect(err).NotTo(HaveOccurred())
 			newIdentity, _, err := kmp.Identity(nil)
 			Expect(err).NotTo(HaveOccurred())

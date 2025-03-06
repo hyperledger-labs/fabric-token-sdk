@@ -92,10 +92,7 @@ func (d *base) newWalletService(
 		kmp := idemix.NewKeyManagerProvider(key.PublicKey, key.Curve, keyStore, sigService, identityConfig, identityConfig.DefaultCacheSize(), ignoreRemote)
 		kmps = append(kmps, kmp)
 	}
-	keyStore, err := x509.NewKeyStore(baseKeyStore)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create keystore")
-	}
+	keyStore := x509.NewKeyStore(baseKeyStore)
 	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 
 	role, err := roleFactory.NewRole(identity.OwnerRole, true, nil, kmps...)

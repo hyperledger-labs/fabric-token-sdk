@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
 )
 
@@ -36,12 +35,13 @@ type KeyManager struct {
 // NewKeyManager returns a new X509 provider with the passed BCCSP configuration.
 // If the configuration path contains the secret key,
 // then the provider can generate also signatures, otherwise it cannot.
-func NewKeyManager(path string, signerService SignerService, bccspConfig *crypto2.BCCSP) (*KeyManager, *crypto2.Config, error) {
-	conf, err := crypto2.LoadConfig(path, "")
-	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "could not get config from dir [%s]", path)
-	}
-	p, conf, err := NewKeyManagerFromConf(conf, path, "", signerService, bccspConfig, nil)
+func NewKeyManager(
+	path string,
+	signerService SignerService,
+	bccspConfig *crypto2.BCCSP,
+	keyStore crypto2.KeyStore,
+) (*KeyManager, *crypto2.Config, error) {
+	p, conf, err := NewKeyManagerFromConf(nil, path, "", signerService, bccspConfig, keyStore)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -53,8 +53,11 @@ func NewKeyManagerFromConf(
 	configPath, keyStoreDirName string,
 	signerService SignerService,
 	bccspConfig *crypto2.BCCSP,
-	keyStore bccsp.KeyStore,
+	keyStore crypto2.KeyStore,
 ) (*KeyManager, *crypto2.Config, error) {
+	if keyStore == nil {
+		return nil, nil, errors.New("no keyStore provided")
+	}
 	if conf == nil {
 		logger.Debugf("load x509 config from [%s]", configPath)
 		var err error
@@ -75,7 +78,7 @@ func NewKeyManagerFromConf(
 	return p, conf, err
 }
 
-func newSigningKeyManager(conf *crypto2.Config, signerService SignerService, bccspConfig *crypto2.BCCSP, keyStore bccsp.KeyStore) (*KeyManager, error) {
+func newSigningKeyManager(conf *crypto2.Config, signerService SignerService, bccspConfig *crypto2.BCCSP, keyStore crypto2.KeyStore) (*KeyManager, error) {
 	sID, err := crypto2.GetSigningIdentity(conf, bccspConfig, keyStore)
 	if err != nil {
 		return nil, err
