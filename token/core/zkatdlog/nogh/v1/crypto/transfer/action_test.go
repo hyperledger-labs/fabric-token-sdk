@@ -14,10 +14,388 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestAction_Validate(t *testing.T) {
+	tests := []struct {
+		name          string
+		action        *Action
+		wantErr       bool
+		expectedError string
+	}{
+		{
+			name:          "",
+			action:        &Action{},
+			wantErr:       true,
+			expectedError: "invalid number of token inputs, expected at least 1",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{},
+			},
+			wantErr:       true,
+			expectedError: "invalid number of token inputs, expected at least 1",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					nil,
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid input at index [0], empty input",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID:             nil,
+						Token:          nil,
+						UpgradeWitness: nil,
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid input's ID at index [0], it is empty",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID:             &token.ID{},
+						Token:          nil,
+						UpgradeWitness: nil,
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid input's ID at index [0], tx id is empty",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID:             &token.ID{TxId: "txid"},
+						Token:          nil,
+						UpgradeWitness: nil,
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid input's token at index [0], empty token",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: nil,
+							Data:  nil,
+						},
+						UpgradeWitness: nil,
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid input token at index [0]: token owner cannot be empty",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  nil,
+						},
+						UpgradeWitness: nil,
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid input token at index [0]: token data cannot be empty",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: nil,
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid number of token outputs, expected at least 1",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{},
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid input's upgrade witness at index [0]: missing FabToken",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{},
+						},
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid input's upgrade witness at index [0]: missing FabToken.Owner",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{
+								Owner: []byte("owner"),
+							},
+						},
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid input's upgrade witness at index [0]: missing FabToken.Type",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{
+								Owner: []byte("owner"),
+								Type:  "type",
+							},
+						},
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid input's upgrade witness at index [0]: missing FabToken.Quantity",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{
+								Owner:    []byte("owner"),
+								Type:     "type",
+								Quantity: "10",
+							},
+						},
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid input's upgrade witness at index [0]: missing BlindingFactor",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{
+								Owner:    []byte("owner"),
+								Type:     "type",
+								Quantity: "10",
+							},
+							BlindingFactor: &math.Zr{},
+						},
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid number of token outputs, expected at least 1",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{
+								Owner:    []byte("owner"),
+								Type:     "type",
+								Quantity: "10",
+							},
+							BlindingFactor: &math.Zr{},
+						},
+					},
+				},
+				Outputs: []*token2.Token{
+					nil,
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid output token at index [0]",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{
+								Owner:    []byte("owner"),
+								Type:     "type",
+								Quantity: "10",
+							},
+							BlindingFactor: &math.Zr{},
+						},
+					},
+				},
+				Outputs: []*token2.Token{
+					{},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid output at index [0]: token data cannot be empty",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{
+								Owner:    []byte("owner"),
+								Type:     "type",
+								Quantity: "10",
+							},
+							BlindingFactor: &math.Zr{},
+						},
+					},
+				},
+				Outputs: []*token2.Token{
+					{
+						Owner: []byte("owner"),
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid output at index [0]: token data cannot be empty",
+		},
+		{
+			name: "",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{
+								Owner:    []byte("owner"),
+								Type:     "type",
+								Quantity: "10",
+							},
+							BlindingFactor: &math.Zr{},
+						},
+					},
+				},
+				Outputs: []*token2.Token{
+					{
+						Owner: []byte("owner"),
+						Data:  &math.G1{},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.action.Validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestSerialization(t *testing.T) {
 	action := randomAction(math.Curves[math.BN254], rand.Reader, t)

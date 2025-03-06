@@ -246,13 +246,25 @@ func (t *Action) Validate() error {
 	}
 	for i, in := range t.Inputs {
 		if in == nil {
-			return errors.Errorf("invalid input token at index [%d]", i)
+			return errors.Errorf("invalid input at index [%d], empty input", i)
+		}
+		if in.ID == nil {
+			return errors.Errorf("invalid input's ID at index [%d], it is empty", i)
+		}
+		if len(in.ID.TxId) == 0 {
+			return errors.Errorf("invalid input's ID at index [%d], tx id is empty", i)
 		}
 		if in.Token == nil {
-			return errors.Errorf("invalid input token at index [%d]", i)
+			return errors.Errorf("invalid input's token at index [%d], empty token", i)
 		}
-		if in.Token.Data == nil {
-			return errors.Errorf("invalid input token at index [%d]", i)
+		if err := in.Token.Validate(true); err != nil {
+			return errors.Wrapf(err, "invalid input token at index [%d]", i)
+		}
+
+		if in.UpgradeWitness != nil {
+			if err := in.UpgradeWitness.Validate(); err != nil {
+				return errors.Wrapf(err, "invalid input's upgrade witness at index [%d]", i)
+			}
 		}
 	}
 	if len(t.Outputs) == 0 {
@@ -261,6 +273,9 @@ func (t *Action) Validate() error {
 	for i, out := range t.Outputs {
 		if out == nil {
 			return errors.Errorf("invalid output token at index [%d]", i)
+		}
+		if err := out.Validate(false); err != nil {
+			return errors.Wrapf(err, "invalid output at index [%d]", i)
 		}
 	}
 	return nil
