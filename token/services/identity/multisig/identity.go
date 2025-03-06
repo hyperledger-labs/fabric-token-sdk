@@ -88,11 +88,7 @@ func (e *InfoMatcher) Match(raw []byte) error {
 		return errors.Errorf("expected [%d] identities, received [%d]", len(e.AuditInfoMatcher), len(mid.Identities))
 	}
 	for k, id := range mid.Identities {
-		tid, err := identity.UnmarshalTypedIdentity(id)
-		if err != nil {
-			return err
-		}
-		err = e.AuditInfoMatcher[k].Match(tid.Identity)
+		err = e.AuditInfoMatcher[k].Match(id)
 		if err != nil {
 			return errors.Wrapf(err, "identity at index %d does not match the audit info", k)
 		}
