@@ -19,6 +19,7 @@ import (
 	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/csp/kvs"
 	"github.com/pkg/errors"
 )
 
@@ -49,13 +50,14 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 		return nil, err
 	}
 
+	keyStore := x509.NewKeyStore(kvs.NewMemoryKVS())
 	if len(tms.Auditors) != 0 {
 		if len(wallets.Auditors) == 0 {
 			return nil, errors.Errorf("no auditor wallets provided")
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			km, _, err := x509.NewKeyManager(auditor.Path, nil, auditor.Opts)
+			km, _, err := x509.NewKeyManager(auditor.Path, nil, auditor.Opts, keyStore)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
@@ -79,7 +81,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 		}
 		for _, issuer := range wallets.Issuers {
 			// Build an MSP Identity
-			km, _, err := x509.NewKeyManager(issuer.Path, nil, issuer.Opts)
+			km, _, err := x509.NewKeyManager(issuer.Path, nil, issuer.Opts, keyStore)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
@@ -154,13 +156,14 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 		return nil, errors.Wrapf(err, "failed to validate public parameters")
 	}
 
+	keyStore := x509.NewKeyStore(kvs.NewMemoryKVS())
 	if len(tms.Auditors) != 0 {
 		if len(wallets.Auditors) == 0 {
 			return nil, errors.Errorf("no auditor wallets provided")
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			km, _, err := x509.NewKeyManager(auditor.Path, nil, auditor.Opts)
+			km, _, err := x509.NewKeyManager(auditor.Path, nil, auditor.Opts, keyStore)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
@@ -184,7 +187,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 		}
 		for _, issuer := range wallets.Issuers {
 			// Build an MSP Identity
-			km, _, err := x509.NewKeyManager(issuer.Path, nil, issuer.Opts)
+			km, _, err := x509.NewKeyManager(issuer.Path, nil, issuer.Opts, keyStore)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}

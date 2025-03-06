@@ -9,10 +9,9 @@ package csp
 import (
 	"crypto/ecdsa"
 	"crypto/x509"
-	"errors"
-	"fmt"
 	"reflect"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/sw"
 )
@@ -31,7 +30,7 @@ func (*ecdsaPKIXPublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts 
 
 	lowLevelKey, err := derToPublicKey(der)
 	if err != nil {
-		return nil, fmt.Errorf("failed converting PKIX to ECDSA public key [%s]", err)
+		return nil, errors.Wrapf(err, "failed converting PKIX to ECDSA public key")
 	}
 
 	ecdsaPK, ok := lowLevelKey.(*ecdsa.PublicKey)
@@ -56,7 +55,7 @@ func (*ecdsaPrivateKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bcc
 
 	lowLevelKey, err := derToPrivateKey(der)
 	if err != nil {
-		return nil, fmt.Errorf("failed converting PKIX to ECDSA public key [%s]", err)
+		return nil, errors.Wrapf(err, "failed converting PKIX to ECDSA public key")
 	}
 
 	ecdsaSK, ok := lowLevelKey.(*ecdsa.PrivateKey)

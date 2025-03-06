@@ -26,8 +26,8 @@ const (
 	ExtraPathElement   = "msp"
 )
 
-func NewKeyStore(kvs identity.Keystore) (crypto.KeyStore, error) {
-	return csp.NewKVSStore(kvs), nil
+func NewKeyStore(kvs identity.Keystore) crypto.KeyStore {
+	return csp.NewKVSStore(kvs)
 }
 
 type KeyManagerProvider struct {
