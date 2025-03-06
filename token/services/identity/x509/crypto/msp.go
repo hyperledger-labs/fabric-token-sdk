@@ -13,7 +13,6 @@ import (
 	"encoding/pem"
 
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/hyperledger/fabric/bccsp/signer"
 	"github.com/pkg/errors"
 )
 
@@ -116,36 +115,36 @@ func NewIdentityFactory(bccsp bccsp.BCCSP, signatureHashFamily string) *Identity
 
 func (f *IdentityFactory) GetFullIdentity(sidInfo *SigningIdentityInfo) (*fullIdentity, error) {
 	if sidInfo == nil {
-		return nil, errors.New("getIdentityFromBytes error: nil sidInfo")
+		return nil, errors.New("nil signing identity info")
 	}
 
 	// Extract the public part of the identity
-	idPub, pubKey, err := f.getIdentityFromConf(sidInfo.PublicSigner)
+	idPub, pubKey, cryptoPK, err := f.getIdentityFromConf(sidInfo.PublicSigner)
 	if err != nil {
 		return nil, err
 	}
 
 	// Find the matching private key in the BCCSP keystore
-	privKey, err := f.bccsp.GetKey(pubKey.SKI())
+	_, err = f.bccsp.GetKey(pubKey.SKI())
 	// Less Secure: Attempt to import Private Key from KeyInfo, if BCCSP was not able to find the key
 	if err != nil {
 		if sidInfo.PrivateSigner == nil || sidInfo.PrivateSigner.KeyMaterial == nil {
-			return nil, errors.New("KeyMaterial not found in SigningIdentityInfo")
+			return nil, errors.New("key material not found in SigningIdentityInfo")
 		}
 		pemKey, _ := pem.Decode(sidInfo.PrivateSigner.KeyMaterial)
 		if pemKey == nil {
 			return nil, errors.Errorf("%s: wrong PEM encoding", sidInfo.PrivateSigner.KeyIdentifier)
 		}
-		privKey, err = f.bccsp.KeyImport(pemKey.Bytes, &bccsp.ECDSAPrivateKeyImportOpts{})
+		_, err = f.bccsp.KeyImport(pemKey.Bytes, &bccsp.ECDSAPrivateKeyImportOpts{})
 		if err != nil {
-			return nil, errors.WithMessage(err, "getIdentityFromBytes error: Failed to import EC private key")
+			return nil, errors.WithMessage(err, "failed to import EC private key")
 		}
 	}
 
 	// get the peer signer
-	identitySigner, err := signer.New(f.bccsp, privKey)
+	identitySigner, err := NewSKIBasedSigner(f.bccsp, pubKey.SKI(), cryptoPK)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getIdentityFromBytes error: Failed initializing bccspCryptoSigner")
+		return nil, errors.WithMessage(err, "failed to create identity signer")
 	}
 
 	return &fullIdentity{
@@ -161,13 +160,13 @@ func (f *IdentityFactory) GetFullIdentity(sidInfo *SigningIdentityInfo) (*fullId
 
 func (f *IdentityFactory) GetIdentity(sidInfo *SigningIdentityInfo) (*verifyingIdentity, error) {
 	if sidInfo == nil {
-		return nil, errors.New("getIdentityFromBytes error: nil sidInfo")
+		return nil, errors.New("nil signing identity info")
 	}
 
 	// Extract the public part of the identity
-	idPub, pubKey, err := f.getIdentityFromConf(sidInfo.PublicSigner)
+	idPub, pubKey, _, err := f.getIdentityFromConf(sidInfo.PublicSigner)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("failed getting identity from config")
 	}
 
 	return &verifyingIdentity{
@@ -178,38 +177,42 @@ func (f *IdentityFactory) GetIdentity(sidInfo *SigningIdentityInfo) (*verifyingI
 	}, nil
 }
 
-func (f *IdentityFactory) getIdentityFromConf(idBytes []byte) (*x509.Certificate, bccsp.Key, error) {
+func (f *IdentityFactory) getIdentityFromConf(idBytes []byte) (*x509.Certificate, bccsp.Key, crypto.PublicKey, error) {
 	// get a cert
 	cert, err := f.getCertFromPem(idBytes)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "failed getting certificate")
 	}
 
 	// get the public key in the right format
 	certPubK, err := f.bccsp.KeyImport(cert, &bccsp.X509PublicKeyImportOpts{Temporary: true})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "failed to import certificate")
 	}
 
-	return cert, certPubK, nil
+	cryptoPK, ok := cert.PublicKey.(crypto.PublicKey)
+	if !ok {
+		return nil, nil, nil, errors.Errorf("certificate public key is not a cryptographic public key")
+	}
+	return cert, certPubK, cryptoPK, nil
 }
 
 func (f *IdentityFactory) getCertFromPem(idBytes []byte) (*x509.Certificate, error) {
 	if idBytes == nil {
-		return nil, errors.New("getCertFromPem error: nil idBytes")
+		return nil, errors.New("nil id")
 	}
 
 	// Decode the pem bytes
 	pemCert, _ := pem.Decode(idBytes)
 	if pemCert == nil {
-		return nil, errors.Errorf("getCertFromPem error: could not decode pem bytes [%v]", idBytes)
+		return nil, errors.Errorf("could not decode pem bytes [%v]", idBytes)
 	}
 
 	// get a cert
 	var cert *x509.Certificate
 	cert, err := x509.ParseCertificate(pemCert.Bytes)
 	if err != nil {
-		return nil, errors.Wrap(err, "getCertFromPem error: failed to parse x509 cert")
+		return nil, errors.Wrap(err, "failed to parse x509 cert")
 	}
 
 	return cert, nil
