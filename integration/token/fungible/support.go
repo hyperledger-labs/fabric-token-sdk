@@ -1043,7 +1043,7 @@ func GetIssuerIdentity(tms *topology.TMS, id string) []byte {
 }
 
 func getIdentity(identities []topology.Identity, id string) []byte {
-	keyStore := x509.NewKeyStore(kvs.NewMemoryKVS())
+	keyStore := x509.NewKeyStore(kvs.NewMemory())
 	for _, topologyIdentity := range identities {
 		if topologyIdentity.ID == id {
 			// Build an MSP Identity

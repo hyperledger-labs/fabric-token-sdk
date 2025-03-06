@@ -16,7 +16,7 @@ type MemoryKVS struct {
 	kvs map[string][]byte
 }
 
-func NewMemoryKVS() *MemoryKVS {
+func NewMemory() *MemoryKVS {
 	return &MemoryKVS{
 		kvs: make(map[string][]byte),
 	}
