@@ -315,10 +315,9 @@ func (a *Auditor) GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver
 			if ia.Outputs[i].IsRedeem() {
 				return nil, nil, errors.Errorf("issue cannot redeem tokens")
 			}
-			if len(o.Receivers) == 0 {
+			if len(o.Receivers) == 0 || o.Receivers[0] == nil {
 				return nil, nil, errors.Errorf("issue must have at least one receiver")
 			}
-			// TODO: check that o.Receivers contains not-nil elements
 			outputs[k][i], err = NewInspectableToken(
 				ia.Outputs[i],
 				o.Receivers[0].AuditInfo,
