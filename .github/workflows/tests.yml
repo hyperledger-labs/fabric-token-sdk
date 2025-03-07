@@ -69,10 +69,31 @@ jobs:
       - name: Run ${{ matrix.tests }}
         run: make ${{ matrix.tests }}
 
-      - name: check test coverage
-        uses: vladopajic/go-test-coverage@v2
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
         with:
-          config: ./testcoverage.yml
+          name: code-coverage
+          path: coverage.out
+
+#      - name: check test coverage
+#        uses: vladopajic/go-test-coverage@v2
+#        with:
+#          config: ./testcoverage.yml
+
+  code_coverage:
+    name: "Code coverage report"
+    if: github.event_name == 'pull_request' # Do not run when workflow is triggered by push to main branch
+    runs-on: ubuntu-latest
+    needs: utest # Depends on the artifact uploaded by the "utest" job
+    permissions:
+      contents:      read
+      actions:       read  # to download code coverage results from "test" job
+      pull-requests: write # write permission needed to comment on PR
+    steps:
+      - uses: fgrosse/go-coverage-report@v1.1.1 # Consider using a Git revision for maximum security
+        with:
+          coverage-artifact-name: "code-coverage" # can be omitted if you used this default value
+          coverage-file-name: "coverage.out" # can be omitted if you used this default value
 
   itest:
     needs: checks
