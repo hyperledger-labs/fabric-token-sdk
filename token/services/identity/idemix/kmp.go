@@ -9,6 +9,7 @@ package idemix
 import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
@@ -43,7 +44,7 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 	if len(identityConfig.Raw) != 0 {
 		// load the config directly from identityConfig.Raw
 		logger.Infof("load the config directly from identityConfig.Raw [%s][%s]", identityConfig.ID, hash.Hashable(identityConfig.Raw))
-		conf, err = crypto2.NewConfigFromRawSigner(l.issuerPublicKey, identityConfig.Raw)
+		conf, err = crypto2.NewConfigFromRaw(l.issuerPublicKey, identityConfig.Raw)
 	} else {
 		// load from URL
 		logger.Infof("load the config form identityConfig.URL [%s][%s]", identityConfig.ID, identityConfig.URL)
@@ -80,6 +81,15 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 			nil,
 		).Identity
 	}
+
+	// finalize identity configuration
+	// remove SK and keep only SKI
+	conf.Signer.Sk = nil
+	identityConfigurationRawField, err := proto.Marshal(conf)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to marshal identity configuration")
+	}
+	identityConfig.Raw = identityConfigurationRawField
 
 	return &WrappedKeyManager{
 		KeyManager:      provider,
