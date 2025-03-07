@@ -83,87 +83,82 @@ func TestNewKeyManager(t *testing.T) {
 }
 
 func TestIdentityWithEidRhNymPolicy(t *testing.T) {
+	// prepare
 	registry := registry2.New()
-
 	backend, err := kvs2.NewInMemoryKVS()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(backend))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
-
 	config, err := crypto2.NewConfig("./testdata/idemix")
 	assert.NoError(t, err)
-
 	keyStore, err := crypto2.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 
-	// invalid sig type
+	// init key manager
+	// with invalid sig type
 	_, err = idemix.NewKeyManager(config, sigService, -1, cryptoProvider)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "unsupported signature type -1")
-
-	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	// correctly
+	keyManager, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
-	assert.NotNil(t, p)
+	assert.NotNil(t, keyManager)
 
-	id, audit, err := p.Identity(nil)
+	// get an identity and check it
+	id, audit, err := keyManager.Identity(nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
-	info, err := p.Info(id, audit)
+	info, err := keyManager.Info(id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: [alice]"))
 
-	id2, audit2, err := p.Identity(audit)
+	// get another identity and compare the info
+	id2, audit2, err := keyManager.Identity(audit)
 	assert.NoError(t, err)
 	assert.NotNil(t, id2)
 	assert.NotNil(t, audit2)
-	info2, err := p.Info(id2, audit2)
+	info2, err := keyManager.Info(id2, audit2)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info2, "Idemix: [alice]"))
 	assert.Equal(t, audit, audit2)
 
-	auditInfo, err := p.DeserializeAuditInfo(audit)
+	// deserialize the audit information
+	auditInfo, err := keyManager.DeserializeAuditInfo(audit)
 	assert.NoError(t, err)
 	assert.NoError(t, auditInfo.Match(id))
-
-	signer, err := p.DeserializeSigner(id)
+	assert.NoError(t, auditInfo.Match(id2))
+	auditInfo2, err := keyManager.DeserializeAuditInfo(audit2)
 	assert.NoError(t, err)
-	verifier, err := p.DeserializeVerifier(id)
+	assert.NoError(t, auditInfo2.Match(id))
+	assert.NoError(t, auditInfo2.Match(id2))
+
+	// deserialize an invalid signer
+	_, err = keyManager.DeserializeSigner(nil)
+	assert.Error(t, err)
+	_, err = keyManager.DeserializeSigner([]byte{})
+	assert.Error(t, err)
+	_, err = keyManager.DeserializeSigner([]byte{0, 1, 2})
+	assert.Error(t, err)
+	// deserialize a valid signer
+	signer, err := keyManager.DeserializeSigner(id)
+	assert.NoError(t, err)
+	// deserialize an invalid verifier
+	_, err = keyManager.DeserializeVerifier(nil)
+	assert.Error(t, err)
+	_, err = keyManager.DeserializeVerifier([]byte{})
+	assert.Error(t, err)
+	_, err = keyManager.DeserializeVerifier([]byte{0, 1, 2})
+	assert.Error(t, err)
+	// deserialize a valid verifier
+	verifier, err := keyManager.DeserializeVerifier(id)
 	assert.NoError(t, err)
 
+	// sign and verify
 	sigma, err := signer.Sign([]byte("hello world!!!"))
-	assert.NoError(t, err)
-	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
-
-	keyStore, err = crypto2.NewKeyStore(math.FP256BN_AMCL, backend)
-	assert.NoError(t, err)
-	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
-	assert.NoError(t, err)
-	p, err = idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
-	assert.NoError(t, err)
-	assert.NotNil(t, p)
-
-	id, audit, err = p.Identity(nil)
-	assert.NoError(t, err)
-	assert.NotNil(t, id)
-	assert.NotNil(t, audit)
-	info, err = p.Info(id, audit)
-	assert.NoError(t, err)
-	assert.True(t, strings.HasPrefix(info, "Idemix: [alice]"))
-
-	auditInfo, err = p.DeserializeAuditInfo(audit)
-	assert.NoError(t, err)
-	assert.NoError(t, auditInfo.Match(id))
-
-	signer, err = p.DeserializeSigner(id)
-	assert.NoError(t, err)
-	verifier, err = p.DeserializeVerifier(id)
-	assert.NoError(t, err)
-
-	sigma, err = signer.Sign([]byte("hello world!!!"))
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 }
