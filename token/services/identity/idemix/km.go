@@ -172,7 +172,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 		return nil, nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", p.userKeySKI)
 	}
 
-	// Derive NymPublicKey
+	// Derive nymPublicKey
 	nymKey, err := p.Csp.KeyDeriv(
 		userKey,
 		&bccsp.IdemixNymKeyDerivationOpts{
@@ -183,7 +183,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed deriving nym")
 	}
-	NymPublicKey, err := nymKey.PublicKey()
+	nymPublicKey, err := nymKey.PublicKey()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting public nym key")
 	}
@@ -197,7 +197,6 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 		if err != nil {
 			return nil, nil, err
 		}
-
 		signerMetadata = &bccsp.IdemixSignerMetadata{
 			EidNymAuditData: ai.EidNymAuditData,
 			RhNymAuditData:  ai.RhNymAuditData,
@@ -227,27 +226,28 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 		sigOpts,
 	)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, "Failed to setup cryptographic proof of identity")
+		return nil, nil, errors.WithMessage(err, "failed to setup cryptographic proof of identity")
 	}
 
 	// Set up default signer
-	id, err := crypto2.NewIdentity(p.Deserializer, NymPublicKey, proof, p.verType)
+	id, err := crypto2.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithMessage(err, "failed to create identity")
 	}
 	sID := &crypto2.SigningIdentity{
 		Identity:     id,
-		NymKey:       nymKey,
+		NymKeySKI:    nymPublicKey.SKI(),
+		UserKeySKI:   p.userKeySKI,
 		EnrollmentId: enrollmentID,
 	}
 	raw, err := sID.Serialize()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithMessage(err, "failed to serialize identity")
 	}
 
 	if p.SignerService != nil {
 		if err := p.SignerService.RegisterSigner(raw, sID, sID, nil); err != nil {
-			return nil, nil, err
+			return nil, nil, errors.WithMessage(err, "failed to register signer")
 		}
 	}
 
@@ -273,7 +273,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 		}
 		infoRaw, err = auditInfo.Bytes()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errors.WithMessage(err, "failed to serialize auditInfo")
 		}
 	default:
 		return nil, nil, errors.Errorf("unsupported signature type [%d]", sigType)
@@ -330,37 +330,18 @@ func (p *KeyManager) Anonymous() bool {
 }
 
 func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentity, error) {
-	r, err := p.Deserialize(raw, true)
+	id, err := p.Deserialize(raw, true)
 	if err != nil {
 		return nil, err
 	}
 
-	nymKey, err := p.Csp.GetKey(r.NymPublicKey.SKI())
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot find nym secret key")
-	}
-
-	// Load the user key
-	userKey, err := p.Csp.GetKey(p.userKeySKI)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", p.userKeySKI)
-	}
-
-	si := &crypto2.SigningIdentity{
-		Identity:     r.Identity,
-		UserKey:      userKey,
-		NymKey:       nymKey,
+	return &crypto2.SigningIdentity{
+		CSP:          p.Csp,
+		Identity:     id.Identity,
+		UserKeySKI:   p.userKeySKI,
+		NymKeySKI:    id.NymPublicKey.SKI(),
 		EnrollmentId: p.conf.Signer.EnrollmentId,
-	}
-	msg := []byte("hello world!!!")
-	sigma, err := si.Sign(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed generating verification signature")
-	}
-	if err := si.Verify(msg, sigma); err != nil {
-		return nil, errors.Wrap(err, "failed verifying verification signature")
-	}
-	return si, nil
+	}, nil
 }
 
 func (p *KeyManager) IdentityType() identity.Type {

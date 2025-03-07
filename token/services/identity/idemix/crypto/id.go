@@ -108,18 +108,31 @@ func (id *Identity) verifyProof() error {
 }
 
 type SigningIdentity struct {
-	*Identity    `json:"-"`
-	UserKey      bccsp.Key `json:"-"`
-	NymKey       bccsp.Key `json:"-"`
+	*Identity `json:"-"`
+	CSP       bccsp.BCCSP `json:"-"`
+
 	EnrollmentId string
+	NymKeySKI    []byte
+	UserKeySKI   []byte
 }
 
 func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
+	nymKey, err := id.CSP.GetKey(id.NymKeySKI)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot find nym secret key")
+	}
+
+	// Load the user key
+	userKey, err := id.CSP.GetKey(id.UserKeySKI)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", id.UserKeySKI)
+	}
+
 	sig, err := id.Idemix.Csp.Sign(
-		id.UserKey,
+		userKey,
 		msg,
 		&bccsp.IdemixNymSignerOpts{
-			Nym:      id.NymKey,
+			Nym:      nymKey,
 			IssuerPK: id.Idemix.IssuerPublicKey,
 		},
 	)
