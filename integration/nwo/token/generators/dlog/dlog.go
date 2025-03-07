@@ -177,13 +177,9 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			)
 			Expect(err).NotTo(HaveOccurred())
 		}
-		signerBytes, err := os.ReadFile(filepath.Join(userOutput, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner))
-		Expect(err).NotTo(HaveOccurred())
-
 		res = append(res, topology.Identity{
 			ID:   owner,
 			Path: userOutput,
-			Raw:  signerBytes,
 		})
 	}
 	d.RevocationHandlerIndex++
