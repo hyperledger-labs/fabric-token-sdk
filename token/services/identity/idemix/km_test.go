@@ -73,7 +73,7 @@ func TestNewKeyManager(t *testing.T) {
 	// no config
 	_, err = idemix.NewKeyManager(nil, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.Error(t, err)
-	assert.EqualError(t, err, "nil conf reference")
+	assert.EqualError(t, err, "no idemix config provided")
 
 	// no signer in config
 	config.Signer = nil
@@ -98,6 +98,12 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
+
+	// invalid sig type
+	_, err = idemix.NewKeyManager(config, sigService, -1, cryptoProvider)
+	assert.Error(t, err)
+	assert.EqualError(t, err, "unsupported signature type -1")
+
 	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
@@ -109,6 +115,15 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	info, err := p.Info(id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: [alice]"))
+
+	id2, audit2, err := p.Identity(audit)
+	assert.NoError(t, err)
+	assert.NotNil(t, id2)
+	assert.NotNil(t, audit2)
+	info2, err := p.Info(id2, audit2)
+	assert.NoError(t, err)
+	assert.True(t, strings.HasPrefix(info2, "Idemix: [alice]"))
+	assert.Equal(t, audit, audit2)
 
 	auditInfo, err := p.DeserializeAuditInfo(audit)
 	assert.NoError(t, err)

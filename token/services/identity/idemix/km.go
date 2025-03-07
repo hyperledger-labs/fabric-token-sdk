@@ -25,13 +25,17 @@ const (
 	IdentityType identity.Type       = "idemix"
 )
 
+type (
+	SKI = []byte
+)
+
 type SignerService interface {
 	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
 }
 
 type KeyManager struct {
 	*crypto2.Deserializer
-	userKey       bccsp.Key
+	userKeySKI    SKI
 	conf          *config.IdemixConfig
 	SignerService SignerService
 
@@ -39,15 +43,14 @@ type KeyManager struct {
 	verType bccsp.VerificationType
 }
 
-func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*KeyManager, error) {
-	logger.Debugf("Setting up Idemix-based key manager instance")
+func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bccsp.SignatureType, csp bccsp.BCCSP) (*KeyManager, error) {
 	if conf == nil {
-		return nil, errors.Errorf("nil conf reference")
+		return nil, errors.New("no idemix config provided")
 	}
-	logger.Debugf("Setting up Idemix key manager instance %s", conf.Name)
+	logger.Debugf("setting up Idemix key manager instance %s", conf.Name)
 
 	// Import Issuer Public Key
-	issuerPublicKey, err := cryptoProvider.KeyImport(
+	issuerPublicKey, err := csp.KeyImport(
 		conf.Ipk,
 		&bccsp.IdemixIssuerPublicKeyImportOpts{
 			Temporary: true,
@@ -65,7 +68,7 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 	// IMPORTANT: we generate an ephemeral revocation key public key because
 	// it is never used in the current idemix implementations.
 	// This might change in the future
-	RevocationKey, err := cryptoProvider.KeyGen(
+	RevocationKey, err := csp.KeyGen(
 		&bccsp.IdemixRevocationKeyGenOpts{Temporary: true},
 	)
 	if err != nil {
@@ -82,18 +85,32 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 	}
 
 	var userKey bccsp.Key
-	if len(conf.Signer.Sk) != 0 && len(conf.Signer.Cred) != 0 {
-		// A credential is present in the config, so we set up a default signer
-		logger.Debugf("the signer contains key material, load it")
+	var userKeySKI SKI
 
-		// Import User secret key
-		userKey, err = cryptoProvider.KeyImport(conf.Signer.Sk, &bccsp.IdemixUserSecretKeyImportOpts{})
+	// use the ski
+	if len(conf.Signer.Ski) != 0 {
+		// load with ski
+		userKey, err = csp.GetKey(conf.Signer.Ski)
 		if err != nil {
-			return nil, errors.WithMessage(err, "failed importing signer secret key")
+			return nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", conf.Signer.Ski)
 		}
+	} else {
+		if len(conf.Signer.Sk) != 0 && len(conf.Signer.Cred) != 0 {
+			// A credential is present in the config, so we set up a default signer
+			logger.Debugf("the signer contains key material, load it")
 
+			// Import User secret key
+			userKey, err = csp.KeyImport(conf.Signer.Sk, &bccsp.IdemixUserSecretKeyImportOpts{})
+			if err != nil {
+				return nil, errors.WithMessage(err, "failed importing signer secret key")
+			}
+		}
+	}
+
+	if userKey != nil {
+		userKeySKI = userKey.SKI()
 		// Verify credential
-		valid, err := cryptoProvider.Verify(
+		valid, err := csp.Verify(
 			userKey,
 			conf.Signer.Cred,
 			nil,
@@ -112,7 +129,7 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 		}
 		logger.Debugf("the signer contains key material, load it, done.")
 	} else {
-		logger.Debugf("the signer does not contain full key material [cred=%d,sk=%d]", len(conf.Signer.Cred), len(conf.Signer.Sk))
+		logger.Debugf("the signer does not contain full key material, it will be considered remote [cred=%d,sk=%d]", len(conf.Signer.Cred), len(conf.Signer.Sk))
 	}
 
 	var verType bccsp.VerificationType
@@ -133,14 +150,14 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 	return &KeyManager{
 		Deserializer: &crypto2.Deserializer{
 			Name:            conf.Name,
-			Csp:             cryptoProvider,
+			Csp:             csp,
 			Ipk:             conf.Ipk,
 			IssuerPublicKey: issuerPublicKey,
 			RevocationPK:    RevocationPublicKey,
 			Epoch:           0,
 			VerType:         verType,
 		},
-		userKey:       userKey,
+		userKeySKI:    userKeySKI,
 		conf:          conf,
 		SignerService: signerService,
 		sigType:       sigType,
@@ -149,9 +166,15 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 }
 
 func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error) {
+	// Load the user key
+	userKey, err := p.Csp.GetKey(p.userKeySKI)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", p.userKeySKI)
+	}
+
 	// Derive NymPublicKey
 	nymKey, err := p.Csp.KeyDeriv(
-		p.userKey,
+		userKey,
 		&bccsp.IdemixNymKeyDerivationOpts{
 			Temporary: false,
 			IssuerPK:  p.IssuerPublicKey,
@@ -199,7 +222,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 		Metadata: signerMetadata,
 	}
 	proof, err := p.Csp.Sign(
-		p.userKey,
+		userKey,
 		nil,
 		sigOpts,
 	)
@@ -214,7 +237,6 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 	sID := &crypto2.SigningIdentity{
 		Identity:     id,
-		UserKey:      p.userKey,
 		NymKey:       nymKey,
 		EnrollmentId: enrollmentID,
 	}
@@ -254,13 +276,13 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 			return nil, nil, err
 		}
 	default:
-		panic("invalid sig type")
+		return nil, nil, errors.Errorf("unsupported signature type [%d]", sigType)
 	}
 	return raw, infoRaw, nil
 }
 
 func (p *KeyManager) IsRemote() bool {
-	return p.userKey == nil
+	return len(p.userKeySKI) == 0
 }
 
 func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
@@ -318,9 +340,15 @@ func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdent
 		return nil, errors.Wrap(err, "cannot find nym secret key")
 	}
 
+	// Load the user key
+	userKey, err := p.Csp.GetKey(p.userKeySKI)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", p.userKeySKI)
+	}
+
 	si := &crypto2.SigningIdentity{
 		Identity:     r.Identity,
-		UserKey:      p.userKey,
+		UserKey:      userKey,
 		NymKey:       nymKey,
 		EnrollmentId: p.conf.Signer.EnrollmentId,
 	}

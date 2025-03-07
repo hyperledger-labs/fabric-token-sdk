@@ -7,10 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package crypto
 
 import (
-	"encoding/json"
-
 	csp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/pkg/errors"
 )
 
