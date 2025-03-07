@@ -235,6 +235,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 		return nil, nil, errors.WithMessage(err, "failed to create identity")
 	}
 	sID := &crypto2.SigningIdentity{
+		CSP:          p.Csp,
 		Identity:     id,
 		NymKeySKI:    nymPublicKey.SKI(),
 		UserKeySKI:   p.userKeySKI,
