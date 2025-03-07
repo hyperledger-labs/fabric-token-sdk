@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/stretchr/testify/assert"
@@ -60,15 +61,31 @@ func TestNewKeyManagerProvider(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, km)
 	assert.NotNil(t, idConfig.Raw)
+	signAndVerify(t, km)
 
 	idConfig.URL = ""
 	km, err = kmp.Get(idConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, km)
 	assert.NotNil(t, idConfig.Raw)
+	signAndVerify(t, km)
 
 	km, err = kmp.Get(idConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, km)
 	assert.NotNil(t, idConfig.Raw)
+	signAndVerify(t, km)
+}
+
+func signAndVerify(t *testing.T, km membership.KeyManager) {
+	id, _, err := km.Identity(nil)
+	assert.NoError(t, err)
+	signer, err := km.DeserializeSigner(id)
+	assert.NoError(t, err)
+	msg := []byte("message")
+	sigma, err := signer.Sign(msg)
+	assert.NoError(t, err)
+	verifier, err := km.DeserializeVerifier(id)
+	assert.NoError(t, err)
+	assert.NoError(t, verifier.Verify(msg, sigma))
 }

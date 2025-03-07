@@ -109,6 +109,7 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 
 	if userKey != nil {
 		userKeySKI = userKey.SKI()
+		conf.Signer.Ski = userKeySKI
 		// Verify credential
 		valid, err := csp.Verify(
 			userKey,
