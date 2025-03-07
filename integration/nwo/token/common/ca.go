@@ -18,7 +18,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/IBM/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
@@ -235,11 +234,7 @@ func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, er
 	}
 	Eventually(sess, i.EventuallyTimeout).Should(gexec.Exit(0))
 
-	signerBytes, err := os.ReadFile(filepath.Join(userOutput, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner))
-	Expect(err).NotTo(HaveOccurred())
-
 	res.ID = owner
-	res.Raw = signerBytes
 	res.URL = userOutput
 	return
 }
