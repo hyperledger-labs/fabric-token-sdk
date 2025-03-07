@@ -293,56 +293,60 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 }
 
 func TestKeyManager_DeserializeSigner(t *testing.T) {
+	// prepare
 	registry := registry2.New()
-
 	backend, err := kvs2.NewInMemoryKVS()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(backend))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
-
-	config, err := crypto2.NewConfig("./testdata/sameissuer/idemix")
-	assert.NoError(t, err)
 	keyStore, err := crypto2.NewKeyStore(math.FP256BN_AMCL, backend)
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
-	assert.NoError(t, err)
-	assert.NotNil(t, p)
 
+	// first key manager
+	config, err := crypto2.NewConfig("./testdata/sameissuer/idemix")
+	assert.NoError(t, err)
+	keyManager, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	assert.NoError(t, err)
+	assert.NotNil(t, keyManager)
+
+	// second key manager
 	config, err = crypto2.NewConfig("./testdata/sameissuer/idemix2")
 	assert.NoError(t, err)
-	p2, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager2, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
-	assert.NotNil(t, p2)
+	assert.NotNil(t, keyManager2)
 
-	id, _, err := p.Identity(nil)
+	// keyManager and keyManager2 use the same key store
+
+	id, _, err := keyManager.Identity(nil)
 	assert.NoError(t, err)
 
-	id2, _, err := p2.Identity(nil)
+	id2, _, err := keyManager2.Identity(nil)
 	assert.NoError(t, err)
 
 	// This must work
-	signer, err := p.DeserializeSigner(id)
+	signer, err := keyManager.DeserializeSigner(id)
 	assert.NoError(t, err)
-	verifier, err := p.DeserializeVerifier(id)
+	verifier, err := keyManager.DeserializeVerifier(id)
 	assert.NoError(t, err)
 	msg := []byte("Hello World!!!")
 	sigma, err := signer.Sign(msg)
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify(msg, sigma))
 
-	// Try to deserialize id2 with provider for id, must fail
-	_, err = p.DeserializeSigner(id2)
-	assert.Error(t, err)
-	_, err = p.DeserializeVerifier(id2)
+	// Try to deserialize id2 with provider for id, it should not fail given they have the same issuer
+	_, err = keyManager.DeserializeSigner(id2)
+	assert.NoError(t, err)
+	_, err = keyManager.DeserializeVerifier(id2)
 	assert.NoError(t, err)
 
 	// this must work
 	des := sig.NewMultiplexDeserializer()
-	des.AddDeserializer(p)
-	des.AddDeserializer(p2)
+	des.AddDeserializer(keyManager)
+	des.AddDeserializer(keyManager2)
 	signer, err = des.DeserializeSigner(id)
 	assert.NoError(t, err)
 	verifier, err = des.DeserializeVerifier(id)
