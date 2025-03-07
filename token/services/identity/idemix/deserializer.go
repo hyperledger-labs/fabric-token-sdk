@@ -25,7 +25,9 @@ type Deserializer struct {
 
 // NewDeserializer returns a new deserializer for the idemix ExpectEidNymRhNym verification strategy
 func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
-	logger.Debugf("new deserialized for dlog idemix")
+	if len(ipk) == 0 {
+		return nil, errors.New("invalid ipk")
+	}
 	cryptoProvider, err := crypto2.NewBCCSPWithDummyKeyStore(curveID, curveID == math.BLS12_381_BBS)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
@@ -62,7 +64,7 @@ func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID [
 				},
 			})
 		if err != nil {
-			return nil, err
+			return nil, errors.WithMessagef(err, "failed to import idemix issuer public key")
 		}
 	}
 
@@ -80,7 +82,7 @@ func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID [
 func (i *Deserializer) DeserializeVerifier(raw driver.Identity) (driver.Verifier, error) {
 	identity, err := i.Deserialize(raw, true)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed to deserialize identity")
 	}
 
 	return &crypto2.NymSignatureVerifier{
@@ -93,7 +95,7 @@ func (i *Deserializer) DeserializeVerifier(raw driver.Identity) (driver.Verifier
 func (i *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byte) (driver.Verifier, error) {
 	identity, err := i.Deserializer.DeserializeAgainstNymEID(raw, true, nymEID)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed to deserialize identity")
 	}
 
 	return &crypto2.NymSignatureVerifier{
@@ -131,20 +133,21 @@ func (i *Deserializer) GetAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][
 	return [][]byte{auditInfo}, nil
 }
 
-func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
+func (i *Deserializer) Info(id []byte, auditInfoRaw []byte) (string, error) {
 	eid := ""
-	if len(auditInfo) != 0 {
-		ai, err := crypto2.DeserializeAuditInfo(auditInfo)
+	if len(auditInfoRaw) != 0 {
+		err := i.MatchIdentity(id, auditInfoRaw)
 		if err != nil {
-			return "", err
+			return "", errors.WithMessagef(err, "failed to get audit info matcher")
 		}
-		if err := ai.Match(raw); err != nil {
-			return "", err
+		ai, err := i.DeserializeAuditInfo(auditInfoRaw)
+		if err != nil {
+			return "", errors.Wrapf(err, "failed to deserialize audit info")
 		}
 		eid = ai.EnrollmentID()
 	}
 
-	return fmt.Sprintf("Idemix: [%s][%s]", eid, driver.Identity(raw).UniqueID()), nil
+	return fmt.Sprintf("Idemix: [%s][%s]", eid, driver.Identity(id).UniqueID()), nil
 }
 
 func (i *Deserializer) String() string {

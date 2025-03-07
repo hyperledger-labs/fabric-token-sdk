@@ -68,6 +68,9 @@ func NewBCCSPWithDummyKeyStore(curveID math.CurveID, aries bool) (bccsp.BCCSP, e
 }
 
 func GetCurveAndTranslator(curveID math.CurveID) (*math.Curve, idemix3.Translator, error) {
+	if curveID < 0 {
+		return nil, nil, errors.New("invalid curve")
+	}
 	curve := math.Curves[curveID]
 	var tr idemix3.Translator
 	switch curveID {
