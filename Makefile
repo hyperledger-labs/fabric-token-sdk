@@ -21,6 +21,7 @@ install-tools:
 # Thanks for great inspiration https://marcofranssen.nl/manage-go-tools-via-go-modules
 	@echo Installing tools from tools/tools.go
 	@cd tools; cat tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %
+	@make install-go-test-coverage
 
 .PHONY: download-fabric
 download-fabric:
@@ -37,7 +38,7 @@ include $(TOP)/fungible.mk
 
 .PHONY: unit-tests
 unit-tests:
-	@go test -cover $(shell go list ./... | grep -v '/integration/')
+	@go test $(shell go list ./... | grep -v '/integration/') -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
 	cd integration/nwo/; go test -cover ./...
 
 .PHONY: unit-tests-race

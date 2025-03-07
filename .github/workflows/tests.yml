@@ -69,6 +69,11 @@ jobs:
       - name: Run ${{ matrix.tests }}
         run: make ${{ matrix.tests }}
 
+      - name: check test coverage
+        uses: vladopajic/go-test-coverage@v2
+        with:
+          config: ./.testcoverage.yml
+
   itest:
     needs: checks
     runs-on: ubuntu-latest
