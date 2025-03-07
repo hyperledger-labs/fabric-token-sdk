@@ -109,7 +109,6 @@ func (id *Identity) verifyProof() error {
 
 type SigningIdentity struct {
 	*Identity    `json:"-"`
-	Cred         []byte
 	UserKey      bccsp.Key `json:"-"`
 	NymKey       bccsp.Key `json:"-"`
 	EnrollmentId string

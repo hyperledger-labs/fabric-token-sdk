@@ -317,13 +317,9 @@ func (l *LocalMembership) registerLocalIdentity(identityConfig *driver.IdentityC
 
 	if exists, _ := l.identityDB.ConfigurationExists(identityConfig.ID, l.IdentityType, identityConfig.URL); !exists {
 		l.logger.Debugf("does the configuration already exists for [%s]? no, add it", identityConfig.ID)
-		if err := l.identityDB.AddConfiguration(dbdriver.IdentityConfiguration{
-			ID:     identityConfig.ID,
-			Type:   l.IdentityType,
-			URL:    identityConfig.URL,
-			Config: identityConfig.Config,
-			Raw:    identityConfig.Raw,
-		}); err != nil {
+		// enforce type
+		identityConfig.Type = l.IdentityType
+		if err := l.identityDB.AddConfiguration(*identityConfig); err != nil {
 			return err
 		}
 	}

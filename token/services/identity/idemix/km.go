@@ -42,7 +42,7 @@ type KeyManager struct {
 func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*KeyManager, error) {
 	logger.Debugf("Setting up Idemix-based key manager instance")
 	if conf == nil {
-		return nil, errors.Errorf("setup error: nil conf reference")
+		return nil, errors.Errorf("nil conf reference")
 	}
 	logger.Debugf("Setting up Idemix key manager instance %s", conf.Name)
 
@@ -87,7 +87,7 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 		logger.Debugf("the signer contains key material, load it")
 
 		// Import User secret key
-		userKey, err = cryptoProvider.KeyImport(conf.Signer.Sk, &bccsp.IdemixUserSecretKeyImportOpts{Temporary: true})
+		userKey, err = cryptoProvider.KeyImport(conf.Signer.Sk, &bccsp.IdemixUserSecretKeyImportOpts{})
 		if err != nil {
 			return nil, errors.WithMessage(err, "failed importing signer secret key")
 		}
@@ -124,7 +124,7 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 	case Any:
 		verType = bccsp.BestEffort
 	default:
-		panic("invalid sig type")
+		return nil, errors.Errorf("unsupported signature type %d", sigType)
 	}
 	if verType == bccsp.BestEffort {
 		sigType = bccsp.Standard
@@ -134,6 +134,7 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 		Deserializer: &crypto2.Deserializer{
 			Name:            conf.Name,
 			Csp:             cryptoProvider,
+			Ipk:             conf.Ipk,
 			IssuerPublicKey: issuerPublicKey,
 			RevocationPK:    RevocationPublicKey,
 			Epoch:           0,
@@ -213,7 +214,6 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 	sID := &crypto2.SigningIdentity{
 		Identity:     id,
-		Cred:         p.conf.Signer.Cred,
 		UserKey:      p.userKey,
 		NymKey:       nymKey,
 		EnrollmentId: enrollmentID,
@@ -320,7 +320,6 @@ func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdent
 
 	si := &crypto2.SigningIdentity{
 		Identity:     r.Identity,
-		Cred:         p.conf.Signer.Cred,
 		UserKey:      p.userKey,
 		NymKey:       nymKey,
 		EnrollmentId: p.conf.Signer.EnrollmentId,

@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestKeyManager(t *testing.T) {
+func TestNewKeyManager(t *testing.T) {
 	backend, err := kvs2.NewInMemoryKVS()
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
@@ -38,20 +38,48 @@ func TestKeyManager(t *testing.T) {
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 
-	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
-	assert.NotNil(t, p)
-	assert.True(t, p.Anonymous())
+	assert.NotNil(t, keyManager)
+	assert.False(t, keyManager.IsRemote())
+	assert.True(t, keyManager.Anonymous())
+	assert.Equal(t, "alice", keyManager.EnrollmentID())
+	assert.Equal(t, idemix.IdentityType, keyManager.IdentityType())
+	assert.Equal(t, "Idemix KeyManager [dJZK5i5D2i5B8S9DsVWDFzdHSJE/jcTLk9VaJzFB4fo=]", keyManager.String())
 
-	p, err = idemix.NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
+	keyManager, err = idemix.NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
-	assert.NotNil(t, p)
-	assert.True(t, p.Anonymous())
+	assert.NotNil(t, keyManager)
+	assert.False(t, keyManager.IsRemote())
+	assert.True(t, keyManager.Anonymous())
+	assert.Equal(t, "alice", keyManager.EnrollmentID())
+	assert.Equal(t, idemix.IdentityType, keyManager.IdentityType())
+	assert.Equal(t, "Idemix KeyManager [dJZK5i5D2i5B8S9DsVWDFzdHSJE/jcTLk9VaJzFB4fo=]", keyManager.String())
 
-	p, err = idemix.NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
+	keyManager, err = idemix.NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
-	assert.NotNil(t, p)
-	assert.True(t, p.Anonymous())
+	assert.NotNil(t, keyManager)
+	assert.False(t, keyManager.IsRemote())
+	assert.True(t, keyManager.Anonymous())
+	assert.Equal(t, "alice", keyManager.EnrollmentID())
+	assert.Equal(t, idemix.IdentityType, keyManager.IdentityType())
+	assert.Equal(t, "Idemix KeyManager [dJZK5i5D2i5B8S9DsVWDFzdHSJE/jcTLk9VaJzFB4fo=]", keyManager.String())
+
+	// invalid sig type
+	_, err = idemix.NewKeyManager(config, sigService, -1, cryptoProvider)
+	assert.Error(t, err)
+	assert.EqualError(t, err, "unsupported signature type -1")
+
+	// no config
+	_, err = idemix.NewKeyManager(nil, sigService, bccsp.EidNymRhNym, cryptoProvider)
+	assert.Error(t, err)
+	assert.EqualError(t, err, "nil conf reference")
+
+	// no signer in config
+	config.Signer = nil
+	_, err = idemix.NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
+	assert.Error(t, err)
+	assert.EqualError(t, err, "no signer information found")
 }
 
 func TestIdentityWithEidRhNymPolicy(t *testing.T) {
