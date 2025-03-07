@@ -33,9 +33,12 @@ func (c *Deserializer) Deserialize(raw []byte, checkValidity bool) (*Deserialize
 	return c.DeserializeAgainstNymEID(raw, checkValidity, nil)
 }
 
-func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID []byte) (*DeserializedIdentity, error) {
+func (c *Deserializer) DeserializeAgainstNymEID(identity []byte, checkValidity bool, nymEID []byte) (*DeserializedIdentity, error) {
+	if len(identity) == 0 {
+		return nil, errors.Errorf("empty identity")
+	}
 	serialized := new(SerializedIdemixIdentity)
-	err := proto.Unmarshal(raw, serialized)
+	err := proto.Unmarshal(identity, serialized)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
 	}
