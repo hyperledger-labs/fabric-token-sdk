@@ -157,8 +157,17 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	verifier, err := keyManager.DeserializeVerifier(id)
 	assert.NoError(t, err)
 
+	// get the signer from the sigService as well
+	signer2, err := sigService.GetSigner(id)
+	assert.NoError(t, err)
+	assert.NotNil(t, signer2)
+
 	// sign and verify
 	sigma, err := signer.Sign([]byte("hello world!!!"))
+	assert.NoError(t, err)
+	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
+
+	sigma, err = signer2.Sign([]byte("hello world!!!"))
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 }
