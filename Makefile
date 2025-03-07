@@ -26,6 +26,8 @@ install-tools:
 download-fabric:
 	./ci/scripts/download_fabric.sh $(FABRIC_BINARY_BASE) $(FABRIC_VERSION) $(FABRIC_CA_VERSION)
 
+# include coverage
+include $(TOP)/coverage.mk
 # include the checks target
 include $(TOP)/checks.mk
 # include the interop target
