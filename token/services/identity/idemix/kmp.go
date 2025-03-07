@@ -59,7 +59,7 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to instantiate crypto provider")
 	}
-	provider, err := NewKeyManager(conf, l.signerService, bccsp.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(conf, l.signerService, bccsp.EidNymRhNym, cryptoProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed instantiating idemix key manager provider from [%s]", identityConfig.URL)
 	}
@@ -70,13 +70,13 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 	}
 
 	var getIdentityFunc func([]byte) (driver.Identity, []byte, error)
-	if provider.IsRemote() {
+	if keyManager.IsRemote() {
 		getIdentityFunc = func([]byte) (driver.Identity, []byte, error) {
 			return nil, nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms")
 		}
 	} else {
 		getIdentityFunc = cache.NewIdentityCache(
-			provider.Identity,
+			keyManager.Identity,
 			cacheSize,
 			nil,
 		).Identity
@@ -92,7 +92,7 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 	identityConfig.Raw = identityConfigurationRawField
 
 	return &WrappedKeyManager{
-		KeyManager:      provider,
+		KeyManager:      keyManager,
 		getIdentityFunc: getIdentityFunc,
 	}, nil
 }
