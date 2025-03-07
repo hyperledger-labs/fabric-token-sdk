@@ -337,9 +337,9 @@ func TestKeyManager_DeserializeSigner(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify(msg, sigma))
 
-	// Try to deserialize id2 with provider for id, it should not fail given they have the same issuer
+	// Try to deserialize id2 with provider for id, it should fail
 	_, err = keyManager.DeserializeSigner(id2)
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	_, err = keyManager.DeserializeVerifier(id2)
 	assert.NoError(t, err)
 

@@ -335,13 +335,25 @@ func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdent
 		return nil, err
 	}
 
-	return &crypto2.SigningIdentity{
+	si := &crypto2.SigningIdentity{
 		CSP:          p.Csp,
 		Identity:     id.Identity,
 		UserKeySKI:   p.userKeySKI,
 		NymKeySKI:    id.NymPublicKey.SKI(),
 		EnrollmentId: p.conf.Signer.EnrollmentId,
-	}, nil
+	}
+
+	// the only way to verify if this signing identity correspond to this key manager
+	// is to generate a signature and verify it.
+	msg := []byte("hello world!!!")
+	sigma, err := si.Sign(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed generating verification signature")
+	}
+	if err := si.Verify(msg, sigma); err != nil {
+		return nil, errors.Wrap(err, "failed verifying verification signature")
+	}
+	return si, nil
 }
 
 func (p *KeyManager) IdentityType() identity.Type {
