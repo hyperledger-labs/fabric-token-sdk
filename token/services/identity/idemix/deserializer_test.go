@@ -21,7 +21,7 @@ import (
 
 func TestNewDeserializer(t *testing.T) {
 	// init
-	backend, err := kvs2.NewInMemoryKVS()
+	backend, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	config, err := crypto2.NewConfig("./testdata/idemix")
