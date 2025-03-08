@@ -49,7 +49,8 @@ func TestTypeMismatch(t *testing.T) {
 	assert.Error(t, store.Put("number", 42))
 
 	var wrongType string
-	assert.Error(t, store.Get("number", &wrongType))
+	err := store.Get("number", &wrongType)
+	assert.Error(t, err)
 	assert.Equal(t, "failed retrieving state [,number], cannot unmarshal state: json: cannot unmarshal number into Go value of type string", err.Error())
 
 	assert.Equal(t, 1, store.GetCounter)
