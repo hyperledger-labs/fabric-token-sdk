@@ -16,12 +16,10 @@ func TestPutAndGet(t *testing.T) {
 	store := NewTrackedMemory()
 
 	data := "Alice"
-	err := store.Put("user1", data)
-	assert.NoError(t, err)
+	assert.NoError(t, store.Put("user1", data))
 
 	var retrievedData string
-	err = store.Get("user1", &retrievedData)
-	assert.NoError(t, err)
+	assert.NoError(t, store.Get("user1", &retrievedData))
 	assert.Equal(t, data, retrievedData)
 
 	assert.Equal(t, 1, store.PutCounter)
@@ -36,8 +34,7 @@ func TestGetNonExistentKey(t *testing.T) {
 	store := NewTrackedMemory()
 
 	var retrievedData string
-	err := store.Get("nonexistent", &retrievedData)
-	assert.Error(t, err)
+	assert.Error(t, store.Get("nonexistent", &retrievedData))
 
 	assert.Equal(t, 1, store.GetCounter)
 	assert.Len(t, store.GetHistory, 1)
@@ -49,11 +46,10 @@ func TestGetNonExistentKey(t *testing.T) {
 func TestTypeMismatch(t *testing.T) {
 	store := NewTrackedMemory()
 
-	store.Put("number", 42)
+	assert.Error(t, store.Put("number", 42))
 
 	var wrongType string
-	err := store.Get("number", &wrongType)
-	assert.Error(t, err)
+	assert.Error(t, store.Get("number", &wrongType))
 	assert.Equal(t, "failed retrieving state [,number], cannot unmarshal state: json: cannot unmarshal number into Go value of type string", err.Error())
 
 	assert.Equal(t, 1, store.GetCounter)
