@@ -46,7 +46,7 @@ func TestGetNonExistentKey(t *testing.T) {
 func TestTypeMismatch(t *testing.T) {
 	store := NewTrackedMemory()
 
-	assert.Error(t, store.Put("number", 42))
+	assert.NoError(t, store.Put("number", 42))
 
 	var wrongType string
 	err := store.Get("number", &wrongType)
