@@ -373,7 +373,7 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.Signi
 	configService := &fakeProv{typ: "memory"}
 	Expect(registry.RegisterService(configService)).NotTo(HaveOccurred())
 
-	backend, err := kvs.NewInMemoryKVS()
+	backend, err := kvs.NewInMemory()
 	Expect(err).NotTo(HaveOccurred())
 	err = registry.RegisterService(backend)
 	Expect(err).NotTo(HaveOccurred())
