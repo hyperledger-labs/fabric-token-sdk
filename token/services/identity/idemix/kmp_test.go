@@ -35,7 +35,7 @@ func (m mockConfig) IdentitiesForRole(role driver.IdentityRoleType) ([]*driver.C
 }
 
 func TestNewKeyManagerProvider(t *testing.T) {
-	backend, err := kvs.NewInMemoryKVS()
+	backend, err := kvs.NewInMemory()
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 	config, err := crypto.NewConfig("./testdata/idemix")

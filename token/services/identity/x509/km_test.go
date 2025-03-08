@@ -9,12 +9,12 @@ package x509
 import (
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/csp/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDeserializer(t *testing.T) {
-	keyStore := NewKeyStore(kvs.NewMemory())
+	keyStore := NewKeyStore(kvs.NewTrackedMemory())
 
 	// load a full identity capable of signing as well
 	fullIdentityProvider, _, err := NewKeyManager("./testdata/msp", nil, nil, keyStore)
