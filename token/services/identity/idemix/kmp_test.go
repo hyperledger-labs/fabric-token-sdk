@@ -62,6 +62,8 @@ func TestNewKeyManagerProvider(t *testing.T) {
 	assert.NotNil(t, km)
 	assert.NotNil(t, idConfig.Raw)
 	signAndVerify(t, km)
+	configRaw := idConfig.Raw
+	checkRawContent(t, config.Ipk, idConfig.Raw)
 
 	idConfig.URL = ""
 	km, err = kmp.Get(idConfig)
@@ -69,12 +71,16 @@ func TestNewKeyManagerProvider(t *testing.T) {
 	assert.NotNil(t, km)
 	assert.NotNil(t, idConfig.Raw)
 	signAndVerify(t, km)
+	checkRawContent(t, config.Ipk, idConfig.Raw)
+	assert.Equal(t, configRaw, idConfig.Raw)
 
 	km, err = kmp.Get(idConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, km)
 	assert.NotNil(t, idConfig.Raw)
 	signAndVerify(t, km)
+	checkRawContent(t, config.Ipk, idConfig.Raw)
+	assert.Equal(t, configRaw, idConfig.Raw)
 }
 
 func signAndVerify(t *testing.T, km membership.KeyManager) {
@@ -88,4 +94,12 @@ func signAndVerify(t *testing.T, km membership.KeyManager) {
 	verifier, err := km.DeserializeVerifier(id)
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify(msg, sigma))
+}
+
+func checkRawContent(t *testing.T, ipk []byte, raw []byte) {
+	conf, err := crypto.NewConfigFromRaw(ipk, raw)
+	assert.NoError(t, err)
+	assert.NotNil(t, conf)
+	assert.NotNil(t, conf.Signer.Ski)
+	assert.Nil(t, conf.Signer.Sk)
 }
