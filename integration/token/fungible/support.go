@@ -28,8 +28,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/csp/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -1043,7 +1043,7 @@ func GetIssuerIdentity(tms *topology.TMS, id string) []byte {
 }
 
 func getIdentity(identities []topology.Identity, id string) []byte {
-	keyStore := x509.NewKeyStore(kvs.NewMemory())
+	keyStore := x509.NewKeyStore(kvs.NewTrackedMemory())
 	for _, topologyIdentity := range identities {
 		if topologyIdentity.ID == id {
 			// Build an MSP Identity

@@ -7,12 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package crypto
 
 import (
-	"encoding/json"
+	"bytes"
 	"os"
 	"path/filepath"
 
 	"github.com/IBM/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
 	"github.com/pkg/errors"
 )
@@ -115,6 +117,8 @@ func NewIdemixConfig(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet 
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		logger.Debugf("cannot read the signer config file [%s]: [%s]", signerConfigPath, err)
 	}
 
 	return assembleConfig(issuerPublicKey, signer)
@@ -149,34 +153,16 @@ func NewFabricCAIdemixConfig(issuerPublicKey []byte, dir string) (*Config, error
 	return assembleConfig(issuerPublicKey, signer)
 }
 
-func NewConfigFromRawSigner(issuerPublicKey []byte, signerRaw []byte) (*Config, error) {
-	var signer *config.IdemixSignerConfig
-	if len(signerRaw) != 0 {
-		signer = &config.IdemixSignerConfig{}
-		if err := proto.Unmarshal(signerRaw, signer); err != nil {
-			// is the format Fabric-CA generate?
-			si := &SignerConfig{}
-			if err2 := json.Unmarshal(signerRaw, si); err2 != nil {
-				return nil, errors.Wrapf(
-					errors.Wrapf(err, "failed to unmarhal IdemixSignerConfig"),
-					"failed to unmarshal SignerConfig [%s]", err2)
-			}
-			signer = &config.IdemixSignerConfig{
-				Cred:                            si.Cred,
-				Sk:                              si.Sk,
-				OrganizationalUnitIdentifier:    si.OrganizationalUnitIdentifier,
-				Role:                            int32(si.Role),
-				EnrollmentId:                    si.EnrollmentID,
-				CredentialRevocationInformation: si.CredentialRevocationInformation,
-				RevocationHandle:                si.RevocationHandle,
-			}
-		}
+func NewConfigFromRaw(issuerPublicKey []byte, configRaw []byte) (*Config, error) {
+	config := &config.IdemixConfig{}
+	if err := proto.Unmarshal(configRaw, config); err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal idemix config at [%s]", string(configRaw))
 	}
-	idemixConfig := &config.IdemixConfig{
-		Ipk:    issuerPublicKey,
-		Signer: signer,
+	// match public keys
+	if !bytes.Equal(issuerPublicKey, config.Ipk) {
+		return nil, errors.Errorf("public key does not match [%s]=[%s]", hash.Hashable(config.Ipk), hash.Hashable(issuerPublicKey))
 	}
-	return idemixConfig, nil
+	return config, nil
 }
 
 func assembleConfig(issuerPublicKey []byte, signer *config.IdemixSignerConfig) (*Config, error) {

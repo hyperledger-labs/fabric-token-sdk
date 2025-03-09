@@ -23,7 +23,7 @@ import (
 func TestGetWallet(t *testing.T) {
 	cp := &mock.ConfigProvider{}
 	cp.IsSetReturns(false)
-	kvsStorage, err := kvs2.NewInMemoryKVS()
+	kvsStorage, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 
 	alice := driver.Identity("alice")

@@ -66,4 +66,7 @@ message IdemixSignerConfig {
 
   // RevocationHandle is the handle used to single out this credential and determine its revocation status
   string revocation_handle = 7;
+
+  // is the identifier of the secret key sk
+  bytes ski = 9;
 }

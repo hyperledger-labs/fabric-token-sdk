@@ -109,7 +109,7 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	configProvider, err := config.NewProvider(filepath.Join(ctx.RootDir(), "fsc", "nodes", node.ReplicaUniqueName(user, 0)))
 	Expect(err).NotTo(HaveOccurred())
 	configService := config2.NewService(configProvider)
-	kvss, err := kvs2.NewInMemoryKVS()
+	kvss, err := kvs2.NewInMemory()
 	Expect(err).ToNot(HaveOccurred())
 	storageProvider := identity.NewKVSStorageProvider(kvss)
 	s := core.NewWalletServiceFactoryService(
