@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package idemix_test
+package idemix
 
 import (
 	"encoding/hex"
@@ -19,7 +19,6 @@ import (
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
@@ -41,26 +40,26 @@ func TestNewKeyManager(t *testing.T) {
 
 	// new key manager loaded from file
 	assert.Empty(t, config.Signer.Ski)
-	keyManager, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 	assert.False(t, keyManager.IsRemote())
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
-	assert.Equal(t, idemix.IdentityType, keyManager.IdentityType())
+	assert.Equal(t, IdentityType, keyManager.IdentityType())
 	assert.Equal(t, "Idemix KeyManager [dJZK5i5D2i5B8S9DsVWDFzdHSJE/jcTLk9VaJzFB4fo=]", keyManager.String())
 	assert.Equal(t, tracker.PutCounter, 1)
 	assert.Equal(t, tracker.GetCounter, 0)
 
 	// the config has been updated, load a new key manager
 	assert.NotEmpty(t, config.Signer.Ski)
-	keyManager, err = idemix.NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
+	keyManager, err = NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 	assert.False(t, keyManager.IsRemote())
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
-	assert.Equal(t, idemix.IdentityType, keyManager.IdentityType())
+	assert.Equal(t, IdentityType, keyManager.IdentityType())
 	assert.Equal(t, "Idemix KeyManager [dJZK5i5D2i5B8S9DsVWDFzdHSJE/jcTLk9VaJzFB4fo=]", keyManager.String())
 	assert.Equal(t, tracker.PutCounter, 1) // this is still 1 because the key is loaded using the SKI
 	assert.Equal(t, tracker.GetCounter, 1) // one get for the user key
@@ -68,20 +67,20 @@ func TestNewKeyManager(t *testing.T) {
 
 	// load a new key manager again
 	assert.NotEmpty(t, config.Signer.Ski)
-	keyManager, err = idemix.NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
+	keyManager, err = NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 	assert.False(t, keyManager.IsRemote())
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
-	assert.Equal(t, idemix.IdentityType, keyManager.IdentityType())
+	assert.Equal(t, IdentityType, keyManager.IdentityType())
 	assert.Equal(t, "Idemix KeyManager [dJZK5i5D2i5B8S9DsVWDFzdHSJE/jcTLk9VaJzFB4fo=]", keyManager.String())
 	assert.Equal(t, tracker.PutCounter, 1) // this is still 1 because the key is loaded using the SKI
 	assert.Equal(t, tracker.GetCounter, 2) // another get for the user key
 	assert.Equal(t, tracker.GetHistory[1].Key, hex.EncodeToString(config.Signer.Ski))
 
 	// invalid sig type
-	_, err = idemix.NewKeyManager(config, sigService, -1, cryptoProvider)
+	_, err = NewKeyManager(config, sigService, -1, cryptoProvider)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "unsupported signature type -1")
 
@@ -90,13 +89,13 @@ func TestNewKeyManager(t *testing.T) {
 	assert.Equal(t, tracker.GetHistory[2].Key, hex.EncodeToString(config.Signer.Ski))
 
 	// no config
-	_, err = idemix.NewKeyManager(nil, sigService, bccsp.EidNymRhNym, cryptoProvider)
+	_, err = NewKeyManager(nil, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "no idemix config provided")
 
 	// no signer in config
 	config.Signer = nil
-	_, err = idemix.NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
+	_, err = NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "no signer information found")
 
@@ -115,18 +114,19 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, registry.RegisterService(sigService))
 	config, err := crypto2.NewConfig("./testdata/idemix")
 	assert.NoError(t, err)
-	keyStore, err := crypto2.NewKeyStore(math.FP256BN_AMCL, kvs)
+	tracker := kvs2.NewTrackedMemoryFrom(kvs)
+	keyStore, err := crypto2.NewKeyStore(math.FP256BN_AMCL, tracker)
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
 
 	// init key manager
 	// with invalid sig type
-	_, err = idemix.NewKeyManager(config, sigService, -1, cryptoProvider)
+	_, err = NewKeyManager(config, sigService, -1, cryptoProvider)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "unsupported signature type -1")
 	// correctly
-	keyManager, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 
@@ -159,6 +159,8 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, auditInfo2.Match(id))
 	assert.NoError(t, auditInfo2.Match(id2))
 
+	assert.Equal(t, tracker.GetCounter, 3)
+
 	// deserialize an invalid signer
 	_, err = keyManager.DeserializeSigner(nil)
 	assert.Error(t, err)
@@ -166,9 +168,13 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	assert.Error(t, err)
 	_, err = keyManager.DeserializeSigner([]byte{0, 1, 2})
 	assert.Error(t, err)
+	assert.Equal(t, tracker.GetCounter, 3)
 	// deserialize a valid signer
 	signer, err := keyManager.DeserializeSigner(id)
 	assert.NoError(t, err)
+	assert.Equal(t, tracker.GetCounter, 5) // this is due the call to Sign used to test if the signer belong to this key manager
+	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[4].Key)
+
 	// deserialize an invalid verifier
 	_, err = keyManager.DeserializeVerifier(nil)
 	assert.Error(t, err)
@@ -189,10 +195,20 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	sigma, err := signer.Sign([]byte("hello world!!!"))
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
+	assert.Equal(t, tracker.GetCounter, 7)
+	assert.Equal(t, tracker.GetHistory[3].Key, tracker.GetHistory[5].Key)
+	assert.Equal(t, tracker.GetHistory[3].Value, tracker.GetHistory[5].Value)
+	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[6].Key)
+	assert.Equal(t, tracker.GetHistory[4].Value, tracker.GetHistory[6].Value)
 
 	sigma, err = signer2.Sign([]byte("hello world!!!"))
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
+	assert.Equal(t, tracker.GetCounter, 9)
+	assert.Equal(t, tracker.GetHistory[3].Key, tracker.GetHistory[7].Key)
+	assert.Equal(t, tracker.GetHistory[3].Value, tracker.GetHistory[7].Value)
+	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[8].Key)
+	assert.Equal(t, tracker.GetHistory[4].Value, tracker.GetHistory[8].Value)
 }
 
 func TestIdentityStandard(t *testing.T) {
@@ -211,7 +227,7 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
+	p, err := NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -233,7 +249,7 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err = idemix.NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
+	p, err = NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -255,7 +271,7 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err = idemix.NewKeyManager(config, sigService, idemix.Any, cryptoProvider)
+	p, err = NewKeyManager(config, sigService, Any, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -289,7 +305,7 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -299,7 +315,7 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	assert.NoError(t, err)
-	p2, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p2, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p2)
 
@@ -340,14 +356,14 @@ func TestKeyManager_DeserializeSigner(t *testing.T) {
 	// first key manager
 	config, err := crypto2.NewConfig("./testdata/sameissuer/idemix")
 	assert.NoError(t, err)
-	keyManager, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 
 	// second key manager
 	config, err = crypto2.NewConfig("./testdata/sameissuer/idemix2")
 	assert.NoError(t, err)
-	keyManager2, err := idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager2, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager2)
 
@@ -406,7 +422,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
+	p, err := NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -428,7 +444,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err = idemix.NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
+	p, err = NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -450,7 +466,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err = idemix.NewKeyManager(config, sigService, idemix.Any, cryptoProvider)
+	p, err = NewKeyManager(config, sigService, Any, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -487,7 +503,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err := idemix.NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
+	p, err := NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -518,7 +534,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err = idemix.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err = NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
