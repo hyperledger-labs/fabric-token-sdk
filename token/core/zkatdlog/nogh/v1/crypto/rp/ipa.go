@@ -8,7 +8,7 @@ package rp
 
 import (
 	mathlib "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	"github.com/pkg/errors"
 )
@@ -28,6 +28,42 @@ type IPA struct {
 	// of the reduction protocol. The size of R is logarithmic in the size
 	// of the left/right vector
 	R []*mathlib.G1
+}
+
+func (ipa *IPA) Serialize() ([]byte, error) {
+	lArray, err := asn1.NewElementArray(ipa.L)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize L")
+	}
+	rArray, err := asn1.NewElementArray(ipa.R)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize R")
+	}
+	return asn1.MarshalMath(ipa.Left, ipa.Right, lArray, rArray)
+}
+
+func (ipa *IPA) Deserialize(raw []byte) error {
+	unmarshaller, err := asn1.NewUnmarshaller(raw)
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize raw")
+	}
+	ipa.Left, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize Left")
+	}
+	ipa.Right, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize Right")
+	}
+	ipa.L, err = unmarshaller.NextG1Array()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize L")
+	}
+	ipa.R, err = unmarshaller.NextG1Array()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize R")
+	}
+	return nil
 }
 
 // ipaProver is the prover for the inner product argument. It shows that a
@@ -129,7 +165,7 @@ func (p *ipaProver) Prove() (*IPA, error) {
 	}
 	bytesToHash[1] = []byte(common.Separator)
 	bytesToHash[2] = p.InnerProduct.Bytes()
-	raw, err := json.Marshal(bytesToHash)
+	raw, err := asn1.MarshalStd(bytesToHash)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +206,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 	}
 	bytesToHash[1] = []byte(common.Separator)
 	bytesToHash[2] = v.InnerProduct.Bytes()
-	raw, err := json.Marshal(bytesToHash)
+	raw, err := asn1.MarshalStd(bytesToHash)
 	if err != nil {
 		return err
 	}
