@@ -40,7 +40,7 @@ func NewWithClient(client *vault.Client, path string) (*KVS, error) {
 	}, nil
 }
 
-func (v *KVS) normalizeID(id string, isShort bool) string {
+func (v *KVS) NormalizeID(id string, isShort bool) string {
 	// Replace all occurrences of \x00 with /
 	replaced := strings.ReplaceAll(id, "\x00", "/")
 	// Remove the leading slash if it exists
@@ -67,7 +67,7 @@ func (v *KVS) GetExisting(ids ...string) []string {
 }
 
 func (v *KVS) Exists(id string) bool {
-	id = v.normalizeID(id, false)
+	id = v.NormalizeID(id, false)
 	secret, err := v.client.Logical().Read(id)
 	if err != nil {
 		logger.Debugf("failed to check existence of id %s: %v", id, err)
@@ -89,7 +89,7 @@ func (v *KVS) Exists(id string) bool {
 }
 
 func (v *KVS) Delete(id string) error {
-	id = v.normalizeID(id, false)
+	id = v.NormalizeID(id, false)
 
 	// Delete the secret from Vault
 	_, err := v.client.Logical().Delete(id)
@@ -103,7 +103,7 @@ func (v *KVS) Delete(id string) error {
 }
 
 func (v *KVS) Put(id string, state interface{}) error {
-	id = v.normalizeID(id, false)
+	id = v.NormalizeID(id, false)
 
 	raw, err := json.Marshal(state)
 	if err != nil {
@@ -121,11 +121,11 @@ func (v *KVS) Put(id string, state interface{}) error {
 }
 
 func (v *KVS) Get(id string, state interface{}) error {
-	id = v.normalizeID(id, false)
+	id = v.NormalizeID(id, false)
 	secret, err := v.client.Logical().Read(id)
 	if err != nil || secret == nil || secret.Data == nil {
 		logger.Debugf("failed retrieving state of id %s", id)
-		return errors.Wrapf(err, "failed retrieving state of id %s", id)
+		return errors.Errorf("failed retrieving state of id %s", id)
 	}
 
 	data, ok := secret.Data["data"].(map[string]interface{})
@@ -155,8 +155,8 @@ func (v *KVS) Get(id string, state interface{}) error {
 func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (Iterator, error) {
 
 	partialCompositeKey, err := kvs.CreateCompositeKey(prefix, attrs)
-	shortNormalizePartialCompositeKey := v.normalizeID(partialCompositeKey, true)
-	partialCompositeKey = v.normalizeID(partialCompositeKey, false)
+	shortNormalizePartialCompositeKey := v.NormalizeID(partialCompositeKey, true)
+	partialCompositeKey = v.NormalizeID(partialCompositeKey, false)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed building composite key")
 	}
@@ -167,13 +167,13 @@ func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (Iterator, 
 
 	// Check if the secret contains any keys
 	if secret == nil || secret.Data == nil {
-		errors.Wrapf(err, "failed")
+		errors.Errorf("secret contains no keys")
 	}
 
 	// Extract the keys from the response
 	keys, ok := secret.Data["keys"].([]interface{})
 	if !ok {
-		errors.Wrapf(err, "failed")
+		errors.Errorf("Unable to extract the keys from the response")
 	}
 	// Convert keys to []*string
 	stringKeys := make([]*string, len(keys))
