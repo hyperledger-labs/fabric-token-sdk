@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
@@ -25,6 +25,18 @@ type Proof struct {
 	TypeAndSum *TypeAndSumProof
 	// Proof that the outputs have value in the authorized range
 	RangeCorrectness *rp.RangeCorrectness
+}
+
+// Serialize marshals Proof
+func (p *Proof) Serialize() ([]byte, error) {
+	return asn1.Marshal[asn1.Serializer](p.TypeAndSum, p.RangeCorrectness)
+}
+
+// Deserialize unmarshals Proof
+func (p *Proof) Deserialize(bytes []byte) error {
+	p.TypeAndSum = &TypeAndSumProof{}
+	p.RangeCorrectness = &rp.RangeCorrectness{}
+	return asn1.Unmarshal[asn1.Serializer](bytes, p.TypeAndSum, p.RangeCorrectness)
 }
 
 // Verifier verifies if a Action is valid
@@ -99,16 +111,6 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 
 	}
 	return p, nil
-}
-
-// Serialize marshals Proof
-func (p *Proof) Serialize() ([]byte, error) {
-	return json.Marshal(p)
-}
-
-// Deserialize unmarshals Proof
-func (p *Proof) Deserialize(bytes []byte) error {
-	return json.Unmarshal(bytes, p)
 }
 
 // Prove produces a serialized Proof

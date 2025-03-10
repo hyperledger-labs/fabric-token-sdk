@@ -8,7 +8,7 @@ package transfer
 
 import (
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	crypto "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/pkg/errors"
@@ -35,12 +35,61 @@ type TypeAndSumProof struct {
 
 // Serialize marshals TypeAndSumProof
 func (p *TypeAndSumProof) Serialize() ([]byte, error) {
-	return json.Marshal(p)
+	ibf, err := asn1.NewElementArray(p.InputBlindingFactors)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to serialize input blinding-factors")
+	}
+	iv, err := asn1.NewElementArray(p.InputValues)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to serialize input values")
+	}
+	return asn1.MarshalMath(
+		p.CommitmentToType,
+		ibf,
+		iv,
+		p.Type,
+		p.TypeBlindingFactor,
+		p.EqualityOfSum,
+		p.Challenge,
+	)
 }
 
 // Deserialize un-marshals TypeAndSumProof
 func (p *TypeAndSumProof) Deserialize(bytes []byte) error {
-	return json.Unmarshal(bytes, p)
+	unmarshaller, err := asn1.NewUnmarshaller(bytes)
+	if err != nil {
+		return errors.Wrapf(err, "failed to prepare unmarshaller")
+	}
+
+	p.CommitmentToType, err = unmarshaller.NextG1()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize commitment type")
+	}
+	p.InputBlindingFactors, err = unmarshaller.NextZrArray()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize input blinding-factors")
+	}
+	p.InputValues, err = unmarshaller.NextZrArray()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize input values")
+	}
+	p.Type, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize type")
+	}
+	p.TypeBlindingFactor, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize type blinding factor")
+	}
+	p.EqualityOfSum, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize equality of sum")
+	}
+	p.Challenge, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize challenge")
+	}
+	return nil
 }
 
 // TypeAndSumWitness contains the secret information used to produce TypeAndSumProof
