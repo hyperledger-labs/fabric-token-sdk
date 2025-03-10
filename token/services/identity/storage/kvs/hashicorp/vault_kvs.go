@@ -7,12 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package kvs
 
 import (
-	"encoding/json"
 	"encoding/base64"
+	"encoding/json"
 	"strings"
 	vault "github.com/hashicorp/vault/api"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -23,11 +21,11 @@ var (
 	logger         = logging.MustGetLogger("view-sdk.kvs")
 )
 
-// type Iterator interface {
-// 	HasNext() bool
-// 	Close() error
-// 	Next(state interface{}) (string, error)
-// }
+type Iterator interface {
+	HasNext() bool
+	Close() error
+	Next(state interface{}) (string, error)
+}
 
 type KVS struct {
 	client *vault.Client
@@ -42,29 +40,70 @@ func NewWithClient(client *vault.Client, path string) (*KVS, error) {
 	}, nil
 }
 
-func (v *KVS) normalizeID(id string) string {
+func (v *KVS) normalizeID(id string, isShort bool) string {
 	// Replace all occurrences of \x00 with /
 	replaced := strings.ReplaceAll(id, "\x00", "/")
 	// Remove the leading slash if it exists
-	id = strings.TrimPrefix(replaced, "/")
+	replaced = strings.TrimPrefix(replaced, "/")
+	// Remove the trailing slash if it exists
+	id = strings.TrimSuffix(replaced, "/")
 	// Append the id to the path
+	if isShort{
+		return id
+	}
 	return v.path + id
 }
 
 func (v *KVS) GetExisting(ids ...string) []string {
 	results := make([]string, 0)
-	results = append(results, "Not implemented")
-	logger.Errorf("error GetExisting not implemented")
+
+	for _, id := range ids {
+		if v.Exists(id) {
+			results = append(results, id)
+		}
+	}
+
 	return results
 }
 
 func (v *KVS) Exists(id string) bool {
-	logger.Errorf("error Exists not implemented")
-	return false
+	id = v.normalizeID(id, false)
+	secret, err := v.client.Logical().Read(id)
+	if err != nil {
+		logger.Debugf("failed to check existence of id %s: %v", id, err)
+		return false
+	}
+
+	if secret == nil || secret.Data == nil {
+		logger.Debugf("state of id %s does not exist", id)
+		return false
+	}
+
+	data, ok := secret.Data["data"].(map[string]interface{})
+	if !ok || len(data) == 0 {
+		logger.Debugf("state of id %s does not exist", id)
+		return false
+	}
+
+	return true
+}
+
+func (v *KVS) Delete(id string) error {
+	id = v.normalizeID(id, false)
+
+	// Delete the secret from Vault
+	_, err := v.client.Logical().Delete(id)
+	if err != nil {
+		logger.Errorf("failed to delete state of id %s: %v", id, err)
+		return errors.Wrapf(err, "failed to delete state of id %s", id)
+	}
+
+	logger.Debugf("deleted state of id %s successfully", id)
+	return nil
 }
 
 func (v *KVS) Put(id string, state interface{}) error {
-	id = v.normalizeID(id)
+	id = v.normalizeID(id, false)
 
 	raw, err := json.Marshal(state)
 	if err != nil {
@@ -75,15 +114,16 @@ func (v *KVS) Put(id string, state interface{}) error {
 	_, err = v.client.Logical().Write(id, map[string]interface{}{"data": value})
 	if err == nil {
 		logger.Debugf("put state of id %s successfully", id)
+		return nil
 	}
 	
-	return err
+	return errors.Wrapf(err, "cannot Put state with id [%s]", id)
 }
 
 func (v *KVS) Get(id string, state interface{}) error {
-	id = v.normalizeID(id)
+	id = v.normalizeID(id, false)
 	secret, err := v.client.Logical().Read(id)
-	if err != nil {
+	if err != nil || secret == nil || secret.Data == nil {
 		logger.Debugf("failed retrieving state of id %s", id)
 		return errors.Wrapf(err, "failed retrieving state of id %s", id)
 	}
@@ -111,26 +151,63 @@ func (v *KVS) Get(id string, state interface{}) error {
 	return nil
 }
 
-func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error) {
-	logger.Errorf("error GetByPartialCompositeID not implemented")
-	return &vaultIterator{ri: nil}, nil
+
+func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (Iterator, error) {
+
+	partialCompositeKey, err := kvs.CreateCompositeKey(prefix, attrs)
+	shortNormalizePartialCompositeKey := v.normalizeID(partialCompositeKey, true)
+	partialCompositeKey = v.normalizeID(partialCompositeKey, false)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed building composite key")
+	}
+	secret, err := v.client.Logical().List(partialCompositeKey)
+	if err != nil {
+		errors.Wrapf(err, "failed")
+	}
+
+	// Check if the secret contains any keys
+	if secret == nil || secret.Data == nil {
+		errors.Wrapf(err, "failed")
+	}
+
+	// Extract the keys from the response
+	keys, ok := secret.Data["keys"].([]interface{})
+	if !ok {
+		errors.Wrapf(err, "failed")
+	}
+	// Convert keys to []*string
+	stringKeys := make([]*string, len(keys))
+	for i, key := range keys {
+		keyStr := shortNormalizePartialCompositeKey + "/" + key.(string)       // Cast to string
+		stringKeys[i] = &keyStr // Store pointer to the string
+	}
+	// Create and return a sliceIterator for the keys
+	keys_iterator := collections.NewSliceIterator(stringKeys)
+	return &vaultIterator{ri: keys_iterator, client: v}, nil
 }
 
 type vaultIterator struct {
-	ri collections.Iterator[*driver.UnversionedRead]
+	ri collections.Iterator[*string]
+	next *string
+	client *KVS
 }
 
 func (i *vaultIterator) HasNext() bool {
-	logger.Errorf("error HasNext not implemented")
-	return false
+	var err error
+	i.next, err = i.ri.Next()
+	if err != nil || i.next == nil {
+		return false
+	}
+	return true
 }
 
+
 func (i *vaultIterator) Close() error {
-	logger.Errorf("error Close not implemented")
+	i.ri.Close()
 	return nil
 }
 
 func (i *vaultIterator) Next(state interface{}) (string, error) {
-	logger.Errorf("error Next not implemented")
-	return "Not implemented ", nil
+	err := i.client.Get(*i.next, state)
+	return *i.next, err
 }
