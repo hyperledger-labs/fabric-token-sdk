@@ -11,6 +11,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
 )
 
 type Serializer interface {
@@ -37,13 +38,18 @@ func MarshalStd(a any) ([]byte, error) {
 }
 
 func Marshal[S Serializer](values ...S) ([]byte, error) {
-	v := Values{}
-	for _, value := range values {
+	v := Values{
+		Values: make([][]byte, len(values)),
+	}
+	for i, value := range values {
+		if utils.IsNil(value) {
+			continue
+		}
 		b, err := value.Serialize()
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to serialize value`)
 		}
-		v.Values = append(v.Values, b)
+		v.Values[i] = b
 	}
 	return asn1.Marshal(v)
 }
@@ -58,9 +64,12 @@ func Unmarshal[S Serializer](data []byte, values ...S) error {
 		return errors.Errorf("number of values does not match number of values")
 	}
 	for i, value := range values {
+		if len(v.Values[i]) == 0 {
+			continue
+		}
 		err = value.Deserialize(v.Values[i])
 		if err != nil {
-			return errors.Wrap(err, "failed to deserialize value")
+			return errors.Wrapf(err, "failed to deserialize value [%d of %d]", i, len(values))
 		}
 	}
 	return nil
