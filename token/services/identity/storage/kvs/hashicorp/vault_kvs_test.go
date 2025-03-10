@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	vault "github.com/hashicorp/vault/api"
-	// "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	hashicorp "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs/hashicorp"
 	"github.com/stretchr/testify/assert"
@@ -74,10 +73,10 @@ func testRound(t *testing.T, client *vault.Client) {
 		key, err := it.Next(val)
 		assert.NoError(t, err)
 		if ctr == 0 {
-			assert.Equal(t, k1, key)
+			assert.Equal(t, kvstore.NormalizeID(k1, true), key)
 			assert.Equal(t, &stuff{"santa", 1}, val)
 		} else if ctr == 1 {
-			assert.Equal(t, k2, key)
+			assert.Equal(t, kvstore.NormalizeID(k2,true), key)
 			assert.Equal(t, &stuff{"claws", 2}, val)
 		} else {
 			assert.Fail(t, "expected 2 entries in the range, found more")
@@ -95,7 +94,7 @@ func testRound(t *testing.T, client *vault.Client) {
 		key, err := it.Next(val)
 		assert.NoError(t, err)
 		if ctr == 0 {
-			assert.Equal(t, k1, key)
+			assert.Equal(t, kvstore.NormalizeID(k1,true), key)
 			assert.Equal(t, &stuff{"santa", 1}, val)
 		} else {
 			assert.Fail(t, "expected 2 entries in the range, found more")
@@ -110,7 +109,7 @@ func testRound(t *testing.T, client *vault.Client) {
 		key, err := it2.Next(val)
 		assert.NoError(t, err)
 		if ctr == 0 {
-			assert.Equal(t, k1, key)
+			assert.Equal(t, kvstore.NormalizeID(k1,true), key)
 			assert.Equal(t, &stuff{"santa", 1}, val)
 		} else {
 			assert.Fail(t, "expected 1 entries in the range, found more")
