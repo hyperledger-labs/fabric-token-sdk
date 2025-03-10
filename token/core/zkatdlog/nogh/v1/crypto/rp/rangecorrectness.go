@@ -28,6 +28,9 @@ func (r *RangeCorrectness) Deserialize(raw []byte) error {
 	proofs, err := asn1.NewArrayWithNew[*RangeProof](func() *RangeProof {
 		return &RangeProof{}
 	})
+	if err != nil {
+		return errors.Wrap(err, "failed to prepare proofs for unmarshalling")
+	}
 	err = asn1.Unmarshal(raw, proofs)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal proofs")
