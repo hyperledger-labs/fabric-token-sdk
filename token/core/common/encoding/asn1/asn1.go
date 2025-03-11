@@ -111,10 +111,6 @@ func MarshalMath(values ...element) ([]byte, error) {
 	return asn1.Marshal(v)
 }
 
-type UnmarshalSequence struct {
-	Reference any
-	What      string
-}
 type unmarshaller struct {
 	v     *Values
 	index int
