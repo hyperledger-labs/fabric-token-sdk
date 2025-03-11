@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	views1 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 )
@@ -27,9 +26,7 @@ type SDK struct {
 }
 
 func NewSDK(registry node.Registry) *SDK {
-	sdk := &SDK{SDK: tokensdk.NewSDK(registry)}
-	sdk.registry = registry
-	return sdk
+	return &SDK{registry: registry}
 }
 
 func NewFrom(sdk dig2.SDK) *SDK {
