@@ -67,6 +67,7 @@ var selectorProviders = map[sdriver.Driver]any{
 
 type SDK struct {
 	dig2.SDK
+	registry node.Registry
 }
 
 func (p *SDK) TokenEnabled() bool {
@@ -74,7 +75,9 @@ func (p *SDK) TokenEnabled() bool {
 }
 
 func NewSDK(registry node.Registry) *SDK {
-	return NewFrom(fabricsdk.NewSDK(registry))
+	sdk := NewFrom(fabricsdk.NewSDK(registry))
+	sdk.registry = registry
+	return sdk
 }
 
 func NewFrom(sdk dig2.SDK) *SDK {
@@ -225,6 +228,15 @@ func (p *SDK) Install() error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed post-inititialization")
 	}
+
+	// register dig's container in the service provider
+	if p.registry != nil {
+		// register dig's container
+		if err := p.registry.RegisterService(p.Container()); err != nil {
+			return errors.WithMessagef(err, "failed registering dig's container")
+		}
+	}
+
 	return nil
 }
 
