@@ -39,7 +39,7 @@ func StartHashicorpVaultContainer(t *testing.T) (func(), string, string) {
 		t.Fatal(err)
 	}
 	defer out.Close()
-	io.Copy(os.Stdout, out)
+	_, _ = io.Copy(os.Stdout, out)
 
 	// Define the container configuration
 	token := "00000000-0000-0000-0000-000000000000"

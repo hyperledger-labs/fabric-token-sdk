@@ -159,18 +159,18 @@ func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterat
 	}
 	secret, err := v.client.Logical().List(partialCompositeKey)
 	if err != nil {
-		errors.Wrapf(err, "failed")
+		_ = errors.Wrapf(err, "failed")
 	}
 
 	// Check if the secret contains any keys
 	if secret == nil || secret.Data == nil {
-		errors.Errorf("secret contains no keys")
+		_ = errors.Errorf("secret contains no keys")
 	}
 
 	// Extract the keys from the response
 	keys, ok := secret.Data["keys"].([]interface{})
 	if !ok {
-		errors.Errorf("unable to extract the keys from the response")
+		_ = errors.Errorf("unable to extract the keys from the response")
 	}
 	// Convert keys to []*string
 	stringKeys := make([]*string, len(keys))
