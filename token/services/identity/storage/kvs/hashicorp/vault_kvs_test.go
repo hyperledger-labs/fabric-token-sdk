@@ -168,7 +168,7 @@ func testParallelWrites(t *testing.T, client *vault.Client) {
 }
 
 func TestVaultKVS(t *testing.T) {
-	terminate, vaultURL, token := StartHashicorpVaultContainer(t)
+	terminate, vaultURL, token := hashicorp.StartHashicorpVaultContainer(t)
 	defer terminate()
 	client, err := NewVaultClient(vaultURL, token)
 	assert.NoError(t, err)

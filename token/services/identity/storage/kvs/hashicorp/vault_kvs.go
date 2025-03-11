@@ -9,23 +9,21 @@ package kvs
 import (
 	"encoding/base64"
 	"encoding/json"
+	"strings"
+
 	vault "github.com/hashicorp/vault/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/pkg/errors"
-	"strings"
 )
+
+const DATA = "data"
+const VALUE = "value"
 
 var (
 	logger = logging.MustGetLogger("view-sdk.kvs")
 )
-
-type Iterator interface {
-	HasNext() bool
-	Close() error
-	Next(state interface{}) (string, error)
-}
 
 type KVS struct {
 	client *vault.Client
@@ -70,18 +68,18 @@ func (v *KVS) Exists(id string) bool {
 	id = v.NormalizeID(id, false)
 	secret, err := v.client.Logical().Read(id)
 	if err != nil {
-		logger.Debugf("failed to check existence of id %s: %v", id, err)
+		logger.Debugf("failed to check existence of id [%s]: %v", id, err)
 		return false
 	}
 
 	if secret == nil || secret.Data == nil {
-		logger.Debugf("state of id %s does not exist", id)
+		logger.Debugf("state of id [%s] does not exist", id)
 		return false
 	}
 
-	data, ok := secret.Data["data"].(map[string]interface{})
+	data, ok := secret.Data[DATA].(map[string]interface{})
 	if !ok || len(data) == 0 {
-		logger.Debugf("state of id %s does not exist", id)
+		logger.Debugf("state of id [%s] does not exist", id)
 		return false
 	}
 
@@ -94,11 +92,11 @@ func (v *KVS) Delete(id string) error {
 	// Delete the secret from Vault
 	_, err := v.client.Logical().Delete(id)
 	if err != nil {
-		logger.Errorf("failed to delete state of id %s: %v", id, err)
-		return errors.Wrapf(err, "failed to delete state of id %s", id)
+		logger.Errorf("failed to delete state of id [%s]: %v", id, err)
+		return errors.Wrapf(err, "failed to delete state of id [%s]", id)
 	}
 
-	logger.Debugf("deleted state of id %s successfully", id)
+	logger.Debugf("deleted state of id [%s] successfully", id)
 	return nil
 }
 
@@ -110,10 +108,10 @@ func (v *KVS) Put(id string, state interface{}) error {
 		return errors.Wrapf(err, "cannot marshal state with id [%s]", id)
 	}
 
-	value := map[string]interface{}{"value": base64.StdEncoding.EncodeToString(raw)}
-	_, err = v.client.Logical().Write(id, map[string]interface{}{"data": value})
+	value := map[string]interface{}{VALUE: base64.StdEncoding.EncodeToString(raw)}
+	_, err = v.client.Logical().Write(id, map[string]interface{}{DATA: value})
 	if err == nil {
-		logger.Debugf("put state of id %s successfully", id)
+		logger.Debugf("put state of id [%s] successfully", id)
 		return nil
 	}
 
@@ -124,16 +122,16 @@ func (v *KVS) Get(id string, state interface{}) error {
 	id = v.NormalizeID(id, false)
 	secret, err := v.client.Logical().Read(id)
 	if err != nil || secret == nil || secret.Data == nil {
-		logger.Debugf("failed retrieving state of id %s", id)
-		return errors.Errorf("failed retrieving state of id %s", id)
+		logger.Errorf("failed retrieving state of id [%s]", id)
+		return errors.Errorf("failed retrieving state of id [%s]", id)
 	}
 
-	data, ok := secret.Data["data"].(map[string]interface{})
+	data, ok := secret.Data[DATA].(map[string]interface{})
 	if len(data) == 0 {
-		return errors.Errorf("state of id %s does not exist", id)
+		return errors.Errorf("state of id [%s] does not exist", id)
 	}
 
-	value, ok := data["value"]
+	value, ok := data[VALUE]
 	if !ok {
 		return errors.Errorf("missing 'value' key in data")
 	}
@@ -144,14 +142,14 @@ func (v *KVS) Get(id string, state interface{}) error {
 	}
 
 	if err := json.Unmarshal(raw, state); err != nil {
-		logger.Debugf("failed retrieving state of id %s, cannot unmarshal state, error [%s]", id, err)
-		return errors.Wrapf(err, "failed retrieving state of id %s], cannot unmarshal state", id)
+		logger.Debugf("failed retrieving state of id [%s], cannot unmarshal state, error [%s]", id, err)
+		return errors.Wrapf(err, "failed retrieving state of id [%s], cannot unmarshal state", id)
 	}
-	logger.Debugf("got state of id %s successfully", id)
+	logger.Debugf("got state of id [%s] successfully", id)
 	return nil
 }
 
-func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (Iterator, error) {
+func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error) {
 
 	partialCompositeKey, err := kvs.CreateCompositeKey(prefix, attrs)
 	shortNormalizePartialCompositeKey := v.NormalizeID(partialCompositeKey, true)
@@ -172,7 +170,7 @@ func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (Iterator, 
 	// Extract the keys from the response
 	keys, ok := secret.Data["keys"].([]interface{})
 	if !ok {
-		errors.Errorf("Unable to extract the keys from the response")
+		errors.Errorf("unable to extract the keys from the response")
 	}
 	// Convert keys to []*string
 	stringKeys := make([]*string, len(keys))
@@ -206,6 +204,9 @@ func (i *vaultIterator) Close() error {
 }
 
 func (i *vaultIterator) Next(state interface{}) (string, error) {
+	if i.next == nil {
+		return "", errors.Errorf("nil i.next in the vault terator")
+	}
 	err := i.client.Get(*i.next, state)
 	return *i.next, err
 }
