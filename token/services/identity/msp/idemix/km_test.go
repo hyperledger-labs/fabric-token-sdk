@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package idemix_test
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -16,7 +15,6 @@ import (
 	"github.com/IBM/idemix/bccsp/types"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	vault "github.com/hashicorp/vault/api"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -28,26 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// creates a new Vault client
-func NewVaultClient(address, token string) (*vault.Client, error) {
-	config := vault.DefaultConfig()
-	config.Address = address
-
-	client, err := vault.NewClient(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Vault client: %v", err)
-	}
-
-	client.SetToken(token)
-
-	return client, nil
-}
-
 func TestKeyManager(t *testing.T) {
 	backend, err := kvs2.NewInMemoryKVS()
-	client, err := NewVaultClient("http://localhoat:8200", "root")
-	assert.NoError(t, err)
-	backend, err = kvs2.NewHashicorpVaultKVS(client, "secret/data/token-sdk/")
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
 
@@ -79,11 +59,6 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	registry := registry2.New()
 
 	backend, err := kvs2.NewInMemoryKVS()
-
-	client, err := NewVaultClient("http://localhoat:8200", "root")
-	assert.NoError(t, err)
-	backend, err = kvs2.NewHashicorpVaultKVS(client, "secret/data/token-sdk/")
-
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(backend))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
