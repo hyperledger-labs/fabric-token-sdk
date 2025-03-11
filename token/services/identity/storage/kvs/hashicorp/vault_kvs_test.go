@@ -24,7 +24,7 @@ type stuff struct {
 	I int    `json:"i"`
 }
 
-// creates a new Vault client
+// Creates a new Vault client
 func NewVaultClient(address, token string) (*vault.Client, error) {
 	config := vault.DefaultConfig()
 	config.Address = address
@@ -76,7 +76,7 @@ func testRound(t *testing.T, client *vault.Client) {
 			assert.Equal(t, kvstore.NormalizeID(k1, true), key)
 			assert.Equal(t, &stuff{"santa", 1}, val)
 		} else if ctr == 1 {
-			assert.Equal(t, kvstore.NormalizeID(k2,true), key)
+			assert.Equal(t, kvstore.NormalizeID(k2, true), key)
 			assert.Equal(t, &stuff{"claws", 2}, val)
 		} else {
 			assert.Fail(t, "expected 2 entries in the range, found more")
@@ -94,7 +94,7 @@ func testRound(t *testing.T, client *vault.Client) {
 		key, err := it.Next(val)
 		assert.NoError(t, err)
 		if ctr == 0 {
-			assert.Equal(t, kvstore.NormalizeID(k1,true), key)
+			assert.Equal(t, kvstore.NormalizeID(k1, true), key)
 			assert.Equal(t, &stuff{"santa", 1}, val)
 		} else {
 			assert.Fail(t, "expected 2 entries in the range, found more")
@@ -109,7 +109,7 @@ func testRound(t *testing.T, client *vault.Client) {
 		key, err := it2.Next(val)
 		assert.NoError(t, err)
 		if ctr == 0 {
-			assert.Equal(t, kvstore.NormalizeID(k1,true), key)
+			assert.Equal(t, kvstore.NormalizeID(k1, true), key)
 			assert.Equal(t, &stuff{"santa", 1}, val)
 		} else {
 			assert.Fail(t, "expected 1 entries in the range, found more")
@@ -120,11 +120,10 @@ func testRound(t *testing.T, client *vault.Client) {
 		S: "hello",
 		I: 100,
 	}
-	// k := hash.Hashable("Hello World").RawString()
 	data := "Hello World"
 	hash := sha256.Sum256([]byte(data)) // Replace with hash.Hashable if applicable
-	k := hex.EncodeToString(hash[:]) // Convert to clean hex string
-	
+	k := hex.EncodeToString(hash[:])    // Convert to clean hex string
+
 	assert.NoError(t, kvstore.Put(k, val))
 	assert.True(t, kvstore.Exists(k))
 	val2 := &stuff{}
@@ -137,7 +136,6 @@ func testRound(t *testing.T, client *vault.Client) {
 func testParallelWrites(t *testing.T, client *vault.Client) {
 	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk/")
 	assert.NoError(t, err)
-	// defer kvstore.Stop() TBD
 
 	// different keys
 	wg := sync.WaitGroup{}
@@ -170,7 +168,7 @@ func testParallelWrites(t *testing.T, client *vault.Client) {
 }
 
 func TestVaultKVS(t *testing.T) {
-	terminate, vaultURL, token := hashicorp.StartHashicorpVaultContainer(t)
+	terminate, vaultURL, token := StartHashicorpVaultContainer(t)
 	defer terminate()
 	client, err := NewVaultClient(vaultURL, token)
 	assert.NoError(t, err)

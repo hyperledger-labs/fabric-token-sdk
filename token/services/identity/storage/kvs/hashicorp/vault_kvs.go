@@ -9,16 +9,16 @@ package kvs
 import (
 	"encoding/base64"
 	"encoding/json"
-	"strings"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 var (
-	logger         = logging.MustGetLogger("view-sdk.kvs")
+	logger = logging.MustGetLogger("view-sdk.kvs")
 )
 
 type Iterator interface {
@@ -29,14 +29,14 @@ type Iterator interface {
 
 type KVS struct {
 	client *vault.Client
-	path string
+	path   string
 }
 
 // NewWithClient returns a new KVS instance for the passed hashicorp vault API client
 func NewWithClient(client *vault.Client, path string) (*KVS, error) {
 	return &KVS{
 		client: client,
-		path: path,
+		path:   path,
 	}, nil
 }
 
@@ -48,7 +48,7 @@ func (v *KVS) NormalizeID(id string, isShort bool) string {
 	// Remove the trailing slash if it exists
 	id = strings.TrimSuffix(replaced, "/")
 	// Append the id to the path
-	if isShort{
+	if isShort {
 		return id
 	}
 	return v.path + id
@@ -116,7 +116,7 @@ func (v *KVS) Put(id string, state interface{}) error {
 		logger.Debugf("put state of id %s successfully", id)
 		return nil
 	}
-	
+
 	return errors.Wrapf(err, "cannot Put state with id [%s]", id)
 }
 
@@ -137,7 +137,7 @@ func (v *KVS) Get(id string, state interface{}) error {
 	if !ok {
 		return errors.Errorf("missing 'value' key in data")
 	}
-	raw, err :=  base64.StdEncoding.DecodeString(value.(string))
+	raw, err := base64.StdEncoding.DecodeString(value.(string))
 	if err != nil {
 		logger.Debugf("Failed to decode base64 string: %v, error: %v", value, err)
 		return errors.Wrapf(err, "failed to decode base64 string: %v", value)
@@ -150,7 +150,6 @@ func (v *KVS) Get(id string, state interface{}) error {
 	logger.Debugf("got state of id %s successfully", id)
 	return nil
 }
-
 
 func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (Iterator, error) {
 
@@ -178,8 +177,8 @@ func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (Iterator, 
 	// Convert keys to []*string
 	stringKeys := make([]*string, len(keys))
 	for i, key := range keys {
-		keyStr := shortNormalizePartialCompositeKey + "/" + key.(string)       // Cast to string
-		stringKeys[i] = &keyStr // Store pointer to the string
+		keyStr := shortNormalizePartialCompositeKey + "/" + key.(string) // Cast to string
+		stringKeys[i] = &keyStr                                          // Store pointer to the string
 	}
 	// Create and return a sliceIterator for the keys
 	keys_iterator := collections.NewSliceIterator(stringKeys)
@@ -187,8 +186,8 @@ func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (Iterator, 
 }
 
 type vaultIterator struct {
-	ri collections.Iterator[*string]
-	next *string
+	ri     collections.Iterator[*string]
+	next   *string
 	client *KVS
 }
 
@@ -200,7 +199,6 @@ func (i *vaultIterator) HasNext() bool {
 	}
 	return true
 }
-
 
 func (i *vaultIterator) Close() error {
 	i.ri.Close()

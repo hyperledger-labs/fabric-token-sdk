@@ -21,9 +21,8 @@ import (
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat" // Import the nat package for PortBinding
+	"github.com/docker/go-connections/nat"
 )
-
 
 func StartHashicorpVaultContainer(t *testing.T) (func(), string, string) {
 	ctx := context.Background()
@@ -48,8 +47,8 @@ func StartHashicorpVaultContainer(t *testing.T) (func(), string, string) {
 	containerConfig := &container.Config{
 		Image: imageName,
 		Env: []string{
-			"VAULT_DEV_ROOT_TOKEN_ID="+token,
-			"VAULT_DEV_LISTEN_ADDRESS="+address,
+			"VAULT_DEV_ROOT_TOKEN_ID=" + token,
+			"VAULT_DEV_LISTEN_ADDRESS=" + address,
 		},
 	}
 	// Define the host configuration
