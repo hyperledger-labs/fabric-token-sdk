@@ -17,8 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	containertypes "github.com/docker/docker/api/types/container"
+	container "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -88,7 +87,7 @@ func StartHashicorpVaultContainer(t *testing.T) (func(), string, string) {
 
 	return func() {
 		noWaitTimeout := 0 // to not wait for the container to exit gracefully
-		if err := cli.ContainerStop(ctx, resp.ID, containertypes.StopOptions{Timeout: &noWaitTimeout}); err != nil {
+		if err := cli.ContainerStop(ctx, resp.ID, container.StopOptions{Timeout: &noWaitTimeout}); err != nil {
 			logger.Errorf("failed to terminate hashicorp/vault [%s][%s]", err, debug.Stack())
 		}
 		fmt.Println("Success")
