@@ -227,6 +227,7 @@ func TestArray(t *testing.T) {
 	a2, err := NewArrayWithNew[*Rectangle](func() *Rectangle {
 		return &Rectangle{}
 	})
+	assert.NoError(t, err)
 	assert.NoError(t, a2.Deserialize(raw))
 	assert.Equal(t, a1.Values, a2.Values)
 }
