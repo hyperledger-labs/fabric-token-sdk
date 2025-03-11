@@ -8,11 +8,11 @@ package issue
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"io"
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 )

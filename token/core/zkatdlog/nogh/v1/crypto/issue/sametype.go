@@ -8,7 +8,7 @@ package issue
 
 import (
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -22,8 +22,6 @@ type SameType struct {
 	// Proof of randomness used to compute the commitment to type and value in the issued tokens
 	// i^th proof is for the randomness  used to compute the i^th token
 	BlindingFactor *math.Zr
-	// only when the type is not hidden
-	TypeInTheClear string
 	// Challenge computed using the Fiat-Shamir Heuristic
 	Challenge *math.Zr
 	// CommitmentToType is a commitment to the type being issued
@@ -32,12 +30,37 @@ type SameType struct {
 
 // Serialize marshals SameType proof
 func (stp *SameType) Serialize() ([]byte, error) {
-	return json.Marshal(stp)
+	return asn1.MarshalMath(
+		stp.Type,
+		stp.BlindingFactor,
+		stp.Challenge,
+		stp.CommitmentToType,
+	)
 }
 
 // Deserialize un-marshals SameType proof
 func (stp *SameType) Deserialize(bytes []byte) error {
-	return json.Unmarshal(bytes, stp)
+	unmarshaller, err := asn1.NewUnmarshaller(bytes)
+	if err != nil {
+		return errors.Wrapf(err, "failed to initialize unmarshaller")
+	}
+	stp.Type, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize type")
+	}
+	stp.BlindingFactor, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize blinding factor")
+	}
+	stp.Challenge, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize challenge")
+	}
+	stp.CommitmentToType, err = unmarshaller.NextG1()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize commitment to type")
+	}
+	return nil
 }
 
 // SameTypeRandomness is the randomness used to generate
