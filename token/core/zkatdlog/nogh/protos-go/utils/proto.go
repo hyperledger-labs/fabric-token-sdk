@@ -9,12 +9,12 @@ package utils
 import (
 	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
 	"github.com/pkg/errors"
 )
 
 func ToProtoG1Slice(input []*mathlib.G1) ([]*math.G1, error) {
-	return utils.ToProtosSliceFunc(input, func(s *mathlib.G1) (*math.G1, error) {
+	return protos.ToProtosSliceFunc(input, func(s *mathlib.G1) (*math.G1, error) {
 		return ToProtoG1(s)
 	})
 }
@@ -31,7 +31,7 @@ func ToProtoG1(s *mathlib.G1) (*math.G1, error) {
 }
 
 func FromG1ProtoSlice(generators []*math.G1) ([]*mathlib.G1, error) {
-	return utils.FromProtosSliceFunc(generators, func(s *math.G1) (*mathlib.G1, error) {
+	return protos.FromProtosSliceFunc(generators, func(s *math.G1) (*mathlib.G1, error) {
 		return FromG1Proto(s)
 	})
 }

@@ -15,7 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -190,13 +191,13 @@ func (i *Action) ExtraSigners() []driver.Identity {
 // Serialize marshal IssueAction
 func (i *Action) Serialize() ([]byte, error) {
 	// inputs
-	inputs, err := utils2.ToProtosSlice[actions.IssueActionInput, *ActionInput](i.Inputs)
+	inputs, err := protos.ToProtosSlice[actions.IssueActionInput, *ActionInput](i.Inputs)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to serialize inputs")
 	}
 
 	// outputs
-	outputs, err := utils2.ToProtosSliceFunc(i.Outputs, func(output *token.Token) (*actions.IssueActionOutput, error) {
+	outputs, err := protos.ToProtosSliceFunc(i.Outputs, func(output *token.Token) (*actions.IssueActionOutput, error) {
 		data, err := utils.ToProtoG1(output.Data)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to serialize output")
@@ -236,8 +237,8 @@ func (i *Action) Deserialize(raw []byte) error {
 
 	// inputs
 	i.Inputs = make([]*ActionInput, len(issueAction.Inputs))
-	i.Inputs = utils2.GenericSliceOfPointers[ActionInput](len(issueAction.Inputs))
-	if err := utils2.FromProtosSlice(issueAction.Inputs, i.Inputs); err != nil {
+	i.Inputs = slices.GenericSliceOfPointers[ActionInput](len(issueAction.Inputs))
+	if err := protos.FromProtosSlice(issueAction.Inputs, i.Inputs); err != nil {
 		return errors.Wrap(err, "failed unmarshalling receivers metadata")
 	}
 
