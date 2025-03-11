@@ -126,7 +126,7 @@ func (v *KVS) Get(id string, state interface{}) error {
 		return errors.Errorf("failed retrieving state of id [%s]", id)
 	}
 
-	data, ok := secret.Data[DATA].(map[string]interface{})
+	data, _ := secret.Data[DATA].(map[string]interface{})
 	if len(data) == 0 {
 		return errors.Errorf("state of id [%s] does not exist", id)
 	}
