@@ -9,7 +9,7 @@ package issue
 import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
@@ -25,12 +25,14 @@ type Proof struct {
 
 // Serialize marshals Proof
 func (p *Proof) Serialize() ([]byte, error) {
-	return json.Marshal(p)
+	return asn1.Marshal[asn1.Serializer](p.SameType, p.RangeCorrectness)
 }
 
 // Deserialize un-marshals Proof
 func (p *Proof) Deserialize(bytes []byte) error {
-	return json.Unmarshal(bytes, p)
+	p.SameType = &SameType{}
+	p.RangeCorrectness = &rp.RangeCorrectness{}
+	return asn1.Unmarshal[asn1.Serializer](bytes, p.SameType, p.RangeCorrectness)
 }
 
 // Prover produces a proof of validity of an IssueAction
