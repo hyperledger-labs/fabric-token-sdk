@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
@@ -21,8 +20,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
-	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/auditor"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/endorser"
+	issuer2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/issuer"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/party"
 )
 
 func Topology(opts common.Opts) []api.Topology {
@@ -63,28 +64,6 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.AddOptions(opts.ReplicationOpts.For("issuer")...)
-	issuer.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{})
-	issuer.RegisterResponder(&views.TokensUpgradeResponderView{}, &views.TokensUpgradeInitiatorView{})
-	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
-	issuer.RegisterViewFactory("transfer", &views.TransferViewFactory{})
-	issuer.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
-	issuer.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
-	issuer.RegisterViewFactory("balance", &views.BalanceViewFactory{})
-	issuer.RegisterViewFactory("historyIssuedToken", &views.ListIssuedTokensViewFactory{})
-	issuer.RegisterViewFactory("issuedTokenQuery", &views.ListIssuedTokensViewFactory{})
-	issuer.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
-	issuer.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
-	issuer.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
-	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
-	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
-	issuer.RegisterViewFactory("RegisterIssuerIdentity", &views.RegisterIssuerIdentityViewFactory{})
-	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
-	issuer.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
-	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-	issuer.RegisterViewFactory("SetKVSEntry", &views.SetKVSEntryViewFactory{})
-	issuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
-	issuer.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	newIssuer := fscTopology.AddNodeByName("newIssuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -96,55 +75,20 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithOwnerIdentity("newIssuer.owner"),
 	)
 	newIssuer.AddOptions(opts.ReplicationOpts.For("newIssuer")...)
-	newIssuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
-	newIssuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-	newIssuer.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
-	newIssuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
-	newIssuer.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	var auditor *node.Node
-	newAuditor := fscTopology.AddNodeByName("newAuditor").AddOptions(
-		fabric.WithOrganization("Org1"),
-		orion.WithRole("auditor"),
-		token.WithAuditorIdentity(opts.HSM),
-	)
-	newAuditor.AddOptions(opts.ReplicationOpts.For("newAuditor")...)
-	newAuditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
-	newAuditor.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-	newAuditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
-	newAuditor.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
-	newAuditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
-
 	if opts.AuditorAsIssuer {
 		issuer.AddOptions(
 			orion.WithRole("auditor"),
 			token.WithAuditorIdentity(opts.HSM),
 			fsc.WithAlias("auditor"),
 		)
-		issuer.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
-		issuer.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
-		issuer.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
-		issuer.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
-		issuer.RegisterViewFactory("SetTransactionAuditStatus", &views.SetTransactionAuditStatusViewFactory{})
-		issuer.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
-		issuer.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
-		issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-		issuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 		auditor = issuer
-
 		newIssuer.AddOptions(
 			orion.WithRole("auditor"),
 			token.WithAuditorIdentity(opts.HSM),
 			fsc.WithAlias("auditor"),
 		)
-		newIssuer.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
-		newIssuer.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
-		newIssuer.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
-		newIssuer.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
-		newIssuer.RegisterViewFactory("SetTransactionAuditStatus", &views.SetTransactionAuditStatusViewFactory{})
-		newIssuer.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
-		newIssuer.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
-		newIssuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 	} else {
 		auditor = fscTopology.AddNodeByName("auditor").AddOptions(
 			fabric.WithOrganization("Org1"),
@@ -153,22 +97,13 @@ func Topology(opts common.Opts) []api.Topology {
 			token.WithAuditorIdentity(opts.HSM),
 		)
 		auditor.AddOptions(opts.ReplicationOpts.For("auditor")...)
-		auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
-		auditor.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
-		auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
-		auditor.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
-		auditor.RegisterViewFactory("balance", &views.BalanceViewFactory{})
-		auditor.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
-		auditor.RegisterViewFactory("SetTransactionAuditStatus", &views.SetTransactionAuditStatusViewFactory{})
-		auditor.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
-		auditor.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
-		auditor.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
-		auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
-		auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
-		auditor.RegisterViewFactory("RevokeUser", &views.RevokeUserViewFactory{})
-		auditor.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
-		auditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 	}
+	newAuditor := fscTopology.AddNodeByName("newAuditor").AddOptions(
+		fabric.WithOrganization("Org1"),
+		orion.WithRole("auditor"),
+		token.WithAuditorIdentity(opts.HSM),
+	)
+	newAuditor.AddOptions(opts.ReplicationOpts.For("newAuditor")...)
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -179,41 +114,6 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithRemoteOwnerIdentity("alice_remote_2"),
 	)
 	alice.AddOptions(opts.ReplicationOpts.For("alice")...)
-	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
-	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
-	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
-	alice.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{})
-	alice.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigLockView{})
-	alice.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigSpendView{})
-	alice.RegisterResponder(&views.MultiSigAcceptSpendView{}, &views.MultiSigRequestSpend{})
-	alice.RegisterViewFactory("MultiSigLock", &views.MultiSigLockViewFactory{})
-	alice.RegisterViewFactory("MultiSigSpend", &views.MultiSigSpendViewFactory{})
-	alice.RegisterViewFactory("CoOwnedBalance", &views.CoOwnedBalanceViewFactory{})
-	alice.RegisterViewFactory("transfer", &views.TransferViewFactory{})
-	alice.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
-	alice.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
-	alice.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
-	alice.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
-	alice.RegisterViewFactory("balance", &views.BalanceViewFactory{})
-	alice.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
-	alice.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
-	alice.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
-	alice.RegisterViewFactory("prepareTransfer", &views.PrepareTransferViewFactory{})
-	alice.RegisterViewFactory("broadcastPreparedTransfer", &views.BroadcastPreparedTransferViewFactory{})
-	alice.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
-	alice.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
-	alice.RegisterViewFactory("SetTransactionOwnerStatus", &views.SetTransactionOwnerStatusViewFactory{})
-	alice.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
-	alice.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
-	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
-	alice.RegisterViewFactory("withdrawal", &views.WithdrawalInitiatorViewFactory{})
-	alice.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
-	alice.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
-	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
-	alice.RegisterViewFactory("MaliciousTransfer", &views.MaliciousTransferViewFactory{})
-	alice.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
-	alice.RegisterViewFactory("TokensUpgrade", &views.TokensUpgradeInitiatorViewFactory{})
-	alice.RegisterViewFactory("SetSpendableFlag", &views.SetSpendableFlagViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -224,42 +124,6 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithRemoteOwnerIdentity("bob_remote"),
 	)
 	bob.AddOptions(opts.ReplicationOpts.For("bob")...)
-	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
-	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
-	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
-	bob.RegisterResponder(&views.AcceptCashView{}, &views.MaliciousTransferView{})
-	bob.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{})
-	bob.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
-	bob.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigLockView{})
-	bob.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigSpendView{})
-	bob.RegisterResponder(&views.MultiSigAcceptSpendView{}, &views.MultiSigRequestSpend{})
-	bob.RegisterViewFactory("MultiSigLock", &views.MultiSigLockViewFactory{})
-	bob.RegisterViewFactory("MultiSigSpend", &views.MultiSigSpendViewFactory{})
-	bob.RegisterViewFactory("CoOwnedBalance", &views.CoOwnedBalanceViewFactory{})
-	bob.RegisterViewFactory("transfer", &views.TransferViewFactory{})
-	bob.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
-	bob.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
-	bob.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
-	bob.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
-	bob.RegisterViewFactory("balance", &views.BalanceViewFactory{})
-	bob.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
-	bob.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
-	bob.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
-	bob.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
-	bob.RegisterViewFactory("prepareTransfer", &views.PrepareTransferViewFactory{})
-	bob.RegisterViewFactory("TokenSelectorUnlock", &views.TokenSelectorUnlockViewFactory{})
-	bob.RegisterViewFactory("FinalityWithTimeout", &views.FinalityWithTimeoutViewFactory{})
-	bob.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
-	bob.RegisterViewFactory("SetTransactionOwnerStatus", &views.SetTransactionOwnerStatusViewFactory{})
-	bob.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
-	bob.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
-	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
-	bob.RegisterViewFactory("GetRevocationHandle", &views.GetRevocationHandleViewFactory{})
-	bob.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
-	bob.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
-	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
-	bob.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
-	bob.RegisterViewFactory("TokensUpgrade", &views.TokensUpgradeInitiatorViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -269,32 +133,6 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithOwnerIdentity("charlie.id1"),
 	)
 	charlie.AddOptions(opts.ReplicationOpts.For("charlie")...)
-	charlie.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
-	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
-	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
-	charlie.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
-	charlie.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigLockView{})
-	charlie.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigSpendView{})
-	charlie.RegisterResponder(&views.MultiSigAcceptSpendView{}, &views.MultiSigRequestSpend{})
-	charlie.RegisterViewFactory("MultiSigLock", &views.MultiSigLockViewFactory{})
-	charlie.RegisterViewFactory("MultiSigSpend", &views.MultiSigSpendViewFactory{})
-	charlie.RegisterViewFactory("CoOwnedBalance", &views.CoOwnedBalanceViewFactory{})
-	charlie.RegisterViewFactory("transfer", &views.TransferViewFactory{})
-	charlie.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
-	charlie.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
-	charlie.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
-	charlie.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
-	charlie.RegisterViewFactory("balance", &views.BalanceViewFactory{})
-	charlie.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
-	charlie.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
-	charlie.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
-	charlie.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
-	charlie.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
-	charlie.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
-	charlie.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
-	charlie.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
-	charlie.RegisterViewFactory("RegisterOwnerIdentity", &views.RegisterOwnerIdentityViewFactory{})
-	charlie.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	manager := fscTopology.AddNodeByName("manager").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -306,37 +144,9 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithOwnerIdentity("manager.id3"),
 	)
 	manager.AddOptions(opts.ReplicationOpts.For("manager")...)
-	manager.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
-	manager.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
-	manager.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
-	manager.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigLockView{})
-	manager.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigSpendView{})
-	manager.RegisterResponder(&views.MultiSigAcceptSpendView{}, &views.MultiSigRequestSpend{})
-	manager.RegisterViewFactory("MultiSigLock", &views.MultiSigLockViewFactory{})
-	manager.RegisterViewFactory("MultiSigSpend", &views.MultiSigSpendViewFactory{})
-	manager.RegisterViewFactory("CoOwnedBalance", &views.CoOwnedBalanceViewFactory{})
-	manager.RegisterViewFactory("transfer", &views.TransferViewFactory{})
-	manager.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
-	manager.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
-	manager.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
-	manager.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
-	manager.RegisterViewFactory("balance", &views.BalanceViewFactory{})
-	manager.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
-	manager.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
-	manager.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
-	manager.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
-	manager.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
-	manager.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
-	manager.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
-	manager.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
-	manager.RegisterViewFactory("ListOwnerWalletIDsView", &views.ListOwnerWalletIDsViewFactory{})
-	manager.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
-	manager.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	if opts.FSCBasedEndorsement {
 		endorserTemplate := fscTopology.NewTemplate("endorser")
-		endorserTemplate.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
-		endorserTemplate.RegisterViewFactory("EndorserFinality", &endorser.FinalityViewFactory{})
 		endorserTemplate.AddOptions(
 			fabric.WithOrganization("Org1"),
 			fabric2.WithEndorserRole(),
@@ -384,8 +194,36 @@ func Topology(opts common.Opts) []api.Topology {
 		common2.WithOnlyUnity(tms)
 	}
 
+	// base SDKs
 	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
+	}
+
+	// business SDKs
+
+	// auditors
+	for _, node := range fscTopology.ListNodes("auditor", "newAuditor") {
+		node.AddSDK(&auditor2.SDK{})
+	}
+
+	// issuers
+	for _, node := range fscTopology.ListNodes("issuer", "newIssuer") {
+		node.AddSDK(&issuer2.SDK{})
+		if opts.AuditorAsIssuer {
+			node.AddSDK(&auditor2.SDK{})
+		}
+	}
+
+	// parties
+	for _, node := range fscTopology.ListNodes("alice", "bob", "charlie", "manager") {
+		node.AddSDK(&party.SDK{})
+	}
+
+	// endorsers
+	if opts.FSCBasedEndorsement {
+		for _, node := range fscTopology.ListNodes("endorser-1", "endorser-2", "endorser-3") {
+			node.AddSDK(&endorser.SDK{})
+		}
 	}
 
 	// any extra TMS
