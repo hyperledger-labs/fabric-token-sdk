@@ -806,17 +806,18 @@ func TransferCashWithSelector(network *integration.Infrastructure, sender *token
 	}
 }
 
-func RedeemCash(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference) {
-	RedeemCashForTMSID(network, id, wallet, typ, amount, auditor, nil)
+func RedeemCash(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference) {
+	RedeemCashForTMSID(network, id, wallet, typ, amount, auditor, issuer, nil)
 }
 
-func RedeemCashForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, tmsID *token2.TMSID) {
+func RedeemCashForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference, tmsID *token2.TMSID) {
 	txid, err := network.Client(id.ReplicaName()).CallView("redeem", common.JSONMarshall(&views.Redeem{
 		Auditor: auditor.Id(),
 		Wallet:  wallet,
 		Type:    typ,
 		Amount:  amount,
 		TMSID:   tmsID,
+		Issuer:  issuer.Id(),
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), tmsID, false)
@@ -853,6 +854,18 @@ func SwapCash(network *integration.Infrastructure, id *token3.NodeReference, wal
 
 func CheckPublicParams(network *integration.Infrastructure, ids ...*token3.NodeReference) {
 	CheckPublicParamsForTMSID(network, nil, ids...)
+}
+
+func SetBinding(network *integration.Infrastructure, ids ...*token3.NodeReference) {
+	for _, id := range ids {
+		for _, replicaName := range id.AllNames() {
+			_, err := network.Client(replicaName).CallView("SetBinding", common.JSONMarshall(&views.Binding{
+				FSCNodeIdentity: network.Identity(id.Id()), // Network node identity.
+				Alias:           nil,                       // TODO: add alias
+			}))
+			Expect(err).NotTo(HaveOccurred())
+		}
+	}
 }
 
 func GetTXStatus(network *integration.Infrastructure, id *token3.NodeReference, txID string) *views.TxStatusResponse {

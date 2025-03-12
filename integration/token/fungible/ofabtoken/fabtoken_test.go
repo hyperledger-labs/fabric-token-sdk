@@ -26,6 +26,13 @@ var _ = Describe("Orion EndToEnd", func() {
 			AfterEach(ts.TearDown)
 			It("succeeded", func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
 		})
+
+		Describe("Orion FabToken Redeem", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T1"), func() { fungible.TestRedeem(ts.II, selector) })
+		})
 	}
 })
 

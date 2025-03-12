@@ -8,6 +8,7 @@ package views
 
 import (
 	"encoding/json"
+	"github.com/pkg/errors"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -31,6 +32,8 @@ type Redeem struct {
 	Amount uint64
 	// The TMS to pick in case of multiple TMSIDs
 	TMSID *token2.TMSID
+	// Issuer is the name of the issuer that must sign the operation
+	Issuer string
 }
 
 type RedeemView struct {
@@ -51,6 +54,9 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	senderWallet := ttx.GetWallet(context, t.Wallet, ServiceOpts(t.TMSID)...)
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
+	// Attach the issuer to the transaction
+	issuer := view2.GetIdentityProvider(context).Identity(t.Issuer)
+
 	// The senders adds a new redeem operation to the transaction following the instruction received.
 	// Notice the use of `token2.WithTokenIDs(t.TokenIDs...)`. If t.TokenIDs is not empty, the Redeem
 	// function uses those tokens, otherwise the tokens will be selected on the spot.
@@ -64,6 +70,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 		senderWallet,
 		t.Type,
 		t.Amount,
+		issuer,
 		token2.WithTokenIDs(t.TokenIDs...),
 	)
 	assert.NoError(err, "failed adding new tokens")
@@ -105,4 +112,22 @@ func (p *RedeemViewFactory) NewView(in []byte) (view.View, error) {
 	err := json.Unmarshal(in, f.Redeem)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
+}
+
+type IssuerRedeemAcceptView struct{}
+
+func (a *IssuerRedeemAcceptView) Call(context view.Context) (interface{}, error) {
+	tx, err := ttx.ReceiveTransaction(context)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting transaction")
+	}
+
+	wallet := ttx.MyIssuerWallet(context, ServiceOpts(&tx.Opts.TMSID)...)
+	if wallet == nil {
+		return nil, errors.Errorf("issuer wallet not found")
+	}
+
+	// TODO: The issuer signs the transaction? How to get tokenType for issuer identity? what message to sign? each transfer?
+
+	return nil, nil
 }

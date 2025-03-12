@@ -45,6 +45,7 @@ func NewTransferService(
 // Transfer returns a TransferAction as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
 func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.OwnerWallet, tokenIDs []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+	var isRedeem bool
 	// select inputs
 	inputTokens, err := s.TokenLoader.GetTokens(tokenIDs)
 	if err != nil {
@@ -61,6 +62,9 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	// prepare outputs
 	var outs []*v1.Output
 	for _, output := range Outputs {
+		if len(output.Owner) == 0 {
+			isRedeem = true
+		}
 		outs = append(outs, &v1.Output{
 			Owner:    output.Owner,
 			Type:     output.Type,
@@ -140,6 +144,19 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		})
 	}
 
+	var extraSigners []driver.Identity
+	if isRedeem {
+		issuer := opts.Issuer
+		if issuer == nil {
+			issuers := s.PublicParametersManager.PublicParameters().Issuers()
+			if len(issuers) == 0 {
+				return nil, nil, errors.New("no issuer found")
+			}
+			issuer = issuers[0]
+		}
+		extraSigners = append(extraSigners, issuer)
+	}
+
 	// return
 	transfer := &v1.TransferAction{
 		Inputs:      tokenIDs,
@@ -150,7 +167,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	transferMetadata := &driver.TransferMetadata{
 		Inputs:       transferInputsMetadata,
 		Outputs:      transferOutputsMetadata,
-		ExtraSigners: nil,
+		ExtraSigners: extraSigners,
 	}
 
 	return transfer, transferMetadata, nil
