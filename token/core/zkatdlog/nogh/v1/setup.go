@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	pp3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
@@ -309,16 +310,16 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(&pp2.PublicParameters{
+	return pp3.Marshal(&pp2.PublicParameters{
 		Identifier: p.Label,
 		Raw:        raw,
 	})
 }
 
 func (p *PublicParams) Deserialize(raw []byte) error {
-	container := &pp2.PublicParameters{}
-	if err := json.Unmarshal(raw, container); err != nil {
-		return err
+	container, err := pp3.Unmarshal(raw)
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
 	if container.Identifier != p.Label {
 		return errors.Errorf("invalid identifier, expecting [%s], got [%s]", p.Label, container.Identifier)

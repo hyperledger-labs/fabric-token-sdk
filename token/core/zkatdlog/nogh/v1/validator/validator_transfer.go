@@ -11,7 +11,6 @@ import (
 	"time"
 
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -157,7 +156,7 @@ func TransferHTLCValidate(ctx *Context) error {
 		}
 		if owner.Type == htlc.ScriptType {
 			script := &htlc.Script{}
-			err = json.Unmarshal(owner.Identity, script)
+			err = script.FromBytes(owner.Identity)
 			if err != nil {
 				return err
 			}
