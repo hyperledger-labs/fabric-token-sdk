@@ -14,7 +14,6 @@ import (
 	views1 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/pkg/errors"
-	"go.uber.org/dig"
 )
 
 type SDK struct {
@@ -29,33 +28,32 @@ func (p *SDK) Install() error {
 	if err := p.SDK.Install(); err != nil {
 		return err
 	}
-	if err := p.SDK.Container().Invoke(func(in struct {
-		dig.In
-		Registry driver.Registry // replace this with an external interface
-	}) error {
+	if err := p.SDK.Container().Invoke(func(
+		registry driver.Registry, // replace this with an external interface
+	) error {
 		return errors2.Join(
-			in.Registry.RegisterFactory("issue", &views.IssueCashViewFactory{}),
-			in.Registry.RegisterFactory("transfer", &views.TransferViewFactory{}),
-			in.Registry.RegisterFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{}),
-			in.Registry.RegisterFactory("redeem", &views.RedeemViewFactory{}),
-			in.Registry.RegisterFactory("balance", &views.BalanceViewFactory{}),
-			in.Registry.RegisterFactory("historyIssuedToken", &views.ListIssuedTokensViewFactory{}),
-			in.Registry.RegisterFactory("issuedTokenQuery", &views.ListIssuedTokensViewFactory{}),
-			in.Registry.RegisterFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{}),
-			in.Registry.RegisterFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{}),
-			in.Registry.RegisterFactory("transactionInfo", &views.TransactionInfoViewFactory{}),
-			in.Registry.RegisterFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{}),
-			in.Registry.RegisterFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{}),
-			in.Registry.RegisterFactory("RegisterIssuerIdentity", &views.RegisterIssuerIdentityViewFactory{}),
-			in.Registry.RegisterFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{}),
-			in.Registry.RegisterFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{}),
-			in.Registry.RegisterFactory("GetPublicParams", &views.GetPublicParamsViewFactory{}),
-			in.Registry.RegisterFactory("SetKVSEntry", &views.SetKVSEntryViewFactory{}),
-			in.Registry.RegisterFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{}),
-			in.Registry.RegisterFactory("TxFinality", &views1.TxFinalityViewFactory{}),
-			in.Registry.RegisterFactory("issue", &views.IssueCashViewFactory{}),
-			in.Registry.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{}),
-			in.Registry.RegisterResponder(&views.TokensUpgradeResponderView{}, &views.TokensUpgradeInitiatorView{}),
+			registry.RegisterFactory("issue", &views.IssueCashViewFactory{}),
+			registry.RegisterFactory("transfer", &views.TransferViewFactory{}),
+			registry.RegisterFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{}),
+			registry.RegisterFactory("redeem", &views.RedeemViewFactory{}),
+			registry.RegisterFactory("balance", &views.BalanceViewFactory{}),
+			registry.RegisterFactory("historyIssuedToken", &views.ListIssuedTokensViewFactory{}),
+			registry.RegisterFactory("issuedTokenQuery", &views.ListIssuedTokensViewFactory{}),
+			registry.RegisterFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{}),
+			registry.RegisterFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{}),
+			registry.RegisterFactory("transactionInfo", &views.TransactionInfoViewFactory{}),
+			registry.RegisterFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{}),
+			registry.RegisterFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{}),
+			registry.RegisterFactory("RegisterIssuerIdentity", &views.RegisterIssuerIdentityViewFactory{}),
+			registry.RegisterFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{}),
+			registry.RegisterFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{}),
+			registry.RegisterFactory("GetPublicParams", &views.GetPublicParamsViewFactory{}),
+			registry.RegisterFactory("SetKVSEntry", &views.SetKVSEntryViewFactory{}),
+			registry.RegisterFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{}),
+			registry.RegisterFactory("TxFinality", &views1.TxFinalityViewFactory{}),
+			registry.RegisterFactory("issue", &views.IssueCashViewFactory{}),
+			registry.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{}),
+			registry.RegisterResponder(&views.TokensUpgradeResponderView{}, &views.TokensUpgradeInitiatorView{}),
 		)
 	}); err != nil {
 		return errors.WithMessage(err, "failed to install issuer's views")
