@@ -14,8 +14,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
-	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	auditor3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/auditor"
+	issuer3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/issuer"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/party"
 )
 
 const (
@@ -38,25 +39,7 @@ func Topology(opts common.Opts) []api.Topology {
 	fscTopology.P2PCommunicationType = opts.CommType
 	fscTopology.SetLogging(opts.FSCLogSpec, "")
 
-	issuer := fscTopology.NewTemplate("issuer").
-		RegisterViewFactory("issue", &views.IssueCashViewFactory{}).
-		RegisterViewFactory("transfer", &views.TransferViewFactory{}).
-		RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{}).
-		RegisterViewFactory("redeem", &views.RedeemViewFactory{}).
-		RegisterViewFactory("balance", &views.BalanceViewFactory{}).
-		RegisterViewFactory("historyIssuedToken", &views.ListIssuedTokensViewFactory{}).
-		RegisterViewFactory("issuedTokenQuery", &views.ListIssuedTokensViewFactory{}).
-		RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{}).
-		RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{}).
-		RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{}).
-		RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{}).
-		RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{}).
-		RegisterViewFactory("RegisterIssuerIdentity", &views.RegisterIssuerIdentityViewFactory{}).
-		RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{}).
-		RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{}).
-		RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{}).
-		RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
-
+	issuer := fscTopology.NewTemplate("issuer")
 	issuer1 := fscTopology.AddNodeFromTemplate("issuer1", issuer).
 		AddOptions(
 			fabric.WithOrganization("Org1"),
@@ -72,22 +55,7 @@ func Topology(opts common.Opts) []api.Topology {
 		).
 		AddOptions(opts.ReplicationOpts.For("issuer2")...)
 
-	auditor := fscTopology.NewTemplate("auditor").
-		RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{}).
-		RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{}).
-		RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{}).
-		RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{}).
-		RegisterViewFactory("balance", &views.BalanceViewFactory{}).
-		RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{}).
-		RegisterViewFactory("SetTransactionAuditStatus", &views.SetTransactionAuditStatusViewFactory{}).
-		RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{}).
-		RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{}).
-		RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{}).
-		RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{}).
-		RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{}).
-		RegisterViewFactory("RevokeUser", &views.RevokeUserViewFactory{}).
-		RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
-
+	auditor := fscTopology.NewTemplate("auditor")
 	auditor1 := fscTopology.AddNodeFromTemplate("auditor1", auditor).
 		AddOptions(
 			fabric.WithOrganization("Org1"),
@@ -103,72 +71,17 @@ func Topology(opts common.Opts) []api.Topology {
 		).
 		AddOptions(opts.ReplicationOpts.For("auditor2")...)
 
-	alice := fscTopology.AddNodeByName("alice").
-		AddOptions(
-			fabric.WithOrganization("Org1"),
-			fabric.WithAnonymousIdentity(),
-			token.WithOwnerIdentity("alice"),
-		).
-		AddOptions(opts.ReplicationOpts.For("alice")...).
-		RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{}).
-		RegisterResponder(&views.AcceptCashView{}, &views.TransferView{}).
-		RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{}).
-		RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{}).
-		RegisterViewFactory("transfer", &views.TransferViewFactory{}).
-		RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{}).
-		RegisterViewFactory("redeem", &views.RedeemViewFactory{}).
-		RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{}).
-		RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{}).
-		RegisterViewFactory("balance", &views.BalanceViewFactory{}).
-		RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{}).
-		RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{}).
-		RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{}).
-		RegisterViewFactory("prepareTransfer", &views.PrepareTransferViewFactory{}).
-		RegisterViewFactory("broadcastPreparedTransfer", &views.BroadcastPreparedTransferViewFactory{}).
-		RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{}).
-		RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{}).
-		RegisterViewFactory("SetTransactionOwnerStatus", &views.SetTransactionOwnerStatusViewFactory{}).
-		RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{}).
-		RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{}).
-		RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{}).
-		RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{}).
-		RegisterViewFactory("MaliciousTransfer", &views.MaliciousTransferViewFactory{}).
-		RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{}).
-		RegisterViewFactory("SetSpendableFlag", &views.SetSpendableFlagViewFactory{})
+	alice := fscTopology.AddNodeByName("alice").AddOptions(
+		fabric.WithOrganization("Org1"),
+		fabric.WithAnonymousIdentity(),
+		token.WithOwnerIdentity("alice"),
+	).AddOptions(opts.ReplicationOpts.For("alice")...)
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		token.WithOwnerIdentity("bob"),
-	).
-		AddOptions(opts.ReplicationOpts.For("bob")...).
-		RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{}).
-		RegisterResponder(&views.AcceptCashView{}, &views.TransferView{}).
-		RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{}).
-		RegisterResponder(&views.AcceptCashView{}, &views.MaliciousTransferView{}).
-		RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{}).
-		RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{}).
-		RegisterViewFactory("transfer", &views.TransferViewFactory{}).
-		RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{}).
-		RegisterViewFactory("redeem", &views.RedeemViewFactory{}).
-		RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{}).
-		RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{}).
-		RegisterViewFactory("balance", &views.BalanceViewFactory{}).
-		RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{}).
-		RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{}).
-		RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{}).
-		RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{}).
-		RegisterViewFactory("prepareTransfer", &views.PrepareTransferViewFactory{}).
-		RegisterViewFactory("TokenSelectorUnlock", &views.TokenSelectorUnlockViewFactory{}).
-		RegisterViewFactory("FinalityWithTimeout", &views.FinalityWithTimeoutViewFactory{}).
-		RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{}).
-		RegisterViewFactory("SetTransactionOwnerStatus", &views.SetTransactionOwnerStatusViewFactory{}).
-		RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{}).
-		RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{}).
-		RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{}).
-		RegisterViewFactory("GetRevocationHandle", &views.GetRevocationHandleViewFactory{}).
-		RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{}).
-		RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
+	).AddOptions(opts.ReplicationOpts.For("bob")...)
 
 	// Token topology
 	tokenTopology := token.NewTopology()
@@ -191,8 +104,28 @@ func Topology(opts common.Opts) []api.Topology {
 	// FSC topology
 	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 
-	for _, sdk := range opts.SDKs {
-		fscTopology.AddSDK(sdk)
+	// set the SDKs
+	// auditors
+	for _, node := range fscTopology.ListNodes("auditor1", "auditor2") {
+		node.AddSDKWithBase(opts.SDKs[0], &auditor3.SDK{})
+	}
+
+	// issuers
+	for _, node := range fscTopology.ListNodes("issuer1", "issuer2") {
+		node.AddSDKWithBase(opts.SDKs[0], &issuer3.SDK{})
+	}
+
+	// parties
+	for _, node := range fscTopology.ListNodes("alice", "bob") {
+		node.AddSDKWithBase(opts.SDKs[0], &party.SDK{})
+	}
+
+	// additional nodes that are backend specific
+	fscTopology.ListNodes("lib-p2p-bootstrap-node")[0].AddSDK(opts.SDKs[0])
+
+	// add the rest of the SDKs
+	for i := 1; i < len(opts.SDKs); i++ {
+		fscTopology.AddSDK(opts.SDKs[i])
 	}
 
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}
