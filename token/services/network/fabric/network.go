@@ -361,13 +361,6 @@ func (n *Network) Ledger() (driver.Ledger, error) {
 	return n.ledger, nil
 }
 
-func (n *Network) ProcessNamespace(namespace string) error {
-	if err := n.ch.Committer().ProcessNamespace(namespace); err != nil {
-		return errors.WithMessagef(err, "failed to register processing of namespace [%s]", namespace)
-	}
-	return nil
-}
-
 type loader struct {
 	newVault NewVaultFunc
 	name     string
