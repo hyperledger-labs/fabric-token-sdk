@@ -89,6 +89,10 @@ func (s *Script) Validate(timeReference time.Time) error {
 	return nil
 }
 
+func (s *Script) FromBytes(raw []byte) error {
+	return json.Unmarshal(raw, s)
+}
+
 // ScriptAuth implements the Authorization interface for this script
 type ScriptAuth struct {
 	WalletService driver.WalletService
