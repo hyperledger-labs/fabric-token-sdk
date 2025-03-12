@@ -222,6 +222,13 @@ func Topology(opts common.Opts) []api.Topology {
 			}
 		}
 
+		// additional nodes that are backend specific
+		if opts.Backend == "orion" {
+			fscTopology.ListNodes("custodian")[0].AddSDK(opts.SDKs[0])
+		} else {
+			fscTopology.ListNodes("lib-p2p-bootstrap-node")[0].AddSDK(opts.SDKs[0])
+		}
+
 		// add the rest of the SDKs
 		for i := 1; i < len(opts.SDKs); i++ {
 			fscTopology.AddSDK(opts.SDKs[i])

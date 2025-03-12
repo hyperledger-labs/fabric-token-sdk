@@ -67,7 +67,6 @@ var selectorProviders = map[sdriver.Driver]any{
 
 type SDK struct {
 	dig2.SDK
-	registry node.Registry
 }
 
 func (p *SDK) TokenEnabled() bool {
@@ -75,9 +74,7 @@ func (p *SDK) TokenEnabled() bool {
 }
 
 func NewSDK(registry node.Registry) *SDK {
-	sdk := NewFrom(fabricsdk.NewSDK(registry))
-	sdk.registry = registry
-	return sdk
+	return NewFrom(fabricsdk.NewSDK(registry))
 }
 
 func NewFrom(sdk dig2.SDK) *SDK {
