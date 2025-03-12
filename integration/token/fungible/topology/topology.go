@@ -194,35 +194,37 @@ func Topology(opts common.Opts) []api.Topology {
 		common2.WithOnlyUnity(tms)
 	}
 
-	// base SDKs
-	for _, sdk := range opts.SDKs {
-		fscTopology.AddSDK(sdk)
-	}
-
-	// business SDKs
-
-	// auditors
-	for _, node := range fscTopology.ListNodes("auditor", "newAuditor") {
-		node.AddSDK(&auditor2.SDK{})
-	}
-
-	// issuers
-	for _, node := range fscTopology.ListNodes("issuer", "newIssuer") {
-		node.AddSDK(&issuer2.SDK{})
-		if opts.AuditorAsIssuer {
-			node.AddSDK(&auditor2.SDK{})
+	if len(opts.SDKs) > 0 {
+		// business SDKs
+		// auditors
+		for _, node := range fscTopology.ListNodes("auditor", "newAuditor") {
+			node.AddSDKWithBase(opts.SDKs[0], &auditor2.SDK{})
 		}
-	}
 
-	// parties
-	for _, node := range fscTopology.ListNodes("alice", "bob", "charlie", "manager") {
-		node.AddSDK(&party.SDK{})
-	}
+		// issuers
+		for _, node := range fscTopology.ListNodes("issuer", "newIssuer") {
+			if opts.AuditorAsIssuer {
+				node.AddSDKWithBase(opts.SDKs[0], &issuer2.SDK{}, &auditor2.SDK{})
+			} else {
+				node.AddSDKWithBase(opts.SDKs[0], &issuer2.SDK{})
+			}
+		}
 
-	// endorsers
-	if opts.FSCBasedEndorsement {
-		for _, node := range fscTopology.ListNodes("endorser-1", "endorser-2", "endorser-3") {
-			node.AddSDK(&endorser.SDK{})
+		// parties
+		for _, node := range fscTopology.ListNodes("alice", "bob", "charlie", "manager") {
+			node.AddSDKWithBase(opts.SDKs[0], &party.SDK{})
+		}
+
+		// endorsers
+		if opts.FSCBasedEndorsement {
+			for _, node := range fscTopology.ListNodes("endorser-1", "endorser-2", "endorser-3") {
+				node.AddSDKWithBase(opts.SDKs[0], &endorser.SDK{})
+			}
+		}
+
+		// add the rest of the SDKs
+		for i := 1; i < len(opts.SDKs); i++ {
+			fscTopology.AddSDK(opts.SDKs[i])
 		}
 	}
 
