@@ -10,7 +10,7 @@ import (
 	errors2 "errors"
 
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	views1 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/pkg/errors"
@@ -29,7 +29,7 @@ func (p *SDK) Install() error {
 		return err
 	}
 	if err := p.SDK.Container().Invoke(func(
-		registry driver.Registry, // replace this with an external interface
+		registry *view.Registry,
 	) error {
 		return errors2.Join(
 			registry.RegisterFactory("registerAuditor", &views.RegisterAuditorViewFactory{}),
