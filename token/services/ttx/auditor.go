@@ -18,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
@@ -113,18 +112,6 @@ func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	// register responder
 	if err := view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{}); err != nil {
 		return nil, errors.Wrapf(err, "failed to register auditor view")
-	}
-	// enable processing of all token transactions for the given network and namespace
-	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
-	if tms == nil {
-		return nil, errors.Errorf("cannot find tms for [%s]", r.TMSID)
-	}
-	net := network.GetInstance(context, tms.Network(), tms.Channel())
-	if net == nil {
-		return nil, errors.Errorf("cannot find network for [%s]", tms.ID())
-	}
-	if err := net.ProcessNamespace(tms.Namespace()); err != nil {
-		return nil, errors.WithMessagef(err, "failed to register namespace for processing [%s]", tms.Network())
 	}
 	return nil, nil
 }
