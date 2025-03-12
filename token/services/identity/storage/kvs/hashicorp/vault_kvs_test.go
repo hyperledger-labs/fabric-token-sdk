@@ -64,6 +64,9 @@ func testRound(t *testing.T, client *vault.Client) {
 	assert.NoError(t, err)
 	assert.Equal(t, &stuff{"claws", 2}, val)
 
+	results := kvstore.GetExisting(k1, k2)
+	assert.True(t, len(results) == 2)
+
 	it, err := kvstore.GetByPartialCompositeID("k", []string{})
 	assert.NoError(t, err)
 	defer it.Close()
@@ -85,6 +88,11 @@ func testRound(t *testing.T, client *vault.Client) {
 
 	assert.NoError(t, kvstore.Delete(k2))
 	assert.False(t, kvstore.Exists(k2))
+
+	results = kvstore.GetExisting(k1, k2)
+	assert.True(t, len(results) == 1)
+	assert.True(t, results[0] == k1)
+
 	val = &stuff{}
 	err = kvstore.Get(k2, val)
 	assert.Error(t, err)
@@ -100,6 +108,11 @@ func testRound(t *testing.T, client *vault.Client) {
 			assert.Fail(t, "expected 2 entries in the range, found more")
 		}
 	}
+
+	// Test the iterator calling Next without hasNext first in case the
+	// iterator has been exhausted
+	_, err = it.Next(val)
+	assert.Error(t, err)
 
 	it2, err := kvstore.GetByPartialCompositeID("k", []string{})
 	assert.NoError(t, err)
@@ -131,6 +144,9 @@ func testRound(t *testing.T, client *vault.Client) {
 	assert.Equal(t, val, val2)
 	assert.NoError(t, kvstore.Delete(k))
 	assert.False(t, kvstore.Exists(k))
+
+	results = kvstore.GetExisting(k)
+	assert.True(t, len(results) == 0)
 }
 
 func testParallelWrites(t *testing.T, client *vault.Client) {

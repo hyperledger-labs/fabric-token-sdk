@@ -18,8 +18,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-const DATA = "data"
-const VALUE = "value"
+const (
+	DATA  = "data"
+	VALUE = "value"
+)
 
 var (
 	logger = logging.MustGetLogger("view-sdk.kvs")
@@ -205,7 +207,7 @@ func (i *vaultIterator) Close() error {
 
 func (i *vaultIterator) Next(state interface{}) (string, error) {
 	if i.next == nil {
-		return "", errors.Errorf("nil i.next in the vault terator")
+		return "", errors.Errorf("no more elements in the iterator")
 	}
 	err := i.client.Get(*i.next, state)
 	return *i.next, err
