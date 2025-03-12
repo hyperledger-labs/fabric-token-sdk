@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/pkg/errors"
-	"go.uber.org/dig"
 )
 
 type SDK struct {
@@ -31,13 +30,12 @@ func (p *SDK) Install() error {
 		return err
 	}
 
-	if err := p.SDK.Container().Invoke(func(in struct {
-		dig.In
-		Registry driver.Registry // replace this with an external interface
-	}) error {
+	if err := p.SDK.Container().Invoke(func(
+		registry driver.Registry, // replace this with an external interface
+	) error {
 		return errors2.Join(
-			in.Registry.RegisterFactory("GetPublicParams", &views.GetPublicParamsViewFactory{}),
-			in.Registry.RegisterFactory("EndorserFinality", &endorser.FinalityViewFactory{}),
+			registry.RegisterFactory("GetPublicParams", &views.GetPublicParamsViewFactory{}),
+			registry.RegisterFactory("EndorserFinality", &endorser.FinalityViewFactory{}),
 		)
 	}); err != nil {
 		return errors.WithMessage(err, "failed to install endorser's views")
