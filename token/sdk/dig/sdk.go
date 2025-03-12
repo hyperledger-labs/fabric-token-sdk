@@ -228,15 +228,6 @@ func (p *SDK) Install() error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed post-inititialization")
 	}
-
-	// register dig's container in the service provider
-	if p.registry != nil {
-		// register dig's container
-		if err := p.registry.RegisterService(p.Container()); err != nil {
-			return errors.WithMessagef(err, "failed registering dig's container")
-		}
-	}
-
 	return nil
 }
 
