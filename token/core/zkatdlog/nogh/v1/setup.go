@@ -15,13 +15,15 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	pp3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	"github.com/pkg/errors"
 )
 
@@ -275,7 +277,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize range proof parameters")
 	}
-	issuers, err := utils.ToProtosSliceFunc(p.IssuerIDs, func(id driver.Identity) (*pp.Identity, error) {
+	issuers, err := protos.ToProtosSliceFunc(p.IssuerIDs, func(id driver.Identity) (*pp.Identity, error) {
 		return &pp.Identity{
 			Raw: id,
 		}, nil
@@ -283,7 +285,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize issuer")
 	}
-	idemixIssuerPublicKeys, err := utils.ToProtosSlice[pp.IdemixIssuerPublicKey, *IdemixIssuerPublicKey](p.IdemixIssuerPublicKeys)
+	idemixIssuerPublicKeys, err := protos.ToProtosSlice[pp.IdemixIssuerPublicKey, *IdemixIssuerPublicKey](p.IdemixIssuerPublicKeys)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize idemix issuer public keys")
 	}
@@ -308,16 +310,16 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(&pp2.PublicParameters{
+	return pp3.Marshal(&pp2.PublicParameters{
 		Identifier: p.Label,
 		Raw:        raw,
 	})
 }
 
 func (p *PublicParams) Deserialize(raw []byte) error {
-	container := &pp2.PublicParameters{}
-	if err := json.Unmarshal(raw, container); err != nil {
-		return err
+	container, err := pp3.Unmarshal(raw)
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
 	if container.Identifier != p.Label {
 		return errors.Errorf("invalid identifier, expecting [%s], got [%s]", p.Label, container.Identifier)
@@ -341,7 +343,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
 	p.PedersenGenerators = pg
-	issuers, err := utils.FromProtosSliceFunc2(publicParams.Issuers, func(id *pp.Identity) (driver.Identity, error) {
+	issuers, err := protos.FromProtosSliceFunc2(publicParams.Issuers, func(id *pp.Identity) (driver.Identity, error) {
 		if id == nil {
 			return nil, nil
 		}
@@ -352,8 +354,8 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	}
 	p.IssuerIDs = issuers
 
-	p.IdemixIssuerPublicKeys = utils.GenericSliceOfPointers[IdemixIssuerPublicKey](len(publicParams.IdemixIssuerPublicKeys))
-	err = utils.FromProtosSlice[pp.IdemixIssuerPublicKey, *IdemixIssuerPublicKey](publicParams.IdemixIssuerPublicKeys, p.IdemixIssuerPublicKeys)
+	p.IdemixIssuerPublicKeys = slices.GenericSliceOfPointers[IdemixIssuerPublicKey](len(publicParams.IdemixIssuerPublicKeys))
+	err = protos.FromProtosSlice[pp.IdemixIssuerPublicKey, *IdemixIssuerPublicKey](publicParams.IdemixIssuerPublicKeys, p.IdemixIssuerPublicKeys)
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize idemix issuer public keys")
 	}

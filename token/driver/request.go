@@ -12,6 +12,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -147,7 +149,7 @@ type IssueOutputMetadata struct {
 }
 
 func (i *IssueOutputMetadata) ToProtos() (*request.OutputMetadata, error) {
-	receivers, err := utils.ToProtosSlice[request.AuditableIdentity, *AuditableIdentity](i.Receivers)
+	receivers, err := protos.ToProtosSlice[request.AuditableIdentity, *AuditableIdentity](i.Receivers)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling receivers")
 	}
@@ -162,8 +164,8 @@ func (i *IssueOutputMetadata) FromProtos(outputsMetadata *request.OutputMetadata
 		return nil
 	}
 	i.OutputMetadata = outputsMetadata.Metadata
-	i.Receivers = utils.GenericSliceOfPointers[AuditableIdentity](len(outputsMetadata.Receivers))
-	if err := utils.FromProtosSlice(outputsMetadata.Receivers, i.Receivers); err != nil {
+	i.Receivers = slices.GenericSliceOfPointers[AuditableIdentity](len(outputsMetadata.Receivers))
+	if err := protos.FromProtosSlice(outputsMetadata.Receivers, i.Receivers); err != nil {
 		return errors.Wrap(err, "failed unmarshalling receivers metadata")
 	}
 	return nil
@@ -194,11 +196,11 @@ func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling issuer [%v]", i.Issuer)
 	}
-	inputs, err := utils.ToProtosSlice(i.Inputs)
+	inputs, err := protos.ToProtosSlice(i.Inputs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling inputs")
 	}
-	outputs, err := utils.ToProtosSlice(i.Outputs)
+	outputs, err := protos.ToProtosSlice(i.Outputs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
@@ -216,13 +218,13 @@ func (i *IssueMetadata) FromProtos(issueMetadata *request.IssueMetadata) error {
 		return errors.Wrapf(err, "failed unmarshalling issuer [%v]", issueMetadata.Issuer)
 	}
 	i.Issuer = *issuer
-	i.Inputs = utils.GenericSliceOfPointers[IssueInputMetadata](len(issueMetadata.Inputs))
-	err := utils.FromProtosSlice[request.IssueInputMetadata, *IssueInputMetadata](issueMetadata.Inputs, i.Inputs)
+	i.Inputs = slices.GenericSliceOfPointers[IssueInputMetadata](len(issueMetadata.Inputs))
+	err := protos.FromProtosSlice[request.IssueInputMetadata, *IssueInputMetadata](issueMetadata.Inputs, i.Inputs)
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling input metadata")
 	}
-	i.Outputs = utils.GenericSliceOfPointers[IssueOutputMetadata](len(issueMetadata.Outputs))
-	err = utils.FromProtosSlice(issueMetadata.Outputs, i.Outputs)
+	i.Outputs = slices.GenericSliceOfPointers[IssueOutputMetadata](len(issueMetadata.Outputs))
+	err = protos.FromProtosSlice(issueMetadata.Outputs, i.Outputs)
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling output metadata")
 	}
@@ -250,7 +252,7 @@ type TransferInputMetadata struct {
 }
 
 func (t *TransferInputMetadata) ToProtos() (*request.TransferInputMetadata, error) {
-	senders, err := utils.ToProtosSlice(t.Senders)
+	senders, err := protos.ToProtosSlice(t.Senders)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling senders")
 	}
@@ -269,8 +271,8 @@ func (t *TransferInputMetadata) FromProtos(transferInputMetadata *request.Transf
 		return nil
 	}
 	t.TokenID = ToTokenID(transferInputMetadata.TokenId)
-	t.Senders = utils.GenericSliceOfPointers[AuditableIdentity](len(transferInputMetadata.Senders))
-	if err := utils.FromProtosSlice(transferInputMetadata.Senders, t.Senders); err != nil {
+	t.Senders = slices.GenericSliceOfPointers[AuditableIdentity](len(transferInputMetadata.Senders))
+	if err := protos.FromProtosSlice(transferInputMetadata.Senders, t.Senders); err != nil {
 		return errors.Wrap(err, "failed unmarshalling token metadata")
 	}
 	return nil
@@ -286,7 +288,7 @@ type TransferOutputMetadata struct {
 }
 
 func (t *TransferOutputMetadata) ToProtos() (*request.OutputMetadata, error) {
-	receivers, err := utils.ToProtosSlice(t.Receivers)
+	receivers, err := protos.ToProtosSlice(t.Receivers)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling receivers")
 	}
@@ -303,8 +305,8 @@ func (t *TransferOutputMetadata) FromProtos(transferOutputMetadata *request.Outp
 	}
 	t.OutputMetadata = transferOutputMetadata.Metadata
 	t.OutputAuditInfo = transferOutputMetadata.AuditInfo
-	t.Receivers = utils.GenericSliceOfPointers[AuditableIdentity](len(transferOutputMetadata.Receivers))
-	if err := utils.FromProtosSlice(transferOutputMetadata.Receivers, t.Receivers); err != nil {
+	t.Receivers = slices.GenericSliceOfPointers[AuditableIdentity](len(transferOutputMetadata.Receivers))
+	if err := protos.FromProtosSlice(transferOutputMetadata.Receivers, t.Receivers); err != nil {
 		return errors.Wrap(err, "failed unmarshalling receivers metadata")
 	}
 	return nil
@@ -342,11 +344,11 @@ func (t *TransferMetadata) TokenIDAt(index int) *token.ID {
 }
 
 func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
-	inputs, err := utils.ToProtosSlice[request.TransferInputMetadata, *TransferInputMetadata](t.Inputs)
+	inputs, err := protos.ToProtosSlice[request.TransferInputMetadata, *TransferInputMetadata](t.Inputs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling inputs")
 	}
-	outputs, err := utils.ToProtosSlice(t.Outputs)
+	outputs, err := protos.ToProtosSlice(t.Outputs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
@@ -358,12 +360,12 @@ func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
 }
 
 func (t *TransferMetadata) FromProtos(transferMetadata *request.TransferMetadata) error {
-	t.Inputs = utils.GenericSliceOfPointers[TransferInputMetadata](len(transferMetadata.Inputs))
-	if err := utils.FromProtosSlice(transferMetadata.Inputs, t.Inputs); err != nil {
+	t.Inputs = slices.GenericSliceOfPointers[TransferInputMetadata](len(transferMetadata.Inputs))
+	if err := protos.FromProtosSlice(transferMetadata.Inputs, t.Inputs); err != nil {
 		return errors.Wrap(err, "failed unmarshalling inputs")
 	}
-	t.Outputs = utils.GenericSliceOfPointers[TransferOutputMetadata](len(transferMetadata.Outputs))
-	if err := utils.FromProtosSlice(transferMetadata.Outputs, t.Outputs); err != nil {
+	t.Outputs = slices.GenericSliceOfPointers[TransferOutputMetadata](len(transferMetadata.Outputs))
+	if err := protos.FromProtosSlice(transferMetadata.Outputs, t.Outputs); err != nil {
 		return errors.Wrap(err, "failed unmarshalling outputs")
 	}
 	t.ExtraSigners = FromProtoIdentitySlice(transferMetadata.ExtraSigners)

@@ -8,6 +8,7 @@ package idemix
 
 import (
 	"encoding/hex"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
@@ -26,16 +28,21 @@ import (
 )
 
 func TestNewKeyManager(t *testing.T) {
+	testNewKeyManager(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
+	testNewKeyManager(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+}
+
+func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
 	// prepare
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
-	config, err := crypto2.NewConfig("./testdata/idemix")
+	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
 	tracker := kvs2.NewTrackedMemoryFrom(kvs)
-	keyStore, err := crypto2.NewKeyStore(math.FP256BN_AMCL, tracker)
+	keyStore, err := crypto2.NewKeyStore(curveID, tracker)
 	assert.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
 
 	// new key manager loaded from file
@@ -47,7 +54,7 @@ func TestNewKeyManager(t *testing.T) {
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
 	assert.Equal(t, IdentityType, keyManager.IdentityType())
-	assert.Equal(t, "Idemix KeyManager [dJZK5i5D2i5B8S9DsVWDFzdHSJE/jcTLk9VaJzFB4fo=]", keyManager.String())
+	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
 	assert.Equal(t, tracker.PutCounter, 1)
 	assert.Equal(t, tracker.GetCounter, 0)
 
@@ -60,7 +67,7 @@ func TestNewKeyManager(t *testing.T) {
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
 	assert.Equal(t, IdentityType, keyManager.IdentityType())
-	assert.Equal(t, "Idemix KeyManager [dJZK5i5D2i5B8S9DsVWDFzdHSJE/jcTLk9VaJzFB4fo=]", keyManager.String())
+	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
 	assert.Equal(t, tracker.PutCounter, 1) // this is still 1 because the key is loaded using the SKI
 	assert.Equal(t, tracker.GetCounter, 1) // one get for the user key
 	assert.Equal(t, tracker.GetHistory[0].Key, hex.EncodeToString(config.Signer.Ski))
@@ -74,7 +81,7 @@ func TestNewKeyManager(t *testing.T) {
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
 	assert.Equal(t, IdentityType, keyManager.IdentityType())
-	assert.Equal(t, "Idemix KeyManager [dJZK5i5D2i5B8S9DsVWDFzdHSJE/jcTLk9VaJzFB4fo=]", keyManager.String())
+	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
 	assert.Equal(t, tracker.PutCounter, 1) // this is still 1 because the key is loaded using the SKI
 	assert.Equal(t, tracker.GetCounter, 2) // another get for the user key
 	assert.Equal(t, tracker.GetHistory[1].Key, hex.EncodeToString(config.Signer.Ski))
@@ -105,6 +112,11 @@ func TestNewKeyManager(t *testing.T) {
 }
 
 func TestIdentityWithEidRhNymPolicy(t *testing.T) {
+	testIdentityWithEidRhNymPolicy(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
+	testIdentityWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+}
+
+func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
 	// prepare
 	registry := registry2.New()
 	kvs, err := kvs2.NewInMemory()
@@ -112,12 +124,12 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, registry.RegisterService(kvs))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
-	config, err := crypto2.NewConfig("./testdata/idemix")
+	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
 	tracker := kvs2.NewTrackedMemoryFrom(kvs)
-	keyStore, err := crypto2.NewKeyStore(math.FP256BN_AMCL, tracker)
+	keyStore, err := crypto2.NewKeyStore(curveID, tracker)
 	assert.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
 
 	// init key manager
@@ -212,6 +224,11 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 }
 
 func TestIdentityStandard(t *testing.T) {
+	testIdentityStandard(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
+	testIdentityStandard(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+}
+
+func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
 	registry := registry2.New()
 
 	kvs, err := kvs2.NewInMemory()
@@ -220,12 +237,12 @@ func TestIdentityStandard(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := crypto2.NewConfig("./testdata/idemix")
+	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
 
-	keyStore, err := crypto2.NewKeyStore(math.FP256BN_AMCL, kvs)
+	keyStore, err := crypto2.NewKeyStore(curveID, kvs)
 	assert.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
 	p, err := NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
@@ -245,9 +262,9 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(math.FP256BN_AMCL, kvs)
+	keyStore, err = crypto2.NewKeyStore(curveID, kvs)
 	assert.NoError(t, err)
-	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
 	p, err = NewKeyManager(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
@@ -267,9 +284,9 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(math.FP256BN_AMCL, kvs)
+	keyStore, err = crypto2.NewKeyStore(curveID, kvs)
 	assert.NoError(t, err)
-	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
 	p, err = NewKeyManager(config, sigService, Any, cryptoProvider)
 	assert.NoError(t, err)
@@ -291,6 +308,11 @@ func TestIdentityStandard(t *testing.T) {
 }
 
 func TestAuditWithEidRhNymPolicy(t *testing.T) {
+	testAuditWithEidRhNymPolicy(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
+	testAuditWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+}
+
+func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
 	registry := registry2.New()
 
 	kvs, err := kvs2.NewInMemory()
@@ -299,21 +321,21 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := crypto2.NewConfig("./testdata/idemix")
+	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
-	keyStore, err := crypto2.NewKeyStore(math.FP256BN_AMCL, kvs)
+	keyStore, err := crypto2.NewKeyStore(curveID, kvs)
 	assert.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
 	p, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	config, err = crypto2.NewConfig("./testdata/idemix2")
+	config, err = crypto2.NewConfig(configPath + "2")
 	assert.NoError(t, err)
-	keyStore, err = crypto2.NewKeyStore(math.FP256BN_AMCL, kvs)
+	keyStore, err = crypto2.NewKeyStore(curveID, kvs)
 	assert.NoError(t, err)
-	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
 	p2, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
@@ -341,6 +363,11 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 }
 
 func TestKeyManager_DeserializeSigner(t *testing.T) {
+	testKeyManager_DeserializeSigner(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
+	testKeyManager_DeserializeSigner(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+}
+
+func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
 	// prepare
 	registry := registry2.New()
 	kvs, err := kvs2.NewInMemory()
@@ -348,20 +375,20 @@ func TestKeyManager_DeserializeSigner(t *testing.T) {
 	assert.NoError(t, registry.RegisterService(kvs))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
-	keyStore, err := crypto2.NewKeyStore(math.FP256BN_AMCL, kvs)
+	keyStore, err := crypto2.NewKeyStore(curveID, kvs)
 	assert.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
 
 	// first key manager
-	config, err := crypto2.NewConfig("./testdata/sameissuer/idemix")
+	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
 	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 
 	// second key manager
-	config, err = crypto2.NewConfig("./testdata/sameissuer/idemix2")
+	config, err = crypto2.NewConfig(configPath + "2")
 	assert.NoError(t, err)
 	keyManager2, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
@@ -413,9 +440,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
+	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
 	assert.NoError(t, err)
-	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/charlie.ExtraId2", true)
+	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
 	keyStore, err := crypto2.NewKeyStore(math.BN254, kvs)
@@ -494,9 +521,9 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
+	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
 	assert.NoError(t, err)
-	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/charlie.ExtraId2", true)
+	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
 	keyStore, err := crypto2.NewKeyStore(math.BN254, kvs)

@@ -380,10 +380,6 @@ func (n *Network) Ledger() (*Ledger, error) {
 	return &Ledger{l: l}, nil
 }
 
-func (n *Network) ProcessNamespace(namespace string) error {
-	return n.n.ProcessNamespace(namespace)
-}
-
 func (n *Network) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
 	return n.n.Normalize(opt)
 }

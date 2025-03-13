@@ -9,11 +9,11 @@ package transfer
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"io"
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"

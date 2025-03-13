@@ -8,12 +8,12 @@ package rp
 
 import (
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	"github.com/pkg/errors"
 )
 
-// RangeProof proves that a committed value < max
-type RangeProof struct {
+type RangeProofData struct {
 	// T1 is a Pedersen commitment to a random tau1
 	T1 *math.G1
 	// T2 is a Pedersen commitment a random tau2
@@ -32,8 +32,72 @@ type RangeProof struct {
 	// InnerProduct is the value of the inner product of the vectors committed in the non-hiding
 	// commitment C*D^x/P^Delta
 	InnerProduct *math.Zr
+}
+
+func (p *RangeProofData) Serialize() ([]byte, error) {
+	return asn1.MarshalMath(
+		p.T1,
+		p.T2,
+		p.Tau,
+		p.C,
+		p.D,
+		p.Delta,
+		p.InnerProduct,
+	)
+}
+
+func (p *RangeProofData) Deserialize(bytes []byte) error {
+	unmarshaller, err := asn1.NewUnmarshaller(bytes)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get unmarshaller from bytes")
+	}
+	p.T1, err = unmarshaller.NextG1()
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshall T1")
+	}
+	p.T2, err = unmarshaller.NextG1()
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshall T2")
+	}
+	p.Tau, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshall Tau")
+	}
+	p.C, err = unmarshaller.NextG1()
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshall C")
+	}
+	p.D, err = unmarshaller.NextG1()
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshall D")
+	}
+	p.Delta, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshall Delta")
+	}
+	p.InnerProduct, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshall InnerProduct")
+	}
+	return nil
+}
+
+// RangeProof proves that a committed value < max
+type RangeProof struct {
+	// Data contains all the elements of the range proof that are not in IPA
+	Data *RangeProofData
 	// IPA is the proof that shows that InnerProduct is correct
 	IPA *IPA
+}
+
+func (p *RangeProof) Serialize() ([]byte, error) {
+	return asn1.Marshal[asn1.Serializer](p.Data, p.IPA)
+}
+
+func (p *RangeProof) Deserialize(bytes []byte) error {
+	p.Data = &RangeProofData{}
+	p.IPA = &IPA{}
+	return asn1.Unmarshal[asn1.Serializer](bytes, p.Data, p.IPA)
 }
 
 // rangeProver proves that a committed value < 2^BitLength.
@@ -163,10 +227,10 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 	}
 	// compute the commitment to left and right
 	com := commitVector(left, right, p.LeftGenerators, rightGeneratorsPrime, p.Curve)
-	rp.InnerProduct = innerProduct(left, right, p.Curve)
+	rp.Data.InnerProduct = innerProduct(left, right, p.Curve)
 	// produce the IPA
 	ipp := NewIPAProver(
-		rp.InnerProduct,
+		rp.Data.InnerProduct,
 		left,
 		right,
 		p.Q,
@@ -187,19 +251,19 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 // Verify enable a rangeVerifier to checks the validity of a RangeProof
 func (v *rangeVerifier) Verify(rp *RangeProof) error {
 	// check that the proof is well-formed
-	if rp.InnerProduct == nil || rp.C == nil || rp.D == nil {
+	if rp.Data.InnerProduct == nil || rp.Data.C == nil || rp.Data.D == nil {
 		return errors.New("invalid range proof: nil elements")
 	}
-	if rp.T1 == nil || rp.T2 == nil {
+	if rp.Data.T1 == nil || rp.Data.T2 == nil {
 		return errors.New("invalid range proof: nil elements")
 	}
-	if rp.Tau == nil || rp.Delta == nil {
+	if rp.Data.Tau == nil || rp.Data.Delta == nil {
 		return errors.New("invalid range proof: nil elements")
 	}
 	if rp.IPA == nil {
 		return errors.New("invalid range proof: nil elements")
 	}
-	array := common.GetG1Array([]*math.G1{rp.T1, rp.T2})
+	array := common.GetG1Array([]*math.G1{rp.Data.T1, rp.Data.T2})
 	bytesToHash, err := array.Bytes()
 	if err != nil {
 		return err
@@ -209,7 +273,7 @@ func (v *rangeVerifier) Verify(rp *RangeProof) error {
 	xSquare := x.PowMod(v.Curve.NewZrFromInt(2))
 
 	// compute y and z
-	array = common.GetG1Array([]*math.G1{rp.C, rp.D, v.Commitment})
+	array = common.GetG1Array([]*math.G1{rp.Data.C, rp.Data.D, v.Commitment})
 	bytesToHash, err = array.Bytes()
 	if err != nil {
 		return err
@@ -247,10 +311,10 @@ func (v *rangeVerifier) Verify(rp *RangeProof) error {
 	polEval = v.Curve.ModSub(polEval, zCube, v.Curve.GroupOrder)
 
 	// com is should be equal to v.Commitment^{z^2} if p.Value falls within range
-	com := v.CommitmentGenerators[0].Mul(rp.InnerProduct)
-	com.Add(v.CommitmentGenerators[1].Mul(rp.Tau))
-	com.Sub(rp.T1.Mul(x))
-	com.Sub(rp.T2.Mul(xSquare))
+	com := v.CommitmentGenerators[0].Mul(rp.Data.InnerProduct)
+	com.Add(v.CommitmentGenerators[1].Mul(rp.Data.Tau))
+	com.Sub(rp.Data.T1.Mul(x))
+	com.Sub(rp.Data.T2.Mul(xSquare))
 
 	comPrime := v.Commitment.Mul(zSquare)
 	comPrime.Add(v.CommitmentGenerators[0].Mul(polEval))
@@ -388,12 +452,14 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	delta := p.Curve.ModAdd(rho, p.Curve.ModMul(eta, x, p.Curve.GroupOrder), p.Curve.GroupOrder)
 
 	rp := &RangeProof{
-		T1:    T1,
-		T2:    T2,
-		C:     C,
-		D:     D,
-		Tau:   tau,
-		Delta: delta,
+		Data: &RangeProofData{
+			T1:    T1,
+			T2:    T2,
+			C:     C,
+			D:     D,
+			Tau:   tau,
+			Delta: delta,
+		},
 	}
 
 	return left, right, y, rp, nil
@@ -408,8 +474,8 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 	// com commits to vector L' composed of elements L'_i = (L_i-z) + xU_i and
 	// vector R' composed of elements R'i = y^i((R_i+z)+xV_i)+2^iz^2
 	// with generators  (G_0, ..., G_{BitLength}, H'_0, ..., H'_{BitLength})
-	com := rp.D.Mul(x)
-	com.Add(rp.C)
+	com := rp.Data.D.Mul(x)
+	com.Add(rp.Data.C)
 	rightGeneratorsPrime := make([]*math.G1, len(v.RightGenerators))
 	for i := 0; i < len(v.LeftGenerators); i++ {
 		com.Sub(v.LeftGenerators[i].Mul(z))
@@ -423,11 +489,11 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 		rightGeneratorsPrime[i] = v.RightGenerators[i].Mul(yInv2i)
 		com.Add(rightGeneratorsPrime[i].Mul(zi))
 	}
-	com.Sub(v.P.Mul(rp.Delta))
+	com.Sub(v.P.Mul(rp.Data.Delta))
 
 	// run the IPA verifier
 	ipv := NewIPAVerifier(
-		rp.InnerProduct,
+		rp.Data.InnerProduct,
 		v.Q,
 		v.LeftGenerators,
 		rightGeneratorsPrime,
