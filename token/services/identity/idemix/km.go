@@ -9,7 +9,6 @@ package idemix
 import (
 	"fmt"
 
-	"github.com/IBM/idemix"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -55,10 +54,10 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 		&bccsp.IdemixIssuerPublicKeyImportOpts{
 			Temporary: true,
 			AttributeNames: []string{
-				idemix.AttributeNameOU,
-				idemix.AttributeNameRole,
-				idemix.AttributeNameEnrollmentId,
-				idemix.AttributeNameRevocationHandle,
+				crypto2.AttributeNameOU,
+				crypto2.AttributeNameRole,
+				crypto2.AttributeNameEnrollmentId,
+				crypto2.AttributeNameRevocationHandle,
 			},
 		})
 	if err != nil {

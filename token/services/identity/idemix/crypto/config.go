@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/IBM/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
@@ -26,6 +25,23 @@ type (
 
 const (
 	ExtraPathElement = "msp"
+
+	// AttributeNameOU is the attribute name of the Organization Unit attribute
+	AttributeNameOU = "OU"
+
+	// AttributeNameRole is the attribute name of the Role attribute
+	AttributeNameRole = "Role"
+
+	// AttributeNameEnrollmentId is the attribute name of the Enrollment ID attribute
+	AttributeNameEnrollmentId = "EnrollmentID"
+
+	// AttributeNameRevocationHandle is the attribute name of the revocation handle attribute
+	AttributeNameRevocationHandle = "RevocationHandle"
+
+	IdemixConfigDirMsp              = "msp"
+	IdemixConfigDirUser             = "user"
+	IdemixConfigFileIssuerPublicKey = "IssuerPublicKey"
+	IdemixConfigFileSigner          = "SignerConfig"
 )
 
 // SignerConfig contains the crypto material to set up an idemix signing identity
@@ -63,7 +79,7 @@ func ReadFile(file string) ([]byte, error) {
 }
 
 func NewConfig(dir string) (*Config, error) {
-	ipkBytes, err := ReadFile(filepath.Join(dir, idemix.IdemixConfigDirMsp, idemix.IdemixConfigFileIssuerPublicKey))
+	ipkBytes, err := ReadFile(filepath.Join(dir, IdemixConfigDirMsp, IdemixConfigFileIssuerPublicKey))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read issuer public key file")
 	}
@@ -98,11 +114,11 @@ func newConfigWithIPK(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet
 
 // NewIdemixConfig returns the configuration for Idemix
 func NewIdemixConfig(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet bool) (*Config, error) {
-	signerConfigPath := filepath.Join(dir, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner)
+	signerConfigPath := filepath.Join(dir, IdemixConfigDirUser, IdemixConfigFileSigner)
 	if ignoreVerifyOnlyWallet {
 		logger.Debugf("check the existence of SignerConfigFull")
 		// check if `SignerConfigFull` exists, if yes, use that file
-		path := filepath.Join(dir, idemix.IdemixConfigDirUser, SignerConfigFull)
+		path := filepath.Join(dir, IdemixConfigDirUser, SignerConfigFull)
 		_, err := os.Stat(path)
 		if err == nil {
 			logger.Debugf("SignerConfigFull found, use it")

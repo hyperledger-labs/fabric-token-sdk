@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	idemix2 "github.com/IBM/idemix"
 	"github.com/IBM/idemix/bccsp/types"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
@@ -440,7 +439,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
+	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", crypto2.IdemixConfigFileIssuerPublicKey))
 	assert.NoError(t, err)
 	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
 	assert.NoError(t, err)
@@ -521,7 +520,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
+	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", crypto2.IdemixConfigFileIssuerPublicKey))
 	assert.NoError(t, err)
 	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
 	assert.NoError(t, err)

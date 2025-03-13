@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger/fabric-lib-go/bccsp"
 	"github.com/pkg/errors"
 )
 
