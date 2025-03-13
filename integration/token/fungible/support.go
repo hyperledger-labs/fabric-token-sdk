@@ -855,6 +855,21 @@ func CheckPublicParams(network *integration.Infrastructure, ids ...*token3.NodeR
 	CheckPublicParamsForTMSID(network, nil, ids...)
 }
 
+func SetBinding(network *integration.Infrastructure, issuer *token3.NodeReference, issuerPublicKey []byte, onNodes ...*token3.NodeReference) {
+	for _, node := range onNodes {
+		for _, nodeReplica := range node.AllNames() {
+			for _, issuerName := range issuer.AllNames() {
+				_, err := network.Client(nodeReplica).CallView("SetBinding", common.JSONMarshall(&views.Binding{
+					FSCNodeIdentity: network.Identity(issuerName), // issuer's network node identity.
+					Alias:           issuerPublicKey,              // issuer's public key for the token issuance
+				}))
+				Expect(err).NotTo(HaveOccurred())
+
+			}
+		}
+	}
+}
+
 func GetTXStatus(network *integration.Infrastructure, id *token3.NodeReference, txID string) *views.TxStatusResponse {
 	boxed, err := network.Client(id.ReplicaName()).CallView("TxStatus", common.JSONMarshall(&views.TxStatus{
 		TMSID: token2.TMSID{},

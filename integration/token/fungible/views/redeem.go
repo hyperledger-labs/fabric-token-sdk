@@ -8,6 +8,7 @@ package views
 
 import (
 	"encoding/json"
+	"github.com/pkg/errors"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -105,4 +106,23 @@ func (p *RedeemViewFactory) NewView(in []byte) (view.View, error) {
 	err := json.Unmarshal(in, f.Redeem)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
+}
+
+type IssuerRedeemAcceptView struct{}
+
+func (a *IssuerRedeemAcceptView) Call(context view.Context) (interface{}, error) {
+	// Verify Token Request against Metadata
+	tx, err := ttx.ReceiveTransaction(context)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting transaction")
+	}
+
+	// Sign the transaction
+	// EndorserView generates the signature and send in back on the same communication session
+	_, err = context.RunView(ttx.NewEndorseView(tx))
+	if err != nil {
+		return nil, errors.Wrap(err, "issuer failed endorsing transaction")
+	}
+
+	return nil, nil
 }

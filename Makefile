@@ -108,7 +108,7 @@ tidy:
 	cd tools; go mod tidy
 
 .PHONY: clean
-clean:
+clean: clean-containers
 	docker network prune -f
 	docker container prune -f
 	docker volume prune -f
@@ -133,6 +133,10 @@ clean:
 	rm -rf ./integration/token/interop/dlog/cmd/
 	rm -rf ./integration/token/fungible/update/cmd/
 	rm -rf ./integration/token/fungible/update/testdata/
+
+.PHONY: clean-containers  # TODO: remove before merge
+clean-containers:
+	@if [ -n "$$(docker ps -aq)" ]; then docker rm -f $$(docker ps -aq); else echo "No containers to remove"; fi
 
 .PHONY: clean-fabric-peer-images
 clean-fabric-peer-images:

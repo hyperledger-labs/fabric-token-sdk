@@ -183,6 +183,8 @@ type TransferAction struct {
 	Outputs []*Output
 	// Metadata contains the transfer action's metadata
 	Metadata map[string][]byte
+	// Extra signers contains the extra signers of the transfer action
+	ESigners []driver.Identity
 }
 
 func (t *TransferAction) NumInputs() int {
@@ -282,5 +284,5 @@ func (t *TransferAction) Validate() error {
 }
 
 func (t *TransferAction) ExtraSigners() []driver.Identity {
-	return nil
+	return t.ESigners
 }
