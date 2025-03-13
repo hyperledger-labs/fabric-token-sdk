@@ -1419,8 +1419,8 @@ func TestMultiSig(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckCoOwnedBalance(network, manager, "", "USD", 0)
 }
 
-func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
-	tms := GetTMSByNetworkName(network, "orion")
+func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector, networkName string) {
+	tms := GetTMSByNetworkName(network, networkName)
 	auditor := sel.Get("auditor")
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")

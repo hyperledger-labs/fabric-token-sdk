@@ -111,17 +111,17 @@ func (p *RedeemViewFactory) NewView(in []byte) (view.View, error) {
 type IssuerRedeemAcceptView struct{}
 
 func (a *IssuerRedeemAcceptView) Call(context view.Context) (interface{}, error) {
+	// Verify Token Request against Metadata
 	tx, err := ttx.ReceiveTransaction(context)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting transaction")
 	}
 
-	wallet := ttx.MyIssuerWallet(context, ServiceOpts(&tx.Opts.TMSID)...)
-	if wallet == nil {
-		return nil, errors.Errorf("issuer wallet not found")
+	// Sign the transaction
+	_, err = context.RunView(ttx.NewEndorseView(tx))
+	if err != nil {
+		return nil, errors.Wrap(err, "issuer failed endorsing transaction")
 	}
 
-	// TODO: The issuer signs the transaction? How to get tokenType for issuer identity? what message to sign? each transfer?
-
-	return nil, nil
+	return tx, nil
 }
