@@ -118,10 +118,11 @@ func (a *IssuerRedeemAcceptView) Call(context view.Context) (interface{}, error)
 	}
 
 	// Sign the transaction
+	// EndorserView generates the signature and send in back on the same communication session
 	_, err = context.RunView(ttx.NewEndorseView(tx))
 	if err != nil {
 		return nil, errors.Wrap(err, "issuer failed endorsing transaction")
 	}
 
-	return tx, nil
+	return nil, nil
 }
