@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package testdata
 
 //go:generate idemixgen ca-keygen --output ./bls12_381_bbs/ca --curve BLS12_381_BBS --aries
