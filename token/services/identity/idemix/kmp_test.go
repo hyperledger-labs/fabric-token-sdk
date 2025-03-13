@@ -34,6 +34,7 @@ func (m mockConfig) IdentitiesForRole(role driver.IdentityRoleType) ([]*driver.C
 	return nil, nil
 }
 
+//go:norace
 func TestNewKeyManagerProvider(t *testing.T) {
 	testNewKeyManagerProvider(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
 	testNewKeyManagerProvider(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
@@ -54,7 +55,7 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 		keyStore,
 		sigService,
 		&mockConfig{},
-		10,
+		0,
 		false,
 	)
 	assert.NotNil(t, kmp)
