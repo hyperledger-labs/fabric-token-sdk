@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	DATA  = "data"
-	VALUE = "value"
+	DATA        = "data"
+	VALUE       = "value"
+	COMPOSETKEY = "\x00"
 )
 
 var (
@@ -34,24 +35,31 @@ type KVS struct {
 
 // NewWithClient returns a new KVS instance for the passed hashicorp vault API client
 func NewWithClient(client *vault.Client, path string) (*KVS, error) {
+	// Add slash to the end of path if it is not exists
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
 	return &KVS{
 		client: client,
 		path:   path,
 	}, nil
 }
 
-func (v *KVS) NormalizeID(id string, isShort bool) string {
-	// Replace all occurrences of \x00 with /
-	replaced := strings.ReplaceAll(id, "\x00", "/")
-	// Remove the leading slash if it exists
-	replaced = strings.TrimPrefix(replaced, "/")
-	// Remove the trailing slash if it exists
-	id = strings.TrimSuffix(replaced, "/")
-	// Append the id to the path
-	if isShort {
-		return id
+func (v *KVS) NormalizeID(id string) string {
+	if strings.Contains(id, COMPOSETKEY) {
+		replaced := strings.ReplaceAll(id, COMPOSETKEY, "/")
+		replaced = strings.TrimPrefix(replaced, "/")
+		replaced = strings.TrimPrefix(replaced, "/")
+		id = strings.TrimSuffix(replaced, "/")
 	}
+
 	return v.path + id
+}
+
+func (v *KVS) deNormalizeID(id string) string {
+	trimmedId := strings.TrimPrefix(id, v.path)
+	normilzedId := "\x00" + strings.ReplaceAll(trimmedId, "/", COMPOSETKEY) + "\x00"
+	return normilzedId
 }
 
 func (v *KVS) GetExisting(ids ...string) []string {
@@ -67,7 +75,7 @@ func (v *KVS) GetExisting(ids ...string) []string {
 }
 
 func (v *KVS) Exists(id string) bool {
-	id = v.NormalizeID(id, false)
+	id = v.NormalizeID(id)
 	secret, err := v.client.Logical().Read(id)
 	if err != nil {
 		logger.Debugf("failed to check existence of id [%s]: %v", id, err)
@@ -89,7 +97,7 @@ func (v *KVS) Exists(id string) bool {
 }
 
 func (v *KVS) Delete(id string) error {
-	id = v.NormalizeID(id, false)
+	id = v.NormalizeID(id)
 
 	// Delete the secret from Vault
 	_, err := v.client.Logical().Delete(id)
@@ -103,7 +111,7 @@ func (v *KVS) Delete(id string) error {
 }
 
 func (v *KVS) Put(id string, state interface{}) error {
-	id = v.NormalizeID(id, false)
+	id = v.NormalizeID(id)
 
 	raw, err := json.Marshal(state)
 	if err != nil {
@@ -121,7 +129,7 @@ func (v *KVS) Put(id string, state interface{}) error {
 }
 
 func (v *KVS) Get(id string, state interface{}) error {
-	id = v.NormalizeID(id, false)
+	id = v.NormalizeID(id)
 	secret, err := v.client.Logical().Read(id)
 	if err != nil || secret == nil || secret.Data == nil {
 		logger.Errorf("failed retrieving state of id [%s]", id)
@@ -152,33 +160,37 @@ func (v *KVS) Get(id string, state interface{}) error {
 }
 
 func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error) {
-
-	partialCompositeKey, err := kvs.CreateCompositeKey(prefix, attrs)
-	shortNormalizePartialCompositeKey := v.NormalizeID(partialCompositeKey, true)
-	partialCompositeKey = v.NormalizeID(partialCompositeKey, false)
+	compositeKey, err := kvs.CreateCompositeKey(prefix, attrs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed building composite key")
 	}
-	secret, err := v.client.Logical().List(partialCompositeKey)
+
+	compositeKey = v.NormalizeID(compositeKey)
+
+	secret, err := v.client.Logical().List(compositeKey)
 	if err != nil {
-		_ = errors.Wrapf(err, "failed")
+		return nil, errors.Wrapf(err, "failed to read list for key [%s]", compositeKey)
 	}
 
 	// Check if the secret contains any keys
 	if secret == nil || secret.Data == nil {
-		_ = errors.Errorf("secret contains no keys")
+		return nil, errors.Errorf("secret contains no keys")
 	}
 
 	// Extract the keys from the response
 	keys, ok := secret.Data["keys"].([]interface{})
 	if !ok {
-		_ = errors.Errorf("unable to extract the keys from the response")
+		return nil, errors.Errorf("unable to extract the keys from the response")
 	}
 	// Convert keys to []*string
 	stringKeys := make([]*string, len(keys))
 	for i, key := range keys {
-		keyStr := shortNormalizePartialCompositeKey + "/" + key.(string) // Cast to string
-		stringKeys[i] = &keyStr                                          // Store pointer to the string
+		castedKey, ok := key.(string)
+		if !ok {
+			return nil, errors.Errorf("unable to cast key [%T]: ", key)
+		}
+		keyStr := v.deNormalizeID(compositeKey + "/" + castedKey)
+		stringKeys[i] = &keyStr
 	}
 	// Create and return a sliceIterator for the keys
 	keys_iterator := collections.NewSliceIterator(stringKeys)

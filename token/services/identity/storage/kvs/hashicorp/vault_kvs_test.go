@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -76,10 +77,10 @@ func testRound(t *testing.T, client *vault.Client) {
 		key, err := it.Next(val)
 		assert.NoError(t, err)
 		if ctr == 0 {
-			assert.Equal(t, kvstore.NormalizeID(k1, true), key)
+			assert.Equal(t, k1, key)
 			assert.Equal(t, &stuff{"santa", 1}, val)
 		} else if ctr == 1 {
-			assert.Equal(t, kvstore.NormalizeID(k2, true), key)
+			assert.Equal(t, k2, key)
 			assert.Equal(t, &stuff{"claws", 2}, val)
 		} else {
 			assert.Fail(t, "expected 2 entries in the range, found more")
@@ -102,7 +103,7 @@ func testRound(t *testing.T, client *vault.Client) {
 		key, err := it.Next(val)
 		assert.NoError(t, err)
 		if ctr == 0 {
-			assert.Equal(t, kvstore.NormalizeID(k1, true), key)
+			assert.Equal(t, k1, key)
 			assert.Equal(t, &stuff{"santa", 1}, val)
 		} else {
 			assert.Fail(t, "expected 2 entries in the range, found more")
@@ -114,20 +115,22 @@ func testRound(t *testing.T, client *vault.Client) {
 	_, err = it.Next(val)
 	assert.Error(t, err)
 
-	it2, err := kvstore.GetByPartialCompositeID("k", []string{})
+	it, err = kvstore.GetByPartialCompositeID("k", []string{})
 	assert.NoError(t, err)
-	defer it2.Close()
-	for ctr := 0; it2.HasNext(); ctr++ {
+	defer it.Close()
+	for ctr := 0; it.HasNext(); ctr++ {
 		val = &stuff{}
-		key, err := it2.Next(val)
+		key, err := it.Next(val)
 		assert.NoError(t, err)
 		if ctr == 0 {
-			assert.Equal(t, kvstore.NormalizeID(k1, true), key)
+			assert.Equal(t, k1, key)
 			assert.Equal(t, &stuff{"santa", 1}, val)
 		} else {
 			assert.Fail(t, "expected 1 entries in the range, found more")
 		}
 	}
+
+	assert.NoError(t, kvstore.Delete(k1))
 
 	val = &stuff{
 		S: "hello",
@@ -142,18 +145,50 @@ func testRound(t *testing.T, client *vault.Client) {
 	val2 := &stuff{}
 	assert.NoError(t, kvstore.Get(k, val2))
 	assert.Equal(t, val, val2)
+
+	results = kvstore.GetExisting(k)
+	assert.True(t, len(results) == 1)
+
+	it, err = kvstore.GetByPartialCompositeID(k, []string{})
+	assert.Error(t, err)
+	assert.True(t, it == nil)
 	assert.NoError(t, kvstore.Delete(k))
 	assert.False(t, kvstore.Exists(k))
 
-	results = kvstore.GetExisting(k)
-	assert.True(t, len(results) == 0)
+	k1, err = kvs.CreateCompositeKey(k, []string{"1"})
+	assert.NoError(t, err)
+	assert.NoError(t, kvstore.Put(k1, val))
+	it, err = kvstore.GetByPartialCompositeID(k, []string{})
+	assert.NoError(t, err)
+	defer it.Close()
+	for ctr := 0; it.HasNext(); ctr++ {
+		val = &stuff{}
+		key, err := it.Next(val)
+		assert.NoError(t, err)
+		if ctr == 0 {
+			assert.Equal(t, k1, key)
+			assert.Equal(t, &stuff{"hello", 100}, val)
+		} else {
+			assert.Fail(t, "expected 1 entries in the range, found more")
+		}
+	}
+	assert.NoError(t, kvstore.Delete(k1))
+	assert.False(t, kvstore.Exists(k1))
+	assert.True(t, kvstore.Delete(k1) == nil)
+
+	it, err = kvstore.GetByPartialCompositeID(k, []string{})
+	assert.Error(t, err)
+	assert.True(t, it == nil)
+
+	_, err = kvstore.GetByPartialCompositeID("k", []string{})
+	assert.Error(t, err)
 }
 
 func testParallelWrites(t *testing.T, client *vault.Client) {
-	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk/")
+	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk")
 	assert.NoError(t, err)
 
-	// different keys
+	// different composite key keys
 	wg := sync.WaitGroup{}
 	n := 100
 	wg.Add(n)
@@ -176,6 +211,22 @@ func testParallelWrites(t *testing.T, client *vault.Client) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			err := kvstore.Put(k1, &stuff{"santa", 1})
+			assert.NoError(t, err)
+			defer wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	// different none composite key keys
+	wg = sync.WaitGroup{}
+	wg.Add(n)
+
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			data := "Hello World " + strconv.Itoa(i)
+			hash := sha256.Sum256([]byte(data)) // Replace with hash.Hashable if applicable
+			k2 := hex.EncodeToString(hash[:])   // Convert to clean hex string
+			err = kvstore.Put(k2, &stuff{"hello", 1})
 			assert.NoError(t, err)
 			defer wg.Done()
 		}(i)
