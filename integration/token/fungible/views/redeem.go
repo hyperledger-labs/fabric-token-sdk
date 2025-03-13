@@ -32,8 +32,6 @@ type Redeem struct {
 	Amount uint64
 	// The TMS to pick in case of multiple TMSIDs
 	TMSID *token2.TMSID
-	// Issuer is the name of the issuer that must sign the operation
-	Issuer string
 }
 
 type RedeemView struct {
@@ -54,9 +52,6 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	senderWallet := ttx.GetWallet(context, t.Wallet, ServiceOpts(t.TMSID)...)
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
-	// Attach the issuer to the transaction
-	issuer := view2.GetIdentityProvider(context).Identity(t.Issuer)
-
 	// The senders adds a new redeem operation to the transaction following the instruction received.
 	// Notice the use of `token2.WithTokenIDs(t.TokenIDs...)`. If t.TokenIDs is not empty, the Redeem
 	// function uses those tokens, otherwise the tokens will be selected on the spot.
@@ -70,7 +65,6 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 		senderWallet,
 		t.Type,
 		t.Amount,
-		issuer,
 		token2.WithTokenIDs(t.TokenIDs...),
 	)
 	assert.NoError(err, "failed adding new tokens")

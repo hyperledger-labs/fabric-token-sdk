@@ -244,8 +244,8 @@ func (t *Transaction) Transfer(wallet *token.OwnerWallet, typ token2.Type, value
 	return err
 }
 
-func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ token2.Type, value uint64, issuer view.Identity, opts ...token.TransferOption) error {
-	return t.TokenRequest.Redeem(t.Context, wallet, typ, value, issuer, opts...)
+func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ token2.Type, value uint64, opts ...token.TransferOption) error {
+	return t.TokenRequest.Redeem(t.Context, wallet, typ, value, opts...)
 }
 
 func (t *Transaction) Upgrade(

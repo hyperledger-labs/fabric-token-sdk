@@ -16,8 +16,6 @@ import (
 type TransferOptions struct {
 	// Attributes is a container of generic options that might be driver specific
 	Attributes map[interface{}]interface{}
-	// Issuer is an optional issuer to sign the transfer action
-	Issuer Identity
 }
 
 //go:generate counterfeiter -o mock/ts.go -fake-name TransferService . TransferService

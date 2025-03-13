@@ -146,14 +146,11 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 
 	var extraSigners []driver.Identity
 	if isRedeem {
-		issuer := opts.Issuer
-		if issuer == nil {
-			issuers := s.PublicParametersManager.PublicParameters().Issuers()
-			if len(issuers) == 0 {
-				return nil, nil, errors.New("no issuer found")
-			}
-			issuer = issuers[0]
+		issuers := s.PublicParametersManager.PublicParameters().Issuers()
+		if len(issuers) == 0 {
+			return nil, nil, errors.New("no issuer found")
 		}
+		issuer := issuers[0]
 		extraSigners = append(extraSigners, issuer)
 	}
 
