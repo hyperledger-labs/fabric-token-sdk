@@ -160,6 +160,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		InputTokens: inputs,
 		Outputs:     outs,
 		Metadata:    meta.TransferActionMetadata(opts.Attributes),
+		ESigners:    extraSigners,
 	}
 	transferMetadata := &driver.TransferMetadata{
 		Inputs:       transferInputsMetadata,
