@@ -19,16 +19,16 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
-	pp2 "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
-	topology3 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc/fabricv25"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
+	ttopology "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	. "github.com/onsi/gomega"
 )
 
 const (
-	DefaultTokenChaincode                    = "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fabricv25/main"
-	DefaultTokenChaincodeParamsReplaceSuffix = "/token/services/network/fabric/tcc/params.go"
+	DefaultFabricV25TokenChaincode                    = "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fabricv25/main"
+	DefaultFabricV25TokenChaincodeParamsReplaceSuffix = "/token/services/network/fabric/tcc/fabricv25/params.go"
 )
 
 var logger = logging.MustGetLogger("token-sdk.integration.token.fabric.cc")
@@ -45,22 +45,22 @@ type TCC struct {
 type GenericBackend struct {
 	TokenChaincodePath                string
 	TokenChaincodeParamsReplaceSuffix string
-	TokenPlatform                     common2.TokenPlatform
+	TokenPlatform                     common.TokenPlatform
 }
 
-func NewDefaultGenericBackend(tokenPlatform common2.TokenPlatform) *GenericBackend {
+func NewDefaultFabricV25Backend(tokenPlatform common.TokenPlatform) *GenericBackend {
 	return NewGenericBackend(
-		DefaultTokenChaincode,
-		DefaultTokenChaincodeParamsReplaceSuffix,
+		DefaultFabricV25TokenChaincode,
+		DefaultFabricV25TokenChaincodeParamsReplaceSuffix,
 		tokenPlatform,
 	)
 }
 
-func NewGenericBackend(tokenChaincodePath string, tokenChaincodeParamsReplaceSuffix string, tokenPlatform common2.TokenPlatform) *GenericBackend {
+func NewGenericBackend(tokenChaincodePath string, tokenChaincodeParamsReplaceSuffix string, tokenPlatform common.TokenPlatform) *GenericBackend {
 	return &GenericBackend{TokenChaincodePath: tokenChaincodePath, TokenChaincodeParamsReplaceSuffix: tokenChaincodeParamsReplaceSuffix, TokenPlatform: tokenPlatform}
 }
 
-func (p *GenericBackend) PrepareNamespace(tms *topology3.TMS) {
+func (p *GenericBackend) PrepareNamespace(tms *ttopology.TMS) {
 	if tms.Transient {
 		return
 	}
@@ -104,7 +104,7 @@ func (p *GenericBackend) PrepareNamespace(tms *topology3.TMS) {
 	p.Fabric(tms).Topology().AddChaincode(cc)
 }
 
-func (p *GenericBackend) UpdatePublicParams(tms *topology3.TMS, ppRaw []byte) {
+func (p *GenericBackend) UpdatePublicParams(tms *ttopology.TMS, ppRaw []byte) {
 	var cc *topology.ChannelChaincode
 	for _, chaincode := range p.Fabric(tms).Topology().Chaincodes {
 		if chaincode.Chaincode.Name == tms.Namespace {
@@ -152,7 +152,7 @@ func (p *GenericBackend) UpdatePublicParams(tms *topology3.TMS, ppRaw []byte) {
 		cc.Chaincode.Path, cc.Chaincode.PackageFile)
 }
 
-func (p *GenericBackend) tccSetup(tms *topology3.TMS, cc *topology.ChannelChaincode) (*topology.ChannelChaincode, uint16) {
+func (p *GenericBackend) tccSetup(tms *ttopology.TMS, cc *topology.ChannelChaincode) (*topology.ChannelChaincode, uint16) {
 	// Load public parameters
 	logger.Debugf("tcc setup, reading public parameters from [%s]", p.TokenPlatform.PublicParametersFile(tms))
 	ppRaw, err := os.ReadFile(p.TokenPlatform.PublicParametersFile(tms))
@@ -218,7 +218,7 @@ func (p *GenericBackend) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 	return cc, port
 }
 
-func (p *GenericBackend) TCCCtor(tms *topology3.TMS) string {
+func (p *GenericBackend) TCCCtor(tms *ttopology.TMS) string {
 	logger.Debugf("tcc setup, reading public parameters for setting up CTOR [%s]", p.TokenPlatform.PublicParametersFile(tms))
 	ppRaw, err := os.ReadFile(p.TokenPlatform.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred())
@@ -230,14 +230,14 @@ func (p *GenericBackend) TokenChaincodeServerAddr(port uint16) string {
 	return fmt.Sprintf("127.0.0.1:%d", port)
 }
 
-func (p *GenericBackend) Fabric(tms *topology3.TMS) fabricPlatform {
+func (p *GenericBackend) Fabric(tms *ttopology.TMS) fabricPlatform {
 	return p.TokenPlatform.GetContext().PlatformByName(tms.Network).(fabricPlatform)
 }
 
 func PublicParamsTemplate(ppRaw []byte) *bytes.Buffer {
 	t, err := template.New("node").Funcs(template.FuncMap{
 		"Params": func() string { return base64.StdEncoding.EncodeToString(ppRaw) },
-	}).Parse(pp2.DefaultParams)
+	}).Parse(fabricv25.DefaultParams)
 	Expect(err).ToNot(HaveOccurred())
 	paramsFile := bytes.NewBuffer(nil)
 	err = t.Execute(io.MultiWriter(paramsFile), nil)

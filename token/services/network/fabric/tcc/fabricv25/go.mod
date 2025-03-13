@@ -7,8 +7,8 @@ toolchain go1.23.6
 //replace github.com/hyperledger-labs/fabric-token-sdk => ./../../../../../../
 
 require (
-	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250313052101-1635642408c0
-	github.com/hyperledger-labs/fabric-token-sdk v0.4.1-0.20250305122127-914715e08b26
+	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250313070341-221962d51249
+	github.com/hyperledger-labs/fabric-token-sdk v0.4.1-0.20250313062440-258265b9445d
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20240704073638-9fb89180dc17
 	github.com/hyperledger/fabric-protos-go v0.3.7
 	github.com/onsi/ginkgo/v2 v2.22.2
@@ -21,10 +21,10 @@ require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
-	github.com/IBM/idemix v0.0.2-0.20241126135040-1607bca14bba // indirect
-	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20240913182345-72941a5f41cd // indirect
-	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20240913182345-72941a5f41cd // indirect
-	github.com/IBM/idemix/bccsp/types v0.0.0-20240913182345-72941a5f41cd // indirect
+	github.com/IBM/idemix v0.0.2-0.20250224151615-ebf95185165f // indirect
+	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20241220065751-dc7206770307 // indirect
+	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20241220065751-dc7206770307 // indirect
+	github.com/IBM/idemix/bccsp/types v0.0.0-20241220065751-dc7206770307 // indirect
 	github.com/IBM/mathlib v0.0.3-0.20241219051532-81539b287cf5 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -61,13 +61,11 @@ require (
 	github.com/hyperledger/aries-bbs-go v0.0.0-20240528084656-761671ea73bc // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 // indirect
 	github.com/hyperledger/fabric-lib-go v1.1.3-0.20240523144151-25edd1eaf5f5 // indirect
-	github.com/hyperledger/fabric-protos-go-apiv2 v0.3.3 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.7.1 // indirect
 	github.com/jackc/pgxlisten v0.0.0-20241106001234-1d6f6656415c // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kilic/bls12-381 v0.1.0 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
@@ -82,8 +80,6 @@ require (
 	github.com/moby/sys/user v0.1.0 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
