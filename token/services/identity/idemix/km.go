@@ -120,7 +120,7 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 					{Type: bccsp.IdemixHiddenAttribute},
 					{Type: bccsp.IdemixHiddenAttribute},
 					{Type: bccsp.IdemixBytesAttribute, Value: []byte(conf.Signer.EnrollmentId)},
-					{Type: bccsp.IdemixHiddenAttribute, Value: []byte(conf.Signer.RevocationHandle)},
+					{Type: bccsp.IdemixBytesAttribute, Value: []byte(conf.Signer.RevocationHandle)},
 				},
 			},
 		)

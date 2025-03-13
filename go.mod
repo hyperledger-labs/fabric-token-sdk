@@ -5,8 +5,8 @@ go 1.23.1
 toolchain go1.23.5
 
 require (
-	github.com/IBM/idemix v0.0.2-0.20250224151615-ebf95185165f
-	github.com/IBM/idemix/bccsp/types v0.0.0-20241220065751-dc7206770307
+	github.com/IBM/idemix v0.0.2-0.20250313153527-832db18b9478
+	github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478
 	github.com/IBM/mathlib v0.0.3-0.20241219051532-81539b287cf5
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gobuffalo/packr/v2 v2.7.1
@@ -42,6 +42,8 @@ require (
 	modernc.org/sqlite v1.33.1
 )
 
+require github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20250313153527-832db18b9478 // indirect
+
 require (
 	cloud.google.com/go v0.115.0 // indirect
 	cloud.google.com/go/auth v0.6.0 // indirect
@@ -52,7 +54,6 @@ require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20241220065751-dc7206770307 // indirect
 	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20241220065751-dc7206770307 // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
