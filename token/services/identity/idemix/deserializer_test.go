@@ -7,11 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
@@ -20,15 +22,20 @@ import (
 )
 
 func TestNewDeserializer(t *testing.T) {
+	testNewDeserializer(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
+	testNewDeserializer(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+}
+
+func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
 	// init
 	backend, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
-	config, err := crypto2.NewConfig("./testdata/idemix")
+	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
-	keyStore, err := crypto2.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err := crypto2.NewKeyStore(curveID, backend)
 	assert.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
 
 	// key manager
@@ -43,18 +50,18 @@ func TestNewDeserializer(t *testing.T) {
 	// instantiate a deserializer and check that it fils
 	_, err = NewDeserializer(config.Ipk, -1)
 	assert.Error(t, err)
-	_, err = NewDeserializer(nil, math.FP256BN_AMCL)
+	_, err = NewDeserializer(nil, curveID)
 	assert.Error(t, err)
-	_, err = NewDeserializer([]byte{}, math.FP256BN_AMCL)
+	_, err = NewDeserializer([]byte{}, curveID)
 	assert.Error(t, err)
-	_, err = NewDeserializer([]byte{0, 1, 2}, math.FP256BN_AMCL)
+	_, err = NewDeserializer([]byte{0, 1, 2}, curveID)
 	assert.Error(t, err)
 
 	// instantiate a deserializer and validate it
-	d, err := NewDeserializer(config.Ipk, math.FP256BN_AMCL)
+	d, err := NewDeserializer(config.Ipk, curveID)
 	assert.NoError(t, err)
 	assert.NotNil(t, d)
-	assert.Equal(t, "Idemix with IPK [dJZK5i5D2i5B8S9DsVWDFzdHSJE/jcTLk9VaJzFB4fo=]", d.String())
+	assert.Equal(t, fmt.Sprintf("Idemix with IPK [%s]", hash.Hashable(d.Ipk).String()), d.String())
 	_, err = d.DeserializeVerifier(nil)
 	assert.Error(t, err)
 	_, err = d.DeserializeVerifier([]byte{})

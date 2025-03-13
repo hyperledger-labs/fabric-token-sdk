@@ -35,17 +35,22 @@ func (m mockConfig) IdentitiesForRole(role driver.IdentityRoleType) ([]*driver.C
 }
 
 func TestNewKeyManagerProvider(t *testing.T) {
+	testNewKeyManagerProvider(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
+	testNewKeyManagerProvider(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+}
+
+func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
 	backend, err := kvs.NewInMemory()
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
-	config, err := crypto.NewConfig("./testdata/idemix")
+	config, err := crypto.NewConfig(configPath)
 	assert.NoError(t, err)
-	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err := crypto.NewKeyStore(curveID, backend)
 	assert.NoError(t, err)
 
 	kmp := NewKeyManagerProvider(
 		config.Ipk,
-		math.FP256BN_AMCL,
+		curveID,
 		keyStore,
 		sigService,
 		&mockConfig{},
@@ -55,7 +60,7 @@ func TestNewKeyManagerProvider(t *testing.T) {
 	assert.NotNil(t, kmp)
 	idConfig := &token.IdentityConfiguration{
 		ID:  "alice",
-		URL: "./testdata/idemix",
+		URL: configPath,
 	}
 	km, err := kmp.Get(idConfig)
 	assert.NoError(t, err)
