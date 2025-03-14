@@ -229,7 +229,7 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 	return output, nil
 }
 
-func supportedTokenFormat(pp *noghv1.PublicParams, precision uint64) (token.Format, error) {
+func supportedTokenFormat(pp *crypto.PublicParams, precision uint64) (token.Format, error) {
 	hasher := utils2.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
