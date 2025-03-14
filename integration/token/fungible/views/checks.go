@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -107,12 +108,10 @@ type ListVaultUnspentTokensView struct {
 }
 
 func (l *ListVaultUnspentTokensView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, l.TMSID.Network, l.TMSID.Channel)
-	assert.NotNil(net, "cannot find network [%s:%s]", l.TMSID.Network, l.TMSID.Channel)
-	vault, err := net.TokenVault(l.TMSID.Namespace)
-	assert.NoError(err, "failed to get vault for [%s:%s:%s]", l.TMSID.Network, l.TMSID.Channel, l.TMSID.Namespace)
+	tokensDB, err := tokendb.GetByTMSId(context, l.TMSID)
+	assert.NoError(err, "failed getting tokens by TMSID for [%s]", l.TMSID)
 
-	return vault.QueryEngine().ListUnspentTokens()
+	return tokensDB.ListUnspentTokens()
 }
 
 type ListVaultUnspentTokensViewFactory struct{}
@@ -135,14 +134,11 @@ type CheckIfExistsInVaultView struct {
 }
 
 func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, c.TMSID.Network, c.TMSID.Channel)
-	assert.NotNil(net, "cannot find network [%s:%s]", c.TMSID.Network, c.TMSID.Channel)
-	vault, err := net.TokenVault(c.TMSID.Namespace)
-	assert.NoError(err, "failed to get vault for [%s:%s:%s]", c.TMSID.Network, c.TMSID.Channel, c.TMSID.Namespace)
-	qe := vault.QueryEngine()
+	tokensDB, err := tokendb.GetByTMSId(context, c.TMSID)
+	assert.NoError(err, "failed getting tokens by TMSID for [%s]", c.TMSID)
 	var IDs []*token2.ID
 	count := 0
-	assert.NoError(qe.GetTokenOutputs(c.IDs, func(id *token2.ID, tokenRaw []byte) error {
+	assert.NoError(tokensDB.GetTokenOutputs(c.IDs, func(id *token2.ID, tokenRaw []byte) error {
 		if len(tokenRaw) == 0 {
 			return errors.Errorf("token id [%s] is nil", id)
 		}
