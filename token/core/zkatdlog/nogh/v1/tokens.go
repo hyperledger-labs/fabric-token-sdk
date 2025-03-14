@@ -48,22 +48,20 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	maxPrecision := pp.RangeProofParams.BitLength
 
 	// dlog without graph hiding
-	outputTokenFormat, err := supportedTokenFormat(pp, maxPrecision, pp.IdemixIssuerPublicKeys[0])
+	outputTokenFormat, err := supportedTokenFormat(pp, maxPrecision)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed computing comm token types")
 	}
 
 	supportedTokenFormatList := make([]token.Format, 0, 3*len(pp.IdemixIssuerPublicKeys))
-	for _, key := range pp.IdemixIssuerPublicKeys {
-		for _, precision := range crypto.SupportedPrecisions {
-			// these precisions are supported directly
-			if precision <= maxPrecision {
-				format, err := supportedTokenFormat(pp, precision, key)
-				if err != nil {
-					return nil, errors.Wrapf(err, "failed computing comm token types")
-				}
-				supportedTokenFormatList = append(supportedTokenFormatList, format)
+	for _, precision := range crypto.SupportedPrecisions {
+		// these precisions are supported directly
+		if precision <= maxPrecision {
+			format, err := supportedTokenFormat(pp, precision)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed computing comm token types")
 			}
+			supportedTokenFormatList = append(supportedTokenFormatList, format)
 		}
 	}
 
@@ -231,15 +229,13 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 	return output, nil
 }
 
-func supportedTokenFormat(pp *crypto.PublicParams, precision uint64, ipk *crypto.IdemixIssuerPublicKey) (token.Format, error) {
+func supportedTokenFormat(pp *noghv1.PublicParams, precision uint64) (token.Format, error) {
 	hasher := utils2.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
 		hasher.AddInt(int(pp.Curve)),
 		hasher.AddUInt64(precision),
 		hasher.AddG1s(pp.PedersenGenerators),
-		hasher.AddInt(int(ipk.Curve)),
-		hasher.AddBytes(ipk.PublicKey),
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}
