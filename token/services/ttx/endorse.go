@@ -530,7 +530,7 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 		// It could be done by using a new context.
 		span.AddEvent(fmt.Sprintf("Distribute to %s", entry.EID))
 		if err := c.distributeEvnToParty(context, &entry, txRaw, owner); err != nil {
-			return errors.Wrapf(err, "failed distribute evn to party [%s:%s]", entry.EID, entry.ID)
+			return errors.Wrapf(err, "failed distribute evn of tx [%s] to party [%s:%s]", c.tx.ID(), entry.EID, entry.ID)
 		}
 		span.AddEvent(fmt.Sprintf("Done distributing to %s", entry.EID))
 	}
