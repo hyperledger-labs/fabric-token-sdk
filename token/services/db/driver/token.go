@@ -149,6 +149,8 @@ type TokenDB interface {
 	IsMine(txID string, index uint64) (bool, error)
 	// UnspentTokensIterator returns an iterator over all owned tokens
 	UnspentTokensIterator() (driver.UnspentTokensIterator, error)
+	// LedgerTokensIteratorBy returns an iterator over all unspent ledger tokens
+	UnspentLedgerTokensIteratorBy(ctx context.Context) (driver.LedgerTokensIterator, error)
 	// UnspentTokensIteratorBy returns an iterator over all tokens owned by the passed wallet identifier and of a given type
 	UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (driver.UnspentTokensIterator, error)
 	// SpendableTokensIteratorBy returns an iterator over all tokens owned solely by the passed wallet identifier and of a given type
