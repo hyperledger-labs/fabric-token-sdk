@@ -14,9 +14,9 @@ import (
 
 func TestTokensService_NewUpgradeChallenge(t *testing.T) {
 	ts := NewTokensService()
-	challange, err := ts.NewUpgradeChallenge()
+	challenge, err := ts.NewUpgradeChallenge()
 	assert.NoError(t, err)
-	assert.Len(t, challange, ChallengeSize)
+	assert.Len(t, challenge, ChallengeSize)
 }
 
 func TestTokensService_GenUpgradeProof(t *testing.T) {
