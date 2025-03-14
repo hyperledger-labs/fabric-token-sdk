@@ -79,6 +79,10 @@ func NewDefaultCheckers(tmsProvider TokenManagementServiceProvider, networkProvi
 			Name:    "Unspent Tokens Check",
 			Checker: checkers.checkUnspentTokens,
 		},
+		{
+			Name:    "Token Spendability Check",
+			Checker: checkers.checkTokenSpendability,
+		},
 	}
 }
 
@@ -202,5 +206,45 @@ func (a *DefaultCheckers) checkUnspentTokens(context context.Context) ([]string,
 			return nil, errors.WithMessagef(err, "failed to match ledger token content with local")
 		}
 	}
+	return errorMessages, nil
+}
+
+func (a *DefaultCheckers) checkTokenSpendability(context context.Context) ([]string, error) {
+	var errorMessages []string
+
+	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting tms [%s]", a.tmsID)
+	}
+	net, err := a.networkProvider.GetNetwork(tms.Network(), tms.Channel())
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get network [%s]", tms.ID())
+	}
+	tv, err := net.TokenVault(tms.Namespace())
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get token vault [%s]", tms.ID())
+	}
+	uit, err := tv.QueryEngine().UnspentTokensIterator()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed querying utxo engine")
+	}
+	defer uit.Close()
+
+	// supportedtokenFormats := tms.TokensService().SupportedTokenFormats()
+
+	for {
+		tok, err := uit.Next()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed querying next unspent token")
+		}
+		if tok == nil {
+			break
+		}
+		// is the token's format supported?
+
+		// extract the token's recipients and try to get un unmarshaller
+
+	}
+
 	return errorMessages, nil
 }
