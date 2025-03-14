@@ -10,4 +10,5 @@ package deps
 
 import (
 	_ "github.com/IBM/idemix/tools/idemixgen"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fabricv25"
 )

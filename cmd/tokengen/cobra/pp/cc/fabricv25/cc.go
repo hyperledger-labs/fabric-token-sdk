@@ -4,11 +4,12 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package cc
+package fabricv25
 
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
@@ -33,12 +34,13 @@ func GeneratePackage(raw []byte, outputDir string) error {
 	}
 
 	err = packager.New().PackageChaincode(
-		"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main",
+		"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fabricv25/main",
 		"golang",
 		"tcc",
 		filepath.Join(outputDir, "tcc.tar"),
 		func(s string, s2 string) (string, []byte) {
-			if strings.HasSuffix(s, "github.com/hyperledger-labs/fabric-token-sdk/token/tcc/params.go") {
+			fmt.Println(s)
+			if strings.HasSuffix(s, "/token/services/network/fabric/tcc/fabricv25/params.go") {
 				return "", paramsFile.Bytes()
 			}
 			return "", nil

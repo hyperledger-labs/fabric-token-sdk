@@ -16,13 +16,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	slices2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	"go.uber.org/zap"
 )
 
 const (
-	QueryStates      = tcc.QueryStates
+	QueryStates      = "queryStates"
 	NumberPastBlocks = 10
 	FirstBlock       = 1
 )

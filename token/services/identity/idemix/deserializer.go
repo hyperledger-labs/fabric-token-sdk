@@ -9,7 +9,6 @@ package idemix
 import (
 	"fmt"
 
-	idemix2 "github.com/IBM/idemix"
 	csp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -57,10 +56,10 @@ func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID [
 			&csp.IdemixIssuerPublicKeyImportOpts{
 				Temporary: true,
 				AttributeNames: []string{
-					idemix2.AttributeNameOU,
-					idemix2.AttributeNameRole,
-					idemix2.AttributeNameEnrollmentId,
-					idemix2.AttributeNameRevocationHandle,
+					crypto2.AttributeNameOU,
+					crypto2.AttributeNameRole,
+					crypto2.AttributeNameEnrollmentId,
+					crypto2.AttributeNameRevocationHandle,
 				},
 			})
 		if err != nil {

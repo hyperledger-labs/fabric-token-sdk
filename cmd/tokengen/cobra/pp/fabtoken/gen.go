@@ -11,10 +11,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
+	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc/fabricv25"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -65,7 +64,7 @@ var cobraCommand = &cobra.Command{
 		// generate the chaincode package
 		if GenerateCCPackage {
 			fmt.Println("Generate chaincode package...")
-			if err := cc.GeneratePackage(raw, OutputDir); err != nil {
+			if err := fabricv25.GeneratePackage(raw, OutputDir); err != nil {
 				return err
 			}
 		}

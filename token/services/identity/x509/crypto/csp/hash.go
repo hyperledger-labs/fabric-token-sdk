@@ -9,7 +9,7 @@ package csp
 import (
 	"hash"
 
-	"github.com/hyperledger/fabric/bccsp"
+	"github.com/hyperledger/fabric-lib-go/bccsp"
 )
 
 type hasher struct {
