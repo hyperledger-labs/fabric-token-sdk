@@ -4,14 +4,14 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabtoken
+package v1
 
 import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -20,7 +20,7 @@ import (
 
 type TransferService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common.PublicParametersManager[*v1.PublicParams]
+	PublicParametersManager common.PublicParametersManager[*core.PublicParams]
 	WalletService           driver.WalletService
 	TokenLoader             TokenLoader
 	Deserializer            driver.Deserializer
@@ -28,7 +28,7 @@ type TransferService struct {
 
 func NewTransferService(
 	logger logging.Logger,
-	publicParametersManager common.PublicParametersManager[*v1.PublicParams],
+	publicParametersManager common.PublicParametersManager[*core.PublicParams],
 	walletService driver.WalletService,
 	tokenLoader TokenLoader,
 	deserializer driver.Deserializer,
@@ -51,17 +51,17 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
 
-	var inputs []*v1.Output
+	var inputs []*core.Output
 	for _, tok := range inputTokens {
 		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
-		t := v1.Output(*tok)
+		t := core.Output(*tok)
 		inputs = append(inputs, &t)
 	}
 
 	// prepare outputs
-	var outs []*v1.Output
+	var outs []*core.Output
 	for _, output := range Outputs {
-		outs = append(outs, &v1.Output{
+		outs = append(outs, &core.Output{
 			Owner:    output.Owner,
 			Type:     output.Type,
 			Quantity: output.Quantity,
@@ -90,7 +90,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	}
 
 	// outputs
-	outputMetadata := &v1.OutputMetadata{}
+	outputMetadata := &core.OutputMetadata{}
 	outputMetadataRaw, err := outputMetadata.Serialize()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed serializing output information")
@@ -141,7 +141,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	}
 
 	// return
-	transfer := &v1.TransferAction{
+	transfer := &core.TransferAction{
 		Inputs:      tokenIDs,
 		InputTokens: inputs,
 		Outputs:     outs,
@@ -165,7 +165,7 @@ func (s *TransferService) VerifyTransfer(tr driver.TransferAction, outputMetadat
 // DeserializeTransferAction un-marshals a TransferAction from the passed array of bytes.
 // DeserializeTransferAction returns an error, if the un-marshalling fails.
 func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
-	t := &v1.TransferAction{}
+	t := &core.TransferAction{}
 	if err := t.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing transfer action")
 	}

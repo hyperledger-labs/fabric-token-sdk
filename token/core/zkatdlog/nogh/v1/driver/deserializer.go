@@ -8,12 +8,15 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
+	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/pkg/errors"
 )
 
 // Deserializer deserializes verifiers associated with issuers, owners, and auditors
@@ -22,13 +25,42 @@ type Deserializer struct {
 }
 
 // NewDeserializer returns a deserializer
-func NewDeserializer() *Deserializer {
+func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
+	if pp == nil {
+		return nil, errors.New("failed to get deserializer: nil public parameters")
+	}
+
 	des := deserializer.NewTypedVerifierDeserializerMultiplex()
+	for _, idemixIssuerPublicKey := range pp.IdemixIssuerPublicKeys {
+		idemixDes, err := idemix2.NewDeserializer(idemixIssuerPublicKey.PublicKey, idemixIssuerPublicKey.Curve)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", idemixIssuerPublicKey.Curve)
+		}
+		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+	}
 	des.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 	des.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(des))
 	des.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(des, des))
 
-	return &Deserializer{Deserializer: common.NewDeserializer(x509.IdentityType, des, des, des, des, des)}
+	return &Deserializer{Deserializer: common.NewDeserializer(idemix2.IdentityType, des, des, des, des, des)}, nil
+}
+
+type TokenDeserializer struct{}
+
+func (d *TokenDeserializer) DeserializeMetadata(raw []byte) (*token.Metadata, error) {
+	metadata := &token.Metadata{}
+	if err := metadata.Deserialize(raw); err != nil {
+		return nil, err
+	}
+	return metadata, nil
+}
+
+func (d *TokenDeserializer) DeserializeToken(raw []byte) (*token.Token, error) {
+	token := &token.Token{}
+	if err := token.Deserialize(raw); err != nil {
+		return nil, err
+	}
+	return token, nil
 }
 
 type PublicParamsDeserializer struct{}
@@ -43,8 +75,9 @@ type EIDRHDeserializer = deserializer.EIDRHDeserializer
 // NewEIDRHDeserializer returns an enrollmentService
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
+	d.AddDeserializer(idemix2.IdentityType, &idemix2.AuditInfoDeserializer{})
 	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
-	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&x509.AuditInfoDeserializer{}))
+	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix2.AuditInfoDeserializer{}))
 	d.AddDeserializer(multisig.Multisig, &multisig.AuditInfoDeserializer{})
 	return d
 }

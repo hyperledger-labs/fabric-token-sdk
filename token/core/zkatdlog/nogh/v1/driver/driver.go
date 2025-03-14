@@ -13,8 +13,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -26,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Driver contains the non-static logic of the driver (including services)
 type Driver struct {
 	*base
 	metricsProvider  metrics.Provider
@@ -48,7 +48,7 @@ func NewDriver(
 	networkProvider *network.Provider,
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
-		Name: v1.PublicParameters,
+		Name: crypto.DLogPublicParameters,
 		Driver: &Driver{
 			base:             &base{},
 			metricsProvider:  metricsProvider,
@@ -63,7 +63,7 @@ func NewDriver(
 }
 
 func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (driver.TokenManagerService, error) {
-	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
 	logger.Debugf("creating new token service with public parameters [%s]", hash.Hashable(publicParams))
 
@@ -72,43 +72,33 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	}
 	n, err := d.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
-		return nil, errors.Errorf("failed getting network [%s]", err)
+		return nil, errors.Wrapf(err, "failed to get network [%s]", tmsID.Network)
 	}
 	if n == nil {
 		return nil, errors.Errorf("network [%s] does not exists", tmsID.Network)
 	}
+	networkLocalMembership := n.LocalMembership()
 	v, err := n.TokenVault(tmsID.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", tmsID.Network, tmsID.Namespace)
 	}
-	qe := v.QueryEngine()
-	networkLocalMembership := n.LocalMembership()
 
 	tmsConfig, err := d.configService.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	}
 
-	publicParamsManager, err := common.NewPublicParamsManager[*v1.PublicParams](
+	ppm, err := common.NewPublicParamsManager[*crypto.PublicParams](
 		&PublicParamsDeserializer{},
-		v1.PublicParameters,
+		crypto.DLogPublicParameters,
 		publicParams,
 	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
 
-	ws, err := d.newWalletService(
-		tmsConfig,
-		d.endpointService,
-		d.storageProvider,
-		qe,
-		logger,
-		d.identityProvider.DefaultIdentity(),
-		networkLocalMembership.DefaultIdentity(),
-		publicParamsManager.PublicParams(),
-		false,
-	)
+	qe := v.QueryEngine()
+	ws, err := d.newWalletService(tmsConfig, d.endpointService, d.storageProvider, qe, logger, d.identityProvider.DefaultIdentity(), networkLocalMembership.DefaultIdentity(), ppm.PublicParams(), false)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze wallet service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
@@ -116,23 +106,55 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	ip := ws.IdentityProvider
 
 	authorization := common.NewAuthorizationMultiplexer(
-		common.NewTMSAuthorization(logger, publicParamsManager.PublicParams(), ws),
+		common.NewTMSAuthorization(logger, ppm.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
 		multisig.NewEscrowAuth(ws),
 	)
-	tokensService, err := v1.NewTokensService(publicParamsManager.PublicParams(), deserializer)
+
+	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
+	driverMetrics := v1.NewMetrics(metricsProvider)
+	tokensService, err := v1.NewTokensService(ppm, deserializer)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
-	service, err := fabtoken.NewService(logger, ws, publicParamsManager, ip, deserializer, tmsConfig, fabtoken.NewIssueService(publicParamsManager, ws, deserializer), fabtoken.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer), fabtoken.NewAuditorService(), tokensService, authorization)
+	service, err := v1.NewTokenService(
+		logger,
+		ws,
+		ppm,
+		ip,
+		deserializer,
+		tmsConfig,
+		v1.NewIssueService(logger, ppm, ws, deserializer, driverMetrics, tokensService),
+		v1.NewTransferService(
+			logger,
+			ppm,
+			ws,
+			common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
+			deserializer,
+			driverMetrics,
+			d.tracerProvider,
+			tokensService,
+		),
+		v1.NewAuditorService(
+			logger,
+			ppm,
+			common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
+			deserializer,
+			driverMetrics,
+			d.tracerProvider,
+		),
+		tokensService,
+		authorization,
+	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}
-	return service, nil
+
+	return service, err
 }
 
 func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Validator, error) {
-	pp, ok := params.(*v1.PublicParams)
+	pp, ok := params.(*crypto.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}

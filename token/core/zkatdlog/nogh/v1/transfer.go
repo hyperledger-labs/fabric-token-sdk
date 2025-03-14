@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package nogh
+package v1
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -69,7 +69,7 @@ type TokenDeserializer interface {
 
 type TransferService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common.PublicParametersManager[*v1.PublicParams]
+	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
 	WalletService           driver.WalletService
 	TokenLoader             TokenLoader
 	IdentityDeserializer    driver.Deserializer
@@ -80,7 +80,7 @@ type TransferService struct {
 
 func NewTransferService(
 	logger logging.Logger,
-	publicParametersManager common.PublicParametersManager[*v1.PublicParams],
+	publicParametersManager common.PublicParametersManager[*crypto.PublicParams],
 	walletService driver.WalletService,
 	tokenLoader TokenLoader,
 	identityDeserializer driver.Deserializer,

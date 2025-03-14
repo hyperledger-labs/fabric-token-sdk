@@ -4,12 +4,13 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package v1
+package validator
 
 import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
@@ -72,7 +73,7 @@ func TransferBalanceValidate(ctx *Context) error {
 		}
 	}
 	for _, output := range ctx.TransferAction.GetOutputs() {
-		out := output.(*Output)
+		out := output.(*core.Output)
 		q, err := token.ToQuantity(out.Quantity, ctx.PP.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
@@ -108,7 +109,7 @@ func TransferHTLCValidate(ctx *Context) error {
 			}
 
 			// check type and quantity
-			output := ctx.TransferAction.GetOutputs()[0].(*Output)
+			output := ctx.TransferAction.GetOutputs()[0].(*core.Output)
 			tok := output
 			if ctx.InputTokens[0].Type != tok.Type {
 				return errors.New("invalid transfer action: type of input does not match type of output")
@@ -139,7 +140,7 @@ func TransferHTLCValidate(ctx *Context) error {
 	}
 
 	for _, o := range ctx.TransferAction.GetOutputs() {
-		out, ok := o.(*Output)
+		out, ok := o.(*core.Output)
 		if !ok {
 			return errors.New("invalid output")
 		}

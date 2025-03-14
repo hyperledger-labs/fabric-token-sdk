@@ -4,11 +4,12 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabtoken
+package v1
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -20,13 +21,13 @@ type TokenLoader interface {
 }
 
 type Service struct {
-	*common.Service[*v1.PublicParams]
+	*common.Service[*core.PublicParams]
 }
 
 func NewService(
 	logger logging.Logger,
 	ws *wallet.Service,
-	ppm common.PublicParametersManager[*v1.PublicParams],
+	ppm common.PublicParametersManager[*core.PublicParams],
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
 	configuration driver.Configuration,
@@ -36,7 +37,7 @@ func NewService(
 	tokensService driver.TokensService,
 	authorization driver.Authorization,
 ) (*Service, error) {
-	root, err := common.NewTokenService[*v1.PublicParams](
+	root, err := common.NewTokenService[*core.PublicParams](
 		logger,
 		ws,
 		ppm,
@@ -61,5 +62,5 @@ func NewService(
 }
 
 func (s *Service) Validator() (driver.Validator, error) {
-	return v1.NewValidator(s.Logger, s.PublicParametersManager.PublicParams(), s.Deserializer()), nil
+	return validator.NewValidator(s.Logger, s.PublicParametersManager.PublicParams(), s.Deserializer()), nil
 }
