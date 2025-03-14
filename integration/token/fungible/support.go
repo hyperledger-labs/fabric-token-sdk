@@ -947,24 +947,15 @@ func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReferen
 	return exists
 }
 
-func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, ids ...*token3.NodeReference) {
+func CheckOwnerDB(network *integration.Infrastructure, errorCheck func([]string) error, ids ...*token3.NodeReference) {
 	for _, id := range ids {
 		for _, replicaName := range id.AllNames() {
 			errorMessagesBoxed, err := network.Client(replicaName).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{}))
 			Expect(err).NotTo(HaveOccurred())
-			var errorMessages []string
-			common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-
-			Expect(len(errorMessages)).To(Equal(len(expectedErrors)), "expected %d error messages from [%s], got [% v]", len(expectedErrors), replicaName, errorMessages)
-			for _, expectedError := range expectedErrors {
-				found := false
-				for _, message := range errorMessages {
-					if message == expectedError {
-						found = true
-						break
-					}
-				}
-				Expect(found).To(BeTrue(), "cannot find error message [%s] in [% v]", expectedError, errorMessages)
+			if errorCheck != nil {
+				var errorMessages []string
+				common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
+				Expect(errorCheck(errorMessages)).NotTo(HaveOccurred(), "failed to check errors")
 			}
 		}
 	}
