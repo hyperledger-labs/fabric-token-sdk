@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -224,14 +225,16 @@ func (a *DefaultCheckers) checkTokenSpendability(context context.Context) ([]str
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token vault [%s]", tms.ID())
 	}
-	uit, err := tv.QueryEngine().UnspentTokensIterator()
+	uit, err := tv.QueryEngine().UnspentLedgerTokensIteratorBy(context)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed querying utxo engine")
 	}
 	defer uit.Close()
 
-	// supportedtokenFormats := tms.TokensService().SupportedTokenFormats()
-
+	ts := tms.TokensService()
+	sigService := tms.SigService()
+	supportedTokenFormats := ts.SupportedTokenFormats()
+	supportedTokenFormatsSet := collections.NewSet(supportedTokenFormats...)
 	for {
 		tok, err := uit.Next()
 		if err != nil {
@@ -241,9 +244,23 @@ func (a *DefaultCheckers) checkTokenSpendability(context context.Context) ([]str
 			break
 		}
 		// is the token's format supported?
+		if !supportedTokenFormatsSet.Contains(tok.Format) {
+			errorMessages = append(errorMessages, fmt.Sprintf("token format not supported [%s][%s]", tok.ID, tok.Format))
+			continue
 
-		// extract the token's recipients and try to get un unmarshaller
-
+		}
+		// extract the token's recipients and try to get a verifier for it
+		_, _, recipients, _, err := ts.Deobfuscate(tok.Token, tok.TokenMetadata)
+		if err != nil {
+			errorMessages = append(errorMessages, fmt.Sprintf("failed to deobfuscate token [%s][%s], [%s]", tok.ID, tok.Format, err))
+			continue
+		}
+		for _, recipient := range recipients {
+			_, err = sigService.OwnerVerifier(recipient)
+			if err != nil {
+				errorMessages = append(errorMessages, fmt.Sprintf("failed to verify recipient [%s][%s][%s], [%s]", tok.ID, recipient, tok.Format, err))
+			}
+		}
 	}
 
 	return errorMessages, nil

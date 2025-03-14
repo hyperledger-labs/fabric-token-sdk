@@ -47,6 +47,11 @@ type UnsupportedTokensIterator interface {
 	Next() (*token.LedgerToken, error)
 }
 
+type LedgerTokensIterator interface {
+	Close()
+	Next() (*token.LedgerToken, error)
+}
+
 type Vault interface {
 	QueryEngine() QueryEngine
 	CertificationStorage() CertificationStorage
@@ -70,6 +75,8 @@ type QueryEngine interface {
 	IsMine(id *token.ID) (bool, error)
 	// UnspentTokensIterator returns an iterator over all unspent tokens
 	UnspentTokensIterator() (UnspentTokensIterator, error)
+	// UnspentLedgerTokensIteratorBy returns an iterator over all unspent ledger tokens
+	UnspentLedgerTokensIteratorBy(ctx context.Context) (LedgerTokensIterator, error)
 	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 	// The token type can be empty. In that case, tokens of any type are returned.
 	UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (UnspentTokensIterator, error)
