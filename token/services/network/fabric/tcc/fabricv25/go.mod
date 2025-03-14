@@ -8,7 +8,7 @@ toolchain go1.23.6
 
 require (
 	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250313070341-221962d51249
-	github.com/hyperledger-labs/fabric-token-sdk v0.4.1-0.20250313062440-258265b9445d
+	github.com/hyperledger-labs/fabric-token-sdk v0.4.1-0.20250313194838-ffd98a0dbdc9
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20240704073638-9fb89180dc17
 	github.com/hyperledger/fabric-protos-go v0.3.7
 	github.com/onsi/ginkgo/v2 v2.22.2
@@ -21,10 +21,10 @@ require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
-	github.com/IBM/idemix v0.0.2-0.20250224151615-ebf95185165f // indirect
-	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20241220065751-dc7206770307 // indirect
-	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20241220065751-dc7206770307 // indirect
-	github.com/IBM/idemix/bccsp/types v0.0.0-20241220065751-dc7206770307 // indirect
+	github.com/IBM/idemix v0.0.2-0.20250313153527-832db18b9478 // indirect
+	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20250313153527-832db18b9478 // indirect
+	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20250313153527-832db18b9478 // indirect
+	github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478 // indirect
 	github.com/IBM/mathlib v0.0.3-0.20241219051532-81539b287cf5 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
