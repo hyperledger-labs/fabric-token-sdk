@@ -11,8 +11,8 @@ import (
 	"os"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
-	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
+	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )

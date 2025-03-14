@@ -4,11 +4,11 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package nogh
+package v1
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
@@ -17,14 +17,14 @@ import (
 )
 
 type Service struct {
-	*common.Service[*v1.PublicParams]
+	*common.Service[*crypto.PublicParams]
 	validator *validator.Validator
 }
 
 func NewTokenService(
 	logger logging.Logger,
 	ws *wallet.Service,
-	ppm common.PublicParametersManager[*v1.PublicParams],
+	ppm common.PublicParametersManager[*crypto.PublicParams],
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
 	configuration driver.Configuration,
@@ -34,7 +34,7 @@ func NewTokenService(
 	tokensService driver.TokensService,
 	authorization driver.Authorization,
 ) (*Service, error) {
-	root, err := common.NewTokenService[*v1.PublicParams](
+	root, err := common.NewTokenService[*crypto.PublicParams](
 		logger,
 		ws,
 		ppm,

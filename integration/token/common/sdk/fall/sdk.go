@@ -11,8 +11,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
-	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
-	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
+	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"go.uber.org/dig"

@@ -4,12 +4,12 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabtoken
+package v1
 
 import (
 	"context"
 
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"

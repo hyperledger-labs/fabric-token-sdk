@@ -9,16 +9,17 @@ package driver
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
+// PPMFactory contains the static logic of the driver
 type PPMFactory struct{ *base }
 
 func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {
 	return core.NamedFactory[driver.PPMFactory]{
-		Name:   v1.DLogPublicParameters,
+		Name:   v1.PublicParameters,
 		Driver: &PPMFactory{},
 	}
 }

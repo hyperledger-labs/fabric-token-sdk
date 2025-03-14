@@ -25,7 +25,7 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/dlogstress/support"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"

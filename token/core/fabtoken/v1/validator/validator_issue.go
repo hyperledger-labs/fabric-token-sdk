@@ -4,11 +4,12 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package v1
+package validator
 
 import (
 	"bytes"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -25,7 +26,7 @@ func IssueValidate(ctx *Context) error {
 		return errors.Errorf("there is no output")
 	}
 	for _, output := range action.GetOutputs() {
-		out := output.(*Output)
+		out := output.(*core.Output)
 		q, err := token.ToQuantity(out.Quantity, ctx.PP.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
