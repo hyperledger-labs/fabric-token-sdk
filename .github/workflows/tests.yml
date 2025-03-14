@@ -132,6 +132,11 @@ jobs:
           go-version-file: "go.mod"
           cache-dependency-path: "**/*.sum"
 
+      - name: Get Fabric v2.5 TCC
+        run: |
+          go get github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fabricv25@${{ github.event.pull_request.head.sha }}
+          go mod tidy
+
       - name: Set up tools
         run: make install-tools
 
