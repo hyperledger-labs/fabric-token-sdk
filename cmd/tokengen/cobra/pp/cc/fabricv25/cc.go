@@ -40,7 +40,7 @@ func GeneratePackage(raw []byte, outputDir string) error {
 		filepath.Join(outputDir, "tcc.tar"),
 		func(s string, s2 string) (string, []byte) {
 			fmt.Println(s)
-			if strings.HasSuffix(s, "github.com/hyperledger-labs/fabric-token-sdk/token/tcc/fabricv25/params.go") {
+			if strings.HasSuffix(s, "/token/services/network/fabric/tcc/fabricv25/params.go") {
 				return "", paramsFile.Bytes()
 			}
 			return "", nil
