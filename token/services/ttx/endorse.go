@@ -555,7 +555,7 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	span.AddEvent("Wait for ack")
 	sigma, err := ReadMessage(session, 1*time.Minute)
 	if err != nil {
-		return errors.Wrap(err, "failed reading message")
+		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
 	}
 	logger.Debugf("received ack from [%s] [%s], checking signature on [%s]",
 		entry.LongTerm, hash.Hashable(sigma).String(),
