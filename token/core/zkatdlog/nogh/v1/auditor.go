@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package nogh
+package v1
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
@@ -29,7 +29,7 @@ type TokenCommitmentLoader interface {
 
 type AuditorService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common.PublicParametersManager[*v1.PublicParams]
+	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
 	TokenCommitmentLoader   TokenCommitmentLoader
 	Deserializer            driver.Deserializer
 	Metrics                 *Metrics
@@ -38,7 +38,7 @@ type AuditorService struct {
 
 func NewAuditorService(
 	logger logging.Logger,
-	publicParametersManager common.PublicParametersManager[*v1.PublicParams],
+	publicParametersManager common.PublicParametersManager[*crypto.PublicParams],
 	tokenCommitmentLoader TokenCommitmentLoader,
 	deserializer driver.Deserializer,
 	metrics *Metrics,

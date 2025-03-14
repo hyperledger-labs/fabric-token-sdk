@@ -4,14 +4,14 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package nogh
+package v1
 
 import (
 	"context"
 	"time"
 
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -22,7 +22,7 @@ import (
 
 type IssueService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common2.PublicParametersManager[*v1.PublicParams]
+	PublicParametersManager common2.PublicParametersManager[*crypto.PublicParams]
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
 	Metrics                 *Metrics
@@ -31,7 +31,7 @@ type IssueService struct {
 
 func NewIssueService(
 	logger logging.Logger,
-	publicParametersManager common2.PublicParametersManager[*v1.PublicParams],
+	publicParametersManager common2.PublicParametersManager[*crypto.PublicParams],
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
 	metrics *Metrics,
@@ -198,7 +198,7 @@ func (s *IssueService) VerifyIssue(ia driver.IssueAction, metadata []*driver.Iss
 	// todo check tokenInfo
 	return issue2.NewVerifier(
 		coms,
-		pp.(*v1.PublicParams)).Verify(action.GetProof())
+		pp.(*crypto.PublicParams)).Verify(action.GetProof())
 }
 
 // DeserializeIssueAction un-marshals raw bytes into a zkatdlog IssueAction
