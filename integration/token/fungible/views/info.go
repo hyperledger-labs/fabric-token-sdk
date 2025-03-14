@@ -17,6 +17,7 @@ import (
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -114,12 +115,10 @@ type WhoDeletedTokenView struct {
 }
 
 func (w *WhoDeletedTokenView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, w.TMSID.Network, w.TMSID.Channel)
-	assert.NotNil(net, "cannot find network [%s:%s]", w.TMSID.Network, w.TMSID.Channel)
-	vault, err := net.TokenVault(w.TMSID.Namespace)
-	assert.NoError(err, "failed to get vault for [%s:%s:%s]", w.TMSID.Network, w.TMSID.Channel, w.TMSID.Namespace)
+	tokensDB, err := tokendb.GetByTMSId(context, w.TMSID)
+	assert.NoError(err, "failed getting tokens by TMSID for [%s]", w.TMSID)
 
-	who, deleted, err := vault.QueryEngine().WhoDeletedTokens(w.TokenIDs...)
+	who, deleted, err := tokensDB.WhoDeletedTokens(w.TokenIDs...)
 	assert.NoError(err, "failed to lookup who deleted tokens")
 
 	return &WhoDeletedTokenResult{
