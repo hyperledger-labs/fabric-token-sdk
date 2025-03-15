@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -34,6 +35,7 @@ var precisions = map[token.Format]uint64{
 type TokensService struct {
 	*common.TokensService
 
+	Logger                  logging.Logger
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
 	IdentityDeserializer    driver.Deserializer
 
@@ -42,7 +44,7 @@ type TokensService struct {
 	UpgradeSupportedTokenFormatList []token.Format
 }
 
-func NewTokensService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
+func NewTokensService(logger logging.Logger, publicParametersManager common.PublicParametersManager[*crypto.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
 	// compute supported tokens
 	pp := publicParametersManager.PublicParams()
 	maxPrecision := pp.RangeProofParams.BitLength
@@ -80,6 +82,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	}
 
 	return &TokensService{
+		Logger:                          logger,
 		TokensService:                   common.NewTokensService(),
 		PublicParametersManager:         publicParametersManager,
 		IdentityDeserializer:            identityDeserializer,
@@ -89,7 +92,7 @@ func NewTokensService(publicParametersManager common.PublicParametersManager[*cr
 	}, nil
 }
 
-func (s *TokensService) Recipients(output []byte) ([]driver.Identity, error) {
+func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity, error) {
 	tok := &token2.Token{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize token")
@@ -105,8 +108,20 @@ func (s *TokensService) Recipients(output []byte) ([]driver.Identity, error) {
 // We assume here that the format of the output is the default output format supported
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer
-func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
-	_, metadata, tok, err := s.deserializeToken(output, outputMetadata, false)
+func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
+	// we support fabtoken.Type and comm.Type
+
+	// try first comm type
+	tok, issuer, recipients, format, err := s.deobfuscateAsCommType(output, outputMetadata)
+	if err == nil {
+		return tok, issuer, recipients, format, nil
+	}
+	// try fabtoken type
+	return s.deobfuscateAsFabtokenType(output, outputMetadata)
+}
+
+func (s *TokensService) deobfuscateAsCommType(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
+	_, metadata, tok, err := s.deserializeCommToken(output, outputMetadata, false)
 	if err != nil {
 		return nil, nil, nil, "", errors.Wrapf(err, "failed to deobfuscate token")
 	}
@@ -115,6 +130,30 @@ func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 		return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
 	}
 	return tok, metadata.Issuer, recipients, s.OutputTokenFormat, nil
+}
+
+func (s *TokensService) deobfuscateAsFabtokenType(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
+	// TODO: refer only to the protos
+	tok := &core.Output{}
+	if err := tok.Deserialize(output); err != nil {
+		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token")
+	}
+
+	metadata := &core.OutputMetadata{}
+	if err := metadata.Deserialize(outputMetadata); err != nil {
+		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
+	}
+
+	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	if err != nil {
+		return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
+	}
+
+	return &token.Token{
+		Owner:    tok.Owner,
+		Type:     tok.Type,
+		Quantity: tok.Quantity,
+	}, metadata.Issuer, recipients, s.OutputTokenFormat, nil
 }
 
 func (s *TokensService) SupportedTokenFormats() []token.Format {
@@ -193,7 +232,7 @@ func (s *TokensService) deserializeTokenWithOutputTokenFormat(outputRaw []byte, 
 	return output, metadata, nil
 }
 
-func (s *TokensService) deserializeToken(outputRaw []byte, metadataRaw []byte, checkOwner bool) (*token2.Token, *token2.Metadata, *token.Token, error) {
+func (s *TokensService) deserializeCommToken(outputRaw []byte, metadataRaw []byte, checkOwner bool) (*token2.Token, *token2.Metadata, *token.Token, error) {
 	// get zkatdlog token
 	output, err := s.getOutput(outputRaw, checkOwner)
 	if err != nil {

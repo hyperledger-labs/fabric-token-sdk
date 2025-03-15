@@ -952,10 +952,12 @@ func CheckOwnerDB(network *integration.Infrastructure, errorCheck func([]string)
 		for _, replicaName := range id.AllNames() {
 			errorMessagesBoxed, err := network.Client(replicaName).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{}))
 			Expect(err).NotTo(HaveOccurred())
+			var errorMessages []string
+			common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
 			if errorCheck != nil {
-				var errorMessages []string
-				common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
 				Expect(errorCheck(errorMessages)).NotTo(HaveOccurred(), "failed to check errors")
+			} else {
+				Expect(len(errorMessages)).To(BeZero(), "expected zero errors, got [%v]", errorMessages)
 			}
 		}
 	}
@@ -967,14 +969,12 @@ func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeRef
 		AuditorWalletID: walletID,
 	}))
 	Expect(err).NotTo(HaveOccurred())
+	var errorMessages []string
+	common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
 	if errorCheck != nil {
-		var errorMessages []string
-		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
 		Expect(errorCheck(errorMessages)).NotTo(HaveOccurred(), "failed to check errors")
 	} else {
-		var errorMessages []string
-		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-		Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
+		Expect(len(errorMessages)).To(BeZero(), "expected zero errors, got [%v]", errorMessages)
 	}
 }
 
