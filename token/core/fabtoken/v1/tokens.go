@@ -37,7 +37,7 @@ func NewTokensService(pp *core.PublicParams, identityDeserializer driver.Deseria
 	}, nil
 }
 
-func (s *TokensService) Recipients(output []byte) ([]driver.Identity, error) {
+func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity, error) {
 	tok := &core.Output{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling token")
@@ -50,7 +50,7 @@ func (s *TokensService) Recipients(output []byte) ([]driver.Identity, error) {
 }
 
 // Deobfuscate returns a deserialized token and the identity of its issuer
-func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, driver.Identity, []driver.Identity, token2.Format, error) {
+func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token2.Token, driver.Identity, []driver.Identity, token2.Format, error) {
 	tok := &core.Output{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token")

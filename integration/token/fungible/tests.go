@@ -16,6 +16,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner/nwo"
@@ -1215,7 +1216,17 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
+	// alice has one token that cannot be spent directly, it was created when the fabtoken driver was in place
+	CheckOwnerDB(network, func(errMsgs []string) error {
+		if len(errMsgs) != 1 {
+			return errors.Errorf("expected one error but got %v", errMsgs)
+		}
+		if !strings.Contains(errMsgs[0], "token format not supported [") {
+			return errors.Errorf("expected error format not supported [%v]", errMsgs)
+		}
+		return nil
+	}, alice)
+	CheckOwnerDB(network, nil, issuer, bob, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
@@ -1229,6 +1240,7 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
 	// CopyDBsTo(network, "./testdata", alice)
+	// all the tokens are spendable now
 	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorDB(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 0, auditor)

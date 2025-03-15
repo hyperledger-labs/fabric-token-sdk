@@ -30,3 +30,8 @@ func (t *TokensService) NewUpgradeChallenge() ([]byte, error) {
 func (t *TokensService) GenUpgradeProof(id []byte, tokens []token.LedgerToken) ([]byte, error) {
 	return t.ts.GenUpgradeProof(id, tokens)
 }
+
+// SupportedTokenFormats returns the supported token formats
+func (t *TokensService) SupportedTokenFormats() []token.Format {
+	return t.ts.SupportedTokenFormats()
+}

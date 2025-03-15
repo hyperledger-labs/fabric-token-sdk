@@ -189,6 +189,27 @@ func (db *TokenDB) SpendableTokensIteratorBy(ctx context.Context, walletID strin
 	return &UnspentTokensInWalletIterator{txs: rows}, nil
 }
 
+// UnspentLedgerTokensIteratorBy returns an iterator over all unspent ledger tokens
+func (db *TokenDB) UnspentLedgerTokensIteratorBy(ctx context.Context) (tdriver.LedgerTokensIterator, error) {
+	span := trace.SpanFromContext(ctx)
+	// now, select the tokens with the list of ledger tokens
+	where, args := common.Where(db.ci.HasTokenDetails(driver.QueryTokenDetailsParams{
+		Spendable: driver.Any,
+	}, ""))
+	query, err := NewSelect("tx_id, idx, ledger, ledger_metadata, ledger_type").From(db.table.Tokens).Where(where).Compile()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile query")
+	}
+	logger.Debug(query, args)
+	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+	rows, err := db.readDB.Query(query, args...)
+	span.AddEvent("end_query")
+	if err != nil {
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	return &LedgerTokensIterator{txs: rows}, nil
+}
+
 // UnsupportedTokensIteratorBy returns the minimum information for upgrade about the tokens that are not supported
 func (db *TokenDB) UnsupportedTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (tdriver.UnsupportedTokensIterator, error) {
 	// first select all the distinct ledger types
@@ -217,7 +238,7 @@ func (db *TokenDB) UnsupportedTokensIteratorBy(ctx context.Context, walletID str
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
-	return &UnspendableTokensInWalletIterator{txs: rows}, nil
+	return &LedgerTokensIterator{txs: rows}, nil
 }
 
 // Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
@@ -1329,15 +1350,15 @@ func tokenDBError(err error) error {
 	return err
 }
 
-type UnspendableTokensInWalletIterator struct {
+type LedgerTokensIterator struct {
 	txs *sql.Rows
 }
 
-func (u *UnspendableTokensInWalletIterator) Close() {
+func (u *LedgerTokensIterator) Close() {
 	Close(u.txs)
 }
 
-func (u *UnspendableTokensInWalletIterator) Next() (*token.LedgerToken, error) {
+func (u *LedgerTokensIterator) Next() (*token.LedgerToken, error) {
 	if !u.txs.Next() {
 		return nil, nil
 	}

@@ -170,6 +170,19 @@ type QueryEngine struct {
 		result1 []byte
 		result2 error
 	}
+	UnspentLedgerTokensIteratorByStub        func(context.Context) (driver.LedgerTokensIterator, error)
+	unspentLedgerTokensIteratorByMutex       sync.RWMutex
+	unspentLedgerTokensIteratorByArgsForCall []struct {
+		arg1 context.Context
+	}
+	unspentLedgerTokensIteratorByReturns struct {
+		result1 driver.LedgerTokensIterator
+		result2 error
+	}
+	unspentLedgerTokensIteratorByReturnsOnCall map[int]struct {
+		result1 driver.LedgerTokensIterator
+		result2 error
+	}
 	UnspentTokensIteratorStub        func() (driver.UnspentTokensIterator, error)
 	unspentTokensIteratorMutex       sync.RWMutex
 	unspentTokensIteratorArgsForCall []struct {
@@ -984,6 +997,70 @@ func (fake *QueryEngine) PublicParamsReturnsOnCall(i int, result1 []byte, result
 	}{result1, result2}
 }
 
+func (fake *QueryEngine) UnspentLedgerTokensIteratorBy(arg1 context.Context) (driver.LedgerTokensIterator, error) {
+	fake.unspentLedgerTokensIteratorByMutex.Lock()
+	ret, specificReturn := fake.unspentLedgerTokensIteratorByReturnsOnCall[len(fake.unspentLedgerTokensIteratorByArgsForCall)]
+	fake.unspentLedgerTokensIteratorByArgsForCall = append(fake.unspentLedgerTokensIteratorByArgsForCall, struct {
+		arg1 context.Context
+	}{arg1})
+	stub := fake.UnspentLedgerTokensIteratorByStub
+	fakeReturns := fake.unspentLedgerTokensIteratorByReturns
+	fake.recordInvocation("UnspentLedgerTokensIteratorBy", []interface{}{arg1})
+	fake.unspentLedgerTokensIteratorByMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *QueryEngine) UnspentLedgerTokensIteratorByCallCount() int {
+	fake.unspentLedgerTokensIteratorByMutex.RLock()
+	defer fake.unspentLedgerTokensIteratorByMutex.RUnlock()
+	return len(fake.unspentLedgerTokensIteratorByArgsForCall)
+}
+
+func (fake *QueryEngine) UnspentLedgerTokensIteratorByCalls(stub func(context.Context) (driver.LedgerTokensIterator, error)) {
+	fake.unspentLedgerTokensIteratorByMutex.Lock()
+	defer fake.unspentLedgerTokensIteratorByMutex.Unlock()
+	fake.UnspentLedgerTokensIteratorByStub = stub
+}
+
+func (fake *QueryEngine) UnspentLedgerTokensIteratorByArgsForCall(i int) context.Context {
+	fake.unspentLedgerTokensIteratorByMutex.RLock()
+	defer fake.unspentLedgerTokensIteratorByMutex.RUnlock()
+	argsForCall := fake.unspentLedgerTokensIteratorByArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *QueryEngine) UnspentLedgerTokensIteratorByReturns(result1 driver.LedgerTokensIterator, result2 error) {
+	fake.unspentLedgerTokensIteratorByMutex.Lock()
+	defer fake.unspentLedgerTokensIteratorByMutex.Unlock()
+	fake.UnspentLedgerTokensIteratorByStub = nil
+	fake.unspentLedgerTokensIteratorByReturns = struct {
+		result1 driver.LedgerTokensIterator
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *QueryEngine) UnspentLedgerTokensIteratorByReturnsOnCall(i int, result1 driver.LedgerTokensIterator, result2 error) {
+	fake.unspentLedgerTokensIteratorByMutex.Lock()
+	defer fake.unspentLedgerTokensIteratorByMutex.Unlock()
+	fake.UnspentLedgerTokensIteratorByStub = nil
+	if fake.unspentLedgerTokensIteratorByReturnsOnCall == nil {
+		fake.unspentLedgerTokensIteratorByReturnsOnCall = make(map[int]struct {
+			result1 driver.LedgerTokensIterator
+			result2 error
+		})
+	}
+	fake.unspentLedgerTokensIteratorByReturnsOnCall[i] = struct {
+		result1 driver.LedgerTokensIterator
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *QueryEngine) UnspentTokensIterator() (driver.UnspentTokensIterator, error) {
 	fake.unspentTokensIteratorMutex.Lock()
 	ret, specificReturn := fake.unspentTokensIteratorReturnsOnCall[len(fake.unspentTokensIteratorArgsForCall)]
@@ -1200,6 +1277,8 @@ func (fake *QueryEngine) Invocations() map[string][][]interface{} {
 	defer fake.listUnspentTokensMutex.RUnlock()
 	fake.publicParamsMutex.RLock()
 	defer fake.publicParamsMutex.RUnlock()
+	fake.unspentLedgerTokensIteratorByMutex.RLock()
+	defer fake.unspentLedgerTokensIteratorByMutex.RUnlock()
 	fake.unspentTokensIteratorMutex.RLock()
 	defer fake.unspentTokensIteratorMutex.RUnlock()
 	fake.unspentTokensIteratorByMutex.RLock()
