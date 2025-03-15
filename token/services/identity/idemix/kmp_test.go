@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
@@ -87,6 +88,17 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 	signAndVerify(t, km)
 	checkRawContent(t, config.Ipk, idConfig.Raw)
 	assert.Equal(t, configRaw, idConfig.Raw)
+
+	// change the version in the configuration, it must fail now
+	config2, err := crypto.NewConfigFromRaw(config.Ipk, idConfig.Raw)
+	assert.NoError(t, err)
+	config2.Version = 0
+	config2Raw, err := proto.Marshal(config2)
+	assert.NoError(t, err)
+	idConfig.Raw = config2Raw
+	_, err = kmp.Get(idConfig)
+	assert.Error(t, err)
+	assert.EqualError(t, err, "unsupported protocol version: 0")
 }
 
 func signAndVerify(t *testing.T, km membership.KeyManager) {
