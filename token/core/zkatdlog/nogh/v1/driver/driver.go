@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
@@ -36,6 +37,7 @@ type Driver struct {
 	identityProvider view2.IdentityProvider
 	endpointService  *view.EndpointService
 	networkProvider  *network.Provider
+	vaultProvider    *vault.Provider
 }
 
 func NewDriver(
@@ -46,6 +48,7 @@ func NewDriver(
 	identityProvider view2.IdentityProvider,
 	endpointService *view.EndpointService,
 	networkProvider *network.Provider,
+	vaultProvider *vault.Provider,
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
 		Name: crypto.DLogPublicParameters,
@@ -58,6 +61,7 @@ func NewDriver(
 			identityProvider: identityProvider,
 			endpointService:  endpointService,
 			networkProvider:  networkProvider,
+			vaultProvider:    vaultProvider,
 		},
 	}
 }
@@ -70,18 +74,19 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	if len(publicParams) == 0 {
 		return nil, errors.Errorf("empty public parameters")
 	}
+	// get network
 	n, err := d.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get network [%s]", tmsID.Network)
+		return nil, errors.Errorf("failed getting network [%s]", err)
 	}
-	if n == nil {
-		return nil, errors.Errorf("network [%s] does not exists", tmsID.Network)
-	}
-	networkLocalMembership := n.LocalMembership()
-	v, err := n.TokenVault(tmsID.Namespace)
+
+	// get vault
+	vault, err := d.vaultProvider.Vault(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", tmsID.Network, tmsID.Namespace)
+		return nil, errors.Errorf("failed getting vault [%s]", err)
 	}
+
+	networkLocalMembership := n.LocalMembership()
 
 	tmsConfig, err := d.configService.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
@@ -97,8 +102,18 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
 
-	qe := v.QueryEngine()
-	ws, err := d.newWalletService(tmsConfig, d.endpointService, d.storageProvider, qe, logger, d.identityProvider.DefaultIdentity(), networkLocalMembership.DefaultIdentity(), ppm.PublicParams(), false)
+	qe := vault.QueryEngine()
+	ws, err := d.newWalletService(
+		tmsConfig,
+		d.endpointService,
+		d.storageProvider,
+		qe,
+		logger,
+		d.identityProvider.DefaultIdentity(),
+		networkLocalMembership.DefaultIdentity(),
+		ppm.PublicParams(),
+		false,
+	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze wallet service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
