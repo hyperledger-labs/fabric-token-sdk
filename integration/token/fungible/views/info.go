@@ -17,7 +17,6 @@ import (
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -115,12 +114,10 @@ type WhoDeletedTokenView struct {
 }
 
 func (w *WhoDeletedTokenView) Call(context view.Context) (interface{}, error) {
-	tokensDB, err := tokendb.GetByTMSId(context, w.TMSID)
-	assert.NoError(err, "failed getting tokens by TMSID for [%s]", w.TMSID)
-
-	who, deleted, err := tokensDB.WhoDeletedTokens(w.TokenIDs...)
+	tms := token.GetManagementService(context, token.WithTMSID(w.TMSID))
+	assert.NotNil(tms, "failed to get TMS [%s]", w.TMSID)
+	who, deleted, err := tms.Vault().NewQueryEngine().WhoDeletedTokens(w.TokenIDs...)
 	assert.NoError(err, "failed to lookup who deleted tokens")
-
 	return &WhoDeletedTokenResult{
 		Who:     who,
 		Deleted: deleted,
