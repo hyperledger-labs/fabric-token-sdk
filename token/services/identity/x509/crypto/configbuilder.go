@@ -18,6 +18,8 @@ const (
 	SignCertsDirName = "signcerts"
 	KeyStoreDirName  = "keystore"
 	PrivSKFileName   = "priv_sk"
+
+	ProtobufProtocolVersionV1 uint64 = 1
 )
 
 func LoadConfig(dir string, keyStoreDirName string) (*Config, error) {
@@ -49,6 +51,7 @@ func LoadConfig(dir string, keyStoreDirName string) (*Config, error) {
 
 func LoadConfigWithIdentityInfo(signingIdentityInfo *SigningIdentityInfo) (*Config, error) {
 	config := &Config{
+		Version:         ProtobufProtocolVersionV1,
 		SigningIdentity: signingIdentityInfo,
 		CryptoConfig: &CryptoConfig{
 			SignatureHashFamily: bccsp.SHA2,

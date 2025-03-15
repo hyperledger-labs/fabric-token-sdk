@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
@@ -38,9 +38,9 @@ type KeyManager struct {
 func NewKeyManager(
 	path string,
 	signerService SignerService,
-	bccspConfig *crypto2.BCCSP,
-	keyStore crypto2.KeyStore,
-) (*KeyManager, *crypto2.Config, error) {
+	bccspConfig *crypto.BCCSP,
+	keyStore crypto.KeyStore,
+) (*KeyManager, *crypto.Config, error) {
 	p, conf, err := NewKeyManagerFromConf(nil, path, "", signerService, bccspConfig, keyStore)
 	if err != nil {
 		return nil, nil, err
@@ -49,22 +49,26 @@ func NewKeyManager(
 }
 
 func NewKeyManagerFromConf(
-	conf *crypto2.Config,
+	conf *crypto.Config,
 	configPath, keyStoreDirName string,
 	signerService SignerService,
-	bccspConfig *crypto2.BCCSP,
-	keyStore crypto2.KeyStore,
-) (*KeyManager, *crypto2.Config, error) {
+	bccspConfig *crypto.BCCSP,
+	keyStore crypto.KeyStore,
+) (*KeyManager, *crypto.Config, error) {
 	if keyStore == nil {
 		return nil, nil, errors.New("no keyStore provided")
 	}
 	if conf == nil {
 		logger.Debugf("load x509 config from [%s]", configPath)
 		var err error
-		conf, err = crypto2.LoadConfig(configPath, keyStoreDirName)
+		conf, err = crypto.LoadConfig(configPath, keyStoreDirName)
 		if err != nil {
 			return nil, nil, errors.WithMessagef(err, "could not get config from dir [%s]", configPath)
 		}
+	}
+	// enforce version
+	if conf.Version != crypto.ProtobufProtocolVersionV1 {
+		return nil, nil, errors.Errorf("unsupported protocol version: %d", conf.Version)
 	}
 	p, err := newSigningKeyManager(conf, signerService, bccspConfig, keyStore)
 	if err == nil {
@@ -78,8 +82,8 @@ func NewKeyManagerFromConf(
 	return p, conf, err
 }
 
-func newSigningKeyManager(conf *crypto2.Config, signerService SignerService, bccspConfig *crypto2.BCCSP, keyStore crypto2.KeyStore) (*KeyManager, error) {
-	sID, err := crypto2.GetSigningIdentity(conf, bccspConfig, keyStore)
+func newSigningKeyManager(conf *crypto.Config, signerService SignerService, bccspConfig *crypto.BCCSP, keyStore crypto.KeyStore) (*KeyManager, error) {
+	sID, err := crypto.GetSigningIdentity(conf, bccspConfig, keyStore)
 	if err != nil {
 		return nil, err
 	}
@@ -97,12 +101,12 @@ func newSigningKeyManager(conf *crypto2.Config, signerService SignerService, bcc
 	return newKeyManager(sID, idRaw)
 }
 
-func newVerifyingKeyManager(conf *crypto2.Config) (*KeyManager, *crypto2.Config, error) {
-	conf, err := crypto2.RemovePrivateSigner(conf)
+func newVerifyingKeyManager(conf *crypto.Config) (*KeyManager, *crypto.Config, error) {
+	conf, err := crypto.RemovePrivateSigner(conf)
 	if err != nil {
 		return nil, nil, err
 	}
-	idRaw, err := crypto2.SerializeIdentity(conf)
+	idRaw, err := crypto.SerializeIdentity(conf)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to load identity")
 	}
@@ -114,7 +118,7 @@ func newVerifyingKeyManager(conf *crypto2.Config) (*KeyManager, *crypto2.Config,
 }
 
 func newKeyManager(sID driver.SigningIdentity, id []byte) (*KeyManager, error) {
-	enrollmentID, err := crypto2.GetEnrollmentID(id)
+	enrollmentID, err := crypto.GetEnrollmentID(id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get enrollment id")
 	}
@@ -126,7 +130,7 @@ func (p *KeyManager) IsRemote() bool {
 }
 
 func (p *KeyManager) Identity([]byte) (driver.Identity, []byte, error) {
-	revocationHandle, err := crypto2.GetRevocationHandle(p.id)
+	revocationHandle, err := crypto.GetRevocationHandle(p.id)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting revocation handle")
 	}
@@ -147,7 +151,7 @@ func (p *KeyManager) EnrollmentID() string {
 }
 
 func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	return crypto2.DeserializeVerifier(raw)
+	return crypto.DeserializeVerifier(raw)
 }
 
 func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
@@ -155,7 +159,7 @@ func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
 }
 
 func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
-	return crypto2.Info(raw)
+	return crypto.Info(raw)
 }
 
 func (p *KeyManager) Anonymous() bool {

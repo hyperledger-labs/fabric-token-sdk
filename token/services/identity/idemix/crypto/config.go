@@ -26,6 +26,8 @@ type (
 
 const (
 	ExtraPathElement = "msp"
+
+	ProtobufProtocolVersionV1 uint64 = 1
 )
 
 // SignerConfig contains the crypto material to set up an idemix signing identity
@@ -162,13 +164,19 @@ func NewConfigFromRaw(issuerPublicKey []byte, configRaw []byte) (*Config, error)
 	if !bytes.Equal(issuerPublicKey, config.Ipk) {
 		return nil, errors.Errorf("public key does not match [%s]=[%s]", hash.Hashable(config.Ipk), hash.Hashable(issuerPublicKey))
 	}
+	// match version, supported are: ProtobufProtocolVersionV1
+	if config.Version != ProtobufProtocolVersionV1 {
+		return nil, errors.Errorf("unsupported protocol version: %d", config.Version)
+	}
+
 	return config, nil
 }
 
 func assembleConfig(issuerPublicKey []byte, signer *config.IdemixSignerConfig) (*Config, error) {
 	idemixConfig := &config.IdemixConfig{
-		Ipk:    issuerPublicKey,
-		Signer: signer,
+		Version: ProtobufProtocolVersionV1,
+		Ipk:     issuerPublicKey,
+		Signer:  signer,
 	}
 	return idemixConfig, nil
 }
