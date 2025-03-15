@@ -160,11 +160,8 @@ func (a *DefaultCheckers) checkUnspentTokens(context context.Context) ([]string,
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network [%s]", tms.ID())
 	}
-	tv, err := net.TokenVault(tms.Namespace())
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get token vault [%s]", tms.ID())
-	}
-	uit, err := tv.QueryEngine().UnspentTokensIterator()
+	qe := tms.Vault().NewQueryEngine()
+	uit, err := qe.UnspentTokensIterator()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed querying utxo engine")
 	}
@@ -188,7 +185,7 @@ func (a *DefaultCheckers) checkUnspentTokens(context context.Context) ([]string,
 			return nil, errors.Errorf("length diffrence")
 		}
 		index := 0
-		if err := tv.QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
+		if err := qe.GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
 			for _, content := range ledgerTokenContent {
 				if bytes.Equal(content, tokenRaw) {
 					return nil

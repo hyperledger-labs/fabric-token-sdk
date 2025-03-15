@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -108,10 +107,9 @@ type ListVaultUnspentTokensView struct {
 }
 
 func (l *ListVaultUnspentTokensView) Call(context view.Context) (interface{}, error) {
-	tokensDB, err := tokendb.GetByTMSId(context, l.TMSID)
-	assert.NoError(err, "failed getting tokens by TMSID for [%s]", l.TMSID)
-
-	return tokensDB.ListUnspentTokens()
+	net := token.GetManagementService(context, token.WithTMSID(l.TMSID))
+	assert.NotNil(net, "cannot find tms [%s]", l.TMSID)
+	return net.Vault().NewQueryEngine().ListUnspentTokens()
 }
 
 type ListVaultUnspentTokensViewFactory struct{}
@@ -134,11 +132,12 @@ type CheckIfExistsInVaultView struct {
 }
 
 func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, error) {
-	tokensDB, err := tokendb.GetByTMSId(context, c.TMSID)
-	assert.NoError(err, "failed getting tokens by TMSID for [%s]", c.TMSID)
+	tms := token.GetManagementService(context, token.WithTMSID(c.TMSID))
+	assert.NotNil(tms, "cannot find tms [%s]", c.TMSID)
+	qe := tms.Vault().NewQueryEngine()
 	var IDs []*token2.ID
 	count := 0
-	assert.NoError(tokensDB.GetTokenOutputs(c.IDs, func(id *token2.ID, tokenRaw []byte) error {
+	assert.NoError(qe.GetTokenOutputs(c.IDs, func(id *token2.ID, tokenRaw []byte) error {
 		if len(tokenRaw) == 0 {
 			return errors.Errorf("token id [%s] is nil", id)
 		}
@@ -147,7 +146,7 @@ func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, erro
 		return nil
 	}), "failed to match tokens")
 	assert.Equal(len(c.IDs), count, "got a mismatch; count is [%d] while there are [%d] ids", count, len(c.IDs))
-	return IDs, err
+	return IDs, nil
 }
 
 type CheckIfExistsInVaultViewFactory struct {

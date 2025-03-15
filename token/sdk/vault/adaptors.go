@@ -8,12 +8,12 @@ package vault
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
 )
 
 type Vault struct {
-	*network.TokenVault
+	driver2.TokenVault
 }
 
 func (v *Vault) QueryEngine() driver.QueryEngine {
@@ -25,33 +25,25 @@ func (v *Vault) CertificationStorage() driver.CertificationStorage {
 }
 
 type ProviderAdaptor struct {
-	Provider *network.Provider
+	Provider *Provider
 }
 
 func (p *ProviderAdaptor) Vault(networkID string, channel string, namespace string) (driver.Vault, error) {
-	net, err := p.Provider.GetNetwork(networkID, channel)
+	vault, err := p.Provider.Vault(networkID, channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network for [%s:%s:%s]", networkID, channel, namespace)
 	}
-	v, err := net.TokenVault(namespace)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", networkID, channel, namespace)
-	}
-	return &Vault{TokenVault: v}, nil
+	return &Vault{TokenVault: vault}, nil
 }
 
 type PublicParamsProvider struct {
-	Provider *network.Provider
+	Provider *Provider
 }
 
 func (p *PublicParamsProvider) PublicParams(networkID string, channel string, namespace string) ([]byte, error) {
-	net, err := p.Provider.GetNetwork(networkID, channel)
+	vault, err := p.Provider.Vault(networkID, channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network for [%s:%s:%s]", networkID, channel, namespace)
 	}
-	v, err := net.TokenVault(namespace)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", networkID, channel, namespace)
-	}
-	return v.QueryEngine().PublicParams()
+	return vault.QueryEngine().PublicParams()
 }
