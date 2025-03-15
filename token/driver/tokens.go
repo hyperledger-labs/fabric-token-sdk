@@ -13,6 +13,11 @@ import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 type (
 	TokensUpgradeChallenge []byte
 	TokensUpgradeProof     []byte
+
+	// TokenOutput models an output on the edger
+	TokenOutput []byte
+	// TokenOutputMetadata models the metadata of an output on the ledger
+	TokenOutputMetadata []byte
 )
 
 // TokensUpgradeService models the token update service
@@ -37,8 +42,8 @@ type TokensService interface {
 	// - its issuer (if any),
 	// - the recipients defined by Token.Owner,
 	// = and the output format
-	Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, []Identity, token.Format, error)
+	Deobfuscate(output TokenOutput, outputMetadata TokenOutputMetadata) (*token.Token, Identity, []Identity, token.Format, error)
 
 	// Recipients returns the recipients of the passed output
-	Recipients(output []byte) ([]Identity, error)
+	Recipients(output TokenOutput) ([]Identity, error)
 }

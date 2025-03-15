@@ -16,9 +16,14 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+)
+
+var (
+	logger = logging.MustGetLogger("token-sdk.db.common.checks")
 )
 
 type TokenTransactionDB interface {
@@ -74,20 +79,22 @@ func NewDefaultCheckers(tmsProvider TokenManagementServiceProvider, networkProvi
 	return []NamedChecker{
 		{
 			Name:    "Transaction Check",
-			Checker: checkers.checkTransactions,
+			Checker: checkers.CheckTransactions,
 		},
 		{
 			Name:    "Unspent Tokens Check",
-			Checker: checkers.checkUnspentTokens,
+			Checker: checkers.CheckUnspentTokens,
 		},
 		{
 			Name:    "Token Spendability Check",
-			Checker: checkers.checkTokenSpendability,
+			Checker: checkers.CheckTokenSpendability,
 		},
 	}
 }
 
-func (a *DefaultCheckers) checkTransactions(context context.Context) ([]string, error) {
+// CheckTransactions checks that for each transaction stored in the local database,
+// the status of this transaction matches the status of the transaction on the ledger.
+func (a *DefaultCheckers) CheckTransactions(context context.Context) ([]string, error) {
 	var errorMessages []string
 
 	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
@@ -154,7 +161,8 @@ func (a *DefaultCheckers) checkTransactions(context context.Context) ([]string, 
 	return errorMessages, nil
 }
 
-func (a *DefaultCheckers) checkUnspentTokens(context context.Context) ([]string, error) {
+// CheckUnspentTokens checks that for each unspent token, the content of the local database matches the ledger
+func (a *DefaultCheckers) CheckUnspentTokens(context context.Context) ([]string, error) {
 	var errorMessages []string
 
 	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
@@ -210,7 +218,13 @@ func (a *DefaultCheckers) checkUnspentTokens(context context.Context) ([]string,
 	return errorMessages, nil
 }
 
-func (a *DefaultCheckers) checkTokenSpendability(context context.Context) ([]string, error) {
+// CheckTokenSpendability checks that for each unspent token, it is still spendable.
+// Spendability is verified against the current TMS for the given TMS ID.
+// A token is still spendable if:
+// - The token type is among the supported;
+// - The token is parsable;
+// - The token's recipients are still valid.
+func (a *DefaultCheckers) CheckTokenSpendability(context context.Context) ([]string, error) {
 	var errorMessages []string
 
 	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
@@ -235,6 +249,7 @@ func (a *DefaultCheckers) checkTokenSpendability(context context.Context) ([]str
 	sigService := tms.SigService()
 	supportedTokenFormats := ts.SupportedTokenFormats()
 	supportedTokenFormatsSet := collections.NewSet(supportedTokenFormats...)
+	logger.Debugf("checking token spendability for [%s], supported tokens [%s]", tms.ID(), supportedTokenFormatsSet.ToSlice())
 	for {
 		tok, err := uit.Next()
 		if err != nil {
@@ -247,12 +262,18 @@ func (a *DefaultCheckers) checkTokenSpendability(context context.Context) ([]str
 		if !supportedTokenFormatsSet.Contains(tok.Format) {
 			errorMessages = append(errorMessages, fmt.Sprintf("token format not supported [%s][%s]", tok.ID, tok.Format))
 			continue
-
 		}
+
+		logger.Debugf("deobfuscating token [%s][%s]...", tok.ID, tok.Format)
 		// extract the token's recipients and try to get a verifier for it
 		_, _, recipients, _, err := ts.Deobfuscate(tok.Token, tok.TokenMetadata)
 		if err != nil {
 			errorMessages = append(errorMessages, fmt.Sprintf("failed to deobfuscate token [%s][%s], [%s]", tok.ID, tok.Format, err))
+			continue
+		}
+		logger.Debugf("deobfuscated token [%s][%s][%v]...", tok.ID, tok.Format, recipients)
+		if len(recipients) == 0 {
+			errorMessages = append(errorMessages, fmt.Sprintf("token recipient list is empty for [%s][%s]", tok.ID, tok.Format))
 			continue
 		}
 		for _, recipient := range recipients {
@@ -262,6 +283,8 @@ func (a *DefaultCheckers) checkTokenSpendability(context context.Context) ([]str
 			}
 		}
 	}
+
+	logger.Debugf("finished checks with [%d] error messages", len(errorMessages))
 
 	return errorMessages, nil
 }
