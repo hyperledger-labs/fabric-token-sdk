@@ -132,18 +132,6 @@ func (e *Envelope) String() string {
 	return e.e.String()
 }
 
-type Vault struct {
-	v driver.Vault
-}
-
-func (v *Vault) Status(id string) (ValidationCode, string, error) {
-	return v.v.Status(id)
-}
-
-func (v *Vault) DiscardTx(id string) error {
-	return v.v.DiscardTx(id, "")
-}
-
 type TokenVault struct {
 	n  *Network
 	v  driver.TokenVault

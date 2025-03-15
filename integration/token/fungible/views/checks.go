@@ -107,12 +107,9 @@ type ListVaultUnspentTokensView struct {
 }
 
 func (l *ListVaultUnspentTokensView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, l.TMSID.Network, l.TMSID.Channel)
-	assert.NotNil(net, "cannot find network [%s:%s]", l.TMSID.Network, l.TMSID.Channel)
-	vault, err := net.TokenVault(l.TMSID.Namespace)
-	assert.NoError(err, "failed to get vault for [%s:%s:%s]", l.TMSID.Network, l.TMSID.Channel, l.TMSID.Namespace)
-
-	return vault.QueryEngine().ListUnspentTokens()
+	net := token.GetManagementService(context, token.WithTMSID(l.TMSID))
+	assert.NotNil(net, "cannot find tms [%s]", l.TMSID)
+	return net.Vault().NewQueryEngine().ListUnspentTokens()
 }
 
 type ListVaultUnspentTokensViewFactory struct{}
@@ -135,11 +132,9 @@ type CheckIfExistsInVaultView struct {
 }
 
 func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, c.TMSID.Network, c.TMSID.Channel)
-	assert.NotNil(net, "cannot find network [%s:%s]", c.TMSID.Network, c.TMSID.Channel)
-	vault, err := net.TokenVault(c.TMSID.Namespace)
-	assert.NoError(err, "failed to get vault for [%s:%s:%s]", c.TMSID.Network, c.TMSID.Channel, c.TMSID.Namespace)
-	qe := vault.QueryEngine()
+	tms := token.GetManagementService(context, token.WithTMSID(c.TMSID))
+	assert.NotNil(tms, "cannot find tms [%s]", c.TMSID)
+	qe := tms.Vault().NewQueryEngine()
 	var IDs []*token2.ID
 	count := 0
 	assert.NoError(qe.GetTokenOutputs(c.IDs, func(id *token2.ID, tokenRaw []byte) error {
@@ -151,7 +146,7 @@ func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, erro
 		return nil
 	}), "failed to match tokens")
 	assert.Equal(len(c.IDs), count, "got a mismatch; count is [%d] while there are [%d] ids", count, len(c.IDs))
-	return IDs, err
+	return IDs, nil
 }
 
 type CheckIfExistsInVaultViewFactory struct {
