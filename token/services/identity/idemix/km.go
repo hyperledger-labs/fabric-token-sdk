@@ -47,6 +47,10 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 	if conf == nil {
 		return nil, errors.New("no idemix config provided")
 	}
+	if conf.Version != crypto2.ProtobufProtocolVersionV1 {
+		return nil, errors.Errorf("unsupported protocol version [%d]", conf.Version)
+	}
+
 	logger.Debugf("setting up Idemix key manager instance %s", conf.Name)
 
 	// Import Issuer Public Key

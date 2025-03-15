@@ -45,6 +45,13 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
 
+	// check that version is enforced
+	config.Version = 0
+	_, err = NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	assert.Error(t, err)
+	assert.EqualError(t, err, "unsupported protocol version [0]")
+	config.Version = crypto2.ProtobufProtocolVersionV1
+
 	// new key manager loaded from file
 	assert.Empty(t, config.Signer.Ski)
 	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)

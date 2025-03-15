@@ -10,12 +10,15 @@ package identity_x509;
 
 // Config collects all the configuration information for an x509 identity.
 message Config {
+  // Version indicates message protocol version
+  uint64 version = 1;
+
   // SigningIdentity holds information on the signing identity
-  SigningIdentityInfo signing_identity = 1;
+  SigningIdentityInfo signing_identity = 2;
 
   // CryptoConfig contains the configuration parameters
   // for the cryptographic algorithms
-  CryptoConfig crypto_config = 2;
+  CryptoConfig crypto_config = 3;
 }
 
 // CryptoConfig contains configuration parameters for the cryptographic algorithms
