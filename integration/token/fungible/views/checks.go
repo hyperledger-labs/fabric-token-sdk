@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -80,12 +80,14 @@ type PruneInvalidUnspentTokensView struct {
 }
 
 func (p *PruneInvalidUnspentTokensView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, p.TMSID.Network, p.TMSID.Channel)
-	assert.NotNil(net, "cannot find network [%s:%s]", p.TMSID.Network, p.TMSID.Channel)
-	vault, err := net.TokenVault(p.TMSID.Namespace)
-	assert.NoError(err, "failed to get vault for [%s:%s:%s]", p.TMSID.Network, p.TMSID.Channel, p.TMSID.Namespace)
+	tms := token.GetManagementService(context, token.WithTMSID(p.TMSID))
+	assert.NotNil(tms, "cannot find tms [%s]", p.TMSID)
+	tokensProvider, err := tokens.GetProvider(context)
+	assert.NoError(err, "failed to get tokens provider")
+	tokens, err := tokensProvider.Tokens(tms.ID())
+	assert.NoError(err, "failed to get tokens for [%s]", p.TMSID)
 
-	return vault.PruneInvalidUnspentTokens(context)
+	return tokens.PruneInvalidUnspentTokens(context.Context())
 }
 
 type PruneInvalidUnspentTokensViewFactory struct{}
