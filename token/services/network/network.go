@@ -33,8 +33,6 @@ const (
 
 var logger = logging.MustGetLogger("token-sdk.network")
 
-type UnspentTokensIterator = driver.UnspentTokensIterator
-
 // FinalityListener is the interface that must be implemented to receive transaction status change notifications
 type FinalityListener interface {
 	// OnStatus is called when the status of a transaction changes
@@ -132,102 +130,6 @@ func (e *Envelope) String() string {
 	return e.e.String()
 }
 
-type TokenVault struct {
-	n  *Network
-	v  driver.TokenVault
-	ns string
-}
-
-func (v *TokenVault) QueryEngine() driver.QueryEngine {
-	return v.v.QueryEngine()
-}
-
-func (v *TokenVault) CertificationStorage() driver.CertificationStorage {
-	return v.v.CertificationStorage()
-}
-
-// PruneInvalidUnspentTokens checks that each unspent token is actually available on the ledger.
-// Those that are not available are deleted.
-// The function returns the list of deleted token ids
-func (v *TokenVault) PruneInvalidUnspentTokens(context view.Context) ([]*token2.ID, error) {
-	it, err := v.QueryEngine().UnspentTokensIterator()
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get an iterator of unspent tokens")
-	}
-	defer it.Close()
-
-	var deleted []*token2.ID
-	tms := token.GetManagementService(context, token.WithTMS(v.n.Name(), v.n.Channel(), v.ns))
-	var buffer []*token2.UnspentToken
-	bufferSize := 50
-	for {
-		tok, err := it.Next()
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to get next unspent token")
-		}
-		if tok == nil {
-			break
-		}
-		buffer = append(buffer, tok)
-		if len(buffer) > bufferSize {
-			newDeleted, err := v.deleteTokens(context.Context(), tms, buffer)
-			if err != nil {
-				return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
-			}
-			deleted = append(deleted, newDeleted...)
-			buffer = nil
-		}
-	}
-	newDeleted, err := v.deleteTokens(context.Context(), tms, buffer)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
-	}
-	deleted = append(deleted, newDeleted...)
-
-	return deleted, nil
-}
-
-func (v *TokenVault) DeleteTokens(ids ...*token2.ID) error {
-	return v.v.DeleteTokens(ids...)
-}
-
-func (v *TokenVault) deleteTokens(context context.Context, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
-	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
-	if len(tokens) == 0 {
-		return nil, nil
-	}
-
-	// get spent flags
-	ids := make([]*token2.ID, len(tokens))
-	for i, tok := range tokens {
-		ids[i] = tok.Id
-	}
-	meta, err := tms.WalletManager().SpentIDs(ids)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
-	}
-	spent, err := v.n.AreTokensSpent(context, tms.Namespace(), ids, meta)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "cannot fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
-	}
-
-	// remove the tokens flagged as spent
-	var toDelete []*token2.ID
-	for i, tok := range tokens {
-		if spent[i] {
-			logger.Debugf("token [%s] is spent", tok.Id)
-			toDelete = append(toDelete, tok.Id)
-		} else {
-			logger.Debugf("token [%s] is not spent", tok.Id)
-		}
-	}
-	if err := v.v.DeleteTokens(toDelete...); err != nil {
-		return nil, errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
-	}
-
-	return toDelete, nil
-}
-
 type LocalMembership struct {
 	lm driver.LocalMembership
 }
@@ -265,15 +167,6 @@ func (n *Network) Name() string {
 // Channel returns the channel name
 func (n *Network) Channel() string {
 	return n.n.Channel()
-}
-
-// TokenVault returns the token vault for the given namespace
-func (n *Network) TokenVault(namespace string) (*TokenVault, error) {
-	v, err := n.n.TokenVault(namespace)
-	if err != nil {
-		return nil, err
-	}
-	return &TokenVault{n: n, v: v, ns: namespace}, nil
 }
 
 // Broadcast sends the given blob to the network
