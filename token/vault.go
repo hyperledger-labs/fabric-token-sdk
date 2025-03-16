@@ -144,6 +144,10 @@ func (q *QueryEngine) WhoDeletedTokens(iDs ...*token.ID) ([]string, []bool, erro
 	return q.qe.WhoDeletedTokens(iDs...)
 }
 
+func (q *QueryEngine) UnspentLedgerTokensIteratorBy(ctx context.Context) (driver.LedgerTokensIterator, error) {
+	return q.qe.UnspentLedgerTokensIteratorBy(ctx)
+}
+
 type CertificationStorage struct {
 	c driver.CertificationStorage
 }
