@@ -100,6 +100,7 @@ func (p *SDK) Install() error {
 				new(token.Normalizer),
 				new(auditor.NetworkProvider),
 				new(common2.NetworkProvider),
+				new(tokens.NetworkProvider),
 			),
 		),
 		p.Container().Provide(func(vaultProvider *vault.Provider) *vault.PublicParamsProvider {
