@@ -13,6 +13,8 @@ import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 type (
 	// TokensUpgradeChallenge is the challenge the issuer generates to make sure the client is not cheating
 	TokensUpgradeChallenge = []byte
+	// TokensUpgradeWitness contains any other additional information needed to generate a TokensUpgradeProof
+	TokensUpgradeWitness = []byte
 	// TokensUpgradeProof is the proof generated with the respect to a given challenge to prove the validity of the tokens to be upgrade
 	TokensUpgradeProof = []byte
 
@@ -27,7 +29,7 @@ type TokensUpgradeService interface {
 	// NewUpgradeChallenge generates a new upgrade challenge
 	NewUpgradeChallenge() (TokensUpgradeChallenge, error)
 	// GenUpgradeProof generates an upgrade proof for the given challenge and tokens
-	GenUpgradeProof(ch TokensUpgradeChallenge, tokens []token.LedgerToken) (TokensUpgradeProof, error)
+	GenUpgradeProof(ch TokensUpgradeChallenge, tokens []token.LedgerToken, witness TokensUpgradeWitness) (TokensUpgradeProof, error)
 	// CheckUpgradeProof checks the upgrade proof for the given challenge and tokens
 	CheckUpgradeProof(ch TokensUpgradeChallenge, proof TokensUpgradeProof, tokens []token.LedgerToken) (bool, error)
 }
