@@ -17,6 +17,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	IdentityDBPrefix              = "idb"
+	IdentityDBConfigurationPrefix = "configuration"
+	IdentityDBData                = "data"
+	IdentityDBSigner              = "signer"
+)
+
 // RecipientData contains information about the identity of a token owner
 type RecipientData struct {
 	// AuditInfo contains private information Identity
