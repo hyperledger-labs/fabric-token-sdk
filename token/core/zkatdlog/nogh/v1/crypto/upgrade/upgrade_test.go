@@ -21,7 +21,7 @@ func TestTokensService_NewUpgradeChallenge(t *testing.T) {
 
 func TestTokensService_GenUpgradeProof(t *testing.T) {
 	ts := NewService()
-	res, err := ts.GenUpgradeProof(nil, nil)
+	res, err := ts.GenUpgradeProof(nil, nil, nil)
 	assert.Error(t, err)
 	assert.Nil(t, res)
 	assert.EqualError(t, err, "not supported")

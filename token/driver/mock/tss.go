@@ -45,11 +45,12 @@ type TokensService struct {
 		result4 token.Format
 		result5 error
 	}
-	GenUpgradeProofStub        func([]byte, []token.LedgerToken) ([]byte, error)
+	GenUpgradeProofStub        func([]byte, []token.LedgerToken, []byte) ([]byte, error)
 	genUpgradeProofMutex       sync.RWMutex
 	genUpgradeProofArgsForCall []struct {
 		arg1 []byte
 		arg2 []token.LedgerToken
+		arg3 []byte
 	}
 	genUpgradeProofReturns struct {
 		result1 []byte
@@ -253,7 +254,7 @@ func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token,
 	}{result1, result2, result3, result4, result5}
 }
 
-func (fake *TokensService) GenUpgradeProof(arg1 []byte, arg2 []token.LedgerToken) ([]byte, error) {
+func (fake *TokensService) GenUpgradeProof(arg1 []byte, arg2 []token.LedgerToken, arg3 []byte) ([]byte, error) {
 	var arg1Copy []byte
 	if arg1 != nil {
 		arg1Copy = make([]byte, len(arg1))
@@ -264,18 +265,24 @@ func (fake *TokensService) GenUpgradeProof(arg1 []byte, arg2 []token.LedgerToken
 		arg2Copy = make([]token.LedgerToken, len(arg2))
 		copy(arg2Copy, arg2)
 	}
+	var arg3Copy []byte
+	if arg3 != nil {
+		arg3Copy = make([]byte, len(arg3))
+		copy(arg3Copy, arg3)
+	}
 	fake.genUpgradeProofMutex.Lock()
 	ret, specificReturn := fake.genUpgradeProofReturnsOnCall[len(fake.genUpgradeProofArgsForCall)]
 	fake.genUpgradeProofArgsForCall = append(fake.genUpgradeProofArgsForCall, struct {
 		arg1 []byte
 		arg2 []token.LedgerToken
-	}{arg1Copy, arg2Copy})
+		arg3 []byte
+	}{arg1Copy, arg2Copy, arg3Copy})
 	stub := fake.GenUpgradeProofStub
 	fakeReturns := fake.genUpgradeProofReturns
-	fake.recordInvocation("GenUpgradeProof", []interface{}{arg1Copy, arg2Copy})
+	fake.recordInvocation("GenUpgradeProof", []interface{}{arg1Copy, arg2Copy, arg3Copy})
 	fake.genUpgradeProofMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -289,17 +296,17 @@ func (fake *TokensService) GenUpgradeProofCallCount() int {
 	return len(fake.genUpgradeProofArgsForCall)
 }
 
-func (fake *TokensService) GenUpgradeProofCalls(stub func([]byte, []token.LedgerToken) ([]byte, error)) {
+func (fake *TokensService) GenUpgradeProofCalls(stub func([]byte, []token.LedgerToken, []byte) ([]byte, error)) {
 	fake.genUpgradeProofMutex.Lock()
 	defer fake.genUpgradeProofMutex.Unlock()
 	fake.GenUpgradeProofStub = stub
 }
 
-func (fake *TokensService) GenUpgradeProofArgsForCall(i int) ([]byte, []token.LedgerToken) {
+func (fake *TokensService) GenUpgradeProofArgsForCall(i int) ([]byte, []token.LedgerToken, []byte) {
 	fake.genUpgradeProofMutex.RLock()
 	defer fake.genUpgradeProofMutex.RUnlock()
 	argsForCall := fake.genUpgradeProofArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *TokensService) GenUpgradeProofReturns(result1 []byte, result2 error) {

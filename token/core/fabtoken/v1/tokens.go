@@ -78,7 +78,7 @@ func (s *TokensService) NewUpgradeChallenge() (driver.TokensUpgradeChallenge, er
 	return nil, errors.New("not supported")
 }
 
-func (s *TokensService) GenUpgradeProof(ch driver.TokensUpgradeChallenge, tokens []token2.LedgerToken) (driver.TokensUpgradeProof, error) {
+func (s *TokensService) GenUpgradeProof(ch driver.TokensUpgradeChallenge, tokens []token2.LedgerToken, witness driver.TokensUpgradeWitness) (driver.TokensUpgradeProof, error) {
 	return nil, errors.New("not supported")
 }
 
