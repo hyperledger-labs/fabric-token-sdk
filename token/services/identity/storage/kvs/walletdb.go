@@ -16,21 +16,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	IdentityDBPrefix              = "idb"
-	IdentityDBConfigurationPrefix = "configuration"
-	IdentityDBData                = "data"
-	IdentityDBSigner              = "signer"
-)
-
-type KVS interface {
-	Exists(id string) bool
-	GetExisting(ids ...string) []string
-	Put(id string, state interface{}) error
-	Get(id string, state interface{}) error
-	GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error)
-}
-
 type WalletDB struct {
 	kvs   KVS
 	tmsID token.TMSID
