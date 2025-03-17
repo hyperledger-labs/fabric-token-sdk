@@ -16,7 +16,7 @@ import (
 
 	vault "github.com/hashicorp/vault/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
-	hashicorp "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs/hashicorp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs/hashicorp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,19 +25,20 @@ type stuff struct {
 	I int    `json:"i"`
 }
 
-// Creates a new Vault client
-func NewVaultClient(address, token string) (*vault.Client, error) {
-	config := vault.DefaultConfig()
-	config.Address = address
+func TestVaultKVS(t *testing.T) {
+	terminate, vaultURL, token := hashicorp.StartHashicorpVaultContainer(t, 9100)
+	defer terminate()
+	client, err := hashicorp.NewVaultClient(vaultURL, token)
+	assert.NoError(t, err)
 
-	client, err := vault.NewClient(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Vault client: %v", err)
-	}
+	testRound(t, client)
+	testParallelWrites(t, client)
+	testParallelWritesReadDelete(t, client)
+	testParallelConnections(t, client)
 
-	client.SetToken(token)
+	terminate()
 
-	return client, nil
+	testWithVaultDown(t, client)
 }
 
 func testRound(t *testing.T, client *vault.Client) {
@@ -347,19 +348,4 @@ func testWithVaultDown(t *testing.T, client *vault.Client) {
 	it, err := kvstore.GetByPartialCompositeID("k", []string{})
 	assert.Error(t, err)
 	assert.True(t, it == nil)
-}
-func TestVaultKVS(t *testing.T) {
-	terminate, vaultURL, token := hashicorp.StartHashicorpVaultContainer(t)
-	defer terminate()
-	client, err := NewVaultClient(vaultURL, token)
-	assert.NoError(t, err)
-
-	testRound(t, client)
-	testParallelWrites(t, client)
-	testParallelWritesReadDelete(t, client)
-	testParallelConnections(t, client)
-
-	terminate()
-
-	testWithVaultDown(t, client)
 }

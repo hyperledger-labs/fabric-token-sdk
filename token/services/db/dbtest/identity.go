@@ -36,7 +36,7 @@ func TConfigurations(t *testing.T, db driver.IdentityDB) {
 	}
 	assert.NoError(t, db.AddConfiguration(expected))
 
-	it, err := db.IteratorConfigurations("core")
+	it, err := db.IteratorConfigurations(expected.Type)
 	assert.NoError(t, err)
 	assert.True(t, it.HasNext())
 	c, err := it.Next()
@@ -44,7 +44,7 @@ func TConfigurations(t *testing.T, db driver.IdentityDB) {
 	assert.True(t, reflect.DeepEqual(expected, c))
 	assert.NoError(t, it.Close())
 
-	exists, err := db.ConfigurationExists("pineapple", "core", "look here")
+	exists, err := db.ConfigurationExists(expected.ID, expected.Type, expected.URL)
 	assert.NoError(t, err)
 	assert.True(t, exists)
 
@@ -52,7 +52,7 @@ func TConfigurations(t *testing.T, db driver.IdentityDB) {
 	assert.NoError(t, err)
 	assert.False(t, it.HasNext())
 
-	exists, err = db.ConfigurationExists("pineapple", "no core", "look here")
+	exists, err = db.ConfigurationExists("pineapple", "no core", expected.URL)
 	assert.NoError(t, err)
 	assert.False(t, exists)
 
@@ -86,10 +86,14 @@ func TIdentityInfo(t *testing.T, db driver.IdentityDB) {
 func TSignerInfo(t *testing.T, db driver.IdentityDB) {
 	alice := []byte("alice")
 	bob := []byte("bob")
-	assert.NoError(t, db.StoreSignerInfo(alice, nil))
+	signerInfo := []byte("signer_info")
+	assert.NoError(t, db.StoreSignerInfo(alice, signerInfo))
 	exists, err := db.SignerInfoExists(alice)
 	assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
 	assert.True(t, exists)
+	signerInfo2, err := db.GetSignerInfo(alice)
+	assert.NoError(t, err, "failed to retrieve signer info for [%s]", alice)
+	assert.Equal(t, signerInfo, signerInfo2)
 
 	exists, err = db.SignerInfoExists(bob)
 	assert.NoError(t, err, "failed to check signer info existence for [%s]", bob)
