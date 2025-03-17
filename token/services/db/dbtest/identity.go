@@ -84,8 +84,34 @@ func TIdentityInfo(t *testing.T, db driver.IdentityDB) {
 }
 
 func TSignerInfo(t *testing.T, db driver.IdentityDB) {
-	alice := []byte("alice")
-	bob := []byte("bob")
+	tSignerInfo(t, db, 0)
+}
+
+func TSignerInfoConcurrent(t *testing.T, db driver.IdentityDB) {
+	wg := sync.WaitGroup{}
+	n := 100
+	wg.Add(n)
+
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			tSignerInfo(t, db, i)
+			t.Log(i)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	for i := 0; i < n; i++ {
+		alice := []byte(fmt.Sprintf("alice_%d", i))
+		exists, err := db.SignerInfoExists(alice)
+		assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
+		assert.True(t, exists)
+	}
+}
+
+func tSignerInfo(t *testing.T, db driver.IdentityDB, index int) {
+	alice := []byte(fmt.Sprintf("alice_%d", index))
+	bob := []byte(fmt.Sprintf("bob_%d", index))
 	signerInfo := []byte("signer_info")
 	assert.NoError(t, db.StoreSignerInfo(alice, signerInfo))
 	exists, err := db.SignerInfoExists(alice)
@@ -98,35 +124,4 @@ func TSignerInfo(t *testing.T, db driver.IdentityDB) {
 	exists, err = db.SignerInfoExists(bob)
 	assert.NoError(t, err, "failed to check signer info existence for [%s]", bob)
 	assert.False(t, exists)
-}
-
-func TSignerInfoConcurrent(t *testing.T, db driver.IdentityDB) {
-	wg := sync.WaitGroup{}
-	n := 100
-	wg.Add(n)
-
-	for i := 0; i < n; i++ {
-		go func(i int) {
-			alice := []byte(fmt.Sprintf("alice_%d", i))
-			bob := []byte(fmt.Sprintf("bob_%d", i))
-			assert.NoError(t, db.StoreSignerInfo(alice, nil))
-			exists, err := db.SignerInfoExists(alice)
-			assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
-			assert.True(t, exists)
-
-			t.Log(i)
-			exists, err = db.SignerInfoExists(bob)
-			assert.NoError(t, err, "failed to check signer info existence for [%s]", bob)
-			assert.False(t, exists)
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()
-
-	for i := 0; i < n; i++ {
-		alice := []byte(fmt.Sprintf("alice_%d", i))
-		exists, err := db.SignerInfoExists(alice)
-		assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
-		assert.True(t, exists)
-	}
 }
