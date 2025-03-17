@@ -26,7 +26,7 @@ type stuff struct {
 }
 
 func TestVaultKVS(t *testing.T) {
-	terminate, vaultURL, token := hashicorp.StartHashicorpVaultContainer(t, 9100)
+	terminate, vaultURL, token := hashicorp.StartHashicorpVaultContainer(t, 8200)
 	defer terminate()
 	client, err := hashicorp.NewVaultClient(vaultURL, token)
 	assert.NoError(t, err)
