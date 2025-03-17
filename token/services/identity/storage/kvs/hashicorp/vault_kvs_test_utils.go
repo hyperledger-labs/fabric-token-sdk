@@ -9,19 +9,22 @@ package hashicorp
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	vault "github.com/hashicorp/vault/api"
+	docker2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/docker"
+	"github.com/pkg/errors"
+)
+
+const (
+	ImageName = "hashicorp/vault"
 )
 
 // NewVaultClient creates a new Vault client
@@ -31,7 +34,7 @@ func NewVaultClient(address, token string) (*vault.Client, error) {
 
 	client, err := vault.NewClient(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Vault client: %v", err)
+		return nil, errors.Wrap(err, "failed to create Vault client")
 	}
 
 	client.SetToken(token)
@@ -40,28 +43,25 @@ func NewVaultClient(address, token string) (*vault.Client, error) {
 }
 
 func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, string) {
-	ctx := context.Background()
+	docker, err := docker2.GetInstance()
+	if err != nil {
+		t.Fatalf("failed to connect to docker daemon: %v", err)
+	}
+	err = docker.CheckImagesExist(ImageName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cli.Close()
-
-	imageName := "hashicorp/vault"
-
-	out, err := cli.ImagePull(ctx, imageName, image.PullOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer out.Close()
-	_, _ = io.Copy(os.Stdout, out)
-
 	// Define the container configuration
 	portStr := fmt.Sprintf("%d", port)
 	token := "00000000-0000-0000-0000-000000000000"
 	address := "0.0.0.0:" + portStr
 	containerConfig := &container.Config{
-		Image: imageName,
+		Image: ImageName,
 		Env: []string{
 			"VAULT_DEV_ROOT_TOKEN_ID=" + token,
 			"VAULT_DEV_LISTEN_ADDRESS=" + address,
@@ -81,6 +81,7 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 		},
 	}
 	// Create the container
+	ctx := context.Background()
 	resp, err := cli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
 	if err != nil {
 		t.Fatal(err)
@@ -127,7 +128,7 @@ func waitForVault(vaultURL, token string) error {
 		}
 		time.Sleep(1 * time.Second)
 	}
-	return fmt.Errorf("vault did not become ready in time")
+	return errors.Errorf("vault did not become ready in time")
 }
 
 func enableKVSecretEngine(vaultURL, token, path string) error {
@@ -147,7 +148,7 @@ func enableKVSecretEngine(vaultURL, token, path string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("failed to enable kv secret engine: %s", resp.Status)
+		return errors.Errorf("failed to enable kv secret engine: %s", resp.Status)
 	}
 	return nil
 }
