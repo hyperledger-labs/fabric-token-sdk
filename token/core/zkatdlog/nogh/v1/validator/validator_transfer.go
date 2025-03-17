@@ -55,6 +55,8 @@ func TransferSignatureValidate(ctx *Context) error {
 		signatures = append(signatures, sigma)
 	}
 
+	// TODO validate issuer signature
+
 	ctx.InputTokens = inputToken
 	ctx.Signatures = signatures
 
