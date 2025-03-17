@@ -36,6 +36,13 @@ var _ = Describe("EndToEnd", func() {
 			It("Test Remote Wallet (GRPC)", Label("T4"), func() { fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, false) })
 			It("Test Remote Wallet (WebSocket)", Label("T5"), func() { fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, true) })
 		})
+
+		Describe("Orion FabToken Redeem", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T6"), func() { fungible.TestRedeem(ts.II, selector, "default") })
+		})
 	}
 })
 
