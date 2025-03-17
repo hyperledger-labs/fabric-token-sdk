@@ -58,6 +58,8 @@ func (v *KVS) NormalizeID(id string) string {
 
 func (v *KVS) deNormalizeID(id string) string {
 	trimmedId := strings.TrimPrefix(id, v.path)
+	trimmedId = strings.TrimPrefix(trimmedId, "/")
+	trimmedId = strings.TrimSuffix(trimmedId, "/")
 	normilzedId := "\x00" + strings.ReplaceAll(trimmedId, "/", CompositeKey) + "\x00"
 	return normilzedId
 }

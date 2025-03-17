@@ -17,13 +17,29 @@ import (
 	"testing"
 	"time"
 
-	container "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	vault "github.com/hashicorp/vault/api"
 )
 
-func StartHashicorpVaultContainer(t *testing.T) (func(), string, string) {
+// NewVaultClient creates a new Vault client
+func NewVaultClient(address, token string) (*vault.Client, error) {
+	config := vault.DefaultConfig()
+	config.Address = address
+
+	client, err := vault.NewClient(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Vault client: %v", err)
+	}
+
+	client.SetToken(token)
+
+	return client, nil
+}
+
+func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, string) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -41,8 +57,9 @@ func StartHashicorpVaultContainer(t *testing.T) (func(), string, string) {
 	_, _ = io.Copy(os.Stdout, out)
 
 	// Define the container configuration
+	portStr := fmt.Sprintf("%d", port)
 	token := "00000000-0000-0000-0000-000000000000"
-	address := "0.0.0.0:8200"
+	address := "0.0.0.0:" + portStr
 	containerConfig := &container.Config{
 		Image: imageName,
 		Env: []string{
@@ -51,13 +68,14 @@ func StartHashicorpVaultContainer(t *testing.T) (func(), string, string) {
 		},
 	}
 	// Define the host configuration
+	portBinding := nat.Port(fmt.Sprintf("%d/tcp", port))
 	hostConfig := &container.HostConfig{
 		CapAdd: []string{"IPC_LOCK"},
 		PortBindings: nat.PortMap{ // Use nat.PortMap for port bindings
-			"8200/tcp": []nat.PortBinding{
+			portBinding: []nat.PortBinding{
 				{
 					HostIP:   "0.0.0.0",
-					HostPort: "8200",
+					HostPort: portStr,
 				},
 			},
 		},
