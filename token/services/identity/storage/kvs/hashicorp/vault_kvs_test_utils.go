@@ -126,7 +126,7 @@ func waitForVault(vaultURL, token string) error {
 		if err == nil && resp.StatusCode == http.StatusOK {
 			return nil
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 	return errors.Errorf("vault did not become ready in time")
 }
