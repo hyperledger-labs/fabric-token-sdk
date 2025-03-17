@@ -43,12 +43,16 @@ func NewAuditor(sp token.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, e
 	if err != nil {
 		return nil, err
 	}
+	return NewTxAuditor(w, backend, auditDB, ttxDB), nil
+}
+
+func NewTxAuditor(w *token.AuditorWallet, backend *auditor.Auditor, auditDB *auditdb.DB, ttxDB *ttxdb.DB) *TxAuditor {
 	return &TxAuditor{
 		w:                       w,
 		auditor:                 backend,
 		auditDB:                 auditDB,
 		transactionInfoProvider: newTransactionInfoProvider(w.TMS(), ttxDB),
-	}, nil
+	}
 }
 
 func (a *TxAuditor) Validate(tx *Transaction) error {
