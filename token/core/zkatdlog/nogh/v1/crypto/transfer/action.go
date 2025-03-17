@@ -121,6 +121,8 @@ type Action struct {
 	Proof []byte
 	// Metadata contains the transfer action's metadata
 	Metadata map[string][]byte
+	// Extra signers contains the extra signers of the transfer action
+	ESigners []driver.Identity
 }
 
 // NewTransfer returns the Action that matches the passed arguments
@@ -149,6 +151,7 @@ func NewTransfer(tokenIDs []*token2.ID, inputToken []*token.Token, commitments [
 		Outputs:  tokens,
 		Proof:    proof,
 		Metadata: map[string][]byte{},
+		ESigners: nil,
 	}, nil
 }
 
@@ -283,7 +286,7 @@ func (t *Action) Validate() error {
 }
 
 func (t *Action) ExtraSigners() []driver.Identity {
-	return nil
+	return t.ESigners
 }
 
 // Serialize marshal TransferAction

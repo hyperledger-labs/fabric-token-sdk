@@ -136,6 +136,7 @@ func (s *TransferService) Transfer(
 		return nil, nil, errors.Wrapf(err, "failed to prepare inputs")
 	}
 
+	var isRedeem bool
 	// get sender
 	pp := s.PublicParametersManager.PublicParams()
 	sender, err := transfer2.NewSender(nil, prepareInputs.Tokens(), tokenIDs, prepareInputs.Metadata(), pp)
@@ -153,7 +154,15 @@ func (s *TransferService) Transfer(
 		}
 		values = append(values, q.ToBigInt().Uint64())
 		owners = append(owners, output.Owner)
+
+		if len(output.Owner) == 0 {
+			isRedeem = true
+		}
 	}
+
+	// Print is redeem
+	s.Logger.Infof("Is Redeem: %t", isRedeem)
+
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
 	start := time.Now()
@@ -257,6 +266,17 @@ func (s *TransferService) Transfer(
 		Inputs:       transferInputsMetadata,
 		Outputs:      transferOutputsMetadata,
 		ExtraSigners: nil,
+	}
+
+	if isRedeem {
+		issuers := s.PublicParametersManager.PublicParameters().Issuers()
+		if len(issuers) == 0 {
+			return nil, nil, errors.New("no issuers found")
+		}
+		issuer := issuers[0]
+
+		transfer.ESigners = []driver.Identity{issuer}
+		transferMetadata.ExtraSigners = []driver.Identity{issuer}
 	}
 
 	return transfer, transferMetadata, nil
