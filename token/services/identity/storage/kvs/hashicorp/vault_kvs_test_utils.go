@@ -60,15 +60,19 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 	portStr := fmt.Sprintf("%d", port)
 	token := "00000000-0000-0000-0000-000000000000"
 	address := "0.0.0.0:" + portStr
+	portBinding := nat.Port(fmt.Sprintf("%d/tcp", port))
 	containerConfig := &container.Config{
 		Image: ImageName,
 		Env: []string{
 			"VAULT_DEV_ROOT_TOKEN_ID=" + token,
 			"VAULT_DEV_LISTEN_ADDRESS=" + address,
 		},
+		ExposedPorts: map[nat.Port]struct{}{
+			portBinding: {},
+		},
 	}
+
 	// Define the host configuration
-	portBinding := nat.Port(fmt.Sprintf("%d/tcp", port))
 	hostConfig := &container.HostConfig{
 		CapAdd: []string{"IPC_LOCK"},
 		PortBindings: nat.PortMap{ // Use nat.PortMap for port bindings
@@ -82,7 +86,15 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 	}
 	// Create the container
 	ctx := context.Background()
-	resp, err := cli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
+	containerName := "dev-hashicorp-vault-container-" + portStr
+	resp, err := cli.ContainerCreate(
+		ctx,
+		containerConfig,
+		hostConfig,
+		nil,
+		nil,
+		containerName,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
