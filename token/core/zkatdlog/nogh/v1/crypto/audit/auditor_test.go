@@ -15,7 +15,7 @@ import (
 	math "github.com/IBM/mathlib"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/audit/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"

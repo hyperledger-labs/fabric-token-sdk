@@ -143,6 +143,6 @@ clean-fabric-peer-images:
 tokengen:
 	@go install ./cmd/tokengen
 
-.PHONY: txgen
+.PHONY: idemixgen
 txgen:
-	@go install ./cmd/txgen
+	@go install github.com/IBM/idemix/tools/idemixgen

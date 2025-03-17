@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/fabtoken"
@@ -24,7 +25,7 @@ type TokensService struct {
 	OutputTokenFormat    token2.Format
 }
 
-func NewTokensService(pp *PublicParams, identityDeserializer driver.Deserializer) (*TokensService, error) {
+func NewTokensService(pp *core.PublicParams, identityDeserializer driver.Deserializer) (*TokensService, error) {
 	supportedTokens, err := SupportedTokenFormat(pp.QuantityPrecision)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting supported token types")
@@ -36,8 +37,8 @@ func NewTokensService(pp *PublicParams, identityDeserializer driver.Deserializer
 	}, nil
 }
 
-func (s *TokensService) Recipients(output []byte) ([]driver.Identity, error) {
-	tok := &Output{}
+func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity, error) {
+	tok := &core.Output{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling token")
 	}
@@ -49,13 +50,13 @@ func (s *TokensService) Recipients(output []byte) ([]driver.Identity, error) {
 }
 
 // Deobfuscate returns a deserialized token and the identity of its issuer
-func (s *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token2.Token, driver.Identity, []driver.Identity, token2.Format, error) {
-	tok := &Output{}
+func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token2.Token, driver.Identity, []driver.Identity, token2.Format, error) {
+	tok := &core.Output{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token")
 	}
 
-	metadata := &OutputMetadata{}
+	metadata := &core.OutputMetadata{}
 	if err := metadata.Deserialize(outputMetadata); err != nil {
 		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
 	}

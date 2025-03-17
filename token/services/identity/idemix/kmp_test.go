@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
@@ -34,28 +35,34 @@ func (m mockConfig) IdentitiesForRole(role driver.IdentityRoleType) ([]*driver.C
 	return nil, nil
 }
 
+//go:norace
 func TestNewKeyManagerProvider(t *testing.T) {
+	testNewKeyManagerProvider(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
+	testNewKeyManagerProvider(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+}
+
+func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
 	backend, err := kvs.NewInMemory()
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
-	config, err := crypto.NewConfig("./testdata/idemix")
+	config, err := crypto.NewConfig(configPath)
 	assert.NoError(t, err)
-	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err := crypto.NewKeyStore(curveID, backend)
 	assert.NoError(t, err)
 
 	kmp := NewKeyManagerProvider(
 		config.Ipk,
-		math.FP256BN_AMCL,
+		curveID,
 		keyStore,
 		sigService,
 		&mockConfig{},
-		10,
+		0,
 		false,
 	)
 	assert.NotNil(t, kmp)
 	idConfig := &token.IdentityConfiguration{
 		ID:  "alice",
-		URL: "./testdata/idemix",
+		URL: configPath,
 	}
 	km, err := kmp.Get(idConfig)
 	assert.NoError(t, err)
@@ -81,6 +88,17 @@ func TestNewKeyManagerProvider(t *testing.T) {
 	signAndVerify(t, km)
 	checkRawContent(t, config.Ipk, idConfig.Raw)
 	assert.Equal(t, configRaw, idConfig.Raw)
+
+	// change the version in the configuration, it must fail now
+	config2, err := crypto.NewConfigFromRaw(config.Ipk, idConfig.Raw)
+	assert.NoError(t, err)
+	config2.Version = 0
+	config2Raw, err := proto.Marshal(config2)
+	assert.NoError(t, err)
+	idConfig.Raw = config2Raw
+	_, err = kmp.Get(idConfig)
+	assert.Error(t, err)
+	assert.EqualError(t, err, "unsupported protocol version: 0")
 }
 
 func signAndVerify(t *testing.T, km membership.KeyManager) {

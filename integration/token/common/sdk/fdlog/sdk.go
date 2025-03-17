@@ -10,7 +10,7 @@ import (
 	"errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
-	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
+	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"go.uber.org/dig"

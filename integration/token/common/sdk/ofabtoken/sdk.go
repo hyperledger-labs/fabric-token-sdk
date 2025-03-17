@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	orionsdk "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk/dig"
-	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"go.uber.org/dig"

@@ -25,23 +25,26 @@ message SerializedIdemixIdentity {
 }
 
 message IdemixConfig {
+  // Version indicates message protocol version
+  uint64 version = 1;
+
   // Name holds the identifier of the
-  string name = 1;
+  string name = 2;
 
   // ipk represents the (serialized) issuer public key
-  bytes ipk = 2;
+  bytes ipk = 3;
 
   // signer may contain crypto material to configure a default signer
-  IdemixSignerConfig signer = 3;
+  IdemixSignerConfig signer = 4;
 
   // revocation_pk is the public key used for revocation of credentials
-  bytes revocation_pk = 4;
+  bytes revocation_pk = 5;
 
   // epoch represents the current epoch (time interval) used for revocation
-  int64 epoch = 5;
+  int64 epoch = 6;
 
   // curve_id indicates which Elliptic Curve should be used
-  string curve_id = 6;
+  string curve_id = 7;
 }
 
 // IdemixSignerConfig contains the crypto material to set up an idemix signing identity
@@ -68,5 +71,5 @@ message IdemixSignerConfig {
   string revocation_handle = 7;
 
   // is the identifier of the secret key sk
-  bytes ski = 9;
+  bytes ski = 8;
 }
