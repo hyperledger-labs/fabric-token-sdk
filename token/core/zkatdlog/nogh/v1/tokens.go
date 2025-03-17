@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
@@ -33,7 +34,7 @@ var precisions = map[token.Format]uint64{
 }
 
 type TokensService struct {
-	*common.TokensService
+	*upgrade.Service
 
 	Logger                  logging.Logger
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
@@ -83,7 +84,7 @@ func NewTokensService(logger logging.Logger, publicParametersManager common.Publ
 
 	return &TokensService{
 		Logger:                          logger,
-		TokensService:                   common.NewTokensService(),
+		Service:                         upgrade.NewService(),
 		PublicParametersManager:         publicParametersManager,
 		IdentityDeserializer:            identityDeserializer,
 		OutputTokenFormat:               outputTokenFormat,
@@ -205,16 +206,6 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 		}, nil
 }
 
-func (s *TokensService) GenUpgradeProof(ch driver.TokensUpgradeChallenge, tokens []token.LedgerToken) ([]byte, error) {
-	// TODO: implement
-	return nil, nil
-}
-
-func (s *TokensService) CheckUpgradeProof(ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token.LedgerToken) (bool, error) {
-	// TODO: implement
-	return true, nil
-}
-
 func (s *TokensService) deserializeTokenWithOutputTokenFormat(outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, error) {
 	// get zkatdlog token
 	output, err := s.getOutput(outputRaw, false)
@@ -294,7 +285,7 @@ func (s *TokensService) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequ
 	}
 
 	// check the upgrade proof
-	ok, err := s.CheckUpgradeProof(utp.Challenge, utp.Proof, utp.Tokens)
+	ok, err := s.Service.CheckUpgradeProof(utp.Challenge, utp.Proof, utp.Tokens)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to check upgrade proof")
 	}

@@ -27,7 +27,7 @@ type TokensUpgradeService interface {
 	// NewUpgradeChallenge generates a new upgrade challenge
 	NewUpgradeChallenge() (TokensUpgradeChallenge, error)
 	// GenUpgradeProof generates an upgrade proof for the given challenge and tokens
-	GenUpgradeProof(ch TokensUpgradeChallenge, tokens []token.LedgerToken) ([]byte, error)
+	GenUpgradeProof(ch TokensUpgradeChallenge, tokens []token.LedgerToken) (TokensUpgradeProof, error)
 	// CheckUpgradeProof checks the upgrade proof for the given challenge and tokens
 	CheckUpgradeProof(ch TokensUpgradeChallenge, proof TokensUpgradeProof, tokens []token.LedgerToken) (bool, error)
 }

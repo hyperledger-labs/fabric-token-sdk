@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package upgrade
 
 import (
 	"testing"
@@ -13,14 +13,14 @@ import (
 )
 
 func TestTokensService_NewUpgradeChallenge(t *testing.T) {
-	ts := NewTokensService()
+	ts := NewService()
 	challenge, err := ts.NewUpgradeChallenge()
 	assert.NoError(t, err)
 	assert.Len(t, challenge, ChallengeSize)
 }
 
 func TestTokensService_GenUpgradeProof(t *testing.T) {
-	ts := NewTokensService()
+	ts := NewService()
 	res, err := ts.GenUpgradeProof(nil, nil)
 	assert.Error(t, err)
 	assert.Nil(t, res)
@@ -28,7 +28,7 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 }
 
 func TestTokensService_CheckUpgradeProof(t *testing.T) {
-	ts := NewTokensService()
+	ts := NewService()
 	res, err := ts.CheckUpgradeProof(nil, nil, nil)
 	assert.Error(t, err)
 	assert.False(t, res)
