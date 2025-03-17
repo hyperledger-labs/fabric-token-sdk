@@ -71,3 +71,15 @@ The specific driver used by the application will ultimately determine the availa
 Don't forget to import the driver that you are ultimately using with a blank import in your executable.  
 
 For the list of options to configure sql datasources, refer to the [Fabric Smart Client documentation](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/core-fabric.md).
+
+### HashiCorp Vault Support
+
+The Fabric Token SDK uses the HashiCorp Vault Secrets Engine is generic key-value database to store sensitive data like the identity crypto material of an identity. The Fabric Token SDK requieres to configure the HashiCorp 
+Vault Secrets Engine to run in non-versioned mode (i.e., stores the most recently written value for a key). For more information about non-versioned secrets engine mode, refer to the (https://developer.hashicorp.com/vault/docs/secrets/kv/kv-v1). 
+
+To switch the current identity database depedencies to work with HashiCorp Vault key-value database:
+* Go to [`token/sdk/dig/sdk.go`](./../../token/sdk/diag/sdk.go).
+* Add the following line to overwrite the default identity database depedencey to HashiCorp Vault
+  ```
+  p.Container().Decorate(identiyt.NewKVSStorageProvider)
+  ```
