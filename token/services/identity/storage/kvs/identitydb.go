@@ -17,6 +17,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+// RecipientData contains information about the identity of a token owner
+type RecipientData struct {
+	// AuditInfo contains private information Identity
+	AuditInfo []byte
+	// TokenMetadata contains public information related to the token to be assigned to this Recipient.
+	TokenMetadata []byte
+	// TokenMetadataAuditInfo contains private information TokenMetadata
+	TokenMetadataAuditInfo []byte
+}
+
 type IdentityDB struct {
 	kvs   KVS
 	tmsID token.TMSID
