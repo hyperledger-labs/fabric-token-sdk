@@ -9,6 +9,7 @@ package kvs
 import (
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -81,23 +82,17 @@ func (s *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallets iterator")
 	}
-	var walletIDs []string
+	walletIDs := collections.NewSet[string]()
 	for it.HasNext() {
 		var wID string
 		if _, err := it.Next(&wID); err != nil {
 			return nil, errors.Wrapf(err, "failed to get next wallets from iterator")
 		}
-		found := false
-		for _, walletID := range walletIDs {
-			if walletID == wID {
-				found = true
-			}
-		}
-		if !found {
-			walletIDs = append(walletIDs, wID)
+		if !walletIDs.Contains(wID) {
+			walletIDs.Add(wID)
 		}
 	}
-	return walletIDs, nil
+	return walletIDs.ToSlice(), nil
 }
 
 func (s *WalletDB) LoadMeta(identity driver2.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
