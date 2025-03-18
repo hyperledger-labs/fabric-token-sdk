@@ -24,7 +24,8 @@ import (
 )
 
 const (
-	ImageName = "hashicorp/vault"
+	ImageName           = "hashicorp/vault"
+	ContainerNamePrefix = "dev-hashicorp-vault-container-"
 )
 
 // NewVaultClient creates a new Vault client
@@ -86,7 +87,7 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 	}
 	// Create the container
 	ctx := context.Background()
-	containerName := "dev-hashicorp-vault-container-" + portStr
+	containerName := ContainerNamePrefix + portStr
 	resp, err := cli.ContainerCreate(
 		ctx,
 		containerConfig,
