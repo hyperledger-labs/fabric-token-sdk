@@ -24,8 +24,8 @@ var _ = Describe("Orion EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
-			It("Test redeem flow", Label("T2"), func() { fungible.TestRedeem(ts.II, selector, "orion") })
+			It("succeeded", func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+			It("Test redeem flow", Label("T1"), func() { fungible.TestRedeem(ts.II, selector, "orion") })
 		})
 	}
 })
