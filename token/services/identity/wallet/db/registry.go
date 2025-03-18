@@ -13,7 +13,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -25,7 +24,7 @@ import (
 type WalletRegistry struct {
 	Logger  logging.Logger
 	Role    identity.Role
-	Storage db.WalletDB
+	Storage idriver.WalletDB
 
 	Wallets map[string]driver.Wallet
 }
@@ -33,7 +32,7 @@ type WalletRegistry struct {
 // NewWalletRegistry returns a new registry for the passed parameters.
 // A registry is bound to a given role, and it is persistent.
 // Long-term identities are provided by the passed identity provider
-func NewWalletRegistry(logger logging.Logger, role identity.Role, storage db.WalletDB) *WalletRegistry {
+func NewWalletRegistry(logger logging.Logger, role identity.Role, storage idriver.WalletDB) *WalletRegistry {
 	return &WalletRegistry{
 		Logger:  logger,
 		Role:    role,
