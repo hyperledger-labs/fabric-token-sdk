@@ -136,3 +136,36 @@ The `WalletService` gives access to the available wallets.
 You, as the developer, have the flexibility to implement a `WalletService` that best fits your application's needs.
 
 A default implementation is provided under [`token/services/identity/wallet`](./../../token/services/identity/wallet).
+
+## Storage
+
+The identity service uses 3 data storage defined by the following interfaces:
+- `IdentityDB`: It is used to store identity configuration, signer related information, audit information, and so on.
+- `WalletDB`: It is used to track the mapping between identities, wallet identifier, and enrollment IDs.
+- `Keystore`: It is used for the key storage.
+
+### Implementation
+
+We support the following implementations:
+- `IdentityDB`, can be either based on the `identitydb` service or the Fabric-Smart-Client's KVS.
+- `WalletDB`, same as the `IdentityDB`.
+- `Keystore` is based on the Fabric-Smart-Client's KVS.
+By default, the `identitydb` is used to provide both an implementation to both the `IdentityDB` and `WalletDB`.
+
+To retrieve the implementation of these interfaces, we have the `identity.StorageProvider` interface.
+An implementation for this interface can be found under [`token/sdk/identity`](./../../token/sdk/identity).
+It uses the `identitydb` service for the `IdentityDB` and the `WalletDB`, and the Fabric-Smart-Client's KVS for the `Keystore`.
+
+### HashiCorp Vault Secrets Engine Support
+
+The HashiCorp Vault Secrets Engine is a modular component of Vault designed to securely manage, store, or generate sensitive data such as API keys, passwords, certificates, and encryption keys.
+The identity service provides an implementation for both the `IdentityDB` and `Keystore` based on the `HashiCorp Vault Secrets Engine`.
+This implementation can be found under [`hashicorp`](./../../token/services/identity/storage/kvs/hashicorp).
+
+In order to use this integration, the developer must do the following:
+1. Implement the `identity.StorageProvider` interface. 
+2. Register this implementation in `Dig` via decoration like this:
+   ```go
+    p.Container().Decorate(yourpackage.NewYourIdentityStorageProvider)
+   ```
+   This can be added in the Application Dig SDK that links that token-sdk Dig SDK
