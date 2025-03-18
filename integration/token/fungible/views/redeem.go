@@ -8,6 +8,7 @@ package views
 
 import (
 	"encoding/json"
+
 	"github.com/pkg/errors"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"

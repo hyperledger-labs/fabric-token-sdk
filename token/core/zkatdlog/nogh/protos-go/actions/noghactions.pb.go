@@ -12,13 +12,14 @@
 package actions
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	actions "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
 	math "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math"
 	pp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
