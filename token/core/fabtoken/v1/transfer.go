@@ -167,8 +167,8 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 		}
 		issuer := issuers[0]
 
-		transfer.ESigners = append(transfer.ESigners, issuer)
-		transferMetadata.ExtraSigners = append(transferMetadata.ExtraSigners, issuer)
+		transfer.ESigners = []driver.Identity{issuer}
+		transferMetadata.ExtraSigners = []driver.Identity{issuer}
 	}
 
 	return transfer, transferMetadata, nil
