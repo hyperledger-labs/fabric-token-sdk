@@ -140,6 +140,10 @@ clean-fabric-peer-images:
 	docker images -a | grep "_peer.org" | awk '{print $3}' | xargs docker rmi
 	docker images -a | grep "_peer_" | awk '{print $3}' | xargs docker rmi
 
+.PHONY: clean-all-containers
+clean-all-containers:
+	@if [ -n "$$(docker ps -aq)" ]; then docker rm -f $$(docker ps -aq); else echo "No containers to remove"; fi
+
 .PHONY: tokengen
 tokengen:
 	@go install ./cmd/tokengen
