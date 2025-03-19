@@ -11,28 +11,59 @@ import (
 	"fmt"
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
-type AcceptView struct {
+type acceptView struct {
 	tx      *Transaction
 	options *EndorsementsOpts
 }
 
-func NewAcceptView(tx *Transaction, opts ...EndorsementsOpt) *AcceptView {
+func NewAcceptView(tx *Transaction, opts ...EndorsementsOpt) *acceptView {
 	options, err := CompileCollectEndorsementsOpts(opts...)
 	if err != nil {
 		panic(err)
 	}
-	return &AcceptView{tx: tx, options: options}
+	return &acceptView{tx: tx, options: options}
+}
+
+func (s *acceptView) Call(context view.Context) (interface{}, error) {
+	return context.RunView(&AcceptView{
+		tx:               s.tx,
+		options:          s.options,
+		ttxManager:       utils.MustGet(context.GetService(&Manager{})).(*Manager),
+		kvss:             utils.MustGet(context.GetService(&kvs.KVS{})).(*kvs.KVS),
+		tmsProvider:      token.GetManagementServiceProvider(context),
+		networkProvider:  network.GetProvider(context),
+		identityProvider: driver.GetIdentityProvider(context),
+		sigService:       driver.GetSigService(context),
+		tokensManager:    utils.MustGet(context.GetService(&tokens.Manager{})).(*tokens.Manager),
+		metrics:          GetMetrics(context),
+	})
+}
+
+type AcceptView struct {
+	tx      *Transaction
+	options *EndorsementsOpts
+
+	ttxManager       *Manager
+	kvss             *kvs.KVS
+	tmsProvider      *token.ManagementServiceProvider
+	networkProvider  *network.Provider
+	identityProvider driver.IdentityProvider
+	sigService       driver.SigService
+	tokensManager    *tokens.Manager
+	metrics          *Metrics
 }
 
 func (s *AcceptView) Call(context view.Context) (interface{}, error) {
@@ -44,16 +75,20 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 
 	// Store transaction in the token transaction database
 	span.AddEvent("Store transactions in Transaction table")
-	if err := StoreTransactionRecords(context, s.tx); err != nil {
+	ttxDB, err := s.ttxManager.DB(s.tx.TMSID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "ttxdb not found")
+	}
+	if err := ttxDB.Append(s.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
 	}
 
 	txRaw := s.tx.FromRaw
 	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(txRaw), view2.GetIdentityProvider(context).DefaultIdentity())
+		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(txRaw), s.identityProvider.DefaultIdentity())
 	}
-	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
+	signer, err := s.sigService.GetSigner(s.identityProvider.DefaultIdentity())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
 	}
@@ -66,14 +101,14 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	// Ack for distribution
 	// Send the signature back
 	session := context.Session()
-	logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
+	logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), s.identityProvider.DefaultIdentity())
 	span.AddEvent("Send ack for distribution")
 	if err := session.Send(sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
 
 	// cache the token request into the tokens db
-	t, err := tokens.GetService(context, s.tx.TMSID())
+	t, err := s.tokensManager.Tokens(s.tx.TMSID())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
 	}
@@ -87,7 +122,7 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 		"channel", s.tx.Channel(),
 		"namespace", s.tx.Namespace(),
 	}
-	GetMetrics(context).AcceptedTransactions.With(labels...).Add(1)
+	s.metrics.AcceptedTransactions.With(labels...).Add(1)
 
 	return s.tx, nil
 }
@@ -115,9 +150,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 				return errors.Wrap(err, "failed to generate key to store signature request")
 			}
 			var srStr string
-			if kvss, err := context.GetService(&kvs.KVS{}); err != nil {
-				return errors.Wrap(err, "failed to get KVS from context")
-			} else if err := kvss.(*kvs.KVS).Get(k, &srStr); err != nil {
+			if err := s.kvss.Get(k, &srStr); err != nil {
 				return errors.Wrap(err, "failed to to store signature request")
 			}
 			srRaw, err := base64.StdEncoding.DecodeString(srStr)
@@ -144,8 +177,8 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			}
 		}
 		span.AddEvent("Fetched request from session")
-		tms := token.GetManagementService(context, token.WithTMS(s.tx.Network(), s.tx.Channel(), s.tx.Namespace()))
-		if tms == nil {
+		tms, err := s.tmsProvider.GetManagementService(token.WithTMS(s.tx.Network(), s.tx.Channel(), s.tx.Namespace()))
+		if err != nil {
 			return errors.Errorf("failed getting TMS for [%s:%s:%s]", s.tx.Network(), s.tx.Channel(), s.tx.Namespace())
 		}
 
@@ -177,7 +210,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 		}
 		// expect again to receive a transaction
 		span.AddEvent("Wait to receive transaction")
-		tx, err := ReceiveTransaction(context)
+		tx, err := receiveTransactionWithKVS(context, s.kvss, s.tmsProvider, s.networkProvider)
 		if err != nil {
 			return errors.Wrapf(err, "expected to receive a transaction")
 		}
@@ -194,4 +227,56 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 
 	span.AddEvent("All requests signed")
 	return nil
+}
+
+func NewAcceptViewFactory(
+	ttxManager *Manager,
+	kvss *kvs.KVS,
+	tmsProvider *token.ManagementServiceProvider,
+	networkProvider *network.Provider,
+	identityProvider driver.IdentityProvider,
+	sigService driver.SigService,
+	tokensManager *tokens.Manager,
+	metrics *Metrics,
+) *AcceptViewFactory {
+	return &AcceptViewFactory{
+		ttxManager:       ttxManager,
+		kvss:             kvss,
+		tmsProvider:      tmsProvider,
+		networkProvider:  networkProvider,
+		identityProvider: identityProvider,
+		sigService:       sigService,
+		tokensManager:    tokensManager,
+		metrics:          metrics,
+	}
+}
+
+type AcceptViewFactory struct {
+	ttxManager       *Manager
+	kvss             *kvs.KVS
+	tmsProvider      *token.ManagementServiceProvider
+	networkProvider  *network.Provider
+	identityProvider driver.IdentityProvider
+	sigService       driver.SigService
+	tokensManager    *tokens.Manager
+	metrics          *Metrics
+}
+
+func (f *AcceptViewFactory) New(tx *Transaction, opts ...EndorsementsOpt) (*AcceptView, error) {
+	options, err := CompileCollectEndorsementsOpts(opts...)
+	if err != nil {
+		panic(err)
+	}
+	return &AcceptView{
+		tx:               tx,
+		options:          options,
+		ttxManager:       f.ttxManager,
+		kvss:             f.kvss,
+		tmsProvider:      f.tmsProvider,
+		networkProvider:  f.networkProvider,
+		identityProvider: f.identityProvider,
+		sigService:       f.sigService,
+		tokensManager:    f.tokensManager,
+		metrics:          f.metrics,
+	}, nil
 }

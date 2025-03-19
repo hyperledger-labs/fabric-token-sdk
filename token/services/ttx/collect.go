@@ -7,9 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -37,7 +41,7 @@ type collectActionsView struct {
 	actions *Actions
 }
 
-// NewCollectActionsView returns an instance of collectActionsView.
+// NewCollectActionsView returns an instance of CollectActionsView.
 // The view does the following:
 // For each action, the view contact the recipient by sending as first message the transaction.
 // Then, the view waits for the answer and append it to the transaction.
@@ -51,11 +55,31 @@ func NewCollectActionsView(tx *Transaction, actions ...*ActionTransfer) *collect
 }
 
 func (c *collectActionsView) Call(context view.Context) (interface{}, error) {
-	ts := token.GetManagementService(context, token.WithChannel(c.tx.Channel()))
+	return context.RunView(&CollectActionsView{
+		tx:              c.tx,
+		actions:         c.actions,
+		tmsProvider:     token.GetManagementServiceProvider(context),
+		endpointService: view2.NewEndpointService(driver.GetEndpointService(context)),
+	})
+}
+
+type CollectActionsView struct {
+	tx      *Transaction
+	actions *Actions
+
+	tmsProvider     *token.ManagementServiceProvider
+	endpointService *view2.EndpointService
+}
+
+func (c *CollectActionsView) Call(context view.Context) (interface{}, error) {
+	ts, err := c.tmsProvider.GetManagementService(token.WithChannel(c.tx.Channel()))
+	if err != nil {
+		return nil, errors.Wrapf(err, "tms not found")
+	}
 
 	for _, actionTransfer := range c.actions.Transfers {
 		if w := ts.WalletManager().OwnerWallet(actionTransfer.From); w != nil {
-			if err := c.collectLocal(context, actionTransfer, w); err != nil {
+			if err := c.collectLocal(actionTransfer, w); err != nil {
 				return nil, err
 			}
 		} else {
@@ -67,7 +91,7 @@ func (c *collectActionsView) Call(context view.Context) (interface{}, error) {
 	return c.tx, nil
 }
 
-func (c *collectActionsView) collectLocal(context view.Context, actionTransfer *ActionTransfer, w *token.OwnerWallet) error {
+func (c *CollectActionsView) collectLocal(actionTransfer *ActionTransfer, w *token.OwnerWallet) error {
 	party := actionTransfer.From
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collect local from [%s]", party)
@@ -79,19 +103,18 @@ func (c *collectActionsView) collectLocal(context view.Context, actionTransfer *
 	}
 
 	// Binds identities
-	es := view2.GetEndpointService(context)
-	longTermIdentity, _, _, err := es.Resolve(party)
+	longTermIdentity, _, _, err := c.endpointService.Resolve(party)
 	if err != nil {
 		return errors.Wrapf(err, "cannot resolve long term network identity for [%s]", party)
 	}
-	if err := c.tx.TokenRequest.BindTo(es, longTermIdentity); err != nil {
+	if err := c.tx.TokenRequest.BindTo(c.endpointService, longTermIdentity); err != nil {
 		return errors.Wrapf(err, "failed binding to [%s]", party.String())
 	}
 
 	return nil
 }
 
-func (c *collectActionsView) collectRemote(context view.Context, actionTransfer *ActionTransfer) error {
+func (c *CollectActionsView) collectRemote(context view.Context, actionTransfer *ActionTransfer) error {
 	party := actionTransfer.From
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collect remote from [%s]", party)
@@ -143,24 +166,57 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	}
 
 	// Bind to party
-	es := view2.GetEndpointService(context)
-	longTermIdentity, _, _, err := es.Resolve(party)
+	longTermIdentity, _, _, err := c.endpointService.Resolve(party)
 	if err != nil {
 		return errors.Wrapf(err, "cannot resolve long term network identity for [%s]", party)
 	}
-	if err := txPayload.TokenRequest.BindTo(es, longTermIdentity); err != nil {
+	if err := txPayload.TokenRequest.BindTo(c.endpointService, longTermIdentity); err != nil {
 		return errors.Wrapf(err, "failed binding to [%s]", party.String())
 	}
 
 	return nil
 }
 
-type receiveActionsView struct{}
+type CollectActionsViewFactory struct {
+	tmsProvider     *token.ManagementServiceProvider
+	endpointService *view2.EndpointService
+}
 
-// ReceiveAction runs the receiveActionsView.
+func NewCollectActionsViewFactory(
+	tmsProvider *token.ManagementServiceProvider,
+	endpointService *view2.EndpointService,
+) *CollectActionsViewFactory {
+	return &CollectActionsViewFactory{
+		tmsProvider:     tmsProvider,
+		endpointService: endpointService,
+	}
+}
+
+func (f *CollectActionsViewFactory) New(tx *Transaction, actions ...*ActionTransfer) (*CollectActionsView, error) {
+	return &CollectActionsView{
+		tx: tx,
+		actions: &Actions{
+			Transfers: actions,
+		},
+		tmsProvider:     f.tmsProvider,
+		endpointService: f.endpointService,
+	}, nil
+}
+
+type ReceiveActionsView struct {
+	kvss            *kvs.KVS
+	tmsProvider     *token.ManagementServiceProvider
+	networkProvider *network.Provider
+}
+
+// ReceiveAction runs the ReceiveActionsView.
 // The view does the following: It receives the transaction, the collection of actions, and the requested action.
 func ReceiveAction(context view.Context) (*Transaction, *ActionTransfer, error) {
-	res, err := context.RunView(&receiveActionsView{})
+	res, err := context.RunView(&ReceiveActionsView{
+		kvss:            utils.MustGet(context.GetService(&kvs.KVS{})).(*kvs.KVS),
+		tmsProvider:     token.GetManagementServiceProvider(context),
+		networkProvider: network.GetProvider(context),
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -168,9 +224,9 @@ func ReceiveAction(context view.Context) (*Transaction, *ActionTransfer, error) 
 	return result[0].(*Transaction), result[1].(*ActionTransfer), nil
 }
 
-func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
+func (r *ReceiveActionsView) Call(context view.Context) (interface{}, error) {
 	// transaction
-	txBoxed, err := context.RunView(NewReceiveTransactionView(), view.WithSameContext())
+	txBoxed, err := context.RunView(NewReceiveTransactionView(r.kvss, r.tmsProvider, r.networkProvider), view.WithSameContext())
 	if err != nil {
 		return nil, err
 	}

@@ -13,8 +13,10 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -53,10 +55,39 @@ func (sr *SignatureRequest) MessageToSign() []byte {
 	return sr.Request
 }
 
+type collectEndorsementsView struct {
+	tx       *Transaction
+	Opts     *EndorsementsOpts
+	sessions map[string]view.Session
+}
+
+func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error) {
+	return context.RunView(&CollectEndorsementsView{
+		tx:                    c.tx,
+		Opts:                  c.Opts,
+		sessions:              c.sessions,
+		metrics:               GetMetrics(context),
+		sigService:            driver.GetSigService(context),
+		identityProvider:      driver.GetIdentityProvider(context),
+		endpointService:       view2.NewEndpointService(driver.GetEndpointService(context)),
+		auditingViewInitiator: AuditingViewInitiatorFactory{viewRegistry: view2.GetRegistry(context)},
+		networkProvider:       network.GetProvider(context),
+		ttxManager:            utils.MustGet(context.GetService(&Manager{})).(*Manager),
+	})
+}
+
 type CollectEndorsementsView struct {
 	tx       *Transaction
 	Opts     *EndorsementsOpts
 	sessions map[string]view.Session
+
+	metrics               *Metrics
+	sigService            driver.SigService
+	identityProvider      driver.IdentityProvider
+	endpointService       *view2.EndpointService
+	auditingViewInitiator AuditingViewInitiatorFactory
+	networkProvider       *network.Provider
+	ttxManager            *Manager
 }
 
 // NewCollectEndorsementsView returns an instance of the CollectEndorsementsView struct.
@@ -67,12 +98,12 @@ type CollectEndorsementsView struct {
 // 3. Before completing, all recipients receive the approved transaction.
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
-func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *CollectEndorsementsView {
+func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *collectEndorsementsView {
 	options, err := CompileCollectEndorsementsOpts(opts...)
 	if err != nil {
 		panic(err)
 	}
-	return &CollectEndorsementsView{tx: tx, Opts: options, sessions: map[string]view.Session{}}
+	return &collectEndorsementsView{tx: tx, Opts: options, sessions: map[string]view.Session{}}
 }
 
 // Call executes the view.
@@ -85,8 +116,6 @@ func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *Colle
 // the token transaction valid.
 func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error) {
 	span := trace.SpanFromContext(context.Context())
-	metrics := GetMetrics(context)
-
 	externalWallets := make(map[string]ExternalWalletSigner)
 	// 1. First collect signatures on the token request
 	span.AddEvent("Request signatures on issues")
@@ -158,7 +187,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 		"channel", c.tx.Channel(),
 		"namespace", c.tx.Namespace(),
 	}
-	metrics.EndorsedTransactions.With(labels...).Add(1)
+	c.metrics.EndorsedTransactions.With(labels...).Add(1)
 	return nil, nil
 }
 
@@ -392,7 +421,11 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 		logger.Debugf("call chaincode for endorsement [nonce=%s]", base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
 	}
 
-	env, err := network.GetInstance(context, c.tx.Network(), c.tx.Channel()).RequestApproval(
+	nw, err := c.networkProvider.GetNetwork(c.tx.Network(), c.tx.Channel())
+	if err != nil {
+		return nil, errors.Wrapf(err, "nw not found")
+	}
+	env, err := nw.RequestApproval(
 		context,
 		c.tx.TokenRequest.TokenService,
 		requestRaw,
@@ -417,8 +450,8 @@ func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Ide
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("ask auditing to [%s]", c.tx.Opts.Auditor)
 		}
-		local := view2.GetSigService(context).IsMe(c.tx.Opts.Auditor)
-		sessionBoxed, err := context.RunView(newAuditingViewInitiator(c.tx, local))
+		local := c.sigService.IsMe(c.tx.Opts.Auditor)
+		sessionBoxed, err := context.RunView(utils.MustGet(c.auditingViewInitiator.New(c.tx, local)))
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.Auditor.String())
 		}
@@ -469,16 +502,20 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 	// Filter the metadata by Enrollment ID.
 	// The auditor will receive the full set of metadata
 	span.AddEvent("Prepare final distribution list")
-	finalDistributionList, err := c.prepareDistributionList(context, auditors, distributionList)
+	finalDistributionList, err := c.prepareDistributionList(auditors, distributionList)
 	if err != nil {
 		return errors.Wrap(err, "failed preparing distribution list")
 	}
 
-	owner := NewOwner(context, c.tx.TokenService())
+	ttxDB, err := c.ttxManager.DB(c.tx.TokenService().ID())
+	if err != nil {
+		return errors.Wrapf(err, "ttxdb not found")
+	}
+	owner := NewTxOwner(c.tx.TokenService(), ttxDB)
 
 	// Store transaction in the token transaction database
 	span.AddEvent("Store transaction records")
-	if err := StoreTransactionRecords(context, c.tx); err != nil {
+	if err := owner.Append(c.tx); err != nil {
 		return errors.Wrapf(err, "failed adding transaction %s to the token transaction database", c.tx.ID())
 	}
 
@@ -562,7 +599,7 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 		hash.Hashable(txRaw).String())
 
 	span.AddEvent("Verify signature")
-	verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
+	verifier, err := c.sigService.GetVerifier(entry.LongTerm)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for identity [%s]", entry.ID)
 	}
@@ -582,7 +619,7 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	return nil
 }
 
-func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, auditors []view.Identity, distributionList []view.Identity) ([]distributionListEntry, error) {
+func (c *CollectEndorsementsView) prepareDistributionList(auditors []view.Identity, distributionList []view.Identity) ([]distributionListEntry, error) {
 	// Compress distributionList by removing duplicates
 
 	// check if there are multisig identities, if yes, unwrap them
@@ -605,7 +642,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 	distributionList = allIds
 	allIds = append(allIds, auditors...)
 
-	mine := collections.NewSet(view2.GetSigService(context).AreMe(allIds...)...)
+	mine := collections.NewSet(c.sigService.AreMe(allIds...)...)
 	remainingIds := make([]view.Identity, 0, len(allIds)-mine.Length())
 	for _, id := range allIds {
 		if !mine.Contains(id.UniqueID()) {
@@ -639,9 +676,9 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		var err error
 		// if it is me, no need to resolve, get directly the default identity
 		if isMe {
-			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
+			longTermIdentity = c.identityProvider.DefaultIdentity()
 		} else {
-			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
+			longTermIdentity, _, _, err = c.endpointService.Resolve(party)
 			if err != nil {
 				return nil, errors.Wrapf(err, "cannot resolve long term identity for [%s]", party.UniqueID())
 			}
@@ -691,9 +728,9 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		var err error
 		// if it is me, no need to resolve, get directly the default identity
 		if isMe {
-			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
+			longTermIdentity = c.identityProvider.DefaultIdentity()
 		} else {
-			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
+			longTermIdentity, _, _, err = c.endpointService.Resolve(party)
 			if err != nil {
 				return nil, errors.Wrapf(err, "cannot resolve long term auitor identity for [%s]", party.UniqueID())
 			}
@@ -725,10 +762,21 @@ func (c *CollectEndorsementsView) getSession(context view.Context, p view.Identi
 	return context.GetSession(context.Initiator(), p)
 }
 
-type ReceiveTransactionView struct{}
+type ReceiveTransactionView struct {
+	kvss            *kvs.KVS
+	tmsProvider     *token.ManagementServiceProvider
+	networkProvider *network.Provider
+}
 
-func NewReceiveTransactionView() *ReceiveTransactionView {
-	return &ReceiveTransactionView{}
+func NewReceiveTransactionView(
+	kvss *kvs.KVS,
+	tmsProvider *token.ManagementServiceProvider,
+	networkProvider *network.Provider) *ReceiveTransactionView {
+	return &ReceiveTransactionView{
+		kvss:            kvss,
+		tmsProvider:     tmsProvider,
+		networkProvider: networkProvider,
+	}
 }
 
 func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error) {
@@ -749,7 +797,7 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 		info := context.Session().Info()
 		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
 	}
-	tx, err := NewTransactionFromBytes(context, msg)
+	tx, err := newTransactionFromBytes(context, f.tmsProvider, f.networkProvider, msg)
 	if err != nil {
 		logger.Warnf("failed creating transaction from bytes: [%v], try to unmarshal as signature request...", err)
 		// try to unmarshal as SignatureRequest
@@ -771,7 +819,7 @@ func (f *ReceiveTransactionView) unmarshalAsSignatureRequest(context view.Contex
 	if len(signatureRequest.TX) == 0 {
 		return nil, errors.Wrap(err, "no transaction received")
 	}
-	tx, err := NewTransactionFromBytes(context, signatureRequest.TX)
+	tx, err := newTransactionFromBytes(context, f.tmsProvider, f.networkProvider, signatureRequest.TX)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to receive transaction")
 	}
@@ -780,15 +828,13 @@ func (f *ReceiveTransactionView) unmarshalAsSignatureRequest(context view.Contex
 		return nil, errors.Wrap(err, "failed to generate key to store signature request")
 	}
 	k = base64.StdEncoding.EncodeToString([]byte(k))
-	if kvss, err := context.GetService(&kvs.KVS{}); err != nil {
-		return nil, errors.Wrap(err, "failed to get KVS from context")
-	} else if err := kvss.(*kvs.KVS).Put(k, base64.StdEncoding.EncodeToString(raw)); err != nil {
+	if err := f.kvss.Put(k, base64.StdEncoding.EncodeToString(raw)); err != nil {
 		return nil, errors.Wrap(err, "failed to to store signature request")
 	}
 	return tx, nil
 }
 
-type EndorseView struct {
+type endorseView struct {
 	tx *Transaction
 }
 
@@ -799,8 +845,33 @@ type EndorseView struct {
 // 3. After, it waits to receive the Transaction. The Transaction is validated and stored locally
 // to be processed at time of committing.
 // 4. It sends back an ack.
-func NewEndorseView(tx *Transaction) *EndorseView {
-	return &EndorseView{tx: tx}
+func NewEndorseView(tx *Transaction) *endorseView {
+	return &endorseView{tx: tx}
+}
+
+func (s *endorseView) Call(context view.Context) (interface{}, error) {
+	return context.RunView(&EndorseView{
+		tx:               s.tx,
+		kvss:             utils.MustGet(context.GetService(&kvs.KVS{})).(*kvs.KVS),
+		ttxManager:       utils.MustGet(context.GetService(&Manager{})).(*Manager),
+		sigService:       driver.GetSigService(context),
+		identityProvider: driver.GetIdentityProvider(context),
+		tokensManager:    utils.MustGet(context.GetService(&tokens.Manager{})).(*tokens.Manager),
+		tmsProvider:      token.GetManagementServiceProvider(context),
+		networkProvider:  network.GetProvider(context),
+	})
+}
+
+type EndorseView struct {
+	tx *Transaction
+
+	kvss             *kvs.KVS
+	ttxManager       *Manager
+	sigService       driver.SigService
+	identityProvider driver.IdentityProvider
+	tokensManager    *tokens.Manager
+	tmsProvider      *token.ManagementServiceProvider
+	networkProvider  *network.Provider
 }
 
 // Call executes the view.
@@ -826,17 +897,13 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrap(err, "failed to generate key to store signature request")
 	}
 	k = base64.StdEncoding.EncodeToString([]byte(k))
-	kvss, err := context.GetService(&kvs.KVS{})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get KVS from context")
-	}
-	storage := kvss.(*kvs.KVS)
+
 	for i := range requestsToBeSigned {
 		var srRaw []byte
 		signatureRequest := &SignatureRequest{}
 
-		if i == 0 && storage.Exists(k) {
-			if err := kvss.(*kvs.KVS).Get(k, &srRaw); err != nil {
+		if i == 0 && s.kvss.Exists(k) {
+			if err := s.kvss.Get(k, &srRaw); err != nil {
 				return nil, errors.Wrap(err, "failed to to store signature request")
 			}
 		} else {
@@ -881,16 +948,22 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed receiving transaction")
 	}
 
+	ttxDB, err := s.ttxManager.DB(s.tx.TokenService().ID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "ttxdb not found")
+	}
+	owner := NewTxOwner(s.tx.TokenService(), ttxDB)
+
 	// Store transaction in the token transaction database
-	if err := StoreTransactionRecords(context, s.tx); err != nil {
+	if err := owner.Append(s.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
 	}
 
 	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(receivedTx.FromRaw), view2.GetIdentityProvider(context).DefaultIdentity())
+		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(receivedTx.FromRaw), s.identityProvider.DefaultIdentity())
 	}
-	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
+	signer, err := s.sigService.GetSigner(s.identityProvider.DefaultIdentity())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
 	}
@@ -899,14 +972,14 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessage(err, "failed to sign ack response")
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
+		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), s.identityProvider.DefaultIdentity())
 	}
 	if err := session.SendWithContext(context.Context(), sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
 
 	// cache the token request into the tokens db
-	t, err := tokens.GetService(context, s.tx.TMSID())
+	t, err := s.tokensManager.Tokens(s.tx.TMSID())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
 	}
@@ -922,7 +995,7 @@ func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, er
 		logger.Debugf("Receive transaction with envelope...")
 	}
 	// TODO: this might also happen multiple times because of the pseudonym. Avoid this by identity resolution at the sender
-	tx, err := ReceiveTransaction(context)
+	tx, err := receiveTransactionWithKVS(context, s.kvss, s.tmsProvider, s.networkProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed receiving transaction")
 	}

@@ -10,8 +10,10 @@ import (
 	"encoding/base64"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/marshaller"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -57,7 +59,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 		logger.Debugf("receive a new transaction...")
 	}
 
-	txBoxed, err := context.RunView(ttx.NewReceiveTransactionView(), view.WithSameContext())
+	txBoxed, err := context.RunView(ttx.NewReceiveTransactionView(views.GetKVS(context), token.GetManagementServiceProvider(context), network.GetProvider(context)), view.WithSameContext())
 	if err != nil {
 		return nil, err
 	}
