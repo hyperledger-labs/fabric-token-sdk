@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 )
@@ -488,5 +489,6 @@ func randomAction(curve *math.Curve, rand io.Reader, b assert.TestingT) *Action 
 		"key1": getRandomBytes(b, 32),
 		"key2": getRandomBytes(b, 32),
 	}
+	action.ESigners = make([]driver.Identity, 0)
 	return action
 }
