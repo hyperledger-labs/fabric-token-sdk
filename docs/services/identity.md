@@ -51,26 +51,7 @@ The identity service is locate under [`token/services/identity`](./../../token/s
 Building on the concept of long-term identities, we'll now explore how they are grouped into roles within the identity service.
 
 Each role acts as a container for long-term identities, which are then used to create wallets. 
-Here's the interface that defines a role:
-
-```go
-// Role is a container of long-term identities.
-// A long-term identity is then used to construct a wallet.
-type Role interface {
-	// ID returns the identifier of this role
-	ID() IdentityRoleType
-	// MapToIdentity returns the long-term identity and its identifier for the given index.
-	// The index can be an identity or a label (string).
-	MapToIdentity(v WalletLookupID) (Identity, string, error)
-	// GetIdentityInfo returns the long-term identity info associated to the passed id
-	GetIdentityInfo(id string) (IdentityInfo, error)
-	// RegisterIdentity registers the given identity
-	RegisterIdentity(config IdentityConfiguration) error
-	// IdentityIDs returns the identifiers contained in this role
-	IdentityIDs() ([]string, error)
-}
-```
-
+The role is defined by the [`Role`](./../../token/services/identity/roles.go) interface.
 This interface offers functions for managing identities within the role. 
 You, as the developer, have the flexibility to implement a role using any identity representation that best fits your application's needs. 
 
@@ -78,61 +59,8 @@ A default implementation is provided under [`token/services/identity/role`](./..
 
 ## Understanding Wallets in More Detail
 
-The Token-SDK abstracts the wallet management via a service called `WalletService`. 
-Here is the interface that defines such a service:
-
-```go
-// WalletService models the wallet service that handles issuer, recipient, auditor and certifier wallets
-type WalletService interface {
-	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
-	RegisterRecipientIdentity(data *RecipientData) error
-
-	// GetAuditInfo retrieves the audit information for the passed identity
-	GetAuditInfo(id Identity) ([]byte, error)
-
-	// GetEnrollmentID extracts the enrollment id from the passed audit information
-	GetEnrollmentID(identity Identity, auditInfo []byte) (string, error)
-
-	// GetRevocationHandle extracts the revocation handler from the passed audit information
-	GetRevocationHandle(identity Identity, auditInfo []byte) (string, error)
-
-	// GetEIDAndRH returns both enrollment ID and revocation handle
-	GetEIDAndRH(identity Identity, auditInfo []byte) (string, string, error)
-
-	// Wallet returns the wallet bound to the passed identity, if any is available
-	Wallet(identity Identity) Wallet
-
-	// RegisterOwnerIdentity registers an owner long-term identity
-	RegisterOwnerIdentity(config IdentityConfiguration) error
-
-	// RegisterIssuerIdentity registers an issuer long-term wallet
-	RegisterIssuerIdentity(config IdentityConfiguration) error
-
-	// OwnerWalletIDs returns the list of owner wallet identifiers
-	OwnerWalletIDs() ([]string, error)
-
-	// OwnerWallet returns an instance of the OwnerWallet interface bound to the passed id.
-	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	OwnerWallet(id WalletLookupID) (OwnerWallet, error)
-
-	// IssuerWallet returns an instance of the IssuerWallet interface bound to the passed id.
-	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	IssuerWallet(id WalletLookupID) (IssuerWallet, error)
-
-	// AuditorWallet returns an instance of the AuditorWallet interface bound to the passed id.
-	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	AuditorWallet(id WalletLookupID) (AuditorWallet, error)
-
-	// CertifierWallet returns an instance of the CertifierWallet interface bound to the passed id.
-	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	CertifierWallet(id WalletLookupID) (CertifierWallet, error)
-
-    // SpendIDs returns the spend ids for the passed token ids
-    SpendIDs(ids ...*token.ID) ([]string, error)
-}
-```
-
-The `WalletService` gives access to the available wallets.
+The Token-SDK abstracts the wallet management via an interface called [`WalletService`](./../../token/driver/wallet.go) that is part of the `Driver API`.
+The `WalletService` interface gives access to the available wallets.
 You, as the developer, have the flexibility to implement a `WalletService` that best fits your application's needs.
 
 A default implementation is provided under [`token/services/identity/wallet`](./../../token/services/identity/wallet).
@@ -161,11 +89,44 @@ It uses the `identitydb` service for the `IdentityDB` and the `WalletDB`, and th
 The HashiCorp Vault Secrets Engine is a modular component of Vault designed to securely manage, store, or generate sensitive data such as API keys, passwords, certificates, and encryption keys.
 The identity service provides an implementation for both the `IdentityDB` and `Keystore` based on the `HashiCorp Vault Secrets Engine`.
 This implementation can be found under [`hashicorp`](./../../token/services/identity/storage/kvs/hashicorp).
+This implementation requires to configure the `HashiCorp Vault Secrets Engine` to run in non-versioned mode (i.e., stores the most recently written value for a key). 
+For more information about non-versioned secrets engine mode, refer to the (https://developer.hashicorp.com/vault/docs/secrets/kv/kv-v1).
 
 In order to use this integration, the developer must do the following:
 1. Implement the `identity.StorageProvider` interface. 
-2. Register this implementation in `Dig` via decoration like this:
+2. Register this implementation in [`Dig`](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/sdk.md) via decoration like this:
    ```go
-    p.Container().Decorate(yourpackage.NewYourIdentityStorageProvider)
+    p.Container().Decorate(NewMixedStorageProvider)
    ```
-   This can be added in the Application Dig SDK that links that token-sdk Dig SDK
+   This can be added in the Application Dig SDK that links that token-sdk Dig SDK.
+
+Here is an example of the implementation of the `identity.StorageProvider` interface implementing bullet `1`:
+
+```go
+type MixedStorageProvider struct {
+	kvs     kvs.KVS
+	manager *identitydb.Manager
+}
+
+func NewMixedStorageProvider(client *vault.Client, prefix string, manager *identitydb.Manager) (*MixedStorageProvider, error) {
+	kvs, err := hashicorp.NewWithClient(client, prefix)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed instantiating hashicorp.NewWithClient")
+	}
+	return &MixedStorageProvider{kvs: kvs, manager: manager}, nil
+}
+
+func (s *MixedStorageProvider) WalletDB(tmsID token.TMSID) (identity.WalletDB, error) {
+	return s.manager.WalletDBByTMSId(tmsID)
+}
+
+func (s *MixedStorageProvider) IdentityDB(tmsID token.TMSID) (identity.IdentityDB, error) {
+	return kvs.NewIdentityDB(s.kvs, tmsID), nil
+}
+
+func (s *MixedStorageProvider) Keystore() (identity.Keystore, error) {
+	return s.kvs, nil
+}
+```
+
+ 
