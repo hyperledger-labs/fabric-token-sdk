@@ -10,6 +10,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
@@ -33,7 +34,24 @@ type finalityView struct {
 	opts           []TxOption
 }
 
-// NewFinalityView returns an instance of the finalityView.
+func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
+	return ctx.RunView(&FinalityView{
+		pollingTimeout: f.pollingTimeout,
+		opts:           f.opts,
+		ttxdbManager:   utils.MustGet(ctx.GetService(&ttxdb.Manager{})).(*ttxdb.Manager),
+		auditdbManager: utils.MustGet(ctx.GetService(&auditdb.Manager{})).(*auditdb.Manager),
+	})
+}
+
+type FinalityView struct {
+	pollingTimeout time.Duration
+	opts           []TxOption
+
+	ttxdbManager   *ttxdb.Manager
+	auditdbManager *auditdb.Manager
+}
+
+// NewFinalityView returns an instance of the FinalityView.
 // The view does the following: It waits for the finality of the passed transaction.
 // If the transaction is final, the vault is updated.
 func NewFinalityView(tx *Transaction, opts ...TxOption) *finalityView {
@@ -47,7 +65,7 @@ func NewFinalityWithOpts(opts ...TxOption) *finalityView {
 // Call executes the view.
 // The view does the following: It waits for the finality of the passed transaction.
 // If the transaction is final, the vault is updated.
-func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
+func (f *FinalityView) Call(ctx view.Context) (interface{}, error) {
 	// Compile options
 	options, err := CompileOpts(f.opts...)
 	if err != nil {
@@ -63,28 +81,28 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 	if timeout == 0 {
 		timeout = 5 * time.Minute
 	}
-	return f.call(ctx, txID, tmsID, timeout)
+	return f.call(ctx.Context(), txID, tmsID, timeout)
 }
 
-func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, timeout time.Duration) (interface{}, error) {
-	span := trace.SpanFromContext(ctx.Context())
+func (f *FinalityView) call(ctx context.Context, txID string, tmsID token.TMSID, timeout time.Duration) (interface{}, error) {
+	span := trace.SpanFromContext(ctx)
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Listen to finality of [%s]", txID)
 	}
 
-	c := ctx.Context()
+	c := ctx
 	if timeout != 0 {
 		var cancel context.CancelFunc
 		c, cancel = context.WithTimeout(c, timeout)
 		defer cancel()
 	}
 
-	transactionDB, err := ttxdb.GetByTMSId(ctx, tmsID)
+	transactionDB, err := f.ttxdbManager.DBByTMSId(tmsID)
 	if err != nil {
 		return nil, err
 	}
-	auditDB, err := auditdb.GetByTMSId(ctx, tmsID)
+	auditDB, err := f.auditdbManager.DBByTMSId(tmsID)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +144,7 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 	return nil, nil
 }
 
-func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB finalityDB, startCounter, iterations int) (int, error) {
+func (f *FinalityView) dbFinality(c context.Context, txID string, finalityDB finalityDB, startCounter, iterations int) (int, error) {
 	span := trace.SpanFromContext(c)
 	// notice that adding the listener can happen after the event we are looking for has already happened
 	// therefore we need to check more often before the timeout happens
@@ -201,4 +219,28 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 	span.RecordError(errors.Errorf("timeout reached"))
 	logger.Debugf("Is [%s] final? Failed to listen to transaction for timeout", txID)
 	return iterations, errors.Errorf("failed to listen to transaction [%s] for timeout", txID)
+}
+
+type FinalityViewFactory struct {
+	ttxdbManager   *ttxdb.Manager
+	auditdbManager *auditdb.Manager
+}
+
+func NewFinalityViewFactory(
+	ttxdbManager *ttxdb.Manager,
+	auditdbManager *auditdb.Manager,
+) *FinalityViewFactory {
+	return &FinalityViewFactory{
+		ttxdbManager:   ttxdbManager,
+		auditdbManager: auditdbManager,
+	}
+}
+
+func (f *FinalityViewFactory) New(pollingTimeout time.Duration, opts ...TxOption) (*FinalityView, error) {
+	return &FinalityView{
+		pollingTimeout: pollingTimeout,
+		opts:           opts,
+		ttxdbManager:   f.ttxdbManager,
+		auditdbManager: f.auditdbManager,
+	}, nil
 }

@@ -11,13 +11,17 @@ import (
 	"encoding/base64"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
@@ -96,37 +100,90 @@ func (a *TxAuditor) Check(context context.Context) ([]string, error) {
 	return a.auditor.Check(context)
 }
 
-type RegisterAuditorView struct {
+type registerAuditorView struct {
 	TMSID     token.TMSID
 	AuditView view.View
 }
 
-func NewRegisterAuditorView(auditView view.View, opts ...token.ServiceOption) *RegisterAuditorView {
+func (r *registerAuditorView) Call(context view.Context) (interface{}, error) {
+	return context.RunView(&RegisterAuditorView{
+		TMSID:        r.TMSID,
+		AuditView:    r.AuditView,
+		viewRegistry: view2.GetRegistry(context),
+	})
+}
+
+func NewRegisterAuditorView(auditView view.View, opts ...token.ServiceOption) *registerAuditorView {
 	options, err := token.CompileServiceOptions(opts...)
 	if err != nil {
 		return nil
 	}
-	return &RegisterAuditorView{
+	return &registerAuditorView{
 		AuditView: auditView,
 		TMSID:     options.TMSID(),
 	}
 }
 
-func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
+type RegisterAuditorView struct {
+	TMSID     token.TMSID
+	AuditView view.View
+
+	viewRegistry *view2.Registry
+}
+
+func (r *RegisterAuditorView) Call(view.Context) (interface{}, error) {
 	// register responder
-	if err := view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{}); err != nil {
+	if err := r.viewRegistry.RegisterResponder(r.AuditView, &AuditingViewInitiator{}); err != nil {
 		return nil, errors.Wrapf(err, "failed to register auditor view")
 	}
 	return nil, nil
 }
 
-type AuditingViewInitiator struct {
+func NewRegisterAuditorViewFactory(viewRegistry *view2.Registry) *RegisterAuditorViewFactory {
+	return &RegisterAuditorViewFactory{viewRegistry: viewRegistry}
+}
+
+type RegisterAuditorViewFactory struct {
+	viewRegistry *view2.Registry
+}
+
+func (f *RegisterAuditorViewFactory) New(auditView view.View, opts ...token.ServiceOption) (*RegisterAuditorView, error) {
+	options, err := token.CompileServiceOptions(opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile options")
+	}
+	return &RegisterAuditorView{
+		TMSID:        options.TMSID(),
+		AuditView:    auditView,
+		viewRegistry: f.viewRegistry,
+	}, nil
+}
+
+func NewAuditingViewInitiator(tx *Transaction, local bool) *auditingViewInitiatorView {
+	return &auditingViewInitiatorView{
+		tx:    tx,
+		local: local,
+	}
+}
+
+type auditingViewInitiatorView struct {
 	tx    *Transaction
 	local bool
 }
 
-func newAuditingViewInitiator(tx *Transaction, local bool) *AuditingViewInitiator {
-	return &AuditingViewInitiator{tx: tx, local: local}
+func (a *auditingViewInitiatorView) Call(context view.Context) (interface{}, error) {
+	return context.RunView(&AuditingViewInitiator{
+		tx:           a.tx,
+		local:        a.local,
+		viewRegistry: view2.GetRegistry(context),
+	})
+}
+
+type AuditingViewInitiator struct {
+	tx    *Transaction
+	local bool
+
+	viewRegistry *view2.Registry
 }
 
 func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
@@ -247,7 +304,7 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 	}
 
 	// execute the auditor responder using the fake communication session
-	responderView, err := view2.GetRegistry(context).GetResponder(&AuditingViewInitiator{})
+	responderView, err := a.viewRegistry.GetResponder(&AuditingViewInitiator{})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get auditor view")
 	}
@@ -257,13 +314,58 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 	return left, nil
 }
 
-type AuditApproveView struct {
+type AuditingViewInitiatorFactory struct {
+	viewRegistry *view2.Registry
+}
+
+func NewAuditingViewInitiatorFactory(viewRegistry *view2.Registry) *AuditingViewInitiatorFactory {
+	return &AuditingViewInitiatorFactory{viewRegistry: viewRegistry}
+}
+
+func (f *AuditingViewInitiatorFactory) New(tx *Transaction, local bool) (*AuditingViewInitiator, error) {
+	return &AuditingViewInitiator{
+		tx:           tx,
+		local:        local,
+		viewRegistry: f.viewRegistry,
+	}, nil
+}
+
+type auditApproveView struct {
 	w  *token.AuditorWallet
 	tx *Transaction
 }
 
-func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *AuditApproveView {
-	return &AuditApproveView{w: w, tx: tx}
+func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *auditApproveView {
+	return &auditApproveView{w: w, tx: tx}
+}
+
+func (a *auditApproveView) Call(context view.Context) (interface{}, error) {
+	return context.RunView(&AuditApproveView{
+		w:                a.w,
+		tx:               a.tx,
+		auditorManager:   utils.MustGet(context.GetService(&auditor.Manager{})).(*auditor.Manager),
+		tmsProvider:      token.GetManagementServiceProvider(context),
+		networkProvider:  network.GetProvider(context),
+		kvss:             utils.MustGet(context.GetService(&kvs.KVS{})).(*kvs.KVS),
+		sigService:       driver2.GetSigService(context),
+		identityProvider: driver2.GetIdentityProvider(context),
+		tokensManager:    utils.MustGet(context.GetService(&tokens.Manager{})).(*tokens.Manager),
+		metrics:          GetMetrics(context),
+	})
+}
+
+type AuditApproveView struct {
+	w  *token.AuditorWallet
+	tx *Transaction
+
+	auditorManager   *auditor.Manager
+	kvss             *kvs.KVS
+	tmsProvider      *token.ManagementServiceProvider
+	networkProvider  *network.Provider
+	sigService       driver2.SigService
+	identityProvider driver2.IdentityProvider
+	tokensManager    *tokens.Manager
+	metrics          *Metrics
 }
 
 func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
@@ -271,7 +373,11 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	span.AddEvent("start_audit_approve_view")
 	defer span.AddEvent("end_audit_approve_view")
 	// Append audit records
-	if err := auditor.New(context, a.w).Append(a.tx); err != nil {
+	aud, err := a.auditorManager.Auditor(a.w.TMS().ID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "auditor not found")
+	}
+	if err := aud.Append(a.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed appending audit records for transaction %s", a.tx.ID())
 	}
 
@@ -280,7 +386,7 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// cache the token request into the tokens db
-	t, err := tokens.GetService(context, a.tx.TMSID())
+	t, err := a.tokensManager.Tokens(a.tx.TMSID())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", a.tx.TMSID())
 	}
@@ -293,7 +399,7 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 		"channel", a.tx.Channel(),
 		"namespace", a.tx.Namespace(),
 	}
-	GetMetrics(context).AuditApprovedTransactions.With(labels...).Add(1)
+	a.metrics.AuditApprovedTransactions.With(labels...).Add(1)
 	return nil, nil
 }
 
@@ -341,7 +447,7 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	span := trace.SpanFromContext(context.Context())
 	logger.Debugf("Waiting for envelope... [%s]", a.tx.ID())
-	tx, err := ReceiveTransaction(context, WithNoTransactionVerification())
+	tx, err := receiveTransactionWithKVS(context, a.kvss, a.tmsProvider, a.networkProvider, WithNoTransactionVerification())
 	if err != nil {
 		return errors.Wrapf(err, "failed to receive transaction with network envelope")
 	}
@@ -358,8 +464,8 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	// Send the signature back
 
 	var sigma []byte
-	logger.Debugf("auditor signing ack response [%s] with identity [%s]", hash.Hashable(tx.FromRaw), view2.GetIdentityProvider(context).DefaultIdentity())
-	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
+	logger.Debugf("auditor signing ack response [%s] with identity [%s]", hash.Hashable(tx.FromRaw), a.identityProvider.DefaultIdentity())
+	signer, err := a.sigService.GetSigner(a.identityProvider.DefaultIdentity())
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting signing identity for [%s]", view2.GetIdentityProvider(context).DefaultIdentity())
 	}
@@ -369,7 +475,7 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 		return errors.WithMessage(err, "failed to sign ack response")
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
+		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), a.identityProvider.DefaultIdentity())
 	}
 	session := context.Session()
 	span.AddEvent("send_back_ack")
@@ -380,4 +486,52 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	logger.Debugf("Waiting for envelope...done [%s]", a.tx.ID())
 
 	return nil
+}
+
+type AuditApproveViewFactory struct {
+	tmsProvider      *token.ManagementServiceProvider
+	networkProvider  *network.Provider
+	auditorManager   *auditor.Manager
+	kvss             *kvs.KVS
+	sigService       driver2.SigService
+	identityProvider driver2.IdentityProvider
+	tokensManager    *tokens.Manager
+	metrics          *Metrics
+}
+
+func NewAuditApproveViewFactory(
+	auditorManager *auditor.Manager,
+	kvss *kvs.KVS,
+	tmsProvider *token.ManagementServiceProvider,
+	networkProvider *network.Provider,
+	sigService driver2.SigService,
+	identityProvider driver2.IdentityProvider,
+	tokensManager *tokens.Manager,
+	metrics *Metrics,
+) *AuditApproveViewFactory {
+	return &AuditApproveViewFactory{
+		auditorManager:   auditorManager,
+		kvss:             kvss,
+		tmsProvider:      tmsProvider,
+		networkProvider:  networkProvider,
+		sigService:       sigService,
+		identityProvider: identityProvider,
+		tokensManager:    tokensManager,
+		metrics:          metrics,
+	}
+}
+
+func (f *AuditApproveViewFactory) New(w *token.AuditorWallet, tx *Transaction) (*AuditApproveView, error) {
+	return &AuditApproveView{
+		w:                w,
+		tx:               tx,
+		auditorManager:   f.auditorManager,
+		tmsProvider:      f.tmsProvider,
+		networkProvider:  f.networkProvider,
+		kvss:             f.kvss,
+		sigService:       f.sigService,
+		identityProvider: f.identityProvider,
+		tokensManager:    f.tokensManager,
+		metrics:          f.metrics,
+	}, nil
 }

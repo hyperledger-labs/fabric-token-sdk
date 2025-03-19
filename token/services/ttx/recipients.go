@@ -11,6 +11,7 @@ import (
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
@@ -278,6 +279,9 @@ func (f *RequestRecipientIdentityView) aggregateAndDistribute(context view.Conte
 
 type RespondRequestRecipientIdentityView struct {
 	Wallet string
+
+	tmsProvider *token.ManagementServiceProvider
+	binder      driver.EndpointService
 }
 
 // RespondRequestRecipientIdentity executes the RespondRequestRecipientIdentityView.
@@ -294,7 +298,11 @@ func RespondRequestRecipientIdentity(context view.Context) (view.Identity, error
 // If the wallet is not found, an error is returned.
 // If the wallet is the empty string, the identity is taken from the default wallet.
 func RespondRequestRecipientIdentityUsingWallet(context view.Context, wallet string) (view.Identity, error) {
-	id, err := context.RunView(&RespondRequestRecipientIdentityView{Wallet: wallet})
+	id, err := context.RunView(&RespondRequestRecipientIdentityView{
+		Wallet:      wallet,
+		tmsProvider: token.GetManagementServiceProvider(context),
+		binder:      driver.GetEndpointService(context),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -315,8 +323,8 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		wallet = string(recipientRequest.WalletID)
 	}
 	logger.Debugf("Respond request recipient identity using wallet [%s]", wallet)
-	tms := token.GetManagementService(context, token.WithTMSID(recipientRequest.TMSID))
-	if tms == nil {
+	tms, err := s.tmsProvider.GetManagementService(token.WithTMSID(recipientRequest.TMSID))
+	if err != nil {
 		return nil, errors.Errorf("failed getting token management service [%s]", recipientRequest.TMSID)
 	}
 	w := tms.WalletManager().OwnerWallet(wallet)
@@ -348,16 +356,15 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 
 	// Step 3: send the public key back to the invoker
 	span.AddEvent(fmt.Sprintf("Send recipient identity response to %s", string(session.Info().Caller)))
-	err := session.Send(recipientData)
+	err = session.Send(recipientData)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
 	// Update the Endpoint Resolver
-	resolver := view2.GetEndpointService(context)
 	logger.Debugf("bind me [%s] to [%s]", context.Me(), recipientData)
 	span.AddEvent("Bind identity")
-	err = resolver.Bind(context.Me(), recipientIdentity)
+	err = s.binder.Bind(context.Me(), recipientIdentity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to bind me to recipient identity")
 	}
@@ -445,9 +452,8 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 	}
 
 	// Update the Endpoint Resolver
-	resolver := view2.GetEndpointService(context)
 	for i, node := range multisigRecipientData.Nodes {
-		err = resolver.Bind(node, multisigRecipientData.Recipients[i])
+		err = s.binder.Bind(node, multisigRecipientData.Recipients[i])
 		if err != nil {
 			return errors.Wrapf(err, "failed to bind me to recipient identity")
 		}
@@ -459,6 +465,9 @@ type ExchangeRecipientIdentitiesView struct {
 	TMSID  token.TMSID
 	Wallet string
 	Other  view.Identity
+
+	tmsProvider *token.ManagementServiceProvider
+	binder      driver.EndpointService
 }
 
 // ExchangeRecipientIdentities executes the ExchangeRecipientIdentitiesView using by passed wallet id to
@@ -473,6 +482,9 @@ func ExchangeRecipientIdentities(context view.Context, walletID string, recipien
 		TMSID:  options.TMSID(),
 		Wallet: walletID,
 		Other:  recipient,
+
+		tmsProvider: token.GetManagementServiceProvider(context),
+		binder:      driver.GetEndpointService(context),
 	})
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed running view")
@@ -482,7 +494,10 @@ func ExchangeRecipientIdentities(context view.Context, walletID string, recipien
 }
 
 func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
-	ts := token.GetManagementService(context, token.WithTMSID(f.TMSID))
+	ts, err := f.tmsProvider.GetManagementService(token.WithTMSID(f.TMSID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "tms not found")
+	}
 
 	if w := ts.WalletManager().OwnerWallet(f.Other); w != nil {
 		other, err := w.GetRecipientIdentity()
@@ -535,8 +550,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("bind [%s] to other [%s]", remoteRecipientData.Identity, f.Other)
 		}
-		resolver := view2.GetEndpointService(context)
-		err = resolver.Bind(f.Other, remoteRecipientData.Identity)
+		err = f.binder.Bind(f.Other, remoteRecipientData.Identity)
 		if err != nil {
 			return nil, err
 		}
@@ -544,7 +558,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("bind me [%s] to [%s]", localRecipientData.Identity, context.Me())
 		}
-		err = resolver.Bind(context.Me(), localRecipientData.Identity)
+		err = f.binder.Bind(context.Me(), localRecipientData.Identity)
 		if err != nil {
 			return nil, err
 		}
@@ -555,13 +569,19 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 
 type RespondExchangeRecipientIdentitiesView struct {
 	Wallet string
+
+	tmsProvider *token.ManagementServiceProvider
+	binder      driver.EndpointService
 }
 
 // RespondExchangeRecipientIdentities executes the RespondExchangeRecipientIdentitiesView.
 // The recipient sends back the identity to receive ownership of tokens.
 // The identity is taken from the default wallet
 func RespondExchangeRecipientIdentities(context view.Context) (view.Identity, view.Identity, error) {
-	ids, err := context.RunView(&RespondExchangeRecipientIdentitiesView{})
+	ids, err := context.RunView(&RespondExchangeRecipientIdentitiesView{
+		tmsProvider: token.GetManagementServiceProvider(context),
+		binder:      driver.GetEndpointService(context),
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -578,7 +598,10 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		return nil, err
 	}
 
-	ts := token.GetManagementService(context, token.WithTMSID(request.TMSID))
+	ts, err := s.tmsProvider.GetManagementService(token.WithTMSID(request.TMSID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "tms not found")
+	}
 	other := request.RecipientData.Identity
 	if err := ts.WalletManager().RegisterRecipientIdentity(&RecipientData{
 		Identity: other, AuditInfo: request.RecipientData.AuditInfo, TokenMetadata: request.RecipientData.TokenMetadata,
@@ -602,12 +625,11 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	}
 
 	// Update the Endpoint Resolver
-	resolver := view2.GetEndpointService(context)
-	err = resolver.Bind(context.Me(), recipientData.Identity)
+	err = s.binder.Bind(context.Me(), recipientData.Identity)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
 	}
-	err = resolver.Bind(session.Info().Caller, other)
+	err = s.binder.Bind(session.Info().Caller, other)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
 	}

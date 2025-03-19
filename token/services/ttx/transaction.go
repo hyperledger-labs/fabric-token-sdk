@@ -9,6 +9,8 @@ package ttx
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -44,18 +46,22 @@ type Transaction struct {
 	FromRaw         []byte
 }
 
-// NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
 func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transaction, error) {
+	return newAnonymousTransaction(context, token.GetManagementServiceProvider(context), network.GetProvider(context), opts...)
+}
+
+// NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
+func newAnonymousTransaction(context view.Context, tmsProvider *token.ManagementServiceProvider, networkProvider *network.Provider, opts ...TxOption) (*Transaction, error) {
 	txOpts, err := CompileOpts(opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed compiling tx options")
 	}
-	tms := token.GetManagementService(
-		context,
-		token.WithTMSID(txOpts.TMSID),
-	)
-	net := network.GetInstance(context, tms.Network(), tms.Channel())
-	if net == nil {
+	tms, err := tmsProvider.GetManagementService(token.WithTMSID(txOpts.TMSID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "tms not found")
+	}
+	net, err := networkProvider.GetNetwork(tms.Network(), tms.Channel())
+	if net == nil || err != nil {
 		return nil, errors.New("failed to get network")
 	}
 	id, err := net.AnonymousIdentity()
@@ -63,28 +69,33 @@ func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transacti
 		return nil, errors.WithMessage(err, "failed getting anonymous identity for transaction")
 	}
 
-	return NewTransaction(context, id, opts...)
+	return newTransaction(context, tmsProvider, networkProvider, id, opts...)
 }
 
-// NewTransaction returns a new token transaction customized with the passed opts that will be signed by the passed signer.
+func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption) (*Transaction, error) {
+	return newTransaction(context, token.GetManagementServiceProvider(context), network.GetProvider(context), signer, opts...)
+}
+
+// newTransaction returns a new token transaction customized with the passed opts that will be signed by the passed signer.
 // A valid signer is a signer that the target network recognizes as so. For example, in case of fabric, the signer must be a valid fabric identity.
 // If the passed signer is nil, then the default identity is used.
-func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption) (*Transaction, error) {
+func newTransaction(context view.Context, tmsProvider *token.ManagementServiceProvider, networkProvider *network.Provider, signer view.Identity, opts ...TxOption) (*Transaction, error) {
 	txOpts, err := CompileOpts(opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed compiling tx options")
 	}
 
+	tms, err := tmsProvider.GetManagementService(token.WithTMSID(txOpts.TMSID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "tms not found")
+	}
+	net, err := networkProvider.GetNetwork(tms.Network(), tms.Channel())
+	if net == nil || err != nil {
+		return nil, errors.Wrapf(err, "network not found")
+	}
+
 	if txOpts.AnonymousTransaction && signer == nil {
 		// set the signer to anonymous
-		tms := token.GetManagementService(
-			context,
-			token.WithTMSID(txOpts.TMSID),
-		)
-		net := network.GetInstance(context, tms.Network(), tms.Channel())
-		if net == nil {
-			return nil, errors.New("failed to get network")
-		}
 		id, err := net.AnonymousIdentity()
 		if err != nil {
 			return nil, errors.WithMessage(err, "failed getting anonymous identity for transaction")
@@ -92,24 +103,17 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 		signer = id
 	}
 
-	tms := token.GetManagementService(
-		context,
-		token.WithTMSID(txOpts.TMSID),
-	)
-	networkService := network.GetInstance(context, tms.Network(), tms.Channel())
-	networkProvider := network.GetProvider(context).GetNetwork
-
 	var txID network.TxID
 	if len(txOpts.NetworkTxID.Creator) != 0 {
 		txID = txOpts.NetworkTxID
 		signer = txID.Creator
 	} else {
 		if signer.IsNone() {
-			signer = networkService.LocalMembership().DefaultIdentity()
+			signer = net.LocalMembership().DefaultIdentity()
 		}
 		txID = network.TxID{Creator: signer}
 	}
-	id := networkService.ComputeTxID(&txID)
+	id := net.ComputeTxID(&txID)
 	tr, err := tms.NewRequest(id)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed init token request")
@@ -128,7 +132,7 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 			Transient:    map[string][]byte{},
 		},
 		TMS:             tms,
-		NetworkProvider: networkProvider,
+		NetworkProvider: networkProvider.GetNetwork,
 		Opts:            txOpts,
 		Context:         context.Context(),
 	}
@@ -137,6 +141,10 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 }
 
 func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, error) {
+	return newTransactionFromBytes(context, token.GetManagementServiceProvider(context), network.GetProvider(context), raw)
+}
+
+func newTransactionFromBytes(context view.Context, tmsProvider *token.ManagementServiceProvider, networkProvider *network.Provider, raw []byte) (*Transaction, error) {
 	tx := &Transaction{
 		Payload: &Payload{
 			Transient:    map[string][]byte{},
@@ -145,20 +153,23 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 		Context: context.Context(),
 		FromRaw: raw,
 	}
-	networkProvider := network.GetProvider(context).GetNetwork
-	if err := unmarshal(networkProvider, tx.Payload, raw); err != nil {
+
+	if err := unmarshal(networkProvider.GetNetwork, tx.Payload, raw); err != nil {
 		return nil, err
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.TxID.String())
 	}
-	tms := token.GetManagementService(context,
+	tms, err := tmsProvider.GetManagementService(
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
 		token.WithNamespace(tx.Namespace()),
 	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "tms not found")
+	}
 	tx.TMS = tms
-	tx.NetworkProvider = networkProvider
+	tx.NetworkProvider = networkProvider.GetNetwork
 	tx.TokenRequest.SetTokenService(tms)
 	if tx.ID() != tx.TokenRequest.ID() {
 		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", tx.ID(), tx.TokenRequest.ID())
@@ -168,6 +179,10 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 }
 
 func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, error) {
+	return receiveTransactionWithKVS(context, utils.MustGet(context.GetService(&kvs.KVS{})).(*kvs.KVS), token.GetManagementServiceProvider(context), network.GetProvider(context), opts...)
+}
+
+func receiveTransactionWithKVS(context view.Context, kvss *kvs.KVS, tmsProvider *token.ManagementServiceProvider, networkProvider *network.Provider, opts ...TxOption) (*Transaction, error) {
 	opt, err := CompileOpts(opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to parse options")
@@ -176,7 +191,7 @@ func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, e
 		logger.Debugf("receive a new transaction...")
 	}
 
-	txBoxed, err := context.RunView(NewReceiveTransactionView(), view.WithSameContext())
+	txBoxed, err := context.RunView(NewReceiveTransactionView(kvss, tmsProvider, networkProvider), view.WithSameContext())
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to receive transaction")
 	}
