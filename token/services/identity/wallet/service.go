@@ -180,7 +180,7 @@ func (s *Service) CertifierWallet(id driver.WalletLookupID) (driver.CertifierWal
 	return w.(driver.CertifierWallet), nil
 }
 
-// SpentIDs returns the spend ids for the passed token ids
+// SpendIDs returns the spend ids for the passed token ids
 func (s *Service) SpendIDs(ids ...*token.ID) ([]string, error) {
 	return nil, nil
 }
