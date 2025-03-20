@@ -9,18 +9,13 @@ package upgrade
 import (
 	"bytes"
 	"crypto/rand"
-	errors2 "errors"
 	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -32,62 +27,33 @@ type (
 	Signature = []byte
 )
 
-type Proof struct {
-	Challenge  driver.TokensUpgradeChallenge
-	Tokens     []token.LedgerToken
-	Signatures []Signature
+//go:generate counterfeiter -o mock/des.go -fake-name Deserializer . Deserializer
+
+type Deserializer interface {
+	GetOwnerVerifier(id driver.Identity) (driver.Verifier, error)
 }
 
-func (p *Proof) Serialize() ([]byte, error) {
-	return json.Marshal(p)
-}
+//go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
 
-func (p *Proof) Deserialize(raw []byte) error {
-	return json.Unmarshal(raw, p)
-}
-
-func (p *Proof) SHA256Digest() ([]byte, error) {
-	h := utils.NewSHA256Hasher()
-	err := h.AddBytes(p.Challenge)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to write challenge to hash")
-	}
-	for _, token := range p.Tokens {
-		if err := errors2.Join(
-			h.AddString(token.ID.TxId),
-			h.AddUInt64(token.ID.Index),
-			h.AddBytes(token.Token),
-			h.AddBytes(token.TokenMetadata),
-			h.AddString(string(token.Format)),
-		); err != nil {
-			return nil, errors.Wrapf(err, "failed to write token to hash")
-		}
-	}
-	return h.Digest(), nil
-}
-
-func (p *Proof) AddSignature(sigma Signature) {
-	p.Signatures = append(p.Signatures, sigma)
+type IdentityProvider interface {
+	GetSigner(id driver.Identity) (driver.Signer, error)
 }
 
 type Service struct {
 	Logger                          logging.Logger
-	PublicParametersManager         common.PublicParametersManager[*crypto.PublicParams]
+	MaxPrecision                    uint64
 	UpgradeSupportedTokenFormatList []token.Format
-	Deserializer                    driver.Deserializer
-	IdentityProvider                driver.IdentityProvider
+	Deserializer                    Deserializer
+	IdentityProvider                IdentityProvider
 }
 
 func NewService(
 	logger logging.Logger,
-	publicParametersManager common.PublicParametersManager[*crypto.PublicParams],
-	deserializer driver.Deserializer,
-	identityProvider driver.IdentityProvider,
+	maxPrecision uint64,
+	deserializer Deserializer,
+	identityProvider IdentityProvider,
 ) (*Service, error) {
 	// compute supported tokens
-	pp := publicParametersManager.PublicParams()
-	maxPrecision := pp.RangeProofParams.BitLength
-
 	var upgradeSupportedTokenFormatList []token.Format
 	for _, precision := range []uint64{16, 32, 64} {
 		format, err := v1.SupportedTokenFormat(precision)
@@ -101,7 +67,7 @@ func NewService(
 
 	return &Service{
 		Logger:                          logger,
-		PublicParametersManager:         publicParametersManager,
+		MaxPrecision:                    maxPrecision,
 		UpgradeSupportedTokenFormatList: upgradeSupportedTokenFormatList,
 		Deserializer:                    deserializer,
 		IdentityProvider:                identityProvider,
@@ -129,7 +95,10 @@ func (s *Service) GenUpgradeProof(ch driver.TokensUpgradeChallenge, ledgerTokens
 		return nil, errors.Errorf("invalid challenge size, got [%d], expected [%d]", len(ch), ChallengeSize)
 	}
 	if len(ledgerTokens) == 0 {
-		return nil, errors.Errorf("no ledgerTokens provided")
+		return nil, errors.Errorf("no ledger tokens provided")
+	}
+	if len(witness) != 0 {
+		return nil, errors.Errorf("proof witness not expected")
 	}
 
 	proof := &Proof{
@@ -201,13 +170,12 @@ func (s *Service) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequest) (
 func (s *Service) ProcessTokens(ledgerTokens []token.LedgerToken) ([]token.Token, error) {
 	// for each token, extract type and value
 	tokens := make([]token.Token, len(ledgerTokens))
-	maxPrecision := s.PublicParametersManager.PublicParams().RangeProofParams.BitLength
 	for i, tok := range ledgerTokens {
 		precision, ok := token2.Precisions[tok.Format]
 		if !ok {
 			return nil, errors.Errorf("unsupported token format [%s]", tok.Format)
 		}
-		fabToken, _, err := token2.ParseFabtokenToken(tok.Token, precision, maxPrecision)
+		fabToken, _, err := token2.ParseFabtokenToken(tok.Token, precision, s.MaxPrecision)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to check unspent tokens")
 		}
