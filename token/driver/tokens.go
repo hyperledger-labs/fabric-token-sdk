@@ -36,8 +36,6 @@ type TokensUpgradeService interface {
 
 // TokensService models the token service
 type TokensService interface {
-	TokensUpgradeService
-
 	// SupportedTokenFormats returns the supported token formats
 	SupportedTokenFormats() []token.Format
 

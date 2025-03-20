@@ -140,6 +140,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		v1.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
 		v1.NewAuditorService(),
 		tokensService,
+		&v1.TokensUpgradeService{},
 		authorization,
 	)
 	if err != nil {

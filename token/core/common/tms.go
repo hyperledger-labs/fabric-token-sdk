@@ -29,6 +29,7 @@ type Service[T driver.PublicParameters] struct {
 	transferService         driver.TransferService
 	auditorService          driver.AuditorService
 	tokensService           driver.TokensService
+	tokensUpgradeService    driver.TokensUpgradeService
 	authorization           driver.Authorization
 }
 
@@ -44,6 +45,7 @@ func NewTokenService[T driver.PublicParameters](
 	transferService driver.TransferService,
 	auditorService driver.AuditorService,
 	tokensService driver.TokensService,
+	tokensUpgradeService driver.TokensUpgradeService,
 	authorization driver.Authorization,
 ) (*Service[T], error) {
 	s := &Service[T]{
@@ -58,6 +60,7 @@ func NewTokenService[T driver.PublicParameters](
 		transferService:         transferService,
 		auditorService:          auditorService,
 		tokensService:           tokensService,
+		tokensUpgradeService:    tokensUpgradeService,
 		authorization:           authorization,
 	}
 	return s, nil
@@ -104,6 +107,10 @@ func (s *Service[T]) AuditorService() driver.AuditorService {
 
 func (s *Service[T]) TokensService() driver.TokensService {
 	return s.tokensService
+}
+
+func (s *Service[T]) TokensUpgradeService() driver.TokensUpgradeService {
+	return s.tokensUpgradeService
 }
 
 func (s *Service[T]) Authorization() driver.Authorization {
