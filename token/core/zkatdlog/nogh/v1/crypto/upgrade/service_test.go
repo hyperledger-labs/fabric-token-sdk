@@ -13,7 +13,7 @@ import (
 )
 
 func TestTokensService_NewUpgradeChallenge(t *testing.T) {
-	ts, err := NewService(nil, nil)
+	ts, err := NewService(nil, nil, nil, nil)
 	assert.NoError(t, err)
 	challenge, err := ts.NewUpgradeChallenge()
 	assert.NoError(t, err)
@@ -21,7 +21,7 @@ func TestTokensService_NewUpgradeChallenge(t *testing.T) {
 }
 
 func TestTokensService_GenUpgradeProof(t *testing.T) {
-	ts, err := NewService(nil, nil)
+	ts, err := NewService(nil, nil, nil, nil)
 	assert.NoError(t, err)
 	assert.NoError(t, err)
 	res, err := ts.GenUpgradeProof(nil, nil, nil)
@@ -30,7 +30,7 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 }
 
 func TestTokensService_CheckUpgradeProof(t *testing.T) {
-	ts, err := NewService(nil, nil)
+	ts, err := NewService(nil, nil, nil, nil)
 	assert.NoError(t, err)
 	assert.NoError(t, err)
 	res, err := ts.CheckUpgradeProof(nil, nil, nil)

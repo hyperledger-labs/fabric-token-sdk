@@ -64,28 +64,31 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		opts = &driver.IssueOptions{}
 	}
 
+	pp := s.PublicParametersManager.PublicParams()
 	if issuerIdentity.IsNone() && len(tokenType) == 0 && values == nil {
 		// this is a special case where the issue contains also redemption
 		// we need to extract token types and values from the passed tokens
-		tokenTypes, tokenValues, err := s.TokensUpgradeService.ProcessTokensUpgradeRequest(opts.TokensUpgradeRequest)
+		tokensToUpgrade, err := s.TokensUpgradeService.ProcessTokensUpgradeRequest(opts.TokensUpgradeRequest)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed to extract token types and values from the passed tokens")
 		}
 
-		// check that token types are all the same
-		if len(tokenTypes) == 0 {
+		// check that token types are all the same and sum the token values
+		if len(tokensToUpgrade) == 0 {
 			return nil, nil, errors.New("no token types found in the passed tokens")
 		}
-		tokenType = tokenTypes[0]
-		for _, t := range tokenTypes {
-			if t != tokenType {
+		tokenType = tokensToUpgrade[0].Type
+		var totalValue uint64
+		for _, t := range tokensToUpgrade {
+			if t.Type != tokenType {
 				return nil, nil, errors.New("all token types should be the same")
 			}
-		}
-		// sum the token values
-		var totalValue uint64
-		for _, v := range tokenValues {
-			totalValue += v
+			// sum the token values
+			q, err := token.NewUBigQuantity(t.Quantity, pp.QuantityPrecision)
+			if err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to create quantity from [%s]", t.Quantity)
+			}
+			totalValue += q.Uint64()
 		}
 		values = []uint64{totalValue}
 
@@ -107,7 +110,6 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, err
 	}
 
-	pp := s.PublicParametersManager.PublicParams()
 	issuer := &issue2.Issuer{}
 	issuer.New(tokenType, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,

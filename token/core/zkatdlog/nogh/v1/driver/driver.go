@@ -133,6 +133,10 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
+	tokensUpgradeService, err := upgrade.NewService(logger, ppm, deserializer, ip)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to initiliaze token upgrade service for [%s:%s]", tmsID.Network, tmsID.Namespace)
+	}
 	service, err := v1.NewTokenService(
 		logger,
 		ws,
@@ -160,7 +164,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 			d.tracerProvider,
 		),
 		tokensService,
-		upgrade.NewService(),
+		tokensUpgradeService,
 		authorization,
 	)
 	if err != nil {
