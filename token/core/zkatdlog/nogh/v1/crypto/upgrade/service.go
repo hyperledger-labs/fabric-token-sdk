@@ -10,10 +10,16 @@ import (
 	"bytes"
 	"crypto/rand"
 	errors2 "errors"
+	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -64,10 +70,33 @@ func (p *Proof) AddSignature(sigma Signature) {
 	p.Signatures = append(p.Signatures, sigma)
 }
 
-type Service struct{}
+type Service struct {
+	Logger                          logging.Logger
+	PublicParametersManager         common.PublicParametersManager[*crypto.PublicParams]
+	UpgradeSupportedTokenFormatList []token.Format
+}
 
-func NewService() *Service {
-	return &Service{}
+func NewService(logger logging.Logger, publicParametersManager common.PublicParametersManager[*crypto.PublicParams]) (*Service, error) {
+	// compute supported tokens
+	pp := publicParametersManager.PublicParams()
+	maxPrecision := pp.RangeProofParams.BitLength
+
+	var upgradeSupportedTokenFormatList []token.Format
+	for _, precision := range []uint64{16, 32, 64} {
+		format, err := v1.SupportedTokenFormat(precision)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed computing fabtoken token format with precision [%d]", precision)
+		}
+		if precision > maxPrecision {
+			upgradeSupportedTokenFormatList = append(upgradeSupportedTokenFormatList, format)
+		}
+	}
+
+	return &Service{
+		Logger:                          logger,
+		PublicParametersManager:         publicParametersManager,
+		UpgradeSupportedTokenFormatList: upgradeSupportedTokenFormatList,
+	}, nil
 }
 
 func (s *Service) NewUpgradeChallenge() (driver.TokensUpgradeChallenge, error) {
@@ -159,4 +188,44 @@ func (s *Service) CheckUpgradeProof(ch driver.TokensUpgradeChallenge, proofRaw d
 
 	// all good
 	return true, nil
+}
+
+func (s *Service) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequest) ([]token.Type, []uint64, error) {
+	if utp == nil {
+		return nil, nil, errors.New("nil token upgrade request")
+	}
+
+	// check that each token doesn't have a supported format
+	for _, tok := range utp.Tokens {
+		if !slices.Contains(s.UpgradeSupportedTokenFormatList, tok.Format) {
+			return nil, nil, errors.Errorf("upgrade of unsupported token format [%s] requested", tok.Format)
+		}
+	}
+
+	// check the upgrade proof
+	ok, err := s.CheckUpgradeProof(utp.Challenge, utp.Proof, utp.Tokens)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to check upgrade proof")
+	}
+	if !ok {
+		return nil, nil, errors.New("invalid upgrade proof")
+	}
+
+	// for each token, extract type and value
+	tokenTypes := make([]token.Type, len(utp.Tokens))
+	tokenValue := make([]uint64, len(utp.Tokens))
+	maxPrecision := s.PublicParametersManager.PublicParams().RangeProofParams.BitLength
+	for i, tok := range utp.Tokens {
+		precision, ok := token2.Precisions[tok.Format]
+		if !ok {
+			return nil, nil, errors.Errorf("unsupported token format [%s]", tok.Format)
+		}
+		fabToken, v, err := token2.ParseFabtokenToken(tok.Token, precision, maxPrecision)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to check unspent tokens")
+		}
+		tokenTypes[i] = fabToken.Type
+		tokenValue[i] = v
+	}
+	return tokenTypes, tokenValue, nil
 }

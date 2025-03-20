@@ -74,15 +74,17 @@ func (s *TokensService) SupportedTokenFormats() []token2.Format {
 	return []token2.Format{s.OutputTokenFormat}
 }
 
-func (s *TokensService) NewUpgradeChallenge() (driver.TokensUpgradeChallenge, error) {
+type TokensUpgradeService struct{}
+
+func (s *TokensUpgradeService) NewUpgradeChallenge() (driver.TokensUpgradeChallenge, error) {
 	return nil, errors.New("not supported")
 }
 
-func (s *TokensService) GenUpgradeProof(ch driver.TokensUpgradeChallenge, tokens []token2.LedgerToken, witness driver.TokensUpgradeWitness) (driver.TokensUpgradeProof, error) {
+func (s *TokensUpgradeService) GenUpgradeProof(ch driver.TokensUpgradeChallenge, tokens []token2.LedgerToken, witness driver.TokensUpgradeWitness) (driver.TokensUpgradeProof, error) {
 	return nil, errors.New("not supported")
 }
 
-func (s *TokensService) CheckUpgradeProof(ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token2.LedgerToken) (bool, error) {
+func (s *TokensUpgradeService) CheckUpgradeProof(ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token2.LedgerToken) (bool, error) {
 	return false, errors.New("not supported")
 }
 

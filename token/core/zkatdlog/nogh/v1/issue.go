@@ -14,6 +14,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/issue"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -26,7 +28,8 @@ type IssueService struct {
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
 	Metrics                 *Metrics
-	TokensService           *TokensService
+	TokensService           *token2.TokensService
+	TokensUpgradeService    *upgrade.Service
 }
 
 func NewIssueService(
@@ -35,7 +38,7 @@ func NewIssueService(
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
 	metrics *Metrics,
-	tokensService *TokensService,
+	tokensService *token2.TokensService,
 ) *IssueService {
 	return &IssueService{
 		Logger:                  logger,
@@ -64,7 +67,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	if issuerIdentity.IsNone() && len(tokenType) == 0 && values == nil {
 		// this is a special case where the issue contains also redemption
 		// we need to extract token types and values from the passed tokens
-		tokenTypes, tokenValues, err := s.TokensService.ProcessTokensUpgradeRequest(opts.TokensUpgradeRequest)
+		tokenTypes, tokenValues, err := s.TokensUpgradeService.ProcessTokensUpgradeRequest(opts.TokensUpgradeRequest)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed to extract token types and values from the passed tokens")
 		}

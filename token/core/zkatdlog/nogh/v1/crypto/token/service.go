@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package v1
+package token
 
 import (
 	errors2 "errors"
@@ -17,8 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
@@ -27,22 +25,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-var precisions = map[token.Format]uint64{
+var Precisions = map[token.Format]uint64{
 	utils.MustGet(v1.SupportedTokenFormat(16)): 16,
 	utils.MustGet(v1.SupportedTokenFormat(32)): 32,
 	utils.MustGet(v1.SupportedTokenFormat(64)): 64,
 }
 
 type TokensService struct {
-	*upgrade.Service
-
 	Logger                  logging.Logger
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
 	IdentityDeserializer    driver.Deserializer
 
-	OutputTokenFormat               token.Format
-	SupportedTokenFormatList        []token.Format
-	UpgradeSupportedTokenFormatList []token.Format
+	OutputTokenFormat        token.Format
+	SupportedTokenFormatList []token.Format
 }
 
 func NewTokensService(logger logging.Logger, publicParametersManager common.PublicParametersManager[*crypto.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
@@ -58,7 +53,7 @@ func NewTokensService(logger logging.Logger, publicParametersManager common.Publ
 
 	supportedTokenFormatList := make([]token.Format, 0, 3*len(pp.IdemixIssuerPublicKeys))
 	for _, precision := range crypto.SupportedPrecisions {
-		// these precisions are supported directly
+		// these Precisions are supported directly
 		if precision <= maxPrecision {
 			format, err := supportedTokenFormat(pp, precision)
 			if err != nil {
@@ -69,7 +64,6 @@ func NewTokensService(logger logging.Logger, publicParametersManager common.Publ
 	}
 
 	// in addition, we support all fabtoken with precision less than maxPrecision
-	var upgradeSupportedTokenFormatList []token.Format
 	for _, precision := range []uint64{16, 32, 64} {
 		format, err := v1.SupportedTokenFormat(precision)
 		if err != nil {
@@ -77,24 +71,20 @@ func NewTokensService(logger logging.Logger, publicParametersManager common.Publ
 		}
 		if precision <= maxPrecision {
 			supportedTokenFormatList = append(supportedTokenFormatList, format)
-		} else {
-			upgradeSupportedTokenFormatList = append(upgradeSupportedTokenFormatList, format)
 		}
 	}
 
 	return &TokensService{
-		Logger:                          logger,
-		Service:                         upgrade.NewService(),
-		PublicParametersManager:         publicParametersManager,
-		IdentityDeserializer:            identityDeserializer,
-		OutputTokenFormat:               outputTokenFormat,
-		SupportedTokenFormatList:        supportedTokenFormatList,
-		UpgradeSupportedTokenFormatList: upgradeSupportedTokenFormatList,
+		Logger:                   logger,
+		PublicParametersManager:  publicParametersManager,
+		IdentityDeserializer:     identityDeserializer,
+		OutputTokenFormat:        outputTokenFormat,
+		SupportedTokenFormatList: supportedTokenFormatList,
 	}, nil
 }
 
 func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity, error) {
-	tok := &token2.Token{}
+	tok := &Token{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize token")
 	}
@@ -161,7 +151,7 @@ func (s *TokensService) SupportedTokenFormats() []token.Format {
 	return s.SupportedTokenFormatList
 }
 
-func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, *token2.UpgradeWitness, error) {
+func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []byte, metadataRaw []byte) (*Token, *Metadata, *UpgradeWitness, error) {
 	// Here we have to check if what we get in input is already as expected.
 	// If not, we need to check if a token upgrade is possible.
 	// If not, a failure is to be returned
@@ -179,34 +169,34 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 	}
 
 	// if we reach this point, we need to upgrade the token locally
-	precision, ok := precisions[outputFormat]
+	precision, ok := Precisions[outputFormat]
 	if !ok {
 		return nil, nil, nil, errors.Errorf("unsupported token format [%s]", outputFormat)
 	}
-	fabToken, value, err := s.checkFabtokenToken(outputRaw, precision)
+	fabToken, value, err := ParseFabtokenToken(outputRaw, precision, s.PublicParametersManager.PublicParams().RangeProofParams.BitLength)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to unmarshal fabtoken token")
 	}
 	pp := s.PublicParametersManager.PublicParams()
 	curve := math2.Curves[pp.Curve]
-	tokens, meta, err := token2.GetTokensWithWitness([]uint64{value}, fabToken.Type, pp.PedersenGenerators, curve)
+	tokens, meta, err := GetTokensWithWitness([]uint64{value}, fabToken.Type, pp.PedersenGenerators, curve)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to compute commitment")
 	}
-	return &token2.Token{
+	return &Token{
 			Owner: fabToken.Owner,
 			Data:  tokens[0],
-		}, &token2.Metadata{
+		}, &Metadata{
 			Type:           fabToken.Type,
 			Value:          curve.NewZrFromUint64(value),
 			BlindingFactor: meta[0].BlindingFactor,
-		}, &token2.UpgradeWitness{
+		}, &UpgradeWitness{
 			FabToken:       fabToken,
 			BlindingFactor: meta[0].BlindingFactor,
 		}, nil
 }
 
-func (s *TokensService) deserializeTokenWithOutputTokenFormat(outputRaw []byte, metadataRaw []byte) (*token2.Token, *token2.Metadata, error) {
+func (s *TokensService) deserializeTokenWithOutputTokenFormat(outputRaw []byte, metadataRaw []byte) (*Token, *Metadata, error) {
 	// get zkatdlog token
 	output, err := s.getOutput(outputRaw, false)
 	if err != nil {
@@ -214,7 +204,7 @@ func (s *TokensService) deserializeTokenWithOutputTokenFormat(outputRaw []byte, 
 	}
 
 	// get metadata
-	metadata := &token2.Metadata{}
+	metadata := &Metadata{}
 	err = metadata.Deserialize(metadataRaw)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to deserialize token metadata")
@@ -223,7 +213,7 @@ func (s *TokensService) deserializeTokenWithOutputTokenFormat(outputRaw []byte, 
 	return output, metadata, nil
 }
 
-func (s *TokensService) deserializeCommToken(outputRaw []byte, metadataRaw []byte, checkOwner bool) (*token2.Token, *token2.Metadata, *token.Token, error) {
+func (s *TokensService) deserializeCommToken(outputRaw []byte, metadataRaw []byte, checkOwner bool) (*Token, *Metadata, *token.Token, error) {
 	// get zkatdlog token
 	output, err := s.getOutput(outputRaw, checkOwner)
 	if err != nil {
@@ -231,7 +221,7 @@ func (s *TokensService) deserializeCommToken(outputRaw []byte, metadataRaw []byt
 	}
 
 	// get metadata
-	metadata := &token2.Metadata{}
+	metadata := &Metadata{}
 	err = metadata.Deserialize(metadataRaw)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to deserialize token metadata [%d][%v]", len(metadataRaw), metadataRaw)
@@ -245,8 +235,8 @@ func (s *TokensService) deserializeCommToken(outputRaw []byte, metadataRaw []byt
 	return output, metadata, tok, nil
 }
 
-func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.Token, error) {
-	output := &token2.Token{}
+func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*Token, error) {
+	output := &Token{}
 	if err := output.Deserialize(outputRaw); err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize token")
 	}
@@ -270,62 +260,4 @@ func supportedTokenFormat(pp *crypto.PublicParams, precision uint64) (token.Form
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}
 	return token.Format(hasher.HexDigest()), nil
-}
-
-func (s *TokensService) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequest) ([]token.Type, []uint64, error) {
-	if utp == nil {
-		return nil, nil, errors.New("nil token upgrade request")
-	}
-
-	// check that each token doesn't have a supported format
-	for _, tok := range utp.Tokens {
-		if !slices.Contains(s.UpgradeSupportedTokenFormatList, tok.Format) {
-			return nil, nil, errors.Errorf("upgrade of unsupported token format [%s] requested", tok.Format)
-		}
-	}
-
-	// check the upgrade proof
-	ok, err := s.Service.CheckUpgradeProof(utp.Challenge, utp.Proof, utp.Tokens)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to check upgrade proof")
-	}
-	if !ok {
-		return nil, nil, errors.New("invalid upgrade proof")
-	}
-
-	// for each token, extract type and value
-	tokenTypes := make([]token.Type, len(utp.Tokens))
-	tokenValue := make([]uint64, len(utp.Tokens))
-	for i, tok := range utp.Tokens {
-		precision, ok := precisions[tok.Format]
-		if !ok {
-			return nil, nil, errors.Errorf("unsupported token format [%s]", tok.Format)
-		}
-		fabToken, v, err := s.checkFabtokenToken(tok.Token, precision)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to check unspent tokens")
-		}
-		tokenTypes[i] = fabToken.Type
-		tokenValue[i] = v
-	}
-	return tokenTypes, tokenValue, nil
-}
-
-func (s *TokensService) checkFabtokenToken(tok []byte, precision uint64) (*core.Output, uint64, error) {
-	maxPrecision := s.PublicParametersManager.PublicParams().RangeProofParams.BitLength
-	if precision < maxPrecision {
-		return nil, 0, errors.Errorf("unsupported precision [%d], max [%d]", precision, maxPrecision)
-	}
-
-	output := &core.Output{}
-	err := output.Deserialize(tok)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to unmarshal fabtoken")
-	}
-	q, err := token.NewUBigQuantity(output.Quantity, precision)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to create quantity")
-	}
-
-	return output, q.Uint64(), nil
 }
