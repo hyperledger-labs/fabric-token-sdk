@@ -55,6 +55,36 @@ func TransferSignatureValidate(ctx *Context) error {
 		signatures = append(signatures, sigma)
 	}
 
+	// If transfer action is a redeem action, verify the signature of the issuer
+	isRedeem := func() bool {
+		for _, output := range ctx.TransferAction.Outputs {
+			if output.Owner == nil {
+				return true
+			}
+		}
+		return false
+	}
+
+	if isRedeem() {
+		ctx.Logger.Infof("redeem action")
+		extraSigners := ctx.TransferAction.ESigners
+		if len(extraSigners) < 1 {
+			return errors.New("no extra signers provided for redeem action")
+		}
+		issuer := ctx.TransferAction.ESigners[0] // issuer is the first extra signer
+
+		verifier, err := ctx.Deserializer.GetIssuerVerifier(issuer)
+		if err != nil {
+			return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
+		}
+
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(issuer, verifier)
+		if err != nil {
+			return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
+		}
+		signatures = append(signatures, sigma)
+	}
+
 	ctx.InputTokens = inputToken
 	ctx.Signatures = signatures
 
