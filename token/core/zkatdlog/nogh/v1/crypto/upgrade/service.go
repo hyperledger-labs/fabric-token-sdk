@@ -193,7 +193,7 @@ func (s *Service) checkUpgradeProof(ch driver.TokensUpgradeChallenge, proofRaw d
 		return nil, false, errors.Errorf("invalid challenge size, got [%d], expected [%d]", len(ch), ChallengeSize)
 	}
 	if len(ledgerTokens) == 0 {
-		return nil, false, errors.Errorf("no ledgerTokens provided")
+		return nil, false, errors.Errorf("no ledger tokens provided")
 	}
 	if len(proofRaw) == 0 {
 		return nil, false, errors.Errorf("no proof provided")
@@ -204,17 +204,24 @@ func (s *Service) checkUpgradeProof(ch driver.TokensUpgradeChallenge, proofRaw d
 	if err := proof.Deserialize(proofRaw); err != nil {
 		return nil, false, errors.Wrapf(err, "failed to deserialize proof")
 	}
+	// match tokens
 	if len(proof.Tokens) != len(ledgerTokens) {
-		return nil, false, errors.Errorf("invalid token count")
+		return nil, false, errors.Errorf("proof with invalid token count")
 	}
+	for i, token := range proof.Tokens {
+		// check that token is equal to ledgerToken[i]
+		if !token.Equal(ledgerTokens[i]) {
+			return nil, false, errors.Errorf("tokens do not match at index [%d]", i)
+		}
+	}
+	// match challenge
 	if !bytes.Equal(proof.Challenge, ch) {
-		return nil, false, errors.Errorf("invalid challenge")
+		return nil, false, errors.Errorf("proof with invalid challenge")
 	}
+	// match signature
 	if len(proof.Signatures) != len(ledgerTokens) {
-		return nil, false, errors.Errorf("invalid number of token signatures")
+		return nil, false, errors.Errorf("proof with invalid number of token signatures")
 	}
-	proof.Challenge = ch
-	proof.Tokens = ledgerTokens
 
 	digest, err := proof.SHA256Digest()
 	if err != nil {
