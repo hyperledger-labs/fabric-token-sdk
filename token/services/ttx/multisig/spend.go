@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
@@ -20,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap/zapcore"
 )
 
 // SpendRequest is the request to spend a token
@@ -71,26 +69,9 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	//msg, err := ttx.ReadMessage(context.Session(), time.Minute*4)
 	if err != nil {
 		span.RecordError(err)
+		//add err
 	}
 	span.AddEvent("receive_tx")
-
-	requestBytes, err := json.Marshal(request)
-	if err != nil {
-		return nil, errors.Errorf("Failed to marshal request: %v", err)
-	}
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(requestBytes), hash.Hashable(requestBytes))
-	}
-	if len(requestBytes) == 0 {
-		info := context.Session().Info()
-		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
-	}
-	// tx, err := NewSpendRequestFromBytes(msg)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to receive spendRequest")
-	// }
-	//return tx, nil
 	return request, nil
 }
 
