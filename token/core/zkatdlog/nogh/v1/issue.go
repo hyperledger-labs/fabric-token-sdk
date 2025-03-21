@@ -39,6 +39,7 @@ func NewIssueService(
 	deserializer driver.Deserializer,
 	metrics *Metrics,
 	tokensService *token2.TokensService,
+	tokensUpgradeService *upgrade.Service,
 ) *IssueService {
 	return &IssueService{
 		Logger:                  logger,
@@ -47,6 +48,7 @@ func NewIssueService(
 		Deserializer:            deserializer,
 		Metrics:                 metrics,
 		TokensService:           tokensService,
+		TokensUpgradeService:    tokensUpgradeService,
 	}
 }
 

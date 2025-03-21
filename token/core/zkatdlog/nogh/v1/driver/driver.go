@@ -144,7 +144,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		ip,
 		deserializer,
 		tmsConfig,
-		v1.NewIssueService(logger, ppm, ws, deserializer, driverMetrics, tokensService),
+		v1.NewIssueService(logger, ppm, ws, deserializer, driverMetrics, tokensService, tokensUpgradeService),
 		v1.NewTransferService(
 			logger,
 			ppm,
