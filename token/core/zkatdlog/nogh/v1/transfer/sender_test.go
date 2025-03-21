@@ -9,9 +9,9 @@ import (
 	"context"
 
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
-	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
+	transfer3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer/mock"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 
 	math "github.com/IBM/mathlib"
@@ -27,8 +27,8 @@ var _ = Describe("Sender", func() {
 		signers             []driver.Signer
 		pp                  *v1.PublicParams
 
-		transfer *transfer2.Action
-		sender   *transfer2.Sender
+		transfer *transfer3.Action
+		sender   *transfer3.Sender
 
 		invalues  []*math.Zr
 		outvalues []uint64
@@ -88,7 +88,7 @@ var _ = Describe("Sender", func() {
 		inputInf[1] = &token.Metadata{Type: "ABC", Value: invalues[1], BlindingFactor: inBF[1]}
 		inputInf[2] = &token.Metadata{Type: "ABC", Value: invalues[2], BlindingFactor: inBF[2]}
 
-		sender, err = transfer2.NewSender(signers, tokens, ids, inputInf, pp)
+		sender, err = transfer3.NewSender(signers, tokens, ids, inputInf, pp)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

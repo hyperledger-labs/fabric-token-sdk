@@ -13,7 +13,7 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
-	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/issue"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -112,7 +112,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, err
 	}
 
-	issuer := &issue2.Issuer{}
+	issuer := &issue.Issuer{}
 	issuer.New(tokenType, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,
 		Signer:   signer,
@@ -131,9 +131,9 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	var inputsMetadata []*driver.IssueInputMetadata
 	if opts != nil && opts.TokensUpgradeRequest != nil && len(opts.TokensUpgradeRequest.Tokens) > 0 {
 		tokens := opts.TokensUpgradeRequest.Tokens
-		issueAction.Inputs = make([]*issue2.ActionInput, len(tokens))
+		issueAction.Inputs = make([]*issue.ActionInput, len(tokens))
 		for i, tok := range tokens {
-			issueAction.Inputs[i] = &issue2.ActionInput{
+			issueAction.Inputs[i] = &issue.ActionInput{
 				ID:    tok.ID,
 				Token: tok.Token,
 			}
@@ -193,7 +193,7 @@ func (s *IssueService) VerifyIssue(ia driver.IssueAction, metadata []*driver.Iss
 	if ia == nil {
 		return errors.New("failed to verify issue: nil issue action")
 	}
-	action, ok := ia.(*issue2.Action)
+	action, ok := ia.(*issue.Action)
 	if !ok {
 		return errors.New("failed to verify issue: expected *zkatdlog.IssueAction")
 	}
@@ -203,14 +203,14 @@ func (s *IssueService) VerifyIssue(ia driver.IssueAction, metadata []*driver.Iss
 		return errors.New("failed to verify issue")
 	}
 	// todo check tokenInfo
-	return issue2.NewVerifier(
+	return issue.NewVerifier(
 		coms,
 		pp.(*crypto.PublicParams)).Verify(action.GetProof())
 }
 
 // DeserializeIssueAction un-marshals raw bytes into a zkatdlog IssueAction
 func (s *IssueService) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
-	issue := &issue2.Action{}
+	issue := &issue.Action{}
 	err := issue.Deserialize(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize issue action")
