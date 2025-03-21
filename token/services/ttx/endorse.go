@@ -347,9 +347,8 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction content")
 	}
-	jsonsession := session2.JSON(context)
-	sigma, err := jsonsession.ReceiveRaw()
-	//sigma, err := ReadMessage(session, time.Minute)
+	jsonSession := session2.JSON(context)
+	sigma, err := jsonSession.ReceiveRaw()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed reading message")
 	}
@@ -555,7 +554,6 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	span.AddEvent("Wait for ack")
 	jsonsession := session2.JSON(context)
 	sigma, err := jsonsession.ReceiveRaw()
-	//sigma, err := ReadMessage(session, 1*time.Minute)
 	if err != nil {
 		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
 	}
@@ -740,7 +738,6 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 
 	jsonsession := session2.JSON(context)
 	msg, err := jsonsession.ReceiveRaw()
-	//msg, err := ReadMessage(context.Session(), time.Minute*4)
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -853,7 +850,6 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			}
 			jsonsession := session2.JSON(context)
 			err := jsonsession.Receive(signatureRequest)
-			//srRaw, err = ReadMessage(session, time.Minute)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed reading signature request")
 			}
