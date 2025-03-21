@@ -18,8 +18,8 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/audit/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
-	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
@@ -127,7 +127,7 @@ var _ = Describe("Auditor", func() {
 	})
 })
 
-func createTransfer(pp *v1.PublicParams) (*transfer2.Action, *driver.TransferMetadata, [][]*token.Token) {
+func createTransfer(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMetadata, [][]*token.Token) {
 	id, auditInfo := getIdemixInfo("./testdata/idemix")
 	transfer, meta, inputs := prepareTransfer(pp, id)
 
@@ -169,7 +169,7 @@ func createTransfer(pp *v1.PublicParams) (*transfer2.Action, *driver.TransferMet
 	return transfer, metadata, tokns
 }
 
-func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer2.Action, *driver.TransferMetadata, [][]*token.Token) {
+func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMetadata, [][]*token.Token) {
 	id, auditInfo := getIdemixInfo("./testdata/idemix")
 	transfer, inf, inputs := prepareTransfer(pp, id)
 
@@ -327,12 +327,12 @@ func createInputs(pp *v1.PublicParams, id driver.Identity) ([]*token.Token, []*t
 	return inputs, infos
 }
 
-func prepareTransfer(pp *v1.PublicParams, id driver.Identity) (*transfer2.Action, []*token.Metadata, []*token.Token) {
+func prepareTransfer(pp *v1.PublicParams, id driver.Identity) (*transfer.Action, []*token.Metadata, []*token.Token) {
 	inputs, tokenInfos := createInputs(pp, id)
 
 	fakeSigner := &mock.SigningIdentity{}
 
-	sender, err := transfer2.NewSender([]driver.Signer{fakeSigner, fakeSigner}, inputs, []*token3.ID{{TxId: "0"}, {TxId: "1"}}, tokenInfos, pp)
+	sender, err := transfer.NewSender([]driver.Signer{fakeSigner, fakeSigner}, inputs, []*token3.ID{{TxId: "0"}, {TxId: "1"}}, tokenInfos, pp)
 	Expect(err).NotTo(HaveOccurred())
 	transfer, inf, err := sender.GenerateZKTransfer(context.TODO(), []uint64{40, 20}, [][]byte{id, id})
 	Expect(err).NotTo(HaveOccurred())

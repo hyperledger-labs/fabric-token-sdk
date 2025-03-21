@@ -11,8 +11,8 @@ import (
 
 	math "github.com/IBM/mathlib"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/issue"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
+	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,13 +25,13 @@ func TestIssue(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func prepareZKIssue(t *testing.T) (*issue.Prover, *issue.Verifier) {
+func prepareZKIssue(t *testing.T) (*issue2.Prover, *issue2.Verifier) {
 	pp, err := v1.Setup(32, nil, math.BN254)
 	assert.NoError(t, err)
 	tw, tokens := prepareInputsForZKIssue(pp)
-	prover, err := issue.NewProver(tw, tokens, pp)
+	prover, err := issue2.NewProver(tw, tokens, pp)
 	assert.NoError(t, err)
-	verifier := issue.NewVerifier(tokens, pp)
+	verifier := issue2.NewVerifier(tokens, pp)
 	return prover, verifier
 }
 

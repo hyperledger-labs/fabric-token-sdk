@@ -15,8 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
-	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/transfer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -138,7 +138,7 @@ func (s *TransferService) Transfer(
 
 	// get sender
 	pp := s.PublicParametersManager.PublicParams()
-	sender, err := transfer2.NewSender(nil, prepareInputs.Tokens(), tokenIDs, prepareInputs.Metadata(), pp)
+	sender, err := transfer.NewSender(nil, prepareInputs.Tokens(), tokenIDs, prepareInputs.Metadata(), pp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -267,7 +267,7 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputMet
 	if action == nil {
 		return errors.New("failed to verify transfer: nil transfer action")
 	}
-	tr, ok := action.(*transfer2.Action)
+	tr, ok := action.(*transfer.Action)
 	if !ok {
 		return errors.New("failed to verify transfer: expected *zkatdlog.TransferActionMetadata")
 	}
@@ -296,13 +296,13 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputMet
 		s.Logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
 	}
 
-	return transfer2.NewVerifier(getTokenData(tr.InputTokens()), com, pp).Verify(tr.Proof)
+	return transfer.NewVerifier(getTokenData(tr.InputTokens()), com, pp).Verify(tr.Proof)
 }
 
 // DeserializeTransferAction un-marshals a TransferActionMetadata from the passed array of bytes.
 // DeserializeTransferAction returns an error, if the un-marshalling fails.
 func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
-	transferAction := &transfer2.Action{}
+	transferAction := &transfer.Action{}
 	err := transferAction.Deserialize(raw)
 	if err != nil {
 		return nil, err
