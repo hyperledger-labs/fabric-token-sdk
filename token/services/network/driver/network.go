@@ -46,8 +46,6 @@ type Network interface {
 
 	Connect(ns string) ([]token2.ServiceOption, error)
 
-	TokenVault(namespace string) (TokenVault, error)
-
 	// Broadcast sends the passed blob to the network
 	Broadcast(context context.Context, blob interface{}) error
 

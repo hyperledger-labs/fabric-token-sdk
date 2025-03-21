@@ -8,7 +8,6 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
 type Keystore interface {
@@ -17,7 +16,7 @@ type Keystore interface {
 }
 
 type StorageProvider interface {
-	WalletDB(tmsID token.TMSID) (driver.WalletDB, error)
-	IdentityDB(tmsID token.TMSID) (driver.IdentityDB, error)
+	WalletDB(tmsID token.TMSID) (WalletDB, error)
+	IdentityDB(tmsID token.TMSID) (IdentityDB, error)
 	Keystore() (Keystore, error)
 }

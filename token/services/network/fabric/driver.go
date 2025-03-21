@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
@@ -38,7 +37,6 @@ type NetworkPublicParamsFetcher interface {
 
 type Driver struct {
 	fnsProvider                     *fabric.NetworkServiceProvider
-	vaultProvider                   driver.TokenVaultProvider
 	tokensManager                   *tokens.Manager
 	configService                   *config.Service
 	viewManager                     *view.Manager
@@ -59,7 +57,6 @@ type Driver struct {
 
 func NewGenericDriver(
 	fnsProvider *fabric.NetworkServiceProvider,
-	vaultProvider *vault2.Provider,
 	tokensManager *tokens.Manager,
 	configProvider *config.Service,
 	viewManager *view.Manager,
@@ -71,31 +68,11 @@ func NewGenericDriver(
 	configService driver2.ConfigService,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
-	return NewDriver(
-		fnsProvider,
-		vaultProvider,
-		tokensManager,
-		configProvider,
-		viewManager,
-		viewRegistry,
-		filterProvider,
-		tmsProvider,
-		tracerProvider,
-		identityProvider,
-		NewChaincodePublicParamsFetcher(viewManager),
-		NewTokenExecutorProvider(fnsProvider),
-		NewSpentTokenExecutorProvider(fnsProvider, keyTranslator),
-		keyTranslator,
-		finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)),
-		lookup.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)),
-		endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator),
-		config2.GenericDriver,
-	)
+	return NewDriver(fnsProvider, tokensManager, configProvider, viewManager, viewRegistry, filterProvider, tmsProvider, tracerProvider, identityProvider, NewChaincodePublicParamsFetcher(viewManager), NewTokenExecutorProvider(fnsProvider), NewSpentTokenExecutorProvider(fnsProvider, keyTranslator), keyTranslator, finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)), lookup.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)), endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator), config2.GenericDriver)
 }
 
 func NewDriver(
 	fnsProvider *fabric.NetworkServiceProvider,
-	vaultProvider *vault2.Provider,
 	tokensManager *tokens.Manager,
 	configService *config.Service,
 	viewManager *view.Manager,
@@ -115,7 +92,6 @@ func NewDriver(
 ) *Driver {
 	return &Driver{
 		fnsProvider:                     fnsProvider,
-		vaultProvider:                   vaultProvider,
 		tokensManager:                   tokensManager,
 		configService:                   configService,
 		viewManager:                     viewManager,
@@ -165,22 +141,5 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		return nil, errors.Wrapf(err, "failed to create a new llm")
 	}
 
-	return NewNetwork(
-		fns,
-		ch,
-		d.vaultProvider.Vault,
-		d.configService,
-		d.filterProvider,
-		d.tokensManager,
-		d.viewManager,
-		d.tmsProvider,
-		d.EndorsementServiceProvider,
-		tokenQueryExecutor,
-		d.tracerProvider,
-		d.defaultPublicParamsFetcher,
-		spentTokenQueryExecutor,
-		d.keyTranslator,
-		flm,
-		llm,
-	), nil
+	return NewNetwork(fns, ch, d.configService, d.filterProvider, d.tokensManager, d.viewManager, d.tmsProvider, d.EndorsementServiceProvider, tokenQueryExecutor, d.tracerProvider, d.defaultPublicParamsFetcher, spentTokenQueryExecutor, d.keyTranslator, flm, llm), nil
 }

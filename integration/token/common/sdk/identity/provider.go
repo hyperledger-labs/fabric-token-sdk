@@ -8,7 +8,6 @@ package identity
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 )
@@ -21,11 +20,11 @@ func NewKVSStorageProvider(kvs kvs.KVS) *KVSStorageProvider {
 	return &KVSStorageProvider{kvs: kvs}
 }
 
-func (s *KVSStorageProvider) WalletDB(tmsID token.TMSID) (driver.WalletDB, error) {
+func (s *KVSStorageProvider) WalletDB(tmsID token.TMSID) (identity.WalletDB, error) {
 	return kvs.NewWalletDB(s.kvs, tmsID), nil
 }
 
-func (s *KVSStorageProvider) IdentityDB(tmsID token.TMSID) (driver.IdentityDB, error) {
+func (s *KVSStorageProvider) IdentityDB(tmsID token.TMSID) (identity.IdentityDB, error) {
 	return kvs.NewIdentityDB(s.kvs, tmsID), nil
 }
 

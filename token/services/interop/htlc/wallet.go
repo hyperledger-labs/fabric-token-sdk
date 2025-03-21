@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -322,20 +323,18 @@ func Wallet(sp token.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
 	}
 
 	tms := wallet.TMS()
-	nw := network.GetInstance(sp, tms.Network(), tms.Channel())
-	if nw == nil {
-		return nil
-	}
-	vault, err := nw.TokenVault(tms.Namespace())
+	tokensProvider, err := tokens.GetProvider(sp)
 	if err != nil {
-		logger.Errorf("failed to get vault for [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 		return nil
 	}
-
+	tokens, err := tokensProvider.Tokens(tms.ID())
+	if err != nil {
+		return nil
+	}
 	return &OwnerWallet{
 		wallet:      wallet,
-		vault:       vault,
-		queryEngine: vault.QueryEngine(),
+		vault:       tokens,
+		queryEngine: tms.Vault().NewQueryEngine(),
 		bufferSize:  100,
 	}
 }

@@ -12,7 +12,7 @@ require (
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/vault/api v1.16.0
-	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250314124232-4cd027590cfb
+	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250319152028-b53f202e2b62
 	github.com/hyperledger-labs/orion-sdk-go v0.2.10
 	github.com/hyperledger-labs/orion-server v0.2.10
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2

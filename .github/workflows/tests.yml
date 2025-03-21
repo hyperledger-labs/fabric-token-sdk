@@ -66,6 +66,9 @@ jobs:
       - name: Set up tools
         run: make install-tools
 
+      - name: Install Testing Docker Images
+        run: make testing-docker-images
+
       - name: Run ${{ matrix.tests }}
         run: make ${{ matrix.tests }}
 
