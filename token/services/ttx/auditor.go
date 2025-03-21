@@ -149,7 +149,6 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 
 	jsonsession := session2.JSON(context)
 	signature, err := jsonsession.ReceiveRaw()
-	//signature, err := ReadMessage(session, time.Minute)
 	if err != nil {
 		span.RecordError(err)
 		return nil, errors.WithMessage(err, "failed to read audit event")

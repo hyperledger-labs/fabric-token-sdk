@@ -134,15 +134,9 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			}
 			jsonsession := session2.JSON(context)
 			err := jsonsession.Receive(signatureRequest)
-			// msg, err := ReadMessage(session, time.Minute)
 			if err != nil {
 				return errors.Wrap(err, "failed reading signature request")
 			}
-			// TODO: check what is signed...
-			// err = Unmarshal(msg, signatureRequest)
-			// if err != nil {
-			// 	return errors.Wrap(err, "failed unmarshalling signature request")
-			// }
 		}
 		span.AddEvent("Fetched request from session")
 		tms := token.GetManagementService(context, token.WithTMS(s.tx.Network(), s.tx.Channel(), s.tx.Namespace()))
