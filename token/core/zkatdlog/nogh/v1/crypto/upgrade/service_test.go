@@ -152,3 +152,262 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 		})
 	}
 }
+
+func TestTokensService_CheckUpgradeProof(t *testing.T) {
+	ts, err := upgrade.NewService(nil, 16, nil, nil)
+	assert.NoError(t, err)
+	ch, err := ts.NewUpgradeChallenge()
+	assert.NoError(t, err)
+
+	nilDeserializer := func() upgrade.Deserializer {
+		return nil
+	}
+	nilProof := func() driver.TokensUpgradeProof {
+		return nil
+	}
+	invalidTokens := []token.LedgerToken{{
+		ID:            token.ID{TxId: "tx1", Index: 1},
+		Token:         []byte("token1"),
+		TokenMetadata: []byte("meta1"),
+		Format:        token.Format("token format1"),
+	}}
+	fabtokenOutput := core.Output{
+		Owner:    []byte("owner1"),
+		Type:     "token type",
+		Quantity: "10",
+	}
+	fabtokenOutputRaw, err := fabtokenOutput.Serialize()
+	assert.NoError(t, err)
+	formatFabtoken16, err := v1.SupportedTokenFormat(16)
+	assert.NoError(t, err)
+	validTokens := []token.LedgerToken{{
+		ID:            token.ID{TxId: "tx1", Index: 1},
+		Token:         fabtokenOutputRaw,
+		TokenMetadata: nil,
+		Format:        formatFabtoken16,
+	}}
+
+	tests := []struct {
+		name            string
+		ch              driver.TokensUpgradeChallenge
+		ledgerTokens    []token.LedgerToken
+		proof           func() driver.TokensUpgradeProof
+		wantErr         bool
+		errMsg          string
+		expected        bool
+		wantErrProcess  bool
+		processErrMsg   string
+		getDeserializer func() upgrade.Deserializer
+	}{
+		{
+			name:            "challenge size mismatch",
+			ch:              []byte{0, 1, 2},
+			wantErr:         true,
+			errMsg:          "invalid challenge size, got [3], expected [32]",
+			getDeserializer: nilDeserializer,
+			proof:           nilProof,
+		},
+		{
+			name:            "no ledger tokens provided",
+			ch:              ch,
+			wantErr:         true,
+			errMsg:          "no ledger tokens provided",
+			getDeserializer: nilDeserializer,
+			proof:           nilProof,
+		},
+		{
+			name:            "no proof provided",
+			ch:              ch,
+			ledgerTokens:    invalidTokens,
+			wantErr:         true,
+			errMsg:          "no proof provided",
+			getDeserializer: nilDeserializer,
+			proof:           nilProof,
+		},
+		{
+			name:         "failed to deserialize proof",
+			ch:           ch,
+			ledgerTokens: invalidTokens,
+			proof: func() driver.TokensUpgradeProof {
+				return []byte{1, 2}
+			},
+			wantErr:         true,
+			errMsg:          "failed to deserialize proof: invalid character '\\x01' looking for beginning of value",
+			getDeserializer: nilDeserializer,
+		},
+		{
+			name:         "proof with invalid token count",
+			ch:           ch,
+			ledgerTokens: invalidTokens,
+			proof: func() driver.TokensUpgradeProof {
+				proof := &upgrade.Proof{}
+				raw, err := proof.Serialize()
+				assert.NoError(t, err)
+				return raw
+			},
+			wantErr:         true,
+			errMsg:          "proof with invalid token count",
+			getDeserializer: nilDeserializer,
+		},
+		{
+			name:         "proof with invalid challenge",
+			ch:           ch,
+			ledgerTokens: invalidTokens,
+			proof: func() driver.TokensUpgradeProof {
+				proof := &upgrade.Proof{
+					Challenge:  nil,
+					Tokens:     invalidTokens,
+					Signatures: nil,
+				}
+				raw, err := proof.Serialize()
+				assert.NoError(t, err)
+				return raw
+			},
+			wantErr:         true,
+			errMsg:          "proof with invalid challenge",
+			getDeserializer: nilDeserializer,
+		},
+		{
+			name:         "proof with invalid number of token signatures",
+			ch:           ch,
+			ledgerTokens: invalidTokens,
+			proof: func() driver.TokensUpgradeProof {
+				proof := &upgrade.Proof{
+					Challenge:  ch,
+					Tokens:     invalidTokens,
+					Signatures: nil,
+				}
+				raw, err := proof.Serialize()
+				assert.NoError(t, err)
+				return raw
+			},
+			wantErr:         true,
+			errMsg:          "proof with invalid number of token signatures",
+			getDeserializer: nilDeserializer,
+		},
+		{
+			name:         "tokens do not match at index [0]",
+			ch:           ch,
+			ledgerTokens: invalidTokens,
+			proof: func() driver.TokensUpgradeProof {
+				proof := &upgrade.Proof{
+					Challenge:  ch,
+					Tokens:     validTokens,
+					Signatures: []upgrade.Signature{[]byte("a signature")},
+				}
+				raw, err := proof.Serialize()
+				assert.NoError(t, err)
+				return raw
+			},
+			wantErr:         true,
+			errMsg:          "tokens do not match at index [0]",
+			getDeserializer: nilDeserializer,
+		},
+		{
+			name:         "invalid verifier",
+			ch:           ch,
+			ledgerTokens: validTokens,
+			proof: func() driver.TokensUpgradeProof {
+				proof := &upgrade.Proof{
+					Challenge:  ch,
+					Tokens:     validTokens,
+					Signatures: []upgrade.Signature{[]byte("a signature")},
+				}
+				raw, err := proof.Serialize()
+				assert.NoError(t, err)
+				return raw
+			},
+			wantErr: true,
+			errMsg:  "failed to get owner verifier: invalid verifier",
+			getDeserializer: func() upgrade.Deserializer {
+				d := &mock.Deserializer{}
+				d.GetOwnerVerifierReturns(nil, errors.New("invalid verifier"))
+				return d
+			},
+		},
+		{
+			name:         "invalid signature",
+			ch:           ch,
+			ledgerTokens: validTokens,
+			proof: func() driver.TokensUpgradeProof {
+				proof := &upgrade.Proof{
+					Challenge:  ch,
+					Tokens:     validTokens,
+					Signatures: []upgrade.Signature{[]byte("a signature")},
+				}
+				raw, err := proof.Serialize()
+				assert.NoError(t, err)
+				return raw
+			},
+			wantErr: true,
+			errMsg:  "failed to verify signature at index [0]: invalid signature",
+			getDeserializer: func() upgrade.Deserializer {
+				v := &mock2.Verifier{}
+				v.VerifyReturns(errors.New("invalid signature"))
+				d := &mock.Deserializer{}
+				d.GetOwnerVerifierReturns(v, nil)
+				return d
+			},
+		},
+		{
+			name:         "valid but process fails",
+			ch:           ch,
+			ledgerTokens: validTokens,
+			proof: func() driver.TokensUpgradeProof {
+				proof := &upgrade.Proof{
+					Challenge:  ch,
+					Tokens:     validTokens,
+					Signatures: []upgrade.Signature{[]byte("a signature")},
+				}
+				raw, err := proof.Serialize()
+				assert.NoError(t, err)
+				return raw
+			},
+			wantErr: false,
+			getDeserializer: func() upgrade.Deserializer {
+				v := &mock2.Verifier{}
+				v.VerifyReturns(nil)
+				d := &mock.Deserializer{}
+				d.GetOwnerVerifierReturns(v, nil)
+				return d
+			},
+			expected:       true,
+			wantErrProcess: true,
+			processErrMsg:  "upgrade of unsupported token format [baff495e067aea1a0a5e6a37d72689316c457251e359a6796329761ca3227648] requested",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts, err := upgrade.NewService(nil, 16, tt.getDeserializer(), nil)
+			assert.NoError(t, err)
+			proof := tt.proof()
+			res, err := ts.CheckUpgradeProof(tt.ch, proof, tt.ledgerTokens)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.errMsg)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, res)
+			}
+
+			_, err = ts.ProcessTokensUpgradeRequest(&driver.TokenUpgradeRequest{
+				Challenge: tt.ch,
+				Tokens:    tt.ledgerTokens,
+				Proof:     proof,
+			})
+			if tt.wantErrProcess {
+				assert.Error(t, err)
+				if len(tt.processErrMsg) != 0 {
+					assert.EqualError(t, err, tt.processErrMsg)
+				}
+			} else {
+				if tt.wantErr {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+			}
+		})
+	}
+}
