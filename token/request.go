@@ -28,6 +28,13 @@ type Binder interface {
 	Bind(longTerm Identity, ephemeral Identity) error
 }
 
+type (
+	// TokensUpgradeChallenge is the challenge the issuer generates to make sure the client is not cheating
+	TokensUpgradeChallenge = driver.TokensUpgradeChallenge
+	// TokensUpgradeProof is the proof generated with the respect to a given challenge to prove the validity of the tokens to be upgrade
+	TokensUpgradeProof = driver.TokensUpgradeProof
+)
+
 // RecipientData contains information about the identity of a token owner
 type RecipientData = driver.RecipientData
 
@@ -386,12 +393,17 @@ func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Typ
 	return nil
 }
 
+// Upgrade performs an upgrade operation of the passed ledger tokens.
+// A proof and its challenge will be used to verify that the request of upgrade is legit.
+// If the proof verifies then the passed wallet will be used to issue a new amount of tokens
+// matching those whose upgrade has been requested.
 func (r *Request) Upgrade(
 	ctx context.Context,
 	wallet *IssuerWallet,
 	receiver Identity,
+	challenge TokensUpgradeChallenge,
 	tokens []token.LedgerToken,
-	witness []byte,
+	proof TokensUpgradeProof,
 	opts ...IssueOption,
 ) (*IssueAction, error) {
 	if wallet == nil {
@@ -416,8 +428,9 @@ func (r *Request) Upgrade(
 		&driver.IssueOptions{
 			Attributes: opt.Attributes,
 			TokensUpgradeRequest: &driver.TokenUpgradeRequest{
-				Tokens: tokens,
-				Proof:  witness,
+				Challenge: challenge,
+				Tokens:    tokens,
+				Proof:     proof,
 			},
 			Wallet: wallet.w,
 		},

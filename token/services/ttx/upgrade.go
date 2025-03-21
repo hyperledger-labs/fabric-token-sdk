@@ -26,12 +26,14 @@ type UpgradeTokensAgreement struct {
 }
 
 type UpgradeTokensRequest struct {
-	ID            []byte
-	TMSID         token.TMSID
-	RecipientData RecipientData
-	Tokens        []token2.LedgerToken
-	Proof         []byte
-	NotAnonymous  bool
+	TMSID token.TMSID // The TMSID this request refers to
+
+	ID     token.TokensUpgradeChallenge // The unique ID of this request, it used as challenge of the upgrade protocol
+	Tokens []token2.LedgerToken         // The tokens to be upgraded
+	Proof  token.TokensUpgradeProof     // The proof
+
+	RecipientData RecipientData // The info about the recipient of the new issues tokens
+	NotAnonymous  bool          // Should be the transaction anonymous
 }
 
 // UpgradeTokensInitiatorView is the initiator view to request an issuer the upgrade of tokens.
@@ -236,6 +238,7 @@ func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, er
 		return nil, errors.Errorf("agreement TMSID mismatch [%v] != [%v]", agreement.TMSID, request.TMSID)
 	}
 
+	// register recipient data
 	if err := tms.WalletManager().RegisterRecipientIdentity(&request.RecipientData); err != nil {
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}

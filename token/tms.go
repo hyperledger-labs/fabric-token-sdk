@@ -175,7 +175,7 @@ func (t *ManagementService) init() error {
 }
 
 func (t *ManagementService) TokensService() *TokensService {
-	return &TokensService{ts: t.tms.TokensService()}
+	return &TokensService{ts: t.tms.TokensService(), tus: t.tms.TokensUpgradeService()}
 }
 
 // GetManagementService returns the management service for the passed options. If no options are passed,
