@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -69,7 +69,7 @@ type TokenDeserializer interface {
 
 type TransferService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
+	PublicParametersManager common.PublicParametersManager[*setup.PublicParams]
 	WalletService           driver.WalletService
 	TokenLoader             TokenLoader
 	IdentityDeserializer    driver.Deserializer
@@ -80,7 +80,7 @@ type TransferService struct {
 
 func NewTransferService(
 	logger logging.Logger,
-	publicParametersManager common.PublicParametersManager[*crypto.PublicParams],
+	publicParametersManager common.PublicParametersManager[*setup.PublicParams],
 	walletService driver.WalletService,
 	tokenLoader TokenLoader,
 	identityDeserializer driver.Deserializer,
