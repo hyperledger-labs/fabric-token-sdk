@@ -15,9 +15,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
@@ -36,7 +36,7 @@ type TokensService struct {
 	*common.TokensService
 
 	Logger                  logging.Logger
-	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
+	PublicParametersManager common.PublicParametersManager[*setup.PublicParams]
 	IdentityDeserializer    driver.Deserializer
 
 	OutputTokenFormat               token.Format
@@ -44,7 +44,7 @@ type TokensService struct {
 	UpgradeSupportedTokenFormatList []token.Format
 }
 
-func NewTokensService(logger logging.Logger, publicParametersManager common.PublicParametersManager[*crypto.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
+func NewTokensService(logger logging.Logger, publicParametersManager common.PublicParametersManager[*setup.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
 	// compute supported tokens
 	pp := publicParametersManager.PublicParams()
 	maxPrecision := pp.RangeProofParams.BitLength
@@ -56,7 +56,7 @@ func NewTokensService(logger logging.Logger, publicParametersManager common.Publ
 	}
 
 	supportedTokenFormatList := make([]token.Format, 0, 3*len(pp.IdemixIssuerPublicKeys))
-	for _, precision := range crypto.SupportedPrecisions {
+	for _, precision := range setup.SupportedPrecisions {
 		// these precisions are supported directly
 		if precision <= maxPrecision {
 			format, err := supportedTokenFormat(pp, precision)
@@ -268,7 +268,7 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*token2.To
 	return output, nil
 }
 
-func supportedTokenFormat(pp *crypto.PublicParams, precision uint64) (token.Format, error) {
+func supportedTokenFormat(pp *setup.PublicParams, precision uint64) (token.Format, error) {
 	hasher := utils2.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
