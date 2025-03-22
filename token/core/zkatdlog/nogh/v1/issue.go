@@ -11,9 +11,9 @@ import (
 	"time"
 
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -24,7 +24,7 @@ import (
 
 type IssueService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common2.PublicParametersManager[*crypto.PublicParams]
+	PublicParametersManager common2.PublicParametersManager[*setup.PublicParams]
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
 	Metrics                 *Metrics
@@ -34,7 +34,7 @@ type IssueService struct {
 
 func NewIssueService(
 	logger logging.Logger,
-	publicParametersManager common2.PublicParametersManager[*crypto.PublicParams],
+	publicParametersManager common2.PublicParametersManager[*setup.PublicParams],
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
 	metrics *Metrics,
@@ -205,7 +205,7 @@ func (s *IssueService) VerifyIssue(ia driver.IssueAction, metadata []*driver.Iss
 	// todo check tokenInfo
 	return issue.NewVerifier(
 		coms,
-		pp.(*crypto.PublicParams)).Verify(action.GetProof())
+		pp.(*setup.PublicParams)).Verify(action.GetProof())
 }
 
 // DeserializeIssueAction un-marshals raw bytes into a zkatdlog IssueAction
