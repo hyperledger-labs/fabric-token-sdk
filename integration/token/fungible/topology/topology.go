@@ -193,6 +193,7 @@ func Topology(opts common.Opts) []api.Topology {
 	if opts.OnlyUnity {
 		common2.WithOnlyUnity(tms)
 	}
+	tms.AddIssuer(issuer)
 
 	if len(opts.SDKs) > 0 {
 		// business SDKs
