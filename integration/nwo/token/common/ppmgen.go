@@ -152,9 +152,6 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 	if err != nil {
 		return nil, err
 	}
-	if err := pp.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "failed to validate public parameters")
-	}
 
 	keyStore := x509.NewKeyStore(kvs.NewTrackedMemory())
 	if len(tms.Auditors) != 0 {
@@ -205,11 +202,16 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 		}
 	}
 
+	// validate before serialization
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed to validate public parameters")
+	}
+
+	// finalization
 	ppRaw, err := pp.Serialize()
 	if err != nil {
 		return nil, err
 	}
-
 	tms.Wallets = wallets
 
 	return ppRaw, nil
