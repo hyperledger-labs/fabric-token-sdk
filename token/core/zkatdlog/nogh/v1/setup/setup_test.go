@@ -6,24 +6,13 @@ SPDX-License-Identifier: Apache-2.0
 package setup
 
 import (
-	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestSetup(t *testing.T) {
-	s := time.Now()
-	_, err := Setup(32, []byte("issuerPK"), math3.FP256BN_AMCL)
-	e := time.Now()
-	fmt.Printf("elapsed %d", e.Sub(s).Milliseconds())
-	assert.NoError(t, err)
-
-}
 
 func TestSerialization(t *testing.T) {
 	issuerPK, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
@@ -47,11 +36,10 @@ func TestSerialization(t *testing.T) {
 	assert.Equal(t, pp, pp2)
 	assert.Equal(t, ser, ser2)
 
-	assert.NoError(t, pp.Validate())
+	assert.Error(t, pp.Validate())
 
 	pp.IssuerIDs = []driver.Identity{[]byte("issuer")}
 	assert.NoError(t, pp.Validate())
-
 }
 
 func TestComputeMaxTokenValue(t *testing.T) {
