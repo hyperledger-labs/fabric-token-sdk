@@ -847,7 +847,7 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditorId strin
 	alice := sel.Get("alice")
 	manager := sel.Get("manager")
 	auditor := sel.Get("auditor")
-	errorMessage := "issuer wallet [] not found"
+	errorMessage := "is not in issuers"
 	if issuerAsAuditor {
 		auditor = issuer
 	}
