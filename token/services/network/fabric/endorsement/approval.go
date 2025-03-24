@@ -9,6 +9,7 @@ package endorsement
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -39,6 +40,7 @@ type RequestApprovalView struct {
 
 func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 	_, tx, err := endorser.NewTransaction(
+		utils.MustGet(fabric2.GetNetworkServiceProvider(context)),
 		context,
 		fabric2.WithCreator(r.TxID.Creator),
 		fabric2.WithNonce(r.TxID.Nonce),
@@ -114,7 +116,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	// When the borrower runs the CollectEndorsementsView, at some point, the borrower sends the assembled transaction
 	// to the approver. Therefore, the approver waits to receive the transaction.
 	logger.Debugf("Waiting for transaction on context [%s]", context.ID())
-	tx, err := endorser.ReceiveTransaction(context)
+	tx, err := endorser.ReceiveTransaction(utils.MustGet(fabric2.GetNetworkServiceProvider(context)), context)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to received transaction for approval")
 	}
