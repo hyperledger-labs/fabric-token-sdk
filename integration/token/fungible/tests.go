@@ -274,7 +274,7 @@ var BobAcceptedTransactions = []TransactionRecord{
 
 type OnRestartFunc = func(*integration.Infrastructure, string)
 
-func TestAll(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, aries bool, sel *token3.ReplicaSelector) {
+func TestAll(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, aries bool, orion bool, sel *token3.ReplicaSelector) {
 	auditor := sel.Get(auditorId)
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
@@ -356,8 +356,12 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// Register it
 	RegisterIssuerIdentity(network, issuer, "newIssuerWallet", newIssuerWalletPath)
 	// Update public parameters
-	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, "default")
-	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, "default"), alice, bob, charlie, manager, issuer, auditor)
+	networkName := "default"
+	if orion {
+		networkName = "orion"
+	}
+	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, networkName)
+	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, networkName), alice, bob, charlie, manager, issuer, auditor)
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
 	// Issuer tokens with this new wallet
