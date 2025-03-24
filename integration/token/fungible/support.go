@@ -921,16 +921,25 @@ func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte
 	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
 }
 
-func UpdatePublicParamsAndWait(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS, nodes ...*token3.NodeReference) {
+func UpdatePublicParamsAndWait(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS, orion bool, nodes ...*token3.NodeReference) {
 	p := network.Ctx.PlatformsByName["token"]
 	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
 	for _, node := range nodes {
+		if orion {
+			FetchAndUpdatePublicParams(network, node)
+		}
 		Eventually(GetPublicParams).WithArguments(network, node).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(publicParams))
 	}
 }
 
 func GetPublicParams(network *integration.Infrastructure, id *token3.NodeReference) []byte {
 	pp, err := network.Client(id.ReplicaName()).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParams{}))
+	Expect(err).NotTo(HaveOccurred())
+	return pp.([]byte)
+}
+
+func FetchAndUpdatePublicParams(network *integration.Infrastructure, id *token3.NodeReference) []byte {
+	pp, err := network.Client(id.ReplicaName()).CallView("FetchAndUpdatePublicParams", common.JSONMarshall(&views.UpdatePublicParams{}))
 	Expect(err).NotTo(HaveOccurred())
 	return pp.([]byte)
 }

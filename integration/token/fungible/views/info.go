@@ -163,6 +163,33 @@ func GetTMSPublicParams(tms *token.ManagementService) []byte {
 	return ppBytes
 }
 
+type UpdatePublicParams struct {
+	TMSID token.TMSID
+}
+
+type UpdatePublicParamsView struct {
+	*UpdatePublicParams
+}
+
+func (p *UpdatePublicParamsView) Call(context view.Context) (interface{}, error) {
+	tms := token.GetManagementService(context, ServiceOpts(&p.TMSID)...)
+	assert.NotNil(tms, "failed to get TMS")
+	assert.NotNil(tms.PublicParametersManager().PublicParameters(), "failed to validate local public parameters")
+	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
+	assert.NoError(err, "failed to fetch public parameters")
+	assert.NoError(token.GetManagementServiceProvider(context).Update(p.TMSID, fetchedPPRaw), "failed to update public parameters")
+	return nil, nil
+}
+
+type UpdatePublicParamsViewFactory struct{}
+
+func (p *UpdatePublicParamsViewFactory) NewView(in []byte) (view.View, error) {
+	f := &UpdatePublicParamsView{UpdatePublicParams: &UpdatePublicParams{}}
+	err := json.Unmarshal(in, f)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
+
 type DoesWalletExist struct {
 	TMSID      token.TMSID
 	Wallet     string
