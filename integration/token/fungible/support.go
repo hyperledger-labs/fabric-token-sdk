@@ -1367,10 +1367,8 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
 	Expect(err).NotTo(HaveOccurred())
 
-	// is this dlog
 	genericPP, err := pp.Unmarshal(ppBytes)
 	Expect(err).NotTo(HaveOccurred())
-
 	switch genericPP.Identifier {
 	case crypto.DLogPublicParameters:
 		pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
@@ -1420,16 +1418,36 @@ func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issue
 	// Deserialize current params
 	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
 	Expect(err).NotTo(HaveOccurred())
-	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+
+	genericPP, err := pp.Unmarshal(ppBytes)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(pp.Validate()).NotTo(HaveOccurred())
+	switch genericPP.Identifier {
+	case crypto.DLogPublicParameters:
+		pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pp.Validate()).NotTo(HaveOccurred())
 
-	// Update publicParameters
-	pp.IssuerIDs = append(pp.IssuerIDs, wrap)
+		// Update publicParameters
+		pp.IssuerIDs = append(pp.IssuerIDs, wrap)
 
-	// Serialize
-	ppBytes, err = pp.Serialize()
-	Expect(err).NotTo(HaveOccurred())
+		// Serialize
+		ppBytes, err = pp.Serialize()
+		Expect(err).NotTo(HaveOccurred())
+		return ppBytes
+	case fabtokenv1.PublicParameters:
+		pp, err := fabtokenv1.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pp.Validate()).NotTo(HaveOccurred())
 
-	return ppBytes
+		// Update publicParameters
+		pp.IssuerIDs = append(pp.IssuerIDs, wrap)
+
+		// Serialize
+		ppBytes, err = pp.Serialize()
+		Expect(err).NotTo(HaveOccurred())
+		return ppBytes
+	default:
+		Expect(false).To(BeTrue(), "unknown pp identitfier [%s]", genericPP.Identifier)
+	}
+	return nil
 }
