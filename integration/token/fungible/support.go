@@ -28,6 +28,8 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
+	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -99,14 +101,9 @@ func IssueCashForTMSID(network *integration.Infrastructure, wallet string, typ t
 }
 
 func issueCashForTMSID(network *integration.Infrastructure, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, tmsId *token2.TMSID, endorsers []*token3.NodeReference, expectedErrorMsgs []string) string {
-	targetAuditor := auditor.Id()
-	if auditor.Id() == "issuer" || auditor.Id() == "newIssuer" {
-		// the issuer is the auditor, choose default identity
-		targetAuditor = ""
-	}
 	txIDBoxed, err := network.Client(issuer.ReplicaName()).CallView("issue", common.JSONMarshall(&views.IssueCash{
 		Anonymous:    anonymous,
-		Auditor:      targetAuditor,
+		Auditor:      auditor.Id(),
 		IssuerWallet: wallet,
 		TokenType:    typ,
 		Quantity:     amount,
@@ -1369,19 +1366,42 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	// Deserialize current params
 	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
 	Expect(err).NotTo(HaveOccurred())
-	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(pp.Validate()).NotTo(HaveOccurred())
 
-	// Update publicParameters
-	pp.Auditor = auditorId
-	pp.IssuerIDs = []driver.Identity{issuerId}
-
-	// Serialize
-	ppBytes, err = pp.Serialize()
+	// is this dlog
+	genericPP, err := pp.Unmarshal(ppBytes)
 	Expect(err).NotTo(HaveOccurred())
 
-	return ppBytes
+	switch genericPP.Identifier {
+	case crypto.DLogPublicParameters:
+		pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pp.Validate()).NotTo(HaveOccurred())
+
+		// Update publicParameters
+		pp.Auditor = auditorId
+		pp.IssuerIDs = []driver.Identity{issuerId}
+
+		// Serialize
+		ppBytes, err = pp.Serialize()
+		Expect(err).NotTo(HaveOccurred())
+		return ppBytes
+	case fabtokenv1.PublicParameters:
+		pp, err := fabtokenv1.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pp.Validate()).NotTo(HaveOccurred())
+
+		// Update publicParameters
+		pp.Auditor = auditorId
+		pp.IssuerIDs = []driver.Identity{issuerId}
+
+		// Serialize
+		ppBytes, err = pp.Serialize()
+		Expect(err).NotTo(HaveOccurred())
+		return ppBytes
+	default:
+		Expect(false).To(BeTrue(), "unknown pp identitfier [%s]", genericPP.Identifier)
+	}
+	return nil
 }
 
 func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issuerWalletPath string, networkName string) []byte {
