@@ -1384,7 +1384,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 		Expect(err).NotTo(HaveOccurred())
 		return ppBytes
 	case fabtokenv1.PublicParameters:
-		pp, err := fabtokenv1.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+		pp, err := fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(pp.Validate()).NotTo(HaveOccurred())
 
@@ -1435,7 +1435,7 @@ func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issue
 		Expect(err).NotTo(HaveOccurred())
 		return ppBytes
 	case fabtokenv1.PublicParameters:
-		pp, err := fabtokenv1.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+		pp, err := fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(pp.Validate()).NotTo(HaveOccurred())
 
