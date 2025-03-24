@@ -66,6 +66,7 @@ func (p *SDK) Install() error {
 			registry.RegisterFactory("TokenSelectorUnlock", &views.TokenSelectorUnlockViewFactory{}),
 			registry.RegisterFactory("FinalityWithTimeout", &views.FinalityWithTimeoutViewFactory{}),
 			registry.RegisterFactory("GetRevocationHandle", &views.GetRevocationHandleViewFactory{}),
+			registry.RegisterFactory("GetPublicParams", &views.GetPublicParamsViewFactory{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{}),
