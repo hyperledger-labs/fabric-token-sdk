@@ -250,6 +250,8 @@ func Topology(opts common.Opts) []api.Topology {
 		if !opts.NoAuditor {
 			tms.AddAuditor(auditor)
 		}
+		tms.AddIssuer(issuer)
+		tms.AddIssuerByID("issuer.id1")
 	}
 
 	if opts.Monitoring {

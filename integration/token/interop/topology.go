@@ -52,6 +52,7 @@ func HTLCSingleFabricNetworkTopology(opts common.Opts) []api.Topology {
 	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
+	tms.AddIssuerByID("issuer")
 
 	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 
@@ -91,6 +92,7 @@ func HTLCSingleOrionNetworkTopology(opts common.Opts) []api.Topology {
 	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
+	tms.AddIssuerByID("issuer")
 	orion2.SetCustodian(tms, custodian.Name)
 
 	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
@@ -152,11 +154,13 @@ func HTLCTwoFabricNetworksTopology(opts common.Opts) []api.Topology {
 	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
+	tms.AddIssuerByID("issuer")
 
 	tms = tokenTopology.AddTMS(fscTopology.ListNodes(), f2Topology, f2Topology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
 	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
+	tms.AddIssuerByID("issuer")
 
 	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
@@ -222,11 +226,13 @@ func HTLCNoCrossClaimTopology(opts common.Opts) []api.Topology {
 	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
+	tms.AddIssuerByID("issuer")
 
 	tms = tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "bob"), f2Topology, f2Topology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
 	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
+	tms.AddIssuerByID("issuer")
 
 	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
@@ -297,11 +303,13 @@ func HTLCNoCrossClaimWithOrionTopology(opts common.Opts) []api.Topology {
 	common.SetDefaultParams(tmsFabric, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tmsFabric, "Org1")
 	tmsFabric.AddAuditor(auditor)
+	tmsFabric.AddIssuerByID("issuer")
 
 	// TMS for the Orion Network
 	tmsOrion := tokenTopology.AddTMS(fscTopology.ListNodes("custodian", "auditor", "issuer", "bob"), orionTopology, "", opts.DefaultTMSOpts.TokenSDKDriver)
 	common.SetDefaultParams(tmsOrion, opts.DefaultTMSOpts)
 	tmsOrion.AddAuditor(auditor)
+	tmsOrion.AddIssuerByID("issuer")
 	orion2.SetCustodian(tmsOrion, custodian.Name)
 
 	orionTopology.AddDB(tmsOrion.Namespace, "custodian", "issuer", "auditor", "bob")

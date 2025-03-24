@@ -118,6 +118,9 @@ func Topology(opts Opts) []api.Topology {
 	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
+	tms.AddIssuerByID("issuer")
+	tms.AddIssuerByID("cash_issuer")
+	tms.AddIssuerByID("house_issuer")
 
 	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
