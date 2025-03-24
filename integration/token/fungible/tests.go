@@ -839,8 +839,8 @@ func TestSelector(network *integration.Infrastructure, auditorId string, sel *to
 	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
 }
 
-func TestPublicParamsUpdate(network *integration.Infrastructure, auditorId string, ppBytes []byte, networkName string, issuerAsAuditor bool, sel *token3.ReplicaSelector) {
-	newAuditor := sel.Get(auditorId)
+func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID string, ppBytes []byte, networkName string, issuerAsAuditor bool, sel *token3.ReplicaSelector) {
+	newAuditor := sel.Get(newAuditorID)
 	tms := GetTMSByNetworkName(network, networkName)
 	newIssuer := sel.Get("newIssuer")
 	issuer := sel.Get("issuer")
@@ -860,6 +860,7 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditorId strin
 	UpdatePublicParams(network, ppBytes, tms)
 
 	Eventually(GetPublicParams).WithArguments(network, newIssuer).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+	Eventually(GetPublicParams).WithArguments(network, issuer).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
 	if !issuerAsAuditor {
 		Eventually(GetPublicParams).WithArguments(network, newAuditor).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
 	}
