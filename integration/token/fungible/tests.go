@@ -346,6 +346,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
 	// Register a new issuer wallet and issue with that wallet
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
 	Expect(tokenPlatform).ToNot(BeNil(), "cannot find token platform in context")
 	Expect(tokenPlatform.GetTopology()).ToNot(BeNil(), "invalid token topology, it is nil")
@@ -357,6 +358,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// Update public parameters
 	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, "default")
 	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, "default"), alice, bob, charlie, manager, issuer, auditor)
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+
 	// Issuer tokens with this new wallet
 	t4 := time.Now()
 	IssueCash(network, "newIssuerWallet", "EUR", 10, bob, auditor, false, issuer)
