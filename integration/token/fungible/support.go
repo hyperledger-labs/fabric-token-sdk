@@ -1361,7 +1361,7 @@ func MultiSigSpendCashForTMSID(network *integration.Infrastructure, sender *toke
 func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, networkName string) []byte {
 	tms := GetTMSByNetworkName(network, networkName)
 	auditorId := GetAuditorIdentity(tms, auditor)
-	issuerId := GetIssuerIdentity(tms, "newIssuer.id1")
+	issuerId := GetIssuerIdentity(tms, "newIssuer")
 
 	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*tplatform.Platform)
 	Expect(ok).To(BeTrue(), "failed to get token platform from context")

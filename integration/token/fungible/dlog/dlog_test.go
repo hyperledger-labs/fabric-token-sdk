@@ -39,7 +39,7 @@ var _ = Describe("EndToEnd", func() {
 			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
 		})
 
-		Describe("Extras with websockets and replicas", t.Label, func() {
+		Describe("Extras with websockets", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, Aries|WebEnabled, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
