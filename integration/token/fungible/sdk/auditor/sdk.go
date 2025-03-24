@@ -48,6 +48,7 @@ func (p *SDK) Install() error {
 			registry.RegisterFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{}),
 			registry.RegisterFactory("TxFinality", &views1.TxFinalityViewFactory{}),
 			registry.RegisterFactory("GetPublicParams", &views.GetPublicParamsViewFactory{}),
+			registry.RegisterFactory("FetchAndUpdatePublicParams", &views.UpdatePublicParamsViewFactory{}),
 		)
 	}); err != nil {
 		return errors.WithMessage(err, "failed to install auditor's views")

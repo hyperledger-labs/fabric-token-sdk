@@ -52,6 +52,7 @@ func (p *SDK) Install() error {
 			registry.RegisterFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{}),
 			registry.RegisterFactory("TxFinality", &views1.TxFinalityViewFactory{}),
 			registry.RegisterFactory("issue", &views.IssueCashViewFactory{}),
+			registry.RegisterFactory("FetchAndUpdatePublicParams", &views.UpdatePublicParamsViewFactory{}),
 			registry.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{}),
 			registry.RegisterResponder(&views.TokensUpgradeResponderView{}, &views.TokensUpgradeInitiatorView{}),
 		)
