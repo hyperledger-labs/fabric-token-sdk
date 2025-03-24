@@ -42,7 +42,7 @@ var _ = Describe("EndToEnd", func() {
 func UpdatePublicParams(network *integration.Infrastructure, selector *token2.ReplicaSelector) {
 	tms := fungible.GetTMSByNetworkName(network, "default")
 	auditorId := fungible.GetAuditorIdentity(tms, "newAuditor")
-	issuerId := fungible.GetIssuerIdentity(tms, "newIssuer.id1")
+	issuerId := fungible.GetIssuerIdentity(tms, "newIssuer")
 	publicParam := fabtokenv1.PublicParams{
 		Label:             "fabtoken",
 		QuantityPrecision: uint64(64),
