@@ -354,6 +354,9 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), issuer.Id(), "issuer.ExtraId")
 	// Register it
 	RegisterIssuerIdentity(network, issuer, "newIssuerWallet", newIssuerWalletPath)
+	// Update public parameters
+	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, "default")
+	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, "default"), alice, bob, charlie, manager, issuer, auditor)
 	// Issuer tokens with this new wallet
 	t4 := time.Now()
 	IssueCash(network, "newIssuerWallet", "EUR", 10, bob, auditor, false, issuer)

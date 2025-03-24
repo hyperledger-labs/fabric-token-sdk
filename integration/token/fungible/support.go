@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -27,6 +28,8 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
@@ -921,6 +924,14 @@ func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte
 	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
 }
 
+func UpdatePublicParamsAndWait(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS, nodes ...*token3.NodeReference) {
+	p := network.Ctx.PlatformsByName["token"]
+	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
+	for _, node := range nodes {
+		Eventually(GetPublicParams).WithArguments(network, node).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(publicParams))
+	}
+}
+
 func GetPublicParams(network *integration.Infrastructure, id *token3.NodeReference) []byte {
 	pp, err := network.Client(id.ReplicaName()).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParams{}))
 	Expect(err).NotTo(HaveOccurred())
@@ -1345,4 +1356,60 @@ func MultiSigSpendCashForTMSID(network *integration.Infrastructure, sender *toke
 	txID := common.JSONUnmarshalString(txidBoxed)
 	return txID
 
+}
+
+func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, networkName string) []byte {
+	tms := GetTMSByNetworkName(network, networkName)
+	auditorId := GetAuditorIdentity(tms, auditor)
+	issuerId := GetIssuerIdentity(tms, "newIssuer.id1")
+
+	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*tplatform.Platform)
+	Expect(ok).To(BeTrue(), "failed to get token platform from context")
+
+	// Deserialize current params
+	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
+	Expect(err).NotTo(HaveOccurred())
+	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(pp.Validate()).NotTo(HaveOccurred())
+
+	// Update publicParameters
+	pp.Auditor = auditorId
+	pp.IssuerIDs = []driver.Identity{issuerId}
+
+	// Serialize
+	ppBytes, err = pp.Serialize()
+	Expect(err).NotTo(HaveOccurred())
+
+	return ppBytes
+}
+
+func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issuerWalletPath string, networkName string) []byte {
+	tms := GetTMSByNetworkName(network, networkName)
+	keyStore := x509.NewKeyStore(kvs.NewTrackedMemory())
+	kmp, _, err := x509.NewKeyManager(issuerWalletPath, nil, nil, keyStore)
+	Expect(err).NotTo(HaveOccurred())
+	newIdentity, _, err := kmp.Identity(nil)
+	Expect(err).NotTo(HaveOccurred())
+	wrap, err := identity.WrapWithType(x509.IdentityType, newIdentity)
+	Expect(err).NotTo(HaveOccurred())
+
+	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*tplatform.Platform)
+	Expect(ok).To(BeTrue(), "failed to get token platform from context")
+
+	// Deserialize current params
+	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
+	Expect(err).NotTo(HaveOccurred())
+	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(pp.Validate()).NotTo(HaveOccurred())
+
+	// Update publicParameters
+	pp.IssuerIDs = append(pp.IssuerIDs, wrap)
+
+	// Serialize
+	ppBytes, err = pp.Serialize()
+	Expect(err).NotTo(HaveOccurred())
+
+	return ppBytes
 }

@@ -400,9 +400,11 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 	if keyManager.Anonymous() || len(l.targetIdentities) == 0 {
 		l.logger.Debugf("no target identity check needed, skip it")
 	} else if found := slices.ContainsFunc(l.targetIdentities, identity.Equal); !found {
-		l.logger.Debugf("identity [%s:%s] not in target identities, ignore it", name, config.URL)
-		return nil
+		// the identity is not in the target identities, we should give it a lower priority
+		l.logger.Debugf("identity [%s:%s] not in target identities", name, config.URL)
 	} else {
+		// give it high priority
+		priority = -1
 		l.logger.Debugf("identity [%s:%s][%s] in target identities", name, config.URL, identity)
 	}
 
