@@ -357,7 +357,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	RegisterIssuerIdentity(network, issuer, "newIssuerWallet", newIssuerWalletPath)
 	// Update public parameters
 	networkName := "default"
-	if !orion {
+	if orion {
 		networkName = "orion"
 	}
 	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, networkName)
