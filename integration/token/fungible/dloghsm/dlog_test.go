@@ -39,7 +39,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries|HSM|AuditorAsIssuer, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T2"), func() { fungible.TestAll(ts.II, "issuer", nil, true, selector) })
+			It("succeeded", Label("T2"), func() { fungible.TestAll(ts.II, "issuer", nil, true, false, selector) })
 		})
 	}
 })

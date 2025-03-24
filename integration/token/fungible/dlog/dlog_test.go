@@ -36,7 +36,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, false, selector) })
 		})
 
 		Describe("Extras with websockets", t.Label, func() {
@@ -62,7 +62,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries|AuditorAsIssuer, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T6"), func() { fungible.TestAll(ts.II, "issuer", nil, true, selector) })
+			It("succeeded", Label("T6"), func() { fungible.TestAll(ts.II, "issuer", nil, true, false, selector) })
 			It("Update public params", Label("T7"), func() {
 				fungible.TestPublicParamsUpdate(
 					ts.II,
@@ -79,7 +79,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, None, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T8"), func() { fungible.TestAll(ts.II, "auditor", nil, false, selector) })
+			It("succeeded", Label("T8"), func() { fungible.TestAll(ts.II, "auditor", nil, false, false, selector) })
 		})
 
 		Describe("Malicious Transactions", t.Label, func() {
@@ -93,7 +93,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries|WithEndorsers, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T10"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+			It("succeeded", Label("T10"), func() { fungible.TestAll(ts.II, "auditor", nil, true, false, selector) })
 		})
 
 		Describe("Multisig", t.Label, func() {

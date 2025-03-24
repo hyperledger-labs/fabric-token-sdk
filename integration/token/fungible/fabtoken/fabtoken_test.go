@@ -30,7 +30,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, false, selector) })
 			It("Update public params", Label("T2"), func() { UpdatePublicParams(ts.II, selector) })
 			It("Test Identity Revocation", Label("T3"), func() { fungible.TestRevokeIdentity(ts.II, "auditor", selector) })
 			It("Test Remote Wallet (GRPC)", Label("T4"), func() { fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, false) })

@@ -24,7 +24,7 @@ var _ = Describe("Orion EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+			It("succeeded", func() { fungible.TestAll(ts.II, "auditor", nil, true, true, selector) })
 		})
 	}
 })
