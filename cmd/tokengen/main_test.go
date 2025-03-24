@@ -265,6 +265,6 @@ func testGenRunWithError(gt *WithT, tokengen string, args []string, errMsg strin
 }
 
 func testGenRun(gt *WithT, tokengen string, args []string) {
-	_, err := exec.Command(tokengen, args...).CombinedOutput()
-	gt.Expect(err).ToNot(HaveOccurred(), "failed running tokengen [%s:%v]", tokengen, args)
+	output, err := exec.Command(tokengen, args...).CombinedOutput()
+	gt.Expect(err).ToNot(HaveOccurred(), "failed running tokengen [%s:%v] with output \n[%s]", tokengen, args, string(output))
 }
