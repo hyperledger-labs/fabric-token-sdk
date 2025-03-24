@@ -34,6 +34,7 @@ import (
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/config"
 	logger2 "github.com/hyperledger-labs/orion-server/pkg/logger"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -213,7 +214,11 @@ func (p *NetworkHandler) Cleanup() {
 }
 
 func (p *NetworkHandler) UpdatePublicParams(tms *topology2.TMS, ppRaw []byte) {
-	panic("Should not be invoked")
+	c, err := ReadHelperConfig(p.HelperConfigPath())
+	Expect(err).NotTo(HaveOccurred())
+	ppConfig := c.GetByTMSID(token.TMSID{Network: tms.Network, Channel: tms.Channel, Namespace: tms.Namespace})
+	Expect(ppConfig).NotTo(BeNil())
+	Expect(ppConfig.InitWithPPRaw(ppRaw)).To(Succeed())
 }
 
 func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
@@ -396,6 +401,14 @@ func (p *PPInitConfig) createDBInstance() (bcdb.BCDB, error) {
 }
 
 func (p *PPInitConfig) Init() error {
+	ppRaw, err := os.ReadFile(p.PPPath)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to read pp file [%s]", p.PPPath)
+	}
+	return p.InitWithPPRaw(ppRaw)
+}
+
+func (p *PPInitConfig) InitWithPPRaw(ppRaw []byte) error {
 	// Store the public parameters in orion
 	db, err := p.createDBInstance()
 	if err != nil {
@@ -417,10 +430,6 @@ func (p *PPInitConfig) Init() error {
 		tx: tx,
 	}
 	w := translator.New("", translator.NewRWSetWrapper(rwset, "", ""), &translator.HashedKeyTranslator{KT: &keys.Translator{}})
-	ppRaw, err := os.ReadFile(p.PPPath)
-	if err != nil {
-		return err
-	}
 	action := &tcc.SetupAction{
 		SetupParameters: ppRaw,
 	}
