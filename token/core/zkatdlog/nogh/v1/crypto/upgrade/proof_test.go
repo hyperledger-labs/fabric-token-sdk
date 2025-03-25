@@ -9,6 +9,7 @@ package upgrade
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 )
@@ -62,7 +63,7 @@ func TestSHA256Digest(t *testing.T) {
 	}
 
 	// Test
-	digest, err := p.SHA256Digest()
+	digest, err := SHA256Digest(p.Challenge, p.Tokens)
 	assert.NoError(t, err)
 
 	// Assert
@@ -74,47 +75,30 @@ func TestSHA256Digest(t *testing.T) {
 	)
 }
 
-func TestAddSignature(t *testing.T) {
-	// Setup
-	p := &Proof{}
-
-	// Test
-	p.AddSignature(Signature("sig1"))
-	p.AddSignature(Signature("sig2"))
-
-	// Assert
-	assert.Equal(t, 2, len(p.Signatures))
-	assert.Equal(t, Signature("sig1"), p.Signatures[0])
-	assert.Equal(t, Signature("sig2"), p.Signatures[1])
-}
-
 func TestEdgeCases(t *testing.T) {
 	tests := []struct {
-		name    string
-		proof   *Proof
-		wantErr bool
+		name      string
+		Challenge driver.TokensUpgradeChallenge
+		Tokens    []token.LedgerToken
+		wantErr   bool
 	}{
 		{
-			name: "empty tokens",
-			proof: &Proof{
-				Challenge: []byte("test"),
-				Tokens:    nil,
-			},
-			wantErr: false,
+			name:      "empty tokens",
+			Challenge: []byte("test"),
+			Tokens:    nil,
+			wantErr:   false,
 		},
 		{
-			name: "nil challenge",
-			proof: &Proof{
-				Challenge: nil,
-				Tokens:    []token.LedgerToken{},
-			},
-			wantErr: false,
+			name:      "nil challenge",
+			Challenge: nil,
+			Tokens:    []token.LedgerToken{},
+			wantErr:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.proof.SHA256Digest()
+			_, err := SHA256Digest(tt.Challenge, tt.Tokens)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {

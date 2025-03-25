@@ -115,19 +115,10 @@ type LedgerToken struct {
 }
 
 func (t LedgerToken) Equal(right LedgerToken) bool {
-	if !t.ID.Equal(right.ID) {
-		return false
-	}
-	if !bytes.Equal([]byte(t.Format), []byte(right.Format)) {
-		return false
-	}
-	if !bytes.Equal(t.Token, right.Token) {
-		return false
-	}
-	if !bytes.Equal(t.TokenMetadata, right.TokenMetadata) {
-		return false
-	}
-	return true
+	return t.ID.Equal(right.ID) &&
+		bytes.Equal([]byte(t.Format), []byte(right.Format)) &&
+		bytes.Equal(t.Token, right.Token) &&
+		bytes.Equal(t.TokenMetadata, right.TokenMetadata)
 }
 
 // UnspentToken models an unspent token

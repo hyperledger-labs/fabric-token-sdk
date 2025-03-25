@@ -30,13 +30,13 @@ func (p *Proof) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, p)
 }
 
-func (p *Proof) SHA256Digest() ([]byte, error) {
+func SHA256Digest(ch driver.TokensUpgradeChallenge, tokens []token.LedgerToken) ([]byte, error) {
 	h := utils.NewSHA256Hasher()
-	err := h.AddBytes(p.Challenge)
+	err := h.AddBytes(ch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write challenge to hash")
 	}
-	for _, token := range p.Tokens {
+	for _, token := range tokens {
 		if err := errors2.Join(
 			h.AddString(token.ID.TxId),
 			h.AddUInt64(token.ID.Index),
@@ -48,8 +48,4 @@ func (p *Proof) SHA256Digest() ([]byte, error) {
 		}
 	}
 	return h.Digest(), nil
-}
-
-func (p *Proof) AddSignature(sigma Signature) {
-	p.Signatures = append(p.Signatures, sigma)
 }
