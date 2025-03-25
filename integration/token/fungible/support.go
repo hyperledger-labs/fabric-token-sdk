@@ -942,10 +942,11 @@ func GetPublicParams(network *integration.Infrastructure, id *token3.NodeReferen
 	return pp.([]byte)
 }
 
-func FetchAndUpdatePublicParams(network *integration.Infrastructure, id *token3.NodeReference) []byte {
-	pp, err := network.Client(id.ReplicaName()).CallView("FetchAndUpdatePublicParams", common.JSONMarshall(&views.UpdatePublicParams{}))
-	Expect(err).NotTo(HaveOccurred())
-	return pp.([]byte)
+func FetchAndUpdatePublicParams(network *integration.Infrastructure, id *token3.NodeReference) {
+	for _, name := range id.AllNames() {
+		_, err := network.Client(name).CallView("FetchAndUpdatePublicParams", common.JSONMarshall(&views.UpdatePublicParams{}))
+		Expect(err).NotTo(HaveOccurred())
+	}
 }
 
 func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReference, wallet string, walletType int) bool {
