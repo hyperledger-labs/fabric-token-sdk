@@ -101,12 +101,7 @@ func (s *Service) GenUpgradeProof(ch driver.TokensUpgradeChallenge, ledgerTokens
 		return nil, errors.Errorf("proof witness not expected")
 	}
 
-	proof := &Proof{
-		Challenge:  ch,
-		Tokens:     ledgerTokens,
-		Signatures: make([]Signature, 0, len(ledgerTokens)),
-	}
-	digest, err := proof.SHA256Digest()
+	digest, err := SHA256Digest(ch, ledgerTokens)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get sha256 digest")
 	}
@@ -115,7 +110,8 @@ func (s *Service) GenUpgradeProof(ch driver.TokensUpgradeChallenge, ledgerTokens
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to process ledgerTokens upgrade request")
 	}
-	for _, token := range tokens {
+	signatures := make([]Signature, len(tokens))
+	for i, token := range tokens {
 		// get a signer for each token
 		signer, err := s.IdentityProvider.GetSigner(token.Owner)
 		if err != nil {
@@ -126,10 +122,15 @@ func (s *Service) GenUpgradeProof(ch driver.TokensUpgradeChallenge, ledgerTokens
 			return nil, errors.Wrapf(err, "failed to get signature")
 		}
 		// add the signature to the proof
-		proof.AddSignature(sigma)
+		signatures[i] = sigma
 	}
 
 	// marshal proof
+	proof := &Proof{
+		Challenge:  ch,
+		Tokens:     ledgerTokens,
+		Signatures: signatures,
+	}
 	raw, err := proof.Serialize()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize proof")
@@ -223,7 +224,7 @@ func (s *Service) checkUpgradeProof(ch driver.TokensUpgradeChallenge, proofRaw d
 		return nil, false, errors.Errorf("proof with invalid number of token signatures")
 	}
 
-	digest, err := proof.SHA256Digest()
+	digest, err := SHA256Digest(proof.Challenge, proof.Tokens)
 	if err != nil {
 		return nil, false, errors.Wrapf(err, "failed to get sha256 digest")
 	}
