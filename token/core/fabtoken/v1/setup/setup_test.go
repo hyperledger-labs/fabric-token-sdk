@@ -9,6 +9,7 @@ package setup
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,6 +48,7 @@ func TestPublicParams_Validate_Valid(t *testing.T) {
 		Label:             "fabtoken",
 		QuantityPrecision: 32,
 		MaxToken:          1<<32 - 1,
+		IssuerIDs:         []driver.Identity{[]byte("issuer1"), []byte("issuer2")},
 	}
 	err := pp.Validate()
 	assert.NoError(t, err)
