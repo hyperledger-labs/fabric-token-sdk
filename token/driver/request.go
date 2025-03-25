@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	Version = 1
+	ProtocolV1 = 1
 )
 
 // TokenRequest is a collection of Token Action:
@@ -54,7 +54,7 @@ func (r *TokenRequest) FromBytes(raw []byte) error {
 
 func (r *TokenRequest) ToProtos() (*request.TokenRequest, error) {
 	tr := &request.TokenRequest{
-		Version: Version,
+		Version: ProtocolV1,
 	}
 	tr.Actions = append(
 		utils.ToActionSlice(request.ActionType_ISSUE, r.Issues),
@@ -66,6 +66,11 @@ func (r *TokenRequest) ToProtos() (*request.TokenRequest, error) {
 }
 
 func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
+	// assert version
+	if tr.Version != ProtocolV1 {
+		return errors.Errorf("invalid token request version, expected [%d], got [%d]", ProtocolV1, tr.Version)
+	}
+
 	for _, action := range tr.Actions {
 		if action == nil {
 			return errors.New("nil action found")
@@ -443,7 +448,7 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 
 func (m *TokenRequestMetadata) ToProtos() (*request.TokenRequestMetadata, error) {
 	trm := &request.TokenRequestMetadata{
-		Version:     Version,
+		Version:     ProtocolV1,
 		Metadata:    nil,
 		Application: m.Application,
 	}
@@ -481,6 +486,11 @@ func (m *TokenRequestMetadata) ToProtos() (*request.TokenRequestMetadata, error)
 }
 
 func (m *TokenRequestMetadata) FromProtos(trm *request.TokenRequestMetadata) error {
+	// assert version
+	if trm.Version != ProtocolV1 {
+		return errors.Errorf("invalid token request metadata version, expected [%d], got [%d]", ProtocolV1, trm.Version)
+	}
+
 	m.Application = trm.Application
 	for _, meta := range trm.Metadata {
 		im := meta.GetIssueMetadata()

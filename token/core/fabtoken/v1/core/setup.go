@@ -16,7 +16,7 @@ import (
 const (
 	// PublicParameters is the key to be used to look up fabtoken parameters
 	PublicParameters = "fabtoken"
-	Version          = "1.0.0"
+	ProtocolV1       = uint64(1)
 	DefaultPrecision = uint64(64)
 )
 
@@ -26,7 +26,7 @@ type PublicParams struct {
 	// It can be used by the driver for versioning purpose.
 	Label string
 	// Ver is the version of these public params
-	Ver string
+	Ver uint64
 	// The precision of token quantities
 	QuantityPrecision uint64
 	// This is set when audit is enabled
@@ -47,7 +47,7 @@ func Setup(precision uint64) (*PublicParams, error) {
 	}
 	return &PublicParams{
 		Label:             PublicParameters,
-		Ver:               Version,
+		Ver:               ProtocolV1,
 		QuantityPrecision: precision,
 		MaxToken:          uint64(1<<precision) - 1,
 	}, nil
@@ -70,7 +70,7 @@ func (p *PublicParams) Identifier() string {
 	return p.Label
 }
 
-func (p *PublicParams) Version() string {
+func (p *PublicParams) Version() uint64 {
 	return p.Ver
 }
 

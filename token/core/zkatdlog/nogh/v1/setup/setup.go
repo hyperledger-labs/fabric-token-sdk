@@ -29,7 +29,7 @@ import (
 
 const (
 	DLogPublicParameters = "zkatdlog"
-	Version              = "1.0.0"
+	ProtocolV1           = 1
 )
 
 var (
@@ -160,7 +160,7 @@ type PublicParams struct {
 	// It can be used by the driver for versioning purpose.
 	Label string
 	// Ver is the version of these public params
-	Ver string
+	Ver uint64
 	// Curve is the pairing-friendly elliptic curve used for everything but Idemix.
 	Curve mathlib.CurveID
 	// PedersenGenerators contains the public parameters for the Pedersen commitment scheme.
@@ -203,7 +203,7 @@ func setup(bitLength uint64, idemixIssuerPK []byte, label string, idemixCurveID 
 	pp := &PublicParams{
 		Label: label,
 		Curve: mathlib.BN254,
-		Ver:   Version,
+		Ver:   ProtocolV1,
 		IdemixIssuerPublicKeys: []*IdemixIssuerPublicKey{
 			{
 				PublicKey: idemixIssuerPK,
@@ -228,7 +228,7 @@ func (p *PublicParams) Identifier() string {
 	return p.Label
 }
 
-func (p *PublicParams) Version() string {
+func (p *PublicParams) Version() uint64 {
 	return p.Ver
 }
 
@@ -452,6 +452,9 @@ func (p *PublicParams) String() string {
 }
 
 func (p *PublicParams) Validate() error {
+	if p.Ver != ProtocolV1 {
+		return errors.Errorf("invalid version [%d], expected [%d]", p.Ver, ProtocolV1)
+	}
 	if int(p.Curve) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(p.Curve), len(mathlib.Curves)-1)
 	}

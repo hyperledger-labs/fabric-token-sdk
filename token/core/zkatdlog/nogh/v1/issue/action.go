@@ -20,6 +20,8 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+const ProtocolV1 = 1
+
 type ActionInput struct {
 	ID    token2.ID
 	Token []byte
@@ -214,6 +216,7 @@ func (i *Action) Serialize() ([]byte, error) {
 	}
 
 	issueAction := &actions.IssueAction{
+		Version: ProtocolV1,
 		Issuer: &pp.Identity{
 			Raw: i.Issuer,
 		},
@@ -233,6 +236,11 @@ func (i *Action) Deserialize(raw []byte) error {
 	err := proto.Unmarshal(raw, issueAction)
 	if err != nil {
 		return errors.Wrap(err, "failed to deserialize issue action")
+	}
+
+	// assert version
+	if issueAction.Version != ProtocolV1 {
+		return errors.Errorf("invalid issue version, expected [%d], got [%d]", ProtocolV1, issueAction.Version)
 	}
 
 	// inputs

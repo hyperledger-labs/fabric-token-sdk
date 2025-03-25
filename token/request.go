@@ -1005,7 +1005,7 @@ func (r *Request) Bytes() ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed to marshal metadata in tx [%s]", r.Anchor)
 	}
 	requestWithMetadata := &request.TokenRequestWithMetadata{
-		Version:  0,
+		Version:  driver.ProtocolV1,
 		Anchor:   r.Anchor,
 		Request:  requestProto,
 		Metadata: metadataProto,
@@ -1019,6 +1019,11 @@ func (r *Request) FromBytes(raw []byte) error {
 	if err := proto.Unmarshal(raw, requestWithMetadata); err != nil {
 		return errors.Wrapf(err, "failed unmarshaling request")
 	}
+	// assert version
+	if requestWithMetadata.Version != driver.ProtocolV1 {
+		return errors.Errorf("invalid token request with metadata version, expected [%d], got [%d]", driver.ProtocolV1, requestWithMetadata.Version)
+	}
+
 	r.Anchor = requestWithMetadata.Anchor
 	if requestWithMetadata.Request != nil {
 		if err := r.Actions.FromProtos(requestWithMetadata.Request); err != nil {
