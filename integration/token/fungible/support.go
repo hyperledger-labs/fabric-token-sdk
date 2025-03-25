@@ -30,7 +30,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
+	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
@@ -1392,8 +1392,8 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	}
 	var pp PP
 	switch genericPP.Identifier {
-	case crypto.DLogPublicParameters:
-		pp, err = crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+	case dlognoghv1.DLogPublicParameters:
+		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogPublicParameters)
 		Expect(err).NotTo(HaveOccurred())
 	case fabtokenv1.PublicParameters:
 		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
@@ -1439,8 +1439,8 @@ func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issue
 	}
 	var pp PP
 	switch genericPP.Identifier {
-	case crypto.DLogPublicParameters:
-		pp, err = crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+	case dlognoghv1.DLogPublicParameters:
+		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogPublicParameters)
 		Expect(err).NotTo(HaveOccurred())
 	case fabtokenv1.PublicParameters:
 		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
