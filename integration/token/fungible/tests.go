@@ -1430,3 +1430,26 @@ func TestMultiSig(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckCoOwnedBalance(network, charlie, "", "USD", 0)
 	CheckCoOwnedBalance(network, manager, "", "USD", 0)
 }
+
+func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector, networkName string) {
+	tms := GetTMSByNetworkName(network, networkName)
+	auditor := sel.Get("auditor")
+	issuer := sel.Get("issuer")
+	alice := sel.Get("alice")
+	RegisterAuditor(network, auditor)
+
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditor.Id())
+	SetBinding(network, issuer, GetIssuerIdentity(tms, issuer.Id()), alice)
+	CheckPublicParams(network, issuer, auditor, alice)
+
+	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
+	CheckBalance(network, alice, "", "USD", 110)
+	CheckHolding(network, alice, "", "USD", 110, auditor)
+
+	RedeemCash(network, alice, "", "USD", 10, auditor)
+	CheckBalance(network, alice, "", "USD", 100)
+	CheckHolding(network, alice, "", "USD", 100, auditor)
+}
