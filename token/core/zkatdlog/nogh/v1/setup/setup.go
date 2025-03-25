@@ -413,6 +413,16 @@ func (p *PublicParams) AddIssuer(id driver.Identity) {
 	p.IssuerIDs = append(p.IssuerIDs, id)
 }
 
+// SetIssuers sets the issuers to the passed identities
+func (p *PublicParams) SetIssuers(ids []driver.Identity) {
+	p.IssuerIDs = ids
+}
+
+// SetAuditors sets the auditors to the passed identities
+func (p *PublicParams) SetAuditors(ids []driver.Identity) {
+	p.Auditor = ids[0]
+}
+
 func (p *PublicParams) ComputeHash() ([]byte, error) {
 	raw, err := p.Bytes()
 	if err != nil {

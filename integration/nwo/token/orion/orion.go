@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	orion2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
@@ -34,7 +35,6 @@ import (
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/config"
 	logger2 "github.com/hyperledger-labs/orion-server/pkg/logger"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 

@@ -1382,37 +1382,33 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 
 	genericPP, err := pp.Unmarshal(ppBytes)
 	Expect(err).NotTo(HaveOccurred())
+
+	type PP interface {
+		Validate() error
+		Serialize() ([]byte, error)
+		SetIssuers(identities []driver.Identity)
+		SetAuditors(identities []driver.Identity)
+	}
+	var pp PP
 	switch genericPP.Identifier {
 	case crypto.DLogPublicParameters:
-		pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+		pp, err = crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(pp.Validate()).NotTo(HaveOccurred())
-
-		// Update publicParameters
-		pp.Auditor = auditorId
-		pp.IssuerIDs = []driver.Identity{issuerId}
-
-		// Serialize
-		ppBytes, err = pp.Serialize()
-		Expect(err).NotTo(HaveOccurred())
-		return ppBytes
 	case fabtokenv1.PublicParameters:
-		pp, err := fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
+		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(pp.Validate()).NotTo(HaveOccurred())
-
-		// Update publicParameters
-		pp.Auditor = auditorId
-		pp.IssuerIDs = []driver.Identity{issuerId}
-
-		// Serialize
-		ppBytes, err = pp.Serialize()
-		Expect(err).NotTo(HaveOccurred())
-		return ppBytes
 	default:
 		Expect(false).To(BeTrue(), "unknown pp identitfier [%s]", genericPP.Identifier)
 	}
-	return nil
+
+	Expect(pp.Validate()).NotTo(HaveOccurred())
+	pp.SetAuditors([]driver.Identity{auditorId})
+	pp.SetIssuers([]driver.Identity{issuerId})
+
+	// Serialize
+	ppBytes, err = pp.Serialize()
+	Expect(err).NotTo(HaveOccurred())
+	return ppBytes
 }
 
 func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issuerWalletPath string, networkName string) []byte {
@@ -1434,33 +1430,31 @@ func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issue
 
 	genericPP, err := pp.Unmarshal(ppBytes)
 	Expect(err).NotTo(HaveOccurred())
+
+	type PP interface {
+		AddIssuer(id driver.Identity)
+		Validate() error
+		Serialize() ([]byte, error)
+	}
+	var pp PP
 	switch genericPP.Identifier {
 	case crypto.DLogPublicParameters:
-		pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+		pp, err = crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(pp.Validate()).NotTo(HaveOccurred())
-
-		// Update publicParameters
-		pp.IssuerIDs = append(pp.IssuerIDs, wrap)
-
-		// Serialize
-		ppBytes, err = pp.Serialize()
-		Expect(err).NotTo(HaveOccurred())
-		return ppBytes
 	case fabtokenv1.PublicParameters:
-		pp, err := fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
+		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(pp.Validate()).NotTo(HaveOccurred())
-
-		// Update publicParameters
-		pp.IssuerIDs = append(pp.IssuerIDs, wrap)
-
-		// Serialize
-		ppBytes, err = pp.Serialize()
-		Expect(err).NotTo(HaveOccurred())
-		return ppBytes
 	default:
 		Expect(false).To(BeTrue(), "unknown pp identitfier [%s]", genericPP.Identifier)
 	}
-	return nil
+
+	// validate public params
+	Expect(pp.Validate()).NotTo(HaveOccurred())
+	// Update them
+	pp.AddIssuer(wrap)
+
+	// Serialize
+	ppBytes, err = pp.Serialize()
+	Expect(err).NotTo(HaveOccurred())
+	return ppBytes
 }
