@@ -927,6 +927,10 @@ func UpdatePublicParamsAndWait(network *integration.Infrastructure, publicParams
 	for _, node := range nodes {
 		if orion {
 			FetchAndUpdatePublicParams(network, node)
+		} else {
+			if node.Id() == "custodian" {
+				continue
+			}
 		}
 		Eventually(GetPublicParams).WithArguments(network, node).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(publicParams))
 	}

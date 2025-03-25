@@ -282,6 +282,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	charlie := sel.Get("charlie")
 	manager := sel.Get("manager")
 	endorsers := GetEndorsers(network, sel)
+	custodian := sel.Get("custodian")
 	RegisterAuditor(network, auditor)
 
 	// give some time to the nodes to get the public parameters
@@ -289,6 +290,9 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 
 	SetKVSEntry(network, issuer, "auditor", auditor.Id())
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+	if orion {
+		FetchAndUpdatePublicParams(network, custodian)
+	}
 
 	t0 := time.Now()
 	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
@@ -361,7 +365,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 		networkName = "orion"
 	}
 	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, networkName)
-	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, networkName), orion, alice, bob, charlie, manager, issuer, auditor)
+	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, networkName), orion, alice, bob, charlie, manager, issuer, auditor, custodian)
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
 	// Issuer tokens with this new wallet
