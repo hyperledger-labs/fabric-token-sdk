@@ -53,7 +53,7 @@ docker-images: fabric-docker-images orion-server-images monitoring-docker-images
 .PHONY: testing-docker-images
 testing-docker-images:
 	docker pull postgres:16.2-alpine
-	docker tag postgres:16.2-alpine postgres:latest
+	docker tag postgres:16.2-alpine fsc.itests/postgres:latest
 	docker pull hashicorp/vault
 
 .PHONY: fabric-docker-images

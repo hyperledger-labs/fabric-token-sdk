@@ -185,7 +185,9 @@ func Topology(opts common.Opts) []api.Topology {
 		nodeList = fscTopology.ListNodes()
 	} else {
 		nodeList = fscTopology.ListNodes()
-		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
+		if opts.CommType == fsc.LibP2P {
+			fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
+		}
 	}
 	if !opts.NoAuditor {
 		tms.AddAuditor(auditor)
@@ -225,7 +227,7 @@ func Topology(opts common.Opts) []api.Topology {
 		// additional nodes that are backend specific
 		if opts.Backend == "orion" {
 			fscTopology.ListNodes("custodian")[0].AddSDK(opts.SDKs[0])
-		} else {
+		} else if opts.CommType == fsc.LibP2P {
 			fscTopology.ListNodes("lib-p2p-bootstrap-node")[0].AddSDK(opts.SDKs[0])
 		}
 
