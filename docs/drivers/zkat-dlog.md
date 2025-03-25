@@ -5,7 +5,7 @@ We follow a simplified version of the blueprint described in the paper <!-- mark
 [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058.pdf')<!-- markdown-link-check-disable -->
 by Elli Androulaki, Jan Camenisch, Angelo De Caro, Maria Dubovitskaya, Kaoutar Elkhiyaoui, and Björn Tackmann.
 In more details, the driver hides the token's owner, type, and quantity.
-But it reveals which token has been spent by a give transaction. We say that this driver does not support `graph hiding`.
+But it reveals which token has been spent by a given transaction. We say that this driver does not support `graph hiding`.
 Owner anonymity is achieved by using Identity Mixer (Idemix, for short).
 The identities of the issuers and the auditors are not hidden.
 
@@ -17,18 +17,18 @@ The driver implementation is available under the folder [`nogh/v1`](./../../toke
 
 - A token is represented on the ledger as the pair `(pedersen commitment to type and value, owner)`.
 - A token metadata is a tuple containing: Token type, value, commitment blinding factor, and issuer's identity.
-- The admissible values are in the range $[0..max-1]$, where $max$ is $2^{bits}$ and $bits$ is a public parameter. A typical value for $bits$ is $64$.
+- The admissible values are in the range $[0..max-1]$, where $max$ is $2^{bitlength}$ and $bitlength$ is a public parameter. A typical value for $bitlength$ is $64$.
 - The owner of a token can be:
-  - An `Idemix Identity` to achieve identity anonymity. The Idemix Identity Issuer public key can be rotated.
+  - An `Idemix Identity` to achieve identity anonymity. The public key of the Idemix Identity Issuer can be rotated.
   - An `HTLC-like Script` for interoperability;
   - A `Multisig Identity` for shared ownership;
 - An issuer is identified by an X509 certificate. The identity of the issuer is always revealed.
-- Many issuers can be defined each of which can issue tokens; This allows also for rotation of these keys.
+- Multiple issuers can be defined to issue a token type. Each such an issuer can issue tokens of said type; This allows also for rotation of these keys.
 - An auditor is identified by an X509 certificate. The identity of the auditor is always revealed.
 - Only one auditor is definable and it is public key cannot be rotated.
 - If an auditor is set, a request that doesn't carry its signature is considered invalid.
 - Supported actions are: `Issue` and `Transfer`. `Reedem` is obtained as a `Transfer` that creates an output whose's owner is `none`.
-- An `Issue Action` proves that value is in the right range and the issuer signed the request 
+- An `Issue Action` proves that value is in the right range and one of the authorized issuers signed the request. 
 - A `Transfer Action` proves the following:
   - The sum of the inputs is equal to the sum of the outputs and the value of each output is in the valid range;
   - Inputs and outputs have the same type;
