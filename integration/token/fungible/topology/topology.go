@@ -21,6 +21,7 @@ import (
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/auditor"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/custodian"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/endorser"
 	issuer2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/issuer"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/party"
@@ -226,7 +227,7 @@ func Topology(opts common.Opts) []api.Topology {
 
 		// additional nodes that are backend specific
 		if opts.Backend == "orion" {
-			fscTopology.ListNodes("custodian")[0].AddSDK(opts.SDKs[0])
+			fscTopology.ListNodes("custodian")[0].AddSDKWithBase(opts.SDKs[0], &custodian.SDK{})
 		} else {
 			fscTopology.ListNodes("lib-p2p-bootstrap-node")[0].AddSDK(opts.SDKs[0])
 		}

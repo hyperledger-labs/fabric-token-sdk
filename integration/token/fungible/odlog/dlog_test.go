@@ -33,12 +33,11 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 	opts, selector := token2.NewReplicationOptions(factor, names...)
 	ts := token2.NewTestSuite(StartPortDlog, topology.Topology(
 		common.Opts{
-			Backend:        "orion",
-			CommType:       commType,
-			DefaultTMSOpts: common.TMSOpts{TokenSDKDriver: "dlog", Aries: true},
-			SDKs:           []api.SDK{&odlog.SDK{}},
-			// FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:info",
-			// FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:view-sdk.services.comm=debug:info",
+			Backend:         "orion",
+			CommType:        commType,
+			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog", Aries: true},
+			SDKs:            []api.SDK{&odlog.SDK{}},
+			FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 			ReplicationOpts: opts,
 			OnlyUnity:       true,
 		},
