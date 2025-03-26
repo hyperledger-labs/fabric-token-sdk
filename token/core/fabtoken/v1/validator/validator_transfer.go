@@ -26,8 +26,15 @@ func TransferActionValidate(ctx *Context) error {
 
 // TransferSignatureValidate validates the signatures for the inputs spent by an action
 func TransferSignatureValidate(ctx *Context) error {
-	ctx.InputTokens = ctx.TransferAction.InputTokens
-	for _, tok := range ctx.InputTokens {
+	if len(ctx.TransferAction.Inputs) == 0 {
+		return errors.Errorf("invalid number of token inputs, expected at least 1")
+	}
+
+	var inputToken []*actions.Output
+	for _, in := range ctx.TransferAction.Inputs {
+		tok := in.Input
+
+		inputToken = append(inputToken, tok)
 		owner := tok.GetOwner()
 		ctx.Logger.Debugf("check sender [%s]", driver.Identity(owner).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(owner)
@@ -41,6 +48,7 @@ func TransferSignatureValidate(ctx *Context) error {
 		}
 		ctx.Signatures = append(ctx.Signatures, sigma)
 	}
+	ctx.InputTokens = inputToken
 	return nil
 }
 

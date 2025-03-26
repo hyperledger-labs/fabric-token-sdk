@@ -64,3 +64,16 @@ func (t *Output) IsRedeem() bool {
 func (t *Output) GetOwner() []byte {
 	return t.Owner
 }
+
+func (t *Output) Validate(checkOwner bool) error {
+	if checkOwner && len(t.Owner) == 0 {
+		return errors.Errorf("token owner cannot be empty")
+	}
+	if len(t.Quantity) == 0 {
+		return errors.Errorf("token quantity cannot be empty")
+	}
+	if len(t.Type) == 0 {
+		return errors.Errorf("token type cannot be empty")
+	}
+	return nil
+}
