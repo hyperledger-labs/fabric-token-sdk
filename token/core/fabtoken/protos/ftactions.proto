@@ -8,9 +8,9 @@ syntax = "proto3";
 
 package fabtoken;
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions";
-
 import "ftpp.proto";
+
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions";
 
 message Token {
   bytes owner = 1; // is the token owner
