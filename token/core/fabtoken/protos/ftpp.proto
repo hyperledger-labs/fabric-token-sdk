@@ -1,0 +1,25 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+syntax = "proto3";
+
+package fabtoken;
+
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions";
+
+message Identity {
+  bytes raw = 1;
+}
+
+// PublicParameters describes typed public parameters
+message PublicParameters {
+  string identifier = 1; // the identifier of the public parameters
+  uint64 version = 2; // the version of these public params
+  Identity auditor = 7; // is the public key of the auditor.
+  repeated Identity issuers = 8; // is a list of public keys of the entities that can issue tokens.
+  uint64 max_token = 9; // is the maximum quantity a token can hold
+  uint64 quantity_precision = 10; // is the precision used to represent quantities
+}

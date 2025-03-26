@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	factions "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
-	fv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
+	fv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
