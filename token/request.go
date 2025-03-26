@@ -310,6 +310,7 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 		wallet.w,
 		tokenIDs,
 		outputTokens,
+		nil,
 		&driver.TransferOptions{
 			Attributes: opt.Attributes,
 		},
@@ -338,7 +339,7 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 // Redeem appends a redeem action to the request. The action will be prepared using the provided owner wallet.
 // The action redeems tokens of the passed type for a total amount matching the passed value.
 // Additional options can be passed to customize the action.
-func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Type, value uint64, opts ...TransferOption) error {
+func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Type, value uint64, issuerPublicKey []byte, opts ...TransferOption) error {
 	opt, err := compileTransferOptions(opts...)
 	if err != nil {
 		return errors.WithMessagef(err, "failed compiling options [%v]", opts)
@@ -353,12 +354,14 @@ func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Typ
 	ts := r.TokenService.tms.TransferService()
 
 	// Compute redeem, it is a transfer with owner set to nil
+	logger.Infof("L1=", len(issuerPublicKey), issuerPublicKey[20], issuerPublicKey[21])
 	transfer, transferMetadata, err := ts.Transfer(
 		ctx,
 		r.Anchor,
 		wallet.w,
 		tokenIDs,
 		outputTokens,
+		issuerPublicKey,
 		&driver.TransferOptions{
 			Attributes: opt.Attributes,
 		},

@@ -44,7 +44,7 @@ func NewTransferService(
 
 // Transfer returns a TransferAction as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.OwnerWallet, tokenIDs []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.OwnerWallet, tokenIDs []*token.ID, Outputs []*token.Token, issuerPublicKey []byte, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	var isRedeem bool
 	// select inputs
 	inputTokens, err := s.TokenLoader.GetTokens(tokenIDs)
@@ -161,11 +161,16 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 
 	// add redeem signer
 	if isRedeem {
-		issuers := s.PublicParametersManager.PublicParameters().Issuers()
-		if len(issuers) < 1 {
-			return nil, nil, errors.New("no issuer found")
+		var issuer driver.Identity
+		if issuerPublicKey != nil {
+			issuer = issuerPublicKey
+		} else {
+			issuers := s.PublicParametersManager.PublicParameters().Issuers()
+			if len(issuers) < 1 {
+				return nil, nil, errors.New("no issuer found")
+			}
+			issuer = issuers[0]
 		}
-		issuer := issuers[0]
 
 		transfer.ESigners = []driver.Identity{issuer}
 		transferMetadata.ExtraSigners = []driver.Identity{issuer}

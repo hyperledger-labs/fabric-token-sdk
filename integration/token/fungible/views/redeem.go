@@ -23,6 +23,8 @@ import (
 type Redeem struct {
 	// Auditor is the name of the auditor that must be contacted to approve the operation
 	Auditor string
+	// IssuerPublicKey is the (optional) PK of an issuer that would need to be contacted to approve the operation
+	IssuerPublicKey []byte
 	// Wallet is the identifier of the wallet that owns the tokens to redeem
 	Wallet string
 	// TokenIDs contains a list of token ids to redeem. If empty, tokens are selected on the spot.
@@ -66,6 +68,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 		senderWallet,
 		t.Type,
 		t.Amount,
+		t.IssuerPublicKey,
 		token2.WithTokenIDs(t.TokenIDs...),
 	)
 	assert.NoError(err, "failed adding new tokens")

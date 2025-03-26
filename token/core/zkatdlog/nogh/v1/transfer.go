@@ -111,6 +111,7 @@ func (s *TransferService) Transfer(
 	_ driver.OwnerWallet,
 	tokenIDs []*token2.ID,
 	outputTokens []*token2.Token,
+	issuerPublicKey []byte,
 	opts *driver.TransferOptions,
 ) (driver.TransferAction, *driver.TransferMetadata, error) {
 	span := trace.SpanFromContext(ctx)
