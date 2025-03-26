@@ -7,3 +7,4 @@ SPDX-License-Identifier: Apache-2.0
 package protos
 
 //go:generate protoc ftactions.proto --go_out=../protos-go/actions --go_opt=paths=source_relative
+//go:generate protoc ftpp.proto --go_out=../protos-go/pp --go_opt=paths=source_relative

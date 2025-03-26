@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -125,12 +125,12 @@ func (s *TokensService) deobfuscateAsCommType(output driver.TokenOutput, outputM
 
 func (s *TokensService) deobfuscateAsFabtokenType(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
 	// TODO: refer only to the protos
-	tok := &core.Output{}
+	tok := &actions.Output{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token")
 	}
 
-	metadata := &core.OutputMetadata{}
+	metadata := &actions.OutputMetadata{}
 	if err := metadata.Deserialize(outputMetadata); err != nil {
 		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
 	}

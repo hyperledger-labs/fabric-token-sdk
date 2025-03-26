@@ -4,12 +4,16 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package core
+package setup
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	encoding "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
+	fabpp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
 	"github.com/pkg/errors"
 )
 
@@ -29,12 +33,12 @@ type PublicParams struct {
 	Ver uint64
 	// The precision of token quantities
 	QuantityPrecision uint64
+	// MaxToken is the maximum quantity a token can hold
+	MaxToken uint64
 	// This is set when audit is enabled
 	Auditor []byte
 	// This encodes the list of authorized issuers
 	IssuerIDs []driver.Identity
-	// MaxToken is the maximum quantity a token can hold
-	MaxToken uint64
 }
 
 // Setup initializes PublicParams
@@ -99,16 +103,59 @@ func (p *PublicParams) MaxTokenValue() uint64 {
 
 // Bytes marshals PublicParams
 func (p *PublicParams) Bytes() ([]byte, error) {
-	return json.Marshal(p)
+	issuers, err := protos.ToProtosSliceFunc(p.IssuerIDs, func(id driver.Identity) (*fabpp.Identity, error) {
+		return &fabpp.Identity{
+			Raw: id,
+		}, nil
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize issuer")
+	}
+
+	pp := &fabpp.PublicParameters{
+		Identifier: p.Label,
+		Version:    p.Ver,
+		Auditor: &fabpp.Identity{
+			Raw: p.Auditor,
+		},
+		Issuers:           issuers,
+		MaxToken:          p.MaxToken,
+		QuantityPrecision: p.QuantityPrecision,
+	}
+	return proto.Marshal(p)
+}
+
+func (p *PublicParams) FromBytes(data []byte) error {
+	publicParams := &fabpp.PublicParameters{}
+	if err := proto.Unmarshal(data, publicParams); err != nil {
+		return errors.Wrapf(err, "failed to unmarshal public parameters")
+	}
+	p.Ver = publicParams.Version
+	p.QuantityPrecision = publicParams.QuantityPrecision
+	p.MaxToken = publicParams.MaxToken
+	issuers, err := protos.FromProtosSliceFunc2(publicParams.Issuers, func(id *fabpp.Identity) (driver.Identity, error) {
+		if id == nil {
+			return nil, nil
+		}
+		return id.Raw, nil
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize issuers")
+	}
+	p.IssuerIDs = issuers
+	if publicParams.Auditor != nil {
+		p.Auditor = publicParams.Auditor.Raw
+	}
+	return nil
 }
 
 // Serialize marshals a wrapper around PublicParams (SerializedPublicParams)
 func (p *PublicParams) Serialize() ([]byte, error) {
-	raw, err := json.Marshal(p)
+	raw, err := p.Bytes()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to serialize public parameters")
 	}
-	return json.Marshal(&pp2.PublicParameters{
+	return encoding.Marshal(&pp.PublicParameters{
 		Identifier: p.Label,
 		Raw:        raw,
 	})
@@ -116,14 +163,14 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 
 // Deserialize un-marshals the passed bytes into PublicParams
 func (p *PublicParams) Deserialize(raw []byte) error {
-	publicParams := &pp2.PublicParameters{}
-	if err := json.Unmarshal(raw, publicParams); err != nil {
-		return err
+	container, err := encoding.Unmarshal(raw)
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
-	if publicParams.Identifier != p.Label {
-		return errors.Errorf("invalid identifier, expecting 'fabtoken', got [%s]", publicParams.Raw)
+	if container.Identifier != p.Label {
+		return errors.Errorf("invalid identifier, expecting 'fabtoken', got [%s]", container.Identifier)
 	}
-	return json.Unmarshal(publicParams.Raw, p)
+	return p.FromBytes(container.Raw)
 }
 
 // AuditorIdentity returns the auditor identity encoded in PublicParams
