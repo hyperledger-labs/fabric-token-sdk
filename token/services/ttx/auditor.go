@@ -69,8 +69,8 @@ func (a *TxAuditor) Release(tx *Transaction) {
 }
 
 // Transactions returns an iterator of transaction records filtered by the given params.
-func (a *TxAuditor) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
-	return a.auditDB.Transactions(params)
+func (a *TxAuditor) Transactions(params QueryTransactionsParams, pagination Pagination) (*PageTransactionsIterator, error) {
+	return a.auditDB.Transactions(params, pagination)
 }
 
 // NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.

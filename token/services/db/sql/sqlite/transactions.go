@@ -15,9 +15,13 @@ import (
 )
 
 func NewAuditTransactionDB(readDB, writeDB *sql.DB, opts common.NewDBOpts) (driver.AuditTransactionDB, error) {
-	return common.NewAuditTransactionDB(readDB, writeDB, opts, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewAuditTransactionDB(readDB, writeDB, opts,
+		common.NewTokenInterpreter(sqlite.NewInterpreter()),
+		sqlite.NewPaginatedInterpreter())
 }
 
 func NewTransactionDB(readDB, writeDB *sql.DB, opts common.NewDBOpts) (driver.TokenTransactionDB, error) {
-	return common.NewTransactionDB(readDB, writeDB, opts, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewTransactionDB(readDB, writeDB, opts,
+		common.NewTokenInterpreter(sqlite.NewInterpreter()),
+		sqlite.NewPaginatedInterpreter())
 }
