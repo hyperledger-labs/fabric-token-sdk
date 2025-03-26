@@ -142,18 +142,23 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	}
 
 	// return
+	actionInputs := make([]*actions.TransferActionInput, len(tokenIDs))
+	for i, id := range tokenIDs {
+		actionInputs[i] = &actions.TransferActionInput{
+			ID:    id,
+			Input: inputs[i],
+		}
+	}
 	transfer := &actions.TransferAction{
-		Inputs:      tokenIDs,
-		InputTokens: inputs,
-		Outputs:     outs,
-		Metadata:    meta.TransferActionMetadata(opts.Attributes),
+		Inputs:   actionInputs,
+		Outputs:  outs,
+		Metadata: meta.TransferActionMetadata(opts.Attributes),
 	}
 	transferMetadata := &driver.TransferMetadata{
 		Inputs:       transferInputsMetadata,
 		Outputs:      transferOutputsMetadata,
 		ExtraSigners: nil,
 	}
-
 	return transfer, transferMetadata, nil
 }
 
