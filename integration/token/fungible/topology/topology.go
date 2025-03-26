@@ -235,6 +235,9 @@ func Topology(opts common.Opts) []api.Topology {
 		}
 	}
 
+	// Add the default issuer
+	tms.AddIssuer(issuer)
+
 	// any extra TMS
 	for _, tmsOpts := range opts.ExtraTMSs {
 		tms := tokenTopology.AddTMS(nodeList, backendNetwork, backendChannel, tmsOpts.TokenSDKDriver)

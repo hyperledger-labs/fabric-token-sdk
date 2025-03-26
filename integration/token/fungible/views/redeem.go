@@ -9,6 +9,8 @@ package views
 import (
 	"encoding/json"
 
+	"github.com/pkg/errors"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -21,6 +23,8 @@ import (
 type Redeem struct {
 	// Auditor is the name of the auditor that must be contacted to approve the operation
 	Auditor string
+	// IssuerPublicKey is the (optional) PK of an issuer that would need to be contacted to approve the operation
+	IssuerPublicKey []byte
 	// Wallet is the identifier of the wallet that owns the tokens to redeem
 	Wallet string
 	// TokenIDs contains a list of token ids to redeem. If empty, tokens are selected on the spot.
@@ -64,6 +68,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 		senderWallet,
 		t.Type,
 		t.Amount,
+		t.IssuerPublicKey,
 		token2.WithTokenIDs(t.TokenIDs...),
 	)
 	assert.NoError(err, "failed adding new tokens")
@@ -105,4 +110,23 @@ func (p *RedeemViewFactory) NewView(in []byte) (view.View, error) {
 	err := json.Unmarshal(in, f.Redeem)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
+}
+
+type IssuerRedeemAcceptView struct{}
+
+func (a *IssuerRedeemAcceptView) Call(context view.Context) (interface{}, error) {
+	// Verify Token Request against Metadata
+	tx, err := ttx.ReceiveTransaction(context)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting transaction")
+	}
+
+	// Sign the transaction
+	// EndorserView generates the signature and send in back on the same communication session
+	_, err = context.RunView(ttx.NewEndorseView(tx))
+	if err != nil {
+		return nil, errors.Wrap(err, "issuer failed endorsing transaction")
+	}
+
+	return nil, nil
 }

@@ -806,17 +806,18 @@ func TransferCashWithSelector(network *integration.Infrastructure, sender *token
 	}
 }
 
-func RedeemCash(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference) {
-	RedeemCashForTMSID(network, id, wallet, typ, amount, auditor, nil)
+func RedeemCash(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuerPublicKey []byte) {
+	RedeemCashForTMSID(network, id, wallet, typ, amount, auditor, issuerPublicKey, nil)
 }
 
-func RedeemCashForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, tmsID *token2.TMSID) {
+func RedeemCashForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuerPublicKey []byte, tmsID *token2.TMSID) {
 	txid, err := network.Client(id.ReplicaName()).CallView("redeem", common.JSONMarshall(&views.Redeem{
-		Auditor: auditor.Id(),
-		Wallet:  wallet,
-		Type:    typ,
-		Amount:  amount,
-		TMSID:   tmsID,
+		Auditor:         auditor.Id(),
+		IssuerPublicKey: issuerPublicKey,
+		Wallet:          wallet,
+		Type:            typ,
+		Amount:          amount,
+		TMSID:           tmsID,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), tmsID, false)
@@ -1345,4 +1346,19 @@ func MultiSigSpendCashForTMSID(network *integration.Infrastructure, sender *toke
 	txID := common.JSONUnmarshalString(txidBoxed)
 	return txID
 
+}
+
+func SetBinding(network *integration.Infrastructure, issuer *token3.NodeReference, issuerPublicKey []byte, onNodes ...*token3.NodeReference) {
+	for _, node := range onNodes {
+		for _, nodeReplica := range node.AllNames() {
+			for _, issuerName := range issuer.AllNames() {
+				_, err := network.Client(nodeReplica).CallView("SetBinding", common.JSONMarshall(&views.Binding{
+					FSCNodeIdentity: network.Identity(issuerName), // issuer's network node identity.
+					Alias:           issuerPublicKey,              // issuer's public key for the token issuance
+				}))
+				Expect(err).NotTo(HaveOccurred())
+
+			}
+		}
+	}
 }

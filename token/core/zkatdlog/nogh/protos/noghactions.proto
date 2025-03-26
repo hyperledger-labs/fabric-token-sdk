@@ -55,6 +55,7 @@ message TransferAction {
   repeated TransferActionOutput outputs = 2; // outputs
   Proof proof = 3; // ZK Proof that shows that the transfer is correct
   map<string, bytes> metadata = 4; // Metadata contains the transfer action's metadata
+  repeated Identity e_signers = 5; // ESigners is the list of extra signer of the transfer action
 }
 
 message IssueActionInput {
