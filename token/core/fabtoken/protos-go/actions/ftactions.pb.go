@@ -12,10 +12,12 @@
 package actions
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	pp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -424,7 +426,7 @@ type IssueAction struct {
 	unknownFields protoimpl.UnknownFields
 
 	Version  uint64               `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
-	Issuer   *Identity            `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                                             // is the identity of issuer
+	Issuer   *pp.Identity         `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                                             // is the identity of issuer
 	Inputs   []*IssueActionInput  `protobuf:"bytes,3,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                                             // are the tokens to be redeemed by this issue action
 	Outputs  []*IssueActionOutput `protobuf:"bytes,4,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                                           // are the newly issued tokens
 	Metadata map[string][]byte    `protobuf:"bytes,5,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // Metadata of the issue action
@@ -469,7 +471,7 @@ func (x *IssueAction) GetVersion() uint64 {
 	return 0
 }
 
-func (x *IssueAction) GetIssuer() *Identity {
+func (x *IssueAction) GetIssuer() *pp.Identity {
 	if x != nil {
 		return x.Issuer
 	}
@@ -600,7 +602,7 @@ var file_ftactions_proto_goTypes = []interface{}{
 	(*IssueAction)(nil),          // 7: fabtoken.IssueAction
 	nil,                          // 8: fabtoken.TransferAction.MetadataEntry
 	nil,                          // 9: fabtoken.IssueAction.MetadataEntry
-	(*Identity)(nil),             // 10: fabtoken.Identity
+	(*pp.Identity)(nil),          // 10: fabtoken.Identity
 }
 var file_ftactions_proto_depIdxs = []int32{
 	1,  // 0: fabtoken.TransferActionInput.token_id:type_name -> fabtoken.TokenID
@@ -627,7 +629,6 @@ func file_ftactions_proto_init() {
 	if File_ftactions_proto != nil {
 		return
 	}
-	file_ftpp_proto_init()
 	if !protoimpl.UnsafeEnabled {
 		file_ftactions_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Token); i {

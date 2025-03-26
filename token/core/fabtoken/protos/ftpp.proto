@@ -8,7 +8,7 @@ syntax = "proto3";
 
 package fabtoken;
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions";
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp";
 
 message Identity {
   bytes raw = 1;
