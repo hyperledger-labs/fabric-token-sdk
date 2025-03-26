@@ -267,11 +267,16 @@ func (s *TransferService) Transfer(
 	}
 
 	if isRedeem {
-		issuers := s.PublicParametersManager.PublicParameters().Issuers()
-		if len(issuers) == 0 {
-			return nil, nil, errors.New("no issuers found")
+		var issuer driver.Identity
+		if issuerPublicKey != nil {
+			issuer = issuerPublicKey
+		} else {
+			issuers := s.PublicParametersManager.PublicParameters().Issuers()
+			if len(issuers) == 0 {
+				return nil, nil, errors.New("no issuers found")
+			}
+			issuer = issuers[0]
 		}
-		issuer := issuers[0]
 
 		transfer.ESigners = []driver.Identity{issuer}
 		transferMetadata.ExtraSigners = []driver.Identity{issuer}
