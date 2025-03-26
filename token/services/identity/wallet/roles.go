@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"strconv"
 
-	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
@@ -29,7 +29,7 @@ func (m Roles) Register(usage identity.RoleType, role identity.Role) {
 	m[usage] = role
 }
 
-func (m Roles) ToWalletRegistries(logger logging.Logger, db db.WalletDB) map[identity.RoleType]Registry {
+func (m Roles) ToWalletRegistries(logger logging.Logger, db driver.WalletDB) map[identity.RoleType]Registry {
 	res := make(map[identity.RoleType]Registry, len(m))
 	for roleType, role := range m {
 		roleAsString, ok := identity.RoleTypeStrings[roleType]

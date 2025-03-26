@@ -10,7 +10,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
@@ -25,8 +24,6 @@ import (
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
-
-type NewVaultFunc = func(network, channel, namespace string) (driver.TokenVault, error)
 
 type IdentityProvider interface {
 	DefaultIdentity() view.Identity
@@ -44,10 +41,9 @@ type Network struct {
 	tokenQueryExecutor      driver.TokenQueryExecutor
 	spentTokenQueryExecutor driver.SpentTokenQueryExecutor
 
-	tokenVaultLazyCache lazy.Provider[string, driver.TokenVault]
-	dbManager           *DBManager
-	flm                 FinalityListenerManager
-	keyTranslator       translator.KeyTranslator
+	dbManager     *DBManager
+	flm           FinalityListenerManager
+	keyTranslator translator.KeyTranslator
 }
 
 func NewNetwork(
@@ -55,7 +51,6 @@ func NewNetwork(
 	tmsProvider *token2.ManagementServiceProvider,
 	ip IdentityProvider,
 	n *orion.NetworkService,
-	newVault NewVaultFunc,
 	nsFinder common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
 	dbManager *DBManager,
@@ -65,21 +60,14 @@ func NewNetwork(
 	tracerProvider trace.TracerProvider,
 	keyTranslator translator.KeyTranslator,
 ) *Network {
-	loader := &loader{
-		newVault: newVault,
-		name:     n.Name(),
-		channel:  "",
-		vault:    n.Vault(),
-	}
 	return &Network{
-		nsFinder:            nsFinder,
-		filterProvider:      filterProvider,
-		ip:                  ip,
-		n:                   n,
-		viewManager:         viewManager,
-		tmsProvider:         tmsProvider,
-		tokenVaultLazyCache: lazy.NewProvider(loader.loadTokenVault),
-		ledger:              &ledger{network: n.Name(), viewManager: viewManager, dbManager: dbManager},
+		nsFinder:       nsFinder,
+		filterProvider: filterProvider,
+		ip:             ip,
+		n:              n,
+		viewManager:    viewManager,
+		tmsProvider:    tmsProvider,
+		ledger:         &ledger{network: n.Name(), viewManager: viewManager, dbManager: dbManager},
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			Namespace:  "tokensdk_orion",
 			LabelNames: []tracing.LabelName{},
@@ -140,18 +128,6 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 		return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
 	}
 	return nil, nil
-}
-
-func (n *Network) TokenVault(namespace string) (driver.TokenVault, error) {
-	if len(namespace) == 0 {
-		tms, err := n.tmsProvider.GetManagementService(token2.WithNetwork(n.n.Name()))
-		if tms == nil || err != nil {
-			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s]: %v", n.n.Name(), err)
-		}
-		namespace = tms.Namespace()
-	}
-
-	return n.tokenVaultLazyCache.Get(namespace)
 }
 
 func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
@@ -264,22 +240,6 @@ func (n *Network) Ledger() (driver.Ledger, error) {
 	return n.ledger, nil
 }
 
-type tokenVault struct {
-	tokenVault driver.TokenVault
-}
-
-func (v *tokenVault) QueryEngine() driver.QueryEngine {
-	return v.tokenVault.QueryEngine()
-}
-
-func (v *tokenVault) CertificationStorage() driver.CertificationStorage {
-	return v.tokenVault.CertificationStorage()
-}
-
-func (v *tokenVault) DeleteTokens(ids ...*token.ID) error {
-	return v.tokenVault.DeleteTokens(ids...)
-}
-
 type ledger struct {
 	network     string
 	viewManager *view2.Manager
@@ -350,19 +310,4 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 		boxed.(*TxStatusResponse).TokenRequestReference,
 	)
 	return nil
-}
-
-type loader struct {
-	newVault NewVaultFunc
-	name     string
-	channel  string
-	vault    orion.Vault
-}
-
-func (l *loader) loadTokenVault(namespace string) (driver.TokenVault, error) {
-	tv, err := l.newVault(l.name, l.channel, namespace)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get token vault")
-	}
-	return &tokenVault{tokenVault: tv}, nil
 }

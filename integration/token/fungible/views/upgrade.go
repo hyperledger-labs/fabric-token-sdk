@@ -184,6 +184,7 @@ func (p *TokensUpgradeResponderView) Call(context view.Context) (interface{}, er
 		err = tx.Upgrade(
 			wallet,
 			upgradeRequest.RecipientData.Identity,
+			upgradeRequest.ID,
 			upgradeRequest.Tokens,
 			upgradeRequest.Proof,
 		)

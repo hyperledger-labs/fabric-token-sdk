@@ -10,7 +10,6 @@ import (
 	errors2 "errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
@@ -20,7 +19,6 @@ import (
 )
 
 type TokensService struct {
-	*common.TokensService
 	IdentityDeserializer driver.Deserializer
 	OutputTokenFormat    token2.Format
 }
@@ -31,7 +29,6 @@ func NewTokensService(pp *core.PublicParams, identityDeserializer driver.Deseria
 		return nil, errors.WithMessagef(err, "failed getting supported token types")
 	}
 	return &TokensService{
-		TokensService:        common.NewTokensService(),
 		IdentityDeserializer: identityDeserializer,
 		OutputTokenFormat:    supportedTokens,
 	}, nil
@@ -75,6 +72,20 @@ func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata dr
 
 func (s *TokensService) SupportedTokenFormats() []token2.Format {
 	return []token2.Format{s.OutputTokenFormat}
+}
+
+type TokensUpgradeService struct{}
+
+func (s *TokensUpgradeService) NewUpgradeChallenge() (driver.TokensUpgradeChallenge, error) {
+	return nil, errors.New("not supported")
+}
+
+func (s *TokensUpgradeService) GenUpgradeProof(ch driver.TokensUpgradeChallenge, tokens []token2.LedgerToken, witness driver.TokensUpgradeWitness) (driver.TokensUpgradeProof, error) {
+	return nil, errors.New("not supported")
+}
+
+func (s *TokensUpgradeService) CheckUpgradeProof(ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token2.LedgerToken) (bool, error) {
+	return false, errors.New("not supported")
 }
 
 func SupportedTokenFormat(precision uint64) (token2.Format, error) {

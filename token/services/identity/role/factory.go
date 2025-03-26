@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
@@ -26,7 +25,7 @@ var toString = map[identity.RoleType]string{
 }
 
 type StorageProvider interface {
-	IdentityDB(tmsID token.TMSID) (driver2.IdentityDB, error)
+	IdentityDB(tmsID token.TMSID) (driver.IdentityDB, error)
 }
 
 // Factory is the factory for creating wallets, idemix and x509

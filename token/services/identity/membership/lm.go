@@ -18,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -49,7 +48,7 @@ type LocalMembership struct {
 	defaultNetworkIdentity driver.Identity
 	signerService          idriver.SigService
 	deserializerManager    idriver.DeserializerManager
-	identityDB             dbdriver.IdentityDB
+	identityDB             idriver.IdentityDB
 	binderService          idriver.BinderService
 	KeyManagerProviders    []KeyManagerProvider
 	IdentityType           string
@@ -70,7 +69,7 @@ func NewLocalMembership(
 	defaultNetworkIdentity driver.Identity,
 	signerService idriver.SigService,
 	deserializerManager idriver.DeserializerManager,
-	identityDB dbdriver.IdentityDB,
+	identityDB idriver.IdentityDB,
 	binderService idriver.BinderService,
 	identityType string,
 	defaultAnonymous bool,
@@ -480,14 +479,14 @@ func (l *LocalMembership) getLocalIdentity(label string) *LocalIdentity {
 	return nil
 }
 
-func (l *LocalMembership) storedIdentityConfigurations() ([]dbdriver.IdentityConfiguration, error) {
+func (l *LocalMembership) storedIdentityConfigurations() ([]idriver.IdentityConfiguration, error) {
 	it, err := l.identityDB.IteratorConfigurations(l.IdentityType)
 	if err != nil {
 		return nil, errors2.WithMessagef(err, "failed to get registered identities from kvs")
 	}
 	defer it.Close()
 	// copy the iterator
-	items := make([]dbdriver.IdentityConfiguration, 0)
+	items := make([]idriver.IdentityConfiguration, 0)
 	for it.HasNext() {
 		item, err := it.Next()
 		if err != nil {
