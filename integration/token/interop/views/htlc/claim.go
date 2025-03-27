@@ -8,6 +8,7 @@ package htlc
 
 import (
 	"encoding/json"
+	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -26,6 +27,11 @@ type Claim struct {
 	Wallet string
 	// PreImage of the hash encoded in the htlc script in the token to be claimed
 	PreImage []byte
+
+	// Script is used to lookup for PreImage in case that field is empty
+	Script *htlc.Script
+	// ScriptTMSID is the TMSID where to perform the lookup.
+	ScriptTMSID token.TMSID
 }
 
 type ClaimView struct {
@@ -48,12 +54,27 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 		}
 	}()
 
+	preImage := r.PreImage
+	if len(preImage) == 0 {
+		// Scan for the pre-image
+		var err error
+		preImage, err = htlc.ScanForPreImage(
+			context,
+			r.Script.HashInfo.Hash,
+			r.Script.HashInfo.HashFunc,
+			r.Script.HashInfo.HashEncoding,
+			5*time.Minute,
+			token.WithTMSID(r.ScriptTMSID),
+		)
+		assert.NoError(err, "failed to receive the preImage")
+	}
+
 	claimWallet := htlc.GetWallet(context, r.Wallet, token.WithTMSID(r.TMSID))
 	assert.NotNil(claimWallet, "wallet [%s] not found", r.Wallet)
 
-	matched, err := htlc.Wallet(context, claimWallet).ListByPreImage(r.PreImage)
+	matched, err := htlc.Wallet(context, claimWallet).ListByPreImage(preImage)
 	assert.NoError(err, "htlc script has expired")
-	assert.True(matched.Count() == 1, "expected only one htlc script to match, got [%d]", matched.Count())
+	assert.True(matched.Count() == 1, "expected only one htlc script to match [%s], got [%d]", view.Identity(preImage), matched.Count())
 
 	tx, err = htlc.NewAnonymousTransaction(
 		context,
@@ -61,7 +82,7 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 		ttx.WithTMSID(r.TMSID),
 	)
 	assert.NoError(err, "failed to create an htlc transaction")
-	assert.NoError(tx.Claim(claimWallet, matched.At(0), r.PreImage), "failed adding a claim for [%s]", matched.At(0).Id)
+	assert.NoError(tx.Claim(claimWallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
 
 	_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to collect endorsements on htlc transaction")

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
+	"runtime/debug"
 	"slices"
 	"time"
 
@@ -77,6 +78,7 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	}
 	if len(msg) == 0 {
 		info := context.Session().Info()
+		logger.Errorf("received empty message, session closed [%s:%v], [%s]", info.ID, info.Closed, string(debug.Stack()))
 		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
 	}
 	tx, err := NewSpendRequestFromBytes(msg)
