@@ -25,6 +25,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const (
+	MaxPriority = -1 // smaller numbers, higher priority
+)
+
 type KeyManagerProvider interface {
 	Get(identityConfig *driver.IdentityConfiguration) (KeyManager, error)
 }
@@ -41,6 +45,16 @@ type KeyManager interface {
 type LocalIdentityWithPriority struct {
 	Identity *LocalIdentity
 	Priority int
+}
+
+// PriorityComparison gives higher priority to smaller numbers
+var PriorityComparison = func(a, b LocalIdentityWithPriority) int {
+	if a.Priority < b.Priority {
+		return -1
+	} else if a.Priority > b.Priority {
+		return 1
+	}
+	return 0
 }
 
 type LocalMembership struct {
@@ -404,7 +418,7 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 		l.logger.Debugf("identity [%s:%s] not in target identities", name, config.URL)
 	} else {
 		// give it high priority
-		priority = -1
+		priority = MaxPriority
 		l.logger.Debugf("identity [%s:%s][%s] in target identities", name, config.URL, identity)
 	}
 
@@ -427,14 +441,7 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 		Identity: localIdentity,
 		Priority: priority,
 	})
-	slices.SortFunc(list, func(a, b LocalIdentityWithPriority) int {
-		if a.Priority < b.Priority {
-			return -1
-		} else if a.Priority > b.Priority {
-			return 1
-		}
-		return 0
-	})
+	slices.SortFunc(list, PriorityComparison)
 	l.localIdentitiesByName[name] = list
 
 	l.logger.Debugf("new local identity for [%s:%s] - [%d][%v]", name, eID, len(list), list)
