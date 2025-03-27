@@ -1382,6 +1382,7 @@ func SetBinding(network *integration.Infrastructure, issuer *token3.NodeReferenc
 			}
 		}
 	}
+}
 
 func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, networkName string) []byte {
 	tms := GetTMSByNetworkName(network, networkName)
