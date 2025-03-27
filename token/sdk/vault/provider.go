@@ -10,9 +10,8 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
-	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/pkg/errors"
@@ -28,7 +27,7 @@ type Provider struct {
 	auditDBProvider auditor.AuditDBProvider
 
 	vaultCacheLock sync.RWMutex
-	vaultCache     map[string]driver.TokenVault
+	vaultCache     map[string]driver.Vault
 }
 
 func NewVaultProvider(tokenDBProvider tokens.DBProvider, ttxDBProvider ttx.DBProvider, auditDBProvider auditor.AuditDBProvider) *Provider {
@@ -36,11 +35,11 @@ func NewVaultProvider(tokenDBProvider tokens.DBProvider, ttxDBProvider ttx.DBPro
 		ttxDBProvider:   ttxDBProvider,
 		tokenDBProvider: tokenDBProvider,
 		auditDBProvider: auditDBProvider,
-		vaultCache:      make(map[string]driver.TokenVault),
+		vaultCache:      make(map[string]driver.Vault),
 	}
 }
 
-func (v *Provider) Vault(network string, channel string, namespace string) (driver.TokenVault, error) {
+func (v *Provider) Vault(network string, channel string, namespace string) (driver.Vault, error) {
 	k := network + channel + namespace
 	// Check cache
 	v.vaultCacheLock.RLock()
@@ -79,7 +78,7 @@ func (v *Provider) Vault(network string, channel string, namespace string) (driv
 	}
 
 	// Create new vault
-	res, err = vault2.NewVault(tmsID, auditDB, ttxDB, tokenDB)
+	res, err = NewVault(tmsID, auditDB, ttxDB, tokenDB)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create new vault")
 	}

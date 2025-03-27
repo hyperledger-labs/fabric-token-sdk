@@ -33,6 +33,8 @@ type TokenManagerService interface {
 	IssueService() IssueService
 	TransferService() TransferService
 	TokensService() TokensService
+	// TokensUpgradeService return an instance of the TokensUpgradeService interface
+	TokensUpgradeService() TokensUpgradeService
 	AuditorService() AuditorService
 	CertificationService() CertificationService
 	Deserializer() Deserializer

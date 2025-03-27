@@ -13,7 +13,8 @@ import (
 
 // TokensService models the token service
 type TokensService struct {
-	ts driver.TokensService
+	ts  driver.TokensService
+	tus driver.TokensUpgradeService
 }
 
 // Deobfuscate processes the passed output and metadata to derive a token.Token, its issuer (if any), and its token format
@@ -23,12 +24,12 @@ func (t *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*toke
 
 // NewUpgradeChallenge generates a new upgrade challenge
 func (t *TokensService) NewUpgradeChallenge() ([]byte, error) {
-	return t.ts.NewUpgradeChallenge()
+	return t.tus.NewUpgradeChallenge()
 }
 
 // GenUpgradeProof generates an upgrade proof for the given challenge and tokens
 func (t *TokensService) GenUpgradeProof(id []byte, tokens []token.LedgerToken) ([]byte, error) {
-	return t.ts.GenUpgradeProof(id, tokens)
+	return t.tus.GenUpgradeProof(id, tokens, nil)
 }
 
 // SupportedTokenFormats returns the supported token formats

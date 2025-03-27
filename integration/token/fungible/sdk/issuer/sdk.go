@@ -53,6 +53,7 @@ func (p *SDK) Install() error {
 			registry.RegisterFactory("TxFinality", &views1.TxFinalityViewFactory{}),
 			registry.RegisterFactory("issue", &views.IssueCashViewFactory{}),
 			registry.RegisterFactory("SetBinding", &views.SetBindingViewFactory{}),
+			registry.RegisterFactory("FetchAndUpdatePublicParams", &views.UpdatePublicParamsViewFactory{}),
 			registry.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{}),
 			registry.RegisterResponder(&views.TokensUpgradeResponderView{}, &views.TokensUpgradeInitiatorView{}),
 			registry.RegisterResponder(&views.IssuerRedeemAcceptView{}, &views.RedeemView{}),

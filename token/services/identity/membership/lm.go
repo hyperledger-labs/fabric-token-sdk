@@ -18,12 +18,15 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v2"
+)
+
+const (
+	MaxPriority = -1 // smaller numbers, higher priority
 )
 
 type KeyManagerProvider interface {
@@ -44,12 +47,22 @@ type LocalIdentityWithPriority struct {
 	Priority int
 }
 
+// PriorityComparison gives higher priority to smaller numbers
+var PriorityComparison = func(a, b LocalIdentityWithPriority) int {
+	if a.Priority < b.Priority {
+		return -1
+	} else if a.Priority > b.Priority {
+		return 1
+	}
+	return 0
+}
+
 type LocalMembership struct {
 	config                 idriver.Config
 	defaultNetworkIdentity driver.Identity
 	signerService          idriver.SigService
 	deserializerManager    idriver.DeserializerManager
-	identityDB             dbdriver.IdentityDB
+	identityDB             idriver.IdentityDB
 	binderService          idriver.BinderService
 	KeyManagerProviders    []KeyManagerProvider
 	IdentityType           string
@@ -70,7 +83,7 @@ func NewLocalMembership(
 	defaultNetworkIdentity driver.Identity,
 	signerService idriver.SigService,
 	deserializerManager idriver.DeserializerManager,
-	identityDB dbdriver.IdentityDB,
+	identityDB idriver.IdentityDB,
 	binderService idriver.BinderService,
 	identityType string,
 	defaultAnonymous bool,
@@ -401,9 +414,11 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 	if keyManager.Anonymous() || len(l.targetIdentities) == 0 {
 		l.logger.Debugf("no target identity check needed, skip it")
 	} else if found := slices.ContainsFunc(l.targetIdentities, identity.Equal); !found {
-		l.logger.Debugf("identity [%s:%s] not in target identities, ignore it", name, config.URL)
-		return nil
+		// the identity is not in the target identities, we should give it a lower priority
+		l.logger.Debugf("identity [%s:%s] not in target identities", name, config.URL)
 	} else {
+		// give it high priority
+		priority = MaxPriority
 		l.logger.Debugf("identity [%s:%s][%s] in target identities", name, config.URL, identity)
 	}
 
@@ -426,14 +441,7 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 		Identity: localIdentity,
 		Priority: priority,
 	})
-	slices.SortFunc(list, func(a, b LocalIdentityWithPriority) int {
-		if a.Priority < b.Priority {
-			return -1
-		} else if a.Priority > b.Priority {
-			return 1
-		}
-		return 0
-	})
+	slices.SortFunc(list, PriorityComparison)
 	l.localIdentitiesByName[name] = list
 
 	l.logger.Debugf("new local identity for [%s:%s] - [%d][%v]", name, eID, len(list), list)
@@ -480,14 +488,14 @@ func (l *LocalMembership) getLocalIdentity(label string) *LocalIdentity {
 	return nil
 }
 
-func (l *LocalMembership) storedIdentityConfigurations() ([]dbdriver.IdentityConfiguration, error) {
+func (l *LocalMembership) storedIdentityConfigurations() ([]idriver.IdentityConfiguration, error) {
 	it, err := l.identityDB.IteratorConfigurations(l.IdentityType)
 	if err != nil {
 		return nil, errors2.WithMessagef(err, "failed to get registered identities from kvs")
 	}
 	defer it.Close()
 	// copy the iterator
-	items := make([]dbdriver.IdentityConfiguration, 0)
+	items := make([]idriver.IdentityConfiguration, 0)
 	for it.HasNext() {
 		item, err := it.Next()
 		if err != nil {

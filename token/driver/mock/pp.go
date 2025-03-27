@@ -4,31 +4,20 @@ package mock
 import (
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type PublicParameters struct {
-	AuditorsStub        func() []driver.Identity
+	AuditorsStub        func() []identity.Identity
 	auditorsMutex       sync.RWMutex
 	auditorsArgsForCall []struct {
 	}
 	auditorsReturns struct {
-		result1 []driver.Identity
+		result1 []identity.Identity
 	}
 	auditorsReturnsOnCall map[int]struct {
-		result1 []driver.Identity
-	}
-	BytesStub        func() ([]byte, error)
-	bytesMutex       sync.RWMutex
-	bytesArgsForCall []struct {
-	}
-	bytesReturns struct {
-		result1 []byte
-		result2 error
-	}
-	bytesReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
+		result1 []identity.Identity
 	}
 	CertificationDriverStub        func() string
 	certificationDriverMutex       sync.RWMutex
@@ -60,15 +49,15 @@ type PublicParameters struct {
 	identifierReturnsOnCall map[int]struct {
 		result1 string
 	}
-	IssuersStub        func() []driver.Identity
+	IssuersStub        func() []identity.Identity
 	issuersMutex       sync.RWMutex
 	issuersArgsForCall []struct {
 	}
 	issuersReturns struct {
-		result1 []driver.Identity
+		result1 []identity.Identity
 	}
 	issuersReturnsOnCall map[int]struct {
-		result1 []driver.Identity
+		result1 []identity.Identity
 	}
 	MaxTokenValueStub        func() uint64
 	maxTokenValueMutex       sync.RWMutex
@@ -146,7 +135,7 @@ type PublicParameters struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *PublicParameters) Auditors() []driver.Identity {
+func (fake *PublicParameters) Auditors() []identity.Identity {
 	fake.auditorsMutex.Lock()
 	ret, specificReturn := fake.auditorsReturnsOnCall[len(fake.auditorsArgsForCall)]
 	fake.auditorsArgsForCall = append(fake.auditorsArgsForCall, struct {
@@ -170,89 +159,33 @@ func (fake *PublicParameters) AuditorsCallCount() int {
 	return len(fake.auditorsArgsForCall)
 }
 
-func (fake *PublicParameters) AuditorsCalls(stub func() []driver.Identity) {
+func (fake *PublicParameters) AuditorsCalls(stub func() []identity.Identity) {
 	fake.auditorsMutex.Lock()
 	defer fake.auditorsMutex.Unlock()
 	fake.AuditorsStub = stub
 }
 
-func (fake *PublicParameters) AuditorsReturns(result1 []driver.Identity) {
+func (fake *PublicParameters) AuditorsReturns(result1 []identity.Identity) {
 	fake.auditorsMutex.Lock()
 	defer fake.auditorsMutex.Unlock()
 	fake.AuditorsStub = nil
 	fake.auditorsReturns = struct {
-		result1 []driver.Identity
+		result1 []identity.Identity
 	}{result1}
 }
 
-func (fake *PublicParameters) AuditorsReturnsOnCall(i int, result1 []driver.Identity) {
+func (fake *PublicParameters) AuditorsReturnsOnCall(i int, result1 []identity.Identity) {
 	fake.auditorsMutex.Lock()
 	defer fake.auditorsMutex.Unlock()
 	fake.AuditorsStub = nil
 	if fake.auditorsReturnsOnCall == nil {
 		fake.auditorsReturnsOnCall = make(map[int]struct {
-			result1 []driver.Identity
+			result1 []identity.Identity
 		})
 	}
 	fake.auditorsReturnsOnCall[i] = struct {
-		result1 []driver.Identity
+		result1 []identity.Identity
 	}{result1}
-}
-
-func (fake *PublicParameters) Bytes() ([]byte, error) {
-	fake.bytesMutex.Lock()
-	ret, specificReturn := fake.bytesReturnsOnCall[len(fake.bytesArgsForCall)]
-	fake.bytesArgsForCall = append(fake.bytesArgsForCall, struct {
-	}{})
-	stub := fake.BytesStub
-	fakeReturns := fake.bytesReturns
-	fake.recordInvocation("Bytes", []interface{}{})
-	fake.bytesMutex.Unlock()
-	if stub != nil {
-		return stub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *PublicParameters) BytesCallCount() int {
-	fake.bytesMutex.RLock()
-	defer fake.bytesMutex.RUnlock()
-	return len(fake.bytesArgsForCall)
-}
-
-func (fake *PublicParameters) BytesCalls(stub func() ([]byte, error)) {
-	fake.bytesMutex.Lock()
-	defer fake.bytesMutex.Unlock()
-	fake.BytesStub = stub
-}
-
-func (fake *PublicParameters) BytesReturns(result1 []byte, result2 error) {
-	fake.bytesMutex.Lock()
-	defer fake.bytesMutex.Unlock()
-	fake.BytesStub = nil
-	fake.bytesReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *PublicParameters) BytesReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.bytesMutex.Lock()
-	defer fake.bytesMutex.Unlock()
-	fake.BytesStub = nil
-	if fake.bytesReturnsOnCall == nil {
-		fake.bytesReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.bytesReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *PublicParameters) CertificationDriver() string {
@@ -414,7 +347,7 @@ func (fake *PublicParameters) IdentifierReturnsOnCall(i int, result1 string) {
 	}{result1}
 }
 
-func (fake *PublicParameters) Issuers() []driver.Identity {
+func (fake *PublicParameters) Issuers() []identity.Identity {
 	fake.issuersMutex.Lock()
 	ret, specificReturn := fake.issuersReturnsOnCall[len(fake.issuersArgsForCall)]
 	fake.issuersArgsForCall = append(fake.issuersArgsForCall, struct {
@@ -438,32 +371,32 @@ func (fake *PublicParameters) IssuersCallCount() int {
 	return len(fake.issuersArgsForCall)
 }
 
-func (fake *PublicParameters) IssuersCalls(stub func() []driver.Identity) {
+func (fake *PublicParameters) IssuersCalls(stub func() []identity.Identity) {
 	fake.issuersMutex.Lock()
 	defer fake.issuersMutex.Unlock()
 	fake.IssuersStub = stub
 }
 
-func (fake *PublicParameters) IssuersReturns(result1 []driver.Identity) {
+func (fake *PublicParameters) IssuersReturns(result1 []identity.Identity) {
 	fake.issuersMutex.Lock()
 	defer fake.issuersMutex.Unlock()
 	fake.IssuersStub = nil
 	fake.issuersReturns = struct {
-		result1 []driver.Identity
+		result1 []identity.Identity
 	}{result1}
 }
 
-func (fake *PublicParameters) IssuersReturnsOnCall(i int, result1 []driver.Identity) {
+func (fake *PublicParameters) IssuersReturnsOnCall(i int, result1 []identity.Identity) {
 	fake.issuersMutex.Lock()
 	defer fake.issuersMutex.Unlock()
 	fake.IssuersStub = nil
 	if fake.issuersReturnsOnCall == nil {
 		fake.issuersReturnsOnCall = make(map[int]struct {
-			result1 []driver.Identity
+			result1 []identity.Identity
 		})
 	}
 	fake.issuersReturnsOnCall[i] = struct {
-		result1 []driver.Identity
+		result1 []identity.Identity
 	}{result1}
 }
 
@@ -846,8 +779,6 @@ func (fake *PublicParameters) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.auditorsMutex.RLock()
 	defer fake.auditorsMutex.RUnlock()
-	fake.bytesMutex.RLock()
-	defer fake.bytesMutex.RUnlock()
 	fake.certificationDriverMutex.RLock()
 	defer fake.certificationDriverMutex.RUnlock()
 	fake.graphHidingMutex.RLock()

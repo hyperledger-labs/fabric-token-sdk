@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
@@ -33,7 +32,6 @@ func NewOrionDriver(
 	onsProvider *orion.NetworkServiceProvider,
 	viewRegistry driver2.Registry,
 	viewManager *view.Manager,
-	vaultProvider *vault2.Provider,
 	configProvider *view.ConfigService,
 	configService *config.Service,
 	identityProvider view2.IdentityProvider,
@@ -42,29 +40,13 @@ func NewOrionDriver(
 	tracerProvider trace.TracerProvider,
 ) driver.Driver {
 	keyTranslator := &translator.HashedKeyTranslator{KT: &keys.Translator{}}
-	return NewDriver(
-		onsProvider,
-		viewRegistry,
-		viewManager,
-		vaultProvider,
-		configProvider,
-		configService,
-		identityProvider,
-		filterProvider,
-		tmsProvider,
-		NewTokenExecutorProvider(viewManager),
-		NewSpentTokenExecutorProvider(viewManager, keyTranslator),
-		tracerProvider,
-		keyTranslator,
-		NewCommitterBasedFLMProvider(onsProvider, tracerProvider, viewManager),
-	)
+	return NewDriver(onsProvider, viewRegistry, viewManager, configProvider, configService, identityProvider, filterProvider, tmsProvider, NewTokenExecutorProvider(viewManager), NewSpentTokenExecutorProvider(viewManager, keyTranslator), tracerProvider, keyTranslator, NewCommitterBasedFLMProvider(onsProvider, tracerProvider, viewManager))
 }
 
 type Driver struct {
 	onsProvider                     *orion.NetworkServiceProvider
 	viewRegistry                    driver2.Registry
 	viewManager                     *view.Manager
-	vaultProvider                   driver.TokenVaultProvider
 	configProvider                  configProvider
 	configService                   *config.Service
 	identityProvider                view2.IdentityProvider
@@ -81,7 +63,6 @@ func NewDriver(
 	onsProvider *orion.NetworkServiceProvider,
 	viewRegistry driver2.Registry,
 	viewManager *view.Manager,
-	vaultProvider *vault2.Provider,
 	configProvider *view.ConfigService,
 	configService *config.Service,
 	identityProvider view2.IdentityProvider,
@@ -97,7 +78,6 @@ func NewDriver(
 		onsProvider:                     onsProvider,
 		viewRegistry:                    viewRegistry,
 		viewManager:                     viewManager,
-		vaultProvider:                   vaultProvider,
 		configProvider:                  configProvider,
 		configService:                   configService,
 		identityProvider:                identityProvider,
@@ -142,19 +122,5 @@ func (d *Driver) New(network, _ string) (driver.Network, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get flm")
 	}
-	return NewNetwork(
-		d.viewManager,
-		d.tmsProvider,
-		d.identityProvider,
-		n,
-		d.vaultProvider.Vault,
-		d.configService,
-		d.filterProvider,
-		dbManager,
-		flm,
-		tokenQueryExecutor,
-		spentTokenQueryExecutor,
-		d.tracerProvider,
-		d.keyTranslator,
-	), nil
+	return NewNetwork(d.viewManager, d.tmsProvider, d.identityProvider, n, d.configService, d.filterProvider, dbManager, flm, tokenQueryExecutor, spentTokenQueryExecutor, d.tracerProvider, d.keyTranslator), nil
 }

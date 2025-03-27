@@ -132,6 +132,22 @@ func (q *QueryEngine) GetStatus(txID string) (TxStatus, string, error) {
 	return q.qe.GetStatus(txID)
 }
 
+// GetTokenOutputs retrieves the token output as stored on the ledger for the passed ids.
+// For each id, the callback is invoked to unmarshal the output
+func (q *QueryEngine) GetTokenOutputs(ds []*token.ID, f func(id *token.ID, tokenRaw []byte) error) error {
+	return q.qe.GetTokenOutputs(ds, f)
+}
+
+// WhoDeletedTokens returns info about who deleted the passed tokens.
+// The bool array is an indicator used to tell if the token at a given position has been deleted or not
+func (q *QueryEngine) WhoDeletedTokens(iDs ...*token.ID) ([]string, []bool, error) {
+	return q.qe.WhoDeletedTokens(iDs...)
+}
+
+func (q *QueryEngine) UnspentLedgerTokensIteratorBy(ctx context.Context) (driver.LedgerTokensIterator, error) {
+	return q.qe.UnspentLedgerTokensIteratorBy(ctx)
+}
+
 type CertificationStorage struct {
 	c driver.CertificationStorage
 }

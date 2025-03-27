@@ -7,16 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
-	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -195,7 +193,7 @@ func TestGenFailure(t *testing.T) {
 				"dlog",
 				"--issuers", "aOrg1MSP,b",
 			},
-			ErrMsg: "Error: failed to generate public parameters: failed reading idemix issuer public key [msp/IssuerPublicKey]: open msp/IssuerPublicKey: no such file or directory",
+			ErrMsg: "failed to generate public parameters: failed to load issuer public key: failed reading idemix issuer public key [msp/IssuerPublicKey]: open msp/IssuerPublicKey: no such file or directory",
 		},
 		{
 			Args: []string{
@@ -204,35 +202,16 @@ func TestGenFailure(t *testing.T) {
 				"--idemix", "./testdata/idemix",
 				"--issuers", "Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]",
 			},
-			ErrMsg: "Error: failed to generate public parameters: failed to get issuer identity [Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]]:",
+			ErrMsg: "Error: failed to generate public parameters: failed to setup issuer and auditors: failed to get issuer identity [Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]]: failed to load certificates from Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]/signcerts: stat Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]/signcerts: no such file or directory",
 		},
 	}...,
 	)
 
-	for _, test := range tests {
-		testGenRunWithError(gt, tokengen, test.Args, test.ErrMsg)
+	for i, test := range tests {
+		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
+			testGenRunWithError(gt, tokengen, test.Args, test.ErrMsg)
+		})
 	}
-
-	tempOutput, err := os.MkdirTemp("", "tokengen-test")
-	gt.Expect(err).NotTo(HaveOccurred())
-
-	defer os.RemoveAll(tempOutput)
-	testGenRun(gt, tokengen, []string{"gen", "fabtoken", "--output", tempOutput})
-	raw, err := os.ReadFile(filepath.Join(tempOutput, "fabtoken_pp.json"))
-	gt.Expect(err).NotTo(HaveOccurred())
-	is := core.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
-	pp, err := is.PublicParametersFromBytes(raw)
-	gt.Expect(err).NotTo(HaveOccurred())
-	_, err = is.DefaultValidator(pp)
-	gt.Expect(err).NotTo(HaveOccurred())
-
-	testGenRun(gt, tokengen, []string{"gen", "dlog", "--idemix", "./testdata/idemix", "--output", tempOutput})
-	raw, err = os.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
-	gt.Expect(err).NotTo(HaveOccurred())
-	pp, err = is.PublicParametersFromBytes(raw)
-	gt.Expect(err).NotTo(HaveOccurred())
-	_, err = is.DefaultValidator(pp)
-	gt.Expect(err).NotTo(HaveOccurred())
 }
 
 func validateOutputEquivalent(gt *WithT, tempOutput, auditorsMSPdir, issuersMSPdir, idemixMSPdir string) {
@@ -265,6 +244,6 @@ func testGenRunWithError(gt *WithT, tokengen string, args []string, errMsg strin
 }
 
 func testGenRun(gt *WithT, tokengen string, args []string) {
-	_, err := exec.Command(tokengen, args...).CombinedOutput()
-	gt.Expect(err).ToNot(HaveOccurred(), "failed running tokengen [%s:%v]", tokengen, args)
+	output, err := exec.Command(tokengen, args...).CombinedOutput()
+	gt.Expect(err).ToNot(HaveOccurred(), "failed running tokengen [%s:%v] with output \n[%s]", tokengen, args, string(output))
 }

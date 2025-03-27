@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -27,6 +28,10 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
+	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
+	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
@@ -96,14 +101,9 @@ func IssueCashForTMSID(network *integration.Infrastructure, wallet string, typ t
 }
 
 func issueCashForTMSID(network *integration.Infrastructure, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, tmsId *token2.TMSID, endorsers []*token3.NodeReference, expectedErrorMsgs []string) string {
-	targetAuditor := auditor.Id()
-	if auditor.Id() == "issuer" || auditor.Id() == "newIssuer" {
-		// the issuer is the auditor, choose default identity
-		targetAuditor = ""
-	}
 	txIDBoxed, err := network.Client(issuer.ReplicaName()).CallView("issue", common.JSONMarshall(&views.IssueCash{
 		Anonymous:    anonymous,
-		Auditor:      targetAuditor,
+		Auditor:      auditor.Id(),
 		IssuerWallet: wallet,
 		TokenType:    typ,
 		Quantity:     amount,
@@ -921,10 +921,32 @@ func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte
 	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
 }
 
+func UpdatePublicParamsAndWait(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS, orion bool, nodes ...*token3.NodeReference) {
+	p := network.Ctx.PlatformsByName["token"]
+	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
+	for _, node := range nodes {
+		if orion {
+			FetchAndUpdatePublicParams(network, node)
+		} else {
+			if node.Id() == "custodian" {
+				continue
+			}
+		}
+		Eventually(GetPublicParams).WithArguments(network, node).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(publicParams))
+	}
+}
+
 func GetPublicParams(network *integration.Infrastructure, id *token3.NodeReference) []byte {
 	pp, err := network.Client(id.ReplicaName()).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParams{}))
 	Expect(err).NotTo(HaveOccurred())
 	return pp.([]byte)
+}
+
+func FetchAndUpdatePublicParams(network *integration.Infrastructure, id *token3.NodeReference) {
+	for _, name := range id.AllNames() {
+		_, err := network.Client(name).CallView("FetchAndUpdatePublicParams", common.JSONMarshall(&views.UpdatePublicParams{}))
+		Expect(err).NotTo(HaveOccurred())
+	}
 }
 
 func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReference, wallet string, walletType int) bool {
@@ -1360,4 +1382,95 @@ func SetBinding(network *integration.Infrastructure, issuer *token3.NodeReferenc
 			}
 		}
 	}
+}
+
+func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, networkName string) []byte {
+	tms := GetTMSByNetworkName(network, networkName)
+	auditorId := GetAuditorIdentity(tms, auditor)
+	issuerId := GetIssuerIdentity(tms, "newIssuer")
+
+	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*tplatform.Platform)
+	Expect(ok).To(BeTrue(), "failed to get token platform from context")
+
+	// Deserialize current params
+	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
+	Expect(err).NotTo(HaveOccurred())
+
+	genericPP, err := pp.Unmarshal(ppBytes)
+	Expect(err).NotTo(HaveOccurred())
+
+	type PP interface {
+		Validate() error
+		Serialize() ([]byte, error)
+		SetIssuers(identities []driver.Identity)
+		SetAuditors(identities []driver.Identity)
+	}
+	var pp PP
+	switch genericPP.Identifier {
+	case dlognoghv1.DLogPublicParameters:
+		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogPublicParameters)
+		Expect(err).NotTo(HaveOccurred())
+	case fabtokenv1.PublicParameters:
+		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
+		Expect(err).NotTo(HaveOccurred())
+	default:
+		Expect(false).To(BeTrue(), "unknown pp identitfier [%s]", genericPP.Identifier)
+	}
+
+	Expect(pp.Validate()).NotTo(HaveOccurred())
+	pp.SetAuditors([]driver.Identity{auditorId})
+	pp.SetIssuers([]driver.Identity{issuerId})
+
+	// Serialize
+	ppBytes, err = pp.Serialize()
+	Expect(err).NotTo(HaveOccurred())
+	return ppBytes
+}
+
+func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issuerWalletPath string, networkName string) []byte {
+	tms := GetTMSByNetworkName(network, networkName)
+	keyStore := x509.NewKeyStore(kvs.NewTrackedMemory())
+	kmp, _, err := x509.NewKeyManager(issuerWalletPath, nil, nil, keyStore)
+	Expect(err).NotTo(HaveOccurred())
+	newIdentity, _, err := kmp.Identity(nil)
+	Expect(err).NotTo(HaveOccurred())
+	wrap, err := identity.WrapWithType(x509.IdentityType, newIdentity)
+	Expect(err).NotTo(HaveOccurred())
+
+	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*tplatform.Platform)
+	Expect(ok).To(BeTrue(), "failed to get token platform from context")
+
+	// Deserialize current params
+	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
+	Expect(err).NotTo(HaveOccurred())
+
+	genericPP, err := pp.Unmarshal(ppBytes)
+	Expect(err).NotTo(HaveOccurred())
+
+	type PP interface {
+		AddIssuer(id driver.Identity)
+		Validate() error
+		Serialize() ([]byte, error)
+	}
+	var pp PP
+	switch genericPP.Identifier {
+	case dlognoghv1.DLogPublicParameters:
+		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogPublicParameters)
+		Expect(err).NotTo(HaveOccurred())
+	case fabtokenv1.PublicParameters:
+		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
+		Expect(err).NotTo(HaveOccurred())
+	default:
+		Expect(false).To(BeTrue(), "unknown pp identitfier [%s]", genericPP.Identifier)
+	}
+
+	// validate public params
+	Expect(pp.Validate()).NotTo(HaveOccurred())
+	// Update them
+	pp.AddIssuer(wrap)
+
+	// Serialize
+	ppBytes, err = pp.Serialize()
+	Expect(err).NotTo(HaveOccurred())
+	return ppBytes
 }

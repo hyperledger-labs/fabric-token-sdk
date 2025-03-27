@@ -35,6 +35,7 @@ func NewService(
 	transferService driver.TransferService,
 	auditorService driver.AuditorService,
 	tokensService driver.TokensService,
+	tokensUpgradeService driver.TokensUpgradeService,
 	authorization driver.Authorization,
 ) (*Service, error) {
 	root, err := common.NewTokenService[*core.PublicParams](
@@ -49,6 +50,7 @@ func NewService(
 		transferService,
 		auditorService,
 		tokensService,
+		tokensUpgradeService,
 		authorization,
 	)
 	if err != nil {

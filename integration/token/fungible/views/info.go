@@ -114,14 +114,10 @@ type WhoDeletedTokenView struct {
 }
 
 func (w *WhoDeletedTokenView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, w.TMSID.Network, w.TMSID.Channel)
-	assert.NotNil(net, "cannot find network [%s:%s]", w.TMSID.Network, w.TMSID.Channel)
-	vault, err := net.TokenVault(w.TMSID.Namespace)
-	assert.NoError(err, "failed to get vault for [%s:%s:%s]", w.TMSID.Network, w.TMSID.Channel, w.TMSID.Namespace)
-
-	who, deleted, err := vault.QueryEngine().WhoDeletedTokens(w.TokenIDs...)
+	tms := token.GetManagementService(context, token.WithTMSID(w.TMSID))
+	assert.NotNil(tms, "failed to get TMS [%s]", w.TMSID)
+	who, deleted, err := tms.Vault().NewQueryEngine().WhoDeletedTokens(w.TokenIDs...)
 	assert.NoError(err, "failed to lookup who deleted tokens")
-
 	return &WhoDeletedTokenResult{
 		Who:     who,
 		Deleted: deleted,
@@ -165,6 +161,33 @@ func GetTMSPublicParams(tms *token.ManagementService) []byte {
 	ppBytes, err := tms.PublicParametersManager().PublicParameters().Serialize()
 	assert.NoError(err, "failed to marshal public params")
 	return ppBytes
+}
+
+type UpdatePublicParams struct {
+	TMSID token.TMSID
+}
+
+type UpdatePublicParamsView struct {
+	*UpdatePublicParams
+}
+
+func (p *UpdatePublicParamsView) Call(context view.Context) (interface{}, error) {
+	tms := token.GetManagementService(context, ServiceOpts(&p.TMSID)...)
+	assert.NotNil(tms, "failed to get TMS")
+	assert.NotNil(tms.PublicParametersManager().PublicParameters(), "failed to validate local public parameters")
+	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
+	assert.NoError(err, "failed to fetch public parameters")
+	assert.NoError(token.GetManagementServiceProvider(context).Update(tms.ID(), fetchedPPRaw), "failed to update public parameters")
+	return nil, nil
+}
+
+type UpdatePublicParamsViewFactory struct{}
+
+func (p *UpdatePublicParamsViewFactory) NewView(in []byte) (view.View, error) {
+	f := &UpdatePublicParamsView{UpdatePublicParams: &UpdatePublicParams{}}
+	err := json.Unmarshal(in, f)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
 }
 
 type DoesWalletExist struct {

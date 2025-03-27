@@ -32,14 +32,14 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries|HSM, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, false, selector) })
 		})
 
 		Describe("Fungible with Auditor = Issuer", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, Aries|HSM|AuditorAsIssuer, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T2"), func() { fungible.TestAll(ts.II, "issuer", nil, true, selector) })
+			It("succeeded", Label("T2"), func() { fungible.TestAll(ts.II, "issuer", nil, true, false, selector) })
 		})
 	}
 })

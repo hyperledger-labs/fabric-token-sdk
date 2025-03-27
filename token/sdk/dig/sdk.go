@@ -100,11 +100,12 @@ func (p *SDK) Install() error {
 				new(token.Normalizer),
 				new(auditor.NetworkProvider),
 				new(common2.NetworkProvider),
+				new(tokens.NetworkProvider),
 			),
 		),
-		p.Container().Provide(func(networkProvider *network.Provider) *vault.PublicParamsProvider {
-			return &vault.PublicParamsProvider{Provider: networkProvider}
-		}, dig.As(new(core2.Vault))),
+		p.Container().Provide(func(vaultProvider *vault.Provider) *vault.PublicParamsStorage {
+			return &vault.PublicParamsStorage{Provider: vaultProvider}
+		}, dig.As(new(core2.PublicParametersStorage))),
 		p.Container().Provide(digutils.Identity[driver.ConfigService](), dig.As(new(core.ConfigProvider))),
 		p.Container().Provide(func() logging.Logger { return logging.MustGetLogger("token-sdk.core") }),
 		p.Container().Provide(core2.NewTMSProvider),
@@ -116,9 +117,6 @@ func (p *SDK) Install() error {
 		}, dig.As(new(selector.LockerProvider))),
 		p.Container().Provide(selectorProviders[sdriver.Driver(p.ConfigService().GetString("token.selector.driver"))], dig.As(new(token.SelectorManagerProvider))),
 		p.Container().Provide(network2.NewCertificationClientProvider, dig.As(new(token.CertificationClientProvider))),
-		p.Container().Provide(func(networkProvider *network.Provider) *vault.ProviderAdaptor {
-			return &vault.ProviderAdaptor{Provider: networkProvider}
-		}, dig.As(new(token.VaultProvider))),
 		p.Container().Provide(token.NewManagementServiceProvider),
 		p.Container().Provide(token.NewTMSNormalizer, dig.As(new(token.TMSNormalizer))),
 		p.Container().Provide(
@@ -164,6 +162,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(tokens.NewManager),
 		p.Container().Provide(digutils.Identity[*tokens.Manager](), dig.As(new(ttx.TokensProvider), new(auditor.TokenDBProvider))),
 		p.Container().Provide(vault.NewVaultProvider),
+		p.Container().Provide(digutils.Identity[*vault.Provider](), dig.As(new(token.VaultProvider))),
 		p.Container().Provide(tms.NewPostInitializer),
 		p.Container().Provide(ttx.NewMetrics),
 		p.Container().Provide(func(tracerProvider trace.TracerProvider) *tracing.TracerProvider {

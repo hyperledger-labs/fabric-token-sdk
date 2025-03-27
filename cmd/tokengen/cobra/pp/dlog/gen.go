@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/idemix"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -97,6 +97,7 @@ var cobraCommand = &cobra.Command{
 			Aries:             Aries,
 		})
 		if err != nil {
+			fmt.Printf("failed to generate public parameters [%s]\n", err)
 			return errors.Wrap(err, "failed to generate public parameters")
 		}
 		// generate the chaincode package
@@ -115,7 +116,7 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	// Load Idemix Issuer Public Key
 	_, ipkBytes, err := idemix.LoadIssuerPublicKey(args.IdemixMSPDir)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to load issuer public key")
 	}
 
 	// Setup
@@ -129,11 +130,11 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}
+	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
+		return nil, errors.Wrap(err, "failed to setup issuer and auditors")
+	}
 	if err := pp.Validate(); err != nil {
 		return nil, errors.Wrapf(err, "failed to validate public parameters")
-	}
-	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
-		return nil, err
 	}
 
 	// Store Public Params

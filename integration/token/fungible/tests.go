@@ -26,7 +26,7 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/dlogstress/support"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
+	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -274,7 +274,7 @@ var BobAcceptedTransactions = []TransactionRecord{
 
 type OnRestartFunc = func(*integration.Infrastructure, string)
 
-func TestAll(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, aries bool, sel *token3.ReplicaSelector) {
+func TestAll(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, aries bool, orion bool, sel *token3.ReplicaSelector) {
 	auditor := sel.Get(auditorId)
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
@@ -282,6 +282,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	charlie := sel.Get("charlie")
 	manager := sel.Get("manager")
 	endorsers := GetEndorsers(network, sel)
+	custodian := sel.Get("custodian")
 	RegisterAuditor(network, auditor)
 
 	// give some time to the nodes to get the public parameters
@@ -289,6 +290,9 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 
 	SetKVSEntry(network, issuer, "auditor", auditor.Id())
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+	if orion {
+		FetchAndUpdatePublicParams(network, custodian)
+	}
 
 	t0 := time.Now()
 	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
@@ -346,6 +350,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
 	// Register a new issuer wallet and issue with that wallet
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
 	Expect(tokenPlatform).ToNot(BeNil(), "cannot find token platform in context")
 	Expect(tokenPlatform.GetTopology()).ToNot(BeNil(), "invalid token topology, it is nil")
@@ -354,6 +359,15 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), issuer.Id(), "issuer.ExtraId")
 	// Register it
 	RegisterIssuerIdentity(network, issuer, "newIssuerWallet", newIssuerWalletPath)
+	// Update public parameters
+	networkName := "default"
+	if orion {
+		networkName = "orion"
+	}
+	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, networkName)
+	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, networkName), orion, alice, bob, charlie, manager, issuer, auditor, custodian)
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+
 	// Issuer tokens with this new wallet
 	t4 := time.Now()
 	IssueCash(network, "newIssuerWallet", "EUR", 10, bob, auditor, false, issuer)
@@ -833,15 +847,15 @@ func TestSelector(network *integration.Infrastructure, auditorId string, sel *to
 	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
 }
 
-func TestPublicParamsUpdate(network *integration.Infrastructure, auditorId string, ppBytes []byte, networkName string, issuerAsAuditor bool, sel *token3.ReplicaSelector) {
-	newAuditor := sel.Get(auditorId)
+func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID string, ppBytes []byte, networkName string, issuerAsAuditor bool, sel *token3.ReplicaSelector) {
+	newAuditor := sel.Get(newAuditorID)
 	tms := GetTMSByNetworkName(network, networkName)
 	newIssuer := sel.Get("newIssuer")
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
 	manager := sel.Get("manager")
 	auditor := sel.Get("auditor")
-	errorMessage := "issuer wallet [] not found"
+	errorMessage := "is not in issuers"
 	if issuerAsAuditor {
 		auditor = issuer
 	}
@@ -854,6 +868,7 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditorId strin
 	UpdatePublicParams(network, ppBytes, tms)
 
 	Eventually(GetPublicParams).WithArguments(network, newIssuer).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+	Eventually(GetPublicParams).WithArguments(network, issuer).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
 	if !issuerAsAuditor {
 		Eventually(GetPublicParams).WithArguments(network, newAuditor).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
 	}

@@ -24,7 +24,8 @@ var _ = Describe("Orion EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+
+			It("succeeded", func() { fungible.TestAll(ts.II, "auditor", nil, true, true, selector) })
 			It("Test redeem flow", Label("T1"), func() { fungible.TestRedeem(ts.II, selector, "orion") })
 		})
 	}
@@ -34,12 +35,11 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 	opts, selector := token2.NewReplicationOptions(factor, names...)
 	ts := token2.NewTestSuite(StartPortDlog, topology.Topology(
 		common.Opts{
-			Backend:        "orion",
-			CommType:       commType,
-			DefaultTMSOpts: common.TMSOpts{TokenSDKDriver: "dlog", Aries: true},
-			SDKs:           []api.SDK{&odlog.SDK{}},
-			// FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:info",
-			// FSCLogSpec:      "token-sdk=debug:orion-sdk=debug:view-sdk.services.comm=debug:info",
+			Backend:         "orion",
+			CommType:        commType,
+			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog", Aries: true},
+			SDKs:            []api.SDK{&odlog.SDK{}},
+			FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 			ReplicationOpts: opts,
 			OnlyUnity:       true,
 		},
