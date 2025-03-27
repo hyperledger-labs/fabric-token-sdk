@@ -6,7 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package token
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+)
 
 // ID identifies a token as a function of the identifier of the transaction (issue, transfer)
 // that created it and its index in that transaction
@@ -109,6 +112,13 @@ type LedgerToken struct {
 	Format        Format
 	Token         []byte
 	TokenMetadata []byte
+}
+
+func (t LedgerToken) Equal(right LedgerToken) bool {
+	return t.ID.Equal(right.ID) &&
+		bytes.Equal([]byte(t.Format), []byte(right.Format)) &&
+		bytes.Equal(t.Token, right.Token) &&
+		bytes.Equal(t.TokenMetadata, right.TokenMetadata)
 }
 
 // UnspentToken models an unspent token

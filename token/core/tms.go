@@ -20,7 +20,7 @@ import (
 
 type CallbackFunc func(tms driver.TokenManagerService, network, channel, namespace string) error
 
-type Vault interface {
+type PublicParametersStorage interface {
 	PublicParams(networkID string, channel string, namespace string) ([]byte, error)
 }
 
@@ -36,23 +36,23 @@ type PublicParameters struct {
 // TMSProvider is a token management service provider.
 // It is responsible for creating token management services for different networks.
 type TMSProvider struct {
-	logger             logging.Logger
-	configProvider     ConfigProvider
-	vault              Vault
-	callback           CallbackFunc
-	tokenDriverService *TokenDriverService
+	logger                  logging.Logger
+	configProvider          ConfigProvider
+	publicParametersStorage PublicParametersStorage
+	callback                CallbackFunc
+	tokenDriverService      *TokenDriverService
 
 	lock     sync.RWMutex
 	services map[string]driver.TokenManagerService
 }
 
-func NewTMSProvider(logger logging.Logger, configProvider ConfigProvider, vault Vault, tokenDriverService *TokenDriverService) *TMSProvider {
+func NewTMSProvider(logger logging.Logger, configProvider ConfigProvider, pps PublicParametersStorage, tokenDriverService *TokenDriverService) *TMSProvider {
 	ms := &TMSProvider{
-		logger:             logger,
-		configProvider:     configProvider,
-		vault:              vault,
-		services:           map[string]driver.TokenManagerService{},
-		tokenDriverService: tokenDriverService,
+		logger:                  logger,
+		configProvider:          configProvider,
+		publicParametersStorage: pps,
+		services:                map[string]driver.TokenManagerService{},
+		tokenDriverService:      tokenDriverService,
 	}
 	return ms
 }
@@ -207,10 +207,10 @@ func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerSe
 func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) ([]byte, error) {
 	// priorities:
 	// 1. opts.PublicParams
-	// 2. vault
+	// 2. publicParametersStorage
 	// 3. local configuration
 	// 4. public parameters fetcher, if any
-	for _, retriever := range []func(options *driver.ServiceOptions) ([]byte, error){m.ppFromOpts, m.ppFromVault, m.ppFromConfig, m.ppFromFetcher} {
+	for _, retriever := range []func(options *driver.ServiceOptions) ([]byte, error){m.ppFromOpts, m.ppFromStorage, m.ppFromConfig, m.ppFromFetcher} {
 		if ppRaw, err := retriever(opts); err != nil {
 			m.logger.Warnf("failed to retrieve params for [%s]: [%s]", opts, err)
 		} else if len(ppRaw) != 0 {
@@ -228,13 +228,13 @@ func (m *TMSProvider) ppFromOpts(opts *driver.ServiceOptions) ([]byte, error) {
 	return nil, errors.Errorf("public parameter not found in options")
 }
 
-func (m *TMSProvider) ppFromVault(opts *driver.ServiceOptions) ([]byte, error) {
-	ppRaw, err := m.vault.PublicParams(opts.Network, opts.Channel, opts.Namespace)
+func (m *TMSProvider) ppFromStorage(opts *driver.ServiceOptions) ([]byte, error) {
+	ppRaw, err := m.publicParametersStorage.PublicParams(opts.Network, opts.Channel, opts.Namespace)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to load public params from the vault")
+		return nil, errors.WithMessage(err, "failed to load public params from the publicParametersStorage")
 	}
 	if len(ppRaw) == 0 {
-		return nil, errors.Errorf("no public parames found in vault")
+		return nil, errors.Errorf("no public parames found in publicParametersStorage")
 	}
 	return ppRaw, nil
 }
@@ -266,7 +266,7 @@ func (m *TMSProvider) ppFromFetcher(opts *driver.ServiceOptions) ([]byte, error)
 			return nil, errors.WithMessage(err, "failed fetching public parameters")
 		}
 		if len(ppRaw) == 0 {
-			return nil, errors.Errorf("no public parames found in vault")
+			return nil, errors.Errorf("no public parames found in publicParametersStorage")
 		}
 		opts.PublicParams = ppRaw
 		return ppRaw, nil

@@ -248,14 +248,19 @@ func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ token2.Type, value u
 	return t.TokenRequest.Redeem(t.Context, wallet, typ, value, opts...)
 }
 
+// Upgrade performs an upgrade operation of the passed ledger tokens.
+// A proof and its challenge will be used to verify that the request of upgrade is legit.
+// If the proof verifies then the passed wallet will be used to issue a new amount of tokens
+// matching those whose upgrade has been requested.
 func (t *Transaction) Upgrade(
 	wallet *token.IssuerWallet,
-	receiver view.Identity,
+	receiver token.Identity,
+	challenge token.TokensUpgradeChallenge,
 	tokens []token2.LedgerToken,
-	proof []byte,
+	proof token.TokensUpgradeProof,
 	opts ...token.IssueOption,
 ) error {
-	_, err := t.TokenRequest.Upgrade(t.Context, wallet, receiver, tokens, proof, opts...)
+	_, err := t.TokenRequest.Upgrade(t.Context, wallet, receiver, challenge, tokens, proof, opts...)
 	return err
 }
 

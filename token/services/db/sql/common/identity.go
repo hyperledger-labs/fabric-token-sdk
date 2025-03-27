@@ -17,8 +17,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -107,7 +108,7 @@ func (db *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
 	return err
 }
 
-func (db *IdentityDB) IteratorConfigurations(configurationType string) (driver.Iterator[driver.IdentityConfiguration], error) {
+func (db *IdentityDB) IteratorConfigurations(configurationType string) (identity.ConfigurationIterator, error) {
 	query, err := NewSelect("id, url, conf, raw").From(db.table.IdentityConfigurations).Where("type = $1").Compile()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed compiling query")
@@ -229,7 +230,7 @@ func (db *IdentityDB) StoreSignerInfo(id, info []byte) error {
 	return nil
 }
 
-func (db *IdentityDB) GetExistingSignerInfo(ids ...driver2.Identity) ([]string, error) {
+func (db *IdentityDB) GetExistingSignerInfo(ids ...tdriver.Identity) ([]string, error) {
 	idHashes := make([]string, len(ids))
 	for i, id := range ids {
 		idHashes[i] = id.UniqueID()

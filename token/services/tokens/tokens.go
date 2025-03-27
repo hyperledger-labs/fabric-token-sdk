@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -53,8 +54,9 @@ type CacheEntry struct {
 
 // Tokens is the interface for the token service
 type Tokens struct {
-	TMSProvider TMSProvider
-	Storage     *DBStorage
+	TMSProvider     TMSProvider
+	NetworkProvider NetworkProvider
+	Storage         *DBStorage
 
 	RequestsCache Cache
 }
@@ -179,10 +181,16 @@ func (t *Tokens) StorePublicParams(raw []byte) error {
 	return t.Storage.StorePublicParams(raw)
 }
 
-// DeleteToken marks the entries corresponding to the passed token ids as deleted.
+// DeleteTokensBy marks the entries corresponding to the passed token ids as deleted.
 // The deletion is attributed to the passed deletedBy argument.
-func (t *Tokens) DeleteToken(deletedBy string, ids ...*token2.ID) (err error) {
+func (t *Tokens) DeleteTokensBy(deletedBy string, ids ...*token2.ID) (err error) {
 	return t.Storage.tokenDB.DeleteTokens(deletedBy, ids...)
+}
+
+// DeleteTokens marks the entries corresponding to the passed token ids as deleted.
+// The deletion is attributed to the caller of this function.
+func (t *Tokens) DeleteTokens(ids ...*token2.ID) (err error) {
+	return t.DeleteTokensBy(string(debug.Stack()), ids...)
 }
 
 func (t *Tokens) SetSpendableFlag(value bool, ids ...*token2.ID) error {
@@ -223,6 +231,96 @@ func (t *Tokens) SetSupportedTokenFormats(tokenTypes []token2.Format) error {
 // UnsupportedTokensIteratorBy returns the minimum information for upgrade about the tokens that are not supported
 func (t *Tokens) UnsupportedTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.UnsupportedTokensIterator, error) {
 	return t.Storage.tokenDB.UnsupportedTokensIteratorBy(ctx, walletID, typ)
+}
+
+// PruneInvalidUnspentTokens checks that each unspent token is actually available on the ledger.
+// Those that are not available are deleted.
+// The function returns the list of deleted token ids
+func (t *Tokens) PruneInvalidUnspentTokens(ctx context.Context) ([]*token2.ID, error) {
+	tmsID := t.Storage.tmsID
+	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
+	}
+	// network
+	tmsID = tms.ID()
+	net, err := t.NetworkProvider.GetNetwork(tmsID.Network, tms.Channel())
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting network [%s:%s]", tmsID.Network, tmsID.Channel)
+	}
+
+	// get unspent tokens
+	it, err := tms.Vault().NewQueryEngine().UnspentTokensIterator()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get an iterator of unspent tokens")
+	}
+	defer it.Close()
+
+	var deleted []*token2.ID
+	var buffer []*token2.UnspentToken
+	bufferSize := 50
+	for {
+		tok, err := it.Next()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get next unspent token")
+		}
+		if tok == nil {
+			break
+		}
+		buffer = append(buffer, tok)
+		if len(buffer) > bufferSize {
+			newDeleted, err := t.deleteTokens(ctx, net, tms, buffer)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+			}
+			deleted = append(deleted, newDeleted...)
+			buffer = nil
+		}
+	}
+	newDeleted, err := t.deleteTokens(ctx, net, tms, buffer)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+	}
+	deleted = append(deleted, newDeleted...)
+
+	return deleted, nil
+}
+
+func (t *Tokens) deleteTokens(context context.Context, network *network.Network, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
+	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
+	if len(tokens) == 0 {
+		return nil, nil
+	}
+
+	// get spent flags
+	ids := make([]*token2.ID, len(tokens))
+	for i, tok := range tokens {
+		ids[i] = tok.Id
+	}
+	meta, err := tms.WalletManager().SpentIDs(ids)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
+	}
+	spent, err := network.AreTokensSpent(context, tms.Namespace(), ids, meta)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "cannot fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
+	}
+
+	// remove the tokens flagged as spent
+	var toDelete []*token2.ID
+	for i, tok := range tokens {
+		if spent[i] {
+			logger.Debugf("token [%s] is spent", tok.Id)
+			toDelete = append(toDelete, tok.Id)
+		} else {
+			logger.Debugf("token [%s] is not spent", tok.Id)
+		}
+	}
+	if err := t.DeleteTokens(toDelete...); err != nil {
+		return nil, errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
+	}
+
+	return toDelete, nil
 }
 
 func (t *Tokens) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {

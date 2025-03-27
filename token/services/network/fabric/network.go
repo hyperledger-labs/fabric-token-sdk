@@ -41,8 +41,6 @@ const (
 
 var logger = logging.MustGetLogger("token-sdk.network.fabric")
 
-type NewVaultFunc = func(network, channel, namespace string) (driver.TokenVault, error)
-
 type lm struct {
 	lm *fabric.LocalMembership
 }
@@ -53,22 +51,6 @@ func (n *lm) DefaultIdentity() view.Identity {
 
 func (n *lm) AnonymousIdentity() (view.Identity, error) {
 	return n.lm.AnonymousIdentity()
-}
-
-type tokenVault struct {
-	tokenVault driver.TokenVault
-}
-
-func (v *tokenVault) QueryEngine() driver.QueryEngine {
-	return v.tokenVault.QueryEngine()
-}
-
-func (v *tokenVault) CertificationStorage() driver.CertificationStorage {
-	return v.tokenVault.CertificationStorage()
-}
-
-func (v *tokenVault) DeleteTokens(ids ...*token.ID) error {
-	return v.tokenVault.DeleteTokens(ids...)
 }
 
 type ledger struct {
@@ -112,7 +94,6 @@ type Network struct {
 	tokensProvider *tokens2.Manager
 	finalityTracer trace.Tracer
 
-	tokenVaultLazyCache        lazy.Provider[string, driver.TokenVault]
 	flm                        finality.ListenerManager
 	llm                        lookup.ListenerManager
 	defaultPublicParamsFetcher NetworkPublicParamsFetcher
@@ -125,7 +106,6 @@ type Network struct {
 func NewNetwork(
 	n *fabric.NetworkService,
 	ch *fabric.Channel,
-	newVault NewVaultFunc,
 	configuration common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
 	tokensProvider *tokens2.Manager,
@@ -140,12 +120,6 @@ func NewNetwork(
 	flm finality.ListenerManager,
 	llm lookup.ListenerManager,
 ) *Network {
-	loader := &loader{
-		newVault: newVault,
-		name:     n.Name(),
-		channel:  ch.Name(),
-		vault:    ch.Vault(),
-	}
 	return &Network{
 		n:                          n,
 		ch:                         ch,
@@ -155,7 +129,6 @@ func NewNetwork(
 		configuration:              configuration,
 		filterProvider:             filterProvider,
 		tokensProvider:             tokensProvider,
-		tokenVaultLazyCache:        lazy.NewProvider(loader.loadTokenVault),
 		flm:                        flm,
 		llm:                        llm,
 		defaultPublicParamsFetcher: defaultPublicParamsFetcher,
@@ -268,17 +241,6 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 	return nil, nil
 }
 
-func (n *Network) TokenVault(namespace string) (driver.TokenVault, error) {
-	if len(namespace) == 0 {
-		tms, err := n.tmsProvider.GetManagementService(token2.WithNetwork(n.n.Name()), token2.WithChannel(n.ch.Name()))
-		if tms == nil || err != nil {
-			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s:%s]: %v", n.n.Name(), n.ch.Name(), err)
-		}
-		namespace = tms.Namespace()
-	}
-	return n.tokenVaultLazyCache.Get(namespace)
-}
-
 func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
 	return n.n.Ordering().Broadcast(ctx, blob)
 }
@@ -359,21 +321,6 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 
 func (n *Network) Ledger() (driver.Ledger, error) {
 	return n.ledger, nil
-}
-
-type loader struct {
-	newVault NewVaultFunc
-	name     string
-	channel  string
-	vault    *fabric.Vault
-}
-
-func (l *loader) loadTokenVault(namespace string) (driver.TokenVault, error) {
-	tv, err := l.newVault(l.name, l.channel, namespace)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get token vault")
-	}
-	return &tokenVault{tokenVault: tv}, nil
 }
 
 type lookupListener struct {

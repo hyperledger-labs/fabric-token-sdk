@@ -11,9 +11,11 @@ import (
 	"time"
 
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
-	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/issue"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -22,20 +24,22 @@ import (
 
 type IssueService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common2.PublicParametersManager[*crypto.PublicParams]
+	PublicParametersManager common2.PublicParametersManager[*setup.PublicParams]
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
 	Metrics                 *Metrics
-	TokensService           *TokensService
+	TokensService           *token2.TokensService
+	TokensUpgradeService    *upgrade.Service
 }
 
 func NewIssueService(
 	logger logging.Logger,
-	publicParametersManager common2.PublicParametersManager[*crypto.PublicParams],
+	publicParametersManager common2.PublicParametersManager[*setup.PublicParams],
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
 	metrics *Metrics,
-	tokensService *TokensService,
+	tokensService *token2.TokensService,
+	tokensUpgradeService *upgrade.Service,
 ) *IssueService {
 	return &IssueService{
 		Logger:                  logger,
@@ -44,6 +48,7 @@ func NewIssueService(
 		Deserializer:            deserializer,
 		Metrics:                 metrics,
 		TokensService:           tokensService,
+		TokensUpgradeService:    tokensUpgradeService,
 	}
 }
 
@@ -61,28 +66,31 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		opts = &driver.IssueOptions{}
 	}
 
+	pp := s.PublicParametersManager.PublicParams()
 	if issuerIdentity.IsNone() && len(tokenType) == 0 && values == nil {
 		// this is a special case where the issue contains also redemption
 		// we need to extract token types and values from the passed tokens
-		tokenTypes, tokenValues, err := s.TokensService.ProcessTokensUpgradeRequest(opts.TokensUpgradeRequest)
+		tokensToUpgrade, err := s.TokensUpgradeService.ProcessTokensUpgradeRequest(opts.TokensUpgradeRequest)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed to extract token types and values from the passed tokens")
 		}
 
-		// check that token types are all the same
-		if len(tokenTypes) == 0 {
+		// check that token types are all the same and sum the token values
+		if len(tokensToUpgrade) == 0 {
 			return nil, nil, errors.New("no token types found in the passed tokens")
 		}
-		tokenType = tokenTypes[0]
-		for _, t := range tokenTypes {
-			if t != tokenType {
+		tokenType = tokensToUpgrade[0].Type
+		var totalValue uint64
+		for _, t := range tokensToUpgrade {
+			if t.Type != tokenType {
 				return nil, nil, errors.New("all token types should be the same")
 			}
-		}
-		// sum the token values
-		var totalValue uint64
-		for _, v := range tokenValues {
-			totalValue += v
+			// sum the token values
+			q, err := token.NewUBigQuantity(t.Quantity, pp.QuantityPrecision)
+			if err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to create quantity from [%s]", t.Quantity)
+			}
+			totalValue += q.Uint64()
 		}
 		values = []uint64{totalValue}
 
@@ -104,8 +112,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, err
 	}
 
-	pp := s.PublicParametersManager.PublicParams()
-	issuer := &issue2.Issuer{}
+	issuer := &issue.Issuer{}
 	issuer.New(tokenType, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,
 		Signer:   signer,
@@ -124,9 +131,9 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	var inputsMetadata []*driver.IssueInputMetadata
 	if opts != nil && opts.TokensUpgradeRequest != nil && len(opts.TokensUpgradeRequest.Tokens) > 0 {
 		tokens := opts.TokensUpgradeRequest.Tokens
-		issueAction.Inputs = make([]*issue2.ActionInput, len(tokens))
+		issueAction.Inputs = make([]*issue.ActionInput, len(tokens))
 		for i, tok := range tokens {
-			issueAction.Inputs[i] = &issue2.ActionInput{
+			issueAction.Inputs[i] = &issue.ActionInput{
 				ID:    tok.ID,
 				Token: tok.Token,
 			}
@@ -186,7 +193,7 @@ func (s *IssueService) VerifyIssue(ia driver.IssueAction, metadata []*driver.Iss
 	if ia == nil {
 		return errors.New("failed to verify issue: nil issue action")
 	}
-	action, ok := ia.(*issue2.Action)
+	action, ok := ia.(*issue.Action)
 	if !ok {
 		return errors.New("failed to verify issue: expected *zkatdlog.IssueAction")
 	}
@@ -196,14 +203,14 @@ func (s *IssueService) VerifyIssue(ia driver.IssueAction, metadata []*driver.Iss
 		return errors.New("failed to verify issue")
 	}
 	// todo check tokenInfo
-	return issue2.NewVerifier(
+	return issue.NewVerifier(
 		coms,
-		pp.(*crypto.PublicParams)).Verify(action.GetProof())
+		pp.(*setup.PublicParams)).Verify(action.GetProof())
 }
 
 // DeserializeIssueAction un-marshals raw bytes into a zkatdlog IssueAction
 func (s *IssueService) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
-	issue := &issue2.Action{}
+	issue := &issue.Action{}
 	err := issue.Deserialize(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize issue action")

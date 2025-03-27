@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/pkg/errors"
 )
 
@@ -59,7 +60,7 @@ func (s *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
 	return s.kvs.Put(k, &wp)
 }
 
-func (s *IdentityDB) IteratorConfigurations(configurationType string) (driver.Iterator[driver.IdentityConfiguration], error) {
+func (s *IdentityDB) IteratorConfigurations(configurationType string) (identity.ConfigurationIterator, error) {
 	it, err := s.kvs.GetByPartialCompositeID(
 		IdentityDBPrefix,
 		[]string{
