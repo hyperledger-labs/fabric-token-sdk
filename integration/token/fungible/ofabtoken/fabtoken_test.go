@@ -26,6 +26,7 @@ var _ = Describe("Orion EndToEnd", func() {
 			AfterEach(ts.TearDown)
 			It("succeeded", func() { fungible.TestAll(ts.II, "auditor", nil, true, true, selector) })
 			It("Test redeem flow", Label("T1"), func() { fungible.TestRedeem(ts.II, selector, "orion") })
+			It("DEBUG ofabtoken T2", Label("T2"), func() { fungible.TestFailWithNewIssuerWallet(ts.II, selector) })
 		})
 	}
 })
