@@ -35,6 +35,7 @@ var _ = Describe("EndToEnd", func() {
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
 			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, false, selector) })
+			It("DEBUG dlog T14", Label("T14"), func() { fungible.TestFailWithNewIssuerWallet(ts.II, selector) })
 		})
 
 		Describe("Extras with websockets", t.Label, func() {
