@@ -46,8 +46,6 @@ type PublicParameters interface {
 	MaxTokenValue() uint64
 	// CertificationDriver returns the certification driver identifier
 	CertificationDriver() string
-	// Bytes returns the marshalled version of the public parameters.
-	Bytes() ([]byte, error)
 	// Auditors returns the list of auditors.
 	Auditors() []Identity
 	// Issuers returns the list of issuers.

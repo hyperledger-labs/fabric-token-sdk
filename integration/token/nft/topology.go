@@ -111,6 +111,7 @@ func Topology(opts common.Opts) []api.Topology {
 	}
 
 	tms.AddAuditor(auditor)
+	tms.AddIssuerByID("issuer")
 
 	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)

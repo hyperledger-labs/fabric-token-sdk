@@ -4,13 +4,12 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package endorser
+package custodian
 
 import (
 	errors2 "errors"
 
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/pkg/errors"
@@ -35,7 +34,6 @@ func (p *SDK) Install() error {
 	) error {
 		return errors2.Join(
 			registry.RegisterFactory("GetPublicParams", &views.GetPublicParamsViewFactory{}),
-			registry.RegisterFactory("EndorserFinality", &endorser.FinalityViewFactory{}),
 			registry.RegisterFactory("FetchAndUpdatePublicParams", &views.UpdatePublicParamsViewFactory{}),
 		)
 	}); err != nil {

@@ -101,6 +101,9 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
 
+	pp := publicParamsManager.PublicParams()
+	logger.Infof("new token driver for tms id [%s] with label and version [%s:%s]: [%s]", tmsID, pp.Identifier(), pp.Version(), pp)
+
 	networkLocalMembership := n.LocalMembership()
 	qe := vault.QueryEngine()
 	ws, err := d.newWalletService(

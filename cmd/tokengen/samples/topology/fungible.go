@@ -102,6 +102,7 @@ func Topology(tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
 	fabric2.SetOrgs(tms, "Org1")
 	tms.SetTokenGenPublicParams("16")
 	tms.AddAuditor(auditor)
+	tms.AddIssuer(issuer)
 
 	for _, sdk := range sdks {
 		fscTopology.AddSDK(sdk)

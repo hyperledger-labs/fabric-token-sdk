@@ -99,7 +99,9 @@ func Topology(opts common.Opts) []api.Topology {
 	fabric2.SetOrgs(fabTokenTms, "Org2")
 
 	dlogTms.AddAuditor(auditor1)
+	dlogTms.AddIssuer(issuer1)
 	fabTokenTms.AddAuditor(auditor2)
+	fabTokenTms.AddIssuer(issuer2)
 
 	// FSC topology
 	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))

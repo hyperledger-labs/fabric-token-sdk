@@ -85,6 +85,11 @@ func (t *TMS) AddIssuer(issuer *node.Node) *TMS {
 	return t
 }
 
+func (t *TMS) AddIssuerByID(id string) *TMS {
+	t.Issuers = append(t.Issuers, id)
+	return t
+}
+
 func (t *TMS) SetTokenGenPublicParams(publicParamsGenArgs ...string) {
 	t.PublicParamsGenArgs = publicParamsGenArgs
 }

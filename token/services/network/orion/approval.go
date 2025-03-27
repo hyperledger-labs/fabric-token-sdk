@@ -13,9 +13,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
@@ -140,20 +138,11 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 func (r *RequestApprovalResponderView) process(context view.Context, request *ApprovalRequest) ([]byte, error) {
 	span := trace.SpanFromContext(context.Context())
 
-	ds, err := core.GetTokenDriverService(context)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get token driver")
+	tms := token.GetManagementService(context, token.WithNetwork(request.Network), token.WithNamespace(request.Namespace))
+	if tms == nil {
+		return nil, errors.Errorf("failed to get token management service for network [%s:%s]", request.Network, request.Namespace)
 	}
-	sm, err := r.dbManager.GetSessionManager(request.Network)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get session manager for network [%s]", request.Network)
-	}
-	span.AddEvent("fetch_public_params")
-	pp, err := sm.PublicParameters(ds, request.Namespace)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get public parameters for network [%s]", request.Network)
-	}
-	validator, err := ds.NewDefaultValidator(pp)
+	validator, err := tms.Validator()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create validator")
 	}
@@ -199,7 +188,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 		if status.Status == network.Invalid {
 			return true, errors.New("invalid transaction status")
 		}
-		logger.Debugf("transaction [%s] status [%s], retry, wait a bit and resubmit", request.TxID, status)
+		logger.Debugf("transaction [%s] status [%d], retry, wait a bit and resubmit", request.TxID, status)
 		return false, nil
 	})
 
@@ -209,7 +198,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	return envelopeRaw, nil
 }
 
-func (r *RequestApprovalResponderView) validate(context view.Context, request *ApprovalRequest, validator driver.Validator) ([]byte, bool, error) {
+func (r *RequestApprovalResponderView) validate(context view.Context, request *ApprovalRequest, validator *token.Validator) ([]byte, bool, error) {
 	span := trace.SpanFromContext(context.Context())
 
 	sm, err := r.dbManager.GetSessionManager(request.Network)
@@ -225,7 +214,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 		return nil, true, errors.Wrapf(err, "failed to get query executor for orion network [%s]", request.Network)
 	}
 	span.AddEvent("validate_request")
-	actions, attributes, err := token.NewValidator(validator).UnmarshallAndVerifyWithMetadata(
+	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(
 		context.Context(),
 		&LedgerWrapper{qe: qe, keyTranslator: &translator.HashedKeyTranslator{KT: &keys.Translator{}}},
 		request.TxID,
