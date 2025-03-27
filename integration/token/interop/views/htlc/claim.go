@@ -55,7 +55,7 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 	}()
 
 	preImage := r.PreImage
-	if len(preImage) == 0 {
+	if len(preImage) == 0 && r.Script != nil {
 		// Scan for the pre-image
 		var err error
 		preImage, err = htlc.ScanForPreImage(
