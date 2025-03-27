@@ -122,7 +122,7 @@ func (p *PublicParams) Bytes() ([]byte, error) {
 		MaxToken:          p.MaxToken,
 		QuantityPrecision: p.QuantityPrecision,
 	}
-	return proto.Marshal(p)
+	return proto.Marshal(pp)
 }
 
 func (p *PublicParams) FromBytes(data []byte) error {
