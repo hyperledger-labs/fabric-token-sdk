@@ -55,6 +55,10 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	span.AddEvent("start_receive_spendRequest_view")
 	defer span.AddEvent("end_receive_spendRequest_view")
 	request := &SpendRequest{}
+	if context == nil {
+		return nil, errors.New("Failed to read context. context is empty")
+		//WithMessage("failed to read audit event")
+	}
 	jsonsession := session.JSON(context)
 	err := jsonsession.Receive(request)
 	if err != nil {

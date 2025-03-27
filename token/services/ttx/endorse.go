@@ -347,6 +347,10 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction content")
 	}
+	if context == nil {
+		return nil, errors.New("Failed to read context. context is empty")
+		//WithMessage("failed to read audit event")
+	}
 	jsonSession := session2.JSON(context)
 	sigma, err := jsonSession.ReceiveRaw()
 	if err != nil {
@@ -553,6 +557,10 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 
 	span.AddEvent("Wait for ack")
 	//sigma, err := ReadMessage(session, 1*time.Minute)
+	if context == nil {
+		return errors.New("Failed to read context. context is empty")
+		//WithMessage("failed to read audit event")
+	}
 	jsonsession := session2.JSON(context)
 	sigma, err := jsonsession.ReceiveRaw()
 	//sigma, err := ReadMessage(session, time.Minute*4)
@@ -737,7 +745,10 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	span := trace.SpanFromContext(context.Context())
 	span.AddEvent("start_receive_transaction_view")
 	defer span.AddEvent("end_receive_transaction_view")
-
+	if context == nil {
+		return nil, errors.New("Failed to read context. context is empty")
+		//WithMessage("failed to read audit event")
+	}
 	jsonsession := session2.JSON(context)
 	msg, err := jsonsession.ReceiveRaw()
 	if err != nil {
@@ -849,6 +860,10 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Receiving signature request...")
+			}
+			if context == nil {
+				return nil, errors.New("Failed to read context. context is empty")
+				//WithMessage("failed to read audit event")
 			}
 			jsonsession := session2.JSON(context)
 			err := jsonsession.Receive(signatureRequest)

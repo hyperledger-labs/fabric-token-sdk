@@ -132,6 +132,10 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Receiving signature request...")
 			}
+			if context == nil {
+				return errors.New("Failed to read context. context is empty")
+				//WithMessage("failed to read audit event")
+			}
 			jsonsession := session2.JSON(context)
 			err := jsonsession.Receive(signatureRequest)
 			if err != nil {
