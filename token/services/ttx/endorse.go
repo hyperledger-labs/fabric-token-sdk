@@ -355,7 +355,10 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, errors.Wrap(err, "failed reading message")
 	}
-
+	if len(sigma) == 0 {
+		info := context.Session().Info()
+		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
+	}
 	verifier, err := verifierGetter(party)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
@@ -561,6 +564,10 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	if err != nil {
 		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
 	}
+	if len(sigma) == 0 {
+		info := context.Session().Info()
+		return errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
+	}
 	logger.Debugf("received ack from [%s] [%s], checking signature on [%s]",
 		entry.LongTerm, hash.Hashable(sigma).String(),
 		hash.Hashable(txRaw).String())
@@ -743,6 +750,10 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	msg, err := jsonSession.ReceiveRawWithTimeout(time.Minute * 4)
 	if err != nil {
 		span.RecordError(err)
+	}
+	if len(msg) == 0 {
+		info := context.Session().Info()
+		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
 	}
 	span.AddEvent("receive_tx")
 
