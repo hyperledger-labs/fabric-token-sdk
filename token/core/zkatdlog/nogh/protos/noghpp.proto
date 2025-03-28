@@ -33,7 +33,7 @@ message RangeProofParams {
 // PublicParameters describes typed public parameters
 message PublicParameters {
   string identifier = 1; // the identifier of the public parameters
-  string version = 2; // the version of these public params
+  uint64 version = 2; // the version of these public params
   CurveID curve_id = 3; // the pairing-friendly elliptic curve used for everything but Idemix.
   repeated G1 pedersen_generators = 4; // contains the public parameters for the Pedersen commitment scheme.
   RangeProofParams range_proof_params = 5; // contains the public parameters for the range proof scheme.

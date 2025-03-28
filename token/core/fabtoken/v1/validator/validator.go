@@ -8,30 +8,31 @@ package validator
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-type ValidateTransferFunc = common.ValidateTransferFunc[*core.PublicParams, *core.Output, *core.TransferAction, *core.IssueAction, driver.Deserializer]
+type ValidateTransferFunc = common.ValidateTransferFunc[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer]
 
-type ValidateIssueFunc = common.ValidateIssueFunc[*core.PublicParams, *core.Output, *core.TransferAction, *core.IssueAction, driver.Deserializer]
+type ValidateIssueFunc = common.ValidateIssueFunc[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer]
 
 type ActionDeserializer struct{}
 
-func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*core.IssueAction, []*core.TransferAction, error) {
-	issueActions := make([]*core.IssueAction, len(tr.Issues))
+func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*actions.IssueAction, []*actions.TransferAction, error) {
+	issueActions := make([]*actions.IssueAction, len(tr.Issues))
 	for i := 0; i < len(tr.Issues); i++ {
-		ia := &core.IssueAction{}
+		ia := &actions.IssueAction{}
 		if err := ia.Deserialize(tr.Issues[i]); err != nil {
 			return nil, nil, err
 		}
 		issueActions[i] = ia
 	}
 
-	transferActions := make([]*core.TransferAction, len(tr.Transfers))
+	transferActions := make([]*actions.TransferAction, len(tr.Transfers))
 	for i := 0; i < len(tr.Transfers); i++ {
-		ta := &core.TransferAction{}
+		ta := &actions.TransferAction{}
 		if err := ta.Deserialize(tr.Transfers[i]); err != nil {
 			return nil, nil, err
 		}
@@ -41,11 +42,11 @@ func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*cor
 	return issueActions, transferActions, nil
 }
 
-type Context = common.Context[*core.PublicParams, *core.Output, *core.TransferAction, *core.IssueAction, driver.Deserializer]
+type Context = common.Context[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer]
 
-type Validator = common.Validator[*core.PublicParams, *core.Output, *core.TransferAction, *core.IssueAction, driver.Deserializer]
+type Validator = common.Validator[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer]
 
-func NewValidator(logger logging.Logger, pp *core.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
+func NewValidator(logger logging.Logger, pp *setup.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
 	transferValidators := []ValidateTransferFunc{
 		TransferActionValidate,
 		TransferSignatureValidate,
@@ -58,7 +59,7 @@ func NewValidator(logger logging.Logger, pp *core.PublicParams, deserializer dri
 		IssueValidate,
 	}
 
-	return common.NewValidator[*core.PublicParams, *core.Output, *core.TransferAction, *core.IssueAction, driver.Deserializer](
+	return common.NewValidator[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer](
 		logger,
 		pp,
 		deserializer,

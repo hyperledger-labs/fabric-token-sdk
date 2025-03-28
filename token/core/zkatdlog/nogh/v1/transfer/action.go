@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	factions "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
-	fv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
+	fv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
@@ -20,6 +20,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
+
+const ProtocolV1 = 1
 
 type ActionInput struct {
 	ID             *token2.ID
@@ -312,6 +314,7 @@ func (t *Action) Serialize() ([]byte, error) {
 	}
 
 	action := &actions.TransferAction{
+		Version: ProtocolV1,
 		Inputs:  inputs,
 		Outputs: outputs,
 		Proof: &actions.Proof{
@@ -328,6 +331,11 @@ func (t *Action) Deserialize(raw []byte) error {
 	err := proto.Unmarshal(raw, action)
 	if err != nil {
 		return errors.Wrap(err, "failed to deserialize issue action")
+	}
+
+	// assert version
+	if action.Version != ProtocolV1 {
+		return errors.Errorf("invalid issue version, expected [%d], got [%d]", ProtocolV1, action.Version)
 	}
 
 	// inputs

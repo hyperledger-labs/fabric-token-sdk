@@ -121,15 +121,15 @@ type PublicParameters struct {
 	validateReturnsOnCall map[int]struct {
 		result1 error
 	}
-	VersionStub        func() string
+	VersionStub        func() uint64
 	versionMutex       sync.RWMutex
 	versionArgsForCall []struct {
 	}
 	versionReturns struct {
-		result1 string
+		result1 uint64
 	}
 	versionReturnsOnCall map[int]struct {
-		result1 string
+		result1 uint64
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -721,7 +721,7 @@ func (fake *PublicParameters) ValidateReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *PublicParameters) Version() string {
+func (fake *PublicParameters) Version() uint64 {
 	fake.versionMutex.Lock()
 	ret, specificReturn := fake.versionReturnsOnCall[len(fake.versionArgsForCall)]
 	fake.versionArgsForCall = append(fake.versionArgsForCall, struct {
@@ -745,32 +745,32 @@ func (fake *PublicParameters) VersionCallCount() int {
 	return len(fake.versionArgsForCall)
 }
 
-func (fake *PublicParameters) VersionCalls(stub func() string) {
+func (fake *PublicParameters) VersionCalls(stub func() uint64) {
 	fake.versionMutex.Lock()
 	defer fake.versionMutex.Unlock()
 	fake.VersionStub = stub
 }
 
-func (fake *PublicParameters) VersionReturns(result1 string) {
+func (fake *PublicParameters) VersionReturns(result1 uint64) {
 	fake.versionMutex.Lock()
 	defer fake.versionMutex.Unlock()
 	fake.VersionStub = nil
 	fake.versionReturns = struct {
-		result1 string
+		result1 uint64
 	}{result1}
 }
 
-func (fake *PublicParameters) VersionReturnsOnCall(i int, result1 string) {
+func (fake *PublicParameters) VersionReturnsOnCall(i int, result1 uint64) {
 	fake.versionMutex.Lock()
 	defer fake.versionMutex.Unlock()
 	fake.VersionStub = nil
 	if fake.versionReturnsOnCall == nil {
 		fake.versionReturnsOnCall = make(map[int]struct {
-			result1 string
+			result1 uint64
 		})
 	}
 	fake.versionReturnsOnCall[i] = struct {
-		result1 string
+		result1 uint64
 	}{result1}
 }
 

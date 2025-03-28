@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
@@ -26,8 +26,15 @@ func TransferActionValidate(ctx *Context) error {
 
 // TransferSignatureValidate validates the signatures for the inputs spent by an action
 func TransferSignatureValidate(ctx *Context) error {
-	ctx.InputTokens = ctx.TransferAction.InputTokens
-	for _, tok := range ctx.InputTokens {
+	if len(ctx.TransferAction.Inputs) == 0 {
+		return errors.Errorf("invalid number of token inputs, expected at least 1")
+	}
+
+	var inputToken []*actions.Output
+	for _, in := range ctx.TransferAction.Inputs {
+		tok := in.Input
+
+		inputToken = append(inputToken, tok)
 		owner := tok.GetOwner()
 		ctx.Logger.Debugf("check sender [%s]", driver.Identity(owner).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(owner)
@@ -41,6 +48,7 @@ func TransferSignatureValidate(ctx *Context) error {
 		}
 		ctx.Signatures = append(ctx.Signatures, sigma)
 	}
+	ctx.InputTokens = inputToken
 	return nil
 }
 
@@ -73,7 +81,7 @@ func TransferBalanceValidate(ctx *Context) error {
 		}
 	}
 	for _, output := range ctx.TransferAction.GetOutputs() {
-		out := output.(*core.Output)
+		out := output.(*actions.Output)
 		q, err := token.ToQuantity(out.Quantity, ctx.PP.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
@@ -109,7 +117,7 @@ func TransferHTLCValidate(ctx *Context) error {
 			}
 
 			// check type and quantity
-			output := ctx.TransferAction.GetOutputs()[0].(*core.Output)
+			output := ctx.TransferAction.GetOutputs()[0].(*actions.Output)
 			tok := output
 			if ctx.InputTokens[0].Type != tok.Type {
 				return errors.New("invalid transfer action: type of input does not match type of output")
@@ -140,7 +148,7 @@ func TransferHTLCValidate(ctx *Context) error {
 	}
 
 	for _, o := range ctx.TransferAction.GetOutputs() {
-		out, ok := o.(*core.Output)
+		out, ok := o.(*actions.Output)
 		if !ok {
 			return errors.New("invalid output")
 		}

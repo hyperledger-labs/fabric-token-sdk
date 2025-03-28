@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -40,7 +40,7 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 		TokenMetadata: []byte("meta1"),
 		Format:        token.Format("token format1"),
 	}}
-	fabtokenOutput := core.Output{
+	fabtokenOutput := actions.Output{
 		Owner:    []byte("owner1"),
 		Type:     "token type",
 		Quantity: "10",
@@ -171,7 +171,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 		TokenMetadata: []byte("meta1"),
 		Format:        token.Format("token format1"),
 	}}
-	fabtokenOutput := core.Output{
+	fabtokenOutput := actions.Output{
 		Owner:    []byte("owner1"),
 		Type:     "token type",
 		Quantity: "10",

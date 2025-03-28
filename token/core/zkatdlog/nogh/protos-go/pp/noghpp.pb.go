@@ -223,7 +223,7 @@ type PublicParameters struct {
 	unknownFields protoimpl.UnknownFields
 
 	Identifier             string                   `protobuf:"bytes,1,opt,name=identifier,proto3" json:"identifier,omitempty"`                                                           // the identifier of the public parameters
-	Version                string                   `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`                                                                 // the version of these public params
+	Version                uint64                   `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`                                                                // the version of these public params
 	CurveId                *math.CurveID            `protobuf:"bytes,3,opt,name=curve_id,json=curveId,proto3" json:"curve_id,omitempty"`                                                  // the pairing-friendly elliptic curve used for everything but Idemix.
 	PedersenGenerators     []*math.G1               `protobuf:"bytes,4,rep,name=pedersen_generators,json=pedersenGenerators,proto3" json:"pedersen_generators,omitempty"`                 // contains the public parameters for the Pedersen commitment scheme.
 	RangeProofParams       *RangeProofParams        `protobuf:"bytes,5,opt,name=range_proof_params,json=rangeProofParams,proto3" json:"range_proof_params,omitempty"`                     // contains the public parameters for the range proof scheme.
@@ -273,11 +273,11 @@ func (x *PublicParameters) GetIdentifier() string {
 	return ""
 }
 
-func (x *PublicParameters) GetVersion() string {
+func (x *PublicParameters) GetVersion() uint64 {
 	if x != nil {
 		return x.Version
 	}
-	return ""
+	return 0
 }
 
 func (x *PublicParameters) GetCurveId() *math.CurveID {
@@ -369,7 +369,7 @@ var file_noghpp_proto_rawDesc = []byte{
 	0x73, 0x12, 0x1e, 0x0a, 0x0a, 0x69, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x66, 0x69, 0x65, 0x72, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x69, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x66, 0x69, 0x65,
 	0x72, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x28, 0x0a, 0x08, 0x63,
+	0x28, 0x04, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x28, 0x0a, 0x08, 0x63,
 	0x75, 0x72, 0x76, 0x65, 0x5f, 0x69, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0d, 0x2e,
 	0x6e, 0x6f, 0x67, 0x68, 0x2e, 0x43, 0x75, 0x72, 0x76, 0x65, 0x49, 0x44, 0x52, 0x07, 0x63, 0x75,
 	0x72, 0x76, 0x65, 0x49, 0x64, 0x12, 0x39, 0x0a, 0x13, 0x70, 0x65, 0x64, 0x65, 0x72, 0x73, 0x65,

@@ -8,7 +8,7 @@ package v1
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
@@ -21,13 +21,13 @@ type TokenLoader interface {
 }
 
 type Service struct {
-	*common.Service[*core.PublicParams]
+	*common.Service[*setup.PublicParams]
 }
 
 func NewService(
 	logger logging.Logger,
 	ws *wallet.Service,
-	ppm common.PublicParametersManager[*core.PublicParams],
+	ppm common.PublicParametersManager[*setup.PublicParams],
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
 	configuration driver.Configuration,
@@ -38,7 +38,7 @@ func NewService(
 	tokensUpgradeService driver.TokensUpgradeService,
 	authorization driver.Authorization,
 ) (*Service, error) {
-	root, err := common.NewTokenService[*core.PublicParams](
+	root, err := common.NewTokenService[*setup.PublicParams](
 		logger,
 		ws,
 		ppm,

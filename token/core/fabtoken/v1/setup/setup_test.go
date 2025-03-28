@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package core
+package setup
 
 import (
 	"testing"
@@ -31,11 +31,15 @@ func TestNewPublicParamsFromBytes_Valid(t *testing.T) {
 	assert.NoError(t, err)
 	raw, err := pp.Serialize()
 	assert.NoError(t, err)
-	pp, err = NewPublicParamsFromBytes(raw, "fabtoken")
+	pp2, err := NewPublicParamsFromBytes(raw, "fabtoken")
 	assert.NoError(t, err)
-	assert.Equal(t, "fabtoken", pp.Label)
-	assert.Equal(t, uint64(32), pp.QuantityPrecision)
-	assert.Equal(t, uint64(4294967295), pp.MaxToken)
+	assert.Equal(t, "fabtoken", pp2.Label)
+	assert.Equal(t, ProtocolV1, pp2.Ver)
+	assert.Equal(t, uint64(32), pp2.QuantityPrecision)
+	assert.Equal(t, uint64(4294967295), pp2.MaxToken)
+	assert.Nil(t, pp2.IssuerIDs)
+	assert.Nil(t, pp2.Auditor)
+	assert.Equal(t, pp, pp2)
 }
 
 func TestPublicParams_Validate_Valid(t *testing.T) {
