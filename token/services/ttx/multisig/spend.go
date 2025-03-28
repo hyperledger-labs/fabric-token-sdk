@@ -7,10 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
+	"runtime/debug"
 	"slices"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
@@ -19,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap/zapcore"
 )
 
 // SpendRequest is the request to spend a token
@@ -71,7 +74,18 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 		span.RecordError(err)
 	}
 	span.AddEvent("receive_tx")
-
+	txBytes, err := json.Marshal(tx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal SpendRequest")
+	}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(txBytes), hash.Hashable(txBytes))
+	}
+	if len(txBytes) == 0 {
+		info := context.Session().Info()
+		logger.Errorf("received empty message, session closed [%s:%v], [%s]", info.ID, info.Closed, string(debug.Stack()))
+		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
+	}
 	//if logger.IsEnabledFor(zapcore.DebugLevel) {
 	//	logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(msg), hash.Hashable(msg))
 	//}
