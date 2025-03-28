@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"reflect"
 	"runtime/debug"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -23,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
@@ -348,8 +348,9 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction content")
 	}
-
-	sigma, err := ReadMessage(session, time.Minute)
+	jsonsession := session2.JSON(context)
+	sigma, err := jsonsession.ReceiveRaw()
+	//sigma, err := ReadMessage(session, time.Minute)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed reading message")
 	}
@@ -554,7 +555,10 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	}
 
 	span.AddEvent("Wait for ack")
-	sigma, err := ReadMessage(session, 1*time.Minute)
+	//sigma, err := ReadMessage(session, 1*time.Minute)
+	jsonsession := session2.JSON(context)
+	sigma, err := jsonsession.ReceiveRaw()
+	//sigma, err := ReadMessage(session, time.Minute*4)
 	if err != nil {
 		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
 	}
@@ -737,7 +741,9 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	span.AddEvent("start_receive_transaction_view")
 	defer span.AddEvent("end_receive_transaction_view")
 
-	msg, err := ReadMessage(context.Session(), time.Minute*4)
+	jsonsession := session2.JSON(context)
+	msg, err := jsonsession.ReceiveRaw()
+	//msg, err := ReadMessage(context.Session(), time.Minute*4)
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -841,20 +847,26 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			if err := kvss.(*kvs.KVS).Get(k, &srRaw); err != nil {
 				return nil, errors.Wrap(err, "failed to to store signature request")
 			}
+			err = Unmarshal(srRaw, signatureRequest)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed unmarshalling signature request")
+			}
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Receiving signature request...")
 			}
-			srRaw, err = ReadMessage(session, time.Minute)
+			jsonsession := session2.JSON(context)
+			err := jsonsession.Receive(signatureRequest)
+			//srRaw, err = ReadMessage(session, time.Minute)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed reading signature request")
 			}
 		}
 		// TODO: check what is signed...
-		err = Unmarshal(srRaw, signatureRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed unmarshalling signature request")
-		}
+		// err = Unmarshal(srRaw, signatureRequest)
+		// if err != nil {
+		// 	return nil, errors.Wrap(err, "failed unmarshalling signature request")
+		// }
 
 		sigService := s.tx.TokenService().SigService()
 		if !sigService.IsMe(signatureRequest.Signer) {

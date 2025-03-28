@@ -29,14 +29,14 @@ type SpendRequest struct {
 	Token *token.UnspentToken
 }
 
-func NewSpendRequestFromBytes(msg []byte) (*SpendRequest, error) {
-	request := &SpendRequest{}
-	err := json.Unmarshal(msg, request)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed unmarshalling spendRequest")
-	}
-	return request, nil
-}
+// func NewSpendRequestFromBytes(msg []byte) (*SpendRequest, error) {
+// 	request := &SpendRequest{}
+// 	err := json.Unmarshal(msg, request)
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "failed unmarshalling spendRequest")
+// 	}
+// 	return request, nil
+// }
 
 func ReceiveSpendRequest(context view.Context, opts ...ttx.TxOption) (*SpendRequest, error) {
 	logger.Debugf("receive a new spendRequest...")
@@ -66,26 +66,34 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	span := trace.SpanFromContext(context.Context())
 	span.AddEvent("start_receive_spendRequest_view")
 	defer span.AddEvent("end_receive_spendRequest_view")
-
-	msg, err := ttx.ReadMessage(context.Session(), time.Minute*4)
+	request := &SpendRequest{}
+	jsonsession := session.JSON(context)
+	err := jsonsession.Receive(request)
+	//msg, err := ttx.ReadMessage(context.Session(), time.Minute*4)
 	if err != nil {
 		span.RecordError(err)
 	}
 	span.AddEvent("receive_tx")
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(msg), hash.Hashable(msg))
+	requestBytes, err := json.Marshal(request)
+	if err != nil {
+		return nil, errors.Errorf("Failed to marshal request: %v", err)
 	}
-	if len(msg) == 0 {
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(requestBytes), hash.Hashable(requestBytes))
+	}
+	if len(requestBytes) == 0 {
 		info := context.Session().Info()
 		logger.Errorf("received empty message, session closed [%s:%v], [%s]", info.ID, info.Closed, string(debug.Stack()))
 		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
 	}
-	tx, err := NewSpendRequestFromBytes(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to receive spendRequest")
-	}
-	return tx, nil
+	// tx, err := NewSpendRequestFromBytes(msg)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to receive spendRequest")
+	// }
+	//return tx, nil
+	return request, nil
 }
 
 // SpendResponse is the response to a SpendRequest
