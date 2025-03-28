@@ -561,9 +561,6 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 
 	span.AddEvent("Wait for ack")
 	//sigma, err := ReadMessage(session, 1*time.Minute)
-	if context.Session() == nil {
-		return errors.New("sreetest 2nd read message context nil")
-	}
 	jsonSession := session2.NewFromSession(context, session)
 	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
