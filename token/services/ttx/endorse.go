@@ -854,10 +854,6 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			if err := kvss.(*kvs.KVS).Get(k, &srRaw); err != nil {
 				return nil, errors.Wrap(err, "failed to to store signature request")
 			}
-			err = Unmarshal(srRaw, signatureRequest)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed unmarshalling signature request")
-			}
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Receiving signature request...")
@@ -873,10 +869,10 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			}
 		}
 		// TODO: check what is signed...
-		// err = Unmarshal(srRaw, signatureRequest)
-		// if err != nil {
-		// 	return nil, errors.Wrap(err, "failed unmarshalling signature request")
-		// }
+		err = Unmarshal(srRaw, signatureRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed unmarshalling signature request")
+		}
 
 		sigService := s.tx.TokenService().SigService()
 		if !sigService.IsMe(signatureRequest.Signer) {
