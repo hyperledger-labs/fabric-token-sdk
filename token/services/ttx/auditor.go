@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -146,10 +147,14 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	// Receive signature
 	logger.Debugf("Receiving signature for [%s]", a.tx.ID())
 	span.AddEvent("start_receiving")
-	signature, err := ReadMessage(session, time.Minute)
+	jsonSession := session2.NewFromSession(context, session)
+	signature, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
 		span.RecordError(err)
 		return nil, errors.WithMessage(err, "failed to read audit event")
+	}
+	if len(signature) == 0 {
+		return nil, errors.New("Empty signature data.")
 	}
 	span.AddEvent("received_message")
 	logger.Debugf("reply received from %s", a.tx.Opts.Auditor)
