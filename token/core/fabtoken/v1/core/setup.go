@@ -182,6 +182,9 @@ func (p *PublicParams) Validate() error {
 	if p.MaxToken > maxTokenValue {
 		return errors.Errorf("max token value is invalid [%d]>[%d]", p.MaxToken, maxTokenValue)
 	}
+	if len(p.IssuerIDs) == 0 {
+		return errors.New("invalid public parameters: empty list of issuers")
+	}
 	return nil
 }
 
