@@ -29,14 +29,14 @@ type SpendRequest struct {
 	Token *token.UnspentToken
 }
 
-// func NewSpendRequestFromBytes(msg []byte) (*SpendRequest, error) {
-// 	request := &SpendRequest{}
-// 	err := json.Unmarshal(msg, request)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "failed unmarshalling spendRequest")
-// 	}
-// 	return request, nil
-// }
+func NewSpendRequestFromBytes(msg []byte) (*SpendRequest, error) {
+	request := &SpendRequest{}
+	err := json.Unmarshal(msg, request)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling spendRequest")
+	}
+	return request, nil
+}
 
 func ReceiveSpendRequest(context view.Context, opts ...ttx.TxOption) (*SpendRequest, error) {
 	logger.Debugf("receive a new spendRequest...")
@@ -66,38 +66,25 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	span := trace.SpanFromContext(context.Context())
 	span.AddEvent("start_receive_spendRequest_view")
 	defer span.AddEvent("end_receive_spendRequest_view")
-	tx := &SpendRequest{}
-	jsonSession := session.JSON(context)
-	err := jsonSession.ReceiveWithTimeout(tx, time.Minute*4)
-	//msg, err := ttx.ReadMessage(context.Session(), time.Minute*4)
+
+	msg, err := ttx.ReadMessage(context.Session(), time.Minute*4)
 	if err != nil {
 		span.RecordError(err)
 	}
 	span.AddEvent("receive_tx")
-	txBytes, err := json.Marshal(tx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal SpendRequest")
-	}
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(txBytes), hash.Hashable(txBytes))
+		logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(msg), hash.Hashable(msg))
 	}
-	if len(txBytes) == 0 {
+	if len(msg) == 0 {
 		info := context.Session().Info()
 		logger.Errorf("received empty message, session closed [%s:%v], [%s]", info.ID, info.Closed, string(debug.Stack()))
 		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
 	}
-	//if logger.IsEnabledFor(zapcore.DebugLevel) {
-	//	logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(msg), hash.Hashable(msg))
-	//}
-	// if len(msg) == 0 {
-	// 	info := context.Session().Info()
-	// 	logger.Errorf("received empty message, session closed [%s:%v], [%s]", info.ID, info.Closed, string(debug.Stack()))
-	// 	return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
-	// }
-	// tx, err := NewSpendRequestFromBytes(msg)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to receive spendRequest")
-	// }
+	tx, err := NewSpendRequestFromBytes(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to receive spendRequest")
+	}
 	return tx, nil
 }
 
