@@ -154,6 +154,9 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		span.RecordError(err)
 		return nil, errors.WithMessage(err, "failed to read audit event")
 	}
+	if len(signature) == 0 {
+		return nil, errors.New("Empty signature data.")
+	}
 	span.AddEvent("received_message")
 	logger.Debugf("reply received from %s", a.tx.Opts.Auditor)
 
