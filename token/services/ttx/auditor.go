@@ -148,8 +148,17 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	logger.Debugf("Receiving signature for [%s]", a.tx.ID())
 	span.AddEvent("start_receiving")
 	//signature, err := ReadMessage(session, time.Minute)
-	if context.Session() == nil || context.Session().Info().Caller == nil || context.Session().Info().CallerViewID == "" || context.Context() == nil {
-		return nil, errors.New("Empty context data.")
+	if context.Session() == nil {
+		return nil, errors.New("testsree context.Session() is nil")
+	}
+	if context.Session().Info().Caller == nil {
+		return nil, errors.New("testsree context.Session().Info().Caller is nil")
+	}
+	if context.Session().Info().CallerViewID == "" {
+		return nil, errors.New("testsree context.Session().Info().CallerViewID is empty")
+	}
+	if context.Context() == nil {
+		return nil, errors.New("testsree context.Context() is nil")
 	}
 	jsonSession := session2.JSON(context)
 	signature, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
