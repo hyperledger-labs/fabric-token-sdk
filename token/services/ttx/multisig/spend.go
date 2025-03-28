@@ -7,12 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
-	"runtime/debug"
 	"slices"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
@@ -22,7 +20,6 @@ import (
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap/zapcore"
 )
 
 // SpendRequest is the request to spend a token
@@ -30,14 +27,14 @@ type SpendRequest struct {
 	Token *token.UnspentToken
 }
 
-func NewSpendRequestFromBytes(msg []byte) (*SpendRequest, error) {
-	request := &SpendRequest{}
-	err := json.Unmarshal(msg, request)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed unmarshalling spendRequest")
-	}
-	return request, nil
-}
+// func NewSpendRequestFromBytes(msg []byte) (*SpendRequest, error) {
+// 	request := &SpendRequest{}
+// 	err := json.Unmarshal(msg, request)
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "failed unmarshalling spendRequest")
+// 	}
+// 	return request, nil
+// }
 
 func ReceiveSpendRequest(context view.Context, opts ...ttx.TxOption) (*SpendRequest, error) {
 	logger.Debugf("receive a new spendRequest...")
@@ -67,27 +64,27 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	span := trace.SpanFromContext(context.Context())
 	span.AddEvent("start_receive_spendRequest_view")
 	defer span.AddEvent("end_receive_spendRequest_view")
-
+	tx := &SpendRequest{}
 	jsonSession := session2.JSON(context)
-	msg, err := jsonSession.ReceiveRawWithTimeout(time.Minute * 4)
+	err := jsonSession.ReceiveWithTimeout(tx, time.Minute*4)
 	//msg, err := ttx.ReadMessage(context.Session(), time.Minute*4)
 	if err != nil {
 		span.RecordError(err)
 	}
 	span.AddEvent("receive_tx")
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(msg), hash.Hashable(msg))
-	}
-	if len(msg) == 0 {
-		info := context.Session().Info()
-		logger.Errorf("received empty message, session closed [%s:%v], [%s]", info.ID, info.Closed, string(debug.Stack()))
-		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
-	}
-	tx, err := NewSpendRequestFromBytes(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to receive spendRequest")
-	}
+	//if logger.IsEnabledFor(zapcore.DebugLevel) {
+	//	logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(msg), hash.Hashable(msg))
+	//}
+	// if len(msg) == 0 {
+	// 	info := context.Session().Info()
+	// 	logger.Errorf("received empty message, session closed [%s:%v], [%s]", info.ID, info.Closed, string(debug.Stack()))
+	// 	return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
+	// }
+	// tx, err := NewSpendRequestFromBytes(msg)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to receive spendRequest")
+	// }
 	return tx, nil
 }
 
