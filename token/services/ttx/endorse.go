@@ -564,7 +564,7 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	if context.Session() == nil {
 		return errors.New("sreetest 2nd read message context nil")
 	}
-	jsonSession := session2.JSON(context)
+	jsonSession := session2.NewFromSession(context, session)
 	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
 		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
