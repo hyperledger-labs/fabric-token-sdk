@@ -351,9 +351,9 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	}
 
 	//sigma, err := ReadMessage(session, time.Minute)
-	if context.Session() == nil {
-		return nil, errors.New("sreetest 1st read message context nil")
-	}
+	// if context.Session() == nil {
+	// 	return nil, errors.New("sreetest 1st read message context nil")
+	// }
 	jsonSession := session2.JSON(context)
 	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
@@ -746,9 +746,9 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	defer span.AddEvent("end_receive_transaction_view")
 
 	//msg, err := ReadMessage(context.Session(), time.Minute*4)
-	if context.Session() == nil {
-		return nil, errors.New("sreetest 3rd read message context nil")
-	}
+	// if context.Session() == nil {
+	// 	return nil, errors.New("sreetest 3rd read message context nil")
+	// }
 	jsonSession := session2.JSON(context)
 	msg, err := jsonSession.ReceiveRawWithTimeout(time.Minute * 4)
 	if err != nil {
@@ -859,9 +859,9 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 				logger.Debugf("Receiving signature request...")
 			}
 			//srRaw, err = ReadMessage(session, time.Minute)
-			if context.Session() == nil {
-				return nil, errors.New("sreetest 4th read message context nil")
-			}
+			// if context.Session() == nil {
+			// 	return nil, errors.New("sreetest 4th read message context nil")
+			// }
 			jsonSession := session2.JSON(context)
 			srRaw, err = jsonSession.ReceiveRawWithTimeout(time.Minute)
 			if err != nil {
