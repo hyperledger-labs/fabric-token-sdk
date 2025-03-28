@@ -9,6 +9,7 @@ package ttx
 import (
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -132,9 +133,9 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Receiving signature request...")
 			}
-			jsonsession := session2.JSON(context)
-			err := jsonsession.Receive(signatureRequest)
-			// msg, err := ReadMessage(session, time.Minute)
+			jsonSession := session2.JSON(context)
+			err := jsonSession.ReceiveWithTimeout(signatureRequest, time.Minute)
+			//msg, err := ReadMessage(session, time.Minute)
 			if err != nil {
 				return errors.Wrap(err, "failed reading signature request")
 			}

@@ -7,21 +7,19 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
-	"runtime/debug"
 	"slices"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap/zapcore"
 )
 
 // SpendRequest is the request to spend a token
@@ -66,34 +64,28 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	span := trace.SpanFromContext(context.Context())
 	span.AddEvent("start_receive_spendRequest_view")
 	defer span.AddEvent("end_receive_spendRequest_view")
-	request := &SpendRequest{}
-	jsonsession := session.JSON(context)
-	err := jsonsession.Receive(request)
+	tx := &SpendRequest{}
+	jsonSession := session2.JSON(context)
+	err := jsonSession.ReceiveWithTimeout(tx, time.Minute*4)
 	//msg, err := ttx.ReadMessage(context.Session(), time.Minute*4)
 	if err != nil {
 		span.RecordError(err)
 	}
 	span.AddEvent("receive_tx")
 
-	requestBytes, err := json.Marshal(request)
-	if err != nil {
-		return nil, errors.Errorf("Failed to marshal request: %v", err)
-	}
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(requestBytes), hash.Hashable(requestBytes))
-	}
-	if len(requestBytes) == 0 {
-		info := context.Session().Info()
-		logger.Errorf("received empty message, session closed [%s:%v], [%s]", info.ID, info.Closed, string(debug.Stack()))
-		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
-	}
+	//if logger.IsEnabledFor(zapcore.DebugLevel) {
+	//	logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(msg), hash.Hashable(msg))
+	//}
+	// if len(msg) == 0 {
+	// 	info := context.Session().Info()
+	// 	logger.Errorf("received empty message, session closed [%s:%v], [%s]", info.ID, info.Closed, string(debug.Stack()))
+	// 	return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
+	// }
 	// tx, err := NewSpendRequestFromBytes(msg)
 	// if err != nil {
 	// 	return nil, errors.Wrap(err, "failed to receive spendRequest")
 	// }
-	//return tx, nil
-	return request, nil
+	return tx, nil
 }
 
 // SpendResponse is the response to a SpendRequest

@@ -9,6 +9,7 @@ package ttx
 import (
 	"context"
 	"encoding/base64"
+	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -146,13 +147,14 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	// Receive signature
 	logger.Debugf("Receiving signature for [%s]", a.tx.ID())
 	span.AddEvent("start_receiving")
-
-	jsonsession := session2.JSON(context)
-	signature, err := jsonsession.ReceiveRaw()
-	//signature, err := ReadMessage(session, time.Minute)
+	jsonSession := session2.NewFromSession(context, session)
+	signature, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
 		span.RecordError(err)
 		return nil, errors.WithMessage(err, "failed to read audit event")
+	}
+	if len(signature) == 0 {
+		return nil, errors.New("Empty signature data.")
 	}
 	span.AddEvent("received_message")
 	logger.Debugf("reply received from %s", a.tx.Opts.Auditor)
