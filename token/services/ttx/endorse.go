@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
@@ -349,7 +350,9 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 		return nil, errors.Wrap(err, "failed sending transaction content")
 	}
 
-	sigma, err := ReadMessage(session, time.Minute)
+	//sigma, err := ReadMessage(session, time.Minute)
+	jsonSession := session2.JSON(context)
+	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed reading message")
 	}
@@ -554,7 +557,9 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	}
 
 	span.AddEvent("Wait for ack")
-	sigma, err := ReadMessage(session, 1*time.Minute)
+	//sigma, err := ReadMessage(session, 1*time.Minute)
+	jsonSession := session2.JSON(context)
+	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
 		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
 	}
@@ -737,7 +742,9 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	span.AddEvent("start_receive_transaction_view")
 	defer span.AddEvent("end_receive_transaction_view")
 
-	msg, err := ReadMessage(context.Session(), time.Minute*4)
+	//msg, err := ReadMessage(context.Session(), time.Minute*4)
+	jsonSession := session2.JSON(context)
+	msg, err := jsonSession.ReceiveRawWithTimeout(time.Minute * 4)
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -845,7 +852,9 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Receiving signature request...")
 			}
-			srRaw, err = ReadMessage(session, time.Minute)
+			//srRaw, err = ReadMessage(session, time.Minute)
+			jsonSession := session2.JSON(context)
+			srRaw, err = jsonSession.ReceiveRawWithTimeout(time.Minute)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed reading signature request")
 			}
