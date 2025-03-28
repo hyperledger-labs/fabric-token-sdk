@@ -351,10 +351,10 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	}
 
 	//sigma, err := ReadMessage(session, time.Minute)
-	if context.Session() == nil {
-		return nil, errors.New("sreetest 1st read message context nil")
-	}
-	jsonSession := session2.JSON(context)
+	// if context.Session() == nil {
+	// 	return nil, errors.New("sreetest 1st read message context nil")
+	// }
+	jsonSession := session2.NewFromSession(context, session)
 	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed reading message")
