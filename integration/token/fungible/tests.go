@@ -366,6 +366,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	}
 	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, networkName)
 	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, networkName), orion, alice, bob, charlie, manager, issuer, auditor, custodian)
+	tms := GetTMSByNetworkName(network, networkName)
+	SetBinding(network, issuer, GetIssuerIdentity(tms, issuer.Id()), bob)
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
 	// Issuer tokens with this new wallet
