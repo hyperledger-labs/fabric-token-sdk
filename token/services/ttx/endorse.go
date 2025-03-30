@@ -350,10 +350,6 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 		return nil, errors.Wrap(err, "failed sending transaction content")
 	}
 
-	//sigma, err := ReadMessage(session, time.Minute)
-	// if context.Session() == nil {
-	// 	return nil, errors.New("sreetest 1st read message context nil")
-	// }
 	jsonSession := session2.NewFromSession(context, session)
 	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
@@ -560,7 +556,6 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	}
 
 	span.AddEvent("Wait for ack")
-	//sigma, err := ReadMessage(session, 1*time.Minute)
 	jsonSession := session2.NewFromSession(context, session)
 	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
@@ -744,11 +739,6 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	span := trace.SpanFromContext(context.Context())
 	span.AddEvent("start_receive_transaction_view")
 	defer span.AddEvent("end_receive_transaction_view")
-
-	//msg, err := ReadMessage(context.Session(), time.Minute*4)
-	if context.Session() == nil {
-		return nil, errors.New("sreetest 3rd read message context nil")
-	}
 	jsonSession := session2.JSON(context)
 	msg, err := jsonSession.ReceiveRawWithTimeout(time.Minute * 4)
 	if err != nil {
@@ -857,10 +847,6 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Receiving signature request...")
-			}
-			//srRaw, err = ReadMessage(session, time.Minute)
-			if context.Session() == nil {
-				return nil, errors.New("sreetest 4th read message context nil")
 			}
 			jsonSession := session2.JSON(context)
 			srRaw, err = jsonSession.ReceiveRawWithTimeout(time.Minute)

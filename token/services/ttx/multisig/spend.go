@@ -66,35 +66,10 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	tx := &SpendRequest{}
 	jsonSession := session.JSON(context)
 	err := jsonSession.ReceiveWithTimeout(tx, time.Minute*4)
-	//msg, err := ttx.ReadMessage(context.Session(), time.Minute*4)
 	if err != nil {
 		span.RecordError(err)
 	}
 	span.AddEvent("receive_tx")
-	// txBytes, err := json.Marshal(tx)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to marshal SpendRequest")
-	// }
-	// if logger.IsEnabledFor(zapcore.DebugLevel) {
-	// 	logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(txBytes), hash.Hashable(txBytes))
-	// }
-	// if len(txBytes) == 0 {
-	// 	info := context.Session().Info()
-	// 	logger.Errorf("received empty message, session closed [%s:%v], [%s]", info.ID, info.Closed, string(debug.Stack()))
-	// 	return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
-	// }
-	//if logger.IsEnabledFor(zapcore.DebugLevel) {
-	//	logger.Debugf("ReceiveSpendRequestView: received spendRequest, len [%d][%s]", len(msg), hash.Hashable(msg))
-	//}
-	// if len(msg) == 0 {
-	// 	info := context.Session().Info()
-	// 	logger.Errorf("received empty message, session closed [%s:%v], [%s]", info.ID, info.Closed, string(debug.Stack()))
-	// 	return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
-	// }
-	// tx, err := NewSpendRequestFromBytes(msg)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to receive spendRequest")
-	// }
 	return tx, nil
 }
 
