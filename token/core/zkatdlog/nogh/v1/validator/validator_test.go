@@ -309,7 +309,7 @@ func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfe
 	owners := make([][]byte, 2)
 	owners[0] = id
 
-	issuerSigner, err := ecdsa.NewECDSASigner()
+	issuerSigner, err := NewECDSASigner()
 	Expect(err).NotTo(HaveOccurred())
 
 	issuer := &issue2.Issuer{}
