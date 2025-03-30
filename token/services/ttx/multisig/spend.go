@@ -26,15 +26,6 @@ type SpendRequest struct {
 	Token *token.UnspentToken
 }
 
-// func NewSpendRequestFromBytes(msg []byte) (*SpendRequest, error) {
-// 	request := &SpendRequest{}
-// 	err := json.Unmarshal(msg, request)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "failed unmarshalling spendRequest")
-// 	}
-// 	return request, nil
-// }
-
 func ReceiveSpendRequest(context view.Context, opts ...ttx.TxOption) (*SpendRequest, error) {
 	logger.Debugf("receive a new spendRequest...")
 	requestBoxed, err := context.RunView(NewReceiveSpendRequestView(), view.WithSameContext())
