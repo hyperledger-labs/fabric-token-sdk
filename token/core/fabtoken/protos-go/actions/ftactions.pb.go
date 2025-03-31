@@ -12,12 +12,11 @@
 package actions
 
 import (
-	reflect "reflect"
-	sync "sync"
-
 	pp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
