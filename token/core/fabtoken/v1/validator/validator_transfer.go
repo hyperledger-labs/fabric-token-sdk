@@ -42,6 +42,37 @@ func TransferSignatureValidate(ctx *Context) error {
 			return errors.Wrapf(err, "failed deserializing owner [%v][%s]", tok, driver.Identity(owner).UniqueID())
 		}
 		ctx.Logger.Debugf("signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
+
+		// If transfer action is a redeem, verify the signature of the issuer
+		isRedeem := func() bool {
+			for _, output := range ctx.TransferAction.Outputs {
+				if output.Owner == nil {
+					return true
+				}
+			}
+			return false
+		}
+
+		if isRedeem() {
+			ctx.Logger.Debugf("at redeem action validation")
+
+			issuer := ctx.TransferAction.GetIssuer()
+			if issuer == nil {
+				return errors.Errorf("On Redeem action, must have at least one issuer")
+			}
+
+			verifier, err := ctx.Deserializer.GetIssuerVerifier(issuer)
+			if err != nil {
+				return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
+			}
+
+			sigma, err := ctx.SignatureProvider.HasBeenSignedBy(issuer, verifier)
+			if err != nil {
+				return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
+			}
+			ctx.Signatures = append(ctx.Signatures, sigma)
+		}
+
 		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(owner, verifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
