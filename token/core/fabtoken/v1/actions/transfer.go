@@ -72,6 +72,8 @@ type TransferAction struct {
 	Outputs []*Output
 	// Metadata contains the transfer action's metadata
 	Metadata map[string][]byte
+	// Issuer contains the identity of the issuer to sign the transfer action
+	Issuer driver.Identity
 }
 
 func (t *TransferAction) NumInputs() int {
@@ -162,6 +164,11 @@ func (t *TransferAction) GetSerialNumbers() []string {
 // GetMetadata returns the transfer action's metadata
 func (t *TransferAction) GetMetadata() map[string][]byte {
 	return t.Metadata
+}
+
+// GetIssuer returns the issuer to sign the transaction
+func (t *TransferAction) GetIssuer() driver.Identity {
+	return t.Issuer
 }
 
 func (t *TransferAction) Validate() error {
