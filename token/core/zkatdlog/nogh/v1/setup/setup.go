@@ -170,8 +170,8 @@ type PublicParams struct {
 	// IdemixIssuerPublicKeys contains the idemix issuer public keys
 	// Wallets should prefer the use of keys valid under the public key whose index in the array is the smallest.
 	IdemixIssuerPublicKeys []*IdemixIssuerPublicKey
-	// Auditor is the public key of the auditor.
-	Auditor driver.Identity
+	// Auditors is a list of the public keys of the auditor(s).
+	AuditorIDs []driver.Identity
 	// IssuerIDs is a list of public keys of the entities that can issue tokens.
 	IssuerIDs []driver.Identity
 	// MaxToken is the maximum quantity a token can hold
@@ -253,10 +253,7 @@ func (p *PublicParams) Bytes() ([]byte, error) {
 }
 
 func (p *PublicParams) Auditors() []driver.Identity {
-	if len(p.Auditor) == 0 {
-		return []driver.Identity{}
-	}
-	return []driver.Identity{p.Auditor}
+	return p.AuditorIDs
 }
 
 // Issuers returns the list of authorized issuers
@@ -285,6 +282,14 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize issuer")
 	}
+	auditors, err := protos.ToProtosSliceFunc(p.AuditorIDs, func(id driver.Identity) (*pp.Identity, error) {
+		return &pp.Identity{
+			Raw: id,
+		}, nil
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize auditor")
+	}
 	idemixIssuerPublicKeys, err := protos.ToProtosSlice[pp.IdemixIssuerPublicKey, *IdemixIssuerPublicKey](p.IdemixIssuerPublicKeys)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize idemix issuer public keys")
@@ -299,12 +304,10 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 		PedersenGenerators:     pg,
 		RangeProofParams:       rpp,
 		IdemixIssuerPublicKeys: idemixIssuerPublicKeys,
-		Auditor: &pp.Identity{
-			Raw: p.Auditor,
-		},
-		Issuers:           issuers,
-		MaxToken:          p.MaxToken,
-		QuantityPrecision: p.QuantityPrecision,
+		Auditors:               auditors,
+		Issuers:                issuers,
+		MaxToken:               p.MaxToken,
+		QuantityPrecision:      p.QuantityPrecision,
 	}
 	raw, err := proto.Marshal(publicParams)
 	if err != nil {
@@ -353,14 +356,21 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 		return errors.Wrapf(err, "failed to deserialize issuers")
 	}
 	p.IssuerIDs = issuers
+	auditors, err := protos.FromProtosSliceFunc2(publicParams.Auditors, func(id *pp.Identity) (driver.Identity, error) {
+		if id == nil {
+			return nil, nil
+		}
+		return id.Raw, nil
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize issuers")
+	}
+	p.AuditorIDs = auditors
 
 	p.IdemixIssuerPublicKeys = slices.GenericSliceOfPointers[IdemixIssuerPublicKey](len(publicParams.IdemixIssuerPublicKeys))
 	err = protos.FromProtosSlice[pp.IdemixIssuerPublicKey, *IdemixIssuerPublicKey](publicParams.IdemixIssuerPublicKeys, p.IdemixIssuerPublicKeys)
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize idemix issuer public keys")
-	}
-	if publicParams.Auditor != nil {
-		p.Auditor = publicParams.Auditor.Raw
 	}
 
 	p.RangeProofParams = &RangeProofParams{}
@@ -406,7 +416,7 @@ func (p *PublicParams) GenerateRangeProofParameters(bitLength uint64) error {
 }
 
 func (p *PublicParams) AddAuditor(auditor driver.Identity) {
-	p.Auditor = auditor
+	p.AuditorIDs = append(p.AuditorIDs, auditor)
 }
 
 func (p *PublicParams) AddIssuer(id driver.Identity) {
@@ -420,7 +430,7 @@ func (p *PublicParams) SetIssuers(ids []driver.Identity) {
 
 // SetAuditors sets the auditors to the passed identities
 func (p *PublicParams) SetAuditors(ids []driver.Identity) {
-	p.Auditor = ids[0]
+	p.AuditorIDs = ids
 }
 
 func (p *PublicParams) ComputeHash() ([]byte, error) {
