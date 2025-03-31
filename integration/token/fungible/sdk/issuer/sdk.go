@@ -53,8 +53,10 @@ func (p *SDK) Install() error {
 			registry.RegisterFactory("TxFinality", &views1.TxFinalityViewFactory{}),
 			registry.RegisterFactory("issue", &views.IssueCashViewFactory{}),
 			registry.RegisterFactory("FetchAndUpdatePublicParams", &views.UpdatePublicParamsViewFactory{}),
+			registry.RegisterFactory("SetBinding", &views.SetBindingViewFactory{}),
 			registry.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{}),
 			registry.RegisterResponder(&views.TokensUpgradeResponderView{}, &views.TokensUpgradeInitiatorView{}),
+			registry.RegisterResponder(&views.IssuerRedeemAcceptView{}, &views.RedeemView{}),
 		)
 	}); err != nil {
 		return errors.WithMessage(err, "failed to install issuer's views")

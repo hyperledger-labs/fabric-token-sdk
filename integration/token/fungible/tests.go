@@ -1455,3 +1455,45 @@ func TestMultiSig(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckCoOwnedBalance(network, charlie, "", "USD", 0)
 	CheckCoOwnedBalance(network, manager, "", "USD", 0)
 }
+
+func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector, networkName string) {
+	tms := GetTMSByNetworkName(network, networkName)
+	auditor := sel.Get("auditor")
+	issuer := sel.Get("issuer")
+	alice := sel.Get("alice")
+	custodian := sel.Get("custodian")
+
+	RegisterAuditor(network, auditor)
+
+	// give some time to the nodes to get the public parameters - Q - may now be needed. waiting in UpdatePublicParamsAndWait.
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditor.Id())
+
+	// update public parameters with new issuer - START
+	tokenPlatform := token.GetPlatform(network.Ctx, "token")
+	Expect(tokenPlatform).ToNot(BeNil(), "cannot find token platform in context")
+	Expect(tokenPlatform.GetTopology()).ToNot(BeNil(), "invalid token topology, it is nil")
+	Expect(len(tokenPlatform.GetTopology().TMSs)).ToNot(BeEquivalentTo(0), "no tms defined in token topology")
+
+	// Gen crypto material for the new issuer wallet
+	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), issuer.Id(), "issuer.ExtraId")
+	// Register it
+	RegisterIssuerIdentity(network, issuer, "newIssuerWallet", newIssuerWalletPath)
+	// Update public parameters
+	orion := networkName == "orion"
+	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, networkName)
+	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, networkName), orion, alice, issuer, auditor, custodian)
+
+	SetBinding(network, issuer, GetIssuerIdentity(tms, issuer.Id()), alice)
+	CheckPublicParams(network, issuer, auditor, alice)
+	// update public parameters with new issuer - END
+
+	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
+	CheckBalance(network, alice, "", "USD", 110)
+	CheckHolding(network, alice, "", "USD", 110, auditor)
+
+	RedeemCash(network, alice, "", "USD", 10, auditor)
+	CheckBalance(network, alice, "", "USD", 100)
+	CheckHolding(network, alice, "", "USD", 100, auditor)
+}
