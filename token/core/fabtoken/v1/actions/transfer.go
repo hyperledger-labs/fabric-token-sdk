@@ -237,6 +237,7 @@ func (t *TransferAction) Serialize() ([]byte, error) {
 		Inputs:   inputs,
 		Outputs:  outputs,
 		Metadata: t.Metadata,
+		Issuer:   nil, // TODO: add issuer
 	}
 	return proto.Marshal(action)
 }
