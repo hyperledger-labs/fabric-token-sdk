@@ -91,12 +91,23 @@ message Signature {
   bytes raw = 1; // Raw bytes of the signature
 }
 
+// Represent a signature of an auditor
+message AuditorSignature {
+  Identity identity = 1; // The identity of the auditor that signed
+  Signature signature = 2; // Its signatures
+}
+
+// Auditing is the section dedicated to the auditing
+message Auditing {
+  repeated AuditorSignature signatures = 1; // Signatures of the auditors
+}
+
 // Token request containing multiple actions and their signatures
 message TokenRequest {
   uint32 version = 1; // Version number
   repeated Action actions = 2; // List of token actions to perform
   repeated Signature signatures = 3; // Signatures for the actions
-  repeated Signature auditor_signatures = 4; // Additional signatures from auditors
+  Auditing auditing = 4; // Section dedicated to the auditing
 }
 
 message TokenRequestWithMetadata {

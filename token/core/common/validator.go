@@ -25,6 +25,7 @@ const (
 type Context[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
 	Logger            logging.Logger
 	PP                P
+	TokenRequest      *driver.TokenRequest
 	Deserializer      DS
 	SignatureProvider driver.SignatureProvider
 	Signatures        [][]byte
@@ -44,6 +45,8 @@ type ValidateTransferFunc[P driver.PublicParameters, T any, TA driver.TransferAc
 
 type ValidateIssueFunc[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(ctx *Context[P, T, TA, IA, DS]) error
 
+type ValidateAuditingFunc[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(ctx *Context[P, T, TA, IA, DS]) error
+
 type ActionDeserializer[TA driver.TransferAction, IA driver.IssueAction] interface {
 	DeserializeActions(tr *driver.TokenRequest) ([]IA, []TA, error)
 }
@@ -53,6 +56,8 @@ type Validator[P driver.PublicParameters, T any, TA driver.TransferAction, IA dr
 	PublicParams       P
 	Deserializer       DS
 	ActionDeserializer ActionDeserializer[TA, IA]
+
+	AuditingValidators []ValidateAuditingFunc[P, T, TA, IA, DS]
 	TransferValidators []ValidateTransferFunc[P, T, TA, IA, DS]
 	IssueValidators    []ValidateIssueFunc[P, T, TA, IA, DS]
 }
@@ -64,6 +69,7 @@ func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA
 	actionDeserializer ActionDeserializer[TA, IA],
 	transferValidators []ValidateTransferFunc[P, T, TA, IA, DS],
 	issueValidators []ValidateIssueFunc[P, T, TA, IA, DS],
+	auditingValidators []ValidateAuditingFunc[P, T, TA, IA, DS],
 ) *Validator[P, T, TA, IA, DS] {
 	return &Validator[P, T, TA, IA, DS]{
 		Logger:             Logger,
@@ -72,6 +78,7 @@ func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA
 		ActionDeserializer: actionDeserializer,
 		TransferValidators: transferValidators,
 		IssueValidators:    issueValidators,
+		AuditingValidators: auditingValidators,
 	}
 }
 
@@ -90,13 +97,11 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to marshal signed token request")
 	}
-	var signatures [][]byte
-	if len(v.PublicParams.Auditors()) != 0 {
-		signatures = append(signatures, tr.AuditorSignatures...)
-		signatures = append(signatures, tr.Signatures...)
-	} else {
-		signatures = tr.Signatures
+	signatures := make([][]byte, 0, len(tr.AuditorSignatures)+len(tr.Signatures))
+	for _, sig := range tr.AuditorSignatures {
+		signatures = append(signatures, sig.Signature)
 	}
+	signatures = append(signatures, tr.Signatures...)
 
 	attributes := make(driver.ValidationAttributes)
 	attributes[TokenRequestToSign] = signed
@@ -110,18 +115,18 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 }
 
 func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, anchor string, tr *driver.TokenRequest, attributes driver.ValidationAttributes) ([]interface{}, driver.ValidationAttributes, error) {
-	if err := v.verifyAuditorSignature(signatureProvider, attributes); err != nil {
+	if err := v.verifyAuditing(tr, ledger, signatureProvider, attributes); err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", anchor)
 	}
 	ia, ta, err := v.ActionDeserializer.DeserializeActions(tr)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to unmarshal actions [%s]", anchor)
 	}
-	err = v.verifyIssues(ledger, ia, signatureProvider, attributes)
+	err = v.verifyIssues(tr, ledger, ia, signatureProvider, attributes)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to verify issue actions [%s]", anchor)
 	}
-	err = v.verifyTransfers(ledger, ta, signatureProvider, attributes)
+	err = v.verifyTransfers(tr, ledger, ta, signatureProvider, attributes)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to verify transfer actions [%s]", anchor)
 	}
@@ -157,35 +162,34 @@ func (v *Validator[P, T, TA, IA, DS]) UnmarshalActions(raw []byte) ([]interface{
 	return res, nil
 }
 
-func (v *Validator[P, T, TA, IA, DS]) verifyAuditorSignature(signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
-	if len(v.PublicParams.Auditors()) != 0 {
-		auditor := v.PublicParams.Auditors()[0]
-		verifier, err := v.Deserializer.GetAuditorVerifier(auditor)
-		if err != nil {
-			return errors.Errorf("failed to deserialize auditor's public key")
-		}
-		v.Logger.Infof("verify auditor signature for [%s]", auditor)
-		_, err = signatureProvider.HasBeenSignedBy(auditor, verifier)
-		return err
-	}
-	return nil
-}
-
-func (v *Validator[P, T, TA, IA, DS]) verifyIssues(ledger driver.Ledger, issues []IA, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
+func (v *Validator[P, T, TA, IA, DS]) verifyIssues(
+	tokenRequest *driver.TokenRequest,
+	ledger driver.Ledger,
+	issues []IA,
+	signatureProvider driver.SignatureProvider,
+	attributes driver.ValidationAttributes,
+) error {
 	for i, issue := range issues {
-		if err := v.verifyIssue(issue, ledger, signatureProvider, attributes); err != nil {
+		if err := v.verifyIssue(tokenRequest, issue, ledger, signatureProvider, attributes); err != nil {
 			return errors.Wrapf(err, "failed to verify issue action at [%d]", i)
 		}
 	}
 	return nil
 }
 
-func (v *Validator[P, T, TA, IA, DS]) verifyIssue(tr IA, ledger driver.Ledger, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
+func (v *Validator[P, T, TA, IA, DS]) verifyIssue(
+	tokenRequest *driver.TokenRequest,
+	action IA,
+	ledger driver.Ledger,
+	signatureProvider driver.SignatureProvider,
+	attributes driver.ValidationAttributes,
+) error {
 	context := &Context[P, T, TA, IA, DS]{
 		Logger:            v.Logger,
 		PP:                v.PublicParams,
+		TokenRequest:      tokenRequest,
 		Deserializer:      v.Deserializer,
-		IssueAction:       tr,
+		IssueAction:       action,
 		Ledger:            ledger,
 		SignatureProvider: signatureProvider,
 		MetadataCounter:   map[string]int{},
@@ -205,30 +209,43 @@ func (v *Validator[P, T, TA, IA, DS]) verifyIssue(tr IA, ledger driver.Ledger, s
 		}
 		counter += c
 	}
-	if len(tr.GetMetadata()) != counter {
-		return errors.Errorf("more metadata than those validated [%d]!=[%d], [%v]!=[%v]", len(tr.GetMetadata()), counter, tr.GetMetadata(), context.MetadataCounter)
+	if len(action.GetMetadata()) != counter {
+		return errors.Errorf("more metadata than those validated [%d]!=[%d], [%v]!=[%v]", len(action.GetMetadata()), counter, action.GetMetadata(), context.MetadataCounter)
 	}
 
 	return nil
 }
 
-func (v *Validator[P, T, TA, IA, DS]) verifyTransfers(ledger driver.Ledger, transferActions []TA, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
+func (v *Validator[P, T, TA, IA, DS]) verifyTransfers(
+	tokenRequest *driver.TokenRequest,
+	ledger driver.Ledger,
+	transferActions []TA,
+	signatureProvider driver.SignatureProvider,
+	attributes driver.ValidationAttributes,
+) error {
 	v.Logger.Debugf("check sender start...")
 	defer v.Logger.Debugf("check sender finished.")
 	for i, action := range transferActions {
-		if err := v.verifyTransfer(action, ledger, signatureProvider, attributes); err != nil {
+		if err := v.verifyTransfer(tokenRequest, action, ledger, signatureProvider, attributes); err != nil {
 			return errors.Wrapf(err, "failed to verify transfer action at [%d]", i)
 		}
 	}
 	return nil
 }
 
-func (v *Validator[P, T, TA, IA, DS]) verifyTransfer(tr TA, ledger driver.Ledger, signatureProvider driver.SignatureProvider, attributes driver.ValidationAttributes) error {
+func (v *Validator[P, T, TA, IA, DS]) verifyTransfer(
+	tokenRequest *driver.TokenRequest,
+	action TA,
+	ledger driver.Ledger,
+	signatureProvider driver.SignatureProvider,
+	attributes driver.ValidationAttributes,
+) error {
 	context := &Context[P, T, TA, IA, DS]{
 		Logger:            v.Logger,
 		PP:                v.PublicParams,
+		TokenRequest:      tokenRequest,
 		Deserializer:      v.Deserializer,
-		TransferAction:    tr,
+		TransferAction:    action,
 		Ledger:            ledger,
 		SignatureProvider: signatureProvider,
 		MetadataCounter:   map[MetadataCounterID]int{},
@@ -248,10 +265,33 @@ func (v *Validator[P, T, TA, IA, DS]) verifyTransfer(tr TA, ledger driver.Ledger
 		}
 		counter += c
 	}
-	if len(tr.GetMetadata()) != counter {
-		return errors.Errorf("more metadata than those validated [%d]!=[%d], [%v]!=[%v]", len(tr.GetMetadata()), counter, tr.GetMetadata(), context.MetadataCounter)
+	if len(action.GetMetadata()) != counter {
+		return errors.Errorf("more metadata than those validated [%d]!=[%d], [%v]!=[%v]", len(action.GetMetadata()), counter, action.GetMetadata(), context.MetadataCounter)
 	}
 
+	return nil
+}
+
+func (v *Validator[P, T, TA, IA, DS]) verifyAuditing(
+	tokenRequest *driver.TokenRequest,
+	ledger driver.Ledger,
+	signatureProvider driver.SignatureProvider,
+	attributes driver.ValidationAttributes,
+) error {
+	context := &Context[P, T, TA, IA, DS]{
+		Logger:            v.Logger,
+		PP:                v.PublicParams,
+		TokenRequest:      tokenRequest,
+		Deserializer:      v.Deserializer,
+		Ledger:            ledger,
+		SignatureProvider: signatureProvider,
+		Attributes:        attributes,
+	}
+	for _, v := range v.AuditingValidators {
+		if err := v(context); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

@@ -20,9 +20,14 @@ func TestRequestSerialization(t *testing.T) {
 			[]byte("issue1"),
 			[]byte("issue2"),
 		},
-		Transfers:         [][]byte{[]byte("transfer1")},
-		Signatures:        [][]byte{[]byte("signature1")},
-		AuditorSignatures: [][]byte{[]byte("auditor_signature1")},
+		Transfers:  [][]byte{[]byte("transfer1")},
+		Signatures: [][]byte{[]byte("signature1")},
+		AuditorSignatures: []*driver.AuditorSignature{
+			{
+				Identity:  Identity("auditor1"),
+				Signature: []byte("signature1"),
+			},
+		},
 	}
 	raw, err := r.Bytes()
 	assert.NoError(t, err)

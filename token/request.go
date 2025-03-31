@@ -1039,8 +1039,11 @@ func (r *Request) FromBytes(raw []byte) error {
 }
 
 // AddAuditorSignature adds an auditor signature to the request.
-func (r *Request) AddAuditorSignature(sigma []byte) {
-	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, sigma)
+func (r *Request) AddAuditorSignature(identity Identity, sigma []byte) {
+	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, &driver.AuditorSignature{
+		Identity:  identity,
+		Signature: sigma,
+	})
 }
 
 func (r *Request) SetSignatures(sigmas map[string][]byte) bool {
