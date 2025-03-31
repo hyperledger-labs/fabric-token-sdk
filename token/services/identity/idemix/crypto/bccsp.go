@@ -36,16 +36,10 @@ func NewBCCSP(keyStore bccsp.KeyStore, curveID math.CurveID, aries bool) (bccsp.
 		return nil, err
 	}
 
-	var cryptoProvider bccsp.BCCSP
-	if aries {
-		cryptoProvider, err = idemix.NewAries(keyStore, curve, tr, true)
-	} else {
-		cryptoProvider, err = idemix.New(keyStore, curve, tr, true)
-	}
+	cryptoProvider, err := idemix.NewAries(keyStore, curve, tr, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting crypto provider")
 	}
-
 	return cryptoProvider, nil
 }
 
@@ -55,12 +49,7 @@ func NewBCCSPWithDummyKeyStore(curveID math.CurveID, aries bool) (bccsp.BCCSP, e
 	if err != nil {
 		return nil, err
 	}
-	var cryptoProvider bccsp.BCCSP
-	if aries {
-		cryptoProvider, err = idemix.NewAries(&keystore.Dummy{}, curve, tr, true)
-	} else {
-		cryptoProvider, err = idemix.New(&keystore.Dummy{}, curve, tr, true)
-	}
+	cryptoProvider, err := idemix.NewAries(&keystore.Dummy{}, curve, tr, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting crypto provider")
 	}
