@@ -166,6 +166,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	}
 
 	validAuditing := false
+	var auditorIdentity token.Identity
 	span.AddEvent("validate_auditing")
 	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
 		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditorID)
@@ -180,6 +181,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("auditor signature verified [%s][%s][%s]", auditorID, base64.StdEncoding.EncodeToString(signature), hash.Hashable(signed))
 			}
+			auditorIdentity = auditorID
 			validAuditing = true
 			break
 		}
@@ -188,7 +190,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 	}
 	span.AddEvent("append_auditor_signature")
-	a.tx.TokenRequest.AddAuditorSignature(signature)
+	a.tx.TokenRequest.AddAuditorSignature(auditorIdentity, signature)
 
 	logger.Debug("auditor signature verified")
 	return session, nil

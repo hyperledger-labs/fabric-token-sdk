@@ -18,6 +18,8 @@ type ValidateTransferFunc = common.ValidateTransferFunc[*setup.PublicParams, *ac
 
 type ValidateIssueFunc = common.ValidateIssueFunc[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer]
 
+type ValidateAuditingFunc = common.ValidateAuditingFunc[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer]
+
 type ActionDeserializer struct{}
 
 func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*actions.IssueAction, []*actions.TransferAction, error) {
@@ -59,6 +61,10 @@ func NewValidator(logger logging.Logger, pp *setup.PublicParams, deserializer dr
 		IssueValidate,
 	}
 
+	auditingValidators := []ValidateAuditingFunc{
+		common.AuditingSignaturesValidate[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer],
+	}
+
 	return common.NewValidator[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer](
 		logger,
 		pp,
@@ -66,5 +72,6 @@ func NewValidator(logger logging.Logger, pp *setup.PublicParams, deserializer dr
 		&ActionDeserializer{},
 		transferValidators,
 		issueValidators,
+		auditingValidators,
 	)
 }
