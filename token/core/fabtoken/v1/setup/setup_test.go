@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package setup
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
