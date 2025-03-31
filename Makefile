@@ -149,3 +149,7 @@ tokengen:
 .PHONY: idemixgen
 txgen:
 	@go install github.com/IBM/idemix/tools/idemixgen
+
+.PHONY: clean-all-containers
+clean-all-containers:
+	@if [ -n "$$(docker ps -aq)" ]; then docker rm -f $$(docker ps -aq); else echo "No containers to remove"; fi

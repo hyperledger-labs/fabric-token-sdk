@@ -69,6 +69,7 @@ func (p *SDK) Install() error {
 			registry.RegisterFactory("GetRevocationHandle", &views.GetRevocationHandleViewFactory{}),
 			registry.RegisterFactory("GetPublicParams", &views.GetPublicParamsViewFactory{}),
 			registry.RegisterFactory("FetchAndUpdatePublicParams", &views.UpdatePublicParamsViewFactory{}),
+			registry.RegisterFactory("SetBinding", &views.SetBindingViewFactory{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{}),

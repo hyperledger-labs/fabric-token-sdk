@@ -49,6 +49,7 @@ func (p *SDK) Install() error {
 			registry.RegisterFactory("TxFinality", &views1.TxFinalityViewFactory{}),
 			registry.RegisterFactory("GetPublicParams", &views.GetPublicParamsViewFactory{}),
 			registry.RegisterFactory("FetchAndUpdatePublicParams", &views.UpdatePublicParamsViewFactory{}),
+			registry.RegisterFactory("SetBinding", &views.SetBindingViewFactory{}),
 		)
 	}); err != nil {
 		return errors.WithMessage(err, "failed to install auditor's views")

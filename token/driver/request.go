@@ -373,6 +373,8 @@ type TransferMetadata struct {
 	// ExtraSigners is the list of extra identities that are not part of the transfer action per se
 	// but needs to sign the request
 	ExtraSigners []Identity
+	// Issuer contains the identity of the issuer to sign the transfer action
+	Issuer Identity
 }
 
 // TokenIDAt returns the TokenID at the given index.

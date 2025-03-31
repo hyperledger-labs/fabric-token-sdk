@@ -170,6 +170,8 @@ type Transfer struct {
 	// This field is to be used by the token drivers to list any additional identities that must
 	// sign the token request.
 	ExtraSigners []Identity
+	// Issuer
+	Issuer Identity
 }
 
 // Request aggregates token operations that must be performed atomically.
@@ -1081,6 +1083,9 @@ func (r *Request) TransferSigners() []Identity {
 	signers := make([]Identity, 0)
 	for _, transfer := range r.Transfers() {
 		signers = append(signers, transfer.Senders...)
+		if transfer.Issuer != nil { // add also the identity of the issuer, if specified
+			signers = append(signers, transfer.Issuer)
+		}
 		signers = append(signers, transfer.ExtraSigners...)
 	}
 	return signers
@@ -1170,6 +1175,7 @@ func (r *Request) Transfers() []*Transfer {
 			Senders:      transfer.Senders(),
 			Receivers:    transfer.Receivers(),
 			ExtraSigners: transfer.ExtraSigners,
+			Issuer:       transfer.Issuer,
 		})
 	}
 	return transfers
