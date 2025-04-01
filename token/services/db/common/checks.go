@@ -12,7 +12,9 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -28,7 +30,7 @@ var (
 
 type TokenTransactionDB interface {
 	GetTokenRequest(txID string) ([]byte, error)
-	Transactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error)
+	Transactions(params driver.QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*driver.TransactionRecord], error)
 }
 
 type TokenManagementServiceProvider interface {
@@ -110,13 +112,13 @@ func (a *DefaultCheckers) CheckTransactions(context context.Context) ([]string, 
 		return nil, errors.WithMessagef(err, "failed to get ledger [%s]", tms.ID())
 	}
 
-	it, err := a.db.Transactions(driver.QueryTransactionsParams{})
+	it, err := a.db.Transactions(driver.QueryTransactionsParams{}, common.NewNoPagination())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed querying transactions [%s]", tms.ID())
 	}
-	defer it.Close()
+	defer it.Items.Close()
 	for {
-		transactionRecord, err := it.Next()
+		transactionRecord, err := it.Items.Next()
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed querying transactions [%s]", tms.ID())
 		}
