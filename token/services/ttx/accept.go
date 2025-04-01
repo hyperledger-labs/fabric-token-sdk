@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
@@ -132,15 +133,10 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Receiving signature request...")
 			}
-
-			msg, err := ReadMessage(session, time.Minute)
+			jsonSession := session2.JSON(context)
+			err := jsonSession.ReceiveWithTimeout(signatureRequest, time.Minute)
 			if err != nil {
 				return errors.Wrap(err, "failed reading signature request")
-			}
-			// TODO: check what is signed...
-			err = Unmarshal(msg, signatureRequest)
-			if err != nil {
-				return errors.Wrap(err, "failed unmarshalling signature request")
 			}
 		}
 		span.AddEvent("Fetched request from session")

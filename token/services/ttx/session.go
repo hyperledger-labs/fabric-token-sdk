@@ -9,7 +9,6 @@ package ttx
 import (
 	"context"
 	"encoding/base64"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
@@ -127,24 +126,4 @@ func (s *localSession) Receive() <-chan *view.Message {
 
 func (s *localSession) Close() {
 	s.info.Closed = true
-}
-
-func ReadMessage(session view.Session, timeout time.Duration) ([]byte, error) {
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-
-	ch := session.Receive()
-	select {
-	case msg := <-ch:
-		if msg == nil {
-			return nil, errors.New("received nil tx")
-		}
-		if msg.Status == view.ERROR {
-			return nil, errors.New(string(msg.Payload))
-		}
-		return msg.Payload, nil
-	case <-timer.C:
-		err := errors.New("timeout reached")
-		return nil, err
-	}
 }
