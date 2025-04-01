@@ -22,6 +22,32 @@ const (
 	ProtocolV1 = 1
 )
 
+type AuditorSignature struct {
+	Identity  Identity
+	Signature []byte
+}
+
+func (r *AuditorSignature) ToProtos() (*request.AuditorSignature, error) {
+	return &request.AuditorSignature{
+		Identity: &request.Identity{
+			Raw: r.Identity,
+		},
+		Signature: &request.Signature{
+			Raw: r.Signature,
+		},
+	}, nil
+}
+
+func (r *AuditorSignature) FromProtos(tr *request.AuditorSignature) error {
+	if tr.Identity != nil {
+		r.Identity = tr.Identity.Raw
+	}
+	if tr.Signature != nil {
+		r.Signature = tr.Signature.Raw
+	}
+	return nil
+}
+
 // TokenRequest is a collection of Token Action:
 // Issues, to create new Tokens;
 // Transfers, to manipulate Tokens (e.g., transfer ownership or redeem)
@@ -32,7 +58,7 @@ type TokenRequest struct {
 	Issues            [][]byte
 	Transfers         [][]byte
 	Signatures        [][]byte
-	AuditorSignatures [][]byte
+	AuditorSignatures []*AuditorSignature
 }
 
 func (r *TokenRequest) Bytes() ([]byte, error) {
@@ -53,16 +79,25 @@ func (r *TokenRequest) FromBytes(raw []byte) error {
 }
 
 func (r *TokenRequest) ToProtos() (*request.TokenRequest, error) {
-	tr := &request.TokenRequest{
-		Version: ProtocolV1,
-	}
-	tr.Actions = append(
+	actions := append(
 		utils.ToActionSlice(request.ActionType_ISSUE, r.Issues),
 		utils.ToActionSlice(request.ActionType_TRANSFER, r.Transfers)...,
 	)
-	tr.Signatures = utils.ToSignatureSlice(r.Signatures)
-	tr.AuditorSignatures = utils.ToSignatureSlice(r.AuditorSignatures)
-	return tr, nil
+	signatures := utils.ToSignatureSlice(r.Signatures)
+	auditorSignatures, err := protos.ToProtosSlice[request.AuditorSignature, *AuditorSignature](r.AuditorSignatures)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed converting auditor signatures")
+	}
+	auditing := &request.Auditing{
+		Signatures: auditorSignatures,
+	}
+
+	return &request.TokenRequest{
+		Version:    ProtocolV1,
+		Actions:    actions,
+		Signatures: signatures,
+		Auditing:   auditing,
+	}, nil
 }
 
 func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
@@ -90,11 +125,12 @@ func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
 		}
 		r.Signatures = append(r.Signatures, signature.Raw)
 	}
-	for _, signature := range tr.AuditorSignatures {
-		if signature == nil || len(signature.Raw) == 0 {
-			return errors.New("nil auditor signature found")
+	if tr.Auditing != nil {
+		r.AuditorSignatures = make([]*AuditorSignature, len(tr.Auditing.Signatures))
+		r.AuditorSignatures = slices.GenericSliceOfPointers[AuditorSignature](len(tr.Auditing.Signatures))
+		if err := protos.FromProtosSlice(tr.Auditing.Signatures, r.AuditorSignatures); err != nil {
+			return errors.Wrap(err, "failed converting auditor signatures")
 		}
-		r.AuditorSignatures = append(r.AuditorSignatures, signature.Raw)
 	}
 	return nil
 }
