@@ -51,6 +51,7 @@ message TransferMetadata {
   repeated TransferInputMetadata inputs = 1; // Inputs
   repeated OutputMetadata outputs = 2; // Outputs
   repeated Identity extra_signers = 8; // Additional signers for the transfer
+  Identity issuer = 3; // Issuer signer for the redeem transfer
 }
 
 message IssueInputMetadata {
