@@ -62,12 +62,12 @@ func TransferSignatureValidate(ctx *Context) error {
 				return errors.Errorf("On Redeem action, must have at least one issuer")
 			}
 
-			verifier, err := ctx.Deserializer.GetIssuerVerifier(issuer)
+			issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(issuer)
 			if err != nil {
 				return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
 			}
 
-			sigma, err := ctx.SignatureProvider.HasBeenSignedBy(issuer, verifier)
+			sigma, err := ctx.SignatureProvider.HasBeenSignedBy(issuer, issuerVerifier)
 			if err != nil {
 				return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
 			}
