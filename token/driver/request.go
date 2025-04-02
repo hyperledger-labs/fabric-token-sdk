@@ -395,10 +395,18 @@ func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
+
+	var issuer *request.Identity
+	if t.Issuer != nil {
+		issuer = &request.Identity{
+			Raw: t.Issuer.Bytes(),
+		}
+	}
 	return &request.TransferMetadata{
 		Inputs:       inputs,
 		Outputs:      outputs,
 		ExtraSigners: ToProtoIdentitySlice(t.ExtraSigners),
+		Issuer:       issuer,
 	}, nil
 }
 
@@ -412,6 +420,7 @@ func (t *TransferMetadata) FromProtos(transferMetadata *request.TransferMetadata
 		return errors.Wrap(err, "failed unmarshalling outputs")
 	}
 	t.ExtraSigners = FromProtoIdentitySlice(transferMetadata.ExtraSigners)
+	t.Issuer = transferMetadata.Issuer.Raw
 	return nil
 }
 
