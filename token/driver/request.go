@@ -337,6 +337,8 @@ type TransferMetadata struct {
 	// ExtraSigners is the list of extra identities that are not part of the transfer action per se
 	// but needs to sign the request
 	ExtraSigners []Identity
+	// Issuer contains the identity of the issuer to sign the transfer action
+	Issuer Identity
 }
 
 // TokenIDAt returns the TokenID at the given index.
@@ -357,10 +359,18 @@ func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
+
+	var issuer *request.Identity
+	if t.Issuer != nil {
+		issuer = &request.Identity{
+			Raw: t.Issuer.Bytes(),
+		}
+	}
 	return &request.TransferMetadata{
 		Inputs:       inputs,
 		Outputs:      outputs,
 		ExtraSigners: ToProtoIdentitySlice(t.ExtraSigners),
+		Issuer:       issuer,
 	}, nil
 }
 
@@ -374,6 +384,7 @@ func (t *TransferMetadata) FromProtos(transferMetadata *request.TransferMetadata
 		return errors.Wrap(err, "failed unmarshalling outputs")
 	}
 	t.ExtraSigners = FromProtoIdentitySlice(transferMetadata.ExtraSigners)
+	t.Issuer = transferMetadata.Issuer.Raw
 	return nil
 }
 

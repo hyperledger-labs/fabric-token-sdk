@@ -37,6 +37,7 @@ message TransferAction {
   repeated TransferActionInput inputs = 2; // inputs
   repeated TransferActionOutput outputs = 3; // outputs
   map<string, bytes> metadata = 4; // Metadata contains the transfer action's metadata
+  Identity issuer = 5; // is the identity of issuer to sign the transfer action
 }
 
 message IssueActionInput {

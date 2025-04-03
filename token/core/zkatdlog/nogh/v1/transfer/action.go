@@ -123,6 +123,8 @@ type Action struct {
 	Proof []byte
 	// Metadata contains the transfer action's metadata
 	Metadata map[string][]byte
+	// Issuer contains the identity of the issuer to sign the transfer action
+	Issuer driver.Identity
 }
 
 // NewTransfer returns the Action that matches the passed arguments
@@ -151,6 +153,7 @@ func NewTransfer(tokenIDs []*token2.ID, inputToken []*token.Token, commitments [
 		Outputs:  tokens,
 		Proof:    proof,
 		Metadata: map[string][]byte{},
+		Issuer:   nil,
 	}, nil
 }
 
@@ -241,6 +244,11 @@ func (t *Action) IsGraphHiding() bool {
 // GetMetadata returns metadata of the Action
 func (t *Action) GetMetadata() map[string][]byte {
 	return t.Metadata
+}
+
+// GetIssuer returns the issuer to sign the transaction
+func (t *Action) GetIssuer() driver.Identity {
+	return t.Issuer
 }
 
 func (t *Action) Validate() error {
