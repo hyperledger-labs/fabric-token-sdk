@@ -30,6 +30,7 @@ func TransferSignatureValidate(ctx *Context) error {
 		return errors.Errorf("invalid number of token inputs, expected at least 1")
 	}
 
+	var isRedeem bool
 	var inputToken []*actions.Output
 	for _, in := range ctx.TransferAction.Inputs {
 		tok := in.Input
@@ -43,42 +44,41 @@ func TransferSignatureValidate(ctx *Context) error {
 		}
 		ctx.Logger.Debugf("signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
 
-		// If transfer action is a redeem, verify the signature of the issuer
-		isRedeem := func() bool {
-			for _, output := range ctx.TransferAction.Outputs {
-				if output.Owner == nil {
-					return true
-				}
-			}
-			return false
-		}
-
-		if isRedeem() {
-			ctx.Logger.Debugf("at redeem action validation")
-
-			issuer := ctx.TransferAction.GetIssuer()
-			if issuer == nil {
-				return errors.Errorf("On Redeem action, must have at least one issuer")
-			}
-
-			issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(issuer)
-			if err != nil {
-				return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
-			}
-
-			sigma, err := ctx.SignatureProvider.HasBeenSignedBy(issuer, issuerVerifier)
-			if err != nil {
-				return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
-			}
-			ctx.Signatures = append(ctx.Signatures, sigma)
-		}
-
 		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(owner, verifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
 		}
 		ctx.Signatures = append(ctx.Signatures, sigma)
 	}
+
+	for _, output := range ctx.TransferAction.Outputs {
+		if output.Owner == nil {
+			isRedeem = true
+			break
+		}
+	}
+
+	// If transfer action is a redeem, verify the signature of the issuer
+	if isRedeem {
+		ctx.Logger.Infof("action is a redeem, verify the signature of the issuer")
+
+		issuer := ctx.TransferAction.GetIssuer()
+		if issuer == nil {
+			return errors.Errorf("On Redeem action, must have at least one issuer")
+		}
+
+		issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(issuer)
+		if err != nil {
+			return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
+		}
+
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(issuer, issuerVerifier)
+		if err != nil {
+			return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
+		}
+		ctx.Signatures = append(ctx.Signatures, sigma)
+	}
+
 	ctx.InputTokens = inputToken
 	return nil
 }
