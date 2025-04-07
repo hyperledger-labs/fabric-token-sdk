@@ -34,6 +34,7 @@ func TransferSignatureValidate(ctx *Context) error {
 		return errors.Errorf("invalid number of token inputs, expected at least 1")
 	}
 
+	var isRedeem bool
 	var inputToken []*token.Token
 	for i, in := range ctx.TransferAction.Inputs {
 		tok := in.Token
@@ -55,6 +56,33 @@ func TransferSignatureValidate(ctx *Context) error {
 
 	ctx.InputTokens = inputToken
 	ctx.Signatures = signatures
+
+	for _, output := range ctx.TransferAction.Outputs {
+		if output.Owner == nil {
+			isRedeem = true
+			break
+		}
+	}
+
+	if isRedeem {
+		ctx.Logger.Infof("action is a redeem, verify the signature of the issuer")
+
+		issuer := ctx.TransferAction.GetIssuer()
+		if issuer == nil {
+			return errors.Errorf("On Redeem action, must have at least one issuer")
+		}
+
+		issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(issuer)
+		if err != nil {
+			return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
+		}
+
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(issuer, issuerVerifier)
+		if err != nil {
+			return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
+		}
+		ctx.Signatures = append(ctx.Signatures, sigma)
+	}
 
 	return nil
 }
