@@ -255,6 +255,7 @@ func TestTransferAction_Serialization(t *testing.T) {
 		Metadata: map[string][]byte{
 			"metadata": []byte("{\"foo\":\"bar\"}"),
 		},
+		Issuer: nil,
 	}
 	raw, err := action.Serialize()
 	assert.NoError(t, err, "failed to serialize a new transfer action")
