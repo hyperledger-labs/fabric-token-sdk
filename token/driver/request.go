@@ -420,7 +420,12 @@ func (t *TransferMetadata) FromProtos(transferMetadata *request.TransferMetadata
 		return errors.Wrap(err, "failed unmarshalling outputs")
 	}
 	t.ExtraSigners = FromProtoIdentitySlice(transferMetadata.ExtraSigners)
-	t.Issuer = transferMetadata.Issuer.Raw
+
+	t.Issuer = nil
+	if transferMetadata.Issuer != nil {
+		t.Issuer = transferMetadata.Issuer.Raw
+	}
+
 	return nil
 }
 
