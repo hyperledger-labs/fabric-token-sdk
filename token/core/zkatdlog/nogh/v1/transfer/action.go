@@ -13,6 +13,7 @@ import (
 	factions "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
 	fv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -321,6 +322,13 @@ func (t *Action) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to serialize outputs")
 	}
 
+	var issuer *pp.Identity
+	if t.Issuer != nil {
+		issuer = &pp.Identity{
+			Raw: t.Issuer.Bytes(),
+		}
+	}
+
 	action := &actions.TransferAction{
 		Version: ProtocolV1,
 		Inputs:  inputs,
@@ -329,6 +337,7 @@ func (t *Action) Serialize() ([]byte, error) {
 			Proof: t.Proof,
 		},
 		Metadata: t.Metadata,
+		Issuer:   issuer,
 	}
 	return proto.Marshal(action)
 }
@@ -373,6 +382,12 @@ func (t *Action) Deserialize(raw []byte) error {
 		t.Proof = action.Proof.Proof
 	}
 	t.Metadata = action.Metadata
+
+	if action.Issuer != nil {
+		t.Issuer = driver.Identity(action.Issuer.Raw)
+	} else {
+		t.Issuer = nil
+	}
 
 	return nil
 }
