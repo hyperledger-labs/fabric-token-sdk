@@ -284,7 +284,10 @@ func (t *TransferAction) Deserialize(raw []byte) error {
 	}
 
 	t.Metadata = action.Metadata
-	t.Issuer = driver.Identity(action.Issuer.Raw)
+	t.Issuer = nil
+	if action.Issuer != nil {
+		t.Issuer = driver.Identity(action.Issuer.Raw)
+	}
 
 	return nil
 }
