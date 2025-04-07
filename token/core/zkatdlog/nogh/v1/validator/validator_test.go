@@ -312,7 +312,15 @@ func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfe
 	owners := make([][]byte, 2)
 	owners[0] = id
 
-	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners)
+	issuerSigner, err := NewECDSASigner()
+	Expect(err).NotTo(HaveOccurred())
+
+	issuer := &issue2.Issuer{}
+	issuer.New("ABC", issuerSigner, pp)
+	issuerIdentity, err := issuerSigner.Serialize()
+	Expect(err).NotTo(HaveOccurred())
+
+	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners, issuer, issuerIdentity)
 }
 
 func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
@@ -321,7 +329,7 @@ func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*trans
 	owners[0] = id
 	owners[1] = id
 
-	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners)
+	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners, nil, nil)
 }
 
 func prepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
@@ -487,7 +495,7 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 	return ir, issueMetadata
 }
 
-func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *crypto.AuditInfo, id []byte, owners [][]byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
+func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *crypto.AuditInfo, id []byte, owners [][]byte, issuer *issue2.Issuer, issuerIdentity []byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
 
 	signers := make([]driver.Signer, 2)
 	signers[0] = signer
@@ -523,10 +531,14 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	sender, err := transfer.NewSender(signers, tokens, ids, inputInf, pp)
 	Expect(err).NotTo(HaveOccurred())
 
-	transfer, metas, err := sender.GenerateZKTransfer(context.TODO(), outvalues, owners)
+	transfer2, metas, err := sender.GenerateZKTransfer(context.TODO(), outvalues, owners)
 	Expect(err).NotTo(HaveOccurred())
 
-	transferRaw, err := transfer.Serialize()
+	if issuerIdentity != nil {
+		transfer2.Issuer = driver.Identity(issuerIdentity)
+	}
+
+	transferRaw, err := transfer2.Serialize()
 	Expect(err).NotTo(HaveOccurred())
 
 	tr := &driver.TokenRequest{Transfers: [][]byte{transferRaw}}
@@ -541,7 +553,7 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	auditInfoRaw, err := auditInfo.Bytes()
 	Expect(err).NotTo(HaveOccurred())
 	metadata := &driver.TransferMetadata{}
-	for i := 0; i < len(transfer.Inputs); i++ {
+	for i := 0; i < len(transfer2.Inputs); i++ {
 		metadata.Inputs = append(metadata.Inputs, &driver.TransferInputMetadata{
 			TokenID: nil,
 			Senders: []*driver.AuditableIdentity{
@@ -554,7 +566,7 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	for i := 0; i < len(transfer.Outputs); i++ {
+	for i := 0; i < len(transfer2.Outputs); i++ {
 		marshalledinf, err := metas[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		metadata.Outputs = append(metadata.Outputs, &driver.TransferOutputMetadata{
@@ -573,6 +585,11 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	for i := 0; i < len(tokens); i++ {
 		tokns[0] = append(tokns[0], tokens[i])
 	}
+
+	if issuerIdentity != nil {
+		metadata.Issuer = driver.Identity(issuerIdentity)
+	}
+
 	transferMetadata := &driver.TokenRequestMetadata{Transfers: []*driver.TransferMetadata{metadata}}
 	err = auditor.Check(context.Background(), tr, transferMetadata, tokns, "1")
 	Expect(err).NotTo(HaveOccurred())
@@ -589,6 +606,13 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	signatures, err := sender.SignTokenActions(raw)
 	Expect(err).NotTo(HaveOccurred())
 	tr.Signatures = append(tr.Signatures, signatures...)
+
+	// Add issuer signature for redeem case
+	if issuer != nil {
+		issuerSignature, err := issuer.Signer.Sign(raw)
+		Expect(err).NotTo(HaveOccurred())
+		tr.Signatures = append(tr.Signatures, issuerSignature)
+	}
 
 	return sender, tr, transferMetadata, tokens
 }
