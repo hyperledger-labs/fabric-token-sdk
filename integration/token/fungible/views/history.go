@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -76,11 +77,11 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 		return nil, errors.Wrapf(err, "failed to get auditor instance")
 	}
 
-	it, err := auditor.Transactions(ttxdb.QueryTransactionsParams{From: p.From, To: p.To})
+	it, err := auditor.Transactions(ttxdb.QueryTransactionsParams{From: p.From, To: p.To}, common.NewNoPagination())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying transactions")
 	}
-	return ToSlice(it)
+	return ToSlice(it.Items)
 }
 
 type ListAuditedTransactionsViewFactory struct{}
@@ -118,12 +119,12 @@ func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, 
 		To:              p.To,
 		ActionTypes:     p.ActionTypes,
 		Statuses:        p.Statuses,
-	})
+	}, common.NewNoPagination())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying transactions")
 	}
 
-	return ToSlice(it)
+	return ToSlice(it.Items)
 }
 
 type ListAcceptedTransactionsViewFactory struct{}

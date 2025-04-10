@@ -9,6 +9,7 @@ package ttx
 import (
 	"context"
 
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -24,6 +25,12 @@ import (
 const txIdLabel tracing.LabelName = "tx_id"
 
 type QueryTransactionsParams = ttxdb.QueryTransactionsParams
+
+type Pagination = driver2.Pagination
+
+type TransactionRecord = driver.TransactionRecord
+
+type PageTransactionsIterator = driver2.PageIterator[*TransactionRecord]
 
 type NetworkProvider interface {
 	GetNetwork(network string, channel string) (*network.Network, error)
