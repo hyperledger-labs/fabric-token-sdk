@@ -17,19 +17,32 @@ func AuditingSignaturesValidate[P driver.PublicParameters, T any, TA driver.Tran
 		if len(ctx.TokenRequest.AuditorSignatures) != 0 {
 			return errors.New("auditor signatures are not empty")
 		}
+		return nil
 	}
 
+	auditors := ctx.PP.Auditors()
 	for _, auditorSignature := range ctx.TokenRequest.AuditorSignatures {
 		auditor := auditorSignature.Identity
+		// check that issuer of this issue action is authorized
+		found := false
+		for _, target := range auditors {
+			if auditor.Equal(target) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errors.Errorf("auditor [%s] is not in auditors", auditor)
+		}
+
 		verifier, err := ctx.Deserializer.GetAuditorVerifier(auditor)
 		if err != nil {
-			return errors.Errorf("failed to deserialize auditor's public key")
+			return errors.Wrapf(err, "failed to deserialize auditor's public key")
 		}
 		_, err = ctx.SignatureProvider.HasBeenSignedBy(auditor, verifier)
 		if err != nil {
-			return errors.Errorf("failed to verify auditor's signature")
+			return errors.Wrap(err, "failed to verify auditor's signature")
 		}
 	}
 	return nil
-
 }

@@ -27,6 +27,8 @@ type Ledger interface {
 	GetState(id token.ID) ([]byte, error)
 }
 
+//go:generate counterfeiter -o mock/signature_provider.go -fake-name SignatureProvider . SignatureProvider
+
 type SignatureProvider interface {
 	// HasBeenSignedBy returns true and the verified signature if the provider contains a valid signature for the passed identity and verifier
 	HasBeenSignedBy(id Identity, verifier Verifier) ([]byte, error)
