@@ -122,12 +122,13 @@ func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 }
 
 type AuditingViewInitiator struct {
-	tx    *Transaction
-	local bool
+	tx                               *Transaction
+	local                            bool
+	skipAuditorSignatureVerification bool
 }
 
-func newAuditingViewInitiator(tx *Transaction, local bool) *AuditingViewInitiator {
-	return &AuditingViewInitiator{tx: tx, local: local}
+func newAuditingViewInitiator(tx *Transaction, local, skipAuditorSignatureVerification bool) *AuditingViewInitiator {
+	return &AuditingViewInitiator{tx: tx, local: local, skipAuditorSignatureVerification: skipAuditorSignatureVerification}
 }
 
 func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
@@ -156,39 +157,11 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	span.AddEvent("received_message")
 	logger.Debugf("reply received from %s", a.tx.Opts.Auditor)
 
-	// Check signature
-	signed, err := a.tx.MarshallToAudit()
+	auditorIdentity, err := a.verifyAuditorSignature(context, signature)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling message to sign")
-	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
+		return nil, errors.Wrapf(err, "failed verifying auditor signature")
 	}
 
-	validAuditing := false
-	var auditorIdentity token.Identity
-	span.AddEvent("validate_auditing")
-	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
-		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditorID)
-		if err != nil {
-			logger.Debugf("failed to get auditor verifier for [%s]", auditorID)
-			continue
-		}
-		span.AddEvent("verify_auditor_signature")
-		if err := v.Verify(signed, signature); err != nil {
-			logger.Errorf("failed verifying auditor signature [%s][%s][%s]", auditorID, hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
-		} else {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("auditor signature verified [%s][%s][%s]", auditorID, base64.StdEncoding.EncodeToString(signature), hash.Hashable(signed))
-			}
-			auditorIdentity = auditorID
-			validAuditing = true
-			break
-		}
-	}
-	if !validAuditing {
-		return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
-	}
 	span.AddEvent("append_auditor_signature")
 	a.tx.TokenRequest.AddAuditorSignature(auditorIdentity, signature)
 
@@ -259,6 +232,42 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 	view3.RunView(logger, context, responderView, view.AsResponder(right))
 
 	return left, nil
+}
+
+func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, signature []byte) (token.Identity, error) {
+	span := trace.SpanFromContext(context.Context())
+	span.AddEvent("validate_auditing")
+
+	if a.skipAuditorSignatureVerification {
+		return a.tx.Opts.Auditor, nil
+	}
+
+	// check the signature
+	signed, err := a.tx.MarshallToAudit()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling message to sign")
+	}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
+	}
+
+	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
+		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditorID)
+		if err != nil {
+			logger.Debugf("failed to get auditor verifier for [%s]", auditorID)
+			continue
+		}
+		span.AddEvent("verify_auditor_signature")
+		if err := v.Verify(signed, signature); err != nil {
+			logger.Errorf("failed verifying auditor signature [%s][%s][%s]", auditorID, hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
+		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("auditor signature verified [%s][%s][%s]", auditorID, base64.StdEncoding.EncodeToString(signature), hash.Hashable(signed))
+			}
+			return auditorID, nil
+		}
+	}
+	return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 }
 
 type AuditApproveView struct {

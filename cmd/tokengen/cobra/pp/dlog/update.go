@@ -13,7 +13,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -90,10 +89,10 @@ func Update(args *UpdateArgs) error {
 	// Clear auditor and issuers if provided, and add them again.
 	// If not provided, do not change them.
 	if len(args.Auditors) > 0 {
-		pp.AuditorIDs = []driver.Identity{}
+		pp.SetAuditors(nil)
 	}
 	if len(args.Issuers) > 0 {
-		pp.IssuerIDs = []driver.Identity{}
+		pp.SetIssuers(nil)
 	}
 	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
 		return err

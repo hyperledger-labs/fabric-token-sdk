@@ -92,7 +92,7 @@ var _ = Describe("validator", func() {
 		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), &noop.Tracer{}, des, pp.PedersenGenerators, asigner, c)
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
-		pp.AuditorIDs = []driver.Identity{araw}
+		pp.SetAuditors([]driver.Identity{araw})
 
 		// initialize enginw with pp
 		deserializer, err := zkatdlog.NewDeserializer(pp)

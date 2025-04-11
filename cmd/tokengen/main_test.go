@@ -227,7 +227,7 @@ func validateOutputEquivalent(gt *WithT, tempOutput, auditorsMSPdir, issuersMSPd
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(auditors[0]).To(Equal(auditor))
 
-	issuers := pp.IssuerIDs
+	issuers := pp.Issuers()
 	issuer, err := common.GetX509Identity(issuersMSPdir)
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(issuers[0]).To(BeEquivalentTo(issuer))

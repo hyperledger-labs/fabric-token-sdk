@@ -420,7 +420,7 @@ func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Ide
 			logger.Debugf("ask auditing to [%s]", c.tx.Opts.Auditor)
 		}
 		local := view2.GetSigService(context).IsMe(c.tx.Opts.Auditor)
-		sessionBoxed, err := context.RunView(newAuditingViewInitiator(c.tx, local))
+		sessionBoxed, err := context.RunView(newAuditingViewInitiator(c.tx, local, c.Opts.SkipAuditorSignatureVerification))
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.Auditor.String())
 		}

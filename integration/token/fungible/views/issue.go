@@ -38,6 +38,8 @@ type IssueCash struct {
 	RecipientWalletID string
 	// RecipientEID is the expected enrolment id of the recipient
 	RecipientEID string
+	// SkipAuditorSignatureVerification set to true to skip the verification of the auditor signature during endorsement collection
+	SkipAuditorSignatureVerification bool
 }
 
 type IssueCashView struct {
@@ -116,7 +118,11 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// Before completing, all recipients receive the approved transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
-	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
+	var eOpts []ttx.EndorsementsOpt
+	if p.SkipAuditorSignatureVerification {
+		eOpts = append(eOpts, ttx.WithSkipAuditorSignatureVerification())
+	}
+	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx, eOpts...))
 	assert.NoError(err, "failed to sign issue transaction for "+tx.ID())
 
 	// Sanity checks:
