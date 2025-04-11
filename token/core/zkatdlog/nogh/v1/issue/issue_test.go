@@ -35,7 +35,7 @@ func prepareZKIssue(t *testing.T) (*issue2.Prover, *issue2.Verifier) {
 	return prover, verifier
 }
 
-func prepareInputsForZKIssue(pp *v1.PublicParams) ([]*token.TokenDataWitness, []*math.G1) {
+func prepareInputsForZKIssue(pp *v1.PublicParams) ([]*token.Metadata, []*math.G1) {
 	values := make([]uint64, 2)
 	values[0] = 120
 	values[1] = 190
@@ -50,5 +50,5 @@ func prepareInputsForZKIssue(pp *v1.PublicParams) ([]*token.TokenDataWitness, []
 	for i := 0; i < len(values); i++ {
 		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve)
 	}
-	return token.NewTokenDataWitness("ABC", values, bf), tokens
+	return token.NewWitness(pp.Curve, "ABC", values, bf), tokens
 }

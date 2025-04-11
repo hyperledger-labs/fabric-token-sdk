@@ -43,7 +43,7 @@ type Prover struct {
 	RangeCorrectness *rp.RangeCorrectnessProver
 }
 
-func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, pp *v1.PublicParams) (*Prover, error) {
+func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*Prover, error) {
 	c := math.Curves[pp.Curve]
 	p := &Prover{}
 	tokenType := c.HashToZr([]byte(tw[0].Type))
@@ -64,7 +64,10 @@ func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, pp *v1.PublicPar
 			return nil, errors.New("invalid token witness")
 		}
 		// tw[i] = tw[i].Clone()
-		values[i] = tw[i].Value
+		values[i], err = tw[i].Value.Uint()
+		if err != nil {
+			return nil, errors.Wrapf(err, "invalid token witness values")
+		}
 		blindingFactors[i] = c.ModSub(tw[i].BlindingFactor, p.SameType.blindingFactor, c.GroupOrder)
 	}
 	coms := make([]*math.G1, len(tokens))

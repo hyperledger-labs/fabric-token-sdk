@@ -123,7 +123,7 @@ func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier) 
 	return prover, verifier
 }
 
-func prepareInputsForZKTransfer(pp *v1.PublicParams) ([]*token.TokenDataWitness, []*token.TokenDataWitness, []*math.G1, []*math.G1) {
+func prepareInputsForZKTransfer(pp *v1.PublicParams) ([]*token.Metadata, []*token.Metadata, []*math.G1, []*math.G1) {
 	c := math.Curves[pp.Curve]
 	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
@@ -145,20 +145,20 @@ func prepareInputsForZKTransfer(pp *v1.PublicParams) ([]*token.TokenDataWitness,
 	outValues[1] = 20
 
 	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.PedersenGenerators, c)
-	intw := make([]*token.TokenDataWitness, len(inValues))
+	intw := make([]*token.Metadata, len(inValues))
 	for i := 0; i < len(intw); i++ {
-		intw[i] = &token.TokenDataWitness{BlindingFactor: inBF[i], Value: inValues[i], Type: ttype}
+		intw[i] = &token.Metadata{BlindingFactor: inBF[i], Value: c.NewZrFromUint64(inValues[i]), Type: ttype}
 	}
 
-	outtw := make([]*token.TokenDataWitness, len(outValues))
+	outtw := make([]*token.Metadata, len(outValues))
 	for i := 0; i < len(outtw); i++ {
-		outtw[i] = &token.TokenDataWitness{BlindingFactor: outBF[i], Value: outValues[i], Type: ttype}
+		outtw[i] = &token.Metadata{BlindingFactor: outBF[i], Value: c.NewZrFromUint64(outValues[i]), Type: ttype}
 	}
 
 	return intw, outtw, in, out
 }
 
-func prepareInvalidInputsForZKTransfer(pp *v1.PublicParams) ([]*token.TokenDataWitness, []*token.TokenDataWitness, []*math.G1, []*math.G1) {
+func prepareInvalidInputsForZKTransfer(pp *v1.PublicParams) ([]*token.Metadata, []*token.Metadata, []*math.G1, []*math.G1) {
 	c := math.Curves[pp.Curve]
 	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
@@ -180,14 +180,14 @@ func prepareInvalidInputsForZKTransfer(pp *v1.PublicParams) ([]*token.TokenDataW
 	outValues[1] = 45
 
 	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.PedersenGenerators, c)
-	intw := make([]*token.TokenDataWitness, len(inValues))
+	intw := make([]*token.Metadata, len(inValues))
 	for i := 0; i < len(intw); i++ {
-		intw[i] = &token.TokenDataWitness{BlindingFactor: inBF[i], Value: inValues[i], Type: ttype}
+		intw[i] = &token.Metadata{BlindingFactor: inBF[i], Value: c.NewZrFromUint64(inValues[i]), Type: ttype}
 	}
 
-	outtw := make([]*token.TokenDataWitness, len(outValues))
+	outtw := make([]*token.Metadata, len(outValues))
 	for i := 0; i < len(outtw); i++ {
-		outtw[i] = &token.TokenDataWitness{BlindingFactor: outBF[i], Value: outValues[i], Type: ttype}
+		outtw[i] = &token.Metadata{BlindingFactor: outBF[i], Value: c.NewZrFromUint64(outValues[i]), Type: ttype}
 	}
 
 	return intw, outtw, in, out

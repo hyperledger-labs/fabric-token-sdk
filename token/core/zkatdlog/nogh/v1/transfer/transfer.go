@@ -66,11 +66,11 @@ type Prover struct {
 }
 
 // NewProver returns a Action Prover that corresponds to the passed arguments
-func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, outputs []*math.G1, pp *v1.PublicParams) (*Prover, error) {
+func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []*math.G1, pp *v1.PublicParams) (*Prover, error) {
 	c := math.Curves[pp.Curve]
 	p := &Prover{}
-	inW := make([]*token.TokenDataWitness, len(inputWitness))
-	outW := make([]*token.TokenDataWitness, len(outputWitness))
+	inW := make([]*token.Metadata, len(inputWitness))
+	outW := make([]*token.Metadata, len(outputWitness))
 	for i := 0; i < len(inputWitness); i++ {
 		if inputWitness[i] == nil || inputWitness[i].BlindingFactor == nil {
 			return nil, errors.New("invalid token witness")
@@ -92,7 +92,10 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 			return nil, errors.New("invalid token witness")
 		}
 		outW[i] = outputWitness[i].Clone()
-		values[i] = outW[i].Value
+		values[i], err = outW[i].Value.Uint()
+		if err != nil {
+			return nil, errors.Wrapf(err, "invalid token witness values")
+		}
 		blindingFactors[i] = c.ModSub(outW[i].BlindingFactor, typeBF, c.GroupOrder)
 	}
 	commitmentToType.Add(pp.PedersenGenerators[2].Mul(typeBF))
@@ -107,7 +110,19 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 			coms[i] = outputs[i].Copy()
 			coms[i].Sub(commitmentToType)
 		}
-		p.RangeCorrectness = rp.NewRangeCorrectnessProver(coms, values, blindingFactors, pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
+		p.RangeCorrectness = rp.NewRangeCorrectnessProver(
+			coms,
+			values,
+			blindingFactors,
+			pp.PedersenGenerators[1:],
+			pp.RangeProofParams.LeftGenerators,
+			pp.RangeProofParams.RightGenerators,
+			pp.RangeProofParams.P,
+			pp.RangeProofParams.Q,
+			pp.RangeProofParams.BitLength,
+			pp.RangeProofParams.NumberOfRounds,
+			math.Curves[pp.Curve],
+		)
 
 	}
 	return p, nil
