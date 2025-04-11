@@ -92,12 +92,12 @@ func (t *Token) Validate(checkOwner bool) error {
 	return nil
 }
 
-func computeTokens(tw []*TokenDataWitness, pp []*math.G1, c *math.Curve) ([]*math.G1, error) {
+func computeTokens(tw []*Metadata, pp []*math.G1, c *math.Curve) ([]*math.G1, error) {
 	tokens := make([]*math.G1, len(tw))
 	var err error
 	for i := 0; i < len(tw); i++ {
 		hash := c.HashToZr([]byte(tw[i].Type))
-		tokens[i], err = commit([]*math.Zr{hash, c.NewZrFromUint64(tw[i].Value), tw[i].BlindingFactor}, pp, c)
+		tokens[i], err = commit([]*math.Zr{hash, tw[i].Value, tw[i].BlindingFactor}, pp, c)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to compute token [%d]", i)
 		}
@@ -106,7 +106,7 @@ func computeTokens(tw []*TokenDataWitness, pp []*math.G1, c *math.Curve) ([]*mat
 	return tokens, nil
 }
 
-func GetTokensWithWitness(values []uint64, ttype token2.Type, pp []*math.G1, c *math.Curve) ([]*math.G1, []*TokenDataWitness, error) {
+func GetTokensWithWitness(values []uint64, ttype token2.Type, pp []*math.G1, c *math.Curve) ([]*math.G1, []*Metadata, error) {
 	if c == nil {
 		return nil, nil, errors.New("cannot get tokens with witness: please initialize curve")
 	}
@@ -114,11 +114,11 @@ func GetTokensWithWitness(values []uint64, ttype token2.Type, pp []*math.G1, c *
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot get tokens with witness")
 	}
-	tw := make([]*TokenDataWitness, len(values))
+	tw := make([]*Metadata, len(values))
 	for i, v := range values {
-		tw[i] = &TokenDataWitness{
+		tw[i] = &Metadata{
 			BlindingFactor: c.NewRandomZr(rand),
-			Value:          v,
+			Value:          c.NewZrFromUint64(v),
 			Type:           ttype,
 		}
 	}
@@ -131,6 +131,16 @@ func GetTokensWithWitness(values []uint64, ttype token2.Type, pp []*math.G1, c *
 
 // Metadata contains the metadata of a token
 type Metadata comm.Metadata
+
+// NewWitness returns an array of Metadata that corresponds to the passed arguments
+func NewWitness(curve math.CurveID, ttype token2.Type, values []uint64, bfs []*math.Zr) []*Metadata {
+	witness := make([]*Metadata, len(values))
+	for i, v := range values {
+		witness[i] = &Metadata{Value: math.Curves[curve].NewZrFromUint64(v), BlindingFactor: bfs[i]}
+	}
+	witness[0].Type = ttype
+	return witness
+}
 
 // Deserialize un-marshals Metadata
 func (m *Metadata) Deserialize(b []byte) error {
@@ -179,30 +189,13 @@ func (m *Metadata) Serialize() ([]byte, error) {
 	return comm.WrapMetadataWithType(raw)
 }
 
-// TokenDataWitness contains the opening of Data in Token
-type TokenDataWitness struct {
-	Type           token2.Type
-	Value          uint64
-	BlindingFactor *math.Zr
-}
-
-// Clone produces a copy of TokenDataWitness
-func (tdw *TokenDataWitness) Clone() *TokenDataWitness {
-	return &TokenDataWitness{
-		Type:           tdw.Type,
-		Value:          tdw.Value,
-		BlindingFactor: tdw.BlindingFactor.Copy(),
+func (m *Metadata) Clone() *Metadata {
+	return &Metadata{
+		Type:           m.Type,
+		BlindingFactor: m.BlindingFactor,
+		Issuer:         m.Issuer,
+		Value:          m.Value,
 	}
-}
-
-// NewTokenDataWitness returns an array of TokenDataWitness that corresponds to the passed arguments
-func NewTokenDataWitness(ttype token2.Type, values []uint64, bfs []*math.Zr) []*TokenDataWitness {
-	witness := make([]*TokenDataWitness, len(values))
-	for i, v := range values {
-		witness[i] = &TokenDataWitness{Value: v, BlindingFactor: bfs[i]}
-	}
-	witness[0].Type = ttype
-	return witness
 }
 
 func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, error) {

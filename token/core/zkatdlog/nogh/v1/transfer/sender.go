@@ -58,18 +58,13 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 	}
 	span.AddEvent("get_token_data")
 	in := getTokenData(s.Inputs)
-	intw := make([]*token.TokenDataWitness, len(s.InputInformation))
+	intw := make([]*token.Metadata, len(s.InputInformation))
 	for i := 0; i < len(s.InputInformation); i++ {
 		if s.InputInformation[0].Type != s.InputInformation[i].Type {
 			return nil, nil, errors.New("cannot generate transfer: please choose inputs of the same token type")
 		}
-		v, err := s.InputInformation[i].Value.Uint()
-		if err != nil {
-			return nil, nil, errors.New("cannot generate transfer: invalid value")
-		}
-
-		intw[i] = &token.TokenDataWitness{
-			Value:          v,
+		intw[i] = &token.Metadata{
+			Value:          s.InputInformation[i].Value,
 			Type:           s.InputInformation[i].Type,
 			BlindingFactor: s.InputInformation[i].BlindingFactor,
 		}
@@ -99,7 +94,7 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 	for i := 0; i < len(inf); i++ {
 		inf[i] = &token.Metadata{
 			Type:           s.InputInformation[0].Type,
-			Value:          math.Curves[s.PublicParams.Curve].NewZrFromUint64(outtw[i].Value),
+			Value:          outtw[i].Value,
 			BlindingFactor: outtw[i].BlindingFactor,
 		}
 	}
