@@ -93,23 +93,41 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ token.Typ
 }
 
 func IssueSuccessfulCash(network *integration.Infrastructure, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, finalities ...*token3.NodeReference) string {
-	return issueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, nil, finalities, []string{})
+	return issueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, nil, finalities, false, []string{})
 }
 
 func IssueCashForTMSID(network *integration.Infrastructure, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
-	return issueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, tmsId, []*token3.NodeReference{}, expectedErrorMsgs)
+	return issueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, tmsId, []*token3.NodeReference{}, false, expectedErrorMsgs)
 }
 
-func issueCashForTMSID(network *integration.Infrastructure, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, tmsId *token2.TMSID, endorsers []*token3.NodeReference, expectedErrorMsgs []string) string {
+func IssueCashWithNoAuditorSigVerification(network *integration.Infrastructure, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, expectedErrorMsgs ...string) string {
+	return issueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, nil, []*token3.NodeReference{}, true, expectedErrorMsgs)
+}
+
+func issueCashForTMSID(
+	network *integration.Infrastructure,
+	wallet string,
+	typ token.Type,
+	amount uint64,
+	receiver *token3.NodeReference,
+	auditor *token3.NodeReference,
+	anonymous bool,
+	issuer *token3.NodeReference,
+	tmsId *token2.TMSID,
+	endorsers []*token3.NodeReference,
+	skipAuditorSignatureVerification bool,
+	expectedErrorMsgs []string,
+) string {
 	txIDBoxed, err := network.Client(issuer.ReplicaName()).CallView("issue", common.JSONMarshall(&views.IssueCash{
-		Anonymous:    anonymous,
-		Auditor:      auditor.Id(),
-		IssuerWallet: wallet,
-		TokenType:    typ,
-		Quantity:     amount,
-		Recipient:    network.Identity(receiver.Id()),
-		RecipientEID: receiver.Id(),
-		TMSID:        tmsId,
+		Anonymous:                        anonymous,
+		Auditor:                          auditor.Id(),
+		IssuerWallet:                     wallet,
+		TokenType:                        typ,
+		Quantity:                         amount,
+		Recipient:                        network.Identity(receiver.Id()),
+		RecipientEID:                     receiver.Id(),
+		TMSID:                            tmsId,
+		SkipAuditorSignatureVerification: skipAuditorSignatureVerification,
 	}))
 
 	topology.ToOptions(network.FscPlatform.Peers[0].Options).Endorser()
@@ -1369,10 +1387,10 @@ func MultiSigSpendCashForTMSID(network *integration.Infrastructure, sender *toke
 
 }
 
-func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, networkName string) []byte {
+func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, issuer string, networkName string, appendIdentities bool) []byte {
 	tms := GetTMSByNetworkName(network, networkName)
 	auditorId := GetAuditorIdentity(tms, auditor)
-	issuerId := GetIssuerIdentity(tms, "newIssuer")
+	issuerId := GetIssuerIdentity(tms, issuer)
 
 	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*tplatform.Platform)
 	Expect(ok).To(BeTrue(), "failed to get token platform from context")
@@ -1389,6 +1407,8 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 		Serialize() ([]byte, error)
 		SetIssuers(identities []driver.Identity)
 		SetAuditors(identities []driver.Identity)
+		AddAuditor(identity2 driver.Identity)
+		AddIssuer(identity2 driver.Identity)
 	}
 	var pp PP
 	switch genericPP.Identifier {
@@ -1399,12 +1419,17 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
 		Expect(err).NotTo(HaveOccurred())
 	default:
-		Expect(false).To(BeTrue(), "unknown pp identitfier [%s]", genericPP.Identifier)
+		Expect(false).To(BeTrue(), "unknown pp identifier [%s]", genericPP.Identifier)
 	}
 
 	Expect(pp.Validate()).NotTo(HaveOccurred())
-	pp.SetAuditors([]driver.Identity{auditorId})
-	pp.SetIssuers([]driver.Identity{issuerId})
+	if appendIdentities {
+		pp.AddAuditor(auditorId)
+		pp.AddIssuer(issuerId)
+	} else {
+		pp.SetAuditors([]driver.Identity{auditorId})
+		pp.SetIssuers([]driver.Identity{issuerId})
+	}
 
 	// Serialize
 	ppBytes, err = pp.Serialize()

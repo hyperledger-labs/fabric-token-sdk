@@ -847,7 +847,7 @@ func TestSelector(network *integration.Infrastructure, auditorId string, sel *to
 	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
 }
 
-func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID string, ppBytes []byte, networkName string, issuerAsAuditor bool, sel *token3.ReplicaSelector) {
+func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID string, ppBytes []byte, networkName string, issuerAsAuditor bool, sel *token3.ReplicaSelector, updateWithAppend bool) {
 	newAuditor := sel.Get(newAuditorID)
 	tms := GetTMSByNetworkName(network, networkName)
 	newIssuer := sel.Get("newIssuer")
@@ -855,7 +855,6 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID st
 	alice := sel.Get("alice")
 	manager := sel.Get("manager")
 	auditor := sel.Get("auditor")
-	errorMessage := "is not in issuers"
 	if issuerAsAuditor {
 		auditor = issuer
 	}
@@ -886,7 +885,18 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID st
 	Expect(txId).NotTo(BeEmpty())
 	CheckBalance(network, alice, "", "USD", 220)
 	CheckHolding(network, alice, "", "USD", 110, newAuditor)
-	IssueCash(network, "", "USD", 110, alice, newAuditor, true, issuer, errorMessage)
+	if updateWithAppend {
+		IssueCash(network, "", "USD", 110, alice, newAuditor, true, issuer)
+	} else {
+		IssueCash(network, "", "USD", 110, alice, newAuditor, true, issuer, "is not in issuers")
+	}
+	if newAuditorID != "auditor" {
+		if updateWithAppend {
+			IssueCash(network, "", "USD", 110, alice, auditor, true, newIssuer)
+		} else {
+			IssueCashWithNoAuditorSigVerification(network, "", "USD", 110, alice, auditor, true, newIssuer, "is not in auditors")
+		}
+	}
 
 	CheckOwnerWalletIDs(network, manager, "manager.id1", "manager.id2", "manager.id3")
 }

@@ -6,6 +6,10 @@ integration-tests-dlog-fabric-t1:
 integration-tests-dlog-fabric-t2:
 	make integration-tests-dlog-fabric TEST_FILTER="T2"
 
+.PHONY: integration-tests-dlog-fabric-t2.1
+integration-tests-dlog-fabric-t2.1:
+	make integration-tests-dlog-fabric TEST_FILTER="T2.1"
+
 .PHONY: integration-tests-dlog-fabric-t3
 integration-tests-dlog-fabric-t3:
 	make integration-tests-dlog-fabric TEST_FILTER="T3"

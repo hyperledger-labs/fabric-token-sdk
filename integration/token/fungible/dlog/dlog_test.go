@@ -41,14 +41,26 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries|WebEnabled, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("Update public params", Label("T2"), func() {
+			It("Update public params (new auditor and issuer)", Label("T2"), func() {
 				fungible.TestPublicParamsUpdate(
 					ts.II,
 					"newAuditor",
-					fungible.PrepareUpdatedPublicParams(ts.II, "newAuditor", "default"),
+					fungible.PrepareUpdatedPublicParams(ts.II, "newAuditor", "newIssuer", "default", false),
 					"default",
 					false,
 					selector,
+					false,
+				)
+			})
+			It("Update public params (append new auditor and issuer)", Label("T2.1"), func() {
+				fungible.TestPublicParamsUpdate(
+					ts.II,
+					"newAuditor",
+					fungible.PrepareUpdatedPublicParams(ts.II, "newAuditor", "newIssuer", "default", true),
+					"default",
+					false,
+					selector,
+					true,
 				)
 			})
 			It("Test Identity Revocation", Label("T3"), func() { fungible.TestRevokeIdentity(ts.II, "auditor", selector) })
@@ -65,10 +77,11 @@ var _ = Describe("EndToEnd", func() {
 				fungible.TestPublicParamsUpdate(
 					ts.II,
 					"newIssuer",
-					fungible.PrepareUpdatedPublicParams(ts.II, "newIssuer", "default"),
+					fungible.PrepareUpdatedPublicParams(ts.II, "newIssuer", "newIssuer", "default", false),
 					"default",
 					true,
 					selector,
+					false,
 				)
 			})
 		})

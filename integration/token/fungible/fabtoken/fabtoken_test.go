@@ -53,7 +53,7 @@ func UpdatePublicParams(network *integration.Infrastructure, selector *token2.Re
 	ppBytes, err := publicParam.Serialize()
 	Expect(err).NotTo(HaveOccurred())
 
-	fungible.TestPublicParamsUpdate(network, "newAuditor", ppBytes, "default", false, selector)
+	fungible.TestPublicParamsUpdate(network, "newAuditor", ppBytes, "default", false, selector, false)
 }
 
 func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {

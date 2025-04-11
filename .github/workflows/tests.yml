@@ -81,6 +81,7 @@ jobs:
         tests: [
           dlog-fabric-t1,
           dlog-fabric-t2,
+          dlog-fabric-t2.1,
           dlog-fabric-t3,
           dlog-fabric-t4,
           dlog-fabric-t5,
