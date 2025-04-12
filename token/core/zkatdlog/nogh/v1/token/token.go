@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	noghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -66,7 +66,7 @@ func (t *Token) Deserialize(bytes []byte) error {
 }
 
 // ToClear returns Token in the clear
-func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token2.Token, error) {
+func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token.Token, error) {
 	com, err := commit([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedersenGenerators, math.Curves[pp.Curve])
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve token in the clear: failed to check token data")
@@ -75,7 +75,7 @@ func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token2.Token,
 	if !com.Equals(t.Data) {
 		return nil, errors.New("cannot retrieve token in the clear: output does not match provided opening")
 	}
-	return &token2.Token{
+	return &token.Token{
 		Type:     meta.Type,
 		Quantity: "0x" + meta.Value.String(),
 		Owner:    t.Owner,
@@ -106,7 +106,7 @@ func computeTokens(tw []*Metadata, pp []*math.G1, c *math.Curve) ([]*math.G1, er
 	return tokens, nil
 }
 
-func GetTokensWithWitness(values []uint64, ttype token2.Type, pp []*math.G1, c *math.Curve) ([]*math.G1, []*Metadata, error) {
+func GetTokensWithWitness(values []uint64, tokenType token.Type, pp []*math.G1, c *math.Curve) ([]*math.G1, []*Metadata, error) {
 	if c == nil {
 		return nil, nil, errors.New("cannot get tokens with witness: please initialize curve")
 	}
@@ -119,7 +119,7 @@ func GetTokensWithWitness(values []uint64, ttype token2.Type, pp []*math.G1, c *
 		tw[i] = &Metadata{
 			BlindingFactor: c.NewRandomZr(rand),
 			Value:          c.NewZrFromUint64(v),
-			Type:           ttype,
+			Type:           tokenType,
 		}
 	}
 	tokens, err := computeTokens(tw, pp, c)
@@ -132,13 +132,13 @@ func GetTokensWithWitness(values []uint64, ttype token2.Type, pp []*math.G1, c *
 // Metadata contains the metadata of a token
 type Metadata comm.Metadata
 
-// NewWitness returns an array of Metadata that corresponds to the passed arguments
-func NewWitness(curve math.CurveID, ttype token2.Type, values []uint64, bfs []*math.Zr) []*Metadata {
+// NewMetadata returns an array of Metadata that corresponds to the passed arguments
+func NewMetadata(curve math.CurveID, tokenType token.Type, values []uint64, bfs []*math.Zr) []*Metadata {
 	witness := make([]*Metadata, len(values))
 	for i, v := range values {
 		witness[i] = &Metadata{Value: math.Curves[curve].NewZrFromUint64(v), BlindingFactor: bfs[i]}
 	}
-	witness[0].Type = ttype
+	witness[0].Type = tokenType
 	return witness
 }
 
@@ -152,7 +152,7 @@ func (m *Metadata) Deserialize(b []byte) error {
 	if err := proto.Unmarshal(typed.Token, metadata); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling metadata")
 	}
-	m.Type = token2.Type(metadata.Type)
+	m.Type = token.Type(metadata.Type)
 	m.Value, err = utils.FromZrProto(metadata.Value)
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize metadata")

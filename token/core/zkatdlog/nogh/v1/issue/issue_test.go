@@ -50,5 +50,5 @@ func prepareInputsForZKIssue(pp *v1.PublicParams) ([]*token.Metadata, []*math.G1
 	for i := 0; i < len(values); i++ {
 		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve)
 	}
-	return token.NewWitness(pp.Curve, "ABC", values, bf), tokens
+	return token.NewMetadata(pp.Curve, "ABC", values, bf), tokens
 }
