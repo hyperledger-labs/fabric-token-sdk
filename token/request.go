@@ -136,9 +136,10 @@ func WithRestRecipientIdentity(recipientData *RecipientData) TransferOption {
 // AuditRecord models the audit record returned by the audit command
 // It contains the token request's anchor, inputs (with Type and Quantity), and outputs
 type AuditRecord struct {
-	Anchor  string
-	Inputs  *InputStream
-	Outputs *OutputStream
+	Anchor     string
+	Inputs     *InputStream
+	Outputs    *OutputStream
+	Attributes map[string][]byte
 }
 
 // Issue contains information about an issue operation.
@@ -844,25 +845,27 @@ func (r *Request) extractTransferInputs(actionIndex int, metadata *TransferMetad
 	return inputs, nil
 }
 
-func (r *Request) InputsAndOutputs() (*InputStream, *OutputStream, error) {
+func (r *Request) InputsAndOutputs() (*InputStream, *OutputStream, map[string][]byte, error) {
 	return r.inputsAndOutputs(false, false, false)
 }
 
 func (r *Request) InputsAndOutputsNoRecipients() (*InputStream, *OutputStream, error) {
-	return r.inputsAndOutputs(false, false, true)
+	is, os, _, err := r.inputsAndOutputs(false, false, true)
+	return is, os, err
 }
 
-func (r *Request) inputsAndOutputs(failOnMissing, verifyActions, noOutputForRecipient bool) (*InputStream, *OutputStream, error) {
+func (r *Request) inputsAndOutputs(failOnMissing, verifyActions, noOutputForRecipient bool) (*InputStream, *OutputStream, map[string][]byte, error) {
 	tms := r.TokenService.tms
 	if tms.PublicParamsManager() == nil || tms.PublicParamsManager().PublicParameters() == nil {
-		return nil, nil, errors.New("can't get inputs: invalid token service in request")
+		return nil, nil, nil, errors.New("can't get inputs: invalid token service in request")
 	}
 	meta, err := r.GetMetadata()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	var inputs []*Input
 	var outputs []*Output
+	attributes := map[string][]byte{}
 	counter := uint64(0)
 
 	issueService := tms.IssueService()
@@ -870,32 +873,36 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions, noOutputForReci
 		// deserialize action
 		issueAction, err := issueService.DeserializeIssueAction(issue)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed deserializing issue action [%d]", i)
+			return nil, nil, nil, errors.Wrapf(err, "failed deserializing issue action [%d]", i)
 		}
+		for k, v := range issueAction.GetMetadata() {
+			attributes[k] = v
+		}
+
 		// get metadata for action
 		issueMeta, err := meta.Issue(i)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting issue metadata [%d]", i)
+			return nil, nil, nil, errors.Wrapf(err, "failed getting issue metadata [%d]", i)
 		}
 		if err := issueMeta.Match(&IssueAction{a: issueAction}); err != nil {
-			return nil, nil, errors.Wrapf(err, "failed matching issue action with its metadata [%d]", i)
+			return nil, nil, nil, errors.Wrapf(err, "failed matching issue action with its metadata [%d]", i)
 		}
 
 		if verifyActions {
 			if err := issueService.VerifyIssue(issueAction, issueMeta.Outputs); err != nil {
-				return nil, nil, errors.WithMessagef(err, "failed verifying issue action")
+				return nil, nil, nil, errors.WithMessagef(err, "failed verifying issue action")
 			}
 		}
 
 		extractedInputs, err := r.extractIssueInputs(i, issueMeta)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		inputs = append(inputs, extractedInputs...)
 
 		extractedOutputs, newCounter, err := r.extractIssueOutputs(i, counter, issueAction, issueMeta, failOnMissing, noOutputForRecipient)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		outputs = append(outputs, extractedOutputs...)
 		counter = newCounter
@@ -906,36 +913,39 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions, noOutputForReci
 		// deserialize action
 		transferAction, err := ts.DeserializeTransferAction(transfer)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
+			return nil, nil, nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
+		}
+		for k, v := range transferAction.GetMetadata() {
+			attributes[k] = v
 		}
 		// get metadata for action
 		transferMeta, err := meta.Transfer(i)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting transfer metadata [%d]", i)
+			return nil, nil, nil, errors.Wrapf(err, "failed getting transfer metadata [%d]", i)
 		}
 		if err := transferMeta.Match(&TransferAction{a: transferAction}); err != nil {
-			return nil, nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
+			return nil, nil, nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 		if verifyActions {
 			if err := ts.VerifyTransfer(transferAction, transferMeta.Outputs); err != nil {
-				return nil, nil, errors.WithMessagef(err, "failed verifying transfer action")
+				return nil, nil, nil, errors.WithMessagef(err, "failed verifying transfer action")
 			}
 		}
 
 		// we might not have TokenIDs if they have been filtered
 		if len(transferMeta.Inputs) == 0 && failOnMissing {
-			return nil, nil, errors.Errorf("missing token ids for transfer [%d]", i)
+			return nil, nil, nil, errors.Errorf("missing token ids for transfer [%d]", i)
 		}
 
 		extractedInputs, err := r.extractTransferInputs(i, transferMeta, failOnMissing)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		inputs = append(inputs, extractedInputs...)
 
 		extractedOutputs, newCounter, err := r.extractTransferOutputs(i, counter, transferAction, transferMeta, failOnMissing, noOutputForRecipient)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		outputs = append(outputs, extractedOutputs...)
 		counter = newCounter
@@ -944,7 +954,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions, noOutputForReci
 	precision := tms.PublicParamsManager().PublicParameters().Precision()
 	inputStream := NewInputStream(r.TokenService.Vault().NewQueryEngine(), inputs, precision)
 	os := NewOutputStream(outputs, precision)
-	return inputStream, os, nil
+	return inputStream, os, attributes, nil
 }
 
 // IsValid checks that the request is valid.
@@ -961,7 +971,7 @@ func (r *Request) IsValid() error {
 	}
 
 	// check inputs, outputs, and verify actions
-	if _, _, err := r.inputsAndOutputs(false, true, false); err != nil {
+	if _, _, _, err := r.inputsAndOutputs(false, true, false); err != nil {
 		return errors.WithMessagef(err, "failed verifying inputs and outputs")
 	}
 
@@ -1179,7 +1189,7 @@ func (r *Request) AuditCheck(ctx context.Context) error {
 // AuditRecord return the audit record of the request.
 // The audit record contains: The anchor, the audit inputs and outputs
 func (r *Request) AuditRecord() (*AuditRecord, error) {
-	inputs, outputs, err := r.inputsAndOutputs(true, false, false)
+	inputs, outputs, attr, err := r.inputsAndOutputs(true, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1221,9 +1231,10 @@ func (r *Request) AuditRecord() (*AuditRecord, error) {
 	}
 
 	return &AuditRecord{
-		Anchor:  r.Anchor,
-		Inputs:  inputs,
-		Outputs: outputs,
+		Anchor:     r.Anchor,
+		Inputs:     inputs,
+		Outputs:    outputs,
+		Attributes: attr,
 	}, nil
 }
 
