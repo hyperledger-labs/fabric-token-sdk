@@ -135,7 +135,7 @@ func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams
 		SearchDirection: driver.FromBeginning,
 	})
 	query, err := NewSelect(
-		fmt.Sprintf("%s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, %s.application_metadata, stored_at", db.table.Transactions, db.table.Requests, db.table.Requests),
+		fmt.Sprintf("%s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, %s.application_metadata, %s.public_metadata, stored_at", db.table.Transactions, db.table.Requests, db.table.Requests, db.table.Requests),
 	).From(db.table.Transactions, joinOnTxID(db.table.Transactions, db.table.Requests)).Where(conditions).OrderBy(orderBy).Compile()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile query")
@@ -287,6 +287,7 @@ func (db *TransactionDB) GetSchema() string {
 			status INT NOT NULL,
 			status_message TEXT NOT NULL,
 			application_metadata JSONB NOT NULL,
+			public_metadata JSONB NOT NULL,
 			pp_hash BYTEA NOT NULL
 		);
 
@@ -348,6 +349,9 @@ func marshal(in map[string][]byte) (string, error) {
 }
 
 func unmarshal(in []byte, out *map[string][]byte) error {
+	if len(in) == 0 {
+		return nil
+	}
 	return json.Unmarshal(in, out)
 }
 
@@ -367,8 +371,8 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 	var actionType int
 	var amount int64
 	var status int
-	var metadata []byte
-	// tx_id, action_type, sender_eid, recipient_eid, token_type, amount, status, stored_at
+	var appMetadata []byte
+	var pubMetadata []byte
 	err := t.txs.Scan(
 		&r.TxID,
 		&actionType,
@@ -377,11 +381,16 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 		&r.TokenType,
 		&amount,
 		&status,
-		&metadata,
+		&appMetadata,
+		&pubMetadata,
 		&r.Timestamp,
 	)
-	if err := unmarshal(metadata, &r.ApplicationMetadata); err != nil {
-		logger.Errorf("error unmarshaling application metadata: %v", metadata)
+	if err := unmarshal(appMetadata, &r.ApplicationMetadata); err != nil {
+		logger.Errorf("error unmarshaling application metadata: %v", appMetadata)
+		return &r, errors.New("error umarshaling application metadata")
+	}
+	if err := unmarshal(pubMetadata, &r.PublicMetadata); err != nil {
+		logger.Errorf("error unmarshaling application metadata: %v", pubMetadata)
 		return &r, errors.New("error umarshaling application metadata")
 	}
 
@@ -537,7 +546,7 @@ func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 	return ttxDBError(err)
 }
 
-func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadata map[string][]byte, ppHash driver2.PPHash) error {
+func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadata, publicMetadata map[string][]byte, ppHash driver2.PPHash) error {
 	logger.Debugf("adding token request [%s]", txID)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
@@ -545,18 +554,25 @@ func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadat
 	if applicationMetadata == nil {
 		applicationMetadata = make(map[string][]byte)
 	}
-	j, err := marshal(applicationMetadata)
+	ja, err := marshal(applicationMetadata)
+	if err != nil {
+		return errors.New("error marshaling application metadata")
+	}
+	if publicMetadata == nil {
+		publicMetadata = make(map[string][]byte)
+	}
+	jp, err := marshal(publicMetadata)
 	if err != nil {
 		return errors.New("error marshaling application metadata")
 	}
 
-	query, err := NewInsertInto(w.table.Requests).Rows("tx_id, request, status, status_message, application_metadata, pp_hash").Compile()
+	query, err := NewInsertInto(w.table.Requests).Rows("tx_id, request, status, status_message, application_metadata, public_metadata, pp_hash").Compile()
 	if err != nil {
 		return errors.Wrapf(err, "error compiling query")
 	}
-	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(ppHash))
+	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(publicMetadata), len(ppHash))
 
-	_, err = w.txn.Exec(query, txID, tr, driver.Pending, "", j, ppHash)
+	_, err = w.txn.Exec(query, txID, tr, driver.Pending, "", ja, jp, ppHash)
 	return ttxDBError(err)
 }
 

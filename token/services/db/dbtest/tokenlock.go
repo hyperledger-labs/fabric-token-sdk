@@ -46,7 +46,7 @@ var tokenLockDBCases = []struct {
 func TestFully(t *testing.T, tokenLockDB driver.TokenLockDB, tokenTransactionDB driver.TokenTransactionDB) {
 	tx, err := tokenTransactionDB.BeginAtomicWrite()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.AddTokenRequest("apple", []byte("apple_tx_content"), nil, driver2.PPHash("tr")))
+	assert.NoError(t, tx.AddTokenRequest("apple", []byte("apple_tx_content"), nil, nil, driver2.PPHash("tr")))
 	assert.NoError(t, tx.Commit())
 
 	assert.NoError(t, tokenLockDB.Lock(&token.ID{TxId: "apple", Index: 0}, "pineapple"))

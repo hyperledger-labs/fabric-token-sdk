@@ -272,7 +272,7 @@ func (t *Transaction) Inputs() (*token.InputStream, error) {
 	return t.TokenRequest.Inputs()
 }
 
-func (t *Transaction) InputsAndOutputs() (*token.InputStream, *token.OutputStream, error) {
+func (t *Transaction) InputsAndOutputs() (*token.InputStream, *token.OutputStream, map[string][]byte, error) {
 	return t.TokenRequest.InputsAndOutputs()
 }
 
