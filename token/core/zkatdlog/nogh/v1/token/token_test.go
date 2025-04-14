@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -99,24 +100,93 @@ func TestTokenIsRedeem(t *testing.T) {
 
 func TestGetTokensWithWitness(t *testing.T) {
 	tests := []struct {
-		name             string
-		values           []uint64
-		tokenType        token3.Type
-		pp               []*math.G1
-		curve            *math.Curve
-		wantErr          bool
-		expectedError    string
-		expectedQuantity uint64
+		name          string
+		values        []uint64
+		tokenType     token3.Type
+		pp            []*math.G1
+		curve         *math.Curve
+		validate      func([]*math.G1, []*token2.TokenDataWitness) error
+		wantErr       bool
+		expectedError string
 	}{
 		{
 			name:          "curve is nil",
 			wantErr:       true,
 			expectedError: "cannot get tokens with witness: please initialize curve",
 		},
+		{
+			name:    "curve is not nil",
+			curve:   math.Curves[math.FP256BN_AMCL],
+			wantErr: false,
+			validate: func(tokens []*math.G1, data []*token2.TokenDataWitness) error {
+				if len(tokens) != 0 {
+					return errors.New("tokens should be empty")
+				}
+				if len(data) != 0 {
+					return errors.New("tokens should be empty")
+				}
+				return nil
+			},
+		},
+		{
+			name:          "number of generators is not equal to number of vector elements",
+			values:        []uint64{10},
+			tokenType:     "token type",
+			pp:            nil,
+			curve:         math.Curves[math.FP256BN_AMCL],
+			wantErr:       true,
+			expectedError: "cannot get tokens with witness: failed to compute token [0]: number of generators is not equal to number of vector elements, [0]!=[3]",
+		},
+		{
+			name:      "success",
+			values:    []uint64{10},
+			tokenType: "token type",
+			pp: []*math.G1{
+				math.Curves[math.FP256BN_AMCL].NewG1(),
+				math.Curves[math.FP256BN_AMCL].NewG1(),
+				math.Curves[math.FP256BN_AMCL].NewG1(),
+			},
+			curve:   math.Curves[math.FP256BN_AMCL],
+			wantErr: false,
+			validate: func(toks []*math.G1, data []*token2.TokenDataWitness) error {
+				if len(toks) != 1 {
+					return errors.New("one token was expected")
+				}
+				if len(data) != 1 {
+					return errors.New("one data was expected")
+				}
+				c := math.Curves[math.FP256BN_AMCL]
+				pp := []*math.G1{
+					math.Curves[math.FP256BN_AMCL].NewG1(),
+					math.Curves[math.FP256BN_AMCL].NewG1(),
+					math.Curves[math.FP256BN_AMCL].NewG1(),
+				}
+
+				for i, token := range toks {
+					hash := c.HashToZr([]byte(data[i].Type))
+					tok, err := token2.Commit(
+						[]*math.Zr{
+							hash,
+							c.NewZrFromUint64(data[i].Value),
+							data[i].BlindingFactor,
+						},
+						pp,
+						c,
+					)
+					if err != nil {
+						return err
+					}
+					if !token.Equals(tok) {
+						return errors.New("token does not match")
+					}
+				}
+				return nil
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := token2.GetTokensWithWitness(
+			g1s, witnesses, err := token2.GetTokensWithWitness(
 				tt.values,
 				tt.tokenType,
 				tt.pp,
@@ -127,6 +197,7 @@ func TestGetTokensWithWitness(t *testing.T) {
 				assert.EqualError(t, err, tt.expectedError)
 			} else {
 				assert.NoError(t, err)
+				assert.NoError(t, tt.validate(g1s, witnesses))
 			}
 		})
 	}
