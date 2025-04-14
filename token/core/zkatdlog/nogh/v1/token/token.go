@@ -53,9 +53,6 @@ func (t *Token) Deserialize(bytes []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed deserializing token")
 	}
-	if typed.Type != comm.Type {
-		return errors.Errorf("invalid token type [%v]", typed.Type)
-	}
 	token := &actions.Token{}
 	if err := proto.Unmarshal(typed.Token, token); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling token")
