@@ -64,7 +64,7 @@ func (t *Token) Deserialize(bytes []byte) error {
 
 // ToClear returns Token in the clear
 func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token.Token, error) {
-	com, err := commit([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedersenGenerators, math.Curves[pp.Curve])
+	com, err := Commit([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedersenGenerators, math.Curves[pp.Curve])
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve token in the clear: failed to check token data")
 	}
@@ -94,7 +94,7 @@ func computeTokens(tw []*Metadata, pp []*math.G1, c *math.Curve) ([]*math.G1, er
 	var err error
 	for i := 0; i < len(tw); i++ {
 		hash := c.HashToZr([]byte(tw[i].Type))
-		tokens[i], err = commit([]*math.Zr{hash, tw[i].Value, tw[i].BlindingFactor}, pp, c)
+		tokens[i], err = Commit([]*math.Zr{hash, tw[i].Value, tw[i].BlindingFactor}, pp, c)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to compute token [%d]", i)
 		}
@@ -195,7 +195,11 @@ func (m *Metadata) Clone() *Metadata {
 	}
 }
 
-func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, error) {
+// Commit computes the Pedersen commitment of the passed elements using the passed bases
+func Commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, error) {
+	if len(generators) != len(vector) {
+		return nil, errors.Errorf("number of generators is not equal to number of vector elements, [%d]!=[%d]", len(generators), len(vector))
+	}
 	com := c.NewG1()
 	for i := range vector {
 		if vector[i] == nil {
