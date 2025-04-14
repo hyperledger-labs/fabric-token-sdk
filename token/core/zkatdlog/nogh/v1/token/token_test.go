@@ -270,7 +270,7 @@ func TestTokenDeserialize(t *testing.T) {
 				return nil, raw, err
 			},
 			wantErr:       true,
-			expectedError: "failed unmarshalling token: proto:\u00a0cannot parse invalid wire-format data",
+			expectedError: "failed unmarshalling token: proto: cannot parse invalid wire-format data",
 		},
 	}
 	for _, tt := range tests {
