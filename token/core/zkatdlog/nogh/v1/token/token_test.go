@@ -72,3 +72,60 @@ func FuzzSerialization(f *testing.F) {
 		assert.Equal(t, token.Data, token2.Data)
 	})
 }
+
+func TestTokenGetOwner(t *testing.T) {
+	token := &token2.Token{
+		Owner: []byte("Alice"),
+	}
+	assert.Equal(t, token.GetOwner(), token.Owner)
+}
+
+func TestTokenIsRedeem(t *testing.T) {
+	token := &token2.Token{
+		Owner: []byte("Alice"),
+	}
+	assert.False(t, token.IsRedeem())
+
+	token = &token2.Token{}
+	assert.True(t, token.IsRedeem())
+
+	token = &token2.Token{
+		Owner: []byte{},
+	}
+	assert.True(t, token.IsRedeem())
+}
+
+func TestGetTokensWithWitness(t *testing.T) {
+	tests := []struct {
+		name             string
+		values           []uint64
+		tokenType        token3.Type
+		pp               []*math.G1
+		curve            *math.Curve
+		wantErr          bool
+		expectedError    string
+		expectedQuantity uint64
+	}{
+		{
+			name:          "curve is nil",
+			wantErr:       true,
+			expectedError: "cannot get tokens with witness: please initialize curve",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := token2.GetTokensWithWitness(
+				tt.values,
+				tt.tokenType,
+				tt.pp,
+				tt.curve,
+			)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
