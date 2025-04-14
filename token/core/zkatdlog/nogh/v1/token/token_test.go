@@ -12,6 +12,8 @@ import (
 	math "github.com/IBM/mathlib"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 )
@@ -201,6 +203,88 @@ func TestTokenValidate(t *testing.T) {
 				assert.EqualError(t, err, tt.expectedError)
 			} else {
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestTokenDeserialize(t *testing.T) {
+	tests := []struct {
+		name          string
+		token         func() (*token2.Token, []byte, error)
+		owner         bool
+		wantErr       bool
+		expectedError string
+	}{
+		{
+			name:  "nil raw",
+			owner: true,
+			token: func() (*token2.Token, []byte, error) {
+				return nil, nil, nil
+			},
+			wantErr:       true,
+			expectedError: "failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: syntax error: sequence truncated",
+		},
+		{
+			name:  "empty raw",
+			owner: true,
+			token: func() (*token2.Token, []byte, error) {
+				return nil, []byte{}, nil
+			},
+			wantErr:       true,
+			expectedError: "failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: syntax error: sequence truncated",
+		},
+		{
+			name:  "invalid raw",
+			owner: true,
+			token: func() (*token2.Token, []byte, error) {
+				return nil, []byte{0, 1, 2, 3}, nil
+			},
+			wantErr:       true,
+			expectedError: "failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: structure error: tags don't match (16 vs {class:0 tag:0 length:1 isCompound:false}) {optional:false explicit:false application:false private:false defaultValue:<nil> tag:<nil> stringType:0 timeType:0 set:false omitEmpty:false} TypedToken @2",
+		},
+		{
+			name:  "invalid token type",
+			owner: true,
+			token: func() (*token2.Token, []byte, error) {
+				raw, err := tokens.WrapWithType(-1, []byte{0, 1, 2, 3})
+				return nil, raw, err
+			},
+			wantErr:       true,
+			expectedError: "failed deserializing token: invalid token type [-1]",
+		},
+		{
+			name:  "valid token raw, nil",
+			owner: true,
+			token: func() (*token2.Token, []byte, error) {
+				raw, err := tokens.WrapWithType(comm.Type, nil)
+				return &token2.Token{}, raw, err
+			},
+			wantErr: false,
+		},
+		{
+			name:  "invalid token raw, invalid",
+			owner: true,
+			token: func() (*token2.Token, []byte, error) {
+				raw, err := tokens.WrapWithType(comm.Type, []byte{0, 1, 2, 3})
+				return nil, raw, err
+			},
+			wantErr:       true,
+			expectedError: "failed unmarshalling token: proto:\u00a0cannot parse invalid wire-format data",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tok, raw, err := tt.token()
+			assert.NoError(t, err)
+			tok2 := &token2.Token{}
+			err = tok2.Deserialize(raw)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tok, tok2)
 			}
 		})
 	}
