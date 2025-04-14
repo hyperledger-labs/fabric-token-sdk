@@ -141,12 +141,12 @@ func NewMetadata(curve math.CurveID, tokenType token.Type, values []uint64, bfs 
 
 // Deserialize un-marshals Metadata
 func (m *Metadata) Deserialize(b []byte) error {
-	typed, err := comm.UnmarshalTypedToken(b)
+	typed, err := comm.UnmarshalTypedMetadata(b)
 	if err != nil {
 		return errors.Wrapf(err, "failed deserializing metadata")
 	}
 	metadata := &actions.TokenMetadata{}
-	if err := proto.Unmarshal(typed.Token, metadata); err != nil {
+	if err := proto.Unmarshal(typed.Metadata, metadata); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling metadata")
 	}
 	m.Type = token.Type(metadata.Type)
