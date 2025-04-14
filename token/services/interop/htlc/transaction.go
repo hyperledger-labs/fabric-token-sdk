@@ -195,7 +195,7 @@ func (t *Transaction) Lock(wallet *token.OwnerWallet, sender view.Identity, typ 
 }
 
 // Reclaim appends a reclaim (transfer) action to the token request of the transaction
-func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToken) error {
+func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToken, opts ...token.TransferOption) error {
 	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().PublicParameters().Precision())
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
@@ -236,11 +236,17 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 		return err
 	}
 
-	return t.Transfer(wallet, tok.Type, []uint64{q.ToBigInt().Uint64()}, []view.Identity{script.Sender}, token.WithTokenIDs(tok.Id))
+	return t.Transfer(
+		wallet,
+		tok.Type,
+		[]uint64{q.ToBigInt().Uint64()},
+		[]view.Identity{script.Sender},
+		append(opts, token.WithTokenIDs(tok.Id))...,
+	)
 }
 
 // Claim appends a claim (transfer) action to the token request of the transaction
-func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken, preImage []byte) error {
+func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken, preImage []byte, opts ...token.TransferOption) error {
 	if len(preImage) == 0 {
 		return errors.New("preImage is nil")
 	}
@@ -309,8 +315,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		tok.Type,
 		[]uint64{q.ToBigInt().Uint64()},
 		[]view.Identity{script.Recipient},
-		token.WithTokenIDs(tok.Id),
-		token.WithTransferMetadata(ClaimKey(image), preImage),
+		append(opts, token.WithTokenIDs(tok.Id), token.WithTransferMetadata(ClaimKey(image), preImage))...,
 	)
 }
 
