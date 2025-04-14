@@ -129,3 +129,79 @@ func TestGetTokensWithWitness(t *testing.T) {
 		})
 	}
 }
+
+func TestTokenValidate(t *testing.T) {
+	tests := []struct {
+		name          string
+		token         func() (*token2.Token, error)
+		owner         bool
+		wantErr       bool
+		expectedError string
+	}{
+		{
+			name:  "owner is nil",
+			owner: true,
+			token: func() (*token2.Token, error) {
+				return &token2.Token{}, nil
+			},
+			wantErr:       true,
+			expectedError: "token owner cannot be empty",
+		},
+		{
+			name:  "owner is empty",
+			owner: true,
+			token: func() (*token2.Token, error) {
+				return &token2.Token{Owner: []byte{}}, nil
+			},
+			wantErr:       true,
+			expectedError: "token owner cannot be empty",
+		},
+		{
+			name:  "data is empty",
+			owner: true,
+			token: func() (*token2.Token, error) {
+				return &token2.Token{Owner: []byte("owner")}, nil
+			},
+			wantErr:       true,
+			expectedError: "token data cannot be empty",
+		},
+		{
+			name:  "data is empty with no owner",
+			owner: false,
+			token: func() (*token2.Token, error) {
+				return &token2.Token{}, nil
+			},
+			wantErr:       true,
+			expectedError: "token data cannot be empty",
+		},
+		{
+			name:  "valid with no owner",
+			owner: false,
+			token: func() (*token2.Token, error) {
+				return &token2.Token{Data: &math.G1{}}, nil
+			},
+			wantErr: false,
+		},
+		{
+			name:  "valid with owner",
+			owner: true,
+			token: func() (*token2.Token, error) {
+				return &token2.Token{Owner: []byte("owner"), Data: &math.G1{}}, nil
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tok, err := tt.token()
+			assert.NoError(t, err)
+			err = tok.Validate(tt.owner)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
