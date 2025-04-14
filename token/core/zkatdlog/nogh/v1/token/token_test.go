@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -466,6 +467,107 @@ func TestMetadataDeserialize(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, metadata, metadata2)
+			}
+		})
+	}
+}
+
+func TestUpgradeWitnessValidate(t *testing.T) {
+	tests := []struct {
+		name          string
+		token         func() (*token2.UpgradeWitness, error)
+		wantErr       bool
+		expectedError string
+	}{
+		{
+			name: "missing FabToken",
+			token: func() (*token2.UpgradeWitness, error) {
+				return &token2.UpgradeWitness{}, nil
+			},
+			wantErr:       true,
+			expectedError: "missing FabToken",
+		},
+		{
+			name: "missing FabToken.Owner",
+			token: func() (*token2.UpgradeWitness, error) {
+				return &token2.UpgradeWitness{
+					FabToken:       &fabtokenv1.Output{},
+					BlindingFactor: nil,
+				}, nil
+			},
+			wantErr:       true,
+			expectedError: "missing FabToken.Owner",
+		},
+		{
+			name: "missing FabToken.Type",
+			token: func() (*token2.UpgradeWitness, error) {
+				return &token2.UpgradeWitness{
+					FabToken: &fabtokenv1.Output{
+						Owner:    []byte("owner"),
+						Type:     "",
+						Quantity: "",
+					},
+					BlindingFactor: nil,
+				}, nil
+			},
+			wantErr:       true,
+			expectedError: "missing FabToken.Type",
+		},
+		{
+			name: "missing FabToken.Quantity",
+			token: func() (*token2.UpgradeWitness, error) {
+				return &token2.UpgradeWitness{
+					FabToken: &fabtokenv1.Output{
+						Owner:    []byte("owner"),
+						Type:     "token type",
+						Quantity: "",
+					},
+					BlindingFactor: nil,
+				}, nil
+			},
+			wantErr:       true,
+			expectedError: "missing FabToken.Quantity",
+		},
+		{
+			name: "missing BlindingFactor",
+			token: func() (*token2.UpgradeWitness, error) {
+				return &token2.UpgradeWitness{
+					FabToken: &fabtokenv1.Output{
+						Owner:    []byte("owner"),
+						Type:     "token type",
+						Quantity: "quantity",
+					},
+					BlindingFactor: nil,
+				}, nil
+			},
+			wantErr:       true,
+			expectedError: "missing BlindingFactor",
+		},
+		{
+			name: "success",
+			token: func() (*token2.UpgradeWitness, error) {
+				return &token2.UpgradeWitness{
+					FabToken: &fabtokenv1.Output{
+						Owner:    []byte("owner"),
+						Type:     "token type",
+						Quantity: "quantity",
+					},
+					BlindingFactor: &math.Zr{},
+				}, nil
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tok, err := tt.token()
+			assert.NoError(t, err)
+			err = tok.Validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
