@@ -8,16 +8,18 @@ package token
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func ParseFabtokenToken(tok []byte, precision uint64, maxPrecision uint64) (*actions.Output, uint64, error) {
-	if precision < maxPrecision {
+// ParseFabtokenToken unmarshals tok as a fabtoken.Output using precision to parse the quantity.
+// If precision is larger than maxPrecision, it returns an error
+func ParseFabtokenToken(tok []byte, precision uint64, maxPrecision uint64) (*fabtoken.Output, uint64, error) {
+	if precision > maxPrecision {
 		return nil, 0, errors.Errorf("unsupported precision [%d], max [%d]", precision, maxPrecision)
 	}
 
-	output := &actions.Output{}
+	output := &fabtoken.Output{}
 	err := output.Deserialize(tok)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed to unmarshal fabtoken")
