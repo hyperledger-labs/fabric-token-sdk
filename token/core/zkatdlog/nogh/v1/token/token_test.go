@@ -68,7 +68,7 @@ func FuzzSerialization(f *testing.F) {
 		token2 := &token2.Token{}
 		err = token2.Deserialize(raw)
 		if err != nil {
-			t.Errorf("failed to deserialize token [owner: %s, putData: %v]: [%v]", owner, putData, err)
+			t.Errorf("failed to deserialize metadata [owner: %s, putData: %v]: [%v]", owner, putData, err)
 		}
 		assert.Equal(t, len(token.Owner), len(token2.Owner), "owner mismatch [owner: %s, putData: %v]", owner, putData)
 		assert.Equal(t, token.Data, token2.Data)
@@ -285,6 +285,116 @@ func TestTokenDeserialize(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tok, tok2)
+			}
+		})
+	}
+}
+
+func TestMetadataDeserialize(t *testing.T) {
+	tests := []struct {
+		name          string
+		metadata      func() (*token2.Metadata, []byte, error)
+		owner         bool
+		wantErr       bool
+		expectedError string
+	}{
+		{
+			name:  "nil raw",
+			owner: true,
+			metadata: func() (*token2.Metadata, []byte, error) {
+				return nil, nil, nil
+			},
+			wantErr:       true,
+			expectedError: "failed deserializing metadata: failed unmarshalling metadata: failed to unmarshal to TypedMetadata: asn1: syntax error: sequence truncated",
+		},
+		{
+			name:  "empty raw",
+			owner: true,
+			metadata: func() (*token2.Metadata, []byte, error) {
+				return nil, []byte{}, nil
+			},
+			wantErr:       true,
+			expectedError: "failed deserializing metadata: failed unmarshalling metadata: failed to unmarshal to TypedMetadata: asn1: syntax error: sequence truncated",
+		},
+		{
+			name:  "invalid raw",
+			owner: true,
+			metadata: func() (*token2.Metadata, []byte, error) {
+				return nil, []byte{0, 1, 2, 3}, nil
+			},
+			wantErr:       true,
+			expectedError: "failed deserializing metadata: failed unmarshalling metadata: failed to unmarshal to TypedMetadata: asn1: structure error: tags don't match (16 vs {class:0 tag:0 length:1 isCompound:false}) {optional:false explicit:false application:false private:false defaultValue:<nil> tag:<nil> stringType:0 timeType:0 set:false omitEmpty:false} TypedMetadata @2",
+		},
+		{
+			name:  "invalid metadata type",
+			owner: true,
+			metadata: func() (*token2.Metadata, []byte, error) {
+				raw, err := tokens.WrapWithType(-1, []byte{0, 1, 2, 3})
+				return nil, raw, err
+			},
+			wantErr:       true,
+			expectedError: "failed deserializing metadata: invalid metadata type [-1]",
+		},
+		{
+			name:  "valid metadata raw, nil",
+			owner: true,
+			metadata: func() (*token2.Metadata, []byte, error) {
+				raw, err := tokens.WrapWithType(comm.Type, nil)
+				return &token2.Metadata{}, raw, err
+			},
+			wantErr: false,
+		},
+		{
+			name:  "invalid metadata raw, invalid",
+			owner: true,
+			metadata: func() (*token2.Metadata, []byte, error) {
+				raw, err := tokens.WrapWithType(comm.Type, []byte{0, 1, 2, 3})
+				return nil, raw, err
+			},
+			wantErr:       true,
+			expectedError: "failed unmarshalling metadata: proto: cannot parse invalid wire-format data",
+		},
+		{
+			name:  "invalid metadata raw, invalid",
+			owner: true,
+			metadata: func() (*token2.Metadata, []byte, error) {
+				raw, err := tokens.WrapWithType(comm.Type, []byte{0, 1, 2, 3})
+				return nil, raw, err
+			},
+			wantErr:       true,
+			expectedError: "failed unmarshalling metadata: proto: cannot parse invalid wire-format data",
+		},
+		{
+			name:  "valid metadata",
+			owner: true,
+			metadata: func() (*token2.Metadata, []byte, error) {
+				c := math.Curves[math.BN254]
+				rand, err := c.Rand()
+				assert.NoError(t, err)
+				metadata := &token2.Metadata{
+					Type:           "token type",
+					Value:          c.NewRandomZr(rand),
+					BlindingFactor: c.NewRandomZr(rand),
+					Issuer:         []byte("issuer"),
+				}
+				raw, err := metadata.Serialize()
+				return metadata, raw, err
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metadata, raw, err := tt.metadata()
+			assert.NoError(t, err)
+			metadata2 := &token2.Metadata{}
+			err = metadata2.Deserialize(raw)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, metadata, metadata2)
 			}
 		})
 	}
