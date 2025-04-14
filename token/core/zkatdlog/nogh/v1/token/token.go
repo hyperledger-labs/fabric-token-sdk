@@ -53,9 +53,6 @@ func (t *Token) Deserialize(bytes []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed deserializing token")
 	}
-	if typed.Type != comm.Type {
-		return errors.Errorf("invalid token type [%v]", typed.Type)
-	}
 	token := &actions.Token{}
 	if err := proto.Unmarshal(typed.Token, token); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling token")
@@ -67,7 +64,7 @@ func (t *Token) Deserialize(bytes []byte) error {
 
 // ToClear returns Token in the clear
 func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token.Token, error) {
-	com, err := commit([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedersenGenerators, math.Curves[pp.Curve])
+	com, err := Commit([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedersenGenerators, math.Curves[pp.Curve])
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve token in the clear: failed to check token data")
 	}
@@ -97,7 +94,7 @@ func computeTokens(tw []*Metadata, pp []*math.G1, c *math.Curve) ([]*math.G1, er
 	var err error
 	for i := range tw {
 		hash := c.HashToZr([]byte(tw[i].Type))
-		tokens[i], err = commit([]*math.Zr{hash, tw[i].Value, tw[i].BlindingFactor}, pp, c)
+		tokens[i], err = Commit([]*math.Zr{hash, tw[i].Value, tw[i].BlindingFactor}, pp, c)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to compute token [%d]", i)
 		}
@@ -144,13 +141,13 @@ func NewMetadata(curve math.CurveID, tokenType token.Type, values []uint64, bfs 
 
 // Deserialize un-marshals Metadata
 func (m *Metadata) Deserialize(b []byte) error {
-	typed, err := comm.UnmarshalTypedToken(b)
+	typed, err := comm.UnmarshalTypedMetadata(b)
 	if err != nil {
-		return errors.Wrapf(err, "failed deserializing metadata")
+		return errors.Wrapf(err, "failed to deserialize metadata")
 	}
 	metadata := &actions.TokenMetadata{}
-	if err := proto.Unmarshal(typed.Token, metadata); err != nil {
-		return errors.Wrapf(err, "failed unmarshalling metadata")
+	if err := proto.Unmarshal(typed.Metadata, metadata); err != nil {
+		return errors.Wrapf(err, "failed to deserialize metadata")
 	}
 	m.Type = token.Type(metadata.Type)
 	m.Value, err = utils.FromZrProto(metadata.Value)
@@ -171,11 +168,11 @@ func (m *Metadata) Deserialize(b []byte) error {
 func (m *Metadata) Serialize() ([]byte, error) {
 	value, err := utils.ToProtoZr(m.Value)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to deserialize metadata")
+		return nil, errors.Wrapf(err, "failed to serialize metadata")
 	}
 	blindingFactor, err := utils.ToProtoZr(m.BlindingFactor)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to deserialize metadata")
+		return nil, errors.Wrapf(err, "failed to serialize metadata")
 	}
 	raw, err := proto.Marshal(&actions.TokenMetadata{
 		Type:           string(m.Type),
@@ -184,7 +181,7 @@ func (m *Metadata) Serialize() ([]byte, error) {
 		Issuer:         &pp.Identity{Raw: m.Issuer},
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed serializing token")
+		return nil, errors.Wrapf(err, "failed to serialize metadata")
 	}
 	return comm.WrapMetadataWithType(raw)
 }
@@ -198,7 +195,11 @@ func (m *Metadata) Clone() *Metadata {
 	}
 }
 
-func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, error) {
+// Commit computes the Pedersen commitment of the passed elements using the passed bases
+func Commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, error) {
+	if len(generators) != len(vector) {
+		return nil, errors.Errorf("number of generators is not equal to number of vector elements, [%d]!=[%d]", len(generators), len(vector))
+	}
 	com := c.NewG1()
 	for i := range vector {
 		if vector[i] == nil {

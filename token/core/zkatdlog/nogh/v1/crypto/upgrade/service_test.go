@@ -47,7 +47,7 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 	}
 	fabtokenOutputRaw, err := fabtokenOutput.Serialize()
 	assert.NoError(t, err)
-	formatFabtoken16, err := v1.SupportedTokenFormat(16)
+	formatFabtoken16, err := v1.ComputeTokenFormat(16)
 	assert.NoError(t, err)
 	validTokens := []token.LedgerToken{{
 		ID:            token.ID{TxId: "tx1", Index: 1},
@@ -178,7 +178,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 	}
 	fabtokenOutputRaw, err := fabtokenOutput.Serialize()
 	assert.NoError(t, err)
-	formatFabtoken16, err := v1.SupportedTokenFormat(16)
+	formatFabtoken16, err := v1.ComputeTokenFormat(16)
 	assert.NoError(t, err)
 	validTokens := []token.LedgerToken{{
 		ID:            token.ID{TxId: "tx1", Index: 1},

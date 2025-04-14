@@ -26,7 +26,7 @@ type TokensService struct {
 }
 
 func NewTokensService(pp *setup.PublicParams, identityDeserializer driver.Deserializer) (*TokensService, error) {
-	supportedTokens, err := SupportedTokenFormat(pp.QuantityPrecision)
+	supportedTokens, err := ComputeTokenFormat(pp.QuantityPrecision)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting supported token types")
 	}
@@ -90,7 +90,7 @@ func (s *TokensUpgradeService) CheckUpgradeProof(ctx context.Context, ch driver.
 	return false, errors.New("not supported")
 }
 
-func SupportedTokenFormat(precision uint64) (token2.Format, error) {
+func ComputeTokenFormat(precision uint64) (token2.Format, error) {
 	hasher := utils.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(fabtoken.Type),
