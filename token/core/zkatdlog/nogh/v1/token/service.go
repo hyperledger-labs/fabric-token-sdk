@@ -25,9 +25,9 @@ import (
 )
 
 var Precisions = map[token.Format]uint64{
-	utils.MustGet(v1.SupportedTokenFormat(16)): 16,
-	utils.MustGet(v1.SupportedTokenFormat(32)): 32,
-	utils.MustGet(v1.SupportedTokenFormat(64)): 64,
+	utils.MustGet(v1.ComputeTokenFormat(16)): 16,
+	utils.MustGet(v1.ComputeTokenFormat(32)): 32,
+	utils.MustGet(v1.ComputeTokenFormat(64)): 64,
 }
 
 //go:generate counterfeiter -o mock/id.go -fake-name IdentityDeserializer . IdentityDeserializer
@@ -47,11 +47,19 @@ type TokensService struct {
 }
 
 func NewTokensService(logger logging.Logger, publicParams *setup.PublicParams, identityDeserializer IdentityDeserializer) (*TokensService, error) {
+	// validate input
+	if publicParams == nil {
+		return nil, errors.New("publicParams cannot be nil")
+	}
+	if identityDeserializer == nil {
+		return nil, errors.New("identityDeserializer cannot be nil")
+	}
+
 	// compute supported tokens
 	maxPrecision := publicParams.Precision()
 
 	// dlog without graph hiding
-	outputTokenFormat, err := supportedTokenFormat(publicParams, maxPrecision)
+	outputTokenFormat, err := ComputeTokenFormat(publicParams, maxPrecision)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed computing comm token types")
 	}
@@ -60,7 +68,7 @@ func NewTokensService(logger logging.Logger, publicParams *setup.PublicParams, i
 	for _, precision := range setup.SupportedPrecisions {
 		// these Precisions are supported directly
 		if precision <= maxPrecision {
-			format, err := supportedTokenFormat(publicParams, precision)
+			format, err := ComputeTokenFormat(publicParams, precision)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed computing comm token types")
 			}
@@ -70,7 +78,7 @@ func NewTokensService(logger logging.Logger, publicParams *setup.PublicParams, i
 
 	// in addition, we support all fabtoken with precision less than maxPrecision
 	for _, precision := range []uint64{16, 32, 64} {
-		format, err := v1.SupportedTokenFormat(precision)
+		format, err := v1.ComputeTokenFormat(precision)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed computing fabtoken token format with precision [%d]", precision)
 		}
@@ -252,7 +260,7 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*Token, er
 	return output, nil
 }
 
-func supportedTokenFormat(pp *setup.PublicParams, precision uint64) (token.Format, error) {
+func ComputeTokenFormat(pp *setup.PublicParams, precision uint64) (token.Format, error) {
 	hasher := utils2.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
