@@ -137,7 +137,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	)
 
 	driverMetrics := v1.NewMetrics(metricsProvider)
-	tokensService, err := v1token.NewTokensService(logger, ppm, deserializer)
+	tokensService, err := v1token.NewTokensService(logger, ppm.PublicParams(), deserializer)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
