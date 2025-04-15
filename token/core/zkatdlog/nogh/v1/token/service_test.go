@@ -15,7 +15,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -113,6 +115,128 @@ func TestNewTokensService(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, ts)
 				assert.NoError(t, tt.check(pp, ts))
+			}
+		})
+	}
+}
+
+func TestTokensService_Recipients(t *testing.T) {
+	pp, err := setup.Setup(32, []byte("issuer public key"), math.FP256BN_AMCL)
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name               string
+		inputs             func() (*token2.TokensService, driver.TokenOutput, error)
+		wantErr            bool
+		expectedError      string
+		expectedIdentities []driver.Identity
+	}{
+		{
+			name: "failed to deserialize token",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, error) {
+				ts, err := token2.NewTokensService(nil, pp, &mock.IdentityDeserializer{})
+				if err != nil {
+					return nil, nil, err
+				}
+				return ts, nil, nil
+			},
+			wantErr:       true,
+			expectedError: "failed to deserialize token: failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: syntax error: sequence truncated",
+		},
+		{
+			name: "failed to deserialize token 2",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, error) {
+				ts, err := token2.NewTokensService(nil, pp, &mock.IdentityDeserializer{})
+				if err != nil {
+					return nil, nil, err
+				}
+				return ts, []byte{}, nil
+			},
+			wantErr:       true,
+			expectedError: "failed to deserialize token: failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: syntax error: sequence truncated",
+		},
+		{
+			name: "failed to deserialize token 3",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, error) {
+				ts, err := token2.NewTokensService(nil, pp, &mock.IdentityDeserializer{})
+				if err != nil {
+					return nil, nil, err
+				}
+				return ts, []byte{0, 1, 2, 3}, nil
+			},
+			wantErr:       true,
+			expectedError: "failed to deserialize token: failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: structure error: tags don't match (16 vs {class:0 tag:0 length:1 isCompound:false}) {optional:false explicit:false application:false private:false defaultValue:<nil> tag:<nil> stringType:0 timeType:0 set:false omitEmpty:false} TypedToken @2",
+		},
+		{
+			name: "failed to deserialize token 4",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, error) {
+				id := &mock.IdentityDeserializer{}
+				id.RecipientsReturns(nil, nil)
+				ts, err := token2.NewTokensService(nil, pp, id)
+				if err != nil {
+					return nil, nil, err
+				}
+				raw, err := comm.WrapTokenWithType([]byte{0, 1, 2, 3})
+				if err != nil {
+					return nil, nil, err
+				}
+				return ts, driver.TokenOutput(raw), nil
+			},
+			wantErr:       true,
+			expectedError: "failed to deserialize token: failed unmarshalling token: proto: cannot parse invalid wire-format data",
+		},
+		{
+			name: "failed identity deserialize",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, error) {
+				id := &mock.IdentityDeserializer{}
+				id.RecipientsReturns(nil, errors.New("pineapple"))
+				ts, err := token2.NewTokensService(nil, pp, id)
+				if err != nil {
+					return nil, nil, err
+				}
+				tok := &token2.Token{}
+				raw, err := tok.Serialize()
+				if err != nil {
+					return nil, nil, err
+				}
+				return ts, raw, nil
+			},
+			wantErr:       true,
+			expectedError: "failed to get recipients: pineapple",
+		},
+		{
+			name: "success",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, error) {
+				id := &mock.IdentityDeserializer{}
+				id.RecipientsReturns([]driver.Identity{driver.Identity("alice")}, nil)
+				ts, err := token2.NewTokensService(nil, pp, id)
+				if err != nil {
+					return nil, nil, err
+				}
+				tok := &token2.Token{}
+				raw, err := tok.Serialize()
+				if err != nil {
+					return nil, nil, err
+				}
+				return ts, raw, nil
+			},
+			wantErr:            false,
+			expectedIdentities: []driver.Identity{driver.Identity("alice")},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts, outputs, err := tt.inputs()
+			assert.NoError(t, err)
+			identities, err := ts.Recipients(outputs)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.expectedError)
+				assert.Nil(t, identities)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, ts)
+				assert.Equal(t, tt.expectedIdentities, identities)
 			}
 		})
 	}
