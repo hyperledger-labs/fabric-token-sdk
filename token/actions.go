@@ -107,3 +107,8 @@ func (t *TransferAction) IsGraphHiding() bool {
 func (t *TransferAction) Validate() error {
 	return t.a.Validate()
 }
+
+// GetIssuer returns a non-empty identity of the issuer in case the transfer contains redeeming outputs
+func (t *TransferAction) GetIssuer() Identity {
+	return t.a.GetIssuer()
+}
