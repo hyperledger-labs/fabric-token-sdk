@@ -396,7 +396,7 @@ func (t *Tokens) parse(
 	for _, output := range os.Outputs() {
 
 		// if this is a redeem, then skip
-		if len(output.Owner) == 0 {
+		if len(output.Token.Owner) == 0 {
 			logger.Debugf("output [%s:%d] is a redeem", txID, output.Index)
 			continue
 		}
