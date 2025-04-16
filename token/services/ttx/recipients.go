@@ -7,13 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	"time"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 	"github.com/pkg/errors"
 )
@@ -178,7 +176,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 
 func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Context, recipient *Recipient, multiSig bool) (token.Identity, error) {
 	logger.DebugfContext(context.Context(), "request recipient [%s] is not registered", recipient.Identity)
-	session, err := session2.NewFromInitiator(context, recipient.Identity)
+	session, err := jsession.NewFromInitiator(context, recipient.Identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session with [%s]", recipient.Identity)
 	}
@@ -202,7 +200,7 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 
 	logger.DebugfContext(context.Context(), "Receive identity response")
 	recipientData := &RecipientData{}
-	err = session.ReceiveWithTimeout(recipientData, 10*time.Second)
+	err = session.Receive(recipientData)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
 	}
@@ -259,7 +257,7 @@ func (f *RequestRecipientIdentityView) aggregateAndDistribute(context view.Conte
 		if local[i] {
 			continue
 		}
-		session, err := session2.NewJSON(context, context.Initiator(), recipient.Identity)
+		session, err := jsession.NewJSON(context, context.Initiator(), recipient.Identity)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get session with [%s]", recipient.Identity)
 		}
@@ -297,7 +295,7 @@ func RespondRequestRecipientIdentityUsingWallet(context view.Context, wallet str
 }
 
 func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
-	session := session2.JSON(context)
+	session := jsession.FromContext(context)
 	recipientRequest := &RecipientRequest{}
 	if err := session.Receive(recipientRequest); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive recipient request")
@@ -374,7 +372,7 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 		return nil
 	}
 
-	jsonSession := session2.NewFromSession(context, session)
+	jsonSession := jsession.NewFromSession(context, session)
 
 	logger.DebugfContext(context.Context(), "Receive multisig")
 	multisigRecipientData := &MultisigRecipientData{}
@@ -490,7 +488,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 
 		return []view.Identity{me, other}, nil
 	} else {
-		session, err := session2.NewFromInitiator(context, f.Other)
+		session, err := jsession.NewFromInitiator(context, f.Other)
 		if err != nil {
 			return nil, err
 		}
@@ -559,7 +557,7 @@ func RespondExchangeRecipientIdentities(context view.Context) (view.Identity, vi
 }
 
 func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
-	session := session2.JSON(context)
+	session := jsession.FromContext(context)
 
 	// other
 	request := &ExchangeRecipientRequest{}

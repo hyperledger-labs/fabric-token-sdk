@@ -11,7 +11,6 @@ import (
 	"encoding/base64"
 	errors2 "errors"
 	"runtime/debug"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
@@ -25,8 +24,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type distributionListEntry struct {
@@ -300,13 +300,13 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, err
 	}
-	err = session.SendWithContext(context.Context(), signatureRequestRaw)
+	err = session.Send(signatureRequestRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction content")
 	}
 
-	jsonSession := session2.NewFromSession(context, session)
-	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
+	jsonSession := jsession.NewFromSession(context, session)
+	sigma, err := jsonSession.ReceiveRaw()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed reading message")
 	}
@@ -471,14 +471,14 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	}
 	// Send the content
 	logger.DebugfContext(context.Context(), "Send transaction content")
-	err = session.SendWithContext(context.Context(), txRaw)
+	err = session.Send(txRaw)
 	if err != nil {
 		return errors.Wrap(err, "failed sending transaction content")
 	}
 
 	logger.DebugfContext(context.Context(), "Wait for ack")
-	jsonSession := session2.NewFromSession(context, session)
-	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
+	jsonSession := jsession.NewFromSession(context, session)
+	sigma, err := jsonSession.ReceiveRaw()
 	if err != nil {
 		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
 	}
@@ -656,8 +656,11 @@ func NewReceiveTransactionView() *ReceiveTransactionView {
 }
 
 func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error) {
-	jsonSession := session2.JSON(context)
-	msg, err := jsonSession.ReceiveRawWithTimeout(time.Minute * 4)
+	span := trace.SpanFromContext(context.Context())
+	span.AddEvent("start_receive_transaction_view")
+	defer span.AddEvent("end_receive_transaction_view")
+	session := jsession.FromContext(context)
+	msg, err := session.ReceiveRaw()
 	if err != nil {
 		logger.ErrorfContext(context.Context(), err.Error())
 	}
@@ -760,8 +763,8 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			}
 		} else {
 			logger.DebugfContext(context.Context(), "Receiving signature request...")
-			jsonSession := session2.JSON(context)
-			srRaw, err = jsonSession.ReceiveRawWithTimeout(time.Minute)
+			jsonSession := jsession.FromContext(context)
+			srRaw, err = jsonSession.ReceiveRaw()
 			if err != nil {
 				return nil, errors.Wrap(err, "failed reading signature request")
 			}
@@ -785,7 +788,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			return nil, errors.Wrapf(err, "failed signing request")
 		}
 		logger.DebugfContext(context.Context(), "Send back signature [%s][%s]", signatureRequest.Signer, hash.Hashable(sigma))
-		err = session.SendWithContext(context.Context(), sigma)
+		err = session.Send(sigma)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed sending signature back")
 		}
@@ -822,7 +825,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessage(err, "failed to sign ack response")
 	}
 	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
-	if err := session.SendWithContext(context.Context(), sigma); err != nil {
+	if err := session.Send(sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
 

@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -58,8 +58,7 @@ func NewReceiveSpendRequestView() *ReceiveSpendRequestView {
 
 func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error) {
 	tx := &SpendRequest{}
-	jsonSession := session.JSON(context)
-	err := jsonSession.ReceiveWithTimeout(tx, time.Minute*4)
+	err := jsession.FromContext(context).Receive(tx)
 	if err != nil {
 		logger.ErrorfContext(context.Context(), "failed receiving request: %s", err)
 	}
@@ -172,7 +171,11 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 	answerChan chan *answer) {
 	defer logger.DebugfContext(context.Context(), "received response for from [%v]", party)
 
-	backendSession, err := context.GetSession(c, party, context.Initiator())
+	initiator := context.Initiator()
+	if c.options.Initiator != nil {
+		initiator = c.options.Initiator
+	}
+	s, err := jsession.NewJSON(context, initiator, party)
 	if err != nil {
 		answerChan <- &answer{
 			err:   errors.Wrapf(err, "failed to create session with [%s]", party),
@@ -180,7 +183,6 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 		}
 		return
 	}
-	s := session.NewFromSession(context, backendSession)
 
 	// Wait to receive a Transaction back
 	logger.DebugfContext(context.Context(), "send request to [%v]", party)
@@ -228,7 +230,7 @@ func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, er
 
 func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
 	// - send back the response
-	if err := session.JSON(context).Send(&SpendResponse{}); err != nil {
+	if err := jsession.FromContext(context).Send(&SpendResponse{}); err != nil {
 		return nil, errors.Wrap(err, "failed to send response")
 	}
 

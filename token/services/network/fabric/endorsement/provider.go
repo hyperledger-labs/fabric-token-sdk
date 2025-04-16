@@ -33,7 +33,7 @@ type IdentityProvider interface {
 }
 
 type ViewManager interface {
-	InitiateView(view view.View, ctx context.Context) (interface{}, error)
+	InitiateView(ctx context.Context, view view.View) (interface{}, error)
 }
 
 type ViewRegistry interface {

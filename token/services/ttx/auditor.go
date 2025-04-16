@@ -9,7 +9,6 @@ package ttx
 import (
 	"context"
 	"encoding/base64"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
@@ -22,7 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 	"github.com/pkg/errors"
 )
@@ -147,8 +146,8 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	// Receive signature
 	logger.DebugfContext(context.Context(), "Receiving signature for [%s]", a.tx.ID())
 
-	jsonSession := session2.NewFromSession(context, session)
-	signature, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
+	jsonSession := jsession.NewFromSession(context, session)
+	signature, err := jsonSession.ReceiveRaw()
 	if err != nil {
 		logger.ErrorfContext(context.Context(), "failed to read audit event: %s", err)
 		return nil, errors.WithMessage(err, "failed to read audit event")
@@ -178,7 +177,7 @@ func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session,
 	if err != nil {
 		return nil, err
 	}
-	err = session.SendWithContext(context.Context(), txRaw)
+	err = session.Send(txRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}

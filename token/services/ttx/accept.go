@@ -8,7 +8,6 @@ package ttx
 
 import (
 	"encoding/base64"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
@@ -17,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	"github.com/pkg/errors"
 )
 
@@ -129,8 +128,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			}
 		} else {
 			logger.DebugfContext(context.Context(), "Receiving signature request...")
-			jsonSession := session2.JSON(context)
-			err := jsonSession.ReceiveWithTimeout(signatureRequest, time.Minute)
+			err := jsession.FromContext(context).Receive(signatureRequest)
 			if err != nil {
 				return errors.Wrap(err, "failed reading signature request")
 			}
