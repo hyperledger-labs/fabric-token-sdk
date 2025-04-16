@@ -75,7 +75,8 @@ func TestParse(t *testing.T) {
 	is := token.NewInputStream(qsMock{}, []*token.Input{input1}, 64)
 	os := token.NewOutputStream([]*token.Output{output1}, 64)
 
-	spend, store := tokens.parse(&authMock{}, "tx1", md, is, os, false, 64, false)
+	spend, store, err := tokens.parse(&authMock{}, "tx1", md, is, os, false, 64, false)
+	assert.NoError(t, err)
 
 	assert.Len(t, spend, 1)
 	assert.Equal(t, "in", spend[0].TxId)
@@ -94,7 +95,8 @@ func TestParse(t *testing.T) {
 	// no ledger output -> spend
 	output1.LedgerOutput = []byte{}
 	os = token.NewOutputStream([]*token.Output{output1}, 64)
-	spend, store = tokens.parse(&authMock{}, "tx1", md, is, os, false, 64, false)
+	spend, store, err = tokens.parse(&authMock{}, "tx1", md, is, os, false, 64, false)
+	assert.NoError(t, err)
 	assert.Len(t, spend, 2)
 	assert.Len(t, store, 0)
 
@@ -144,7 +146,8 @@ func TestParse(t *testing.T) {
 	is = token.NewInputStream(qsMock{}, []*token.Input{input1, input2}, 64)
 	os = token.NewOutputStream([]*token.Output{output1, output2}, 64)
 
-	spend, store = tokens.parse(&authMock{}, "tx2", md, is, os, false, 64, false)
+	spend, store, err = tokens.parse(&authMock{}, "tx2", md, is, os, false, 64, false)
+	assert.NoError(t, err)
 	assert.Len(t, spend, 2)
 	assert.Equal(t, "in1", spend[0].TxId)
 	assert.Equal(t, uint64(1), spend[0].Index)
