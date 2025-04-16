@@ -358,9 +358,9 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get request's outputs")
 	}
-	toSpend, toAppend := t.parse(auth, txID, md, is, os, auditorFlag, precision, graphHiding)
+	toSpend, toAppend, err := t.parse(auth, txID, md, is, os, auditorFlag, precision, graphHiding)
 	logger.Debugf("transaction [%s] parsed [%d] inputs and [%d] outputs", txID, len(toSpend), len(toAppend))
-	return toSpend, toAppend, nil
+	return toSpend, toAppend, err
 }
 
 // parse returns the tokens to store and spend as the result of a transaction
@@ -373,7 +373,7 @@ func (t *Tokens) parse(
 	auditorFlag bool,
 	precision uint64,
 	graphHiding bool,
-) (toSpend []*token2.ID, toAppend []TokenToAppend) {
+) (toSpend []*token2.ID, toAppend []TokenToAppend, err error) {
 	if graphHiding {
 		ids := md.SpentTokenID()
 		logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
@@ -394,13 +394,14 @@ func (t *Tokens) parse(
 
 	// parse the outputs
 	for _, output := range os.Outputs() {
-		// get token in the clear
-		if len(output.LedgerOutput) == 0 {
-			logger.Debugf("transaction [%s] without graph hiding, delete input [%d]", txID, output.Index)
-			toSpend = append(toSpend, &token2.ID{TxId: txID, Index: output.Index})
+
+		// if this is a redeem, then skip
+		if len(output.Owner) == 0 {
+			logger.Debugf("output [%s:%d] is a redeem", txID, output.Index)
 			continue
 		}
 
+		// process the output to identify the relations with the current TMS
 		issuerFlag := !output.Issuer.IsNone() && auth.Issued(output.Issuer, &output.Token)
 		ownerWalletID, ids, mine := auth.IsMine(&output.Token)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -421,8 +422,7 @@ func (t *Tokens) parse(
 
 		ownerType, ownerIdentity, err := auth.OwnerType(output.Token.Owner)
 		if err != nil {
-			logger.Errorf("could not unmarshal identity when storing token: %s", err.Error())
-			continue
+			return nil, nil, errors.Wrapf(err, "failed to extract owner type for token [%s:%d]", txID, output.Index)
 		}
 
 		tta := TokenToAppend{
