@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -81,14 +81,14 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 	}
 
 	logger.DebugfContext(context.Context(), "Start session")
-	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)
+	session, err := jsession.NewJSON(context, context.Initiator(), r.Issuer)
 	if err != nil {
 		logger.Errorf("failed to get session to [%s]: [%s]", r.Issuer, err)
 		return nil, errors.Wrapf(err, "failed to get session to [%s]", r.Issuer)
 	}
 
 	logger.DebugfContext(context.Context(), "Send withdrawal request")
-	err = session.SendWithContext(context.Context(), wr)
+	err = session.Send(wr)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to send recipient data")
@@ -157,9 +157,9 @@ func ReceiveWithdrawalRequest(context view.Context) (*WithdrawalRequest, error) 
 }
 
 func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, error) {
-	session := session.JSON(context)
+	session := jsession.FromContext(context)
 	request := &WithdrawalRequest{}
-	assert.NoError(session.ReceiveWithTimeout(request, 1*time.Minute), "failed to receive the withdrawal request")
+	assert.NoError(session.Receive(request), "failed to receive the withdrawal request")
 
 	logger.DebugfContext(context.Context(), "Received withdrawal request")
 	tms := token.GetManagementService(context, token.WithTMSID(request.TMSID))
