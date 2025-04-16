@@ -67,13 +67,13 @@ func FuzzSerialization(f *testing.F) {
 		assert.NoError(f, err)
 		assert.NotNil(t, raw)
 
-		token2 := &token2.Token{}
-		err = token2.Deserialize(raw)
+		desToken := &token2.Token{}
+		err = desToken.Deserialize(raw)
 		if err != nil {
 			t.Errorf("failed to deserialize metadata [owner: %s, putData: %v]: [%v]", owner, putData, err)
 		}
-		assert.Equal(t, len(token.Owner), len(token2.Owner), "owner mismatch [owner: %s, putData: %v]", owner, putData)
-		assert.Equal(t, token.Data, token2.Data)
+		assert.Equal(t, len(token.Owner), len(desToken.Owner), "owner mismatch [owner: %s, putData: %v]", owner, putData)
+		assert.Equal(t, token.Data, desToken.Data)
 	})
 }
 
@@ -106,7 +106,7 @@ func TestGetTokensWithWitness(t *testing.T) {
 		tokenType     token3.Type
 		pp            []*math.G1
 		curve         *math.Curve
-		validate      func([]*math.G1, []*token2.TokenDataWitness) error
+		validate      func([]*math.G1, []*token2.Metadata) error
 		wantErr       bool
 		expectedError string
 	}{
@@ -119,7 +119,7 @@ func TestGetTokensWithWitness(t *testing.T) {
 			name:    "curve is not nil",
 			curve:   math.Curves[math.FP256BN_AMCL],
 			wantErr: false,
-			validate: func(tokens []*math.G1, data []*token2.TokenDataWitness) error {
+			validate: func(tokens []*math.G1, data []*token2.Metadata) error {
 				if len(tokens) != 0 {
 					return errors.New("tokens should be empty")
 				}
@@ -149,7 +149,7 @@ func TestGetTokensWithWitness(t *testing.T) {
 			},
 			curve:   math.Curves[math.FP256BN_AMCL],
 			wantErr: false,
-			validate: func(toks []*math.G1, data []*token2.TokenDataWitness) error {
+			validate: func(toks []*math.G1, data []*token2.Metadata) error {
 				if len(toks) != 1 {
 					return errors.New("one token was expected")
 				}
@@ -168,7 +168,7 @@ func TestGetTokensWithWitness(t *testing.T) {
 					tok, err := token2.Commit(
 						[]*math.Zr{
 							hash,
-							c.NewZrFromUint64(data[i].Value),
+							data[i].Value,
 							data[i].BlindingFactor,
 						},
 						pp,
