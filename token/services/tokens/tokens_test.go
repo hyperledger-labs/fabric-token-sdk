@@ -63,7 +63,8 @@ func TestParse(t *testing.T) {
 	}
 	output1 := &token.Output{
 		Token: token2.Token{
-			Type: "TOK",
+			Type:  "TOK",
+			Owner: []byte("alice"),
 		},
 		ActionIndex:  0,
 		Index:        0,
@@ -92,12 +93,12 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, uint64(64), store[0].precision)
 	assert.Equal(t, output1.Type, store[0].tok.Type)
 
-	// no ledger output -> spend
-	output1.LedgerOutput = []byte{}
+	// no owner, then a redeemed token
+	output1.Token.Owner = []byte{}
 	os = token.NewOutputStream([]*token.Output{output1}, 64)
 	spend, store, err = tokens.parse(&authMock{}, "tx1", md, is, os, false, 64, false)
 	assert.NoError(t, err)
-	assert.Len(t, spend, 2)
+	assert.Len(t, spend, 1)
 	assert.Len(t, store, 0)
 
 	// transfer with several inputs and outputs
@@ -123,7 +124,8 @@ func TestParse(t *testing.T) {
 	}
 	output1 = &token.Output{
 		Token: token2.Token{
-			Type: "TOK",
+			Type:  "TOK",
+			Owner: []byte("alice"),
 		},
 		ActionIndex:  0,
 		Index:        0,
@@ -134,7 +136,8 @@ func TestParse(t *testing.T) {
 	}
 	output2 := &token.Output{
 		Token: token2.Token{
-			Type: "TOK",
+			Type:  "TOK",
+			Owner: []byte("bob"),
 		},
 		ActionIndex:  0,
 		Index:        1,
