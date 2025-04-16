@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	"github.com/pkg/errors"
 )
 
@@ -75,7 +75,7 @@ func (v *PublicParamsRequestView) Call(context view.Context) (interface{}, error
 			Network:   v.Network,
 			Namespace: v.Namespace,
 		}
-		if err := session.SendWithContext(context.Context(), request); err != nil {
+		if err := session.Send(request); err != nil {
 			if i == v.retries-1 {
 				return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 			}
@@ -97,7 +97,7 @@ type PublicParamsRequestResponderView struct{}
 
 func (v *PublicParamsRequestResponderView) Call(context view.Context) (interface{}, error) {
 	// receive request
-	session := session2.JSON(context)
+	session := session2.FromContext(context)
 	request := &PublicParamsRequest{}
 	if err := session.Receive(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive request")
@@ -110,7 +110,7 @@ func (v *PublicParamsRequestResponderView) Call(context view.Context) (interface
 		return nil, errors.Wrapf(err, "failed to get public parameters from orion network [%s]", request.Network)
 	}
 	logger.Debugf("reading public parameters, done: %d", len(ppRaw))
-	if err := session.SendWithContext(context.Context(), &PublicParamsResponse{Raw: ppRaw}); err != nil {
+	if err := session.Send(&PublicParamsResponse{Raw: ppRaw}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil

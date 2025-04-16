@@ -221,15 +221,9 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)
 	}
-	pp, err := n.viewManager.InitiateView(
-		NewLookupKeyRequestView(
-			n.Name(),
-			namespace,
-			startingTxID,
-			orionKey(k),
-			timeout,
-		), context.TODO(),
-	)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	pp, err := n.viewManager.InitiateView(NewLookupKeyRequestView(n.Name(), namespace, startingTxID, orionKey(k)), ctx)
 	if err != nil {
 		return nil, err
 	}

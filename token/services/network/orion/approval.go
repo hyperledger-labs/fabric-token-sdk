@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -88,12 +88,12 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		Request:   r.RequestRaw,
 	}
 	span.AddEvent("send_approval_request")
-	if err := session.SendWithContext(context.Context(), request); err != nil {
+	if err := session.Send(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", sm.CustodianID)
 	}
 	response := &ApprovalResponse{}
 	span.AddEvent("receive_approval_response")
-	if err := session.ReceiveWithTimeout(response, 30*time.Second); err != nil {
+	if err := session.Receive(response); err != nil {
 		span.RecordError(err)
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", sm.CustodianID)
 	}
@@ -116,7 +116,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	span := trace.SpanFromContext(context.Context())
 
 	// receive request
-	session := session2.JSON(context)
+	session := session2.FromContext(context)
 	span.AddEvent("receive_approval_request")
 	request := &ApprovalRequest{}
 	if err := session.Receive(request); err != nil {
@@ -129,7 +129,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 		return nil, errors.Wrapf(err, "failed to process request")
 	}
 	span.AddEvent("send_approval_response")
-	if err := session.SendWithContext(context.Context(), &ApprovalResponse{Envelope: txRaw}); err != nil {
+	if err := session.Send(&ApprovalResponse{Envelope: txRaw}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil

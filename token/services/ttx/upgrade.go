@@ -8,12 +8,11 @@ package ttx
 
 import (
 	"bytes"
-	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -87,7 +86,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
 
 	span.AddEvent("start_session")
-	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)
+	session, err := jsession.NewJSON(context, context.Initiator(), r.Issuer)
 	if err != nil {
 		logger.Errorf("failed to get session to [%s]: [%s]", r.Issuer, err)
 		return nil, errors.Wrapf(err, "failed to get session to [%s]", r.Issuer)
@@ -96,12 +95,12 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 	// first agreement
 	agreement := &UpgradeTokensAgreement{}
 	span.AddEvent("send_upgrade_agreement")
-	err = session.SendWithContext(context.Context(), agreement)
+	err = session.Send(agreement)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
-	if err := session.ReceiveWithTimeout(agreement, 1*time.Minute); err != nil {
+	if err := session.Receive(agreement); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive upgrade agreement")
 	}
 
@@ -131,7 +130,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 		Proof:         proof,
 		NotAnonymous:  r.NotAnonymous,
 	}
-	err = session.SendWithContext(context.Context(), wr)
+	err = session.Send(wr)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to send recipient data")
@@ -201,9 +200,9 @@ func ReceiveTokensUpgradeRequest(context view.Context) (*UpgradeTokensRequest, e
 func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, error) {
 	span := trace.SpanFromContext(context.Context())
 
-	session := session.JSON(context)
+	session := jsession.FromContext(context)
 	agreement := &UpgradeTokensAgreement{}
-	if err := session.ReceiveWithTimeout(agreement, 1*time.Minute); err != nil {
+	if err := session.Receive(agreement); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive upgrade request")
 	}
 	span.AddEvent("received_upgrade_request")
@@ -225,7 +224,7 @@ func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, er
 	}
 	// receive the response
 	request := &UpgradeTokensRequest{}
-	if err := session.ReceiveWithTimeout(request, 1*time.Minute); err != nil {
+	if err := session.Receive(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive upgrade request")
 	}
 

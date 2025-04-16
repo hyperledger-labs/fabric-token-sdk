@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -55,8 +55,7 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	span.AddEvent("start_receive_spendRequest_view")
 	defer span.AddEvent("end_receive_spendRequest_view")
 	tx := &SpendRequest{}
-	jsonSession := session.JSON(context)
-	err := jsonSession.ReceiveWithTimeout(tx, time.Minute*4)
+	err := jsession.FromContext(context).Receive(tx)
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -174,7 +173,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 	if c.options.Initiator != nil {
 		initiator = c.options.Initiator
 	}
-	s, err := session.NewJSON(context, initiator, party)
+	s, err := jsession.NewJSON(context, initiator, party)
 	if err != nil {
 		answerChan <- &answer{
 			err:   errors.Wrapf(err, "failed to create session with [%s]", party),
@@ -229,7 +228,7 @@ func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, er
 
 func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
 	// - send back the response
-	if err := session.JSON(context).Send(&SpendResponse{}); err != nil {
+	if err := jsession.FromContext(context).Send(&SpendResponse{}); err != nil {
 		return nil, errors.Wrap(err, "failed to send response")
 	}
 

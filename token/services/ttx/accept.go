@@ -9,7 +9,6 @@ package ttx
 import (
 	"encoding/base64"
 	"fmt"
-	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -17,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
@@ -133,8 +132,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Receiving signature request...")
 			}
-			jsonSession := session2.JSON(context)
-			err := jsonSession.ReceiveWithTimeout(signatureRequest, time.Minute)
+			err := jsession.FromContext(context).Receive(signatureRequest)
 			if err != nil {
 				return errors.Wrap(err, "failed reading signature request")
 			}

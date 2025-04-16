@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -61,7 +61,7 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 		TxID:      r.TxID,
 	}
 	span.AddEvent("send_tx_status_request")
-	if err := session.SendWithContext(context.Context(), request); err != nil {
+	if err := session.Send(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
 	response := &TxStatusResponse{}
@@ -83,7 +83,7 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 	span := trace.SpanFromContext(context.Context())
 
 	// receive request
-	session := session2.JSON(context)
+	session := session2.FromContext(context)
 	request := &TxStatusRequest{}
 	span.AddEvent("receive_tx_status_request")
 	if err := session.Receive(request); err != nil {
@@ -104,7 +104,7 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 	}
 	span.AddEvent("send_tx_status_response")
 	logger.Debugf("send tx status response for [%s]: [%d]", request.TxID, response.Status)
-	if err := session.SendWithContext(context.Context(), response); err != nil {
+	if err := session.Send(response); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil

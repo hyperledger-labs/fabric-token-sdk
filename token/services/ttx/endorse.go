@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"reflect"
 	"runtime/debug"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -23,7 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
@@ -345,13 +344,13 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, err
 	}
-	err = session.SendWithContext(context.Context(), signatureRequestRaw)
+	err = session.Send(signatureRequestRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction content")
 	}
 
-	jsonSession := session2.NewFromSession(context, session)
-	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
+	jsonSession := jsession.NewFromSession(context, session)
+	sigma, err := jsonSession.ReceiveRaw()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed reading message")
 	}
@@ -549,14 +548,14 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	}
 	// Send the content
 	span.AddEvent("Send transaction content")
-	err = session.SendWithContext(context.Context(), txRaw)
+	err = session.Send(txRaw)
 	if err != nil {
 		return errors.Wrap(err, "failed sending transaction content")
 	}
 
 	span.AddEvent("Wait for ack")
-	jsonSession := session2.NewFromSession(context, session)
-	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
+	jsonSession := jsession.NewFromSession(context, session)
+	sigma, err := jsonSession.ReceiveRaw()
 	if err != nil {
 		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
 	}
@@ -738,8 +737,8 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	span := trace.SpanFromContext(context.Context())
 	span.AddEvent("start_receive_transaction_view")
 	defer span.AddEvent("end_receive_transaction_view")
-	jsonSession := session2.JSON(context)
-	msg, err := jsonSession.ReceiveRawWithTimeout(time.Minute * 4)
+	session := jsession.FromContext(context)
+	msg, err := session.ReceiveRaw()
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -847,8 +846,8 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Receiving signature request...")
 			}
-			jsonSession := session2.JSON(context)
-			srRaw, err = jsonSession.ReceiveRawWithTimeout(time.Minute)
+			jsonSession := jsession.FromContext(context)
+			srRaw, err = jsonSession.ReceiveRaw()
 			if err != nil {
 				return nil, errors.Wrap(err, "failed reading signature request")
 			}
@@ -874,7 +873,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("Send back signature [%s][%s]", signatureRequest.Signer, hash.Hashable(sigma))
 		}
-		err = session.SendWithContext(context.Context(), sigma)
+		err = session.Send(sigma)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed sending signature back")
 		}
@@ -906,7 +905,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
 	}
-	if err := session.SendWithContext(context.Context(), sigma); err != nil {
+	if err := session.Send(sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
 
