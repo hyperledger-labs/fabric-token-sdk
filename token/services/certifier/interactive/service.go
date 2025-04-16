@@ -9,12 +9,11 @@ package interactive
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -60,7 +59,7 @@ func (c *CertificationService) SetWallet(tms *token2.ManagementService, wallet s
 func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 	// 1. receive request
 	logger.Debugf("receive certification request [%s]", context.ID())
-	s := session.JSON(context)
+	s := jsession.FromContext(context)
 	var cr *CertificationRequest
 	if err := s.Receive(&cr); err != nil {
 		return nil, errors.WithMessage(err, "failed receiving certification request")
@@ -162,7 +161,7 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 		return nil, errors.Errorf("no certifiers defined")
 	}
 
-	s, err := session.NewJSON(context, i, i.certifier)
+	s, err := jsession.NewJSON(context, i, i.certifier)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed opening session to [%s]", i.certifier)
 	}
@@ -178,7 +177,7 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 	// 3. wait response
 	logger.Debugf("wait certification request response for [%v]", i.ids)
 	var certifications [][]byte
-	if err := s.ReceiveWithTimeout(&certifications, 60*time.Second); err != nil {
+	if err := s.Receive(&certifications); err != nil {
 		return nil, errors.WithMessagef(err, "failed receiving certifications [%v] from [%s]", i.ids, i.certifier)
 	}
 
