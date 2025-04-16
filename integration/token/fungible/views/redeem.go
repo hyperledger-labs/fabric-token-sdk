@@ -22,6 +22,8 @@ import (
 type Redeem struct {
 	// Auditor is the name of the auditor that must be contacted to approve the operation
 	Auditor string
+	// Issuer is the name of the issuer that must be contacted to approve the operation
+	Issuer string
 	// Wallet is the identifier of the wallet that owns the tokens to redeem
 	Wallet string
 	// TokenIDs contains a list of token ids to redeem. If empty, tokens are selected on the spot.
@@ -52,7 +54,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	senderWallet := ttx.GetWallet(context, t.Wallet, ServiceOpts(t.TMSID)...)
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
-	// The senders adds a new redeem operation to the transaction following the instruction received.
+	// The sender adds a new redeem operation to the transaction following the instruction received.
 	// Notice the use of `token2.WithTokenIDs(t.TokenIDs...)`. If t.TokenIDs is not empty, the Redeem
 	// function uses those tokens, otherwise the tokens will be selected on the spot.
 	// Token selection happens internally by invoking the default token selector:
@@ -61,11 +63,17 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	// selector.Select(wallet, amount, tokenType)
 	// It is also possible to pass a custom token selector to the Redeem function by using the relative opt:
 	// token2.WithTokenSelector(selector).
+	// Notice also the use of `ttx.WithFSCIssuerIdentity(view2.GetIdentityProvider(context).Identity(t.Issuer))`.
+	// Recall that a redeem operation must be approved by an issuer.
+	// Therefore, we need a way to contact the issuer to obtain its signature.
+	// If the application doesn't have a way to resolve the Issuer's network node already,
+	// the developer can specify the issuer network node identity directly as in this example.
 	err = tx.Redeem(
 		senderWallet,
 		t.Type,
 		t.Amount,
 		token2.WithTokenIDs(t.TokenIDs...),
+		ttx.WithFSCIssuerIdentity(view2.GetIdentityProvider(context).Identity(t.Issuer)),
 	)
 	assert.NoError(err, "failed adding new tokens")
 
