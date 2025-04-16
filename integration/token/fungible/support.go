@@ -823,9 +823,10 @@ func RedeemCashForTMSID(network *integration.Infrastructure, id *token3.NodeRefe
 	common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), tmsID, false)
 }
 
-func RedeemCashByIDs(network *integration.Infrastructure, id *token3.NodeReference, wallet string, ids []*token.ID, amount uint64, auditor *token3.NodeReference) {
+func RedeemCashByIDs(network *integration.Infrastructure, id *token3.NodeReference, wallet string, ids []*token.ID, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference) {
 	txid, err := network.Client(id.ReplicaName()).CallView("redeem", common.JSONMarshall(&views.Redeem{
 		Auditor:  auditor.Id(),
+		Issuer:   issuer.Id(),
 		Wallet:   wallet,
 		Type:     "",
 		TokenIDs: ids,
