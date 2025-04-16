@@ -20,6 +20,9 @@ const (
 
 func WithFSCIssuerIdentity(issuerFSCIdentity view.Identity) token.TransferOption {
 	return func(options *token.TransferOptions) error {
+		if options.Attributes == nil {
+			options.Attributes = make(map[interface{}]interface{})
+		}
 		options.Attributes[IssuerFSCIdentityKey] = issuerFSCIdentity
 		return nil
 	}
