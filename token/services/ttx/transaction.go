@@ -9,6 +9,7 @@ package ttx
 import (
 	"context"
 
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -37,11 +38,12 @@ type Payload struct {
 type Transaction struct {
 	*Payload
 
-	TMS             *token.ManagementService
-	NetworkProvider GetNetworkFunc
-	Opts            *TxOptions
-	Context         context.Context
-	FromRaw         []byte
+	TMS              *token.ManagementService
+	NetworkProvider  GetNetworkFunc
+	Opts             *TxOptions
+	Context          context.Context
+	FromRaw          []byte
+	EndpointResolver *view2.EndpointService
 }
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
@@ -127,10 +129,11 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 			Namespace:    tms.Namespace(),
 			Transient:    map[string][]byte{},
 		},
-		TMS:             tms,
-		NetworkProvider: networkProvider,
-		Opts:            txOpts,
-		Context:         context.Context(),
+		TMS:              tms,
+		NetworkProvider:  networkProvider,
+		Opts:             txOpts,
+		Context:          context.Context(),
+		EndpointResolver: view2.GetEndpointService(context),
 	}
 	context.OnError(tx.Release)
 	return tx, nil
@@ -245,7 +248,30 @@ func (t *Transaction) Transfer(wallet *token.OwnerWallet, typ token2.Type, value
 }
 
 func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ token2.Type, value uint64, opts ...token.TransferOption) error {
-	return t.TokenRequest.Redeem(t.Context, wallet, typ, value, opts...)
+	// build the redeem action
+	action, err := t.TokenRequest.Redeem(t.Context, wallet, typ, value, opts...)
+	if err != nil {
+		return err
+	}
+
+	// check if the opts contain the issuer's network identity,
+	// if yes, then bind it to the issuer identity in the redeem action
+
+	// compile the options
+	options, err := token.CompileTransferOptions(opts...)
+	if err != nil {
+		return errors.Wrap(err, "failed to compile transfer options")
+	}
+	issuerNetworkIdentity, err := GetFSCIssuerIdentityFromOpts(options.Attributes)
+	if err != nil {
+		return errors.Wrap(err, "failed to get issuer identity")
+	}
+	if !issuerNetworkIdentity.IsNone() {
+		if err := t.EndpointResolver.Bind(issuerNetworkIdentity, action.GetIssuer()); err != nil {
+			return errors.Wrapf(err, "failed to bind issuer identity [%s]", action.GetIssuer())
+		}
+	}
+	return nil
 }
 
 // Upgrade performs an upgrade operation of the passed ledger tokens.

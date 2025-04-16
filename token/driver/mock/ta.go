@@ -30,6 +30,16 @@ type TransferAction struct {
 	getInputsReturnsOnCall map[int]struct {
 		result1 []*token.ID
 	}
+	GetIssuerStub        func() identity.Identity
+	getIssuerMutex       sync.RWMutex
+	getIssuerArgsForCall []struct {
+	}
+	getIssuerReturns struct {
+		result1 identity.Identity
+	}
+	getIssuerReturnsOnCall map[int]struct {
+		result1 identity.Identity
+	}
 	GetMetadataStub        func() map[string][]byte
 	getMetadataMutex       sync.RWMutex
 	getMetadataArgsForCall []struct {
@@ -267,6 +277,59 @@ func (fake *TransferAction) GetInputsReturnsOnCall(i int, result1 []*token.ID) {
 	}
 	fake.getInputsReturnsOnCall[i] = struct {
 		result1 []*token.ID
+	}{result1}
+}
+
+func (fake *TransferAction) GetIssuer() identity.Identity {
+	fake.getIssuerMutex.Lock()
+	ret, specificReturn := fake.getIssuerReturnsOnCall[len(fake.getIssuerArgsForCall)]
+	fake.getIssuerArgsForCall = append(fake.getIssuerArgsForCall, struct {
+	}{})
+	stub := fake.GetIssuerStub
+	fakeReturns := fake.getIssuerReturns
+	fake.recordInvocation("GetIssuer", []interface{}{})
+	fake.getIssuerMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *TransferAction) GetIssuerCallCount() int {
+	fake.getIssuerMutex.RLock()
+	defer fake.getIssuerMutex.RUnlock()
+	return len(fake.getIssuerArgsForCall)
+}
+
+func (fake *TransferAction) GetIssuerCalls(stub func() identity.Identity) {
+	fake.getIssuerMutex.Lock()
+	defer fake.getIssuerMutex.Unlock()
+	fake.GetIssuerStub = stub
+}
+
+func (fake *TransferAction) GetIssuerReturns(result1 identity.Identity) {
+	fake.getIssuerMutex.Lock()
+	defer fake.getIssuerMutex.Unlock()
+	fake.GetIssuerStub = nil
+	fake.getIssuerReturns = struct {
+		result1 identity.Identity
+	}{result1}
+}
+
+func (fake *TransferAction) GetIssuerReturnsOnCall(i int, result1 identity.Identity) {
+	fake.getIssuerMutex.Lock()
+	defer fake.getIssuerMutex.Unlock()
+	fake.GetIssuerStub = nil
+	if fake.getIssuerReturnsOnCall == nil {
+		fake.getIssuerReturnsOnCall = make(map[int]struct {
+			result1 identity.Identity
+		})
+	}
+	fake.getIssuerReturnsOnCall[i] = struct {
+		result1 identity.Identity
 	}{result1}
 }
 
@@ -941,6 +1004,8 @@ func (fake *TransferAction) Invocations() map[string][][]interface{} {
 	defer fake.extraSignersMutex.RUnlock()
 	fake.getInputsMutex.RLock()
 	defer fake.getInputsMutex.RUnlock()
+	fake.getIssuerMutex.RLock()
+	defer fake.getIssuerMutex.RUnlock()
 	fake.getMetadataMutex.RLock()
 	defer fake.getMetadataMutex.RUnlock()
 	fake.getOutputsMutex.RLock()
