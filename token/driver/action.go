@@ -71,6 +71,8 @@ type TransferAction interface {
 	IsGraphHiding() bool
 	// GetMetadata returns the action's metadata
 	GetMetadata() map[string][]byte
+	// GetIssuer returns a non-empty identity of the issuer in case the transfer contains redeeming outputs
+	GetIssuer() Identity
 }
 
 //go:generate counterfeiter -o mock/action_with_inputs.go -fake-name ActionWithInputs . ActionWithInputs

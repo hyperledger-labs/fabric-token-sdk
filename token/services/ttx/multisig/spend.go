@@ -174,14 +174,14 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 	if c.options.Initiator != nil {
 		initiator = c.options.Initiator
 	}
-	s, err := session.NewJSON(context, initiator, party)
+	backendSession, err := context.GetSession(initiator, party)
 	if err != nil {
 		answerChan <- &answer{
 			err:   errors.Wrapf(err, "failed to create session with [%s]", party),
 			party: party,
 		}
-		return
 	}
+	s := session.NewFromSession(context, backendSession)
 
 	// Wait to receive a Transaction back
 	logger.Debugf("send request to [%v]", party)

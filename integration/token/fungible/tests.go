@@ -419,7 +419,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(111))).To(BeEquivalentTo(0), "got [%d], expected 111", ut.Sum(64).ToBigInt())
 	Expect(ut.ByType("USD").Count()).To(BeEquivalentTo(ut.Count()))
 
-	RedeemCash(network, bob, "", "USD", 11, auditor)
+	RedeemCash(network, bob, "", "USD", 11, auditor, issuer)
 	t10 := time.Now()
 	CheckAcceptedTransactions(network, bob, "", BobAcceptedTransactions[:6], nil, nil, nil)
 	CheckAcceptedTransactions(network, bob, "", BobAcceptedTransactions[5:6], nil, nil, nil, ttxdb.Redeem)
@@ -470,7 +470,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckSpending(network, alice, "", "USD", auditor, 121)
 	CheckSpending(network, bob, "", "EUR", auditor, 10)
 
-	RedeemCash(network, bob, "", "USD", 10, auditor)
+	RedeemCash(network, bob, "", "USD", 10, auditor, issuer)
 	CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
 	CheckSpending(network, bob, "", "USD", auditor, 21)
 
@@ -765,7 +765,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 		WhoDeletedToken(network, alice, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
 		WhoDeletedToken(network, auditor, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
 		// redeem newly created token
-		RedeemCashByIDs(network, bob, "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor)
+		RedeemCashByIDs(network, bob, "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor, issuer)
 	}
 
 	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
@@ -967,7 +967,7 @@ func TestMixed(network *integration.Infrastructure, onRestart OnRestartFunc, sel
 	TransferCashForTMSID(network, alice, "", "USD", 20, bob, auditor1, dlogId)
 	TransferCashForTMSID(network, alice, "", "USD", 30, bob, auditor2, fabTokenId)
 
-	RedeemCashForTMSID(network, bob, "", "USD", 11, auditor1, dlogId)
+	RedeemCashForTMSID(network, bob, "", "USD", 11, auditor1, issuer1, dlogId)
 	CheckSpendingForTMSID(network, bob, "", "USD", auditor1, 11, dlogId)
 
 	CheckBalanceAndHoldingForTMSID(network, alice, "", "USD", 90, auditor1, dlogId)
@@ -1444,4 +1444,26 @@ func TestMultiSig(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckCoOwnedBalance(network, bob, "", "USD", 0)
 	CheckCoOwnedBalance(network, charlie, "", "USD", 0)
 	CheckCoOwnedBalance(network, manager, "", "USD", 0)
+}
+
+func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector, networkName string) {
+	auditor := sel.Get("auditor")
+	issuer := sel.Get("issuer")
+	alice := sel.Get("alice")
+
+	RegisterAuditor(network, auditor)
+
+	// give some time to the nodes to get the public parameters - Q - may now be needed. waiting in UpdatePublicParamsAndWait.
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditor.Id())
+	CheckPublicParams(network, issuer, auditor, alice)
+
+	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
+	CheckBalance(network, alice, "", "USD", 110)
+	CheckHolding(network, alice, "", "USD", 110, auditor)
+
+	RedeemCash(network, alice, "", "USD", 10, auditor, issuer)
+	CheckBalance(network, alice, "", "USD", 100)
+	CheckHolding(network, alice, "", "USD", 100, auditor)
 }

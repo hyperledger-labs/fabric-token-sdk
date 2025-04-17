@@ -962,6 +962,11 @@ func requestsToBeSigned(request *token.Request) ([]any, error) {
 				res = append(res, transfer)
 			}
 		}
+
+		if transfer.Issuer != nil && sigService.IsMe(transfer.Issuer) {
+			res = append(res, transfer)
+		}
+
 		for _, sender := range transfer.ExtraSigners {
 			if sigService.IsMe(sender) {
 				res = append(res, transfer)

@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
+	pp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
@@ -72,6 +73,8 @@ type TransferAction struct {
 	Outputs []*Output
 	// Metadata contains the transfer action's metadata
 	Metadata map[string][]byte
+	// Issuer contains the identity of the issuer to sign the transfer action
+	Issuer driver.Identity
 }
 
 func (t *TransferAction) NumInputs() int {
@@ -164,6 +167,11 @@ func (t *TransferAction) GetMetadata() map[string][]byte {
 	return t.Metadata
 }
 
+// GetIssuer returns the issuer to sign the transaction
+func (t *TransferAction) GetIssuer() driver.Identity {
+	return t.Issuer
+}
+
 func (t *TransferAction) Validate() error {
 	if len(t.Inputs) == 0 {
 		return errors.Errorf("invalid number of token inputs, expected at least 1")
@@ -225,11 +233,19 @@ func (t *TransferAction) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to serialize outputs")
 	}
 
+	var issuer *pp.Identity
+	if t.Issuer != nil {
+		issuer = &pp.Identity{
+			Raw: t.Issuer.Bytes(),
+		}
+	}
+
 	action := &actions.TransferAction{
 		Version:  ProtocolV1,
 		Inputs:   inputs,
 		Outputs:  outputs,
 		Metadata: t.Metadata,
+		Issuer:   issuer,
 	}
 	return proto.Marshal(action)
 }
@@ -268,6 +284,10 @@ func (t *TransferAction) Deserialize(raw []byte) error {
 	}
 
 	t.Metadata = action.Metadata
+	t.Issuer = nil
+	if action.Issuer != nil {
+		t.Issuer = driver.Identity(action.Issuer.Raw)
+	}
 
 	return nil
 }

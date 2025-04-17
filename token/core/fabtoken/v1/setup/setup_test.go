@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+
 	"github.com/stretchr/testify/assert"
 )
 

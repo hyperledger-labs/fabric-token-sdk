@@ -80,7 +80,7 @@ type TransferOptions struct {
 	RestRecipientIdentity *RecipientData
 }
 
-func compileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
+func CompileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
 	txOptions := &TransferOptions{}
 	for _, opt := range opts {
 		if err := opt(txOptions); err != nil {
@@ -165,6 +165,8 @@ type Transfer struct {
 	// This field is to be used by the token drivers to list any additional identities that must
 	// sign the token request.
 	ExtraSigners []Identity
+	// Issuer
+	Issuer Identity
 }
 
 // Request aggregates token operations that must be performed atomically.
@@ -297,7 +299,7 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 			return nil, errors.Errorf("value is zero")
 		}
 	}
-	opt, err := compileTransferOptions(opts...)
+	opt, err := CompileTransferOptions(opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
@@ -345,14 +347,14 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 // Redeem appends a redeem action to the request. The action will be prepared using the provided owner wallet.
 // The action redeems tokens of the passed type for a total amount matching the passed value.
 // Additional options can be passed to customize the action.
-func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Type, value uint64, opts ...TransferOption) error {
-	opt, err := compileTransferOptions(opts...)
+func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Type, value uint64, opts ...TransferOption) (*TransferAction, error) {
+	opt, err := CompileTransferOptions(opts...)
 	if err != nil {
-		return errors.WithMessagef(err, "failed compiling options [%v]", opts)
+		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
 	tokenIDs, outputTokens, err := r.prepareTransfer(true, wallet, typ, []uint64{value}, []Identity{nil}, opt)
 	if err != nil {
-		return errors.Wrap(err, "failed preparing transfer")
+		return nil, errors.Wrap(err, "failed preparing transfer")
 	}
 
 	r.TokenService.logger.Debugf("Prepare Redeem Action [ins:%d,outs:%d]", len(tokenIDs), len(outputTokens))
@@ -371,26 +373,26 @@ func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Typ
 		},
 	)
 	if err != nil {
-		return errors.Wrap(err, "failed creating transfer action")
+		return nil, errors.Wrap(err, "failed creating transfer action")
 	}
 
 	if r.TokenService.logger.IsEnabledFor(zapcore.DebugLevel) {
 		// double check
 		if err := ts.VerifyTransfer(transfer, transferMetadata.Outputs); err != nil {
-			return errors.Wrap(err, "failed checking generated proof")
+			return nil, errors.Wrap(err, "failed checking generated proof")
 		}
 	}
 
 	// Append
 	raw, err := transfer.Serialize()
 	if err != nil {
-		return errors.Wrap(err, "failed serializing transfer action")
+		return nil, errors.Wrap(err, "failed serializing transfer action")
 	}
 
 	r.Actions.Transfers = append(r.Actions.Transfers, raw)
 	r.Metadata.Transfers = append(r.Metadata.Transfers, transferMetadata)
 
-	return nil
+	return &TransferAction{a: transfer}, nil
 }
 
 // Upgrade performs an upgrade operation of the passed ledger tokens.
@@ -1064,6 +1066,9 @@ func (r *Request) TransferSigners() []Identity {
 	signers := make([]Identity, 0)
 	for _, transfer := range r.Transfers() {
 		signers = append(signers, transfer.Senders...)
+		if transfer.Issuer != nil { // add also the identity of the issuer, if specified
+			signers = append(signers, transfer.Issuer)
+		}
 		signers = append(signers, transfer.ExtraSigners...)
 	}
 	return signers
@@ -1153,6 +1158,7 @@ func (r *Request) Transfers() []*Transfer {
 			Senders:      transfer.Senders(),
 			Receivers:    transfer.Receivers(),
 			ExtraSigners: transfer.ExtraSigners,
+			Issuer:       transfer.Issuer,
 		})
 	}
 	return transfers

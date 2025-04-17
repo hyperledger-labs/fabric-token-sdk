@@ -13,6 +13,7 @@ import (
 	factions "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
 	fv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -123,6 +124,8 @@ type Action struct {
 	Proof []byte
 	// Metadata contains the transfer action's metadata
 	Metadata map[string][]byte
+	// Issuer contains the identity of the issuer to sign the transfer action
+	Issuer driver.Identity
 }
 
 // NewTransfer returns the Action that matches the passed arguments
@@ -151,6 +154,7 @@ func NewTransfer(tokenIDs []*token2.ID, inputToken []*token.Token, commitments [
 		Outputs:  tokens,
 		Proof:    proof,
 		Metadata: map[string][]byte{},
+		Issuer:   nil,
 	}, nil
 }
 
@@ -243,6 +247,11 @@ func (t *Action) GetMetadata() map[string][]byte {
 	return t.Metadata
 }
 
+// GetIssuer returns the issuer to sign the transaction
+func (t *Action) GetIssuer() driver.Identity {
+	return t.Issuer
+}
+
 func (t *Action) Validate() error {
 	if len(t.Inputs) == 0 {
 		return errors.Errorf("invalid number of token inputs, expected at least 1")
@@ -313,6 +322,13 @@ func (t *Action) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to serialize outputs")
 	}
 
+	var issuer *pp.Identity
+	if t.Issuer != nil {
+		issuer = &pp.Identity{
+			Raw: t.Issuer.Bytes(),
+		}
+	}
+
 	action := &actions.TransferAction{
 		Version: ProtocolV1,
 		Inputs:  inputs,
@@ -321,6 +337,7 @@ func (t *Action) Serialize() ([]byte, error) {
 			Proof: t.Proof,
 		},
 		Metadata: t.Metadata,
+		Issuer:   issuer,
 	}
 	return proto.Marshal(action)
 }
@@ -365,6 +382,12 @@ func (t *Action) Deserialize(raw []byte) error {
 		t.Proof = action.Proof.Proof
 	}
 	t.Metadata = action.Metadata
+
+	if action.Issuer != nil {
+		t.Issuer = driver.Identity(action.Issuer.Raw)
+	} else {
+		t.Issuer = nil
+	}
 
 	return nil
 }
