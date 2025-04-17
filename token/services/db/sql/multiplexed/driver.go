@@ -7,7 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package multiplexed
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/multiplexed"
+	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
+	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 )
@@ -61,7 +66,7 @@ func (d *Driver) NewAuditTransaction(cfg driver.Config, params ...string) (drive
 	if err != nil {
 		return nil, err
 	}
-	return dr.NewOwnerTransaction(cfg, params...)
+	return dr.NewAuditTransaction(cfg, params...)
 }
 
 func (d *Driver) NewOwnerTransaction(cfg driver.Config, params ...string) (driver.TokenTransactionDB, error) {
@@ -73,7 +78,7 @@ func (d *Driver) NewOwnerTransaction(cfg driver.Config, params ...string) (drive
 }
 
 func (d Driver) getDriver(c driver.Config) (driver.Driver, error) {
-	t, err := multiplexed.GetDriverType(c)
+	t, err := GetDriverType(c)
 	if err != nil {
 		return nil, err
 	}
@@ -83,4 +88,28 @@ func (d Driver) getDriver(c driver.Config) (driver.Driver, error) {
 		}
 	}
 	return nil, errors.Errorf("driver %s not found", t)
+}
+
+func GetDriverType(c driver2.Config) (driver3.PersistenceType, error) {
+	var d driver3.PersistenceType
+	if err := c.UnmarshalKey("type", &d); err != nil {
+		return "", err
+	}
+	if len(d) == 0 || d == mem.Persistence {
+		return mem.Persistence, nil
+	}
+	if d != sql.SQLPersistence && d != "unity" {
+		return "", errors.Errorf("unknown persistence type: [%s]", d)
+	}
+	var t driver2.SQLDriverType
+	if err := c.UnmarshalKey("opts.driver", &t); err != nil {
+		return "", err
+	}
+	if t == sql.SQLite {
+		return sqlite.Persistence, nil
+	}
+	if t == sql.Postgres {
+		return postgres.Persistence, nil
+	}
+	return "", errors.Errorf("type [%s] not defined", t)
 }
