@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package sqlite
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
@@ -75,7 +74,6 @@ func (d *Driver) NewToken(cfg driver.Config, params ...string) (driver.TokenDB, 
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("opts: %v, tokencache: %v", opts, d.TokenCache)
 
 	return d.TokenCache.Get(*opts)
 }
