@@ -32,6 +32,8 @@ type WalletDB interface {
 	IdentityExists(identity token.Identity, wID WalletID, roleID int) bool
 	// LoadMeta returns the metadata stored for a specific identity
 	LoadMeta(identity token.Identity, wID WalletID, roleID int) ([]byte, error)
+	// Close closes the store
+	Close() error
 }
 
 type IdentityDB interface {
@@ -55,4 +57,6 @@ type IdentityDB interface {
 	SignerInfoExists(id []byte) (bool, error)
 	// GetSignerInfo returns the signer info bound to the given identity
 	GetSignerInfo(id []byte) ([]byte, error)
+	// Close closes the store
+	Close() error
 }

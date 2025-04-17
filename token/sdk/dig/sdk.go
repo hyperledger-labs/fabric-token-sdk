@@ -33,11 +33,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/memory"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/unity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/memory"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -128,28 +127,16 @@ func (p *SDK) Install() error {
 				new(common2.TokenManagementServiceProvider),
 			),
 		),
-		p.Container().Provide(func(dh *db2.DriverHolder) *ttxdb.Manager {
-			return ttxdb.NewManager(dh, "ttxdb.persistence", "db.persistence")
-		}),
+		p.Container().Provide(ttxdb.NewManager),
 		p.Container().Provide(digutils.Identity[*ttxdb.Manager](), dig.As(new(ttx.DBProvider), new(network2.TTXDBProvider))),
-		p.Container().Provide(func(dh *db2.DriverHolder) *tokendb.Manager {
-			return tokendb.NewManager(dh, "tokendb.persistence", "db.persistence")
-		}),
-		p.Container().Provide(func(dh *db2.DriverHolder) *tokendb.NotifierManager {
-			return tokendb.NewNotifierManager(dh, "tokendb.persistence", "db.persistence")
-		}),
+		p.Container().Provide(tokendb.NewManager),
+		p.Container().Provide(tokendb.NewNotifierManager),
 		p.Container().Provide(digutils.Identity[*tokendb.Manager](), dig.As(new(tokens.DBProvider))),
 		p.Container().Provide(NewDriverHolder),
-		p.Container().Provide(func(dh *db2.DriverHolder) *auditdb.Manager {
-			return auditdb.NewManager(dh, "auditdb.persistence", "db.persistence")
-		}),
+		p.Container().Provide(auditdb.NewManager),
 		p.Container().Provide(digutils.Identity[*auditdb.Manager](), dig.As(new(auditor.AuditDBProvider))),
-		p.Container().Provide(func(dh *db2.DriverHolder) *identitydb.Manager {
-			return identitydb.NewManager(dh, "identitydb.persistence", "db.persistence")
-		}),
-		p.Container().Provide(func(dh *db2.DriverHolder) *tokenlockdb.Manager {
-			return tokenlockdb.NewManager(dh, "tokenlockdb.persistence", "db.persistence")
-		}),
+		p.Container().Provide(identitydb.NewManager),
+		p.Container().Provide(tokenlockdb.NewManager),
 		p.Container().Provide(digutils.Identity[*kvs.KVS](), dig.As(new(identity2.Keystore))),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
@@ -165,12 +152,10 @@ func (p *SDK) Install() error {
 		p.Container().Provide(digutils.Identity[*vault.Provider](), dig.As(new(token.VaultProvider))),
 		p.Container().Provide(tms.NewPostInitializer),
 		p.Container().Provide(ttx.NewMetrics),
-		p.Container().Provide(func(tracerProvider trace.TracerProvider) *tracing.TracerProvider {
-			return tracing.NewTracerProvider(tracerProvider)
-		}),
-		p.Container().Provide(unity.NewUnityDriver, dig.Group("token-db-drivers")),
-		p.Container().Provide(sql.NewDriver, dig.Group("token-db-drivers")),
-		p.Container().Provide(memory.NewDriver, dig.Group("token-db-drivers")),
+		p.Container().Provide(tracing.NewTracerProvider),
+		p.Container().Provide(sqlite.NewNamedDriver, dig.Group("token-db-drivers")),
+		p.Container().Provide(postgres.NewNamedDriver, dig.Group("token-db-drivers")),
+		p.Container().Provide(memory.NewNamedDriver, dig.Group("token-db-drivers")),
 		p.Container().Provide(func(dbManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
 			return sherdlock.NewFetcherProvider(dbManager, notifierManager, metricsProvider, sherdlock.Mixed)
 		}),

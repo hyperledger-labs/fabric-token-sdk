@@ -8,10 +8,10 @@ package common
 
 import (
 	"database/sql"
-	errors2 "errors"
 	"fmt"
 	"time"
 
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
@@ -40,26 +40,18 @@ func newTokenLockDB(readDB, writeDB *sql.DB, tables tokenLockTables) *TokenLockD
 	}
 }
 
-func NewTokenLockDB(readDB, writeDB *sql.DB, opts NewDBOpts) (*TokenLockDB, error) {
-	tables, err := GetTableNames(opts.TablePrefix)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names")
-	}
-
-	tokenLockDB := newTokenLockDB(
+func NewTokenLockDB(readDB, writeDB *sql.DB, tables tableNames) (*TokenLockDB, error) {
+	return newTokenLockDB(
 		readDB,
 		writeDB,
 		tokenLockTables{
 			TokenLocks: tables.TokenLocks,
 			Requests:   tables.Requests,
-		},
-	)
-	if opts.CreateSchema {
-		if err = common.InitSchema(writeDB, []string{tokenLockDB.GetSchema()}...); err != nil {
-			return nil, err
-		}
-	}
-	return tokenLockDB, nil
+		}), nil
+}
+
+func (db *TokenLockDB) CreateSchema() error {
+	return common.InitSchema(db.WriteDB, []string{db.GetSchema()}...)
 }
 
 func (db *TokenLockDB) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
@@ -98,14 +90,5 @@ func (db *TokenLockDB) GetSchema() string {
 }
 
 func (db *TokenLockDB) Close() error {
-	logger.Info("closing database")
-	if db.ReadDB != db.WriteDB {
-		return errors2.Join(db.ReadDB.Close(), db.WriteDB.Close())
-	}
-	err := db.ReadDB.Close()
-	if err != nil {
-		return errors.Wrap(err, "could not close DB")
-	}
-
-	return nil
+	return common2.Close(db.ReadDB, db.WriteDB)
 }

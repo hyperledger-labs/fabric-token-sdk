@@ -20,7 +20,7 @@ func NewDriverHolder(in struct {
 	Drivers        []dbdriver.NamedDriver `group:"token-db-drivers"`
 	ConfigProvider driver2.ConfigService
 }) *db.DriverHolder {
-	return db.NewDriverHolder(in.ConfigProvider, in.Drivers...)
+	return db.NewDriverHolder(in.ConfigProvider, in.Drivers)
 }
 
 func newTokenDriverService(in struct {

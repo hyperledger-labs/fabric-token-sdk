@@ -16,7 +16,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var IdentityCases = []struct {
+func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
+	for _, c := range identityCases {
+		driver, config := cfgProvider(c.Name)
+		db, err := driver.NewIdentity(config, c.Name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(c.Name, func(xt *testing.T) {
+			c.Fn(xt, db)
+		})
+	}
+}
+
+var identityCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.IdentityDB)
 }{

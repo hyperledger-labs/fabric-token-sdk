@@ -12,6 +12,7 @@ import (
 	"time"
 
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
@@ -120,6 +121,8 @@ type CertificationDB interface {
 	// For each token, the callback function is invoked.
 	// If a token doesn't have a certification, the function returns an error
 	GetCertifications(ids []*token.ID) ([][]byte, error)
+	// Close closes the databases
+	Close() error
 }
 
 type TokenDBTransaction interface {
@@ -217,6 +220,7 @@ type TokenNotifierDriver interface {
 // - avoid that the table grows infinitely
 // - unlock tokens that were locked by a process that exited unexpectedly
 type TokenLockDB interface {
+	common.DBObject
 	// Lock locks a specific token for the consumer TX
 	Lock(tokenID *token.ID, consumerTxID transaction.ID) error
 	// UnlockByTxID unlocks all tokens locked by the consumer TX

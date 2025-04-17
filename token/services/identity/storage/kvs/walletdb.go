@@ -107,3 +107,7 @@ func (s *WalletDB) LoadMeta(identity driver2.Identity, wID driver.WalletID, role
 	}
 	return meta, nil
 }
+
+func (s *WalletDB) Close() error {
+	return nil
+}

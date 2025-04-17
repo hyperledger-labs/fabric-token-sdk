@@ -7,12 +7,20 @@ SPDX-License-Identifier: Apache-2.0
 package sqlite
 
 import (
-	"database/sql"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-func NewWalletDB(readDB, writeDB *sql.DB, opts common.NewDBOpts) (driver.WalletDB, error) {
-	return common.NewWalletDB(readDB, writeDB, opts)
+type WalletDB = common.WalletDB
+
+func NewWalletDB(opts sqlite.Opts) (*WalletDB, error) {
+	dbs, err := sqlite.DbProvider.OpenDB(opts)
+	if err != nil {
+		return nil, err
+	}
+	tableNames, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
+	if err != nil {
+		return nil, err
+	}
+	return common.NewWalletDB(dbs.ReadDB, dbs.WriteDB, tableNames)
 }

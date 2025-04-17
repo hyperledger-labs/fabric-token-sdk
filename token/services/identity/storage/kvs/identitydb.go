@@ -209,6 +209,10 @@ func (s *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
 	return res, nil
 }
 
+func (s *IdentityDB) Close() error {
+	return nil
+}
+
 type IdentityConfigurationsIterator struct {
 	kvs.Iterator
 }
