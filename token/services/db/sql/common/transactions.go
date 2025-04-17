@@ -13,7 +13,6 @@ import (
 	errors2 "errors"
 	"fmt"
 	"math/big"
-	"runtime/debug"
 	"strings"
 	"time"
 
@@ -565,7 +564,6 @@ func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadat
 	if err != nil {
 		return errors.Wrapf(err, "error compiling query")
 	}
-	debug.PrintStack()
 	logger.Warnf(query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(ppHash))
 
 	_, err = w.txn.Exec(query, txID, tr, driver.Pending, "", j, ppHash)
