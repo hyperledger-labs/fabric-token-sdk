@@ -377,7 +377,7 @@ func TestMetadataDeserialize(t *testing.T) {
 				return nil, nil, nil
 			},
 			wantErr:       true,
-			expectedError: "failed deserializing metadata: failed unmarshalling metadata: failed to unmarshal to TypedMetadata: asn1: syntax error: sequence truncated",
+			expectedError: "failed to deserialize metadata: failed unmarshalling metadata: failed to unmarshal to TypedMetadata: asn1: syntax error: sequence truncated",
 		},
 		{
 			name:  "empty raw",
@@ -386,7 +386,7 @@ func TestMetadataDeserialize(t *testing.T) {
 				return nil, []byte{}, nil
 			},
 			wantErr:       true,
-			expectedError: "failed deserializing metadata: failed unmarshalling metadata: failed to unmarshal to TypedMetadata: asn1: syntax error: sequence truncated",
+			expectedError: "failed to deserialize metadata: failed unmarshalling metadata: failed to unmarshal to TypedMetadata: asn1: syntax error: sequence truncated",
 		},
 		{
 			name:  "invalid raw",
@@ -395,7 +395,7 @@ func TestMetadataDeserialize(t *testing.T) {
 				return nil, []byte{0, 1, 2, 3}, nil
 			},
 			wantErr:       true,
-			expectedError: "failed deserializing metadata: failed unmarshalling metadata: failed to unmarshal to TypedMetadata: asn1: structure error: tags don't match (16 vs {class:0 tag:0 length:1 isCompound:false}) {optional:false explicit:false application:false private:false defaultValue:<nil> tag:<nil> stringType:0 timeType:0 set:false omitEmpty:false} TypedMetadata @2",
+			expectedError: "failed to deserialize metadata: failed unmarshalling metadata: failed to unmarshal to TypedMetadata: asn1: structure error: tags don't match (16 vs {class:0 tag:0 length:1 isCompound:false}) {optional:false explicit:false application:false private:false defaultValue:<nil> tag:<nil> stringType:0 timeType:0 set:false omitEmpty:false} TypedMetadata @2",
 		},
 		{
 			name:  "invalid metadata type",
@@ -405,7 +405,7 @@ func TestMetadataDeserialize(t *testing.T) {
 				return nil, raw, err
 			},
 			wantErr:       true,
-			expectedError: "failed deserializing metadata: invalid metadata type [-1]",
+			expectedError: "failed to deserialize metadata: invalid metadata type [-1]",
 		},
 		{
 			name:  "valid metadata raw, nil",
@@ -424,7 +424,7 @@ func TestMetadataDeserialize(t *testing.T) {
 				return nil, raw, err
 			},
 			wantErr:       true,
-			expectedError: "failed unmarshalling metadata: proto: cannot parse invalid wire-format data",
+			expectedError: "failed to deserialize metadata: proto: cannot parse invalid wire-format data",
 		},
 		{
 			name:  "invalid metadata raw, invalid",
@@ -434,7 +434,7 @@ func TestMetadataDeserialize(t *testing.T) {
 				return nil, raw, err
 			},
 			wantErr:       true,
-			expectedError: "failed unmarshalling metadata: proto: cannot parse invalid wire-format data",
+			expectedError: "failed to deserialize metadata: proto: cannot parse invalid wire-format data",
 		},
 		{
 			name:  "valid metadata",
