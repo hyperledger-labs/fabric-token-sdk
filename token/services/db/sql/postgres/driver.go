@@ -27,14 +27,14 @@ type Driver struct {
 	OwnerTxCache       lazy.Provider[postgres.Config, *TransactionDB]
 }
 
-func NewDriver() driver.NamedDriver {
+func NewNamedDriver() driver.NamedDriver {
 	return driver.NamedDriver{
 		Name:   sql.SQLPersistence,
-		Driver: newDriver(),
+		Driver: NewDriver(),
 	}
 }
 
-func newDriver() *Driver {
+func NewDriver() *Driver {
 	return &Driver{
 		TokenLockCache:     newProviderWithKeyMapper(NewTokenLockDB),
 		WalletCache:        newProviderWithKeyMapper(NewWalletDB),

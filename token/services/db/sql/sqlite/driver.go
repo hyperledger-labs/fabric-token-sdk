@@ -27,14 +27,14 @@ type Driver struct {
 	OwnerTxCache       lazy.Provider[sqlite.Config, *TransactionDB]
 }
 
-func NewDriver() driver.NamedDriver {
+func NewNamedDriver() driver.NamedDriver {
 	return driver.NamedDriver{
 		Name:   sqlite.Persistence,
-		Driver: newDriver(),
+		Driver: NewDriver(),
 	}
 }
 
-func newDriver() *Driver {
+func NewDriver() *Driver {
 	return &Driver{
 		TokenLockCache:     newProviderWithKeyMapper(NewTokenLockDB),
 		WalletCache:        newProviderWithKeyMapper(NewWalletDB),
@@ -107,11 +107,13 @@ func (d *Driver) NewOwnerTransaction(cfg driver.Config, params ...string) (drive
 func newProviderWithKeyMapper[V common.DBObject](constructor common.PersistenceConstructor[sqlite.Opts, V]) lazy.Provider[sqlite.Config, V] {
 	return lazy.NewProviderWithKeyMapper(key, func(o sqlite.Config) (V, error) {
 		p, err := constructor(sqlite.Opts{
-			DataSource:   o.DataSource,
-			MaxOpenConns: o.MaxOpenConns,
-			MaxIdleConns: *o.MaxIdleConns,
-			MaxIdleTime:  *o.MaxIdleTime,
-			TablePrefix:  o.TablePrefix,
+			DataSource:      o.DataSource,
+			SkipPragmas:     o.SkipPragmas,
+			MaxOpenConns:    o.MaxOpenConns,
+			MaxIdleConns:    *o.MaxIdleConns,
+			MaxIdleTime:     *o.MaxIdleTime,
+			TablePrefix:     o.TablePrefix,
+			TableNameParams: o.TableNameParams,
 		})
 		if err != nil {
 			return utils.Zero[V](), err

@@ -30,7 +30,7 @@ func TestDB(t *testing.T) {
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 
-	var dh = db.NewDriverHolder(cp, multiplexed.Driver{sqlite.NewDriver()})
+	var dh = db.NewDriverHolder(cp, multiplexed.Driver{sqlite.NewNamedDriver()})
 	manager := ttxdb.NewManager(dh)
 	db1, err := manager.DBByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)

@@ -7,63 +7,48 @@ SPDX-License-Identifier: Apache-2.0
 package memory
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqlite2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 )
 
-type Driver struct{}
+type Driver sqlite2.Driver
 
-func NewDriver() driver.NamedDriver {
+func NewNamedDriver() driver.NamedDriver {
 	return driver.NamedDriver{
 		Name:   mem.Persistence,
-		Driver: newDriver(),
+		Driver: NewDriver(),
 	}
 }
 
-func newDriver() *Driver {
-	return &Driver{}
+func NewDriver() *Driver {
+	return (*Driver)(sqlite2.NewDriver())
 }
 
 func (d *Driver) NewTokenLock(_ driver.Config, params ...string) (driver.TokenLockDB, error) {
-	return newPersistenceWithOpts(sqlite2.NewTokenLockDB, params...)
+	return d.TokenLockCache.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewWallet(_ driver.Config, params ...string) (driver.WalletDB, error) {
-	return newPersistenceWithOpts(sqlite2.NewWalletDB, params...)
+	return d.WalletCache.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewIdentity(_ driver.Config, params ...string) (driver.IdentityDB, error) {
-	return newPersistenceWithOpts(sqlite2.NewIdentityDB, params...)
+	return d.IdentityCache.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewToken(_ driver.Config, params ...string) (driver.TokenDB, error) {
-	return newPersistenceWithOpts(sqlite2.NewTokenDB, params...)
+	return d.TokenCache.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewTokenNotifier(_ driver.Config, params ...string) (driver.TokenNotifier, error) {
-	return newPersistenceWithOpts(sqlite2.NewTokenNotifier, params...)
+	return d.TokenNotifierCache.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewAuditTransaction(_ driver.Config, params ...string) (driver.AuditTransactionDB, error) {
-	return newPersistenceWithOpts(sqlite2.NewAuditTransactionDB, params...)
+	return d.AuditTxCache.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewOwnerTransaction(_ driver.Config, params ...string) (driver.TokenTransactionDB, error) {
-	return newPersistenceWithOpts(sqlite2.NewTransactionDB, params...)
-}
-
-func newPersistenceWithOpts[V common.DBObject](constructor common.PersistenceConstructor[sqlite.Opts, V], params ...string) (V, error) {
-	p, err := constructor(mem.Op.GetOpts(params...))
-	if err != nil {
-		return utils.Zero[V](), err
-	}
-	if err := p.CreateSchema(); err != nil {
-		return utils.Zero[V](), err
-	}
-
-	return p, nil
+	return d.OwnerTxCache.Get(mem.Op.GetConfig(params...))
 }

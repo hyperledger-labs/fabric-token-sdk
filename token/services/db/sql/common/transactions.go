@@ -64,7 +64,9 @@ func NewTransactionDB(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterp
 }
 
 func (db *TransactionDB) CreateSchema() error {
-	return common.InitSchema(db.writeDB, db.GetSchema())
+	schema := db.GetSchema()
+	logger.Warnf("schema to create: %s", schema)
+	return common.InitSchema(db.writeDB, schema)
 }
 
 func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
@@ -255,7 +257,6 @@ func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string]
 }
 
 func (db *TransactionDB) Close() error {
-	logger.Info("closing database")
 	if db.readDB != db.writeDB {
 		return errors2.Join(db.readDB.Close(), db.writeDB.Close())
 	}

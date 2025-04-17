@@ -23,7 +23,7 @@ func TestDB(t *testing.T) {
 	// create a new config service by loading the config file
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
-	dh := db.NewDriverHolder(cp, multiplexed.Driver{sqlite.NewDriver()})
+	dh := db.NewDriverHolder(cp, multiplexed.Driver{sqlite.NewNamedDriver()})
 	manager := tokendb.NewManager(dh)
 	_, err = manager.DBByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)

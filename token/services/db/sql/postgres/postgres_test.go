@@ -17,12 +17,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
+var postgresDriver = NewDriver()
+
 func TestTokens(t *testing.T) {
 	terminate, pgConnStr := StartContainer(t)
 	defer terminate()
 
 	dbtest.TokensTest(t, func(name string) (driver.Driver, driver.Config) {
-		return newDriver(), postgresCfg(pgConnStr, name)
+		return postgresDriver, postgresCfg(pgConnStr, name)
 	})
 }
 
@@ -31,7 +33,7 @@ func TestTransactions(t *testing.T) {
 	defer terminate()
 
 	dbtest.TransactionsTest(t, func(name string) (driver.Driver, driver.Config) {
-		return newDriver(), postgresCfg(pgConnStr, name)
+		return postgresDriver, postgresCfg(pgConnStr, name)
 	})
 }
 
@@ -40,7 +42,7 @@ func TestTokenLocks(t *testing.T) {
 	defer terminate()
 
 	dbtest.TokenLocksTest(t, func(name string) (driver.Driver, driver.Config) {
-		return newDriver(), postgresCfg(pgConnStr, name)
+		return postgresDriver, postgresCfg(pgConnStr, name)
 	})
 }
 
@@ -49,7 +51,7 @@ func TestWallet(t *testing.T) {
 	defer terminate()
 
 	dbtest.WalletTest(t, func(name string) (driver.Driver, driver.Config) {
-		return newDriver(), postgresCfg(pgConnStr, name)
+		return postgresDriver, postgresCfg(pgConnStr, name)
 	})
 }
 
@@ -58,7 +60,7 @@ func TestIdentity(t *testing.T) {
 	defer terminate()
 
 	dbtest.IdentityTest(t, func(name string) (driver.Driver, driver.Config) {
-		return newDriver(), postgresCfg(pgConnStr, name)
+		return postgresDriver, postgresCfg(pgConnStr, name)
 	})
 }
 
