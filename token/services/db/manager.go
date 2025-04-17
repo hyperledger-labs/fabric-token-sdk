@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package db
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/db"
@@ -15,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
-//var logger = logging.MustGetLogger("token-db")
+var logger = logging.MustGetLogger("token-db")
 
 type Manager[S any] struct{ lazy.Provider[token.TMSID, S] }
 
@@ -26,7 +27,12 @@ func newManager[V any](config *config.Service, prefix string, constructor func(c
 			return utils.Zero[V](), err
 		}
 
-		return constructor(db.NewPrefixConfig(cfg, prefix), tmsID.Network, tmsID.Channel, tmsID.Namespace)
+		prefixConfig := db.NewPrefixConfig(cfg, prefix)
+		if !prefixConfig.IsSet("") {
+			logger.Warnf("Prefix [%s:%s] not found: changing to unity", tmsID, prefix)
+			prefixConfig = db.NewPrefixConfig(cfg, "db")
+		}
+		return constructor(prefixConfig, tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	})}
 }
 
