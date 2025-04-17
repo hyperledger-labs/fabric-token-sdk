@@ -35,18 +35,18 @@ func GetTableNames(prefix string, params ...string) (tableNames, error) {
 
 	return tableNames{
 		Movements:              nc.MustGetTableName(prefix, "movements", params...),
-		Transactions:           nc.MustGetTableName(prefix, "transactions", params...),
-		TransactionEndorseAck:  nc.MustGetTableName(prefix, "transaction_endorsements", params...),
+		Transactions:           nc.MustGetTableName(prefix, "txs", params...),
+		TransactionEndorseAck:  nc.MustGetTableName(prefix, "tx_ends", params...),
 		Requests:               nc.MustGetTableName(prefix, "requests", params...),
-		Validations:            nc.MustGetTableName(prefix, "request_validations", params...),
+		Validations:            nc.MustGetTableName(prefix, "req_vals", params...),
 		Tokens:                 nc.MustGetTableName(prefix, "tokens", params...),
-		Ownership:              nc.MustGetTableName(prefix, "token_ownership", params...),
-		Certifications:         nc.MustGetTableName(prefix, "token_certifications", params...),
-		TokenLocks:             nc.MustGetTableName(prefix, "token_locks", params...),
+		Ownership:              nc.MustGetTableName(prefix, "tkn_own", params...),
+		Certifications:         nc.MustGetTableName(prefix, "tkn_crts", params...),
+		TokenLocks:             nc.MustGetTableName(prefix, "tkn_locks", params...),
 		PublicParams:           nc.MustGetTableName(prefix, "public_params", params...),
 		Wallets:                nc.MustGetTableName(prefix, "wallets", params...),
-		IdentityConfigurations: nc.MustGetTableName(prefix, "identity_configurations", params...),
-		IdentityInfo:           nc.MustGetTableName(prefix, "identity_information", params...),
-		Signers:                nc.MustGetTableName(prefix, "identity_signers", params...),
+		IdentityConfigurations: nc.MustGetTableName(prefix, "id_cfgs", params...),
+		IdentityInfo:           nc.MustGetTableName(prefix, "id_info", params...),
+		Signers:                nc.MustGetTableName(prefix, "id_signers", params...),
 	}, nil
 }
