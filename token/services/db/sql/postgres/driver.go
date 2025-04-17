@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
@@ -29,7 +28,7 @@ type Driver struct {
 
 func NewNamedDriver() driver.NamedDriver {
 	return driver.NamedDriver{
-		Name:   sql.SQLPersistence,
+		Name:   postgres.Persistence,
 		Driver: NewDriver(),
 	}
 }
