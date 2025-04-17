@@ -14,10 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
-
-var logger = logging.MustGetLogger("postgres")
 
 type Driver struct {
 	TokenLockCache     lazy.Provider[postgres.Config, *TokenLockDB]
@@ -118,7 +115,6 @@ func newProviderWithKeyMapper[V common.DBObject](constructor common.PersistenceC
 			return utils.Zero[V](), err
 		}
 		if !o.SkipCreateTable {
-			logger.Warnf("Create new db for data source: [%s]", o.DataSource)
 			if err := p.CreateSchema(); err != nil {
 				return utils.Zero[V](), err
 			}
