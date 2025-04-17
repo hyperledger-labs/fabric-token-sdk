@@ -12,6 +12,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token/mock"
@@ -240,5 +241,136 @@ func TestTokensService_Recipients(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestTokensService_Deobfuscate(t *testing.T) {
+	pp, err := setup.Setup(32, []byte("issuer public key"), math.FP256BN_AMCL)
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		inputs        func() (*token2.TokensService, driver.TokenOutput, driver.TokenOutputMetadata, error)
+		wantErr       bool
+		expectedError string
+	}{
+		{
+			name: "failed to deserialize token",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, driver.TokenOutputMetadata, error) {
+				ts, err := token2.NewTokensService(nil, pp, &mock.IdentityDeserializer{})
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				return ts, nil, nil, nil
+			},
+			wantErr:       true,
+			expectedError: "failed to deobfuscate: failed to deobfuscate comm token: failed to deobfuscate token: failed getting token output: failed to deserialize token: failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: syntax error: sequence truncated\nfailed to deobfuscate fabtoken token: failed unmarshalling token: failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: syntax error: sequence truncated",
+		},
+		{
+			name: "failed to deserialize token 2",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, driver.TokenOutputMetadata, error) {
+				ts, err := token2.NewTokensService(nil, pp, &mock.IdentityDeserializer{})
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				return ts, []byte{}, nil, nil
+			},
+			wantErr:       true,
+			expectedError: "failed to deobfuscate: failed to deobfuscate comm token: failed to deobfuscate token: failed getting token output: failed to deserialize token: failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: syntax error: sequence truncated\nfailed to deobfuscate fabtoken token: failed unmarshalling token: failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: syntax error: sequence truncated",
+		},
+		{
+			name: "failed to deserialize token 3",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, driver.TokenOutputMetadata, error) {
+				ts, err := token2.NewTokensService(nil, pp, &mock.IdentityDeserializer{})
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				return ts, []byte{0, 1, 2, 3}, nil, nil
+			},
+			wantErr:       true,
+			expectedError: "failed to deobfuscate: failed to deobfuscate comm token: failed to deobfuscate token: failed getting token output: failed to deserialize token: failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: structure error: tags don't match (16 vs {class:0 tag:0 length:1 isCompound:false}) {optional:false explicit:false application:false private:false defaultValue:<nil> tag:<nil> stringType:0 timeType:0 set:false omitEmpty:false} TypedToken @2\nfailed to deobfuscate fabtoken token: failed unmarshalling token: failed deserializing token: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: structure error: tags don't match (16 vs {class:0 tag:0 length:1 isCompound:false}) {optional:false explicit:false application:false private:false defaultValue:<nil> tag:<nil> stringType:0 timeType:0 set:false omitEmpty:false} TypedToken @2",
+		},
+		{
+			name: "failed to deserialize fabtoken metadata",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, driver.TokenOutputMetadata, error) {
+				ts, err := token2.NewTokensService(nil, pp, &mock.IdentityDeserializer{})
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				tok := &actions.Output{}
+				raw, err := tok.Serialize()
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				return ts, raw, nil, nil
+			},
+			wantErr:       true,
+			expectedError: "failed to deobfuscate: failed to deobfuscate comm token: failed to deobfuscate token: failed getting token output: failed to deserialize token: failed deserializing token: invalid token type [1]\nfailed to deobfuscate fabtoken token: failed unmarshalling token metadata: failed deserializing metadata: failed unmarshalling token: failed to unmarshal to TypedToken: asn1: syntax error: sequence truncated",
+		},
+		{
+			name: "failed to deserialize fabtoken owner identity",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, driver.TokenOutputMetadata, error) {
+				des := &mock.IdentityDeserializer{}
+				des.RecipientsReturns(nil, errors.New("pineapple"))
+				ts, err := token2.NewTokensService(nil, pp, des)
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				tok := &actions.Output{}
+				raw, err := tok.Serialize()
+				if err != nil {
+					return nil, nil, nil, err
+				}
+
+				meta := &actions.OutputMetadata{}
+				metaRaw, err := meta.Serialize()
+				if err != nil {
+					return nil, nil, nil, err
+				}
+
+				return ts, raw, metaRaw, nil
+			},
+			wantErr:       true,
+			expectedError: "failed to deobfuscate: failed to deobfuscate comm token: failed to deobfuscate token: failed getting token output: failed to deserialize token: failed deserializing token: invalid token type [1]\nfailed to deobfuscate fabtoken token: failed to get recipients: pineapple",
+		},
+		{
+			name: "fabtoken output, cannot deserialize output",
+			inputs: func() (*token2.TokensService, driver.TokenOutput, driver.TokenOutputMetadata, error) {
+				des := &mock.IdentityDeserializer{}
+				des.RecipientsReturns(nil, errors.New("pineapple"))
+				ts, err := token2.NewTokensService(nil, pp, des)
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				tok := &actions.Output{}
+				raw, err := tok.Serialize()
+				if err != nil {
+					return nil, nil, nil, err
+				}
+
+				meta := &actions.OutputMetadata{}
+				metaRaw, err := meta.Serialize()
+				if err != nil {
+					return nil, nil, nil, err
+				}
+
+				return ts, raw, metaRaw, nil
+			},
+			wantErr:       true,
+			expectedError: "failed to deobfuscate: failed to deobfuscate comm token: failed to deobfuscate token: failed getting token output: failed to deserialize token: failed deserializing token: invalid token type [1]\nfailed to deobfuscate fabtoken token: failed to get recipients: pineapple",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts, output, metadata, err := tt.inputs()
+			assert.NoError(t, err)
+			_, _, _, _, err = ts.Deobfuscate(output, metadata)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, ts)
+			}
+		})
+	}
 }
