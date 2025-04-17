@@ -32,6 +32,10 @@ func newManager[V any](config *config.Service, prefix string, constructor func(c
 			logger.Warnf("Prefix [%s:%s] not found: changing to unity", tmsID, prefix)
 			prefixConfig = db.NewPrefixConfig(cfg, "db")
 		}
+		if !prefixConfig.IsSet("") {
+			logger.Errorf("unity not found for [%s] either", prefix)
+			panic("no db driver found")
+		}
 		return constructor(prefixConfig, tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	})}
 }
