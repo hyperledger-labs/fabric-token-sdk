@@ -40,48 +40,6 @@ func newManager[V any](config *config.Service, prefix string, constructor func(c
 	})}
 }
 
-//func compileOpts(cp driver.ConfigProvider, tmsID token.TMSID, keys ...string) (common2.Opts, driver.PersistenceType, error) {
-//	tmsConfig, err := config.NewService(cp).ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
-//	if err != nil {
-//		return common2.Opts{}, "", errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)
-//	}
-//
-//	for _, k := range keys {
-//		if !tmsConfig.IsSet(fmt.Sprintf("%s.type", k)) {
-//			logger.Infof("Key [%s] not found", k)
-//		} else if persistenceType := driver.PersistenceType(tmsConfig.GetString(fmt.Sprintf("%s.type", k))); persistenceType == mem.MemoryPersistence {
-//			return MemoryOpts(tmsID), mem.MemoryPersistence, nil
-//		} else if opts, err := sqlOpts(tmsConfig, k); err != nil {
-//			return common2.Opts{}, "", err
-//		} else {
-//			return opts, persistenceType, nil
-//		}
-//	}
-//	logger.Warnf("Persistence not found for keys [%v]. Defaulting to memory", keys)
-//	return MemoryOpts(tmsID), mem.MemoryPersistence, nil
-//}
-//
-//func sqlOpts(tmsConfig config.Configuration, k string) (common2.Opts, error) {
-//	opts, err := common2.GetOpts(tmsConfig, fmt.Sprintf("%s.opts", k))
-//	if err != nil {
-//		return common2.Opts{}, errors.Wrapf(err, "failed reading opts")
-//	}
-//	tmsID := tmsConfig.ID()
-//	opts.TablePrefix = db2.EscapeForTableName(tmsID.Network, tmsID.Channel, tmsID.Namespace)
-//	return *opts, nil
-//}
-//
-//func MemoryOpts(tmsID token.TMSID) common2.Opts {
-//	h := sha256.New()
-//	if _, err := h.Write([]byte(tmsID.String())); err != nil {
-//		panic(err)
-//	}
-//	o := mem.Opts
-//	o.DataSource = fmt.Sprintf("file:%x?mode=memory&cache=shared", h.Sum(nil))
-//	return o
-//
-//}
-
 func (m *Manager[S]) DBByTMSId(id token.TMSID) (S, error) {
 	return m.Get(id)
 }
