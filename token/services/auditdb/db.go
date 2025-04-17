@@ -37,7 +37,7 @@ var (
 	logger      = logging.MustGetLogger("token-sdk.auditdb")
 )
 
-func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
+func NewManager(dh *db.DriverHolder) *Manager {
 	return db.MappedManager[driver.AuditTransactionDB, *DB](dh.NewAuditTransactionManager(), newDB)
 }
 

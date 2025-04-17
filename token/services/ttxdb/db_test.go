@@ -31,7 +31,7 @@ func TestDB(t *testing.T) {
 	assert.NoError(t, err)
 
 	var dh = db.NewDriverHolder(cp, multiplexed.Driver{sqlite.NewDriver()})
-	manager := ttxdb.NewManager(dh, "ttxdb.persistence")
+	manager := ttxdb.NewManager(dh)
 	db1, err := manager.DBByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	db2, err := manager.DBByTMSId(token.TMSID{Network: "grapes"})

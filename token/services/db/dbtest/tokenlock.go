@@ -17,7 +17,7 @@ import (
 )
 
 func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
-	for _, c := range TokenLockDBCases {
+	for _, c := range tokenLockDBCases {
 		driver, config := cfgProvider(c.Name)
 		tokenLockDB, err := driver.NewTokenLock(config)
 		if err != nil {
@@ -36,8 +36,7 @@ func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
 	}
 }
 
-// TokenLockDBCases collects test functions that db driver implementations can use for integration tests
-var TokenLockDBCases = []struct {
+var tokenLockDBCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.TokenLockDB, driver.TokenTransactionDB)
 }{

@@ -19,31 +19,31 @@ import (
 
 func TestTokens(t *testing.T) {
 	dbtest.TokensTest(t, func(name string) (driver.Driver, driver.Config) {
-		return &Driver{}, memoryCfg(name)
+		return newDriver(), memoryCfg(name)
 	})
 }
 
 func TestTransactions(t *testing.T) {
 	dbtest.TransactionsTest(t, func(name string) (driver.Driver, driver.Config) {
-		return &Driver{}, memoryCfg(name)
+		return newDriver(), memoryCfg(name)
 	})
 }
 
 func TestTokenLocks(t *testing.T) {
 	dbtest.TokenLocksTest(t, func(name string) (driver.Driver, driver.Config) {
-		return &Driver{}, memoryCfg(name)
+		return newDriver(), memoryCfg(name)
 	})
 }
 
 func TestIdentity(t *testing.T) {
 	dbtest.IdentityTest(t, func(name string) (driver.Driver, driver.Config) {
-		return &Driver{}, memoryCfg(name)
+		return newDriver(), memoryCfg(name)
 	})
 }
 
 func TestWallet(t *testing.T) {
 	dbtest.WalletTest(t, func(name string) (driver.Driver, driver.Config) {
-		return &Driver{}, memoryCfg(name)
+		return newDriver(), memoryCfg(name)
 	})
 }
 

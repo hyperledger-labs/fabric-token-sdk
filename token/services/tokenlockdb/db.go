@@ -13,7 +13,7 @@ import (
 
 type Manager = db.Manager[*DB]
 
-func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
+func NewManager(dh *db.DriverHolder) *Manager {
 	return db.MappedManager[driver.TokenLockDB, *DB](dh.NewTokenLockManager(), newDB)
 }
 

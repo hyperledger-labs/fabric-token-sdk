@@ -24,7 +24,7 @@ func TestDB(t *testing.T) {
 	assert.NoError(t, err)
 
 	dh := db2.NewDriverHolder(cp, multiplexed.Driver{sqlite.NewDriver()})
-	manager := identitydb.NewManager(dh, "identitydb.persistence")
+	manager := identitydb.NewManager(dh)
 	_, err = manager.IdentityDBByTMSId(token2.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	_, err = manager.WalletDBByTMSId(token2.TMSID{Network: "grapes"})

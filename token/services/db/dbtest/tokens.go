@@ -23,7 +23,7 @@ import (
 type cfgProvider func(string) (driver.Driver, driver.Config)
 
 func TokensTest(t *testing.T, cfgProvider cfgProvider) {
-	for _, c := range TokensCases {
+	for _, c := range tokensCases {
 		t.Run(c.Name, func(xt *testing.T) {
 			driver, config := cfgProvider(c.Name)
 			db, err := driver.NewToken(config)
@@ -46,7 +46,7 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 	// }
 }
 
-var TokensCases = []struct {
+var tokensCases = []struct {
 	Name string
 	Fn   func(*testing.T, TestTokenDB)
 }{

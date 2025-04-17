@@ -29,16 +29,20 @@ type Driver struct {
 
 func NewDriver() driver.NamedDriver {
 	return driver.NamedDriver{
-		Name: sql.SQLPersistence,
-		Driver: &Driver{
-			TokenLockCache:     newProviderWithKeyMapper(NewTokenLockDB),
-			WalletCache:        newProviderWithKeyMapper(NewWalletDB),
-			IdentityCache:      newProviderWithKeyMapper(NewIdentityDB),
-			TokenCache:         newProviderWithKeyMapper(NewTokenDB),
-			TokenNotifierCache: newProviderWithKeyMapper(NewTokenNotifier),
-			AuditTxCache:       newProviderWithKeyMapper(NewAuditTransactionDB),
-			OwnerTxCache:       newProviderWithKeyMapper(NewTransactionDB),
-		},
+		Name:   sql.SQLPersistence,
+		Driver: newDriver(),
+	}
+}
+
+func newDriver() *Driver {
+	return &Driver{
+		TokenLockCache:     newProviderWithKeyMapper(NewTokenLockDB),
+		WalletCache:        newProviderWithKeyMapper(NewWalletDB),
+		IdentityCache:      newProviderWithKeyMapper(NewIdentityDB),
+		TokenCache:         newProviderWithKeyMapper(NewTokenDB),
+		TokenNotifierCache: newProviderWithKeyMapper(NewTokenNotifier),
+		AuditTxCache:       newProviderWithKeyMapper(NewAuditTransactionDB),
+		OwnerTxCache:       newProviderWithKeyMapper(NewTransactionDB),
 	}
 }
 

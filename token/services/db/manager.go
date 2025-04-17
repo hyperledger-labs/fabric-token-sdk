@@ -9,6 +9,7 @@ package db
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -18,13 +19,14 @@ import (
 
 type Manager[S any] struct{ lazy.Provider[token.TMSID, S] }
 
-func newManager[V any](config *config.Service, constructor func(cfg driver.Config, params ...string) (V, error)) *Manager[V] {
+func newManager[V any](config *config.Service, prefix string, constructor func(cfg driver.Config, params ...string) (V, error)) *Manager[V] {
 	return &Manager[V]{Provider: lazy.NewProviderWithKeyMapper(Key, func(tmsID token.TMSID) (V, error) {
 		cfg, err := config.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 		if err != nil {
 			return utils.Zero[V](), err
 		}
-		return constructor(cfg, tmsID.Network, tmsID.Channel, tmsID.Namespace)
+
+		return constructor(db.NewPrefixConfig(cfg, prefix), tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	})}
 }
 

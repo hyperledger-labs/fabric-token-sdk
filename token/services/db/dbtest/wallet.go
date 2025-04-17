@@ -14,7 +14,7 @@ import (
 )
 
 func WalletTest(t *testing.T, cfgProvider cfgProvider) {
-	for _, c := range WalletCases {
+	for _, c := range walletCases {
 		driver, config := cfgProvider(c.Name)
 		db, err := driver.NewWallet(config)
 		if err != nil {
@@ -26,7 +26,7 @@ func WalletTest(t *testing.T, cfgProvider cfgProvider) {
 	}
 }
 
-var WalletCases = []struct {
+var walletCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.WalletDB)
 }{

@@ -22,7 +22,7 @@ import (
 )
 
 func TransactionsTest(t *testing.T, cfgProvider cfgProvider) {
-	for _, c := range TokenTransactionDBCases {
+	for _, c := range tokenTransactionDBCases {
 		driver, config := cfgProvider(c.Name)
 		db, err := driver.NewOwnerTransaction(config)
 		if err != nil {
@@ -35,8 +35,7 @@ func TransactionsTest(t *testing.T, cfgProvider cfgProvider) {
 	}
 }
 
-// TokenTransactionDBCases collects test functions that db driver implementations can use for integration tests
-var TokenTransactionDBCases = []struct {
+var tokenTransactionDBCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.TokenTransactionDB)
 }{

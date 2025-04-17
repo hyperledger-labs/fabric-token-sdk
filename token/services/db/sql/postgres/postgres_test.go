@@ -22,7 +22,7 @@ func TestTokens(t *testing.T) {
 	defer terminate()
 
 	dbtest.TokensTest(t, func(name string) (driver.Driver, driver.Config) {
-		return &Driver{}, postgresCfg(pgConnStr, name)
+		return newDriver(), postgresCfg(pgConnStr, name)
 	})
 }
 
@@ -31,7 +31,7 @@ func TestTransactions(t *testing.T) {
 	defer terminate()
 
 	dbtest.TransactionsTest(t, func(name string) (driver.Driver, driver.Config) {
-		return &Driver{}, postgresCfg(pgConnStr, name)
+		return newDriver(), postgresCfg(pgConnStr, name)
 	})
 }
 
@@ -40,7 +40,7 @@ func TestTokenLocks(t *testing.T) {
 	defer terminate()
 
 	dbtest.TokenLocksTest(t, func(name string) (driver.Driver, driver.Config) {
-		return &Driver{}, postgresCfg(pgConnStr, name)
+		return newDriver(), postgresCfg(pgConnStr, name)
 	})
 }
 
@@ -49,7 +49,7 @@ func TestWallet(t *testing.T) {
 	defer terminate()
 
 	dbtest.WalletTest(t, func(name string) (driver.Driver, driver.Config) {
-		return &Driver{}, postgresCfg(pgConnStr, name)
+		return newDriver(), postgresCfg(pgConnStr, name)
 	})
 }
 
@@ -58,7 +58,7 @@ func TestIdentity(t *testing.T) {
 	defer terminate()
 
 	dbtest.IdentityTest(t, func(name string) (driver.Driver, driver.Config) {
-		return &Driver{}, postgresCfg(pgConnStr, name)
+		return newDriver(), postgresCfg(pgConnStr, name)
 	})
 }
 

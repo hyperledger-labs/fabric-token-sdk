@@ -17,7 +17,7 @@ type Manager struct {
 	walletManager   *db.Manager[identity.WalletDB]
 }
 
-func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
+func NewManager(dh *db.DriverHolder) *Manager {
 	return &Manager{
 		identityManager: dh.NewIdentityManager(),
 		walletManager:   dh.NewWalletManager(),

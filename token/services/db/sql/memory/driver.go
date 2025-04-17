@@ -20,8 +20,12 @@ type Driver struct{}
 func NewDriver() driver.NamedDriver {
 	return driver.NamedDriver{
 		Name:   mem.Persistence,
-		Driver: &Driver{},
+		Driver: newDriver(),
 	}
+}
+
+func newDriver() *Driver {
+	return &Driver{}
 }
 
 func (d *Driver) NewTokenLock(_ driver.Config, params ...string) (driver.TokenLockDB, error) {

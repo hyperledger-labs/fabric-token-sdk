@@ -129,27 +129,17 @@ func (p *SDK) Install() error {
 			),
 		),
 		p.Container().Provide(func(dh *db2.DriverHolder) *ttxdb.Manager {
-			return ttxdb.NewManager(dh, "ttxdb.persistence", "db.persistence")
+			return ttxdb.NewManager(dh)
 		}),
 		p.Container().Provide(digutils.Identity[*ttxdb.Manager](), dig.As(new(ttx.DBProvider), new(network2.TTXDBProvider))),
-		p.Container().Provide(func(dh *db2.DriverHolder) *tokendb.Manager {
-			return tokendb.NewManager(dh, "tokendb.persistence", "db.persistence")
-		}),
-		p.Container().Provide(func(dh *db2.DriverHolder) *tokendb.NotifierManager {
-			return tokendb.NewNotifierManager(dh, "tokendb.persistence", "db.persistence")
-		}),
+		p.Container().Provide(tokendb.NewManager),
+		p.Container().Provide(tokendb.NewNotifierManager),
 		p.Container().Provide(digutils.Identity[*tokendb.Manager](), dig.As(new(tokens.DBProvider))),
 		p.Container().Provide(NewDriverHolder),
-		p.Container().Provide(func(dh *db2.DriverHolder) *auditdb.Manager {
-			return auditdb.NewManager(dh, "auditdb.persistence", "db.persistence")
-		}),
+		p.Container().Provide(auditdb.NewManager),
 		p.Container().Provide(digutils.Identity[*auditdb.Manager](), dig.As(new(auditor.AuditDBProvider))),
-		p.Container().Provide(func(dh *db2.DriverHolder) *identitydb.Manager {
-			return identitydb.NewManager(dh, "identitydb.persistence", "db.persistence")
-		}),
-		p.Container().Provide(func(dh *db2.DriverHolder) *tokenlockdb.Manager {
-			return tokenlockdb.NewManager(dh, "tokenlockdb.persistence", "db.persistence")
-		}),
+		p.Container().Provide(identitydb.NewManager),
+		p.Container().Provide(tokenlockdb.NewManager),
 		p.Container().Provide(digutils.Identity[*kvs.KVS](), dig.As(new(identity2.Keystore))),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),

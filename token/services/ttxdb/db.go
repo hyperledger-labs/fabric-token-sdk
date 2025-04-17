@@ -29,7 +29,7 @@ var (
 	logger      = logging.MustGetLogger("token-sdk.ttxdb")
 )
 
-func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
+func NewManager(dh *db.DriverHolder) *Manager {
 	return db.MappedManager[driver.TokenTransactionDB, *DB](dh.NewOwnerTransactionManager(), newDB)
 }
 

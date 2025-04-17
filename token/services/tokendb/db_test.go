@@ -24,7 +24,7 @@ func TestDB(t *testing.T) {
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 	dh := db.NewDriverHolder(cp, multiplexed.Driver{sqlite.NewDriver()})
-	manager := tokendb.NewManager(dh, "tokendb.persistence")
+	manager := tokendb.NewManager(dh)
 	_, err = manager.DBByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	_, err = manager.DBByTMSId(token.TMSID{Network: "grapes"})
