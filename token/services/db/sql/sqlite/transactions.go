@@ -21,7 +21,7 @@ func NewAuditTransactionDB(opts sqlite.Opts) (*AuditTransactionDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	tableNames, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
+	tableNames, err := common.GetTableNames(opts.TablePrefix+"_aud", opts.TableNameParams...)
 	if err != nil {
 		return nil, err
 	}
