@@ -35,6 +35,9 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 
 	select {
 	case msg := <-ch:
+		if msg == nil {
+			return nil, errors.Errorf("receive nil msg")
+		}
 		if msg.Status == view.ERROR {
 			return nil, errors.New(string(msg.Payload))
 		}
