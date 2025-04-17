@@ -21,6 +21,20 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
+func TransactionsTest(t *testing.T, cfgProvider cfgProvider) {
+	for _, c := range TokenTransactionDBCases {
+		driver, config := cfgProvider(c.Name)
+		db, err := driver.NewOwnerTransaction(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(c.Name, func(xt *testing.T) {
+			defer db.Close()
+			c.Fn(xt, db)
+		})
+	}
+}
+
 // TokenTransactionDBCases collects test functions that db driver implementations can use for integration tests
 var TokenTransactionDBCases = []struct {
 	Name string

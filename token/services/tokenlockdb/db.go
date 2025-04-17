@@ -14,7 +14,7 @@ import (
 type Manager = db.Manager[*DB]
 
 func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
-	return db.MappedManager[driver.TokenLockDB, *DB](dh.NewTokenLockManager(keys...), newDB)
+	return db.MappedManager[driver.TokenLockDB, *DB](dh.NewTokenLockManager(), newDB)
 }
 
 type DB struct{ driver.TokenLockDB }

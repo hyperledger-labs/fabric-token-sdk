@@ -19,8 +19,8 @@ type Manager struct {
 
 func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
 	return &Manager{
-		identityManager: dh.NewIdentityManager(keys...),
-		walletManager:   dh.NewWalletManager(keys...),
+		identityManager: dh.NewIdentityManager(),
+		walletManager:   dh.NewWalletManager(),
 	}
 }
 

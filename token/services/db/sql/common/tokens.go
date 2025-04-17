@@ -35,24 +35,17 @@ type tokenTables struct {
 	Certifications string
 }
 
-func NewTokenDB(readDB, writeDB *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.TokenDB, error) {
-	tables, err := GetTableNames(opts.TablePrefix)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names")
-	}
-
-	tokenDB := newTokenDB(readDB, writeDB, tokenTables{
+func NewTokenDB(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter) (*TokenDB, error) {
+	return newTokenDB(readDB, writeDB, tokenTables{
 		Tokens:         tables.Tokens,
 		Ownership:      tables.Ownership,
 		PublicParams:   tables.PublicParams,
 		Certifications: tables.Certifications,
-	}, ci)
-	if opts.CreateSchema {
-		if err = common.InitSchema(writeDB, tokenDB.GetSchema()); err != nil {
-			return nil, err
-		}
-	}
-	return tokenDB, nil
+	}, ci), nil
+}
+
+func (db *TokenDB) CreateSchema() error {
+	return common.InitSchema(db.writeDB, db.GetSchema())
 }
 
 type TokenDB struct {

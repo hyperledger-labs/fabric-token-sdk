@@ -59,25 +59,19 @@ func newIdentityDB(readDB, writeDB *sql.DB, tables identityTables, singerInfoCac
 	}
 }
 
-func NewCachedIdentityDB(readDB, writeDB *sql.DB, opts NewDBOpts, ci common.Interpreter) (driver.IdentityDB, error) {
+func NewCachedIdentityDB(readDB, writeDB *sql.DB, tables tableNames, ci common.Interpreter) (*IdentityDB, error) {
 	return NewIdentityDB(
 		readDB,
 		writeDB,
-		opts.TablePrefix,
-		opts.CreateSchema,
+		tables,
 		secondcache.NewTyped[bool](1000),
 		secondcache.NewTyped[[]byte](1000),
 		ci,
 	)
 }
 
-func NewIdentityDB(readDB, writeDB *sql.DB, tablePrefix string, createSchema bool, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) (*IdentityDB, error) {
-	tables, err := GetTableNames(tablePrefix)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names")
-	}
-
-	identityDB := newIdentityDB(
+func NewIdentityDB(readDB, writeDB *sql.DB, tables tableNames, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) (*IdentityDB, error) {
+	return newIdentityDB(
 		readDB,
 		writeDB,
 		identityTables{
@@ -88,13 +82,11 @@ func NewIdentityDB(readDB, writeDB *sql.DB, tablePrefix string, createSchema boo
 		signerInfoCache,
 		auditInfoCache,
 		ci,
-	)
-	if createSchema {
-		if err = common.InitSchema(writeDB, []string{identityDB.GetSchema()}...); err != nil {
-			return nil, err
-		}
-	}
-	return identityDB, nil
+	), nil
+}
+
+func (db *IdentityDB) CreateSchema() error {
+	return common.InitSchema(db.writeDB, []string{db.GetSchema()}...)
 }
 
 func (db *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {

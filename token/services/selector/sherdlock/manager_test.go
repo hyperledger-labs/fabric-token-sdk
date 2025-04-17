@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/multiplexed"
+	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/dbtest"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/testutils"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -66,7 +66,7 @@ func TestInsufficientTokensManyReplicas(t *testing.T) {
 // Set up
 
 func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries int) ([]testutils.EnhancedManager, func()) {
-	terminate, pgConnStr := common2.StartPostgresContainer(t)
+	terminate, pgConnStr := postgres.StartContainer(t)
 	replicas := make([]testutils.EnhancedManager, number)
 
 	for i := 0; i < number; i++ {
@@ -78,22 +78,23 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 }
 
 func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
-	opts := common.Opts{
-		DataSource:   pgConnStr,
+	d := &postgres.Driver{}
+	config := multiplexed.MockTypeConfig(postgres2.Persistence, postgres2.Config{
 		TablePrefix:  "test",
+		DataSource:   pgConnStr,
 		MaxOpenConns: 10,
-	}
-	lockDB, err := sql.OpenPostgres(opts, postgres.NewTokenLockDB)
+	})
+	lockDB, err := d.NewTokenLock(config)
 	if err != nil {
 		return nil, err
 	}
-	tokenDB, err := sql.OpenPostgres(opts, postgres.NewTransactionDB)
+	tokenDB, err := d.NewOwnerTransaction(config)
 	if err != nil {
 		return nil, errors.Join(err, lockDB.Close())
 	}
 
-	fetcher := newMixedFetcher(tokenDB.(common2.TestTokenDB), newMetrics(&disabled.Provider{}))
+	fetcher := newMixedFetcher(tokenDB.(dbtest.TestTokenDB), newMetrics(&disabled.Provider{}))
 	manager := NewManager(fetcher, lockDB, testutils.TokenQuantityPrecision, backoff, maxRetries, 0, 0)
 
-	return testutils.NewEnhancedManager(manager, tokenDB.(common2.TestTokenDB)), nil
+	return testutils.NewEnhancedManager(manager, tokenDB.(dbtest.TestTokenDB)), nil
 }

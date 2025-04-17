@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package postgres
 
 import (
 	"context"
@@ -13,23 +13,15 @@ import (
 	"testing"
 	"time"
 
-	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-type PostgresConfig = postgres2.ContainerConfig
-type DataSourceProvider = postgres2.DataSourceProvider
-
-func DefaultPostgresConfig(node string) *PostgresConfig {
-	return postgres2.DefaultConfig(node)
-}
-
 // https://testcontainers.com/guides/getting-started-with-testcontainers-for-go/
 // Note: Before running tests: docker pull postgres:16.2-alpine
 // Test may time out if image is not present on machine.
-func StartPostgresContainer(t *testing.T) (func(), string) {
+func StartContainer(t *testing.T) (func(), string) {
 	if os.Getenv("TESTCONTAINERS") != "true" {
 		t.Skip("set environment variable TESTCONTAINERS to true to include postgres test")
 	}
@@ -55,7 +47,7 @@ func StartPostgresContainer(t *testing.T) (func(), string) {
 
 	return func() {
 		if err := pg.Terminate(ctx); err != nil {
-			logger.Errorf("failed to terminate [%s][%s]", err, debug.Stack())
+			t.Errorf("failed to terminate [%s][%s]", err, debug.Stack())
 		}
 	}, pgConnStr
 }

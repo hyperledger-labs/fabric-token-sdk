@@ -35,9 +35,9 @@ import (
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/memory"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/unity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/memory"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -168,8 +168,8 @@ func (p *SDK) Install() error {
 		p.Container().Provide(func(tracerProvider trace.TracerProvider) *tracing.TracerProvider {
 			return tracing.NewTracerProvider(tracerProvider)
 		}),
-		p.Container().Provide(unity.NewUnityDriver, dig.Group("token-db-drivers")),
-		p.Container().Provide(sql.NewDriver, dig.Group("token-db-drivers")),
+		p.Container().Provide(sqlite.NewDriver, dig.Group("token-db-drivers")),
+		p.Container().Provide(postgres.NewDriver, dig.Group("token-db-drivers")),
 		p.Container().Provide(memory.NewDriver, dig.Group("token-db-drivers")),
 		p.Container().Provide(func(dbManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
 			return sherdlock.NewFetcherProvider(dbManager, notifierManager, metricsProvider, sherdlock.Mixed)

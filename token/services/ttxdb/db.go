@@ -30,7 +30,7 @@ var (
 )
 
 func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
-	return db.MappedManager[driver.TokenTransactionDB, *DB](dh.NewOwnerTransactionManager(keys...), newDB)
+	return db.MappedManager[driver.TokenTransactionDB, *DB](dh.NewOwnerTransactionManager(), newDB)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {

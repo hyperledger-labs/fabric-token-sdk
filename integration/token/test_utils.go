@@ -13,8 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	. "github.com/onsi/gomega"
 )
 
@@ -48,10 +48,10 @@ func NewReplicationOptions(factor int, names ...string) (*ReplicationOptions, *R
 		return NoReplication()
 	}
 	replicationFactors := make(ReplicaSelector, len(names))
-	sqlConfigs := make(map[string]*common.PostgresConfig, len(names))
+	sqlConfigs := make(map[string]*postgres2.ContainerConfig, len(names))
 	for _, name := range names {
 		replicationFactors[name] = factor
-		sqlConfigs[name] = common.DefaultPostgresConfig(fmt.Sprintf("%s-db", name))
+		sqlConfigs[name] = postgres2.DefaultConfig(fmt.Sprintf("%s-db", name))
 
 	}
 	return &ReplicationOptions{ReplicationOptions: &integration.ReplicationOptions{

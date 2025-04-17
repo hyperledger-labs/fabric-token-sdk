@@ -27,11 +27,11 @@ type Notifier struct {
 var managerType = reflect.TypeOf((*Manager)(nil))
 
 func NewNotifierManager(dh *db.DriverHolder, keys ...string) *NotifierManager {
-	return db.MappedManager[driver.TokenNotifier, *Notifier](dh.NewTokenNotifierManager(keys...), func(p driver.TokenNotifier) (*Notifier, error) { return &Notifier{p}, nil })
+	return db.MappedManager[driver.TokenNotifier, *Notifier](dh.NewTokenNotifierManager(), func(p driver.TokenNotifier) (*Notifier, error) { return &Notifier{p}, nil })
 }
 
 func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
-	return db.MappedManager[driver.TokenDB, *DB](dh.NewTokenManager(keys...), newDB)
+	return db.MappedManager[driver.TokenDB, *DB](dh.NewTokenManager(), newDB)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
