@@ -30,7 +30,7 @@ func newManager[V any](config *config.Service, prefix string, constructor func(c
 		prefixConfig := db.NewPrefixConfig(cfg, prefix)
 		if !prefixConfig.IsSet("") {
 			logger.Warnf("Prefix [%s:%s] not found: changing to unity", tmsID, prefix)
-			prefixConfig = db.NewPrefixConfig(cfg, "db")
+			prefixConfig = db.NewPrefixConfig(cfg, "db.persistence")
 		}
 		if !prefixConfig.IsSet("") {
 			logger.Errorf("unity not found for [%s] either", prefix)
