@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"slices"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -24,14 +26,7 @@ func AuditingSignaturesValidate[P driver.PublicParameters, T any, TA driver.Tran
 	for _, auditorSignature := range ctx.TokenRequest.AuditorSignatures {
 		auditor := auditorSignature.Identity
 		// check that issuer of this issue action is authorized
-		found := false
-		for _, target := range auditors {
-			if auditor.Equal(target) {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.ContainsFunc(auditors, auditorSignature.Identity.Equal) {
 			return errors.Errorf("auditor [%s] is not in auditors", auditor)
 		}
 
