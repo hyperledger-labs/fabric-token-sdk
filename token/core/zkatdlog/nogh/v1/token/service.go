@@ -121,8 +121,20 @@ func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata dr
 	if err == nil {
 		return tok, issuer, recipients, format, nil
 	}
+	err = errors.Wrapf(err, "failed to deobfuscate comm token")
+
 	// try fabtoken type
-	return s.deobfuscateAsFabtokenType(output, outputMetadata)
+	tok, issuer, recipients, format, err2 := s.deobfuscateAsFabtokenType(output, outputMetadata)
+	if err2 != nil {
+		return nil, nil, nil, "", errors.Wrapf(
+			errors2.Join(
+				err,
+				errors.Wrapf(err2, "failed to deobfuscate fabtoken token"),
+			),
+			"failed to deobfuscate",
+		)
+	}
+	return tok, issuer, recipients, format, nil
 }
 
 func (s *TokensService) deobfuscateAsCommType(ctx context.Context, output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
@@ -146,7 +158,7 @@ func (s *TokensService) deobfuscateAsFabtokenType(output driver.TokenOutput, out
 
 	metadata := &actions.OutputMetadata{}
 	if err := metadata.Deserialize(outputMetadata); err != nil {
-		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
+		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token metadata")
 	}
 
 	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
