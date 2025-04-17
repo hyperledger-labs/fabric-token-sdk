@@ -143,11 +143,11 @@ func NewMetadata(curve math.CurveID, tokenType token.Type, values []uint64, bfs 
 func (m *Metadata) Deserialize(b []byte) error {
 	typed, err := comm.UnmarshalTypedMetadata(b)
 	if err != nil {
-		return errors.Wrapf(err, "failed deserializing metadata")
+		return errors.Wrapf(err, "failed to deserialize metadata")
 	}
 	metadata := &actions.TokenMetadata{}
 	if err := proto.Unmarshal(typed.Metadata, metadata); err != nil {
-		return errors.Wrapf(err, "failed unmarshalling metadata")
+		return errors.Wrapf(err, "failed to deserialize metadata")
 	}
 	m.Type = token.Type(metadata.Type)
 	m.Value, err = utils.FromZrProto(metadata.Value)
@@ -168,11 +168,11 @@ func (m *Metadata) Deserialize(b []byte) error {
 func (m *Metadata) Serialize() ([]byte, error) {
 	value, err := utils.ToProtoZr(m.Value)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to deserialize metadata")
+		return nil, errors.Wrapf(err, "failed to serialize metadata")
 	}
 	blindingFactor, err := utils.ToProtoZr(m.BlindingFactor)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to deserialize metadata")
+		return nil, errors.Wrapf(err, "failed to serialize metadata")
 	}
 	raw, err := proto.Marshal(&actions.TokenMetadata{
 		Type:           string(m.Type),
@@ -181,7 +181,7 @@ func (m *Metadata) Serialize() ([]byte, error) {
 		Issuer:         &pp.Identity{Raw: m.Issuer},
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed serializing token")
+		return nil, errors.Wrapf(err, "failed to serialize metadata")
 	}
 	return comm.WrapMetadataWithType(raw)
 }
