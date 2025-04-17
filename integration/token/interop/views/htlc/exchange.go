@@ -172,9 +172,9 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 
 	assert.NoError(terms.Validate(), "failed to validate the terms")
 
-	// Initiator's Leg
+	// Respond to Initiator's Leg
 	var script *htlc.Script
-	_, err = view2.AsInitiatorCall(context, v, func(context view.Context) (interface{}, error) {
+	{
 		tx, err := htlc.ReceiveTransaction(context)
 		assert.NoError(err, "failed to receive tokens")
 
@@ -193,12 +193,9 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 
 		_, err = context.RunView(htlc.NewFinalityView(tx))
 		assert.NoError(err, "new tokens were not committed")
+	}
 
-		return nil, nil
-	})
-	assert.NoError(err, "failed completing initiator's leg")
-
-	// Responder's Leg
+	// Initiate Responder's Leg
 	_, err = view2.AsInitiatorCall(context, v, func(context view.Context) (interface{}, error) {
 		tx, err := htlc.NewAnonymousTransaction(
 			context,
@@ -233,7 +230,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 
 	time.Sleep(30 * time.Second)
 
-	// Claim initiator's script
+	// Claim initiator's script, we don't need any interaction with the initiator (FastExchangeInitiatorView)
 	_, err = view2.Initiate(context, &ClaimView{
 		&Claim{
 			TMSID:       terms.TMSID1,
