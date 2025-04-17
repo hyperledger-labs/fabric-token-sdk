@@ -42,7 +42,7 @@ func NewTokenLockDB(opts sqlite.Opts) (*TokenLockDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	tableNames, err := common.GetTableNames(opts.TablePrefix)
+	tableNames, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
 	if err != nil {
 		return nil, err
 	}

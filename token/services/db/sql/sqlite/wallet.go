@@ -18,7 +18,7 @@ func NewWalletDB(opts sqlite.Opts) (*WalletDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	tableNames, err := common.GetTableNames(opts.TablePrefix)
+	tableNames, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
 	if err != nil {
 		return nil, err
 	}

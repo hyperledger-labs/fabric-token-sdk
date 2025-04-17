@@ -21,7 +21,7 @@ func NewTokenDB(opts postgres.Opts) (*TokenDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	tableNames, err := common.GetTableNames(opts.TablePrefix)
+	tableNames, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func NewTokenNotifier(opts postgres.Opts) (*TokenNotifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	tables, err := common.GetTableNames(opts.TablePrefix)
+	tables, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
 	if err != nil {
 		return nil, err
 	}

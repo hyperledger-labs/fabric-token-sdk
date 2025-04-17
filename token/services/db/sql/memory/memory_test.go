@@ -16,36 +16,35 @@ import (
 )
 
 var (
-	memDriver = NewDriver()
-	config    = common.MockConfig(memory.Persistence)
+	config = common.MockConfig(memory.Persistence)
 )
 
 func TestTokens(t *testing.T) {
 	dbtest.TokensTest(t, func(name string) (driver.Driver, driver.Config) {
-		return memDriver, config
+		return NewDriver(), config
 	})
 }
 
 func TestTransactions(t *testing.T) {
 	dbtest.TransactionsTest(t, func(name string) (driver.Driver, driver.Config) {
-		return memDriver, config
+		return NewDriver(), config
 	})
 }
 
 func TestTokenLocks(t *testing.T) {
 	dbtest.TokenLocksTest(t, func(name string) (driver.Driver, driver.Config) {
-		return memDriver, config
+		return NewDriver(), config
 	})
 }
 
 func TestIdentity(t *testing.T) {
 	dbtest.IdentityTest(t, func(name string) (driver.Driver, driver.Config) {
-		return memDriver, config
+		return NewDriver(), config
 	})
 }
 
 func TestWallet(t *testing.T) {
 	dbtest.WalletTest(t, func(name string) (driver.Driver, driver.Config) {
-		return memDriver, config
+		return NewDriver(), config
 	})
 }
