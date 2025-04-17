@@ -4,72 +4,30 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common_test
+package dbtest
 
 import (
-	"fmt"
-	"path"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWalletSqlite(t *testing.T) {
-	for _, c := range WalletCases {
-		db, err := sql.OpenSqlite(common.Opts{
-			DataSource:   fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(t.TempDir(), "db.sqlite")),
-			TablePrefix:  c.Name,
-			MaxOpenConns: 10,
-		}, sqlite.NewWalletDB)
+func WalletTest(t *testing.T, cfgProvider cfgProvider) {
+	for _, c := range walletCases {
+		driver, config := cfgProvider(c.Name)
+		db, err := driver.NewWallet(config, c.Name)
 		if err != nil {
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
 			c.Fn(xt, db)
 		})
+		assert.NoError(t, db.Close())
 	}
 }
 
-func TestWalletSqliteMemory(t *testing.T) {
-	for _, c := range WalletCases {
-		db, err := sql.OpenSqlite(common.Opts{
-			DataSource:   "file:tmp?_pragma=busy_timeout(20000)&mode=memory&cache=shared",
-			TablePrefix:  c.Name,
-			MaxOpenConns: 10,
-		}, sqlite.NewWalletDB)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Run(c.Name, func(xt *testing.T) {
-			c.Fn(xt, db)
-		})
-	}
-}
-
-func TestWalletPostgres(t *testing.T) {
-	terminate, pgConnStr := common.StartPostgresContainer(t)
-	defer terminate()
-
-	for _, c := range WalletCases {
-		db, err := sql.OpenPostgres(common.Opts{
-			DataSource:   pgConnStr,
-			TablePrefix:  c.Name,
-			MaxOpenConns: 10,
-		}, sqlite.NewWalletDB)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Run(c.Name, func(xt *testing.T) {
-			c.Fn(xt, db)
-		})
-	}
-}
-
-var WalletCases = []struct {
+var walletCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.WalletDB)
 }{

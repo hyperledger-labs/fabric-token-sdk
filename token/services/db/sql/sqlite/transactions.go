@@ -7,17 +7,35 @@ SPDX-License-Identifier: Apache-2.0
 package sqlite
 
 import (
-	"database/sql"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-func NewAuditTransactionDB(readDB, writeDB *sql.DB, opts common.NewDBOpts) (driver.AuditTransactionDB, error) {
-	return common.NewAuditTransactionDB(readDB, writeDB, opts, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+type (
+	AuditTransactionDB = common.TransactionDB
+	TransactionDB      = common.TransactionDB
+)
+
+func NewAuditTransactionDB(opts sqlite.Opts) (*AuditTransactionDB, error) {
+	dbs, err := sqlite.DbProvider.OpenDB(opts)
+	if err != nil {
+		return nil, err
+	}
+	tableNames, err := common.GetTableNames(opts.TablePrefix+"_aud", opts.TableNameParams...)
+	if err != nil {
+		return nil, err
+	}
+	return common.NewAuditTransactionDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
 }
 
-func NewTransactionDB(readDB, writeDB *sql.DB, opts common.NewDBOpts) (driver.TokenTransactionDB, error) {
-	return common.NewTransactionDB(readDB, writeDB, opts, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+func NewTransactionDB(opts sqlite.Opts) (*TransactionDB, error) {
+	dbs, err := sqlite.DbProvider.OpenDB(opts)
+	if err != nil {
+		return nil, err
+	}
+	tableNames, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
+	if err != nil {
+		return nil, err
+	}
+	return common.NewTransactionDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
 }

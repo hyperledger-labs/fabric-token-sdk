@@ -14,6 +14,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -59,25 +60,19 @@ func newIdentityDB(readDB, writeDB *sql.DB, tables identityTables, singerInfoCac
 	}
 }
 
-func NewCachedIdentityDB(readDB, writeDB *sql.DB, opts NewDBOpts, ci common.Interpreter) (driver.IdentityDB, error) {
+func NewCachedIdentityDB(readDB, writeDB *sql.DB, tables tableNames, ci common.Interpreter) (*IdentityDB, error) {
 	return NewIdentityDB(
 		readDB,
 		writeDB,
-		opts.TablePrefix,
-		opts.CreateSchema,
+		tables,
 		secondcache.NewTyped[bool](1000),
 		secondcache.NewTyped[[]byte](1000),
 		ci,
 	)
 }
 
-func NewIdentityDB(readDB, writeDB *sql.DB, tablePrefix string, createSchema bool, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) (*IdentityDB, error) {
-	tables, err := GetTableNames(tablePrefix)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names")
-	}
-
-	identityDB := newIdentityDB(
+func NewIdentityDB(readDB, writeDB *sql.DB, tables tableNames, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) (*IdentityDB, error) {
+	return newIdentityDB(
 		readDB,
 		writeDB,
 		identityTables{
@@ -88,13 +83,11 @@ func NewIdentityDB(readDB, writeDB *sql.DB, tablePrefix string, createSchema boo
 		signerInfoCache,
 		auditInfoCache,
 		ci,
-	)
-	if createSchema {
-		if err = common.InitSchema(writeDB, []string{identityDB.GetSchema()}...); err != nil {
-			return nil, err
-		}
-	}
-	return identityDB, nil
+	), nil
+}
+
+func (db *IdentityDB) CreateSchema() error {
+	return common.InitSchema(db.writeDB, []string{db.GetSchema()}...)
 }
 
 func (db *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
@@ -320,6 +313,10 @@ func (db *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
 	return info, nil
+}
+
+func (db *IdentityDB) Close() error {
+	return common2.Close(db.readDB, db.writeDB)
 }
 
 type IdentityConfigurationIterator struct {

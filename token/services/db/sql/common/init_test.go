@@ -19,33 +19,33 @@ func TestGetTableNames(t *testing.T) {
 	names, err := GetTableNames("")
 	assert.NoError(t, err)
 	assert.Equal(t, tableNames{
-		Movements:              "movements",
-		Transactions:           "transactions",
-		Requests:               "requests",
-		Validations:            "request_validations",
-		TransactionEndorseAck:  "transaction_endorsements",
-		Certifications:         "token_certifications",
-		Tokens:                 "tokens",
-		Ownership:              "token_ownership",
-		PublicParams:           "public_params",
-		Wallets:                "wallets",
-		IdentityConfigurations: "identity_configurations",
-		IdentityInfo:           "identity_information",
-		Signers:                "identity_signers",
-		TokenLocks:             "token_locks",
+		Movements:              "fsc_movements",
+		Transactions:           "fsc_txs",
+		Requests:               "fsc_requests",
+		Validations:            "fsc_req_vals",
+		TransactionEndorseAck:  "fsc_tx_ends",
+		Certifications:         "fsc_tkn_crts",
+		Tokens:                 "fsc_tokens",
+		Ownership:              "fsc_tkn_own",
+		PublicParams:           "fsc_public_params",
+		Wallets:                "fsc_wallets",
+		IdentityConfigurations: "fsc_id_cfgs",
+		IdentityInfo:           "fsc_id_info",
+		Signers:                "fsc_id_signers",
+		TokenLocks:             "fsc_tkn_locks",
 	}, names)
 
 	names, err = GetTableNames("valid_prefix")
 	assert.NoError(t, err)
-	assert.Equal(t, "valid_prefix_transactions", names.Transactions)
+	assert.Equal(t, "valid_prefix_txs", names.Transactions)
 
 	names, err = GetTableNames("Valid_Prefix")
 	assert.NoError(t, err)
-	assert.Equal(t, "valid_prefix_transactions", names.Transactions)
+	assert.Equal(t, "valid_prefix_txs", names.Transactions)
 
 	names, err = GetTableNames("valid")
 	assert.NoError(t, err)
-	assert.Equal(t, "valid_transactions", names.Transactions)
+	assert.Equal(t, "valid_txs", names.Transactions)
 
 	invalid := []string{
 		"invalid;",

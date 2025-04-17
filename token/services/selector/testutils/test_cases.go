@@ -187,7 +187,10 @@ func newTxID() string {
 func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token.Quantity) []error {
 	errCh := make(chan error, 100)
 	errs := make([]error, 0)
+	var errMu sync.Mutex
 	go func() {
+		errMu.Lock()
+		defer errMu.Unlock()
 		for err := range errCh {
 			errs = append(errs, err)
 		}
@@ -221,6 +224,8 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 	}
 	wg.Wait()
 	close(errCh)
+	errMu.Lock()
+	defer errMu.Unlock()
 	return errs
 }
 

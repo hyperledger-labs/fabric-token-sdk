@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -35,19 +36,12 @@ func newWalletDB(readDB, writeDB *sql.DB, tables walletTables) *WalletDB {
 	}
 }
 
-func NewWalletDB(readDB, writeDB *sql.DB, opts NewDBOpts) (driver.WalletDB, error) {
-	tables, err := GetTableNames(opts.TablePrefix)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names [%s]", opts.TablePrefix)
-	}
+func NewWalletDB(readDB, writeDB *sql.DB, tables tableNames) (*WalletDB, error) {
+	return newWalletDB(readDB, writeDB, walletTables{Wallets: tables.Wallets}), nil
+}
 
-	walletDB := newWalletDB(readDB, writeDB, walletTables{Wallets: tables.Wallets})
-	if opts.CreateSchema {
-		if err = common.InitSchema(writeDB, []string{walletDB.GetSchema()}...); err != nil {
-			return nil, errors.Wrapf(err, "failed to create schema")
-		}
-	}
-	return walletDB, nil
+func (db *WalletDB) CreateSchema() error {
+	return common.InitSchema(db.writeDB, []string{db.GetSchema()}...)
 }
 
 func (db *WalletDB) GetWalletID(identity token.Identity, roleID int) (driver.WalletID, error) {
@@ -160,4 +154,8 @@ func (db *WalletDB) GetSchema() string {
 		db.table.Wallets, db.table.Wallets,
 		db.table.Wallets, db.table.Wallets,
 	)
+}
+
+func (db *WalletDB) Close() error {
+	return common2.Close(db.readDB, db.writeDB)
 }

@@ -29,8 +29,8 @@ var (
 	logger      = logging.MustGetLogger("token-sdk.ttxdb")
 )
 
-func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
-	return db.MappedManager[driver.TokenTransactionDB, *DB](dh.NewOwnerTransactionManager(keys...), newDB)
+func NewManager(dh *db.DriverHolder) *Manager {
+	return db.MappedManager[driver.TokenTransactionDB, *DB](dh.NewOwnerTransactionManager(), newDB)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {

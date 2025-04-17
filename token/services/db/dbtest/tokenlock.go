@@ -16,8 +16,27 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
-// TokenLockDBCases collects test functions that db driver implementations can use for integration tests
-var TokenLockDBCases = []struct {
+func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
+	for _, c := range tokenLockDBCases {
+		driver, config := cfgProvider(c.Name)
+		tokenLockDB, err := driver.NewTokenLock(config, c.Name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tokenTransactionDB, err := driver.NewOwnerTransaction(config, c.Name)
+		if err != nil {
+			tokenLockDB.Close()
+			t.Fatal(err)
+		}
+		t.Run(c.Name, func(xt *testing.T) {
+			defer tokenLockDB.Close()
+			defer tokenTransactionDB.Close()
+			c.Fn(xt, tokenLockDB, tokenTransactionDB)
+		})
+	}
+}
+
+var tokenLockDBCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.TokenLockDB, driver.TokenTransactionDB)
 }{

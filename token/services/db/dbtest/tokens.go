@@ -4,123 +4,53 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package dbtest
 
 import (
 	"context"
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	assert2 "github.com/stretchr/testify/assert"
 	"github.com/test-go/testify/assert"
 )
 
-type TestTokenDB interface {
-	driver.TokenDB
+type cfgProvider func(string) (driver.Driver, driver.Config)
 
-	StoreToken(tr driver.TokenRecord, owners []string) error
-	GetAllTokenInfos(ids []*token.ID) ([][]byte, error)
-}
-
-const (
-	TST = token.Type("TST")
-	ABC = token.Type("ABC")
-)
-
-var TokenNotifierCases = []struct {
-	Name string
-	Fn   func(*testing.T, TestTokenDB, driver.TokenNotifier)
-}{
-	{"SubscribeStore", TSubscribeStore},
-	{"SubscribeStoreDelete", TSubscribeStoreDelete},
-	{"SubscribeStoreNoCommit", TSubscribeStoreNoCommit},
-	{"SubscribeRead", TSubscribeRead},
-}
-
-type dbEvent struct {
-	op   driver2.Operation
-	vals map[driver2.ColumnKey]string
-}
-
-func collectDBEvents(db driver.TokenNotifier) (*[]dbEvent, error) {
-	ch := make(chan dbEvent)
-	err := db.Subscribe(func(operation driver2.Operation, m map[driver2.ColumnKey]string) {
-		logger.Debugf("Received event: [%v]: %v", operation, m)
-		ch <- dbEvent{op: operation, vals: m}
-	})
-	if err != nil {
-		return nil, err
+func TokensTest(t *testing.T, cfgProvider cfgProvider) {
+	for _, c := range tokensCases {
+		t.Run(c.Name, func(xt *testing.T) {
+			driver, config := cfgProvider(c.Name)
+			db, err := driver.NewToken(config, c.Name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.(*common.TokenDB).Close()
+			c.Fn(xt, db.(*common.TokenDB))
+		})
 	}
-	result := make([]dbEvent, 0, 1)
-	go func() {
-		for e := range ch {
-			result = append(result, e)
-		}
-	}()
-	return &result, nil
+	// for _, c := range TokenNotifierCases {
+	//	db, err := initTokenNDB(sql2.Postgres, pgConnStr, c.Name, 10)
+	//	if err != nil {
+	//		t.Fatal(err)
+	//	}
+	//	t.Run(c.Name, func(xt *testing.T) {
+	//		defer Close(db)
+	//		c.Fn(xt, db)
+	//	})
+	// }
 }
 
-func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
-	result, err := collectDBEvents(notifier)
-	assert.Nil(t, err)
-	tx, err := db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
-	assert.NoError(t, tx.Commit())
-
-	assert2.Eventually(t, func() bool { return len(*result) == 2 }, time.Second, 20*time.Millisecond)
-}
-
-func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
-	result, err := collectDBEvents(notifier)
-	assert.Nil(t, err)
-	tx, err := db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
-	assert.NoError(t, tx.Delete(context.TODO(), token.ID{TxId: "tx1", Index: 1}, "alice"))
-	assert.NoError(t, tx.Commit())
-
-	assert2.Eventually(t, func() bool { return len(*result) == 3 }, time.Second, 20*time.Millisecond)
-}
-
-func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
-	result, err := collectDBEvents(notifier)
-	assert.Nil(t, err)
-	tx, err := db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
-
-	assert2.Eventually(t, func() bool { return len(*result) == 0 }, time.Second, 20*time.Millisecond)
-}
-
-func TSubscribeRead(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
-	result, err := collectDBEvents(notifier)
-	assert.Nil(t, err)
-	tx, err := db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	// assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	_, _, err = tx.GetToken(context.TODO(), token.ID{TxId: "tx1"}, true)
-	assert.NoError(t, err)
-	assert.NoError(t, tx.Commit())
-
-	assert2.Eventually(t, func() bool { return len(*result) == 0 }, time.Second, 20*time.Millisecond)
-}
-
-var TokensCases = []struct {
+var tokensCases = []struct {
 	Name string
 	Fn   func(*testing.T, TestTokenDB)
 }{
-	{"Transaction", TTransaction},
+	{"Transaction", TTokenTransaction},
 	{"SaveAndGetToken", TSaveAndGetToken},
 	{"DeleteAndMine", TDeleteAndMine},
 	{"GetTokenMetadata", TGetTokenInfos},
@@ -133,7 +63,7 @@ var TokensCases = []struct {
 	{"TTokenTypes", TTokenTypes},
 }
 
-func TTransaction(t *testing.T, db TestTokenDB) {
+func TTokenTransaction(t *testing.T, db TestTokenDB) {
 	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
 		t.Fatal(err)
@@ -1090,7 +1020,7 @@ func TTokenTypes(t *testing.T, db TestTokenDB) {
 	consumeSpendableTokensIterator(t, it, "TST1", 1)
 }
 
-func consumeSpendableTokensIterator(t *testing.T, it driver3.SpendableTokensIterator, tokenType token.Type, count int) {
+func consumeSpendableTokensIterator(t *testing.T, it tdriver.SpendableTokensIterator, tokenType token.Type, count int) {
 	defer it.Close()
 	for i := 0; i < count; i++ {
 		tok, err := it.Next()

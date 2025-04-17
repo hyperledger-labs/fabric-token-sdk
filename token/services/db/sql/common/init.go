@@ -7,11 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 var logger = logging.MustGetLogger("token-sdk.sql")
+
+var ncProvider = db.NewTableNameCreator("fsc")
 
 type tableNames struct {
 	Movements              string
@@ -30,26 +32,26 @@ type tableNames struct {
 	TokenLocks             string
 }
 
-func GetTableNames(prefix string) (tableNames, error) {
-	nc, err := common.NewTableNameCreator(prefix)
+func GetTableNames(prefix string, params ...string) (tableNames, error) {
+	nc, err := ncProvider.GetFormatter(prefix)
 	if err != nil {
 		return tableNames{}, err
 	}
 
 	return tableNames{
-		Movements:              nc.MustGetTableName("movements"),
-		Transactions:           nc.MustGetTableName("transactions"),
-		TransactionEndorseAck:  nc.MustGetTableName("transaction_endorsements"),
-		Requests:               nc.MustGetTableName("requests"),
-		Validations:            nc.MustGetTableName("request_validations"),
-		Tokens:                 nc.MustGetTableName("tokens"),
-		Ownership:              nc.MustGetTableName("token_ownership"),
-		Certifications:         nc.MustGetTableName("token_certifications"),
-		TokenLocks:             nc.MustGetTableName("token_locks"),
-		PublicParams:           nc.MustGetTableName("public_params"),
-		Wallets:                nc.MustGetTableName("wallets"),
-		IdentityConfigurations: nc.MustGetTableName("identity_configurations"),
-		IdentityInfo:           nc.MustGetTableName("identity_information"),
-		Signers:                nc.MustGetTableName("identity_signers"),
+		Movements:              nc.MustFormat("movements", params...),
+		Transactions:           nc.MustFormat("txs", params...),
+		TransactionEndorseAck:  nc.MustFormat("tx_ends", params...),
+		Requests:               nc.MustFormat("requests", params...),
+		Validations:            nc.MustFormat("req_vals", params...),
+		Tokens:                 nc.MustFormat("tokens", params...),
+		Ownership:              nc.MustFormat("tkn_own", params...),
+		Certifications:         nc.MustFormat("tkn_crts", params...),
+		TokenLocks:             nc.MustFormat("tkn_locks", params...),
+		PublicParams:           nc.MustFormat("public_params", params...),
+		Wallets:                nc.MustFormat("wallets", params...),
+		IdentityConfigurations: nc.MustFormat("id_cfgs", params...),
+		IdentityInfo:           nc.MustFormat("id_info", params...),
+		Signers:                nc.MustFormat("id_signers", params...),
 	}, nil
 }

@@ -12,7 +12,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,8 +23,8 @@ func TestDB(t *testing.T) {
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 
-	dh := db2.NewDriverHolder(cp, sql.NewDriver())
-	manager := identitydb.NewManager(dh, "identitydb.persistence")
+	dh := db2.NewDriverHolder(cp, multiplexed.Driver{sqlite.NewNamedDriver()})
+	manager := identitydb.NewManager(dh)
 	_, err = manager.IdentityDBByTMSId(token2.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	_, err = manager.WalletDBByTMSId(token2.TMSID{Network: "grapes"})
