@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	views1 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/multisig"
 	"github.com/pkg/errors"
 )
 
@@ -74,7 +75,7 @@ func (p *SDK) Install() error {
 			registry.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigLockView{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigSpendView{}),
-			registry.RegisterResponder(&views.MultiSigAcceptSpendView{}, &views.MultiSigRequestSpend{}),
+			registry.RegisterResponder(&views.MultiSigAcceptSpendView{}, &multisig.RequestSpendView{}),
 			registry.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.MaliciousTransferView{}),
 		)

@@ -102,12 +102,6 @@ func (f *MultiSigLockViewFactory) NewView(in []byte) (view.View, error) {
 	return v, nil
 }
 
-type MultiSigRequestSpend struct{}
-
-func (m *MultiSigRequestSpend) Call(context view.Context) (interface{}, error) {
-	return nil, nil
-}
-
 // MultiSigSpend contains the input information to spend a token
 type MultiSigSpend struct {
 	// Auditor is the name of the auditor that must be contacted to approve the operation
@@ -140,10 +134,7 @@ func (r *MultiSigSpendView) Call(context view.Context) (res interface{}, err err
 	assert.True(matched.Count() == 1, "expected only one multisig script to match, got [%d]", matched.Count())
 
 	// contact the co-owners about the intention to spend the multisig token
-	_, err = context.RunView(multisig.NewRequestSpendView(
-		matched.At(0),
-		append(serviceOpts, token2.WithInitiator(&MultiSigRequestSpend{}))...,
-	))
+	_, err = context.RunView(multisig.NewRequestSpendView(matched.At(0), serviceOpts...))
 	assert.NoError(err, "failed to request spend")
 
 	// generate the transaction
