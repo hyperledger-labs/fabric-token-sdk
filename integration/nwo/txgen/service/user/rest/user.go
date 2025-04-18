@@ -22,6 +22,7 @@ import (
 	c "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/constants"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 var operationTypeMap = map[c.ApiRequestType]metrics.OperationType{
@@ -183,7 +184,7 @@ func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType
 		return nil, txgen.NewBadRequestError(err, "Can't make request")
 	}
 
-	defer response.Body.Close()
+	defer utils.IgnoreError(response.Body.Close)
 	respBody, _ := io.ReadAll(response.Body)
 
 	if response.StatusCode >= http.StatusBadRequest {
@@ -227,7 +228,7 @@ func (u *restUser) authenticateUser() (string, txgen.Error) {
 		return "", txgen.NewBadRequestError(err, "Can't make authentication request")
 	}
 
-	defer response.Body.Close()
+	defer utils.IgnoreError(response.Body.Close)
 	respBody, _ := io.ReadAll(response.Body)
 
 	if response.StatusCode >= http.StatusBadRequest {
