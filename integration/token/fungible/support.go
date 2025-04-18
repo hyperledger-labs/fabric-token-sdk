@@ -621,11 +621,14 @@ func TransferCashMultiActions(network *integration.Infrastructure, sender *token
 		RecipientEID: receivers[0].Id(),
 		TokenIDs:     []*token.ID{tokenID},
 	}
+
+	uniqueKey := fmt.Sprintf("%d", time.Now().UnixNano())
 	for i := 1; i < len(amounts); i++ {
 		transfer.TransferAction = append(transfer.TransferAction, views.TransferAction{
-			Amount:       amounts[i],
-			Recipient:    network.Identity(receivers[i].Id()),
-			RecipientEID: receivers[i].Id(),
+			Amount:         amounts[i],
+			Recipient:      network.Identity(receivers[i].Id()),
+			RecipientEID:   receivers[i].Id(),
+			PublicMetadata: map[string][]byte{fmt.Sprintf("%s_%d", uniqueKey, i): fmt.Appendf(nil, "val_%d", i)},
 		})
 	}
 
@@ -650,6 +653,17 @@ func TransferCashMultiActions(network *integration.Infrastructure, sender *token
 			gomega.Expect(sigma).ToNot(gomega.BeNil(), "endorsement ack sigma is nil for identity %s", identity)
 		}
 		gomega.Expect(len(txInfo.EndorsementAcks)).To(gomega.BeEquivalentTo(len(signers)))
+		params := views.ListAcceptedTransactions{SenderWallet: wallet, IDs: []string{txID}}
+
+		txsBoxed, err := network.Client(receivers[0].Id()).CallView("acceptedTransactionHistory", common.JSONMarshall(&params))
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		var txs []*ttxdb.TransactionRecord
+		common.JSONUnmarshal(txsBoxed.([]byte), &txs)
+
+		gomega.Expect(len(txs)).To(gomega.BeEquivalentTo(1), "1 tx")
+		gomega.Expect(len(txs[0].PublicMetadata)).To(gomega.BeEquivalentTo(1), "1 public metadata")
+		gomega.Expect(txs[0].PublicMetadata["pub."+uniqueKey+"_1"]).To(gomega.BeEquivalentTo([]byte("val_1")), fmt.Sprintf("public metadata = %v", txs[0].PublicMetadata))
+
 		return txID
 	}
 

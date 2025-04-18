@@ -103,6 +103,7 @@ type ListAcceptedTransactions struct {
 	ActionTypes     []ttxdb.ActionType
 	Statuses        []ttxdb.TxStatus
 	TMSID           *token.TMSID
+	IDs             []string
 }
 
 type ListAcceptedTransactionsView struct {
@@ -119,6 +120,7 @@ func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, 
 		To:              p.To,
 		ActionTypes:     p.ActionTypes,
 		Statuses:        p.Statuses,
+		IDs:             p.IDs,
 	}, pagination.None())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying transactions")
