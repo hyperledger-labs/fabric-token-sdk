@@ -202,14 +202,15 @@ func (d *DB) ValidationRecords(params QueryValidationRecordsParams) (*Validation
 func (d *DB) AppendTransactionRecord(req *token.Request) error {
 	logger.Debugf("appending new transaction record... [%s]", req.Anchor)
 
-	ins, outs, err := req.InputsAndOutputs()
+	ins, outs, attrs, err := req.InputsAndOutputs()
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting inputs and outputs for request [%s]", req.Anchor)
 	}
 	record := &token.AuditRecord{
-		Anchor:  req.Anchor,
-		Inputs:  ins,
-		Outputs: outs,
+		Anchor:     req.Anchor,
+		Inputs:     ins,
+		Outputs:    outs,
+		Attributes: attrs,
 	}
 
 	raw, err := req.Bytes()
@@ -230,8 +231,9 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 	if err := w.AddTokenRequest(
 		record.Anchor,
 		raw,
-		req.Metadata.Application,
-		req.TokenService.PublicParametersManager().PublicParamsHash(),
+		req.AllApplicationMetadata(),
+		record.Attributes,
+		req.PublicParamsHash(),
 	); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
@@ -308,7 +310,7 @@ func (d *DB) AppendValidationRecord(txID string, tokenRequest []byte, meta map[s
 	}
 	// we store the token request, but don't have or care about the application metadata
 	d.cache.Add(txID, tokenRequest)
-	if err := w.AddTokenRequest(txID, tokenRequest, nil, ppHash); err != nil {
+	if err := w.AddTokenRequest(txID, tokenRequest, nil, nil, ppHash); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", txID)
 	}

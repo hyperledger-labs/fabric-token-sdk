@@ -120,6 +120,9 @@ type TransactionRecord struct {
 	// ApplicationMetadata is the metadata sent by the application in the
 	// transient field. It is not validated or recorded on the ledger.
 	ApplicationMetadata map[string][]byte
+	// PublicMetadata is the metadata that is stored on the ledger as part
+	// of an Issuance or Transfer Action (for instance the HTLC hash).
+	PublicMetadata map[string][]byte
 }
 
 func (t *TransactionRecord) String() string {

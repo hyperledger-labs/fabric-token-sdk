@@ -185,6 +185,7 @@ func (d *DB) Append(req tokenRequest) error {
 		record.Anchor,
 		raw,
 		req.AllApplicationMetadata(),
+		record.Attributes,
 		req.PublicParamsHash(),
 	); err != nil {
 		w.Rollback()
