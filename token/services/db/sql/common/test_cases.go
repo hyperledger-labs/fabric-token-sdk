@@ -426,7 +426,7 @@ func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 	assert.Equal(t, "", deletedBy[1], "expected tx101-0 to not be deleted by tx103")
 }
 
-// // ListAuditTokens returns the audited tokens associated to the passed ids
+// TListAuditTokens returns the audited tokens associated to the passed ids
 func TListAuditTokens(t *testing.T, db TestTokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
