@@ -48,7 +48,7 @@ func newInitCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return c.InitConfig.Init()
+			return c.Init()
 		},
 	}
 	flags := cmd.Flags()

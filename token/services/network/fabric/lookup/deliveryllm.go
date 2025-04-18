@@ -204,9 +204,9 @@ func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) (
 }
 
 func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string) (map[driver2.Namespace]KeyInfo, error) {
-	txInfos := make(map[driver2.Namespace]KeyInfo, len(rwSet.WriteSet.Writes))
-	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.WriteSet.Writes))
-	for ns, writes := range rwSet.WriteSet.Writes {
+	txInfos := make(map[driver2.Namespace]KeyInfo, len(rwSet.Writes))
+	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.Writes))
+	for ns, writes := range rwSet.Writes {
 		logger.Debugf("TX [%s:%s] has [%d] writes: %v", txID, ns, len(writes), logging2.Keys(writes))
 		for key, value := range writes {
 			if slices.ContainsFunc(m.prefixes, func(prefix string) bool { return strings.HasPrefix(key, prefix) }) {

@@ -38,7 +38,7 @@ func (o *OutputStream) ByEnrollmentID(id string) *OutputStream {
 }
 
 func (o *OutputStream) StateAt(index int, state interface{}) error {
-	output := o.OutputStream.At(index)
+	output := o.At(index)
 	decoded, err := base64.StdEncoding.DecodeString(string(output.Type))
 	if err != nil {
 		return errors.Wrap(err, "failed to decode type")
@@ -52,7 +52,7 @@ func (o *OutputStream) StateAt(index int, state interface{}) error {
 func (o *OutputStream) Validate() error {
 	// all outputs must have quantity set to 1
 	one := token2.NewOneQuantity(o.Precision)
-	for _, output := range o.OutputStream.Outputs() {
+	for _, output := range o.Outputs() {
 		if output.Quantity.Cmp(one) != 0 {
 			return errors.New("all outputs must have quantity set to 1")
 		}

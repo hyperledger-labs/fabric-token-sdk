@@ -20,7 +20,7 @@ type OwnerWallet struct {
 }
 
 func (o *OwnerWallet) QueryByKey(state interface{}, key string, value string) error {
-	qe, err := NewQueryExecutor(o.ServiceProvider, o.OwnerWallet.ID(), o.Precision)
+	qe, err := NewQueryExecutor(o.ServiceProvider, o.ID(), o.Precision)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to create query executor")
 	}

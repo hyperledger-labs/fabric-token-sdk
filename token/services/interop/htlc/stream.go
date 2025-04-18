@@ -45,7 +45,7 @@ func (o *OutputStream) ByScript() *OutputStream {
 
 // ScriptAt returns an htlc script that is the owner of the output at the passed index of the OutputStream
 func (o *OutputStream) ScriptAt(i int) *Script {
-	tok := o.OutputStream.At(i)
+	tok := o.At(i)
 	owner, err := identity.UnmarshalTypedIdentity(tok.Token.Owner)
 	if err != nil {
 		logger.Debugf("failed unmarshalling raw owner [%s]: [%s]", tok, err)

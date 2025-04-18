@@ -180,7 +180,7 @@ func (t *Transaction) Lock(wallet *token.OwnerWallet, sender view.Identity, typ 
 		return nil, err
 	}
 	_, err = t.TokenRequest.Transfer(
-		t.Transaction.Context,
+		t.Context,
 		wallet,
 		typ,
 		[]uint64{value},
