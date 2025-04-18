@@ -191,9 +191,9 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string,
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't create for token request [%s]", txID)
 	}
-	txInfos := make(map[driver2.Namespace]TxInfo, len(rwSet.WriteSet.Writes))
-	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.WriteSet.Writes))
-	for ns, write := range rwSet.WriteSet.Writes {
+	txInfos := make(map[driver2.Namespace]TxInfo, len(rwSet.Writes))
+	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.Writes))
+	for ns, write := range rwSet.Writes {
 		logger.Debugf("TX [%s:%s] has %d writes", txID, ns, len(write))
 		if requestHash, ok := write[key]; ok {
 			logger.Debugf("TX [%s:%s] did have key [%s]. Found: %v", txID, ns, key, write.Keys())

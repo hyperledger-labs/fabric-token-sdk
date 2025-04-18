@@ -47,7 +47,7 @@ func (ks *KVSStore) GetKey(ski []byte) (bccsp.Key, error) {
 	id := hex.EncodeToString(ski)
 
 	value := &KeyEntry{}
-	err := ks.KVS.Get(id, value)
+	err := ks.Get(id, value)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get key [%s] from kvs", id)
 	}
@@ -102,5 +102,5 @@ func (ks *KVSStore) StoreKey(k bccsp.Key) error {
 	if err != nil {
 		return errors.Wrapf(err, "could not marshall stored key [%s]", id)
 	}
-	return ks.KVS.Put(id, value)
+	return ks.Put(id, value)
 }

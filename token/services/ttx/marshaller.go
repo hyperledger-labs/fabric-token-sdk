@@ -82,19 +82,19 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 	var err error
 
 	var transientRaw []byte
-	if len(t.Payload.Transient) != 0 {
-		transientRaw, err = MarshalMeta(t.Payload.Transient)
+	if len(t.Transient) != 0 {
+		transientRaw, err = MarshalMeta(t.Transient)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal transient")
 		}
 	}
 
 	var tokenRequestRaw []byte
-	if t.Payload.TokenRequest != nil {
-		req := t.Payload.TokenRequest
+	if t.TokenRequest != nil {
+		req := t.TokenRequest
 		// If eIDs are specified, we only marshal the metadata for the passed eIDs
 		if len(eIDs) != 0 {
-			req, err = t.Payload.TokenRequest.FilterMetadataBy(eIDs...)
+			req, err = t.TokenRequest.FilterMetadataBy(eIDs...)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to filter metadata")
 			}
@@ -106,7 +106,7 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 	}
 
 	var envRaw []byte
-	if t.Payload.Envelope != nil {
+	if t.Envelope != nil {
 		envRaw, err = t.Envelope.Bytes()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal envelope")
@@ -117,13 +117,13 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 	}
 
 	res, err := asn1.Marshal(TransactionSer{
-		Nonce:        t.Payload.TxID.Nonce,
-		Creator:      t.Payload.TxID.Creator,
+		Nonce:        t.TxID.Nonce,
+		Creator:      t.TxID.Creator,
 		ID:           t.Payload.ID,
 		Network:      t.Payload.Network,
 		Channel:      t.Payload.Channel,
 		Namespace:    t.Payload.Namespace,
-		Signer:       t.Payload.Signer,
+		Signer:       t.Signer,
 		Transient:    transientRaw,
 		TokenRequest: tokenRequestRaw,
 		Envelope:     envRaw,

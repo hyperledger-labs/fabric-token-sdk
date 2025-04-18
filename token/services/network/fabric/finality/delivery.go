@@ -22,12 +22,12 @@ type Delivery struct {
 func (d *Delivery) ScanBlock(background context.Context, callback fabric.BlockCallback) error {
 	startingBlock := uint64(0)
 	if d.Ledger != nil {
-		info, err := d.Ledger.GetLedgerInfo()
+		info, err := d.GetLedgerInfo()
 		if err == nil {
 			startingBlock = info.Height
 		} else {
 			d.Logger.Errorf("failed to get ledger info: %s", err)
 		}
 	}
-	return d.Delivery.ScanBlockFrom(background, startingBlock, callback)
+	return d.ScanBlockFrom(background, startingBlock, callback)
 }

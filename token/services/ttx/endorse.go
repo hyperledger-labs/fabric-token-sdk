@@ -385,7 +385,7 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 		c.tx.TokenRequest.TokenService,
 		requestRaw,
 		c.tx.Signer,
-		c.tx.Payload.TxID,
+		c.tx.TxID,
 	)
 	if err != nil {
 		return nil, err
