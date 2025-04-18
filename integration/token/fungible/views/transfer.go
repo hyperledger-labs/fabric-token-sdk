@@ -30,6 +30,8 @@ type TransferAction struct {
 	Recipient view.Identity
 	// RecipientEID is the expected enrolment id of the recipient
 	RecipientEID string
+	// PublicMetadata is stored with the transaction
+	PublicMetadata map[string][]byte
 }
 
 // Transfer contains the input information for a transfer
@@ -67,8 +69,8 @@ type Transfer struct {
 	TMSID *token2.TMSID
 	// NotAnonymous true if the transaction must be anonymous, false otherwise
 	NotAnonymous bool
-	// Metadata contains application metadata to append to the transaction
-	Metadata map[string][]byte
+	// ApplicationMetadata contains application metadata to append to the transaction
+	ApplicationMetadata map[string][]byte
 }
 
 type TransferView struct {
@@ -122,7 +124,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	assert.NoError(err, "failed creating transaction")
 
 	// append metadata, if any
-	for k, v := range t.Metadata {
+	for k, v := range t.ApplicationMetadata {
 		tx.SetApplicationMetadata(k, v)
 	}
 
@@ -153,12 +155,17 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// add additional transfers
 	span.AddEvent("add_additional_transfers")
 	for i, action := range t.TransferAction {
+		opts := []token2.TransferOption{token2.WithTokenIDs(t.TokenIDs...)}
+		for k, v := range action.PublicMetadata {
+			opts = append(opts, token2.WithPublicMetadata(k, v))
+		}
+
 		err = tx.Transfer(
 			senderWallet,
 			t.Type,
 			[]uint64{action.Amount},
 			[]view.Identity{additionalRecipients[i]},
-			token2.WithTokenIDs(t.TokenIDs...),
+			opts...,
 		)
 		assert.NoError(err, "failed adding transfer action [%d:%s]", action.Amount, action.Recipient)
 	}
@@ -583,7 +590,7 @@ func (t *MaliciousTransferView) Call(context view.Context) (txID interface{}, er
 	assert.NoError(err, "failed creating transaction")
 
 	// append metadata, if any
-	for k, v := range t.Metadata {
+	for k, v := range t.ApplicationMetadata {
 		tx.SetApplicationMetadata(k, v)
 	}
 

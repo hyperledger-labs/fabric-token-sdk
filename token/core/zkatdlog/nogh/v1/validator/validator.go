@@ -64,6 +64,7 @@ func New(
 		TransferUpgradeWitnessValidate,
 		TransferZKProofValidate,
 		TransferHTLCValidate,
+		TransferApplicationDataValidate,
 	}
 	transferValidators = append(transferValidators, extraValidators...)
 

@@ -22,6 +22,7 @@ import (
 
 const (
 	TransferMetadataPrefix = meta.TransferMetadataPrefix
+	PublicMetadataPrefix   = "application."
 )
 
 type Binder interface {
@@ -104,6 +105,14 @@ func WithTokenSelector(selector Selector) TransferOption {
 // WithTransferMetadata sets transfer action metadata
 func WithTransferMetadata(key string, value []byte) TransferOption {
 	return WithTransferAttribute(TransferMetadataPrefix+key, value)
+
+}
+
+// WithPublicMetadata adds any data to the public ledger that may be relevant to the application.
+// It is also made available to the participants as part of the TransactionRecord.
+// The transaction fails if the key already exists on the ledger. The value is not validated.
+func WithPublicMetadata(key string, value []byte) TransferOption {
+	return WithTransferAttribute(PublicMetadataPrefix+key, value)
 }
 
 // WithTokenIDs sets the tokens ids to transfer
