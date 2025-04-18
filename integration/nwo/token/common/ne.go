@@ -17,7 +17,7 @@ import (
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -82,22 +82,22 @@ func (p *NetworkHandler) DeleteDBs(node *sfcnode.Node) {
 	for _, uniqueName := range node.ReplicaUniqueNames() {
 		for _, path := range []string{p.TokensDBSQLDataSourceDir(uniqueName)} {
 			logger.Infof("remove all [%s]", path)
-			Expect(os.RemoveAll(path)).ToNot(HaveOccurred())
-			Expect(os.MkdirAll(path, 0775)).ToNot(HaveOccurred(), "failed to create [%s]", path)
+			gomega.Expect(os.RemoveAll(path)).ToNot(gomega.HaveOccurred())
+			gomega.Expect(os.MkdirAll(path, 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", path)
 		}
 	}
 }
 
 func (p *NetworkHandler) CopyDBsTo(node *sfcnode.Node, to string) {
-	Expect(os.MkdirAll(to, 0775)).ToNot(HaveOccurred(), "failed to create [%s]", to)
+	gomega.Expect(os.MkdirAll(to, 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", to)
 	for _, uniqueName := range node.ReplicaUniqueNames() {
 		for _, path := range []string{p.TokensDBSQLDataSourceDir(uniqueName), p.TTXDBSQLDataSourceDir(uniqueName)} {
 			elements := filepath.SplitList(path)
 			lastElement := elements[len(elements)-1]
 			destination := filepath.Join(to, uniqueName, lastElement)
-			Expect(os.MkdirAll(destination, 0775)).ToNot(HaveOccurred(), "failed to create [%s]", destination)
+			gomega.Expect(os.MkdirAll(destination, 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", destination)
 
-			Expect(CopyDir(path, destination)).ToNot(HaveOccurred(), "failed to copy [%s] to [%s]", path, destination)
+			gomega.Expect(CopyDir(path, destination)).ToNot(gomega.HaveOccurred(), "failed to copy [%s] to [%s]", path, destination)
 		}
 	}
 }

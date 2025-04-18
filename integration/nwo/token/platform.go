@@ -28,7 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/tedsuo/ifrit/grouper"
 )
@@ -214,7 +214,7 @@ func (p *Platform) PublicParametersFile(tms *topology2.TMS) string {
 
 func (p *Platform) PublicParameters(tms *topology2.TMS) []byte {
 	raw, err := os.ReadFile(p.PublicParametersFile(tms))
-	Expect(err).ToNot(HaveOccurred())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	return raw
 }
 
@@ -225,7 +225,7 @@ func (p *Platform) GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, wa
 			targetTMS = tms
 		}
 	}
-	Expect(targetTMS).ToNot(BeNil(), "failed to find TMS for network [%s]", tmsNetwork)
+	gomega.Expect(targetTMS).ToNot(gomega.BeNil(), "failed to find TMS for network [%s]", tmsNetwork)
 
 	nh := p.NetworkHandlers[p.Context.TopologyByName(targetTMS.Network).Type()]
 	return nh.GenIssuerCryptoMaterial(targetTMS, fscNode, walletID)
@@ -238,7 +238,7 @@ func (p *Platform) GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, wal
 			targetTMS = tms
 		}
 	}
-	Expect(targetTMS).ToNot(BeNil(), "failed to find TMS for network [%s]", tmsNetwork)
+	gomega.Expect(targetTMS).ToNot(gomega.BeNil(), "failed to find TMS for network [%s]", tmsNetwork)
 
 	nh := p.NetworkHandlers[p.Context.TopologyByName(targetTMS.Network).Type()]
 	return nh.GenOwnerCryptoMaterial(targetTMS, fscNode, walletID, useCAIfAvailable)
@@ -262,11 +262,11 @@ func (p *Platform) GenerateExtension(node *sfcnode.Node) {
 		"TokenSelector": func() string { return p.Topology.TokenSelector },
 		"FinalityType":  func() string { return string(p.Topology.FinalityType) },
 	}).Parse(Extension)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	ext := bytes.NewBufferString("")
 	err = t.Execute(io.MultiWriter(ext), p)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	for _, uniqueName := range node.ReplicaUniqueNames() {
 		p.Context.AddExtension(uniqueName, TopologyName, ext.String())

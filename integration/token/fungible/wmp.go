@@ -23,7 +23,7 @@ import (
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 var logger = logging.MustGetLogger("token-sdk.fungible")
@@ -43,15 +43,15 @@ func NewWalletManagerProvider(loader WalletManagerLoader) *WalletManagerProvider
 func (p *WalletManagerProvider) RecipientData(user string, wallet string) *token.RecipientData {
 	wm := p.load(user)
 	ownerWallet := wm.OwnerWallet(wallet)
-	Expect(ownerWallet).ToNot(BeNil())
+	gomega.Expect(ownerWallet).ToNot(gomega.BeNil())
 	recipientIdentity, err := ownerWallet.GetRecipientIdentity()
-	Expect(err).ToNot(HaveOccurred())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	auditInfo, err := ownerWallet.GetAuditInfo(recipientIdentity)
-	Expect(err).ToNot(HaveOccurred())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	tokenMetadata, err := ownerWallet.GetTokenMetadata(recipientIdentity)
-	Expect(err).ToNot(HaveOccurred())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	tokenIdentityMetadata, err := ownerWallet.GetTokenMetadataAuditInfo(recipientIdentity)
-	Expect(err).ToNot(HaveOccurred())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	logger.Debugf("new recipient data [%s:%s:%s:%s]", recipientIdentity, auditInfo, tokenMetadata, tokenIdentityMetadata)
 	return &token.RecipientData{
 		Identity:               recipientIdentity,
@@ -65,7 +65,7 @@ func (p *WalletManagerProvider) RecipientData(user string, wallet string) *token
 func (p *WalletManagerProvider) GetSinger(user string, wallet string, party view.Identity) (token.Signer, error) {
 	wm := p.load(user)
 	ownerWallet := wm.OwnerWallet(wallet)
-	Expect(ownerWallet).ToNot(BeNil())
+	gomega.Expect(ownerWallet).ToNot(gomega.BeNil())
 	return ownerWallet.GetSigner(party)
 }
 
@@ -107,18 +107,18 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 
 	// prepare a service provider with the required services
 	configProvider, err := config.NewProvider(filepath.Join(ctx.RootDir(), "fsc", "nodes", node.ReplicaUniqueName(user, 0)))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	configService := config2.NewService(configProvider)
 	kvss, err := kvs2.NewInMemory()
-	Expect(err).ToNot(HaveOccurred())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	storageProvider := identity.NewKVSStorageProvider(kvss)
 	s := core.NewWalletServiceFactoryService(
 		fabtoken.NewWalletServiceFactory(storageProvider),
 		dlog.NewWalletServiceFactory(storageProvider))
 	tmsConfig, err := configService.ConfigurationFor(tms.Network, tms.Channel, tms.Namespace)
-	Expect(err).ToNot(HaveOccurred())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	walletService, err := s.NewWalletService(tmsConfig, ppRaw)
-	Expect(err).ToNot(HaveOccurred())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	return token.NewWalletManager(walletService)
 }
 
