@@ -10,6 +10,7 @@ import (
 	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	"github.com/pkg/errors"
 )
 
@@ -62,6 +63,28 @@ func (ipa *IPA) Deserialize(raw []byte) error {
 	ipa.R, err = unmarshaller.NextG1Array()
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize R")
+	}
+	return nil
+}
+
+func (ipa *IPA) Validate(curve mathlib.CurveID) error {
+	if ipa.Left == nil {
+		return errors.New("invalid IPA proof: nil Left")
+	}
+	if ipa.Right == nil {
+		return errors.New("invalid IPA proof: nil Right")
+	}
+	if ipa.L == nil {
+		return errors.New("invalid IPA proof: nil L")
+	}
+	if ipa.R == nil {
+		return errors.New("invalid IPA proof: nil R")
+	}
+	if err := math.CheckZrElements(ipa.L, curve, uint64(len(ipa.L))); err != nil {
+		return errors.Wrapf(err, "invalid IPA proof: invalid L elements")
+	}
+	if err := math.CheckZrElements(ipa.R, curve, uint64(len(ipa.R))); err != nil {
+		return errors.Wrapf(err, "invalid IPA proof: invalid R elements")
 	}
 	return nil
 }
