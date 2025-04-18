@@ -26,6 +26,7 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/dlogstress/support"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	token4 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -401,7 +402,11 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	Restart(network, false, onRestart, alice)
 
 	t8 := time.Now()
-	TransferCash(network, alice, "", "USD", 111, bob, auditor)
+	key := fmt.Sprintf("%d", t8.UnixMilli())
+	val := []byte("public ledger data")
+	opts := []token4.TransferOption{token4.WithPublicMetadata(key, val)}
+	BobAcceptedTransactions[3:4][0].PublicMetadata = map[string][]byte{key: val}
+	TransferCashWithOpts(network, alice, "", "USD", 111, bob, auditor, opts)
 	t9 := time.Now()
 	CheckAuditedTransactions(network, auditor, AuditedTransactions[5:7], &t8, &t9)
 	CheckSpending(network, alice, "", "USD", auditor, 111)

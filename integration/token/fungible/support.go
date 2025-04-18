@@ -387,7 +387,15 @@ func TransferCash(network *integration.Infrastructure, sender *token3.NodeRefere
 	return TransferCashForTMSID(network, sender, wallet, typ, amount, receiver, auditor, nil, expectedErrorMsgs...)
 }
 
+func TransferCashWithOpts(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, opts []token2.TransferOption, expectedErrorMsgs ...string) string {
+	return TransferCashForTMSIDWithOpts(network, sender, wallet, typ, amount, receiver, auditor, nil, opts, expectedErrorMsgs...)
+}
+
 func TransferCashForTMSID(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
+	return TransferCashForTMSIDWithOpts(network, sender, wallet, typ, amount, receiver, auditor, nil, nil, expectedErrorMsgs...)
+}
+
+func TransferCashForTMSIDWithOpts(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, tmsId *token2.TMSID, opts []token2.TransferOption, expectedErrorMsgs ...string) string {
 	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("transfer", common.JSONMarshall(&views.Transfer{
 		Auditor:      auditor.Id(),
 		Wallet:       wallet,
@@ -396,6 +404,7 @@ func TransferCashForTMSID(network *integration.Infrastructure, sender *token3.No
 		Recipient:    network.Identity(receiver.Id()),
 		RecipientEID: receiver.Id(),
 		TMSID:        tmsId,
+		TransferOpts: opts,
 	}))
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())

@@ -69,6 +69,8 @@ type Transfer struct {
 	NotAnonymous bool
 	// Metadata contains application metadata to append to the transaction
 	Metadata map[string][]byte
+	// TransferOpts contains additional options to use on the Transfer action
+	TransferOpts []token2.TransferOption
 }
 
 type TransferView struct {
@@ -140,13 +142,20 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// It is also possible to pass a custom token selector to the Transfer function by using the relative opt:
 	// token2.WithTokenSelector(selector).
 	span.AddEvent("append_transfer")
+
+	opts := []token2.TransferOption{
+		token2.WithTokenIDs(t.TokenIDs...),
+		token2.WithRestRecipientIdentity(t.SenderChangeRecipientData),
+	}
+	if len(t.TransferOpts) > 0 {
+		opts = append(opts, t.TransferOpts...)
+	}
 	err = tx.Transfer(
 		senderWallet,
 		t.Type,
 		[]uint64{t.Amount},
 		[]view.Identity{recipient},
-		token2.WithTokenIDs(t.TokenIDs...),
-		token2.WithRestRecipientIdentity(t.SenderChangeRecipientData),
+		opts...,
 	)
 	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
 
