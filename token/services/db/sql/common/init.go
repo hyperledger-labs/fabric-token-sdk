@@ -13,8 +13,6 @@ import (
 
 var logger = logging.MustGetLogger("token-sdk.sql")
 
-var tnc = db.NewTableNameCreatorWithDefaultPrefix("fts")
-
 type tableNames struct {
 	Movements              string
 	Transactions           string
@@ -33,25 +31,22 @@ type tableNames struct {
 }
 
 func GetTableNames(prefix string, params ...string) (tableNames, error) {
-	nc, err := tnc.GetFormatter(prefix)
-	if err != nil {
-		return tableNames{}, err
-	}
+	nc := db.NewTableNameCreator()
 
 	return tableNames{
-		Movements:              nc.MustFormat("movements", params...),
-		Transactions:           nc.MustFormat("txs", params...),
-		TransactionEndorseAck:  nc.MustFormat("tx_ends", params...),
-		Requests:               nc.MustFormat("requests", params...),
-		Validations:            nc.MustFormat("req_vals", params...),
-		Tokens:                 nc.MustFormat("tokens", params...),
-		Ownership:              nc.MustFormat("tkn_own", params...),
-		Certifications:         nc.MustFormat("tkn_crts", params...),
-		PublicParams:           nc.MustFormat("public_params", params...),
-		Wallets:                nc.MustFormat("wallets", params...),
-		IdentityConfigurations: nc.MustFormat("id_cfgs", params...),
-		IdentityInfo:           nc.MustFormat("id_info", params...),
-		Signers:                nc.MustFormat("id_signers", params...),
-		TokenLocks:             nc.MustFormat("tkn_locks", params...),
+		Movements:              nc.MustGetTableName(prefix, "movements", params...),
+		Transactions:           nc.MustGetTableName(prefix, "txs", params...),
+		TransactionEndorseAck:  nc.MustGetTableName(prefix, "tx_ends", params...),
+		Requests:               nc.MustGetTableName(prefix, "requests", params...),
+		Validations:            nc.MustGetTableName(prefix, "req_vals", params...),
+		Tokens:                 nc.MustGetTableName(prefix, "tokens", params...),
+		Ownership:              nc.MustGetTableName(prefix, "tkn_own", params...),
+		Certifications:         nc.MustGetTableName(prefix, "tkn_crts", params...),
+		TokenLocks:             nc.MustGetTableName(prefix, "tkn_locks", params...),
+		PublicParams:           nc.MustGetTableName(prefix, "public_params", params...),
+		Wallets:                nc.MustGetTableName(prefix, "wallets", params...),
+		IdentityConfigurations: nc.MustGetTableName(prefix, "id_cfgs", params...),
+		IdentityInfo:           nc.MustGetTableName(prefix, "id_info", params...),
+		Signers:                nc.MustGetTableName(prefix, "id_signers", params...),
 	}, nil
 }
