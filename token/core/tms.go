@@ -214,6 +214,7 @@ func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) ([]byte, err
 		if ppRaw, err := retriever(opts); err != nil {
 			m.logger.Warnf("failed to retrieve params for [%s]: [%s]", opts, err)
 		} else if len(ppRaw) != 0 {
+			m.logger.Infof("Fetched pubnlic params [%d]", len(ppRaw))
 			return ppRaw, nil
 		}
 	}
@@ -222,6 +223,7 @@ func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) ([]byte, err
 }
 
 func (m *TMSProvider) ppFromOpts(opts *driver.ServiceOptions) ([]byte, error) {
+	m.logger.Infof("Fetching pp from opts")
 	if len(opts.PublicParams) != 0 {
 		return opts.PublicParams, nil
 	}
@@ -229,6 +231,7 @@ func (m *TMSProvider) ppFromOpts(opts *driver.ServiceOptions) ([]byte, error) {
 }
 
 func (m *TMSProvider) ppFromStorage(opts *driver.ServiceOptions) ([]byte, error) {
+	m.logger.Infof("Fetching pp from storage")
 	ppRaw, err := m.publicParametersStorage.PublicParams(opts.Network, opts.Channel, opts.Namespace)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to load public params from the publicParametersStorage")
@@ -240,6 +243,7 @@ func (m *TMSProvider) ppFromStorage(opts *driver.ServiceOptions) ([]byte, error)
 }
 
 func (m *TMSProvider) ppFromConfig(opts *driver.ServiceOptions) ([]byte, error) {
+	m.logger.Infof("Fetching pp from config")
 	tmsConfig, err := m.configProvider.ConfigurationFor(opts.Network, opts.Channel, opts.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to identify driver from the configuration of [%s], loading driver from public parameters failed too [%s]", opts, err)
@@ -260,6 +264,7 @@ func (m *TMSProvider) ppFromConfig(opts *driver.ServiceOptions) ([]byte, error) 
 }
 
 func (m *TMSProvider) ppFromFetcher(opts *driver.ServiceOptions) ([]byte, error) {
+	m.logger.Infof("Fetching pp from fetcher")
 	if opts.PublicParamsFetcher != nil {
 		ppRaw, err := opts.PublicParamsFetcher.Fetch()
 		if err != nil {
