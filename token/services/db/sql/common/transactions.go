@@ -64,9 +64,7 @@ func NewTransactionDB(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterp
 }
 
 func (db *TransactionDB) CreateSchema() error {
-	schema := db.GetSchema()
-	logger.Warnf("schema to create: %s", schema)
-	return common.InitSchema(db.writeDB, schema)
+	return common.InitSchema(db.writeDB, db.GetSchema())
 }
 
 func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
