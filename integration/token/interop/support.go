@@ -24,17 +24,17 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 func RegisterAuditor(network *integration.Infrastructure, opts ...token.ServiceOption) {
 	options, err := token.CompileServiceOptions(opts...)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	_, err = network.Client("auditor").CallView("registerAuditor", common.JSONMarshall(&views2.RegisterAuditor{
 		TMSID: options.TMSID(),
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 func IssueCash(network *integration.Infrastructure, wallet string, typ token2.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference) string {
@@ -44,7 +44,7 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ token2.Ty
 		Quantity:     amount,
 		Recipient:    network.Identity(receiver.Id()),
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	txID := common.JSONUnmarshalString(txid)
 	common2.CheckFinality(network, receiver, txID, nil, false)
 	common2.CheckFinality(network, auditor, txID, nil, false)
@@ -59,7 +59,7 @@ func IssueCashWithTMS(network *integration.Infrastructure, tmsID token.TMSID, is
 		Quantity:     amount,
 		Recipient:    network.Identity(receiver.Id()),
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	txID := common.JSONUnmarshalString(txid)
 	common2.CheckFinality(network, receiver, txID, &tmsID, false)
 	common2.CheckFinality(network, auditor, txID, &tmsID, false)
@@ -71,7 +71,7 @@ func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ t
 		Wallet:    wallet,
 		TokenType: typ,
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	issuedTokens := &token2.IssuedTokens{}
 	common.JSONUnmarshal(res.([]byte), issuedTokens)
@@ -80,7 +80,7 @@ func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ t
 
 func CheckBalance(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, opts ...token.ServiceOption) {
 	options, err := token.CompileServiceOptions(opts...)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	res, err := network.Client(id.ReplicaName()).CallView("balance", common.JSONMarshall(&views2.Balance{
 		Wallet: wallet,
 		Type:   typ,
@@ -90,14 +90,14 @@ func CheckBalance(network *integration.Infrastructure, id *token3.NodeReference,
 			Namespace: options.Namespace,
 		},
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	b := &views2.BalanceResult{}
 	common.JSONUnmarshal(res.([]byte), b)
-	Expect(b.Type).To(BeEquivalentTo(typ))
+	gomega.Expect(b.Type).To(gomega.BeEquivalentTo(typ))
 	q, err := token2.ToQuantity(b.Quantity, 64)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	expectedQ := token2.NewQuantityFromUInt64(expected)
-	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+	gomega.Expect(expectedQ.Cmp(q)).To(gomega.BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
 }
 
 func CheckBalanceReturnError(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, opts ...token.ServiceOption) (err error) {
@@ -112,48 +112,48 @@ func CheckBalanceReturnError(network *integration.Infrastructure, id *token3.Nod
 
 func CheckHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected int64, opts ...token.ServiceOption) {
 	opt, err := token.CompileServiceOptions(opts...)
-	Expect(err).NotTo(HaveOccurred(), "failed to compile options [%v]", opts)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to compile options [%v]", opts)
 	tmsId := opt.TMSID()
 	eIDBoxed, err := network.Client(id.ReplicaName()).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
 		Wallet: wallet,
 		TMSID:  &tmsId,
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	eID := common.JSONUnmarshalString(eIDBoxed)
 	holdingBoxed, err := network.Client("auditor").CallView("holding", common.JSONMarshall(&views.CurrentHolding{
 		EnrollmentID: eID,
 		TokenType:    typ,
 		TMSID:        tmsId,
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	holding, err := strconv.Atoi(common.JSONUnmarshalString(holdingBoxed))
-	Expect(err).NotTo(HaveOccurred())
-	Expect(holding).To(Equal(int(expected)))
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Expect(holding).To(gomega.Equal(int(expected)))
 }
 
 func CheckBalanceWithLocked(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, expectedLocked uint64, expectedExpired uint64, opts ...token.ServiceOption) {
 	opt, err := token.CompileServiceOptions(opts...)
-	Expect(err).NotTo(HaveOccurred(), "failed to compile options [%v]", opts)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to compile options [%v]", opts)
 	resBoxed, err := network.Client(id.ReplicaName()).CallView("balance", common.JSONMarshall(&views2.Balance{
 		Wallet: wallet,
 		Type:   typ,
 		TMSID:  opt.TMSID(),
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	result := &views2.BalanceResult{}
 	common.JSONUnmarshal(resBoxed.([]byte), result)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	balance, err := strconv.Atoi(result.Quantity)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	locked, err := strconv.Atoi(result.Locked)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	expired, err := strconv.Atoi(result.Expired)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	Expect(balance).To(Equal(int(expected)), "expected [%d], got [%d]", expected, balance)
-	Expect(locked).To(Equal(int(expectedLocked)), "expected locked [%d], got [%d]", expectedLocked, locked)
-	Expect(expired).To(Equal(int(expectedExpired)), "expected expired [%d], got [%d]", expectedExpired, expired)
+	gomega.Expect(balance).To(gomega.Equal(int(expected)), "expected [%d], got [%d]", expected, balance)
+	gomega.Expect(locked).To(gomega.Equal(int(expectedLocked)), "expected locked [%d], got [%d]", expectedLocked, locked)
+	gomega.Expect(expired).To(gomega.Equal(int(expectedExpired)), "expected expired [%d], got [%d]", expectedExpired, expired)
 }
 
 func CheckBalanceAndHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, opts ...token.ServiceOption) {
@@ -175,7 +175,7 @@ func CheckPublicParams(network *integration.Infrastructure, tmsID token.TMSID, i
 			_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
 				TMSID: &tmsID,
 			}))
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}
 	}
 }
@@ -186,11 +186,11 @@ func CheckOwnerStore(network *integration.Infrastructure, tmsID token.TMSID, exp
 			errorMessagesBoxed, err := network.Client(replicaName).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
 				TMSID: tmsID,
 			}))
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			var errorMessages []string
 			common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
 
-			Expect(len(errorMessages)).To(Equal(len(expectedErrors)), "expected %d error messages from [%s], got [% v]", len(expectedErrors), id, errorMessages)
+			gomega.Expect(len(errorMessages)).To(gomega.Equal(len(expectedErrors)), "expected %d error messages from [%s], got [% v]", len(expectedErrors), id, errorMessages)
 			for _, expectedError := range expectedErrors {
 				found := false
 				for _, message := range errorMessages {
@@ -199,7 +199,7 @@ func CheckOwnerStore(network *integration.Infrastructure, tmsID token.TMSID, exp
 						break
 					}
 				}
-				Expect(found).To(BeTrue(), "cannot find error message [%s] in [% v]", expectedError, errorMessages)
+				gomega.Expect(found).To(gomega.BeTrue(), "cannot find error message [%s] in [% v]", expectedError, errorMessages)
 			}
 		}
 	}
@@ -211,32 +211,32 @@ func CheckAuditorStore(network *integration.Infrastructure, tmsID token.TMSID, a
 		AuditorWalletID: walletID,
 		TMSID:           tmsID,
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	if errorCheck != nil {
 		var errorMessages []string
 		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-		Expect(errorCheck(errorMessages)).NotTo(HaveOccurred(), "failed to check errors")
+		gomega.Expect(errorCheck(errorMessages)).NotTo(gomega.HaveOccurred(), "failed to check errors")
 	} else {
 		var errorMessages []string
 		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-		Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
+		gomega.Expect(len(errorMessages)).To(gomega.Equal(0), "expected 0 error messages, got [% v]", errorMessages)
 	}
 }
 
 func PruneInvalidUnspentTokens(network *integration.Infrastructure, tmsID token.TMSID, ids ...*token3.NodeReference) {
 	for _, id := range ids {
 		eIDBoxed, err := network.Client(id.ReplicaName()).CallView("PruneInvalidUnspentTokens", common.JSONMarshall(&views.PruneInvalidUnspentTokens{TMSID: tmsID}))
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		var deleted []*token2.ID
 		common.JSONUnmarshal(eIDBoxed.([]byte), &deleted)
-		Expect(len(deleted)).To(BeZero())
+		gomega.Expect(len(deleted)).To(gomega.BeZero())
 	}
 }
 
 func ListVaultUnspentTokens(network *integration.Infrastructure, tmsID token.TMSID, id *token3.NodeReference) []*token2.ID {
 	res, err := network.Client(id.ReplicaName()).CallView("ListVaultUnspentTokens", common.JSONMarshall(&views.ListVaultUnspentTokens{TMSID: tmsID}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	unspentTokens := &token2.UnspentTokens{}
 	common.JSONUnmarshal(res.([]byte), unspentTokens)
@@ -251,7 +251,7 @@ func ListVaultUnspentTokens(network *integration.Infrastructure, tmsID token.TMS
 
 func CheckIfExistsInVault(network *integration.Infrastructure, tmsID token.TMSID, id *token3.NodeReference, tokenIDs []*token2.ID) {
 	_, err := network.Client(id.ReplicaName()).CallView("CheckIfExistsInVault", common.JSONMarshall(&views.CheckIfExistsInVault{TMSID: tmsID, IDs: tokenIDs}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 func Restart(network *integration.Infrastructure, ids ...*token3.NodeReference) {
@@ -277,7 +277,7 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3
 		HashFunc:            hashFunc,
 	}))
 	if len(errorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		lockResult := &htlc.LockInfo{}
 		common.JSONUnmarshal(result.([]byte), lockResult)
 
@@ -285,17 +285,17 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3
 		common2.CheckFinality(network, auditor, lockResult.TxID, &tmsID, false)
 
 		if len(hash) == 0 {
-			Expect(lockResult.PreImage).NotTo(BeNil())
+			gomega.Expect(lockResult.PreImage).NotTo(gomega.BeNil())
 		}
-		Expect(lockResult.Hash).NotTo(BeNil())
+		gomega.Expect(lockResult.Hash).NotTo(gomega.BeNil())
 		if len(hash) != 0 {
-			Expect(lockResult.Hash).To(BeEquivalentTo(hash))
+			gomega.Expect(lockResult.Hash).To(gomega.BeEquivalentTo(hash))
 		}
 		return lockResult.TxID, lockResult.PreImage, lockResult.Hash
 	} else {
-		Expect(err).To(HaveOccurred())
+		gomega.Expect(err).To(gomega.HaveOccurred())
 		for _, msg := range errorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
+			gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg))
 		}
 		time.Sleep(5 * time.Second)
 
@@ -316,12 +316,12 @@ func HTLCReclaimAll(network *integration.Infrastructure, id *token3.NodeReferenc
 		Wallet: wallet,
 	}))
 	if len(errorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		common2.CheckFinality(network, id, common.JSONUnmarshalString(txID), nil, false)
 	} else {
-		Expect(err).To(HaveOccurred())
+		gomega.Expect(err).To(gomega.HaveOccurred())
 		for _, msg := range errorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
+			gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg))
 		}
 		time.Sleep(5 * time.Second)
 	}
@@ -334,12 +334,12 @@ func HTLCReclaimByHash(network *integration.Infrastructure, tmsID token.TMSID, i
 		TMSID:  tmsID,
 	}))
 	if len(errorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		common2.CheckFinality(network, id, common.JSONUnmarshalString(txID), &tmsID, false)
 	} else {
-		Expect(err).To(HaveOccurred())
+		gomega.Expect(err).To(gomega.HaveOccurred())
 		for _, msg := range errorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
+			gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg))
 		}
 		time.Sleep(5 * time.Second)
 	}
@@ -353,11 +353,11 @@ func HTLCCheckExistenceReceivedExpiredByHash(network *integration.Infrastructure
 		TMSID:  tmsID,
 	}))
 	if len(errorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	} else {
-		Expect(err).To(HaveOccurred())
+		gomega.Expect(err).To(gomega.HaveOccurred())
 		for _, msg := range errorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
+			gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg))
 		}
 	}
 }
@@ -369,15 +369,15 @@ func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id *token
 		PreImage: preImage,
 	}))
 	if len(errorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		txID := common.JSONUnmarshalString(txIDBoxed)
 		common2.CheckFinality(network, id, txID, &tmsID, false)
 		common2.CheckFinality(network, auditor, txID, &tmsID, false)
 		return txID
 	} else {
-		Expect(err).To(HaveOccurred())
+		gomega.Expect(err).To(gomega.HaveOccurred())
 		for _, msg := range errorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
+			gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg))
 		}
 		time.Sleep(5 * time.Second)
 
@@ -404,14 +404,14 @@ func fastExchange(network *integration.Infrastructure, id *token3.NodeReference,
 		Amount2:             amount2,
 		ReclamationDeadline: deadline,
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	// give time to bob to commit the transaction
 	time.Sleep(10 * time.Second)
 }
 
 func scan(network *integration.Infrastructure, id *token3.NodeReference, hash []byte, hashFunc crypto.Hash, startingTransactionID string, stopOnLastTx bool, opts ...token.ServiceOption) {
 	options, err := token.CompileServiceOptions(opts...)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	_, err = network.Client(id.ReplicaName()).CallView("htlc.scan", common.JSONMarshall(&htlc.Scan{
 		TMSID:                 options.TMSID(),
@@ -421,12 +421,12 @@ func scan(network *integration.Infrastructure, id *token3.NodeReference, hash []
 		StartingTransactionID: startingTransactionID,
 		StopOnLastTx:          stopOnLastTx,
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 func scanWithError(network *integration.Infrastructure, id *token3.NodeReference, hash []byte, hashFunc crypto.Hash, startingTransactionID string, errorMsgs []string, stopOnLastTx bool, opts ...token.ServiceOption) {
 	options, err := token.CompileServiceOptions(opts...)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	_, err = network.Client(id.ReplicaName()).CallView("htlc.scan", common.JSONMarshall(&htlc.Scan{
 		TMSID:                 options.TMSID(),
@@ -436,8 +436,8 @@ func scanWithError(network *integration.Infrastructure, id *token3.NodeReference
 		StartingTransactionID: startingTransactionID,
 		StopOnLastTx:          stopOnLastTx,
 	}))
-	Expect(err).To(HaveOccurred())
+	gomega.Expect(err).To(gomega.HaveOccurred())
 	for _, msg := range errorMsgs {
-		Expect(err.Error()).To(ContainSubstring(msg))
+		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg))
 	}
 }

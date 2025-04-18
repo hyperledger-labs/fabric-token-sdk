@@ -25,7 +25,7 @@ import (
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 var logger = logging.MustGetLogger("token-sdk.integration.token.fabric")
@@ -70,11 +70,11 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 
 	// Generate crypto material
 	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
-	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
+	gomega.Expect(cmGenerator).NotTo(gomega.BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
 
 	// - Setup
 	root, err := cmGenerator.Setup(tms)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	// - Generate crypto material for each FSC node
 	fscTopology := p.TokenPlatform.GetContext().TopologyByName(fsc.TopologyName).(*fsc.Topology)
@@ -85,7 +85,7 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	// Generate public parameters
 	var ppRaw []byte
 	ppGenerator := p.TokenPlatform.GetPublicParamsGenerators(tms.Driver)
-	Expect(ppGenerator).NotTo(BeNil(), "No public params generator for driver %s", tms.Driver)
+	gomega.Expect(ppGenerator).NotTo(gomega.BeNil(), "No public params generator for driver %s", tms.Driver)
 	args := []interface{}{root}
 	for _, arg := range tms.PublicParamsGenArgs {
 		args = append(args, arg)
@@ -99,11 +99,11 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 		wallets.Certifiers = append(wallets.Certifiers, w.Certifiers...)
 	}
 	ppRaw, err = ppGenerator.Generate(tms, wallets, args...)
-	Expect(err).ToNot(HaveOccurred())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 	// - Store pp
-	Expect(os.MkdirAll(p.TokenPlatform.PublicParametersDir(), 0766)).ToNot(HaveOccurred())
-	Expect(os.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(HaveOccurred())
+	gomega.Expect(os.MkdirAll(p.TokenPlatform.PublicParametersDir(), 0766)).ToNot(gomega.HaveOccurred())
+	gomega.Expect(os.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(gomega.HaveOccurred())
 
 	// Prepare namespace
 	p.Backend.PrepareNamespace(tms)
@@ -113,17 +113,17 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 		caFactory, found := p.CASupports[tms.Driver]
 		if found {
 			ca, err := caFactory(p.TokenPlatform, tms, root)
-			Expect(err).ToNot(HaveOccurred(), "failed to instantiate CA for [%s]", tms.ID())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred(), "failed to instantiate CA for [%s]", tms.ID())
 			entry.CA = ca
 		}
 	}
 }
 
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node, uniqueName string) string {
-	Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(uniqueName))
-	Expect(os.MkdirAll(p.TokensDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TokensDBSQLDataSourceDir(uniqueName))
-	Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(uniqueName))
-	Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(uniqueName))
+	gomega.Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(uniqueName), 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(uniqueName))
+	gomega.Expect(os.MkdirAll(p.TokensDBSQLDataSourceDir(uniqueName), 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", p.TokensDBSQLDataSourceDir(uniqueName))
+	gomega.Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(uniqueName), 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(uniqueName))
+	gomega.Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(uniqueName), 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(uniqueName))
 
 	persistenceNames := fsc.GetPersistenceNames(node.Options, common2.AllPrefixes...)
 
@@ -141,11 +141,11 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 		"EndorserID":           func() string { return "" },
 		"Endorser":             func() bool { return topology2.ToOptions(node.Options).Endorser() },
 	}).Parse(Extension)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	ext := bytes.NewBufferString("")
 	err = t.Execute(io.MultiWriter(ext), p)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	return ext.String()
 }
@@ -155,7 +155,7 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 		// Start the CA, if available
 		entry := p.GetEntry(tms)
 		if entry.CA != nil {
-			Expect(entry.CA.Start()).ToNot(HaveOccurred(), "failed to start CA for [%s]", tms.ID())
+			gomega.Expect(entry.CA.Start()).ToNot(gomega.HaveOccurred(), "failed to start CA for [%s]", tms.ID())
 		}
 	}
 }
@@ -174,7 +174,7 @@ func (p *NetworkHandler) UpdatePublicParams(tms *topology2.TMS, ppRaw []byte) {
 
 func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
 	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
-	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
+	gomega.Expect(cmGenerator).NotTo(gomega.BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
 
 	fscTopology := p.TokenPlatform.GetContext().TopologyByName(fsc.TopologyName).(*fsc.Topology)
 	for _, node := range fscTopology.Nodes {
@@ -183,7 +183,7 @@ func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID stri
 			return ids[0].Path
 		}
 	}
-	Expect(false).To(BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
+	gomega.Expect(false).To(gomega.BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
 	return ""
 }
 
@@ -196,14 +196,14 @@ func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID strin
 			// return the path where the credential is stored
 			logger.Infof("generate owner crypto material using ca")
 			ic, err := ca.Gen(walletID)
-			Expect(err).ToNot(HaveOccurred(), "failed to generate owner crypto material using ca [%s]", tms.ID())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred(), "failed to generate owner crypto material using ca [%s]", tms.ID())
 			return ic
 		}
 		// continue without the ca
 	}
 
 	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
-	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
+	gomega.Expect(cmGenerator).NotTo(gomega.BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
 
 	fscTopology := p.TokenPlatform.GetContext().TopologyByName(fsc.TopologyName).(*fsc.Topology)
 	for _, node := range fscTopology.Nodes {
@@ -215,7 +215,7 @@ func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID strin
 			return
 		}
 	}
-	Expect(false).To(BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
+	gomega.Expect(false).To(gomega.BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
 	return
 }
 

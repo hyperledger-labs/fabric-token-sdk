@@ -15,7 +15,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 func CheckFinality(network *integration.Infrastructure, id *token2.NodeReference, txID string, tmsID *token.TMSID, fail bool) {
@@ -28,9 +28,9 @@ func CheckFinality(network *integration.Infrastructure, id *token2.NodeReference
 		Timeout: 30 * time.Second,
 	}))
 	if fail {
-		Expect(err).To(HaveOccurred())
+		gomega.Expect(err).To(gomega.HaveOccurred())
 	} else {
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	}
 }
 
@@ -47,8 +47,8 @@ func CheckEndorserFinality(network *integration.Infrastructure, id *token2.NodeR
 		Channel: tmsID.Channel,
 	}))
 	if fail {
-		Expect(err).To(HaveOccurred())
+		gomega.Expect(err).To(gomega.HaveOccurred())
 	} else {
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	}
 }

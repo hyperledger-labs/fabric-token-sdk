@@ -30,7 +30,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 const (
@@ -295,10 +295,10 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	}
 
 	t0 := time.Now()
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
 	IssueSuccessfulCash(network, "", "USD", 110, alice, auditor, true, issuer, endorsers...)
 	t1 := time.Now()
 	CheckBalanceAndHolding(network, alice, "", "USD", 110, auditor)
@@ -322,12 +322,12 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckAcceptedTransactions(network, alice, "", AliceAcceptedTransactions[1:2], &t2, &t3, nil)
 
 	h := ListIssuerHistory(network, "", "USD", issuer)
-	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0), "expected [%d]=[120]", h.Sum(64).ToBigInt().Int64())
-	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
+	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(gomega.BeEquivalentTo(0), "expected [%d]=[120]", h.Sum(64).ToBigInt().Int64())
+	gomega.Expect(h.ByType("USD").Count()).To(gomega.BeEquivalentTo(h.Count()))
 
 	h = ListIssuerHistory(network, "", "EUR", issuer)
-	Expect(h.Count()).To(BeEquivalentTo(0))
+	gomega.Expect(h.Count()).To(gomega.BeEquivalentTo(0))
 
 	Restart(network, true, onRestart, auditor)
 	RegisterAuditor(network, auditor)
@@ -342,19 +342,19 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckAcceptedTransactions(network, alice, "", AliceAcceptedTransactions[1:2], &t2, &t3, nil)
 
 	h = ListIssuerHistory(network, "", "USD", issuer)
-	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0), "expected [%d]=[120]", h.Sum(64).ToBigInt().Int64())
-	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
+	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(gomega.BeEquivalentTo(0), "expected [%d]=[120]", h.Sum(64).ToBigInt().Int64())
+	gomega.Expect(h.ByType("USD").Count()).To(gomega.BeEquivalentTo(h.Count()))
 
 	h = ListIssuerHistory(network, "", "EUR", issuer)
-	Expect(h.Count()).To(BeEquivalentTo(0))
+	gomega.Expect(h.Count()).To(gomega.BeEquivalentTo(0))
 
 	// Register a new issuer wallet and issue with that wallet
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
-	Expect(tokenPlatform).ToNot(BeNil(), "cannot find token platform in context")
-	Expect(tokenPlatform.GetTopology()).ToNot(BeNil(), "invalid token topology, it is nil")
-	Expect(len(tokenPlatform.GetTopology().TMSs)).ToNot(BeEquivalentTo(0), "no tms defined in token topology")
+	gomega.Expect(tokenPlatform).ToNot(gomega.BeNil(), "cannot find token platform in context")
+	gomega.Expect(tokenPlatform.GetTopology()).ToNot(gomega.BeNil(), "invalid token topology, it is nil")
+	gomega.Expect(len(tokenPlatform.GetTopology().TMSs)).ToNot(gomega.BeEquivalentTo(0), "no tms defined in token topology")
 	// Gen crypto material for the new issuer wallet
 	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), issuer.Id(), "issuer.ExtraId")
 	// Register it
@@ -386,14 +386,14 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckAcceptedTransactions(network, bob, "", BobAcceptedTransactions[:3], &t4, &t7, nil)
 
 	h = ListIssuerHistory(network, "", "USD", issuer)
-	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
-	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
+	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(gomega.BeEquivalentTo(0))
+	gomega.Expect(h.ByType("USD").Count()).To(gomega.BeEquivalentTo(h.Count()))
 
 	h = ListIssuerHistory(network, "newIssuerWallet", "EUR", issuer)
-	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(30))).To(BeEquivalentTo(0))
-	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
+	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(30))).To(gomega.BeEquivalentTo(0))
+	gomega.Expect(h.ByType("EUR").Count()).To(gomega.BeEquivalentTo(h.Count()))
 
 	CheckBalanceAndHolding(network, alice, "", "USD", 120, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 30, auditor)
@@ -411,13 +411,13 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckAcceptedTransactions(network, bob, "", BobAcceptedTransactions[:4], &t0, &t9, nil)
 	CheckAcceptedTransactions(network, bob, "", BobAcceptedTransactions[:4], nil, nil, nil)
 	ut := ListUnspentTokens(network, alice, "", "USD")
-	Expect(ut.Count() > 0).To(BeTrue())
-	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(9))).To(BeEquivalentTo(0), "got [%d], expected 9", ut.Sum(64).ToBigInt())
-	Expect(ut.ByType("USD").Count()).To(BeEquivalentTo(ut.Count()))
+	gomega.Expect(ut.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(9))).To(gomega.BeEquivalentTo(0), "got [%d], expected 9", ut.Sum(64).ToBigInt())
+	gomega.Expect(ut.ByType("USD").Count()).To(gomega.BeEquivalentTo(ut.Count()))
 	ut = ListUnspentTokens(network, bob, "", "USD")
-	Expect(ut.Count() > 0).To(BeTrue())
-	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(111))).To(BeEquivalentTo(0), "got [%d], expected 111", ut.Sum(64).ToBigInt())
-	Expect(ut.ByType("USD").Count()).To(BeEquivalentTo(ut.Count()))
+	gomega.Expect(ut.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(111))).To(gomega.BeEquivalentTo(0), "got [%d], expected 111", ut.Sum(64).ToBigInt())
+	gomega.Expect(ut.ByType("USD").Count()).To(gomega.BeEquivalentTo(ut.Count()))
 
 	RedeemCash(network, bob, "", "USD", 11, auditor, issuer)
 	t10 := time.Now()
@@ -485,14 +485,14 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	IssueCash(network, "issuer.id1", "EUR", 10, sel.Get("issuer.owner"), auditor, true, issuer)
 
 	h = ListIssuerHistory(network, "", "USD", issuer)
-	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(241))).To(BeEquivalentTo(0))
-	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
+	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(241))).To(gomega.BeEquivalentTo(0))
+	gomega.Expect(h.ByType("USD").Count()).To(gomega.BeEquivalentTo(h.Count()))
 
 	h = ListIssuerHistory(network, "newIssuerWallet", "EUR", issuer)
-	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(180))).To(BeEquivalentTo(0))
-	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
+	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(180))).To(gomega.BeEquivalentTo(0))
+	gomega.Expect(h.ByType("EUR").Count()).To(gomega.BeEquivalentTo(h.Count()))
 
 	CheckBalanceAndHolding(network, issuer, "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, issuer, "", "EUR", 150, auditor)
@@ -679,7 +679,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 
 		transfer := transferErrors[i]
 		r, err := rand.Int(rand.Reader, big.NewInt(200))
-		Expect(err).ToNot(HaveOccurred())
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 		v := r.Uint64() + 1
 		sum += v
 		go func() {
@@ -701,7 +701,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	}
 	for _, transfer := range transferErrors {
 		err := <-transfer
-		Expect(err).ToNot(HaveOccurred())
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}
 	CheckBalanceAndHolding(network, bob, "", "EUR", 2820-sum, auditor)
 
@@ -746,7 +746,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	for _, transfer := range transferErrors2 {
 		errs = append(errs, <-transfer)
 	}
-	Expect((errs[0] == nil && errs[1] != nil) || (errs[0] != nil && errs[1] == nil)).To(BeTrue())
+	gomega.Expect((errs[0] == nil && errs[1] != nil) || (errs[0] != nil && errs[1] == nil)).To(gomega.BeTrue())
 	var errStr string
 	if errs[0] == nil {
 		errStr = errs[1].Error()
@@ -754,8 +754,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 		errStr = errs[0].Error()
 	}
 	v := strings.Contains(errStr, "pineapple") || strings.Contains(errStr, "lemonade")
-	Expect(v).To(BeEquivalentTo(true), "error [%s] does not contain either 'pineapple' or 'lemonade'", errStr)
-	Expect(errStr).NotTo(BeEmpty())
+	gomega.Expect(v).To(gomega.BeEquivalentTo(true), "error [%s] does not contain either 'pineapple' or 'lemonade'", errStr)
+	gomega.Expect(errStr).NotTo(gomega.BeEmpty())
 
 	CheckBalanceAndHolding(network, bob, "", "YUAN", 3, auditor)
 	CheckBalanceAndHolding(network, alice, "", "YUAN", 7, auditor)
@@ -838,10 +838,10 @@ func TestSelector(network *integration.Infrastructure, auditorId string, sel *to
 	SetKVSEntry(network, issuer, "auditor", auditor.Id())
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
 
 	IssueCash(network, "", "USD", 100, alice, auditor, true, issuer)
 	IssueCash(network, "", "USD", 50, alice, auditor, true, issuer)
@@ -865,29 +865,29 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID st
 	}
 	RegisterAuditor(network, auditor)
 	txId := IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
-	Expect(txId).NotTo(BeEmpty())
+	gomega.Expect(txId).NotTo(gomega.BeEmpty())
 	CheckBalanceAndHolding(network, alice, "", "USD", 110, auditor)
 
 	RegisterAuditor(network, newAuditor)
 	UpdatePublicParams(network, ppBytes, tms)
 
-	Eventually(GetPublicParams).WithArguments(network, newIssuer).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
-	Eventually(GetPublicParams).WithArguments(network, issuer).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+	gomega.Eventually(GetPublicParams).WithArguments(network, newIssuer).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(gomega.Equal(ppBytes))
+	gomega.Eventually(GetPublicParams).WithArguments(network, issuer).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(gomega.Equal(ppBytes))
 	if !issuerAsAuditor {
-		Eventually(GetPublicParams).WithArguments(network, newAuditor).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+		gomega.Eventually(GetPublicParams).WithArguments(network, newAuditor).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(gomega.Equal(ppBytes))
 	}
 	// give time to the issuer and the auditor to update their public parameters and reload their wallets
-	Eventually(DoesWalletExist).WithArguments(network, newIssuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, newIssuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 	if issuerAsAuditor {
-		Eventually(DoesWalletExist).WithArguments(network, newIssuer, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+		gomega.Eventually(DoesWalletExist).WithArguments(network, newIssuer, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 	} else {
-		Eventually(DoesWalletExist).WithArguments(network, newAuditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+		gomega.Eventually(DoesWalletExist).WithArguments(network, newAuditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 	}
-	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, manager, "manager.id1", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, manager, "manager.id1", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 
 	txId = IssueCash(network, "", "USD", 110, alice, newAuditor, true, newIssuer)
-	Expect(txId).NotTo(BeEmpty())
+	gomega.Expect(txId).NotTo(gomega.BeEmpty())
 	CheckBalance(network, alice, "", "USD", 220)
 	CheckHolding(network, alice, "", "USD", 110, newAuditor)
 	if updateWithAppend {
@@ -973,8 +973,8 @@ func TestMixed(network *integration.Infrastructure, onRestart OnRestartFunc, sel
 	// give some time to the nodes to get the public parameters
 	time.Sleep(40 * time.Second)
 
-	Eventually(CheckPublicParamsMatch).WithArguments(network, dlogId, issuer1, auditor1, alice, bob).WithTimeout(2 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(CheckPublicParamsMatch).WithArguments(network, fabTokenId, issuer2, auditor2, alice, bob).WithTimeout(2 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	gomega.Eventually(CheckPublicParamsMatch).WithArguments(network, dlogId, issuer1, auditor1, alice, bob).WithTimeout(2 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(CheckPublicParamsMatch).WithArguments(network, fabTokenId, issuer2, auditor2, alice, bob).WithTimeout(2 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 
 	IssueCashForTMSID(network, "", "USD", 110, alice, auditor1, true, issuer1, dlogId)
 	IssueCashForTMSID(network, "", "USD", 115, alice, auditor2, true, issuer2, fabTokenId)
@@ -991,9 +991,9 @@ func TestMixed(network *integration.Infrastructure, onRestart OnRestartFunc, sel
 	CheckBalanceAndHoldingForTMSID(network, bob, "", "USD", 30, auditor2, fabTokenId)
 
 	h := ListIssuerHistoryForTMSID(network, "", "USD", issuer1, dlogId)
-	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(110))).To(BeEquivalentTo(0))
-	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
+	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(110))).To(gomega.BeEquivalentTo(0))
+	gomega.Expect(h.ByType("USD").Count()).To(gomega.BeEquivalentTo(h.Count()))
 
 	// Error cases
 
@@ -1077,19 +1077,19 @@ func TestMaliciousTransactions(net *integration.Infrastructure, sel *token3.Repl
 	manager := sel.Get("manager")
 	CheckPublicParams(net, issuer, alice, bob, charlie, manager)
 
-	Eventually(DoesWalletExist).WithArguments(net, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(net, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(net, bob, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(net, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(net, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(net, bob, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 	IssueCash(net, "", "USD", 110, alice, sel.Get(""), true, issuer)
 	CheckBalance(net, alice, "", "USD", 110)
 
 	txID := MaliciousTransferCash(net, alice, "", "USD", 2, bob, sel.Get(""), nil)
 	txStatusAlice := GetTXStatus(net, alice, txID)
-	Expect(txStatusAlice.ValidationCode).To(BeEquivalentTo(ttx.Deleted))
-	Expect(txStatusAlice.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
+	gomega.Expect(txStatusAlice.ValidationCode).To(gomega.BeEquivalentTo(ttx.Deleted))
+	gomega.Expect(txStatusAlice.ValidationMessage).To(gomega.ContainSubstring("token requests do not match, tr hashes"))
 	txStatusBob := GetTXStatus(net, bob, txID)
-	Expect(txStatusBob.ValidationCode).To(BeEquivalentTo(ttx.Deleted))
-	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
+	gomega.Expect(txStatusBob.ValidationCode).To(gomega.BeEquivalentTo(ttx.Deleted))
+	gomega.Expect(txStatusBob.ValidationMessage).To(gomega.ContainSubstring("token requests do not match, tr hashes"))
 }
 
 func TestStressSuite(network *integration.Infrastructure, auditorId string, selector *token3.ReplicaSelector) {
@@ -1215,7 +1215,7 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	endorsers := GetEndorsers(network, sel)
 	RegisterAuditor(network, auditor)
 	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
-	Expect(ok).To(BeTrue())
+	gomega.Expect(ok).To(gomega.BeTrue())
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
@@ -1223,10 +1223,10 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	SetKVSEntry(network, issuer, "auditor", auditor.Id())
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
 	IssueSuccessfulCash(network, "", "EUR", 110, alice, auditor, true, issuer, endorsers...)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
@@ -1236,15 +1236,15 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	// switch to dlog 32bits, perform a few operations
 	tms := GetTMSByAlias(network, "dlog-32bits")
 	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
-	Expect(err).NotTo(HaveOccurred())
-	Expect(ppBytes).NotTo(BeNil())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Expect(ppBytes).NotTo(gomega.BeNil())
 	UpdatePublicParams(network, ppBytes, tms)
 
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 
 	// alice has one token that cannot be spent directly, it was created when the fabtoken driver was in place
 	CheckOwnerStore(network, func(errMsgs []string) error {
@@ -1288,7 +1288,7 @@ func TestLocalTokensUpgrade(network *integration.Infrastructure, auditorId strin
 	endorsers := GetEndorsers(network, sel)
 	RegisterAuditor(network, auditor)
 	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
-	Expect(ok).To(BeTrue())
+	gomega.Expect(ok).To(gomega.BeTrue())
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
@@ -1296,10 +1296,10 @@ func TestLocalTokensUpgrade(network *integration.Infrastructure, auditorId strin
 	SetKVSEntry(network, issuer, "auditor", auditor.Id())
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
 	IssueSuccessfulCash(network, "", "EUR", 110, alice, auditor, true, issuer, endorsers...)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
@@ -1309,15 +1309,15 @@ func TestLocalTokensUpgrade(network *integration.Infrastructure, auditorId strin
 	// switch to dlog 32bits, perform a few operations
 	tms := GetTMSByAlias(network, "dlog-32bits")
 	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
-	Expect(err).NotTo(HaveOccurred())
-	Expect(ppBytes).NotTo(BeNil())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Expect(ppBytes).NotTo(gomega.BeNil())
 	UpdatePublicParams(network, ppBytes, tms)
 
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 
 	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorStore(network, auditor, "", nil)
@@ -1342,7 +1342,7 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	endorsers := GetEndorsers(network, sel)
 	RegisterAuditor(network, auditor)
 	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
-	Expect(ok).To(BeTrue())
+	gomega.Expect(ok).To(gomega.BeTrue())
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
@@ -1350,10 +1350,10 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	SetKVSEntry(network, issuer, "auditor", auditor.Id())
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
 	IssueSuccessfulCash(network, "", "EUR", 110, alice, auditor, true, issuer, endorsers...)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
@@ -1362,15 +1362,15 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	// switch to dlog 32bits, perform a few operations
 	tms := GetTMSByAlias(network, "dlog-32bits")
 	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
-	Expect(err).NotTo(HaveOccurred())
-	Expect(ppBytes).NotTo(BeNil())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Expect(ppBytes).NotTo(gomega.BeNil())
 
 	UpdatePublicParams(network, ppBytes, tms)
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 
 	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorStore(network, auditor, "", nil)
@@ -1385,28 +1385,28 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 
 	// rotate issuer public key, bob should be able to spend his token
 	pp, err := dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogPublicParameters)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(pp.Validate()).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Expect(pp.Validate()).NotTo(gomega.HaveOccurred())
 
 	tmsBis := GetTMSByAlias(network, "dlog-32bits-bis")
 	ppBytesBis, err := os.ReadFile(tokenPlatform.PublicParametersFile(tmsBis))
-	Expect(err).NotTo(HaveOccurred())
-	Expect(ppBytesBis).NotTo(BeNil())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Expect(ppBytesBis).NotTo(gomega.BeNil())
 	ppBis, err := dlognoghv1.NewPublicParamsFromBytes(ppBytesBis, dlognoghv1.DLogPublicParameters)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(ppBis.Validate()).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Expect(ppBis.Validate()).NotTo(gomega.HaveOccurred())
 
 	pp.IdemixIssuerPublicKeys = append(pp.IdemixIssuerPublicKeys, ppBis.IdemixIssuerPublicKeys...)
 	ppRaw, err := pp.Serialize()
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	UpdatePublicParams(network, ppRaw, tms)
 
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
-	Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 
 	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorStore(network, auditor, "", nil)

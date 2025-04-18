@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 const (
@@ -45,12 +45,12 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 	CheckBalanceWithLockedAndHolding(network, alice, "", USD, 120, 0, 0, -1)
 
 	h := ListIssuerHistory(network, "", USD)
-	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
-	Expect(h.ByType(USD).Count()).To(BeEquivalentTo(h.Count()))
+	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(gomega.BeEquivalentTo(0))
+	gomega.Expect(h.ByType(USD).Count()).To(gomega.BeEquivalentTo(h.Count()))
 
 	h = ListIssuerHistory(network, "", EUR)
-	Expect(h.Count()).To(BeEquivalentTo(0))
+	gomega.Expect(h.Count()).To(gomega.BeEquivalentTo(0))
 
 	IssueCash(network, "", EUR, 10, bob, bob)
 	CheckBalanceWithLockedAndHolding(network, bob, "", EUR, 10, 0, 0, -1)
@@ -60,14 +60,14 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 	CheckBalanceWithLockedAndHolding(network, bob, "", EUR, 30, 0, 0, -1)
 
 	h = ListIssuerHistory(network, "", USD)
-	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
-	Expect(h.ByType(USD).Count()).To(BeEquivalentTo(h.Count()))
+	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(gomega.BeEquivalentTo(0))
+	gomega.Expect(h.ByType(USD).Count()).To(gomega.BeEquivalentTo(h.Count()))
 
 	h = ListIssuerHistory(network, "", EUR)
-	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(30))).To(BeEquivalentTo(0))
-	Expect(h.ByType(EUR).Count()).To(BeEquivalentTo(h.Count()))
+	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(30))).To(gomega.BeEquivalentTo(0))
+	gomega.Expect(h.ByType(EUR).Count()).To(gomega.BeEquivalentTo(h.Count()))
 
 	CheckBalanceWithLockedAndHolding(network, alice, "", USD, 120, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, alice, "", EUR, 0, 0, 0, -1)
@@ -246,15 +246,15 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure, sel *t
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		Expect(func() {
+		gomega.Expect(func() {
 			htlcClaim(network, alpha, alice, "alice.id2", preImage, auditor)
-		}).ToNot(Panic())
+		}).ToNot(gomega.Panic())
 	}()
 	go func() {
 		defer wg.Done()
-		Expect(func() {
+		gomega.Expect(func() {
 			htlcClaim(network, beta, bob, "bob.id2", preImage, auditor)
-		}).ToNot(Panic())
+		}).ToNot(gomega.Panic())
 	}()
 	scan(network, alice, hash, crypto.SHA256, "", false, token.WithTMSID(alpha))
 	scan(network, alice, hash, crypto.SHA256, aliceLockTxID, false, token.WithTMSID(alpha))
@@ -275,7 +275,7 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure, sel *t
 	scan(network, bob, hash, crypto.SHA256, bobLockTxID, true, token.WithTMSID(beta))
 	start := time.Now()
 	scanWithError(network, alice, hash, crypto.SHA256, txID, []string{"reached, stop scan."}, true, token.WithTMSID(alpha))
-	Expect(time.Since(start)).To(BeNumerically("<", time.Second*30), "scan should be canceled on last tx, before timeout")
+	gomega.Expect(time.Since(start)).To(gomega.BeNumerically("<", time.Second*30), "scan should be canceled on last tx, before timeout")
 	scanWithError(network, alice, hash, crypto.SHA256, txID, []string{"context done"}, false, token.WithTMSID(alpha))
 
 	CheckPublicParams(network, token.TMSID{}, alice, bob)
@@ -323,8 +323,8 @@ func TestFastExchange(network *integration.Infrastructure, sel *token2.ReplicaSe
 
 	CheckBalance(network, sel.Get("alice"), "", EUR, 20, token.WithTMSID(alpha))
 
-	Eventually(CheckBalanceReturnError).WithArguments(network, sel.Get("bob"), "", EUR, uint64(10), token.WithTMSID(alpha)).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Succeed())
+	gomega.Eventually(CheckBalanceReturnError).WithArguments(network, sel.Get("bob"), "", EUR, uint64(10), token.WithTMSID(alpha)).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Succeed())
 
 	CheckBalance(network, sel.Get("alice"), "", USD, 10, token.WithTMSID(beta))
-	Eventually(CheckBalanceReturnError).WithArguments(network, sel.Get("bob"), "", USD, uint64(20), token.WithTMSID(beta)).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Succeed())
+	gomega.Eventually(CheckBalanceReturnError).WithArguments(network, sel.Get("bob"), "", USD, uint64(20), token.WithTMSID(beta)).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Succeed())
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 type replicationOpts interface {
@@ -54,7 +54,7 @@ func SetDefaultParams(tms *topology.TMS, opts TMSOpts) {
 	case "fabtoken":
 		// no nothig
 	default:
-		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", opts.TokenSDKDriver)
+		gomega.Expect(false).To(gomega.BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", opts.TokenSDKDriver)
 	}
 	if len(opts.PublicParamsGenArgs) != 0 {
 		tms.SetTokenGenPublicParams(opts.PublicParamsGenArgs...)
