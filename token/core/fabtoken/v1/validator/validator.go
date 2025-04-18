@@ -54,6 +54,7 @@ func NewValidator(logger logging.Logger, pp *setup.PublicParams, deserializer dr
 		TransferSignatureValidate,
 		TransferBalanceValidate,
 		TransferHTLCValidate,
+		TransferApplicationDataValidate,
 	}
 	transferValidators = append(transferValidators, extraValidators...)
 

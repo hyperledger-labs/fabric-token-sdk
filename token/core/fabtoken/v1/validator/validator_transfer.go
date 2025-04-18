@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
+	"strings"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
@@ -207,6 +208,17 @@ func TransferHTLCValidate(ctx *Context) error {
 			}
 			ctx.CountMetadataKey(metadataKey)
 			continue
+		}
+	}
+	return nil
+}
+
+// TransferApplicationDataValidate accepts any metadata in the "pub" namespace.
+// This gives the user of the Token SDK the option to attach public data to the token transaction.
+func TransferApplicationDataValidate(ctx *Context) error {
+	for key := range ctx.TransferAction.Metadata {
+		if strings.HasPrefix(key, "pub.") {
+			ctx.CountMetadataKey(key)
 		}
 	}
 	return nil

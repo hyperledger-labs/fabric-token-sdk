@@ -64,6 +64,7 @@ func New(
 		TransferUpgradeWitnessValidate,
 		TransferZKProofValidate,
 		TransferHTLCValidate,
+		TransferApplicationDataValidate,
 	}
 	transferValidators = append(transferValidators, extraValidators...)
 
@@ -75,7 +76,7 @@ func New(
 		common.AuditingSignaturesValidate[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer],
 	}
 
-	return common.NewValidator[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer](
+	return common.NewValidator(
 		logger,
 		pp,
 		deserializer,
