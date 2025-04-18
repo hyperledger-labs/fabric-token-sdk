@@ -40,9 +40,6 @@ func (r *RangeCorrectness) Deserialize(raw []byte) error {
 }
 
 func (r *RangeCorrectness) Validate(curve math.CurveID) error {
-	if len(r.Proofs) == 0 {
-		return errors.New("no range proofs")
-	}
 	for i, proof := range r.Proofs {
 		if proof == nil {
 			return errors.Errorf("invalid range proof: nil proof at index %d", i)
