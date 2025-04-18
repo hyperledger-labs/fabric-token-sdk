@@ -8,13 +8,12 @@ package ttx
 
 import (
 	"fmt"
-	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -183,7 +182,7 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	span := trace.SpanFromContext(context.Context())
 
 	logger.Debugf("request recipient [%s] is not registered", recipient.Identity)
-	session, err := session2.NewFromInitiator(context, recipient.Identity)
+	session, err := jsession.NewFromInitiator(context, recipient.Identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session with [%s]", recipient.Identity)
 	}
@@ -207,7 +206,7 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 
 	span.AddEvent("Receive identity response")
 	recipientData := &RecipientData{}
-	err = session.ReceiveWithTimeout(recipientData, 10*time.Second)
+	err = session.Receive(recipientData)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
 	}
@@ -264,7 +263,7 @@ func (f *RequestRecipientIdentityView) aggregateAndDistribute(context view.Conte
 		if local[i] {
 			continue
 		}
-		session, err := session2.NewJSON(context, context.Initiator(), recipient.Identity)
+		session, err := jsession.NewJSON(context, context.Initiator(), recipient.Identity)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get session with [%s]", recipient.Identity)
 		}
@@ -304,7 +303,7 @@ func RespondRequestRecipientIdentityUsingWallet(context view.Context, wallet str
 func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
 	span := trace.SpanFromContext(context.Context())
 
-	session := session2.JSON(context)
+	session := jsession.FromContext(context)
 	recipientRequest := &RecipientRequest{}
 	if err := session.Receive(recipientRequest); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive recipient request")
@@ -382,7 +381,7 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 		return nil
 	}
 
-	jsonSession := session2.NewFromSession(context, session)
+	jsonSession := jsession.NewFromSession(context, session)
 
 	span.AddEvent("Receive multisig")
 	multisigRecipientData := &MultisigRecipientData{}
@@ -497,7 +496,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 
 		return []view.Identity{me, other}, nil
 	} else {
-		session, err := session2.NewFromInitiator(context, f.Other)
+		session, err := jsession.NewFromInitiator(context, f.Other)
 		if err != nil {
 			return nil, err
 		}
@@ -570,7 +569,7 @@ func RespondExchangeRecipientIdentities(context view.Context) (view.Identity, vi
 }
 
 func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
-	session := session2.JSON(context)
+	session := jsession.FromContext(context)
 
 	// other
 	request := &ExchangeRecipientRequest{}

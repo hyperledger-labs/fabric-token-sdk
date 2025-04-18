@@ -17,7 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
@@ -50,7 +50,7 @@ func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed getting session manager for network [%s]", r.Network)
 	}
 	custodian := sm.CustodianID
-	session, err := session2.NewJSON(context, context.Initiator(), view2.GetIdentityProvider(context).Identity(custodian))
+	session, err := jsession.NewJSON(context, context.Initiator(), view2.GetIdentityProvider(context).Identity(custodian))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
 	}
@@ -73,12 +73,12 @@ func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
 		Blob:    blob,
 	}
 	span.AddEvent("send_broadcast_request")
-	if err := session.SendWithContext(context.Context(), request); err != nil {
+	if err := session.Send(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
 	response := &BroadcastResponse{}
 	span.AddEvent("receive_broadcast_response")
-	if err := session.ReceiveWithTimeout(response, 30*time.Second); err != nil {
+	if err := session.Receive(response); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
 	if len(response.Err) != 0 {
@@ -97,7 +97,7 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 	span := trace.SpanFromContext(context.Context())
 
 	// receive request
-	session := session2.JSON(context)
+	session := jsession.FromContext(context)
 	request := &BroadcastRequest{}
 	span.AddEvent("receive_request")
 	if err := session.Receive(request); err != nil {
@@ -170,7 +170,7 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 	if broadcastErr != nil {
 		broadcastResponse.Err = fmt.Sprintf("failed to broadcast to [%s] with err [%s]", sm.CustodianID, broadcastErr.Error())
 	}
-	if err := session.SendWithContext(context.Context(), broadcastResponse); err != nil {
+	if err := session.Send(broadcastResponse); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil

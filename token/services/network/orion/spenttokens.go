@@ -7,13 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
-	"time"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	"github.com/pkg/errors"
 )
 
@@ -43,7 +41,7 @@ func (r *RequestSpentTokensView) Call(context view.Context) (interface{}, error)
 		return nil, errors.Wrap(err, "failed to get custodian identifier")
 	}
 	logger.Debugf("custodian: %s", custodian)
-	session, err := session2.NewJSON(context, context.Initiator(), view2.GetIdentityProvider(context).Identity(custodian))
+	session, err := jsession.NewJSON(context, context.Initiator(), view2.GetIdentityProvider(context).Identity(custodian))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
 	}
@@ -59,7 +57,7 @@ func (r *RequestSpentTokensView) Call(context view.Context) (interface{}, error)
 	logger.Debugf("request sent: %s", custodian)
 
 	response := &SpentTokensResponse{}
-	if err := session.ReceiveWithTimeout(response, 1*time.Minute); err != nil {
+	if err := session.Receive(response); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
 	logger.Debugf("response received [%v]: %s", response, custodian)
@@ -70,7 +68,7 @@ type RequestSpentTokensResponderView struct{}
 
 func (r *RequestSpentTokensResponderView) Call(context view.Context) (interface{}, error) {
 	// receive request
-	session := session2.JSON(context)
+	session := jsession.FromContext(context)
 	request := &SpentTokensRequest{}
 	if err := session.Receive(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive request")
