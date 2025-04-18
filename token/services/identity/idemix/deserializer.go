@@ -86,21 +86,21 @@ func (i *Deserializer) DeserializeVerifier(raw driver.Identity) (driver.Verifier
 	}
 
 	return &crypto2.NymSignatureVerifier{
-		CSP:   i.Deserializer.Csp,
-		IPK:   i.Deserializer.IssuerPublicKey,
+		CSP:   i.Csp,
+		IPK:   i.IssuerPublicKey,
 		NymPK: identity.NymPublicKey,
 	}, nil
 }
 
 func (i *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byte) (driver.Verifier, error) {
-	identity, err := i.Deserializer.DeserializeAgainstNymEID(raw, true, nymEID)
+	identity, err := i.DeserializeAgainstNymEID(raw, true, nymEID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to deserialize identity")
 	}
 
 	return &crypto2.NymSignatureVerifier{
-		CSP:   i.Deserializer.Csp,
-		IPK:   i.Deserializer.IssuerPublicKey,
+		CSP:   i.Csp,
+		IPK:   i.IssuerPublicKey,
 		NymPK: identity.NymPublicKey,
 	}, nil
 }
