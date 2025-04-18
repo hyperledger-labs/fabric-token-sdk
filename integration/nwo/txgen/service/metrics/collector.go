@@ -80,9 +80,10 @@ type collector struct {
 }
 
 func (c *collector) AddDuration(duration time.Duration, requestType cons.ApiRequestType, success bool) {
-	if requestType == cons.WithdrawRequest {
+	switch requestType {
+	case cons.WithdrawRequest:
 		c.addWithdrawDuration(duration, success)
-	} else if requestType == cons.PaymentTransferRequest {
+	case cons.PaymentTransferRequest:
 		c.addTransferDuration(duration, success)
 	}
 }

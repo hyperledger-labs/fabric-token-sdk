@@ -83,9 +83,10 @@ func (c *tokenInterpreter) HasTokenDetails(params driver.QueryTokenDetailsParams
 	if !params.IncludeDeleted {
 		conds = append(conds, common.ConstCondition("is_deleted = false"))
 	}
-	if params.Spendable == driver.NonSpendableOnly {
+	switch params.Spendable {
+	case driver.NonSpendableOnly:
 		conds = append(conds, common.ConstCondition("spendable = false"))
-	} else if params.Spendable == driver.SpendableOnly {
+	case driver.SpendableOnly:
 		conds = append(conds, common.ConstCondition("spendable = true"))
 	}
 	if len(params.LedgerTokenFormats) > 0 {
@@ -105,9 +106,10 @@ func (c *tokenInterpreter) HasMovementsParams(params driver.QueryMovementsParams
 		conds = append(conds, common.ConstCondition(fmt.Sprintf("status != %d", driver.Deleted)))
 	}
 
-	if params.MovementDirection == driver.Sent {
+	switch params.MovementDirection {
+	case driver.Sent:
 		conds = append(conds, common.ConstCondition("amount < 0"))
-	} else if params.MovementDirection == driver.Received {
+	case driver.Received:
 		conds = append(conds, common.ConstCondition("amount > 0"))
 	}
 	return c.And(conds...)
