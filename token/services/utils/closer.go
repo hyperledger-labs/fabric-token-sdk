@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package utils
 
 // IgnoreError runs a function that returns an error and silently ignores the error.
