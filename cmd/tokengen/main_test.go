@@ -15,6 +15,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -38,7 +39,7 @@ func TestGenFullSuccess(t *testing.T) {
 
 	tempOutput, err := os.MkdirTemp("", "tokengen-test")
 	gt.Expect(err).NotTo(HaveOccurred())
-	defer os.RemoveAll(tempOutput)
+	defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
 
 	testGenRun(
 		gt,
@@ -74,7 +75,7 @@ func TestFullUpdate(t *testing.T) {
 
 	tempOutput, err := os.MkdirTemp("", "tokengen-update-test")
 	gt.Expect(err).NotTo(HaveOccurred())
-	defer os.RemoveAll(tempOutput)
+	defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
 
 	// Switching the auditor and issuer certs to test the update function
 	testGenRun(
@@ -111,7 +112,7 @@ func TestPartialUpdate(t *testing.T) {
 
 	tempOutput, err := os.MkdirTemp("", "tokengen-update-test")
 	gt.Expect(err).NotTo(HaveOccurred())
-	defer os.RemoveAll(tempOutput)
+	defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
 
 	// Only changing the issuer cert to also use the auditor cert.
 	// The other auditor cert should stay the same.

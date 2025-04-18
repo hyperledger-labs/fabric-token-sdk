@@ -24,7 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/pkg/errors"
 	"github.com/tedsuo/ifrit"
@@ -160,7 +160,7 @@ func (i *IdemixCASupport) Start() error {
 	members := grouper.Members{}
 	members = append(members, grouper.Member{Name: command.SessionName(), Runner: runner.New(config)})
 	i.process = ifrit.Invoke(grouper.NewOrdered(syscall.SIGTERM, members))
-	Eventually(i.process.Ready(), i.StartEventuallyTimeout).Should(BeClosed(), "fabric-ca-server didn't start timely")
+	gomega.Eventually(i.process.Ready(), i.StartEventuallyTimeout).Should(gomega.BeClosed(), "fabric-ca-server didn't start timely")
 
 	// enroll admin
 	caName := i.TMS.ID() + ".example.com"
@@ -176,7 +176,7 @@ func (i *IdemixCASupport) Start() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to start admin enrollment")
 	}
-	Eventually(sess, i.EventuallyTimeout).Should(gexec.Exit(0))
+	gomega.Eventually(sess, i.EventuallyTimeout).Should(gexec.Exit(0))
 
 	return nil
 }
@@ -217,7 +217,7 @@ func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, er
 	if err != nil {
 		return
 	}
-	Eventually(sess, i.EventuallyTimeout).Should(gexec.Exit(0))
+	gomega.Eventually(sess, i.EventuallyTimeout).Should(gexec.Exit(0))
 
 	enrollCommand := &CAClientEnroll{
 		Home:           "",
@@ -232,7 +232,7 @@ func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, er
 	if err != nil {
 		return
 	}
-	Eventually(sess, i.EventuallyTimeout).Should(gexec.Exit(0))
+	gomega.Eventually(sess, i.EventuallyTimeout).Should(gexec.Exit(0))
 
 	res.ID = owner
 	res.URL = userOutput
@@ -287,14 +287,16 @@ func (i *IdemixCASupport) GenerateConfiguration() error {
 
 func (i *IdemixCASupport) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, error) {
 	ansiColorCode := i.nextColor()
-	fmt.Fprintf(
+	if _, err := fmt.Fprintf(
 		ginkgo.GinkgoWriter,
 		"\x1b[33m[d]\x1b[%s[%s]\x1b[0m starting %s %s\n",
 		ansiColorCode,
 		name,
 		filepath.Base(cmd.Args[0]),
 		strings.Join(cmd.Args[1:], " "),
-	)
+	); err != nil {
+		return nil, err
+	}
 	return gexec.Start(
 		cmd,
 		gexec.NewPrefixedWriter(

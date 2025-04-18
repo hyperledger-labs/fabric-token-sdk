@@ -37,5 +37,5 @@ func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, 
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	return d.base.newWalletService(tmsConfig, nil, d.storageProvider, nil, logger, nil, nil, pp, true)
+	return d.newWalletService(tmsConfig, nil, d.storageProvider, nil, logger, nil, nil, pp, true)
 }

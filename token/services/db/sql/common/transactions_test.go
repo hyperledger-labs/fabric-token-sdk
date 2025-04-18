@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 func TestTransactionsSqlite(t *testing.T) {
@@ -28,7 +29,7 @@ func TestTransactionsSqlite(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
+			defer utils.IgnoreError(db.Close)
 			c.Fn(xt, db)
 		})
 	}
@@ -45,7 +46,7 @@ func TestTransactionsSqliteMemory(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
+			defer utils.IgnoreError(db.Close)
 			c.Fn(xt, db)
 		})
 	}
@@ -65,7 +66,7 @@ func TestTransactionsPostgres(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
+			defer utils.IgnoreError(db.Close)
 			c.Fn(xt, db)
 		})
 	}

@@ -13,6 +13,7 @@ import (
 	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/dbtest"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/memory"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 func TestMemory(t *testing.T) {
@@ -24,7 +25,7 @@ func TestMemory(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
+			defer utils.IgnoreError(db.Close)
 			c.Fn(xt, db)
 		})
 	}

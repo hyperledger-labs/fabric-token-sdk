@@ -25,7 +25,7 @@ func Wrap(tx *ttx.Transaction) *Transaction {
 
 // Lock locks the given amount of tokens of the given type in the sender's wallet and transfers them to the recipient.
 func (t *Transaction) Lock(senderWallet *token2.OwnerWallet, tokenType token.Type, amount uint64, recipient token2.Identity, opts ...token2.TransferOption) error {
-	return t.Transaction.Transfer(
+	return t.Transfer(
 		senderWallet,
 		tokenType,
 		[]uint64{amount},
@@ -42,7 +42,7 @@ func (t *Transaction) Spend(senderWallet *token2.OwnerWallet, at *token.UnspentT
 		return errors.Wrapf(err, "failed to convert quantity [%s] to uint64", at.Quantity)
 	}
 
-	return t.Transaction.Transfer(
+	return t.Transfer(
 		senderWallet,
 		at.Type,
 		[]uint64{q.ToBigInt().Uint64()},

@@ -44,7 +44,7 @@ type Quantity interface {
 }
 
 // ToQuantity converts a string q to a Quantity of a given precision.
-// Argument q is supposed to be formatted following big.Int#scan specification.
+// Argument q is supposed to be formatted following big#scan specification.
 // The precision is expressed in bits.
 func ToQuantity(q string, precision uint64) (Quantity, error) {
 	if precision == 0 {
@@ -69,8 +69,8 @@ func ToQuantity(q string, precision uint64) (Quantity, error) {
 	}
 }
 
-// UInt64ToQuantity converts a uint64 q to a Quantity of a given precision.
-// Argument q is supposed to be formatted following big.Int#scan specification.
+// UInt64ToQuantity converts an uint64 q to a Quantity of a given precision.
+// Argument q is supposed to be formatted following big#scan specification.
 // The precision is expressed in bits.
 func UInt64ToQuantity(u uint64, precision uint64) (Quantity, error) {
 	if precision == 0 {
@@ -160,7 +160,7 @@ func (q *BigQuantity) Sub(b Quantity) Quantity {
 	}
 
 	// Check overflow
-	if q.Int.Cmp(bq.Int) < 0 {
+	if q.Cmp(bq) < 0 {
 		panic(fmt.Sprintf("%s < %s", q.Text(10), b.Decimal()))
 	}
 	diff := big.NewInt(0)
@@ -185,15 +185,15 @@ func (q *BigQuantity) Cmp(b Quantity) int {
 }
 
 func (q *BigQuantity) Hex() string {
-	return "0x" + q.Int.Text(16)
+	return "0x" + q.Text(16)
 }
 
 func (q *BigQuantity) Decimal() string {
-	return q.Int.Text(10)
+	return q.Text(10)
 }
 
 func (q *BigQuantity) String() string {
-	return q.Int.Text(10)
+	return q.Text(10)
 }
 
 func (q *BigQuantity) ToBigInt() *big.Int {
