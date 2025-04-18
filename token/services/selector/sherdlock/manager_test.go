@@ -78,7 +78,7 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 }
 
 func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
-	d := &postgres.Driver{}
+	d := postgres.NewDriver()
 	config := multiplexed.MockTypeConfig(postgres2.Persistence, postgres2.Config{
 		TablePrefix:  "test",
 		DataSource:   pgConnStr,
@@ -88,7 +88,7 @@ func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (tes
 	if err != nil {
 		return nil, err
 	}
-	tokenDB, err := d.NewOwnerTransaction(config)
+	tokenDB, err := d.NewToken(config)
 	if err != nil {
 		return nil, errors.Join(err, lockDB.Close())
 	}
