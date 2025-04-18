@@ -170,11 +170,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 	answerChan chan *answer) {
 	defer logger.Debugf("received response for from [%v]", party)
 
-	initiator := context.Initiator()
-	if c.options.Initiator != nil {
-		initiator = c.options.Initiator
-	}
-	s, err := session.NewJSON(context, initiator, party)
+	backendSession, err := context.GetSession(c, party, context.Initiator())
 	if err != nil {
 		answerChan <- &answer{
 			err:   errors.Wrapf(err, "failed to create session with [%s]", party),
@@ -182,6 +178,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 		}
 		return
 	}
+	s := session.NewFromSession(context, backendSession)
 
 	// Wait to receive a Transaction back
 	logger.Debugf("send request to [%v]", party)
