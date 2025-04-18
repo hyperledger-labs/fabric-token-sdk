@@ -18,6 +18,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -203,8 +204,8 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			err = out.Sync()
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			in.Close()
-			out.Close()
+			utils.IgnoreError(in.Close)
+			utils.IgnoreError(out.Close)
 
 			// delete keystore/priv_sk so that the token-sdk will interpreter this wallet as a remote one
 			gomega.Expect(os.Remove(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))).NotTo(gomega.HaveOccurred())
@@ -237,7 +238,7 @@ func (d *CryptoMaterialGenerator) GenerateCryptoConfig(output string, layout *La
 	gomega.Expect(os.MkdirAll(output, 0770)).NotTo(gomega.HaveOccurred())
 	crypto, err := os.Create(filepath.Join(output, "crypto-config.yaml"))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	defer crypto.Close()
+	defer utils.IgnoreError(crypto.Close)
 
 	t, err := template.New("crypto").Parse(DefaultCryptoTemplate)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -262,14 +263,16 @@ func (d *CryptoMaterialGenerator) Cryptogen(command common.Command) (*gexec.Sess
 
 func (d *CryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, error) {
 	ansiColorCode := d.NextColor()
-	fmt.Fprintf(
+	if _, err := fmt.Fprintf(
 		ginkgo.GinkgoWriter,
 		"\x1b[33m[d]\x1b[%s[%s]\x1b[0m starting %s %s\n",
 		ansiColorCode,
 		name,
 		filepath.Base(cmd.Args[0]),
 		strings.Join(cmd.Args[1:], " "),
-	)
+	); err != nil {
+		return nil, err
+	}
 	return gexec.Start(
 		cmd,
 		gexec.NewPrefixedWriter(

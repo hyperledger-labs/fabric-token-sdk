@@ -489,7 +489,10 @@ func (l *LocalMembership) storedIdentityConfigurations() ([]idriver.IdentityConf
 	if err != nil {
 		return nil, errors2.WithMessagef(err, "failed to get registered identities from kvs")
 	}
-	defer it.Close()
+	defer func() {
+		err := it.Close()
+		l.logger.Errorf("failed to close identity configurations iterator: %v", err)
+	}()
 	// copy the iterator
 	items := make([]idriver.IdentityConfiguration, 0)
 	for it.HasNext() {
