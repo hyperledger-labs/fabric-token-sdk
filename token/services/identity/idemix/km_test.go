@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	idemix2 "github.com/IBM/idemix"
-	"github.com/IBM/idemix/bccsp/types"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -47,14 +46,14 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 
 	// check that version is enforced
 	config.Version = 0
-	_, err = NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	_, err = NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "unsupported protocol version [0]")
 	config.Version = crypto2.ProtobufProtocolVersionV1
 
 	// new key manager loaded from file
 	assert.Empty(t, config.Signer.Ski)
-	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 	assert.False(t, keyManager.IsRemote())
@@ -145,7 +144,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.Error(t, err)
 	assert.EqualError(t, err, "unsupported signature type -1")
 	// correctly
-	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 
@@ -334,7 +333,7 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
-	p, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -344,7 +343,7 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
-	p2, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p2, err := NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p2)
 
@@ -390,14 +389,14 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 	// first key manager
 	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
-	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 
 	// second key manager
 	config, err = crypto2.NewConfig(configPath + "2")
 	assert.NoError(t, err)
-	keyManager2, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager2, err := NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager2)
 
@@ -568,7 +567,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err = NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err = NewKeyManager(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
