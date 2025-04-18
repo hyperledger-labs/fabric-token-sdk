@@ -132,7 +132,9 @@ func (i *Insert) Compile() (string, error) {
 	sb.WriteString("VALUES ")
 	sb.WriteString("($1")
 	for i := 2; i <= len(splitRows); i++ {
-		sb.WriteString(fmt.Sprintf(", $%d", i))
+		if _, err := fmt.Fprintf(sb, ", $%d", i); err != nil {
+			return "", err
+		}
 	}
 	sb.WriteString(")")
 	return sb.String(), nil
@@ -174,7 +176,9 @@ func (u *Update) Compile() (string, error) {
 	sb.WriteString(" SET ")
 	splitRows := strings.Split(u.rows, ",")
 	for i, row := range splitRows {
-		sb.WriteString(fmt.Sprintf("%s = $%d", strings.TrimSpace(row), counter))
+		if _, err := fmt.Fprintf(sb, "%s = $%d", strings.TrimSpace(row), counter); err != nil {
+			return "", err
+		}
 		if i < len(splitRows)-1 {
 			sb.WriteString(", ")
 		}
@@ -189,7 +193,9 @@ func (u *Update) Compile() (string, error) {
 		if !strings.Contains(u.where, "$") {
 			splitWhere := strings.Split(u.where, ",")
 			for i, row := range splitWhere {
-				sb.WriteString(fmt.Sprintf("%s = $%d", row, counter))
+				if _, err := fmt.Fprintf(sb, "%s = $%d", row, counter); err != nil {
+					return "", err
+				}
 				if i < len(splitWhere)-1 {
 					sb.WriteString(" AND ")
 				}
