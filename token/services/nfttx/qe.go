@@ -50,7 +50,7 @@ func NewQueryExecutor(sp token.ServiceProvider, wallet string, precision uint64,
 }
 
 func (s *QueryExecutor) QueryByKey(state interface{}, key string, value string) error {
-	ids, err := s.selector.Filter(&jsonFilter{
+	ids, err := s.Filter(&jsonFilter{
 		q:     gojsonq.New(),
 		key:   key,
 		value: value,
@@ -61,7 +61,7 @@ func (s *QueryExecutor) QueryByKey(state interface{}, key string, value string) 
 		}
 		return errors.Wrap(err, "failed to filter")
 	}
-	tokens, err := s.vault.GetTokens(ids...)
+	tokens, err := s.GetTokens(ids...)
 	if err != nil {
 		return errors.Wrap(err, "failed to get tokens")
 	}

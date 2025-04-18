@@ -133,5 +133,5 @@ func NewSignerProvider(walletManagerProvider *WalletManagerProvider, id string, 
 }
 
 func (s *SignerProvider) GetSigner(party view.Identity) (token.Signer, error) {
-	return s.WalletManagerProvider.GetSinger(s.Id, s.Wallet, party)
+	return s.GetSinger(s.Id, s.Wallet, party)
 }
