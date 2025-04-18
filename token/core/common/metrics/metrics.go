@@ -10,6 +10,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 )
 
+//go:generate counterfeiter -o mock/provider.go -fake-name Provider . Provider
+
 type (
 	CounterOpts   = metrics.CounterOpts
 	Counter       = metrics.Counter
@@ -20,5 +22,3 @@ type (
 	Provider      = metrics.Provider
 	MetricLabel   = string
 )
-
-var GetProvider = metrics.GetProvider
