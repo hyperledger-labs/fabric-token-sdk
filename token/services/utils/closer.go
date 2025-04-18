@@ -11,7 +11,8 @@ package utils
 // is non-critical and can be safely discarded.
 //
 // Example:
-//   defer IgnoreError(file.Close)
+//
+//	defer IgnoreError(file.Close)
 func IgnoreError(fn func() error) {
 	_ = fn()
 }
