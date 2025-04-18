@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	"github.com/pkg/errors"
 )
 
@@ -136,7 +136,7 @@ func (t *TMS) SetNamespace(namespace string) *TMS {
 	// Check if another namespace already exists in the same <network,channel>
 	for _, tms := range t.TokenTopology.GetTMSs() {
 		if tms.Network == t.Network && tms.Channel == t.Channel {
-			Expect(tms.Namespace).To(Not(Equal(namespace)), "Namespace [%s] already exists", namespace)
+			gomega.Expect(tms.Namespace).To(gomega.Not(gomega.Equal(namespace)), "Namespace [%s] already exists", namespace)
 		}
 	}
 

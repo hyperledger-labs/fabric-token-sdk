@@ -154,7 +154,7 @@ func (s *TestSuite) Setup() {
 
 	// Create the integration ii
 	network, err := s.generator()
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	s.II = network
 	network.RegisterPlatformFactory(token.NewPlatformFactory())
 	network.Generate()
