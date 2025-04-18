@@ -39,24 +39,91 @@ func (p *Proof) Deserialize(bytes []byte) error {
 	return asn1.Unmarshal[asn1.Serializer](bytes, p.TypeAndSum, p.RangeCorrectness)
 }
 
+func (p *Proof) Validate(curve math.CurveID) error {
+	if p.TypeAndSum == nil {
+		return errors.New("invalid transfer proof")
+	}
+	if err := p.TypeAndSum.Validate(curve); err != nil {
+		return errors.Wrapf(err, "invalid transfer proof")
+	}
+	if p.RangeCorrectness == nil {
+		return nil
+	}
+	err := p.RangeCorrectness.Validate(curve)
+	if err != nil {
+		return errors.Wrapf(err, "invalid transfer proof")
+	}
+	return nil
+}
+
 // Verifier verifies if a Action is valid
 type Verifier struct {
+	PP               *v1.PublicParams
 	TypeAndSum       *TypeAndSumVerifier
 	RangeCorrectness *rp.RangeCorrectnessVerifier
 }
 
 // NewVerifier returns a Action Verifier as a function of the passed parameters
 func NewVerifier(inputs, outputs []*math.G1, pp *v1.PublicParams) *Verifier {
-	v := &Verifier{}
-	v.TypeAndSum = NewTypeAndSumVerifier(pp.PedersenGenerators, inputs, outputs, math.Curves[pp.Curve])
-
 	// check if this is an ownership transfer
 	// if so, skip range proof, well-formedness proof is enough
+	var rangeCorrectness *rp.RangeCorrectnessVerifier
 	if len(inputs) != 1 || len(outputs) != 1 {
-		v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
+		rangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
 	}
 
-	return v
+	return &Verifier{
+		PP:               pp,
+		TypeAndSum:       NewTypeAndSumVerifier(pp.PedersenGenerators, inputs, outputs, math.Curves[pp.Curve]),
+		RangeCorrectness: rangeCorrectness,
+	}
+}
+
+// Verify checks validity of serialized Proof
+func (v *Verifier) Verify(proofRaw []byte) error {
+	proof := Proof{}
+	err := proof.Deserialize(proofRaw)
+	if err != nil {
+		return errors.Wrap(err, "invalid transfer proof")
+	}
+	if err := proof.Validate(v.PP.Curve); err != nil {
+		return errors.Wrap(err, "invalid transfer proof")
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	var tspErr, rangeErr error
+
+	// verify well-formedness of inputs and outputs
+	tspErr = v.TypeAndSum.Verify(proof.TypeAndSum)
+
+	go func() {
+		defer wg.Done()
+		// verify range proof
+		if v.RangeCorrectness != nil {
+			if proof.RangeCorrectness == nil {
+				rangeErr = errors.New("invalid transfer proof")
+			} else {
+				commitmentToType := proof.TypeAndSum.CommitmentToType.Copy()
+				coms := make([]*math.G1, len(v.TypeAndSum.Outputs))
+				for i := 0; i < len(v.TypeAndSum.Outputs); i++ {
+					coms[i] = v.TypeAndSum.Outputs[i].Copy()
+					coms[i].Sub(commitmentToType)
+				}
+				v.RangeCorrectness.Commitments = coms
+				rangeErr = v.RangeCorrectness.Verify(proof.RangeCorrectness)
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	if tspErr != nil {
+		return errors.Wrap(tspErr, "invalid transfer proof")
+	}
+
+	return rangeErr
 }
 
 // Prover produces a proof that a Action is valid
@@ -162,51 +229,4 @@ func (p *Prover) Prove() ([]byte, error) {
 	}
 
 	return proof.Serialize()
-}
-
-// Verify checks validity of serialized Proof
-func (v *Verifier) Verify(proof []byte) error {
-	tp := Proof{}
-	err := tp.Deserialize(proof)
-	if err != nil {
-		return errors.Wrap(err, "invalid transfer proof")
-	}
-	if tp.TypeAndSum == nil {
-		return errors.New("invalid transfer proof")
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	var tspErr, rangeErr error
-
-	// verify well-formedness of inputs and outputs
-	tspErr = v.TypeAndSum.Verify(tp.TypeAndSum)
-
-	go func() {
-		defer wg.Done()
-		// verify range proof
-		if v.RangeCorrectness != nil {
-			if tp.RangeCorrectness == nil {
-				rangeErr = errors.New("invalid transfer proof")
-			} else {
-				commitmentToType := tp.TypeAndSum.CommitmentToType.Copy()
-				coms := make([]*math.G1, len(v.TypeAndSum.Outputs))
-				for i := 0; i < len(v.TypeAndSum.Outputs); i++ {
-					coms[i] = v.TypeAndSum.Outputs[i].Copy()
-					coms[i].Sub(commitmentToType)
-				}
-				v.RangeCorrectness.Commitments = coms
-				rangeErr = v.RangeCorrectness.Verify(tp.RangeCorrectness)
-			}
-		}
-	}()
-
-	wg.Wait()
-
-	if tspErr != nil {
-		return errors.Wrap(tspErr, "invalid transfer proof")
-	}
-
-	return rangeErr
 }
