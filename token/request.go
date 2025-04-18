@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -1381,7 +1382,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType to
 				return nil, nil, errors.Wrapf(err, "failed to get selector manager")
 			}
 			selector, err = sm.NewSelector(r.Anchor)
-			defer sm.Close(r.Anchor)
+			defer utils.IgnoreErrorWithOneArg(sm.Close, r.Anchor)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting default selector")
 			}
