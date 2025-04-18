@@ -37,8 +37,8 @@ var (
 	logger      = logging.MustGetLogger("token-sdk.auditdb")
 )
 
-func NewManager(dh *db.DriverHolder, keys ...string) *Manager {
-	return db.MappedManager[driver.AuditTransactionDB, *DB](dh.NewAuditTransactionManager(keys...), newDB)
+func NewManager(dh *db.DriverHolder) *Manager {
+	return db.MappedManager[driver.AuditTransactionDB, *DB](dh.NewAuditTransactionManager(), newDB)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {

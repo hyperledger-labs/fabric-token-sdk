@@ -17,7 +17,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
@@ -29,8 +30,8 @@ func TestDB(t *testing.T) {
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 
-	dh := db.NewDriverHolder(cp, sql.NewDriver())
-	manager := ttxdb.NewManager(dh, "ttxdb.persistence")
+	var dh = db.NewDriverHolder(cp, multiplexed.Driver{sqlite.NewNamedDriver()})
+	manager := ttxdb.NewManager(dh)
 	db1, err := manager.DBByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	db2, err := manager.DBByTMSId(token.TMSID{Network: "grapes"})

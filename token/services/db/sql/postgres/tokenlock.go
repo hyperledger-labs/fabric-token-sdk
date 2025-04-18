@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -21,8 +21,16 @@ type TokenLockDB struct {
 	*common.TokenLockDB
 }
 
-func NewTokenLockDB(readDB, writeDB *sql.DB, k common.NewDBOpts) (driver.TokenLockDB, error) {
-	tldb, err := common.NewTokenLockDB(readDB, writeDB, k)
+func NewTokenLockDB(opts postgres.Opts) (*TokenLockDB, error) {
+	dbs, err := postgres.DbProvider.OpenDB(opts)
+	if err != nil {
+		return nil, err
+	}
+	tableNames, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
+	if err != nil {
+		return nil, err
+	}
+	tldb, err := common.NewTokenLockDB(dbs.ReadDB, dbs.WriteDB, tableNames)
 	if err != nil {
 		return nil, err
 	}

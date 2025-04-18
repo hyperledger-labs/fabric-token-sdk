@@ -49,32 +49,22 @@ func newTransactionDB(readDB, writeDB *sql.DB, tables transactionTables, ci Toke
 	}
 }
 
-func NewAuditTransactionDB(readDB, writeDB *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.AuditTransactionDB, error) {
-	return NewTransactionDB(readDB, writeDB, NewDBOpts{
-		DataSource:   opts.DataSource,
-		TablePrefix:  opts.TablePrefix + "_aud",
-		CreateSchema: opts.CreateSchema,
-	}, ci)
+func NewAuditTransactionDB(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter) (*TransactionDB, error) {
+	return NewTransactionDB(readDB, writeDB, tables, ci)
 }
 
-func NewTransactionDB(readDB, writeDB *sql.DB, opts NewDBOpts, ci TokenInterpreter) (driver.TokenTransactionDB, error) {
-	tables, err := GetTableNames(opts.TablePrefix)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names")
-	}
-	transactionsDB := newTransactionDB(readDB, writeDB, transactionTables{
+func NewTransactionDB(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter) (*TransactionDB, error) {
+	return newTransactionDB(readDB, writeDB, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
 		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
-	}, ci)
-	if opts.CreateSchema {
-		if err = common.InitSchema(writeDB, []string{transactionsDB.GetSchema()}...); err != nil {
-			return nil, err
-		}
-	}
-	return transactionsDB, nil
+	}, ci), nil
+}
+
+func (db *TransactionDB) CreateSchema() error {
+	return common.InitSchema(db.writeDB, db.GetSchema())
 }
 
 func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
@@ -265,7 +255,6 @@ func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string]
 }
 
 func (db *TransactionDB) Close() error {
-	logger.Info("closing database")
 	if db.readDB != db.writeDB {
 		return errors2.Join(db.readDB.Close(), db.writeDB.Close())
 	}

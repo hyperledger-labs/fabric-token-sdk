@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
@@ -30,26 +30,23 @@ type tableNames struct {
 	TokenLocks             string
 }
 
-func GetTableNames(prefix string) (tableNames, error) {
-	nc, err := common.NewTableNameCreator(prefix)
-	if err != nil {
-		return tableNames{}, err
-	}
+func GetTableNames(prefix string, params ...string) (tableNames, error) {
+	nc := db.NewTableNameCreator()
 
 	return tableNames{
-		Movements:              nc.MustGetTableName("movements"),
-		Transactions:           nc.MustGetTableName("transactions"),
-		TransactionEndorseAck:  nc.MustGetTableName("transaction_endorsements"),
-		Requests:               nc.MustGetTableName("requests"),
-		Validations:            nc.MustGetTableName("request_validations"),
-		Tokens:                 nc.MustGetTableName("tokens"),
-		Ownership:              nc.MustGetTableName("token_ownership"),
-		Certifications:         nc.MustGetTableName("token_certifications"),
-		TokenLocks:             nc.MustGetTableName("token_locks"),
-		PublicParams:           nc.MustGetTableName("public_params"),
-		Wallets:                nc.MustGetTableName("wallets"),
-		IdentityConfigurations: nc.MustGetTableName("identity_configurations"),
-		IdentityInfo:           nc.MustGetTableName("identity_information"),
-		Signers:                nc.MustGetTableName("identity_signers"),
+		Movements:              nc.MustGetTableName(prefix, "movements", params...),
+		Transactions:           nc.MustGetTableName(prefix, "txs", params...),
+		TransactionEndorseAck:  nc.MustGetTableName(prefix, "tx_ends", params...),
+		Requests:               nc.MustGetTableName(prefix, "requests", params...),
+		Validations:            nc.MustGetTableName(prefix, "req_vals", params...),
+		Tokens:                 nc.MustGetTableName(prefix, "tokens", params...),
+		Ownership:              nc.MustGetTableName(prefix, "tkn_own", params...),
+		Certifications:         nc.MustGetTableName(prefix, "tkn_crts", params...),
+		TokenLocks:             nc.MustGetTableName(prefix, "tkn_locks", params...),
+		PublicParams:           nc.MustGetTableName(prefix, "public_params", params...),
+		Wallets:                nc.MustGetTableName(prefix, "wallets", params...),
+		IdentityConfigurations: nc.MustGetTableName(prefix, "id_cfgs", params...),
+		IdentityInfo:           nc.MustGetTableName(prefix, "id_info", params...),
+		Signers:                nc.MustGetTableName(prefix, "id_signers", params...),
 	}, nil
 }
