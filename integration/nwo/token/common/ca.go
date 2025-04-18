@@ -287,14 +287,16 @@ func (i *IdemixCASupport) GenerateConfiguration() error {
 
 func (i *IdemixCASupport) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, error) {
 	ansiColorCode := i.nextColor()
-	fmt.Fprintf(
+	if _, err := fmt.Fprintf(
 		ginkgo.GinkgoWriter,
 		"\x1b[33m[d]\x1b[%s[%s]\x1b[0m starting %s %s\n",
 		ansiColorCode,
 		name,
 		filepath.Base(cmd.Args[0]),
 		strings.Join(cmd.Args[1:], " "),
-	)
+	); err != nil {
+		return nil, err
+	}
 	return gexec.Start(
 		cmd,
 		gexec.NewPrefixedWriter(

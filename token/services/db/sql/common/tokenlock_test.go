@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 func TestTokenLockSqlite(t *testing.T) {
@@ -35,12 +36,12 @@ func TestTokenLockSqlite(t *testing.T) {
 			MaxOpenConns: 10,
 		}, sqlite.NewTransactionDB)
 		if err != nil {
-			tokenLockDB.Close()
+			utils.IgnoreError(tokenLockDB.Close)
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer tokenLockDB.Close()
-			defer tokenTransactionDB.Close()
+			defer utils.IgnoreError(tokenLockDB.Close)
+			defer utils.IgnoreError(tokenTransactionDB.Close)
 			c.Fn(xt, tokenLockDB, tokenTransactionDB)
 		})
 	}
@@ -62,12 +63,12 @@ func TestTokenLockMemory(t *testing.T) {
 			MaxOpenConns: 10,
 		}, sqlite.NewTransactionDB)
 		if err != nil {
-			tokenLockDB.Close()
+			utils.IgnoreError(tokenLockDB.Close)
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer tokenLockDB.Close()
-			defer tokenTransactionDB.Close()
+			defer utils.IgnoreError(tokenLockDB.Close)
+			defer utils.IgnoreError(tokenTransactionDB.Close)
 			c.Fn(xt, tokenLockDB, tokenTransactionDB)
 		})
 	}
@@ -92,12 +93,12 @@ func TestTokenLockPostgres(t *testing.T) {
 			MaxOpenConns: 10,
 		}, postgres.NewTransactionDB)
 		if err != nil {
-			tokenLockDB.Close()
+			utils.IgnoreError(tokenLockDB.Close)
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer tokenLockDB.Close()
-			defer tokenTransactionDB.Close()
+			defer utils.IgnoreError(tokenLockDB.Close)
+			defer utils.IgnoreError(tokenTransactionDB.Close)
 			c.Fn(xt, tokenLockDB, tokenTransactionDB)
 		})
 	}

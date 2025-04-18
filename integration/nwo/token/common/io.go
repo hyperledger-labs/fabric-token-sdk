@@ -10,6 +10,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 func CopyFile(src, dst string) error {
@@ -22,12 +24,12 @@ func CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer sf.Close()
+	defer utils.IgnoreError(sf.Close)
 	df, err := os.Create(cleanDst)
 	if err != nil {
 		return err
 	}
-	defer df.Close()
+	defer utils.IgnoreError(df.Close)
 	_, err = io.Copy(df, sf)
 	return err
 }
