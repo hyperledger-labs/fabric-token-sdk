@@ -136,9 +136,13 @@ func WithRestRecipientIdentity(recipientData *RecipientData) TransferOption {
 // AuditRecord models the audit record returned by the audit command
 // It contains the token request's anchor, inputs (with Type and Quantity), and outputs
 type AuditRecord struct {
-	Anchor     string
-	Inputs     *InputStream
-	Outputs    *OutputStream
+	// Anchor is used to bind the Actions to a given Transaction
+	Anchor string
+	// Inputs represent the input tokens of the transaction
+	Inputs *InputStream
+	// Outputs represent the output tokens of the transaction
+	Outputs *OutputStream
+	// Attributes are metadata which are stored on the public ledger as part of the transaction Actions.
 	Attributes map[string][]byte
 }
 

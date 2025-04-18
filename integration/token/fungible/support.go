@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -246,6 +247,10 @@ func matchTransactionRecord(tx *ttxdb.TransactionRecord, txExpected TransactionR
 	if tx.Amount.Cmp(txExpected.Amount) != 0 {
 		return errors.Errorf("tx [%d] tx.Amount: %d, txExpected.Amount: %d", i, tx.Amount, txExpected.Amount)
 	}
+	if len(txExpected.PublicMetadata) > 0 && !reflect.DeepEqual(tx.PublicMetadata, txExpected.PublicMetadata) {
+		return errors.Errorf("tx [%d] tx.PublicMetadata: %+v, txExpected.PublicMetadata: %+v", i, tx.PublicMetadata, txExpected.PublicMetadata)
+	}
+
 	return nil
 }
 
