@@ -15,7 +15,7 @@ import (
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft/views"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 func TestAll(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
@@ -28,7 +28,7 @@ func TestAll(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
 	time.Sleep(10 * time.Second)
 
 	_, err := network.Client(auditor.ReplicaName()).CallView("registerAuditor", nil)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	houseID := issueHouse(network, issuer, alice, 4)
 	queryHouse(network, alice, houseID, "5th Avenue")
 	queryHouse(network, bob, houseID, "5th Avenue", "failed loading house with id")
@@ -44,7 +44,7 @@ func issueHouse(network *integration.Infrastructure, issuer, recipient *token3.N
 		Address:      "5th Avenue",
 		Valuation:    valuation,
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	time.Sleep(5 * time.Second)
 	return common.JSONUnmarshalString(houseIDBoxed)
 }
@@ -54,7 +54,7 @@ func transferHouse(network *integration.Infrastructure, houseID string, from, to
 		HouseID:   houseID,
 		Recipient: to.Id(),
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	common2.CheckFinality(network, to, common.JSONUnmarshalString(txIDBoxed), nil, false)
 }
 
@@ -63,15 +63,15 @@ func queryHouse(network *integration.Infrastructure, client *token3.NodeReferenc
 		HouseID: houseID,
 	}))
 	if len(errorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		h := &views.House{}
-		Expect(json.Unmarshal(resBoxed.([]byte), h)).NotTo(HaveOccurred())
-		Expect(h.LinearID).To(BeEquivalentTo(houseID))
-		Expect(h.Address).To(BeEquivalentTo(address))
+		gomega.Expect(json.Unmarshal(resBoxed.([]byte), h)).NotTo(gomega.HaveOccurred())
+		gomega.Expect(h.LinearID).To(gomega.BeEquivalentTo(houseID))
+		gomega.Expect(h.Address).To(gomega.BeEquivalentTo(address))
 	} else {
-		Expect(err).To(HaveOccurred())
+		gomega.Expect(err).To(gomega.HaveOccurred())
 		for _, msg := range errorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
+			gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg))
 		}
 	}
 }

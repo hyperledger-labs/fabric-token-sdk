@@ -18,7 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/cash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/house"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 const (
@@ -51,7 +51,7 @@ func TestAll(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
 
 func registerAuditor(network *integration.Infrastructure) {
 	_, err := network.Client("auditor").CallView("registerAuditor", nil)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 func issueCash(network *integration.Infrastructure, issuer *token3.NodeReference, buyer *token3.NodeReference) {
@@ -61,7 +61,7 @@ func issueCash(network *integration.Infrastructure, issuer *token3.NodeReference
 		Quantity:     10,
 		Recipient:    buyer.Id(),
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	time.Sleep(5 * time.Second)
 }
 
@@ -72,7 +72,7 @@ func issueHouse(network *integration.Infrastructure, valuation uint64, issuer *t
 		Address:      "5th Avenue",
 		Valuation:    valuation,
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	time.Sleep(5 * time.Second)
 	return common.JSONUnmarshalString(houseIDBoxed)
 }
@@ -82,7 +82,7 @@ func sellHouse(network *integration.Infrastructure, houseID string, seller *toke
 		HouseID: houseID,
 		Buyer:   buyer.Id(),
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	common2.CheckFinality(network, buyer, common.JSONUnmarshalString(txIDBoxed), nil, false)
 }
 
@@ -91,14 +91,14 @@ func checkBalance(network *integration.Infrastructure, ref *token3.NodeReference
 		Wallet: wallet,
 		Type:   typ,
 	}))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	b := &views2.Balance{}
 	common.JSONUnmarshal(res.([]byte), b)
-	Expect(b.Type).To(BeEquivalentTo(typ))
+	gomega.Expect(b.Type).To(gomega.BeEquivalentTo(typ))
 	q, err := token2.ToQuantity(b.Quantity, 64)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	expectedQ := token2.NewQuantityFromUInt64(expected)
-	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+	gomega.Expect(expectedQ.Cmp(q)).To(gomega.BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
 }
 
 func queryHouse(network *integration.Infrastructure, client *token3.NodeReference, houseID string, address string, errorMsgs ...string) {
@@ -106,15 +106,15 @@ func queryHouse(network *integration.Infrastructure, client *token3.NodeReferenc
 		HouseID: houseID,
 	}))
 	if len(errorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		h := &house.House{}
-		Expect(json.Unmarshal(resBoxed.([]byte), h)).NotTo(HaveOccurred())
-		Expect(h.LinearID).To(BeEquivalentTo(houseID))
-		Expect(h.Address).To(BeEquivalentTo(address))
+		gomega.Expect(json.Unmarshal(resBoxed.([]byte), h)).NotTo(gomega.HaveOccurred())
+		gomega.Expect(h.LinearID).To(gomega.BeEquivalentTo(houseID))
+		gomega.Expect(h.Address).To(gomega.BeEquivalentTo(address))
 	} else {
-		Expect(err).To(HaveOccurred())
+		gomega.Expect(err).To(gomega.HaveOccurred())
 		for _, msg := range errorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
+			gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg))
 		}
 	}
 }

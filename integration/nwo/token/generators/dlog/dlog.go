@@ -28,7 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -98,7 +98,7 @@ func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
+	gomega.Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
 	return output, nil
 }
 
@@ -142,19 +142,19 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			Curve:            curveID,
 			Aries:            IsAries(tms),
 		})
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		gomega.Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
 
 		if remote {
 			// Prepare a folder for the remote wallet
 			// This is done by stripping out Cred and Sk from the SignerConfig
 			signerBytes, err := os.ReadFile(filepath.Join(userOutput, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner))
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			// nullify cred and sk
 			signerConfig := &config.IdemixSignerConfig{}
 			err = proto.Unmarshal(signerBytes, signerConfig)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			signerConfig.Cred = nil
 			signerConfig.Sk = nil
 
@@ -164,18 +164,18 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 				signerBytes,
 				0766,
 			)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			// overwrite the signer config file so that the token-sdk will interpreter this wallet as a remote one or verify only wallet
 			raw, err := proto.Marshal(signerConfig)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			err = os.WriteFile(
 				filepath.Join(userOutput, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner),
 				raw,
 				0766,
 			)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}
 		res = append(res, topology.Identity{
 			ID:   owner,
