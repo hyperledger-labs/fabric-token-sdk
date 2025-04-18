@@ -10,6 +10,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	"github.com/pkg/errors"
 )
 
@@ -82,6 +83,52 @@ func (p *RangeProofData) Deserialize(bytes []byte) error {
 	return nil
 }
 
+func (p *RangeProofData) Validate(curve math.CurveID) error {
+	if p.T1 == nil {
+		return errors.New("invalid range proof data: nil T1")
+	}
+	if err := math2.CheckElement(p.T1, curve); err != nil {
+		return errors.Wrapf(err, "invalid range proof data: invalid T1")
+	}
+	if p.T2 == nil {
+		return errors.New("invalid range proof data: nil T2")
+	}
+	if err := math2.CheckElement(p.T2, curve); err != nil {
+		return errors.Wrapf(err, "invalid range proof data: invalid T2")
+	}
+	if p.C == nil {
+		return errors.New("invalid range proof data: nil C")
+	}
+	if err := math2.CheckElement(p.C, curve); err != nil {
+		return errors.Wrapf(err, "invalid range proof data: invalid C")
+	}
+	if p.D == nil {
+		return errors.New("invalid range proof data: nil D")
+	}
+	if err := math2.CheckElement(p.D, curve); err != nil {
+		return errors.Wrapf(err, "invalid range proof data: invalid D")
+	}
+	if p.Tau == nil {
+		return errors.New("invalid range proof data: nil Tau")
+	}
+	if err := math2.CheckBaseElement(p.Tau, curve); err != nil {
+		return errors.Wrapf(err, "invalid range proof data: invalid Tau")
+	}
+	if p.Delta == nil {
+		return errors.New("invalid range proof data: nil Delta")
+	}
+	if err := math2.CheckBaseElement(p.Delta, curve); err != nil {
+		return errors.Wrapf(err, "invalid range proof data: invalid Delta")
+	}
+	if p.InnerProduct == nil {
+		return errors.New("invalid range proof data: nil InnerProduct")
+	}
+	if err := math2.CheckBaseElement(p.InnerProduct, curve); err != nil {
+		return errors.Wrapf(err, "invalid range proof data: invalid InnerProduct")
+	}
+	return nil
+}
+
 // RangeProof proves that a committed value < max
 type RangeProof struct {
 	// Data contains all the elements of the range proof that are not in IPA
@@ -98,6 +145,22 @@ func (p *RangeProof) Deserialize(bytes []byte) error {
 	p.Data = &RangeProofData{}
 	p.IPA = &IPA{}
 	return asn1.Unmarshal[asn1.Serializer](bytes, p.Data, p.IPA)
+}
+
+func (p *RangeProof) Validate(curve math.CurveID) error {
+	if p.Data == nil {
+		return errors.New("invalid range proof: nil data")
+	}
+	if err := p.Data.Validate(curve); err != nil {
+		return errors.Wrapf(err, "invalid range proof: invalid data")
+	}
+	if p.IPA == nil {
+		return errors.New("invalid range proof: nil IPA")
+	}
+	if err := p.IPA.Validate(curve); err != nil {
+		return errors.Wrapf(err, "invalid range proof: invalid IPA")
+	}
+	return nil
 }
 
 // rangeProver proves that a committed value < 2^BitLength.
