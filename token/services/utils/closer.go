@@ -16,3 +16,7 @@ package utils
 func IgnoreError(fn func() error) {
 	_ = fn()
 }
+
+func IgnoreErrorWithOneArg[T any](fn func(t T) error, t T) {
+	_ = fn(t)
+}

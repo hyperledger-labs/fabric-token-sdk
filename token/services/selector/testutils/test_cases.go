@@ -17,6 +17,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -204,7 +205,7 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 			sel, err := replica.NewSelector(txID)
 			assert.NoError(t, err)
 			go func() {
-				defer replica.Close(txID)
+				defer utils.IgnoreErrorWithOneArg(replica.Close, txID)
 				tokens, sum, err := sel.Select(defaultTokenFilter, quantity.Hex(), defaultCurrency)
 				if err != nil {
 					errCh <- err
