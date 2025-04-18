@@ -17,7 +17,7 @@ type (
 )
 
 func NewTokenDB(opts postgres.Opts) (*TokenDB, error) {
-	readWriteDB, err := postgres.OpenDB(opts)
+	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -25,11 +25,11 @@ func NewTokenDB(opts postgres.Opts) (*TokenDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewTokenDB(readWriteDB, readWriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
+	return common.NewTokenDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
 }
 
 func NewTokenNotifier(opts postgres.Opts) (*TokenNotifier, error) {
-	readWriteDB, err := postgres.OpenDB(opts)
+	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -37,6 +37,6 @@ func NewTokenNotifier(opts postgres.Opts) (*TokenNotifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	return postgres.NewNotifier(readWriteDB, tables.Tokens, opts.DataSource, postgres.AllOperations, *postgres.NewSimplePrimaryKey("tx_id"), *postgres.NewSimplePrimaryKey("idx")), nil
+	return postgres.NewNotifier(dbs.WriteDB, tables.Tokens, opts.DataSource, postgres.AllOperations, *postgres.NewSimplePrimaryKey("tx_id"), *postgres.NewSimplePrimaryKey("idx")), nil
 
 }

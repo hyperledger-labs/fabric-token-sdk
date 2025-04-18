@@ -14,7 +14,7 @@ import (
 type WalletDB = common.WalletDB
 
 func NewWalletDB(opts sqlite.Opts) (*WalletDB, error) {
-	readDB, writeDB, err := sqlite.OpenRWDBs(opts)
+	dbs, err := sqlite.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -22,5 +22,5 @@ func NewWalletDB(opts sqlite.Opts) (*WalletDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewWalletDB(readDB, writeDB, tableNames)
+	return common.NewWalletDB(dbs.ReadDB, dbs.WriteDB, tableNames)
 }

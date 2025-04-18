@@ -17,7 +17,7 @@ type (
 )
 
 func NewAuditTransactionDB(opts sqlite.Opts) (*AuditTransactionDB, error) {
-	readDB, writeDB, err := sqlite.OpenRWDBs(opts)
+	dbs, err := sqlite.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -25,11 +25,11 @@ func NewAuditTransactionDB(opts sqlite.Opts) (*AuditTransactionDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewAuditTransactionDB(readDB, writeDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewAuditTransactionDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
 }
 
 func NewTransactionDB(opts sqlite.Opts) (*TransactionDB, error) {
-	readDB, writeDB, err := sqlite.OpenRWDBs(opts)
+	dbs, err := sqlite.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -37,5 +37,5 @@ func NewTransactionDB(opts sqlite.Opts) (*TransactionDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewTransactionDB(readDB, writeDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewTransactionDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
 }

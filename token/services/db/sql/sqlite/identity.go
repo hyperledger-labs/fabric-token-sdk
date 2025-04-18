@@ -14,7 +14,7 @@ import (
 type IdentityDB = common.IdentityDB
 
 func NewIdentityDB(opts sqlite.Opts) (*IdentityDB, error) {
-	readDB, writeDB, err := sqlite.OpenRWDBs(opts)
+	dbs, err := sqlite.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -22,5 +22,5 @@ func NewIdentityDB(opts sqlite.Opts) (*IdentityDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewCachedIdentityDB(readDB, writeDB, tableNames, sqlite.NewInterpreter())
+	return common.NewCachedIdentityDB(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewInterpreter())
 }

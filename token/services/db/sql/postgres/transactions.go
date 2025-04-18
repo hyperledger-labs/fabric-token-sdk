@@ -17,7 +17,7 @@ type (
 )
 
 func NewAuditTransactionDB(opts postgres.Opts) (*AuditTransactionDB, error) {
-	readWriteDB, err := postgres.OpenDB(opts)
+	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -25,11 +25,11 @@ func NewAuditTransactionDB(opts postgres.Opts) (*AuditTransactionDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewAuditTransactionDB(readWriteDB, readWriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
+	return common.NewAuditTransactionDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
 }
 
 func NewTransactionDB(opts postgres.Opts) (*TransactionDB, error) {
-	readWriteDB, err := postgres.OpenDB(opts)
+	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -37,5 +37,5 @@ func NewTransactionDB(opts postgres.Opts) (*TransactionDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewTransactionDB(readWriteDB, readWriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
+	return common.NewTransactionDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
 }

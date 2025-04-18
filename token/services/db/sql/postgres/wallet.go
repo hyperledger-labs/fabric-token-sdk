@@ -14,7 +14,7 @@ import (
 type WalletDB = common.WalletDB
 
 func NewWalletDB(opts postgres.Opts) (*WalletDB, error) {
-	readWriteDB, err := postgres.OpenDB(opts)
+	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -22,5 +22,5 @@ func NewWalletDB(opts postgres.Opts) (*WalletDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewWalletDB(readWriteDB, readWriteDB, tableNames)
+	return common.NewWalletDB(dbs.ReadDB, dbs.WriteDB, tableNames)
 }

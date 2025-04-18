@@ -14,7 +14,7 @@ import (
 type IdentityDB = common.IdentityDB
 
 func NewIdentityDB(opts postgres.Opts) (*IdentityDB, error) {
-	readWriteDB, err := postgres.OpenDB(opts)
+	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -22,5 +22,5 @@ func NewIdentityDB(opts postgres.Opts) (*IdentityDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewCachedIdentityDB(readWriteDB, readWriteDB, tableNames, postgres.NewInterpreter())
+	return common.NewCachedIdentityDB(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewInterpreter())
 }

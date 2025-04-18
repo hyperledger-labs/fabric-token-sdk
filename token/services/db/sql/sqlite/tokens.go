@@ -15,7 +15,7 @@ import (
 type TokenDB = common.TokenDB
 
 func NewTokenDB(opts sqlite.Opts) (*TokenDB, error) {
-	readDB, writeDB, err := sqlite.OpenRWDBs(opts)
+	dbs, err := sqlite.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func NewTokenDB(opts sqlite.Opts) (*TokenDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewTokenDB(readDB, writeDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewTokenDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
 }
 
 type TokenNotifier struct {

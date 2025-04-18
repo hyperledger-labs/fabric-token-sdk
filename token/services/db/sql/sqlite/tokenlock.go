@@ -38,7 +38,7 @@ func (db *TokenLockDB) Cleanup(leaseExpiry time.Duration) error {
 }
 
 func NewTokenLockDB(opts sqlite.Opts) (*TokenLockDB, error) {
-	readDB, writeDB, err := sqlite.OpenRWDBs(opts)
+	dbs, err := sqlite.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func NewTokenLockDB(opts sqlite.Opts) (*TokenLockDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	tldb, err := common.NewTokenLockDB(readDB, writeDB, tableNames)
+	tldb, err := common.NewTokenLockDB(dbs.ReadDB, dbs.WriteDB, tableNames)
 	if err != nil {
 		return nil, err
 	}

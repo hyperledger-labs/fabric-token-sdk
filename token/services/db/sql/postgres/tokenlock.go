@@ -22,7 +22,7 @@ type TokenLockDB struct {
 }
 
 func NewTokenLockDB(opts postgres.Opts) (*TokenLockDB, error) {
-	readWriteDB, err := postgres.OpenDB(opts)
+	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func NewTokenLockDB(opts postgres.Opts) (*TokenLockDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	tldb, err := common.NewTokenLockDB(readWriteDB, readWriteDB, tableNames)
+	tldb, err := common.NewTokenLockDB(dbs.ReadDB, dbs.WriteDB, tableNames)
 	if err != nil {
 		return nil, err
 	}
