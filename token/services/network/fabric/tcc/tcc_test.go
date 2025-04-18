@@ -50,7 +50,7 @@ var _ = Describe("ccvalidator", func() {
 	})
 
 	AfterEach(func() {
-		os.Remove(ppFile.Name())
+		_ = os.Remove(ppFile.Name())
 	})
 
 	Describe("Init", func() {
