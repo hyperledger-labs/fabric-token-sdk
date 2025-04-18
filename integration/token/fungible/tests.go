@@ -816,6 +816,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, alice, "", "Spendable", 1, auditor)
 	CheckBalanceAndHolding(network, bob, "", "Spendable", 2, auditor)
 	CheckAuditorDB(network, auditor, "", nil)
+	panic("all ok")
 }
 
 func TestSelector(network *integration.Infrastructure, auditorId string, sel *token3.ReplicaSelector) {
