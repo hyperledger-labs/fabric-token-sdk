@@ -31,7 +31,7 @@ type AtomicWrite interface {
 	Rollback()
 
 	// AddTokenRequest binds the passed transaction id to the passed token request
-	AddTokenRequest(txID string, tr []byte, applicationMetadata map[string][]byte, ppHash driver.PPHash) error
+	AddTokenRequest(txID string, tr []byte, applicationMetadata, publicMetadata map[string][]byte, ppHash driver.PPHash) error
 
 	// AddMovement adds a movement record to the database transaction.
 	// Each token transaction can be seen as a list of movements.
