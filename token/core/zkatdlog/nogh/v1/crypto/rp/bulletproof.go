@@ -219,54 +219,6 @@ func NewRangeProver(
 
 }
 
-// rangeVerifier verifies that a committed value < 2^BitLength.
-type rangeVerifier struct {
-	// Commitment is a hiding Pedersen commitment to value: Commitment = G^vH^r
-	Commitment *math.G1
-	// CommitmentGenerators are the generators (G, H) used to compute Commitment
-	CommitmentGenerators []*math.G1
-	// LeftGenerators are the generators (G_0, ..., G_{BitLength}) that will be used to commit to
-	// the bits (b_0,..., b_{BitLength-1}) of value
-	LeftGenerators []*math.G1
-	// RightGenerators are the generators (H_0, ..., H_{BitLength}) that will be used to commit to (b_i-1)
-	RightGenerators []*math.G1
-	// P is a random generator of G1
-	P *math.G1
-	// Q is a random generator of G1
-	Q *math.G1
-	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
-	// number of rounds of the reduction protocol
-	NumberOfRounds uint64
-	// BitLength is the size of the binary representation of value
-	BitLength uint64
-	// Curve is the curve over which the computation is performed
-	Curve *math.Curve
-}
-
-// NewRangeVerifier returns a rangeVerifier based on the passed arguments
-func NewRangeVerifier(
-	com *math.G1,
-	commitmentGen []*math.G1,
-	leftGen []*math.G1,
-	rightGen []*math.G1,
-	P, Q *math.G1,
-	numberOfRounds, bitLength uint64,
-	curve *math.Curve,
-) *rangeVerifier {
-	return &rangeVerifier{
-		Commitment:           com,
-		CommitmentGenerators: commitmentGen,
-		LeftGenerators:       leftGen,
-		RightGenerators:      rightGen,
-		P:                    P,
-		Q:                    Q,
-		NumberOfRounds:       numberOfRounds,
-		BitLength:            bitLength,
-		Curve:                curve,
-	}
-
-}
-
 // Prove produces a RangeProof that shows that a committed value
 // v = \sum_{i=0}^{BitLength} b_i 2^i; b_i in {0, 1}
 func (p *rangeProver) Prove() (*RangeProof, error) {
@@ -309,90 +261,6 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 	}
 
 	return rp, nil
-}
-
-// Verify enable a rangeVerifier to checks the validity of a RangeProof
-func (v *rangeVerifier) Verify(rp *RangeProof) error {
-	// check that the proof is well-formed
-	if rp.Data.InnerProduct == nil || rp.Data.C == nil || rp.Data.D == nil {
-		return errors.New("invalid range proof: nil elements")
-	}
-	if rp.Data.T1 == nil || rp.Data.T2 == nil {
-		return errors.New("invalid range proof: nil elements")
-	}
-	if rp.Data.Tau == nil || rp.Data.Delta == nil {
-		return errors.New("invalid range proof: nil elements")
-	}
-	if rp.IPA == nil {
-		return errors.New("invalid range proof: nil elements")
-	}
-	array := common.GetG1Array([]*math.G1{rp.Data.T1, rp.Data.T2})
-	bytesToHash, err := array.Bytes()
-	if err != nil {
-		return err
-	}
-	// compute x and x^2
-	x := v.Curve.HashToZr(bytesToHash)
-	xSquare := x.PowMod(v.Curve.NewZrFromInt(2))
-
-	// compute y and z
-	array = common.GetG1Array([]*math.G1{rp.Data.C, rp.Data.D, v.Commitment})
-	bytesToHash, err = array.Bytes()
-	if err != nil {
-		return err
-	}
-	y := v.Curve.HashToZr(bytesToHash)
-	z := v.Curve.HashToZr(y.Bytes())
-	// z^2 and z^3
-	zSquare := z.PowMod(v.Curve.NewZrFromInt(2))
-	zCube := v.Curve.ModMul(zSquare, z, v.Curve.GroupOrder)
-
-	yPow := make([]*math.Zr, len(v.RightGenerators))
-	ipy := v.Curve.NewZrFromInt(0)
-	ip2 := v.Curve.NewZrFromInt(0)
-	// 2^i
-	var power2 *math.Zr
-	for i := 0; i < len(yPow); i++ {
-		// y^i
-		if i == 0 {
-			yPow[0] = v.Curve.NewZrFromInt(1)
-			power2 = v.Curve.NewZrFromInt(1)
-		} else {
-			yPow[i] = v.Curve.ModMul(y, yPow[i-1], v.Curve.GroupOrder)
-			power2 = v.Curve.ModMul(v.Curve.NewZrFromInt(2), power2, v.Curve.GroupOrder)
-		}
-		// ipy = \sum y^i
-		ipy = v.Curve.ModAdd(ipy, yPow[i], v.Curve.GroupOrder)
-		// ip2 = sum 2^i
-		ip2 = v.Curve.ModAdd(ip2, power2, v.Curve.GroupOrder)
-	}
-	// polEval = (z -z^)\sum y^i - z^3\sum 2^i
-	polEval := v.Curve.ModSub(z, zSquare, v.Curve.GroupOrder)
-	polEval = v.Curve.ModMul(polEval, ipy, v.Curve.GroupOrder)
-	zCube = v.Curve.ModMul(zCube, ip2, v.Curve.GroupOrder)
-
-	polEval = v.Curve.ModSub(polEval, zCube, v.Curve.GroupOrder)
-
-	// com is should be equal to v.Commitment^{z^2} if p.Value falls within range
-	com := v.CommitmentGenerators[0].Mul(rp.Data.InnerProduct)
-	com.Add(v.CommitmentGenerators[1].Mul(rp.Data.Tau))
-	com.Sub(rp.Data.T1.Mul(x))
-	com.Sub(rp.Data.T2.Mul(xSquare))
-
-	comPrime := v.Commitment.Mul(zSquare)
-	comPrime.Add(v.CommitmentGenerators[0].Mul(polEval))
-
-	if !com.Equals(comPrime) {
-		return errors.New("invalid range proof")
-	}
-
-	// verify the IPA
-	err = v.verifyIPA(rp, x, yPow, z, zSquare)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // preprocess prepares data for the inner product argument
@@ -526,6 +394,138 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 
 	return left, right, y, rp, nil
+}
+
+// rangeVerifier verifies that a committed value < 2^BitLength.
+type rangeVerifier struct {
+	// Commitment is a hiding Pedersen commitment to value: Commitment = G^vH^r
+	Commitment *math.G1
+	// CommitmentGenerators are the generators (G, H) used to compute Commitment
+	CommitmentGenerators []*math.G1
+	// LeftGenerators are the generators (G_0, ..., G_{BitLength}) that will be used to commit to
+	// the bits (b_0,..., b_{BitLength-1}) of value
+	LeftGenerators []*math.G1
+	// RightGenerators are the generators (H_0, ..., H_{BitLength}) that will be used to commit to (b_i-1)
+	RightGenerators []*math.G1
+	// P is a random generator of G1
+	P *math.G1
+	// Q is a random generator of G1
+	Q *math.G1
+	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
+	// number of rounds of the reduction protocol
+	NumberOfRounds uint64
+	// BitLength is the size of the binary representation of value
+	BitLength uint64
+	// Curve is the curve over which the computation is performed
+	Curve *math.Curve
+}
+
+// NewRangeVerifier returns a rangeVerifier based on the passed arguments
+func NewRangeVerifier(
+	com *math.G1,
+	commitmentGen []*math.G1,
+	leftGen []*math.G1,
+	rightGen []*math.G1,
+	P, Q *math.G1,
+	numberOfRounds, bitLength uint64,
+	curve *math.Curve,
+) *rangeVerifier {
+	return &rangeVerifier{
+		Commitment:           com,
+		CommitmentGenerators: commitmentGen,
+		LeftGenerators:       leftGen,
+		RightGenerators:      rightGen,
+		P:                    P,
+		Q:                    Q,
+		NumberOfRounds:       numberOfRounds,
+		BitLength:            bitLength,
+		Curve:                curve,
+	}
+
+}
+
+// Verify enable a rangeVerifier to checks the validity of a RangeProof
+func (v *rangeVerifier) Verify(rp *RangeProof) error {
+	// check that the proof is well-formed
+	if rp.Data.InnerProduct == nil || rp.Data.C == nil || rp.Data.D == nil {
+		return errors.New("invalid range proof: nil elements")
+	}
+	if rp.Data.T1 == nil || rp.Data.T2 == nil {
+		return errors.New("invalid range proof: nil elements")
+	}
+	if rp.Data.Tau == nil || rp.Data.Delta == nil {
+		return errors.New("invalid range proof: nil elements")
+	}
+	if rp.IPA == nil {
+		return errors.New("invalid range proof: nil elements")
+	}
+	array := common.GetG1Array([]*math.G1{rp.Data.T1, rp.Data.T2})
+	bytesToHash, err := array.Bytes()
+	if err != nil {
+		return err
+	}
+	// compute x and x^2
+	x := v.Curve.HashToZr(bytesToHash)
+	xSquare := x.PowMod(v.Curve.NewZrFromInt(2))
+
+	// compute y and z
+	array = common.GetG1Array([]*math.G1{rp.Data.C, rp.Data.D, v.Commitment})
+	bytesToHash, err = array.Bytes()
+	if err != nil {
+		return err
+	}
+	y := v.Curve.HashToZr(bytesToHash)
+	z := v.Curve.HashToZr(y.Bytes())
+	// z^2 and z^3
+	zSquare := z.PowMod(v.Curve.NewZrFromInt(2))
+	zCube := v.Curve.ModMul(zSquare, z, v.Curve.GroupOrder)
+
+	yPow := make([]*math.Zr, len(v.RightGenerators))
+	ipy := v.Curve.NewZrFromInt(0)
+	ip2 := v.Curve.NewZrFromInt(0)
+	// 2^i
+	var power2 *math.Zr
+	for i := 0; i < len(yPow); i++ {
+		// y^i
+		if i == 0 {
+			yPow[0] = v.Curve.NewZrFromInt(1)
+			power2 = v.Curve.NewZrFromInt(1)
+		} else {
+			yPow[i] = v.Curve.ModMul(y, yPow[i-1], v.Curve.GroupOrder)
+			power2 = v.Curve.ModMul(v.Curve.NewZrFromInt(2), power2, v.Curve.GroupOrder)
+		}
+		// ipy = \sum y^i
+		ipy = v.Curve.ModAdd(ipy, yPow[i], v.Curve.GroupOrder)
+		// ip2 = sum 2^i
+		ip2 = v.Curve.ModAdd(ip2, power2, v.Curve.GroupOrder)
+	}
+	// polEval = (z -z^)\sum y^i - z^3\sum 2^i
+	polEval := v.Curve.ModSub(z, zSquare, v.Curve.GroupOrder)
+	polEval = v.Curve.ModMul(polEval, ipy, v.Curve.GroupOrder)
+	zCube = v.Curve.ModMul(zCube, ip2, v.Curve.GroupOrder)
+
+	polEval = v.Curve.ModSub(polEval, zCube, v.Curve.GroupOrder)
+
+	// com is should be equal to v.Commitment^{z^2} if p.Value falls within range
+	com := v.CommitmentGenerators[0].Mul(rp.Data.InnerProduct)
+	com.Add(v.CommitmentGenerators[1].Mul(rp.Data.Tau))
+	com.Sub(rp.Data.T1.Mul(x))
+	com.Sub(rp.Data.T2.Mul(xSquare))
+
+	comPrime := v.Commitment.Mul(zSquare)
+	comPrime.Add(v.CommitmentGenerators[0].Mul(polEval))
+
+	if !com.Equals(comPrime) {
+		return errors.New("invalid range proof")
+	}
+
+	// verify the IPA
+	err = v.verifyIPA(rp, x, yPow, z, zSquare)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // verifyIPA checks if the IPA within the range proof is valid
