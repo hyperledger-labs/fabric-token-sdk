@@ -137,6 +137,97 @@ func NewIPAProver(
 	}
 }
 
+// Prove returns an IPA proof if no error occurs, else, it returns an error
+func (p *ipaProver) Prove() (*IPA, error) {
+	array := common.GetG1Array(p.RightGenerators, p.LeftGenerators, []*mathlib.G1{p.Q, p.Commitment})
+	bytesToHash := make([][]byte, 3)
+	var err error
+	bytesToHash[0], err = array.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	bytesToHash[1] = []byte(common.Separator)
+	bytesToHash[2] = p.InnerProduct.Bytes()
+	raw, err := asn1.MarshalStd(bytesToHash)
+	if err != nil {
+		return nil, err
+	}
+	// compute first challenge
+	x := p.Curve.HashToZr(raw)
+	// compute a commitment to inner product value and the vectors
+	C := p.Q.Mul(p.Curve.ModMul(x, p.InnerProduct, p.Curve.GroupOrder))
+	C.Add(p.Commitment)
+
+	X := p.Q.Mul(x)
+	// reduce the left and right vectors into one value each, left and right
+	// LArray and RArray contain commitments to intermediate vectors
+	left, right, LArray, RArray, err := p.reduce(X, C)
+	if err != nil {
+		return nil, err
+	}
+	return &IPA{Left: left, Right: right, R: RArray, L: LArray}, nil
+}
+
+// reduce returns two values left and right such that left is a function
+// of the left vector and right is a function of right vector.
+// Both vectors are committed in com which is passed as a parameter to reduce
+func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mathlib.G1, []*mathlib.G1, error) {
+	var leftGen, rightGen []*mathlib.G1
+	var left, right []*mathlib.Zr
+
+	leftGen = p.LeftGenerators
+	rightGen = p.RightGenerators
+
+	left = p.leftVector
+	right = p.rightVector
+
+	LArray := make([]*mathlib.G1, p.NumberOfRounds)
+	RArray := make([]*mathlib.G1, p.NumberOfRounds)
+	for i := uint64(0); i < p.NumberOfRounds; i++ {
+		// in each round the size of the vector is reduced by 2
+		n := len(leftGen) / 2
+		leftIP := innerProduct(left[:n], right[n:], p.Curve)
+		rightIP := innerProduct(left[n:], right[:n], p.Curve)
+		// LArray[i] is a commitment to left[:n], right[n:] and their inner product
+		LArray[i] = commitVector(left[:n], right[n:], leftGen[n:], rightGen[:n], p.Curve)
+		LArray[i].Add(X.Mul(leftIP))
+
+		// RArray[i] is a commitment to left[n:], right[:n] and their inner product
+		RArray[i] = commitVector(left[n:], right[:n], leftGen[:n], rightGen[n:], p.Curve)
+		RArray[i].Add(X.Mul(rightIP))
+
+		// compute this round's challenge x
+		array := common.GetG1Array([]*mathlib.G1{LArray[i], RArray[i]})
+		bytesToHash, err := array.Bytes()
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		x := p.Curve.HashToZr(bytesToHash)
+
+		// compute 1/x
+		xInv := x.Copy()
+		xInv.InvModP(p.Curve.GroupOrder)
+
+		// reduce the generators by 1/2, as a function of the old generators and x and 1/x
+		leftGen, rightGen = reduceGenerators(leftGen, rightGen, x, xInv)
+
+		// reduce the vectors by 1/2, a function of the old vectors and x and 1/x
+		left, right = reduceVectors(left, right, x, xInv, p.Curve)
+
+		xSquare := p.Curve.ModMul(x, x, p.Curve.GroupOrder)
+		xSquareInv := xSquare.Copy()
+		xSquareInv.InvModP(p.Curve.GroupOrder)
+
+		// compute the commitment to left, right and their inner product
+		CPrime := LArray[i].Mul(xSquare)
+		CPrime.Add(com)
+		CPrime.Add(RArray[i].Mul(xSquareInv))
+		// com = L^{x^2}*com*R^{1/x^2}
+		com = CPrime.Copy()
+	}
+	return left[0], right[0], LArray, RArray, nil
+}
+
 // ipaVerifier verifies given a proof that a value c is the inner
 // product of two vectors committed in Commitment
 type ipaVerifier struct {
@@ -175,37 +266,6 @@ func NewIPAVerifier(
 		Commitment:      Commitment,
 		Q:               Q,
 	}
-}
-
-// Prove returns an IPA proof if no error occurs, else, it returns an error
-func (p *ipaProver) Prove() (*IPA, error) {
-	array := common.GetG1Array(p.RightGenerators, p.LeftGenerators, []*mathlib.G1{p.Q, p.Commitment})
-	bytesToHash := make([][]byte, 3)
-	var err error
-	bytesToHash[0], err = array.Bytes()
-	if err != nil {
-		return nil, err
-	}
-	bytesToHash[1] = []byte(common.Separator)
-	bytesToHash[2] = p.InnerProduct.Bytes()
-	raw, err := asn1.MarshalStd(bytesToHash)
-	if err != nil {
-		return nil, err
-	}
-	// compute first challenge
-	x := p.Curve.HashToZr(raw)
-	// compute a commitment to inner product value and the vectors
-	C := p.Q.Mul(p.Curve.ModMul(x, p.InnerProduct, p.Curve.GroupOrder))
-	C.Add(p.Commitment)
-
-	X := p.Q.Mul(x)
-	// reduce the left and right vectors into one value each, left and right
-	// LArray and RArray contain commitments to intermediate vectors
-	left, right, LArray, RArray, err := p.reduce(X, C)
-	if err != nil {
-		return nil, err
-	}
-	return &IPA{Left: left, Right: right, R: RArray, L: LArray}, nil
 }
 
 // Verify checks if the proof passed as a parameter is a valid inner
@@ -282,66 +342,6 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 	}
 	return nil
 
-}
-
-// reduce returns two values left and right such that left is a function
-// of the left vector and right is a function of right vector.
-// Both vectors are committed in com which is passed as a parameter to reduce
-func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mathlib.G1, []*mathlib.G1, error) {
-	var leftGen, rightGen []*mathlib.G1
-	var left, right []*mathlib.Zr
-
-	leftGen = p.LeftGenerators
-	rightGen = p.RightGenerators
-
-	left = p.leftVector
-	right = p.rightVector
-
-	LArray := make([]*mathlib.G1, p.NumberOfRounds)
-	RArray := make([]*mathlib.G1, p.NumberOfRounds)
-	for i := uint64(0); i < p.NumberOfRounds; i++ {
-		// in each round the size of the vector is reduced by 2
-		n := len(leftGen) / 2
-		leftIP := innerProduct(left[:n], right[n:], p.Curve)
-		rightIP := innerProduct(left[n:], right[:n], p.Curve)
-		// LArray[i] is a commitment to left[:n], right[n:] and their inner product
-		LArray[i] = commitVector(left[:n], right[n:], leftGen[n:], rightGen[:n], p.Curve)
-		LArray[i].Add(X.Mul(leftIP))
-
-		// RArray[i] is a commitment to left[n:], right[:n] and their inner product
-		RArray[i] = commitVector(left[n:], right[:n], leftGen[:n], rightGen[n:], p.Curve)
-		RArray[i].Add(X.Mul(rightIP))
-
-		// compute this round's challenge x
-		array := common.GetG1Array([]*mathlib.G1{LArray[i], RArray[i]})
-		bytesToHash, err := array.Bytes()
-		if err != nil {
-			return nil, nil, nil, nil, err
-		}
-		x := p.Curve.HashToZr(bytesToHash)
-
-		// compute 1/x
-		xInv := x.Copy()
-		xInv.InvModP(p.Curve.GroupOrder)
-
-		// reduce the generators by 1/2, as a function of the old generators and x and 1/x
-		leftGen, rightGen = reduceGenerators(leftGen, rightGen, x, xInv)
-
-		// reduce the vectors by 1/2, a function of the old vectors and x and 1/x
-		left, right = reduceVectors(left, right, x, xInv, p.Curve)
-
-		xSquare := p.Curve.ModMul(x, x, p.Curve.GroupOrder)
-		xSquareInv := xSquare.Copy()
-		xSquareInv.InvModP(p.Curve.GroupOrder)
-
-		// compute the commitment to left, right and their inner product
-		CPrime := LArray[i].Mul(xSquare)
-		CPrime.Add(com)
-		CPrime.Add(RArray[i].Mul(xSquareInv))
-		// com = L^{x^2}*com*R^{1/x^2}
-		com = CPrime.Copy()
-	}
-	return left[0], right[0], LArray, RArray, nil
 }
 
 // reduceVectors reduces the size of the vectors passed in the parameters by 1/2,
