@@ -9,6 +9,7 @@ package views
 import (
 	"encoding/json"
 
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -22,7 +23,7 @@ import (
 
 type TokenTransactionDB interface {
 	GetTokenRequest(txID string) ([]byte, error)
-	Transactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error)
+	Transactions(params driver.QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*driver.TransactionRecord], error)
 }
 
 type CheckTTXDB struct {

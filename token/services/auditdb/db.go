@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
@@ -125,6 +126,12 @@ type QueryTransactionsParams = driver.QueryTransactionsParams
 // QueryTokenRequestsParams defines the parameters for querying token requests
 type QueryTokenRequestsParams = driver.QueryTokenRequestsParams
 
+// Pagination defines the pagination for querying movements
+type Pagination = driver2.Pagination
+
+// Pagination iterator defines the pagination iterator for movements query results
+type PageTransactionsIterator = driver2.PageIterator[*TransactionRecord]
+
 // Wallet models a wallet
 type Wallet interface {
 	// ID returns the wallet ID
@@ -212,8 +219,8 @@ func (d *DB) Append(req tokenRequest) error {
 }
 
 // Transactions returns an iterators of transaction records filtered by the given params.
-func (d *DB) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
-	return d.db.QueryTransactions(params)
+func (d *DB) Transactions(params QueryTransactionsParams, pagination Pagination) (*PageTransactionsIterator, error) {
+	return d.db.QueryTransactions(params, pagination)
 }
 
 // TokenRequests returns an iterator over the token requests matching the passed params
