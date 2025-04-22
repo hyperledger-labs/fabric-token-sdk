@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -249,9 +250,11 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 	assert.NoError(t, w.AddTokenRequest(tr1.TxID, []byte(fmt.Sprintf("token request for %s", tr1.TxID)), map[string][]byte{}, nil, driver2.PPHash("tr")))
 	assert.NoError(t, w.AddTransaction(tr1))
 
-	for i := 0; i < 20; i++ {
+	pm := map[string][]byte{"key": []byte("val")}
+
+	for i := range 20 {
 		now := time.Now()
-		tr1 := &driver.TransactionRecord{
+		tr := &driver.TransactionRecord{
 			TxID:         fmt.Sprintf("tx%d", i),
 			ActionType:   driver.Issue,
 			SenderEID:    "",
@@ -263,10 +266,11 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 				"this is the first key":  {99, 33, 22, 11},
 				"this is the second key": []byte("with some text as the value " + fmt.Sprintf("tx%d", i)),
 			},
+			PublicMetadata: pm,
 		}
-		assert.NoError(t, w.AddTokenRequest(tr1.TxID, []byte(fmt.Sprintf("token request for %s", tr1.TxID)), tr1.ApplicationMetadata, nil, driver2.PPHash("tr")))
-		assert.NoError(t, w.AddTransaction(tr1))
-		txs = append(txs, tr1)
+		assert.NoError(t, w.AddTokenRequest(tr.TxID, []byte(fmt.Sprintf("token request for %s", tr.TxID)), tr.ApplicationMetadata, pm, driver2.PPHash("tr")))
+		assert.NoError(t, w.AddTransaction(tr))
+		txs = append(txs, tr)
 	}
 	assert.NoError(t, w.Commit())
 
@@ -334,7 +338,7 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 		ApplicationMetadata: map[string][]byte{},
 		Timestamp:           lastYear,
 	}
-	assert.NoError(t, w.AddTokenRequest(tr1.TxID, []byte(fmt.Sprintf("token request for %s", tr1.TxID)), map[string][]byte{}, nil, driver2.PPHash("tr")))
+	assert.NoError(t, w.AddTokenRequest(tr1.TxID, fmt.Appendf(nil, "token request for %s", tr1.TxID), map[string][]byte{}, nil, driver2.PPHash("tr")))
 	assert.NoError(t, w.AddTransaction(tr1))
 	assert.NoError(t, w.Commit())
 	noChange := getTransactions(t, db, driver.QueryTransactionsParams{ExcludeToSelf: true})
@@ -364,7 +368,10 @@ func assertTxEqual(t *testing.T, exp *driver.TransactionRecord, act *driver.Tran
 	assert.Equal(t, exp.TokenType, act.TokenType, expl)
 	assert.Equal(t, exp.Amount, act.Amount, expl)
 	assert.Equal(t, exp.ApplicationMetadata, act.ApplicationMetadata, expl)
-	assert.WithinDuration(t, exp.Timestamp, act.Timestamp, 3*time.Second)
+	assert.WithinDuration(t, exp.Timestamp, act.Timestamp, 3*time.Second, expl)
+	if len(exp.PublicMetadata) > 0 {
+		assert.True(t, reflect.DeepEqual(exp.PublicMetadata, act.PublicMetadata), expl)
+	}
 }
 
 func TTokenRequest(t *testing.T, db driver.TokenTransactionDB) {
