@@ -8,12 +8,8 @@ package driver
 
 import (
 	"context"
-<<<<<<< HEAD
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-=======
->>>>>>> d76fba7f (Switch to new db config)
 )
 
 // AuditTransactionStore defines the interface for a database to store the audit records of token transactions.

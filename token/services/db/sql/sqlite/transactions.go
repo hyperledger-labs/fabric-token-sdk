@@ -25,7 +25,7 @@ func NewAuditTransactionDB(opts sqlite.Opts) (*AuditTransactionDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()), sqlite.NewPaginatedInterpreter())
 }
 
 func NewTransactionDB(opts sqlite.Opts) (*TransactionDB, error) {
