@@ -37,23 +37,17 @@ token:
               endorsers: {{ range Endorsers }}
               - {{ . }}{{ end }}
       {{ end }}
-      db:
-        persistence:
-          type: unity
-          opts:
-            driver: {{ SQLDriver }}    
-            maxOpenConns: 200
-            dataSource: {{ SQLDataSource }}
-      {{ if not OnlyUnity }} 
+ 
       tokendb:
-        persistence:
-          type: sql
-          opts:
-            tablePrefix: tokens  
-            driver: {{ TokensSQLDriver }}    
-            maxOpenConns: 200
-            dataSource: {{ TokensSQLDataSource }}
-      {{ end }}
+        persistence: {{ TokenPersistence }}
+      identitydb:
+        persistence: {{ IdentityPersistence }}
+      tokenlockdb:
+        persistence: {{ TokenLockPersistence }}
+      auditdb:
+        persistence: {{ AuditTxPersistence }}
+      ttxdb:
+        persistence: {{ OwnerTxPersistence }}
       {{ if Wallets }}
       # Wallets associated with this TMS
       wallets:

@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
@@ -152,9 +151,9 @@ func Topology(opts common.Opts) []api.Topology {
 			fabric.WithOrganization("Org1"),
 			fabric2.WithEndorserRole(),
 		)
-		fscTopology.AddNodeFromTemplate("endorser-1", endorserTemplate)
-		fscTopology.AddNodeFromTemplate("endorser-2", endorserTemplate)
-		fscTopology.AddNodeFromTemplate("endorser-3", endorserTemplate)
+		fscTopology.AddNodeFromTemplate("endorser-1", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-1")...)
+		fscTopology.AddNodeFromTemplate("endorser-2", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-2")...)
+		fscTopology.AddNodeFromTemplate("endorser-3", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-3")...)
 	}
 
 	tokenTopology := token.NewTopology()
@@ -190,9 +189,6 @@ func Topology(opts common.Opts) []api.Topology {
 	}
 	if !opts.NoAuditor {
 		tms.AddAuditor(auditor)
-	}
-	if opts.OnlyUnity {
-		common2.WithOnlyUnity(tms)
 	}
 	tms.AddIssuer(issuer)
 	tms.AddIssuerByID("issuer.id1")

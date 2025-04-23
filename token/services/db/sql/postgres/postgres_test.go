@@ -21,45 +21,35 @@ func TestTokens(t *testing.T) {
 	terminate, pgConnStr := startContainer(t)
 	defer terminate()
 
-	dbtest.TokensTest(t, func(name string) (driver.Driver, driver.Config) {
-		return NewDriver(), postgresCfg(pgConnStr, name)
-	})
+	dbtest.TokensTest(t, func(name string) driver.Driver { return NewDriver(postgresCfg(pgConnStr, name)) })
 }
 
 func TestTransactions(t *testing.T) {
 	terminate, pgConnStr := startContainer(t)
 	defer terminate()
 
-	dbtest.TransactionsTest(t, func(name string) (driver.Driver, driver.Config) {
-		return NewDriver(), postgresCfg(pgConnStr, name)
-	})
+	dbtest.TransactionsTest(t, func(name string) driver.Driver { return NewDriver(postgresCfg(pgConnStr, name)) })
 }
 
 func TestTokenLocks(t *testing.T) {
 	terminate, pgConnStr := startContainer(t)
 	defer terminate()
 
-	dbtest.TokenLocksTest(t, func(name string) (driver.Driver, driver.Config) {
-		return NewDriver(), postgresCfg(pgConnStr, name)
-	})
+	dbtest.TokenLocksTest(t, func(name string) driver.Driver { return NewDriver(postgresCfg(pgConnStr, name)) })
 }
 
 func TestWallet(t *testing.T) {
 	terminate, pgConnStr := startContainer(t)
 	defer terminate()
 
-	dbtest.WalletTest(t, func(name string) (driver.Driver, driver.Config) {
-		return NewDriver(), postgresCfg(pgConnStr, name)
-	})
+	dbtest.WalletTest(t, func(name string) driver.Driver { return NewDriver(postgresCfg(pgConnStr, name)) })
 }
 
 func TestIdentity(t *testing.T) {
 	terminate, pgConnStr := startContainer(t)
 	defer terminate()
 
-	dbtest.IdentityTest(t, func(name string) (driver.Driver, driver.Config) {
-		return NewDriver(), postgresCfg(pgConnStr, name)
-	})
+	dbtest.IdentityTest(t, func(name string) driver.Driver { return NewDriver(postgresCfg(pgConnStr, name)) })
 }
 
 func postgresCfg(pgConnStr string, name string) *mock.ConfigProvider {

@@ -18,8 +18,8 @@ import (
 
 func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
 	for _, c := range identityCases {
-		driver, config := cfgProvider(c.Name)
-		db, err := driver.NewIdentity(config, c.Name)
+		driver := cfgProvider(c.Name)
+		db, err := driver.NewIdentity("", c.Name)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -31,7 +31,7 @@ func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
 
 var identityCases = []struct {
 	Name string
-	Fn   func(*testing.T, driver.IdentityDB)
+	Fn   func(*testing.T, driver.IdentityStore)
 }{
 	{"IdentityInfo", TIdentityInfo},
 	{"SignerInfo", TSignerInfo},
@@ -39,7 +39,7 @@ var identityCases = []struct {
 	{"SignerInfoConcurrent", TSignerInfoConcurrent},
 }
 
-func TConfigurations(t *testing.T, db driver.IdentityDB) {
+func TConfigurations(t *testing.T, db driver.IdentityStore) {
 	expected := driver.IdentityConfiguration{
 		ID:     "pineapple",
 		Type:   "core",
@@ -79,7 +79,7 @@ func TConfigurations(t *testing.T, db driver.IdentityDB) {
 	assert.NoError(t, db.AddConfiguration(expected))
 }
 
-func TIdentityInfo(t *testing.T, db driver.IdentityDB) {
+func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
 	id := []byte("alice")
 	auditInfo := []byte("alice_audit_info")
 	tokMeta := []byte("tok_meta")
@@ -96,11 +96,11 @@ func TIdentityInfo(t *testing.T, db driver.IdentityDB) {
 	assert.Equal(t, tokMetaAudit, tokMetaAudit2)
 }
 
-func TSignerInfo(t *testing.T, db driver.IdentityDB) {
+func TSignerInfo(t *testing.T, db driver.IdentityStore) {
 	tSignerInfo(t, db, 0)
 }
 
-func TSignerInfoConcurrent(t *testing.T, db driver.IdentityDB) {
+func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
 	wg := sync.WaitGroup{}
 	n := 100
 	wg.Add(n)
@@ -122,7 +122,7 @@ func TSignerInfoConcurrent(t *testing.T, db driver.IdentityDB) {
 	}
 }
 
-func tSignerInfo(t *testing.T, db driver.IdentityDB, index int) {
+func tSignerInfo(t *testing.T, db driver.IdentityStore, index int) {
 	alice := []byte(fmt.Sprintf("alice_%d", index))
 	bob := []byte(fmt.Sprintf("bob_%d", index))
 	signerInfo := []byte("signer_info")

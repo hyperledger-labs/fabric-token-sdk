@@ -11,12 +11,19 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
+type configProvider interface {
+	GetOpts(name driver2.PersistenceName, params ...string) (*postgres.Config, error)
+}
+
 type Driver struct {
+	cp configProvider
+
 	TokenLockCache     lazy.Provider[postgres.Config, *TokenLockDB]
 	WalletCache        lazy.Provider[postgres.Config, *WalletDB]
 	IdentityCache      lazy.Provider[postgres.Config, *IdentityDB]
@@ -26,15 +33,17 @@ type Driver struct {
 	OwnerTxCache       lazy.Provider[postgres.Config, *TransactionDB]
 }
 
-func NewNamedDriver() driver.NamedDriver {
+func NewNamedDriver(config driver.Config) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name:   postgres.Persistence,
-		Driver: NewDriver(),
+		Driver: NewDriver(config),
 	}
 }
 
-func NewDriver() *Driver {
+func NewDriver(config driver.Config) *Driver {
 	return &Driver{
+		cp: postgres.NewConfigProvider(common.NewConfig(config)),
+
 		TokenLockCache:     newProviderWithKeyMapper(NewTokenLockDB),
 		WalletCache:        newProviderWithKeyMapper(NewWalletDB),
 		IdentityCache:      newProviderWithKeyMapper(NewIdentityDB),
@@ -45,56 +54,56 @@ func NewDriver() *Driver {
 	}
 }
 
-func (d *Driver) NewTokenLock(cfg driver.Config, params ...string) (driver.TokenLockDB, error) {
-	opts, err := postgres.NewConfigProvider(cfg).GetOpts(params...)
+func (d *Driver) NewTokenLock(name driver2.PersistenceName, params ...string) (driver.TokenLockStore, error) {
+	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
 	}
 	return d.TokenLockCache.Get(*opts)
 }
 
-func (d *Driver) NewWallet(cfg driver.Config, params ...string) (driver.WalletDB, error) {
-	opts, err := postgres.NewConfigProvider(cfg).GetOpts(params...)
+func (d *Driver) NewWallet(name driver2.PersistenceName, params ...string) (driver.WalletStore, error) {
+	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
 	}
 	return d.WalletCache.Get(*opts)
 }
 
-func (d *Driver) NewIdentity(cfg driver.Config, params ...string) (driver.IdentityDB, error) {
-	opts, err := postgres.NewConfigProvider(cfg).GetOpts(params...)
+func (d *Driver) NewIdentity(name driver2.PersistenceName, params ...string) (driver.IdentityStore, error) {
+	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
 	}
 	return d.IdentityCache.Get(*opts)
 }
 
-func (d *Driver) NewToken(cfg driver.Config, params ...string) (driver.TokenDB, error) {
-	opts, err := postgres.NewConfigProvider(cfg).GetOpts(params...)
+func (d *Driver) NewToken(name driver2.PersistenceName, params ...string) (driver.TokenStore, error) {
+	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
 	}
 	return d.TokenCache.Get(*opts)
 }
 
-func (d *Driver) NewTokenNotifier(cfg driver.Config, params ...string) (driver.TokenNotifier, error) {
-	opts, err := postgres.NewConfigProvider(cfg).GetOpts(params...)
+func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string) (driver.TokenNotifier, error) {
+	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
 	}
 	return d.TokenNotifierCache.Get(*opts)
 }
 
-func (d *Driver) NewAuditTransaction(cfg driver.Config, params ...string) (driver.AuditTransactionDB, error) {
-	opts, err := postgres.NewConfigProvider(cfg).GetOpts(params...)
+func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...string) (driver.AuditTransactionStore, error) {
+	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
 	}
 	return d.AuditTxCache.Get(*opts)
 }
 
-func (d *Driver) NewOwnerTransaction(cfg driver.Config, params ...string) (driver.TokenTransactionDB, error) {
-	opts, err := postgres.NewConfigProvider(cfg).GetOpts(params...)
+func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...string) (driver.TokenTransactionStore, error) {
+	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
 	}

@@ -58,7 +58,6 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names
 			SDKs:            []api.SDK{&fdlog.SDK{}},
 			// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 			ReplicationOpts: opts,
-			OnlyUnity:       true,
 		},
 	))
 	return ts, selector

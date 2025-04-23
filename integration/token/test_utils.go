@@ -13,8 +13,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	. "github.com/onsi/gomega"
 )
 
@@ -30,8 +32,10 @@ type ReplicationOptions struct {
 
 func (o *ReplicationOptions) For(name string) []node.Option {
 	opts := o.ReplicationOptions.For(name)
-	if sqlConfig, ok := o.SQLConfigs[name]; ok {
-		opts = append(opts, fabric.WithPostgresPersistence(sqlConfig, "token"))
+	if _, ok := o.SQLConfigs[name]; ok {
+		opts = append(opts, fabric.WithPostgresPersistenceNames(common2.DefaultPersistence, common.AllPrefixes...))
+	} else {
+		opts = append(opts, fabric.WithSqlitePersistences(common.AllPrefixes...))
 	}
 	return opts
 }

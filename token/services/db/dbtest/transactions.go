@@ -25,8 +25,8 @@ import (
 
 func TransactionsTest(t *testing.T, cfgProvider cfgProvider) {
 	for _, c := range tokenTransactionDBCases {
-		driver, config := cfgProvider(c.Name)
-		db, err := driver.NewOwnerTransaction(config, c.Name)
+		driver := cfgProvider(c.Name)
+		db, err := driver.NewOwnerTransaction("", c.Name)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -39,7 +39,7 @@ func TransactionsTest(t *testing.T, cfgProvider cfgProvider) {
 
 var tokenTransactionDBCases = []struct {
 	Name string
-	Fn   func(*testing.T, driver.TokenTransactionDB)
+	Fn   func(*testing.T, driver.TokenTransactionStore)
 }{
 	{"FailsIfRequestDoesNotExist", TFailsIfRequestDoesNotExist},
 	{"Status", TStatus},
@@ -54,7 +54,7 @@ var tokenTransactionDBCases = []struct {
 	{"TEndorserAcks", TEndorserAcks},
 }
 
-func TFailsIfRequestDoesNotExist(t *testing.T, db driver.TokenTransactionDB) {
+func TFailsIfRequestDoesNotExist(t *testing.T, db driver.TokenTransactionStore) {
 	tx := driver.TransactionRecord{
 		TxID:         "tx1",
 		ActionType:   driver.Transfer,
@@ -91,7 +91,7 @@ func TFailsIfRequestDoesNotExist(t *testing.T, db driver.TokenTransactionDB) {
 	w.Rollback()
 }
 
-func TStatus(t *testing.T, db driver.TokenTransactionDB) {
+func TStatus(t *testing.T, db driver.TokenTransactionStore) {
 	tx := driver.TransactionRecord{
 		TxID:         "tx1",
 		ActionType:   driver.Transfer,
@@ -148,7 +148,7 @@ func TStatus(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Equal(t, driver.Confirmed, mvs[0].Status, "movement status should be confirmed")
 }
 
-func TStoresTimestamp(t *testing.T, db driver.TokenTransactionDB) {
+func TStoresTimestamp(t *testing.T, db driver.TokenTransactionStore) {
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
 	assert.NoError(t, w.AddTokenRequest("tx1", []byte(""), map[string][]byte{}, nil, driver2.PPHash("tr")))
@@ -178,7 +178,7 @@ func TStoresTimestamp(t *testing.T, db driver.TokenTransactionDB) {
 	assert.WithinDuration(t, now, vr[0].Timestamp, 3*time.Second)
 }
 
-func TMovements(t *testing.T, db driver.TokenTransactionDB) {
+func TMovements(t *testing.T, db driver.TokenTransactionStore) {
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
 	assert.NoError(t, w.AddTokenRequest("0", []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
@@ -243,7 +243,7 @@ func TMovements(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Len(t, records, 1)
 }
 
-func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
+func TTransaction(t *testing.T, db driver.TokenTransactionStore) {
 	var txs []*driver.TransactionRecord
 
 	t0 := time.Now()
@@ -388,7 +388,7 @@ func assertTxEqual(t *testing.T, exp *driver.TransactionRecord, act *driver.Tran
 	}
 }
 
-func TTokenRequest(t *testing.T, db driver.TokenTransactionDB) {
+func TTokenRequest(t *testing.T, db driver.TokenTransactionStore) {
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
 	tr1 := []byte("arbitrary bytes")
@@ -492,7 +492,7 @@ func TTokenRequest(t *testing.T, db driver.TokenTransactionDB) {
 	it.Close()
 }
 
-func TAllowsSameTxID(t *testing.T, db driver.TokenTransactionDB) {
+func TAllowsSameTxID(t *testing.T, db driver.TokenTransactionStore) {
 	// bob sends 10 to alice
 	tr1 := &driver.TransactionRecord{
 		TxID:                "1",
@@ -528,7 +528,7 @@ func TAllowsSameTxID(t *testing.T, db driver.TokenTransactionDB) {
 	assertTxEqual(t, tr2, txs[1])
 }
 
-func TRollback(t *testing.T, db driver.TokenTransactionDB) {
+func TRollback(t *testing.T, db driver.TokenTransactionStore) {
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
 	assert.NoError(t, w.AddTokenRequest("1", []byte("arbitrary bytes"), map[string][]byte{}, nil, driver2.PPHash("tr")))
@@ -559,7 +559,7 @@ func TRollback(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Len(t, mvm, 0)
 }
 
-func TTransactionQueries(t *testing.T, db driver.TokenTransactionDB) {
+func TTransactionQueries(t *testing.T, db driver.TokenTransactionStore) {
 	now := time.Now()
 	justBefore := now.Add(-time.Millisecond)
 	justAfter := now.Add(time.Millisecond)
@@ -796,7 +796,7 @@ func TTransactionQueries(t *testing.T, db driver.TokenTransactionDB) {
 	}
 }
 
-func getTransactions(t *testing.T, db driver.TokenTransactionDB, params driver.QueryTransactionsParams) []*driver.TransactionRecord {
+func getTransactions(t *testing.T, db driver.TokenTransactionStore, params driver.QueryTransactionsParams) []*driver.TransactionRecord {
 	records, err := db.QueryTransactions(params, common.NewNoPagination())
 	assert.NoError(t, err)
 	defer records.Items.Close()
@@ -811,7 +811,7 @@ func getTransactions(t *testing.T, db driver.TokenTransactionDB, params driver.Q
 	}
 }
 
-func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
+func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionStore) {
 	beforeTx := time.Now().UTC().Add(-1 * time.Second)
 	exp := []driver.ValidationRecord{
 		{
@@ -891,7 +891,7 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Len(t, filtered, 3)
 }
 
-func getValidationRecords(t *testing.T, db driver.TokenTransactionDB, params driver.QueryValidationRecordsParams) []*driver.ValidationRecord {
+func getValidationRecords(t *testing.T, db driver.TokenTransactionStore, params driver.QueryValidationRecordsParams) []*driver.ValidationRecord {
 	records, err := db.QueryValidations(params)
 	assert.NoError(t, err)
 	defer records.Close()
@@ -906,7 +906,7 @@ func getValidationRecords(t *testing.T, db driver.TokenTransactionDB, params dri
 	}
 }
 
-func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
+func TEndorserAcks(t *testing.T, db driver.TokenTransactionStore) {
 	createTestTransaction(t, db, "1")
 	wg := sync.WaitGroup{}
 	n := 100
@@ -930,7 +930,7 @@ func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
 	}
 }
 
-func createTestTransaction(t *testing.T, db driver.TokenTransactionDB, txID string) {
+func createTestTransaction(t *testing.T, db driver.TokenTransactionStore, txID string) {
 	w, err := db.BeginAtomicWrite()
 	if err != nil {
 		t.Fatalf("error creating transaction while trying to test something else: %s", err)

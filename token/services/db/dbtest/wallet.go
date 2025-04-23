@@ -15,8 +15,8 @@ import (
 
 func WalletTest(t *testing.T, cfgProvider cfgProvider) {
 	for _, c := range walletCases {
-		driver, config := cfgProvider(c.Name)
-		db, err := driver.NewWallet(config, c.Name)
+		driver := cfgProvider(c.Name)
+		db, err := driver.NewWallet("", c.Name)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -29,13 +29,13 @@ func WalletTest(t *testing.T, cfgProvider cfgProvider) {
 
 var walletCases = []struct {
 	Name string
-	Fn   func(*testing.T, driver.WalletDB)
+	Fn   func(*testing.T, driver.WalletStore)
 }{
 	{"TDuplicate", TDuplicate},
 	{"TWalletIdentities", TWalletIdentities},
 }
 
-func TDuplicate(t *testing.T, db driver.WalletDB) {
+func TDuplicate(t *testing.T, db driver.WalletStore) {
 	id := []byte{254, 0, 155, 1}
 
 	err := db.StoreIdentity(id, "eID", "duplicate", 0, []byte("meta"))
@@ -53,7 +53,7 @@ func TDuplicate(t *testing.T, db driver.WalletDB) {
 	assert.Equal(t, "meta", string(meta))
 }
 
-func TWalletIdentities(t *testing.T, db driver.WalletDB) {
+func TWalletIdentities(t *testing.T, db driver.WalletStore) {
 	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 0, nil))
 	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 1, nil))
 	assert.NoError(t, db.StoreIdentity([]byte("bob"), "eID", "bob_wallet", 0, nil))

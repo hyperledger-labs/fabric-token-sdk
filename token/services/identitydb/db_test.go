@@ -23,7 +23,7 @@ func TestDB(t *testing.T) {
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 
-	dh := db2.NewDriverHolder(cp, multiplexed.Driver{sqlite.NewNamedDriver()})
+	dh := db2.NewDriverHolder(cp, multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp)))
 	manager := identitydb.NewManager(dh)
 	_, err = manager.IdentityDBByTMSId(token2.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)

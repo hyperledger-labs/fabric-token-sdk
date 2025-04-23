@@ -91,24 +91,10 @@ token:
       # The databases can be instantiated in isolation, a different backend for each db, or with a shared backend, depending on the driver used.
       # In the following example, we have all databases using the same backed but tokendb.
 
-      # shared db configuration. The `unity` driver is used as provider.  
-      db:
-        persistence:
-          # configuration for the unity db driver. It uses sql as backend. See also https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/core-fabric.md
-          type: unity
-          opts:
-            driver: sqlite
-            maxOpenConns: 20  # optional: max open read connections to the database. Defaults to unlimited. See https://go.dev/doc/database/manage-connections.
-            maxIdleConns: 20  # optional: max idle read connections to the database. Defaults to 2.
-            maxIdleTime: 30s  # optional: max duration a connection can be idle before it is closed. Defaults to 1 minute.
-            dataSource: /some/path/unitydb
-      # optional separate configuration for ttxdb, tokendb, auditdb, and identitydb
+      # optional separate configuration for ttxdb, tokendb, tokenlockdb, auditdb, and identitydb
+      # otherwise they default to 'default', if it is defined
       tokendb:
-        persistence:
-          type: sql
-          opts:
-            driver: sqlite
-            dataSource: /some/path/tokendb
+        persistence: my_token_persistence
 
       services:
         # This section contains network specific configuration

@@ -984,7 +984,7 @@ func (db *TokenDB) Close() error {
 	return common2.Close(db.readDB, db.writeDB)
 }
 
-func (db *TokenDB) NewTokenDBTransaction() (driver.TokenDBTransaction, error) {
+func (db *TokenDB) NewTokenDBTransaction() (driver.TokenStoreTransaction, error) {
 	tx, err := db.writeDB.Begin()
 	if err != nil {
 		return nil, errors.Errorf("failed starting a db transaction")

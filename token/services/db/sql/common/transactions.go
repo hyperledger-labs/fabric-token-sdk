@@ -52,7 +52,7 @@ func newTransactionDB(readDB, writeDB *sql.DB, tables transactionTables, ci Toke
 	}
 }
 
-func NewAuditTransactionDB(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter, pi common.PaginationInterpreter) (*TransactionDB, error) {
+func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter, pi common.PaginationInterpreter) (*TransactionDB, error) {
 	return NewTransactionDB(readDB, writeDB, tables, ci, pi)
 }
 

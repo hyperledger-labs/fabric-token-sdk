@@ -45,7 +45,4 @@ token:
             id: alice.id1
             path: /token/crypto/default-testchannel-zkat/idemix/alice.id1
   ttxdb:
-    persistence:
-      opts:
-        path: /tmp/ttxdb
-      type: badger
+    persistence: some_persistence

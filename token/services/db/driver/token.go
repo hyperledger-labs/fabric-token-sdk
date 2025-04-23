@@ -108,8 +108,8 @@ const (
 	NonSpendableOnly
 )
 
-// CertificationDB defines a database to manager token certifications
-type CertificationDB interface {
+// CertificationStore defines a database to manager token certifications
+type CertificationStore interface {
 	// ExistsCertification returns true if a certification for the passed token exists,
 	// false otherwise
 	ExistsCertification(id *token.ID) bool
@@ -125,7 +125,7 @@ type CertificationDB interface {
 	Close() error
 }
 
-type TokenDBTransaction interface {
+type TokenStoreTransaction interface {
 	// GetToken returns the owned tokens and their identifier keys for the passed ids.
 	GetToken(ctx context.Context, tokenID token.ID, includeDeleted bool) (*token.Token, []string, error)
 	// Delete marks the passed token as deleted by a given identifier (idempotent)
@@ -143,16 +143,16 @@ type TokenDBTransaction interface {
 	Rollback() error
 }
 
-// TokenDB defines a database to store token related info
-type TokenDB interface {
-	CertificationDB
+// TokenStore defines a database to store token related info
+type TokenStore interface {
+	CertificationStore
 	// DeleteTokens marks the passsed tokens as deleted
 	DeleteTokens(deletedBy string, toDelete ...*token.ID) error
 	// IsMine return true if the passed token was stored before
 	IsMine(txID string, index uint64) (bool, error)
 	// UnspentTokensIterator returns an iterator over all owned tokens
 	UnspentTokensIterator() (driver.UnspentTokensIterator, error)
-	// LedgerTokensIteratorBy returns an iterator over all unspent ledger tokens
+	// UnspentLedgerTokensIteratorBy returns an iterator over all unspent ledger tokens
 	UnspentLedgerTokensIteratorBy(ctx context.Context) (driver.LedgerTokensIterator, error)
 	// UnspentTokensIteratorBy returns an iterator over all tokens owned by the passed wallet identifier and of a given type
 	UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (driver.UnspentTokensIterator, error)
@@ -191,7 +191,7 @@ type TokenDB interface {
 	// If not public parameters are available for that hash, it returns an error
 	PublicParamsByHash(rawHash driver.PPHash) ([]byte, error)
 	// NewTokenDBTransaction returns a new Transaction to commit atomically multiple operations
-	NewTokenDBTransaction() (TokenDBTransaction, error)
+	NewTokenDBTransaction() (TokenStoreTransaction, error)
 	// QueryTokenDetails provides detailed information about tokens
 	QueryTokenDetails(params QueryTokenDetailsParams) ([]TokenDetails, error)
 	// Balance returns the sun of the amounts of the tokens with type and EID equal to those passed as arguments.
@@ -200,13 +200,7 @@ type TokenDB interface {
 	SetSupportedTokenFormats(formats []token.Format) error
 }
 
-// TokenDBDriver is the interface for a token database driver
-type TokenDBDriver interface {
-	// Open opens a token database
-	Open(cp ConfigProvider, tmsID token2.TMSID) (TokenDB, error)
-}
-
-// TokenNotifier is the observable version of TokenDB
+// TokenNotifier is the observable version of TokenStore
 type TokenNotifier driver2.Notifier
 
 // TokenNotifierDriver is the interface for a token database driver
@@ -215,11 +209,11 @@ type TokenNotifierDriver interface {
 	Open(cp ConfigProvider, tmsID token2.TMSID) (TokenNotifier, error)
 }
 
-// TokenLockDB enforces that a token be used only by one process
+// TokenLockStore enforces that a token be used only by one process
 // A housekeeping job can clean up expired locks (e.g. created_at is more than 5 minutes ago) in order to:
 // - avoid that the table grows infinitely
 // - unlock tokens that were locked by a process that exited unexpectedly
-type TokenLockDB interface {
+type TokenLockStore interface {
 	common.DBObject
 	// Lock locks a specific token for the consumer TX
 	Lock(tokenID *token.ID, consumerTxID transaction.ID) error
@@ -231,12 +225,6 @@ type TokenLockDB interface {
 	Cleanup(leaseExpiry time.Duration) error
 	// Close closes the database
 	Close() error
-}
-
-// TokenLockDBDriver is the interface for a token database driver
-type TokenLockDBDriver interface {
-	// Open opens a token database
-	Open(cp ConfigProvider, tmsID token2.TMSID) (TokenLockDB, error)
 }
 
 var (
