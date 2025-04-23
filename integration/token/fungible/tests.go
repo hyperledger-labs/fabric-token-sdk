@@ -470,7 +470,12 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckSpending(network, alice, "", "USD", auditor, 121)
 	CheckSpending(network, bob, "", "EUR", auditor, 10)
 
-	RedeemCash(network, bob, "", "USD", 10, auditor, issuer)
+	// The following RedeemCash doesn't specify the issuer's network id so
+	// it must be preceded by binding this network id with the issuer's signing id
+	// so the endorsement process could automatically idntify the issuer
+	// that needs to sign the Redeem.
+	BindIssuerNetworkAndSigningIdentities(network, issuer, GetIssuerIdentity(GetTMSByNetworkName(network, networkName), issuer.Id()), bob)
+	RedeemCash(network, bob, "", "USD", 10, auditor, nil)
 	CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
 	CheckSpending(network, bob, "", "USD", auditor, 21)
 
@@ -1454,26 +1459,4 @@ func TestMultiSig(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckCoOwnedBalance(network, bob, "", "USD", 0)
 	CheckCoOwnedBalance(network, charlie, "", "USD", 0)
 	CheckCoOwnedBalance(network, manager, "", "USD", 0)
-}
-
-func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector, networkName string) {
-	auditor := sel.Get("auditor")
-	issuer := sel.Get("issuer")
-	alice := sel.Get("alice")
-
-	RegisterAuditor(network, auditor)
-
-	// give some time to the nodes to get the public parameters - Q - may now be needed. waiting in UpdatePublicParamsAndWait.
-	time.Sleep(10 * time.Second)
-
-	SetKVSEntry(network, issuer, "auditor", auditor.Id())
-	CheckPublicParams(network, issuer, auditor, alice)
-
-	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
-	CheckBalance(network, alice, "", "USD", 110)
-	CheckHolding(network, alice, "", "USD", 110, auditor)
-
-	RedeemCash(network, alice, "", "USD", 10, auditor, issuer)
-	CheckBalance(network, alice, "", "USD", 100)
-	CheckHolding(network, alice, "", "USD", 100, auditor)
 }
