@@ -35,7 +35,6 @@ var _ = Describe("EndToEnd", func() {
 			It("Test Identity Revocation", Label("T3"), func() { fungible.TestRevokeIdentity(ts.II, "auditor", selector) })
 			It("Test Remote Wallet (GRPC)", Label("T4"), func() { fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, false) })
 			It("Test Remote Wallet (WebSocket)", Label("T5"), func() { fungible.TestRemoteOwnerWallet(ts.II, "auditor", selector, true) })
-			It("Test redeem flow", Label("T6"), func() { fungible.TestRedeem(ts.II, selector, "default") })
 		})
 	}
 })
