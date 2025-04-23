@@ -12,6 +12,7 @@ import (
 
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
@@ -25,12 +26,12 @@ func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
 		}
 		tokenTransactionDB, err := driver.NewOwnerTransaction("", c.Name)
 		if err != nil {
-			tokenLockDB.Close()
+			utils.IgnoreError(tokenLockDB.Close)
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer tokenLockDB.Close()
-			defer tokenTransactionDB.Close()
+			defer utils.IgnoreError(tokenLockDB.Close)
+			defer utils.IgnoreError(tokenTransactionDB.Close)
 			c.Fn(xt, tokenLockDB, tokenTransactionDB)
 		})
 	}
