@@ -70,7 +70,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
 		SDKs:            []api2.SDK{&fdlog.SDK{}},
-		FSCLogSpec:      "token-sdk.sql=debug:info",
+		FSCLogSpec:      "token-sdk.sql=debug:view-sdk.db.driver.sql=debug:info",
 	}))
 	return ts, selector
 }
@@ -82,7 +82,7 @@ func newTestSuiteSingleOrion(commType fsc.P2PCommunicationType, factor int, name
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
 		SDKs:            []api2.SDK{&odlog.SDK{}},
-		FSCLogSpec:      "token-sdk.sql=debug:info",
+		FSCLogSpec:      "token-sdk.sql=debug:view-sdk.db.driver.sql=debug:info",
 	}))
 	return ts, selector
 }
