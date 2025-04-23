@@ -68,13 +68,15 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	// Therefore, we need a way to contact the issuer to obtain its signature.
 	// If the application doesn't have a way to resolve the Issuer's network node already,
 	// the developer can specify the issuer network node identity directly as in this example.
+	opts := []token2.TransferOption{token2.WithTokenIDs(t.TokenIDs...)}
+	if t.Issuer != "" {
+		opts = append(opts, ttx.WithFSCIssuerIdentity(view2.GetIdentityProvider(context).Identity(t.Issuer)))
+	}
 	err = tx.Redeem(
 		senderWallet,
 		t.Type,
 		t.Amount,
-		token2.WithTokenIDs(t.TokenIDs...),
-		ttx.WithFSCIssuerIdentity(view2.GetIdentityProvider(context).Identity(t.Issuer)),
-	)
+		opts...)
 	assert.NoError(err, "failed adding new tokens")
 
 	// The sender is ready to collect all the required signatures.

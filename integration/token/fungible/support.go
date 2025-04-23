@@ -834,9 +834,14 @@ func RedeemCash(network *integration.Infrastructure, id *token3.NodeReference, w
 }
 
 func RedeemCashForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference, tmsID *token2.TMSID) {
+	issuerName := ""
+	if issuer != nil {
+		issuerName = issuer.Id()
+	}
+
 	txid, err := network.Client(id.ReplicaName()).CallView("redeem", common.JSONMarshall(&views.Redeem{
 		Auditor: auditor.Id(),
-		Issuer:  issuer.Id(),
+		Issuer:  issuerName,
 		Wallet:  wallet,
 		Type:    typ,
 		Amount:  amount,
@@ -1394,7 +1399,7 @@ func MultiSigSpendCashForTMSID(network *integration.Infrastructure, sender *toke
 
 }
 
-func SetBinding(network *integration.Infrastructure, issuer *token3.NodeReference, issuerPublicKey []byte, onNodes ...*token3.NodeReference) {
+func BindIssuerNetworkAndSigningIdentities(network *integration.Infrastructure, issuer *token3.NodeReference, issuerPublicKey []byte, onNodes ...*token3.NodeReference) {
 	for _, node := range onNodes {
 		for _, nodeReplica := range node.AllNames() {
 			for _, issuerName := range issuer.AllNames() {
@@ -1404,7 +1409,6 @@ func SetBinding(network *integration.Infrastructure, issuer *token3.NodeReferenc
 				}))
 
 				Expect(err).NotTo(HaveOccurred())
-
 			}
 		}
 	}
