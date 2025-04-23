@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/test-go/testify/assert"
 )
 
@@ -31,7 +32,7 @@ func TransactionsTest(t *testing.T, cfgProvider cfgProvider) {
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
+			defer utils.IgnoreError(db.Close)
 			c.Fn(xt, db)
 		})
 	}

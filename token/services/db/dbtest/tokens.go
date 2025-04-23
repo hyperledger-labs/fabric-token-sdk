@@ -16,6 +16,7 @@ import (
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
@@ -30,7 +31,9 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer db.(*common.TokenStore).Close()
+			tokenDB, ok := db.(*common.TokenStore)
+			assert.True(xt, ok)
+			defer utils.IgnoreError(tokenDB.Close)
 			c.Fn(xt, db.(*common.TokenStore))
 		})
 	}
