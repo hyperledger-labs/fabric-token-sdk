@@ -150,7 +150,7 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 		return nil, err
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.TxID.String())
+		logger.Debugf("unmarshalling tx, id [%s]", tx.TxID.String())
 	}
 	tms := token.GetManagementService(context,
 		token.WithNetwork(tx.Network()),
@@ -216,7 +216,7 @@ func (t *Transaction) Namespace() string {
 }
 
 func (t *Transaction) Request() *token.Request {
-	return t.Payload.TokenRequest
+	return t.TokenRequest
 }
 
 func (t *Transaction) NetworkTxID() network.TxID {
@@ -227,7 +227,7 @@ func (t *Transaction) NetworkTxID() network.TxID {
 // If eIDs is not nil, then metadata is filtered by the passed eIDs.
 func (t *Transaction) Bytes(eIDs ...string) ([]byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("marshalling tx, id [%s], for EIDs [%x]", t.Payload.TxID.String(), eIDs)
+		logger.Debugf("marshalling tx, id [%s], for EIDs [%x]", t.TxID.String(), eIDs)
 	}
 	return marshal(t, eIDs...)
 }
@@ -335,8 +335,8 @@ func (t *Transaction) TMSID() token.TMSID {
 
 func (t *Transaction) appendPayload(payload *Payload) error {
 	// TODO: change this
-	t.Payload.TokenRequest = payload.TokenRequest
-	t.Payload.Transient = payload.Transient
+	t.TokenRequest = payload.TokenRequest
+	t.Transient = payload.Transient
 	return nil
 
 	// for _, bytes := range payload.Request.Issues {

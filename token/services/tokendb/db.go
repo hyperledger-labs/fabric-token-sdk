@@ -58,7 +58,7 @@ type DB struct {
 }
 
 func (d *DB) NewTransaction() (*Transaction, error) {
-	tx, err := d.TokenDB.NewTokenDBTransaction()
+	tx, err := d.NewTokenDBTransaction()
 	if err != nil {
 		return nil, err
 	}

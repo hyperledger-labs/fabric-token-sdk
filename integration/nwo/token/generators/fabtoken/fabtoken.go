@@ -18,6 +18,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -29,7 +30,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -194,20 +195,20 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 
 			// copy the content of the keystore folder to x509.KeystoreFullFolder
 			in, err := os.Open(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-			Expect(os.MkdirAll(filepath.Join(idOutput, x509.KeystoreFullFolder), 0766)).NotTo(HaveOccurred())
+			gomega.Expect(os.MkdirAll(filepath.Join(idOutput, x509.KeystoreFullFolder), 0766)).NotTo(gomega.HaveOccurred())
 			out, err := os.Create(filepath.Join(idOutput, x509.KeystoreFullFolder, x509.PrivateKeyFileName))
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			_, err = io.Copy(out, in)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			err = out.Sync()
-			Expect(err).NotTo(HaveOccurred())
-			in.Close()
-			out.Close()
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			utils.IgnoreError(in.Close)
+			utils.IgnoreError(out.Close)
 
 			// delete keystore/priv_sk so that the token-sdk will interpreter this wallet as a remote one
-			Expect(os.Remove(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))).NotTo(HaveOccurred())
+			gomega.Expect(os.Remove(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))).NotTo(gomega.HaveOccurred())
 		}
 
 		id := topology.Identity{
@@ -224,7 +225,7 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 				// SW
 				id.Opts, err = crypto.BCCSPOpts("SW")
 			}
-			Expect(err).NotTo(HaveOccurred(), "failed generating identity [%s]", userSpecs[i])
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed generating identity [%s]", userSpecs[i])
 		}
 
 		identities = append(identities, id)
@@ -234,16 +235,16 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 }
 
 func (d *CryptoMaterialGenerator) GenerateCryptoConfig(output string, layout *Layout) {
-	Expect(os.MkdirAll(output, 0770)).NotTo(HaveOccurred())
+	gomega.Expect(os.MkdirAll(output, 0770)).NotTo(gomega.HaveOccurred())
 	crypto, err := os.Create(filepath.Join(output, "crypto-config.yaml"))
-	Expect(err).NotTo(HaveOccurred())
-	defer crypto.Close()
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	defer utils.IgnoreError(crypto.Close)
 
 	t, err := template.New("crypto").Parse(DefaultCryptoTemplate)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	err = t.Execute(io.MultiWriter(crypto), layout)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 func (d *CryptoMaterialGenerator) GenerateArtifacts(output string) {
@@ -251,8 +252,8 @@ func (d *CryptoMaterialGenerator) GenerateArtifacts(output string) {
 		Config: filepath.Join(output, "crypto-config.yaml"),
 		Output: output,
 	})
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
 }
 
 func (d *CryptoMaterialGenerator) Cryptogen(command common.Command) (*gexec.Session, error) {
@@ -262,14 +263,16 @@ func (d *CryptoMaterialGenerator) Cryptogen(command common.Command) (*gexec.Sess
 
 func (d *CryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, error) {
 	ansiColorCode := d.NextColor()
-	fmt.Fprintf(
+	if _, err := fmt.Fprintf(
 		ginkgo.GinkgoWriter,
 		"\x1b[33m[d]\x1b[%s[%s]\x1b[0m starting %s %s\n",
 		ansiColorCode,
 		name,
 		filepath.Base(cmd.Args[0]),
 		strings.Join(cmd.Args[1:], " "),
-	)
+	); err != nil {
+		return nil, err
+	}
 	return gexec.Start(
 		cmd,
 		gexec.NewPrefixedWriter(

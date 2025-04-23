@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 const (
@@ -68,7 +68,7 @@ func (t *Topology) AddTMS(fscNodes []*node.Node, backend BackedTopology, channel
 		}
 	}
 	if !found {
-		Expect(found).To(BeTrue(), "Driver [%s] not recognized", driver)
+		gomega.Expect(found).To(gomega.BeTrue(), "Driver [%s] not recognized", driver)
 	}
 
 	var nodes []*node.Node

@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 type ReplicationOpts interface {
@@ -150,7 +150,7 @@ func (s *TestSuite) Setup() {
 
 	// Create the integration ii
 	network, err := s.generator()
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	s.II = network
 	network.RegisterPlatformFactory(token.NewPlatformFactory())
 	network.Generate()

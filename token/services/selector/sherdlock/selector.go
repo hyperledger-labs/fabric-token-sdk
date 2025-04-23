@@ -182,7 +182,7 @@ type locker struct {
 }
 
 func (l *locker) TryLock(tokenID *token2.ID) bool {
-	err := l.Locker.Lock(tokenID, l.txID)
+	err := l.Lock(tokenID, l.txID)
 	if err != nil {
 		logger.Debugf("failed to lock [%v] for [%s]: [%s]", tokenID, l.txID, err)
 	}
@@ -190,7 +190,7 @@ func (l *locker) TryLock(tokenID *token2.ID) bool {
 }
 
 func (l *locker) UnlockAll() error {
-	return l.Locker.UnlockByTxID(l.txID)
+	return l.UnlockByTxID(l.txID)
 }
 
 func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB Locker, precision uint64, backoff time.Duration, maxRetriesAfterBackoff int) tokenSelectorUnlocker {

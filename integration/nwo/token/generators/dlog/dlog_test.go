@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,7 +29,7 @@ func TestDLogFabricCryptoMaterialGenerator_Setup(t *testing.T) {
 
 	tp := &mock.TokenPlatform{}
 	tp.TokenDirReturns("./testdata/token")
-	defer os.RemoveAll("./testdata")
+	defer utils.IgnoreErrorWithOneArg(os.RemoveAll, "./testdata")
 	tp.GetBuilderReturns(buildServer.Client())
 	tms := &topology.TMS{
 		Network:   "test_network",
