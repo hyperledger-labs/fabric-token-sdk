@@ -40,7 +40,6 @@ type Opts struct {
 	WebEnabled          bool
 	Monitoring          bool
 	TokenSelector       string
-	OnlyUnity           bool
 	FSCBasedEndorsement bool
 	ExtraTMSs           []TMSOpts
 	FinalityType        config.ManagerType

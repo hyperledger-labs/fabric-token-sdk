@@ -120,10 +120,10 @@ func TestInsufficientTokensManyReplicas(t *testing.T, replicas []EnhancedManager
 
 type enhancedManager struct {
 	token2.SelectorManager
-	tokenDB driver.TokenDB
+	tokenDB driver.TokenStore
 }
 
-func NewEnhancedManager(manager token2.SelectorManager, tokenDB driver.TokenDB) *enhancedManager {
+func NewEnhancedManager(manager token2.SelectorManager, tokenDB driver.TokenStore) *enhancedManager {
 	return &enhancedManager{
 		SelectorManager: manager,
 		tokenDB:         tokenDB,

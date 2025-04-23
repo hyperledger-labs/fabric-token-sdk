@@ -49,7 +49,7 @@ func newTransactionDB(readDB, writeDB *sql.DB, tables transactionTables, ci Toke
 	}
 }
 
-func NewAuditTransactionDB(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter) (*TransactionDB, error) {
+func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter) (*TransactionDB, error) {
 	return NewTransactionDB(readDB, writeDB, tables, ci)
 }
 

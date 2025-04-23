@@ -14,11 +14,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-// TokenTransactionDB defines the interface for a token transaction database.
+// TokenTransactionStore defines the interface for a token transaction database.
 // This database is used to store records related to the processed token transactions.
-type TokenTransactionDB interface {
-	TransactionDB
-	TransactionEndorsementAckDB
+type TokenTransactionStore interface {
+	TransactionStore
+	TransactionEndorsementAckStore
 }
 
 type AtomicWrite interface {
@@ -47,7 +47,7 @@ type AtomicWrite interface {
 	AddValidationRecord(txID string, meta map[string][]byte) error
 }
 
-type TransactionDB interface {
+type TransactionStore interface {
 	// Close closes the databases
 	Close() error
 
@@ -79,18 +79,12 @@ type TransactionDB interface {
 	GetTokenRequest(txID string) ([]byte, error)
 }
 
-type TransactionEndorsementAckDB interface {
+type TransactionEndorsementAckStore interface {
 	// AddTransactionEndorsementAck records the signature of a given endorser for a given transaction
 	AddTransactionEndorsementAck(txID string, endorser token.Identity, sigma []byte) error
 
 	// GetTransactionEndorsementAcks returns the endorsement signatures for the given transaction id
 	GetTransactionEndorsementAcks(txID string) (map[string][]byte, error)
-}
-
-// TTXDBDriver is the interface for a token transaction db driver
-type TTXDBDriver interface {
-	// Open opens a token transaction database
-	Open(cp ConfigProvider, tmsID token.TMSID) (TokenTransactionDB, error)
 }
 
 var (

@@ -1,3 +1,13 @@
+fsc:
+  persistences:
+    token_persistence:
+      type: sqlite
+      opts:
+        dataSource: file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(20000)&mode=memory&cache=shared
+        skipCreateSchema: false
+        tablePrefix: tsdk
+        maxOpenConns: 10
+
 token:
   enabled: true
   tms:
@@ -6,24 +16,10 @@ token:
       channel:
       namespace:
       ttxdb:
-        persistence:
-          type: sql
-          opts:
-            createSchema: true
-            tablePrefix: tsdk
-            driver: sqlite
-            maxOpenConns: 10
-            dataSource: file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(20000)&mode=memory&cache=shared
+        persistence: token_persistence
     grapes:
       network: grapes
       channel:
       namespace:
       ttxdb:
-        persistence:
-          type: sql
-          opts:
-            createSchema: true
-            tablePrefix: tsdk
-            driver: sqlite
-            maxOpenConns: 10
-            dataSource: file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(20000)&mode=memory&cache=shared
+        persistence: token_persistence

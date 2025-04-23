@@ -16,17 +16,17 @@ type NamedDriver = driver2.NamedDriver[Driver]
 type Config = driver.Config
 
 type Driver interface {
-	NewTokenLock(Config, ...string) (TokenLockDB, error)
+	NewTokenLock(driver.PersistenceName, ...string) (TokenLockStore, error)
 
-	NewWallet(Config, ...string) (WalletDB, error)
+	NewWallet(driver.PersistenceName, ...string) (WalletStore, error)
 
-	NewIdentity(Config, ...string) (IdentityDB, error)
+	NewIdentity(driver.PersistenceName, ...string) (IdentityStore, error)
 
-	NewToken(Config, ...string) (TokenDB, error)
+	NewToken(driver.PersistenceName, ...string) (TokenStore, error)
 
-	NewTokenNotifier(Config, ...string) (TokenNotifier, error)
+	NewTokenNotifier(driver.PersistenceName, ...string) (TokenNotifier, error)
 
-	NewAuditTransaction(Config, ...string) (AuditTransactionDB, error)
+	NewAuditTransaction(driver.PersistenceName, ...string) (AuditTransactionStore, error)
 
-	NewOwnerTransaction(Config, ...string) (TokenTransactionDB, error)
+	NewOwnerTransaction(driver.PersistenceName, ...string) (TokenTransactionStore, error)
 }

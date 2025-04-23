@@ -10,33 +10,25 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/db"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
 var logger = logging.MustGetLogger("token-db")
 
 type Manager[S any] struct{ lazy.Provider[token.TMSID, S] }
 
-func newManager[V any](config *config.Service, prefix string, constructor func(cfg driver.Config, params ...string) (V, error)) *Manager[V] {
+func newManager[V any](config *config.Service, prefix string, constructor func(name driver2.PersistenceName, params ...string) (V, error)) *Manager[V] {
 	return &Manager[V]{Provider: lazy.NewProviderWithKeyMapper(Key, func(tmsID token.TMSID) (V, error) {
+		logger.Infof("Creating manager for %T for [%s] and prefix [%s]", new(V), tmsID, prefix)
 		cfg, err := config.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 		if err != nil {
 			return utils.Zero[V](), err
 		}
 
-		prefixConfig := db.NewPrefixConfig(cfg, prefix)
-		if !prefixConfig.IsSet("") {
-			logger.Warnf("Prefix [%s:%s] not found: changing to unity", tmsID, prefix)
-			prefixConfig = db.NewPrefixConfig(cfg, "db.persistence")
-		}
-		if !prefixConfig.IsSet("") {
-			logger.Errorf("unity not found for [%s] either", prefix)
-			panic("no db driver found")
-		}
-		return constructor(prefixConfig, tmsID.Network, tmsID.Channel, tmsID.Namespace)
+		return constructor(common.GetPersistenceName(cfg, prefix), tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	})}
 }
 

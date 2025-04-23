@@ -31,7 +31,7 @@ func NewNotifierManager(dh *db.DriverHolder) *NotifierManager {
 }
 
 func NewManager(dh *db.DriverHolder) *Manager {
-	return db.MappedManager[driver.TokenDB, *DB](dh.NewTokenManager(), newDB)
+	return db.MappedManager[driver.TokenStore, *DB](dh.NewTokenManager(), newDB)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
@@ -49,22 +49,22 @@ func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
 type TokenRecord = driver.TokenRecord
 
 type Transaction struct {
-	driver.TokenDBTransaction
+	driver.TokenStoreTransaction
 }
 
 // DB is a database that stores token transactions related information
 type DB struct {
-	driver.TokenDB
+	driver.TokenStore
 }
 
 func (d *DB) NewTransaction() (*Transaction, error) {
-	tx, err := d.TokenDB.NewTokenDBTransaction()
+	tx, err := d.TokenStore.NewTokenDBTransaction()
 	if err != nil {
 		return nil, err
 	}
-	return &Transaction{TokenDBTransaction: tx}, nil
+	return &Transaction{TokenStoreTransaction: tx}, nil
 }
 
-func newDB(p driver.TokenDB) (*DB, error) {
-	return &DB{TokenDB: p}, nil
+func newDB(p driver.TokenStore) (*DB, error) {
+	return &DB{TokenStore: p}, nil
 }
