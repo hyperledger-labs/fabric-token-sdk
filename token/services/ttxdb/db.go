@@ -30,7 +30,7 @@ var (
 )
 
 func NewManager(dh *db.DriverHolder) *Manager {
-	return db.MappedManager[driver.TokenTransactionDB, *DB](dh.NewOwnerTransactionManager(), newDB)
+	return db.MappedManager[driver.TokenTransactionStore, *DB](dh.NewOwnerTransactionManager(), newDB)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
@@ -158,11 +158,11 @@ type Cache interface {
 // DB is a database that stores token transactions related information
 type DB struct {
 	*common.StatusSupport
-	db    driver.TokenTransactionDB
+	db    driver.TokenTransactionStore
 	cache Cache
 }
 
-func newDB(p driver.TokenTransactionDB) (*DB, error) {
+func newDB(p driver.TokenTransactionStore) (*DB, error) {
 	return &DB{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,

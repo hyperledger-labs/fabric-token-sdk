@@ -19,7 +19,7 @@ import (
 )
 
 type TestTokenDB interface {
-	driver.TokenDB
+	driver.TokenStore
 
 	StoreToken(tr driver.TokenRecord, owners []string) error
 	GetAllTokenInfos(ids []*token.ID) ([][]byte, error)

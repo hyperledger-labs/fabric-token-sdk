@@ -42,11 +42,7 @@ token:
       namespace: tns # the name of the channel's namespace this TMS refers to, if applicable
       # db specific driver
       tokendb:
-        persistence:
-          type: sql
-          opts:
-            driver: sqlite    
-            dataSource: /some/path/tokendb
+        persistence: my_token_persistence
 ```
 
 * **Shared Backend:** Alternatively, a single backend system can be shared by all databases, offering a more streamlined approach for deployments with simpler requirements.
@@ -57,15 +53,6 @@ token:
       network: default # the name of the network this TMS refers to (Fabric, Orion, etc)
       channel: testchannel # the name of the network's channel this TMS refers to, if applicable
       namespace: tns # the name of the channel's namespace this TMS refers to, if applicable
-
-      # shared db configuration. The `unity` driver is used as provider.  
-      db:
-        persistence:
-          # configuration for the unity db driver. It uses sql as backend
-          type: unity
-          opts:
-            driver: sqlite
-            dataSource: /some/path/unitydb
 ```
 
 The specific driver used by the application will ultimately determine the available deployment options.

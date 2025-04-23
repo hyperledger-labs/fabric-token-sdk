@@ -8,12 +8,10 @@ package driver
 
 import (
 	"context"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
-// AuditTransactionDB defines the interface for a database to store the audit records of token transactions.
-type AuditTransactionDB interface {
+// AuditTransactionStore defines the interface for a database to store the audit records of token transactions.
+type AuditTransactionStore interface {
 	// Close closes the database
 	Close() error
 
@@ -43,10 +41,4 @@ type AuditTransactionDB interface {
 	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
 	// It returns nil without error if the key is not found.
 	GetTokenRequest(txID string) ([]byte, error)
-}
-
-// AuditDBDriver is the interface for an audit database driver
-type AuditDBDriver interface {
-	// Open opens an audit database connection
-	Open(cp ConfigProvider, tmsID token.TMSID) (AuditTransactionDB, error)
 }

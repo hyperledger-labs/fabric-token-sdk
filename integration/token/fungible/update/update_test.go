@@ -76,7 +76,6 @@ func newTestSuite(commType fsc.P2PCommunicationType, fabtokenPrecision int, extr
 		SDKs:            []api.SDK{&fall.SDK{}},
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken", PublicParamsGenArgs: []string{strconv.Itoa(fabtokenPrecision)}},
-		OnlyUnity:       true,
 		ExtraTMSs:       extraTMSs,
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 	}))

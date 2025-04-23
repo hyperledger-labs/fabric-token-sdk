@@ -18,12 +18,12 @@ import (
 
 func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
 	for _, c := range tokenLockDBCases {
-		driver, config := cfgProvider(c.Name)
-		tokenLockDB, err := driver.NewTokenLock(config, c.Name)
+		driver := cfgProvider(c.Name)
+		tokenLockDB, err := driver.NewTokenLock("", c.Name)
 		if err != nil {
 			t.Fatal(err)
 		}
-		tokenTransactionDB, err := driver.NewOwnerTransaction(config, c.Name)
+		tokenTransactionDB, err := driver.NewOwnerTransaction("", c.Name)
 		if err != nil {
 			tokenLockDB.Close()
 			t.Fatal(err)
@@ -38,12 +38,12 @@ func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
 
 var tokenLockDBCases = []struct {
 	Name string
-	Fn   func(*testing.T, driver.TokenLockDB, driver.TokenTransactionDB)
+	Fn   func(*testing.T, driver.TokenLockStore, driver.TokenTransactionStore)
 }{
 	{"TestFully", TestFully},
 }
 
-func TestFully(t *testing.T, tokenLockDB driver.TokenLockDB, tokenTransactionDB driver.TokenTransactionDB) {
+func TestFully(t *testing.T, tokenLockDB driver.TokenLockStore, tokenTransactionDB driver.TokenTransactionStore) {
 	tx, err := tokenTransactionDB.BeginAtomicWrite()
 	assert.NoError(t, err)
 	assert.NoError(t, tx.AddTokenRequest("apple", []byte("apple_tx_content"), nil, nil, driver2.PPHash("tr")))

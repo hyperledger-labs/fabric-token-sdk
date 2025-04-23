@@ -20,13 +20,13 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
-type cfgProvider func(string) (driver.Driver, driver.Config)
+type cfgProvider func(string) driver.Driver
 
 func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 	for _, c := range tokensCases {
 		t.Run(c.Name, func(xt *testing.T) {
-			driver, config := cfgProvider(c.Name)
-			db, err := driver.NewToken(config, c.Name)
+			driver := cfgProvider(c.Name)
+			db, err := driver.NewToken("", c.Name)
 			if err != nil {
 				t.Fatal(err)
 			}

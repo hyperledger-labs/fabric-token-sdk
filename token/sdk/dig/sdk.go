@@ -33,6 +33,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
@@ -132,7 +133,8 @@ func (p *SDK) Install() error {
 		p.Container().Provide(tokendb.NewManager),
 		p.Container().Provide(tokendb.NewNotifierManager),
 		p.Container().Provide(digutils.Identity[*tokendb.Manager](), dig.As(new(tokens.DBProvider))),
-		p.Container().Provide(NewDriverHolder),
+		p.Container().Provide(db2.NewDriverHolder),
+		p.Container().Provide(newMultiplexedDriver),
 		p.Container().Provide(auditdb.NewManager),
 		p.Container().Provide(digutils.Identity[*auditdb.Manager](), dig.As(new(auditor.AuditDBProvider))),
 		p.Container().Provide(identitydb.NewManager),

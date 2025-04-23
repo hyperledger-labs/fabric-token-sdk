@@ -9,12 +9,12 @@ package identitydb
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
 type Manager struct {
-	identityManager *db.Manager[identity.IdentityDB]
-	walletManager   *db.Manager[identity.WalletDB]
+	identityManager *db.Manager[driver.IdentityStore]
+	walletManager   *db.Manager[driver.WalletStore]
 }
 
 func NewManager(dh *db.DriverHolder) *Manager {
@@ -24,10 +24,10 @@ func NewManager(dh *db.DriverHolder) *Manager {
 	}
 }
 
-func (m *Manager) IdentityDBByTMSId(tmsID token.TMSID) (identity.IdentityDB, error) {
+func (m *Manager) IdentityDBByTMSId(tmsID token.TMSID) (driver.IdentityStore, error) {
 	return m.identityManager.DBByTMSId(tmsID)
 }
 
-func (m *Manager) WalletDBByTMSId(tmsID token.TMSID) (identity.WalletDB, error) {
+func (m *Manager) WalletDBByTMSId(tmsID token.TMSID) (driver.WalletStore, error) {
 	return m.walletManager.DBByTMSId(tmsID)
 }

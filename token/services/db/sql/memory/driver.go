@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package memory
 
 import (
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqlite2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
@@ -22,33 +23,33 @@ func NewNamedDriver() driver.NamedDriver {
 }
 
 func NewDriver() *Driver {
-	return (*Driver)(sqlite2.NewDriver())
+	return (*Driver)(sqlite2.NewDriver(nil))
 }
 
-func (d *Driver) NewTokenLock(_ driver.Config, params ...string) (driver.TokenLockDB, error) {
+func (d *Driver) NewTokenLock(_ driver2.PersistenceName, params ...string) (driver.TokenLockStore, error) {
 	return d.TokenLockCache.Get(mem.Op.GetConfig(params...))
 }
 
-func (d *Driver) NewWallet(_ driver.Config, params ...string) (driver.WalletDB, error) {
+func (d *Driver) NewWallet(_ driver2.PersistenceName, params ...string) (driver.WalletStore, error) {
 	return d.WalletCache.Get(mem.Op.GetConfig(params...))
 }
 
-func (d *Driver) NewIdentity(_ driver.Config, params ...string) (driver.IdentityDB, error) {
+func (d *Driver) NewIdentity(_ driver2.PersistenceName, params ...string) (driver.IdentityStore, error) {
 	return d.IdentityCache.Get(mem.Op.GetConfig(params...))
 }
 
-func (d *Driver) NewToken(_ driver.Config, params ...string) (driver.TokenDB, error) {
+func (d *Driver) NewToken(_ driver2.PersistenceName, params ...string) (driver.TokenStore, error) {
 	return d.TokenCache.Get(mem.Op.GetConfig(params...))
 }
 
-func (d *Driver) NewTokenNotifier(_ driver.Config, params ...string) (driver.TokenNotifier, error) {
+func (d *Driver) NewTokenNotifier(_ driver2.PersistenceName, params ...string) (driver.TokenNotifier, error) {
 	return d.TokenNotifierCache.Get(mem.Op.GetConfig(params...))
 }
 
-func (d *Driver) NewAuditTransaction(_ driver.Config, params ...string) (driver.AuditTransactionDB, error) {
+func (d *Driver) NewAuditTransaction(_ driver2.PersistenceName, params ...string) (driver.AuditTransactionStore, error) {
 	return d.AuditTxCache.Get(mem.Op.GetConfig(params...))
 }
 
-func (d *Driver) NewOwnerTransaction(_ driver.Config, params ...string) (driver.TokenTransactionDB, error) {
+func (d *Driver) NewOwnerTransaction(_ driver2.PersistenceName, params ...string) (driver.TokenTransactionStore, error) {
 	return d.OwnerTxCache.Get(mem.Op.GetConfig(params...))
 }

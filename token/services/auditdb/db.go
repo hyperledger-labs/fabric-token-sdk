@@ -38,7 +38,7 @@ var (
 )
 
 func NewManager(dh *db.DriverHolder) *Manager {
-	return db.MappedManager[driver.AuditTransactionDB, *DB](dh.NewAuditTransactionManager(), newDB)
+	return db.MappedManager[driver.AuditTransactionStore, *DB](dh.NewAuditTransactionManager(), newDB)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
@@ -136,14 +136,14 @@ type Wallet interface {
 // DB is a database that stores token transactions related information
 type DB struct {
 	*common.StatusSupport
-	db        driver.AuditTransactionDB
+	db        driver.AuditTransactionStore
 	eIDsLocks sync.Map
 
 	// status related fields
 	pendingTXs []string
 }
 
-func newDB(p driver.AuditTransactionDB) (*DB, error) {
+func newDB(p driver.AuditTransactionStore) (*DB, error) {
 	return &DB{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,

@@ -20,7 +20,7 @@ import (
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	orion2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	sql2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
@@ -154,10 +154,7 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(uniqueName))
 	Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(uniqueName))
 
-	persistence := node.Options.GetPersistence("token")
-	if persistence == nil {
-		persistence = &sfcnode.SQLOpts{DriverType: sql2.SQLite}
-	}
+	persistenceNames := fsc.GetPersistenceNames(node.Options, common2.AllPrefixes...)
 
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"IsCustodian": func() bool {
@@ -170,14 +167,14 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 		"CustodianID": func() string {
 			return tms.BackendParams[Custodian].(string)
 		},
-		"TMSID":               func() string { return tms.ID() },
-		"TMS":                 func() *topology2.TMS { return tms },
-		"Wallets":             func() *topology2.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
-		"SQLDriver":           func() string { return string(persistence.DriverType) },
-		"SQLDataSource":       func() string { return p.dataSource(*persistence, p.TTXDBSQLDataSourceDir(uniqueName), tms) },
-		"TokensSQLDriver":     func() string { return string(persistence.DriverType) },
-		"TokensSQLDataSource": func() string { return p.dataSource(*persistence, p.TokensDBSQLDataSourceDir(uniqueName), tms) },
-		"OnlyUnity":           func() bool { return common2.IsOnlyUnity(tms) },
+		"TMSID":                func() string { return tms.ID() },
+		"TMS":                  func() *topology2.TMS { return tms },
+		"Wallets":              func() *topology2.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
+		"TokenPersistence":     func() driver.PersistenceName { return persistenceNames[common2.TokenKey] },
+		"IdentityPersistence":  func() driver.PersistenceName { return persistenceNames[common2.IdentityKey] },
+		"TokenLockPersistence": func() driver.PersistenceName { return persistenceNames[common2.TokenLockKey] },
+		"AuditTxPersistence":   func() driver.PersistenceName { return persistenceNames[common2.AuditTransactionKey] },
+		"OwnerTxPersistence":   func() driver.PersistenceName { return persistenceNames[common2.OwnerTransactionKey] },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -186,16 +183,6 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	Expect(err).NotTo(HaveOccurred())
 
 	return ext.String()
-}
-
-func (p *NetworkHandler) dataSource(persistence sfcnode.SQLOpts, sourceDir string, tms *topology2.TMS) string {
-	switch persistence.DriverType {
-	case sql2.SQLite:
-		return p.DBPath(sourceDir, tms)
-	case sql2.Postgres:
-		return persistence.DataSource
-	}
-	panic("unknown driver type")
 }
 
 func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {

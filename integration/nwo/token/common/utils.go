@@ -10,10 +10,27 @@ import (
 	"os"
 	"path"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 var logger = logging.MustGetLogger("token-sdk.integration.token.common")
+
+const (
+	TokenKey            = "tkn"
+	IdentityKey         = "idty"
+	TokenLockKey        = "tknlk"
+	OwnerTransactionKey = "owntx"
+	AuditTransactionKey = "audtx"
+)
+
+var AllPrefixes = []node.PersistenceKey{
+	TokenKey,
+	IdentityKey,
+	TokenLockKey,
+	OwnerTransactionKey,
+	AuditTransactionKey,
+}
 
 const (
 	FabricBinsPathEnvKey = "FAB_BINS"

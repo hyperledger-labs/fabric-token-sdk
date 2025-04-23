@@ -25,7 +25,7 @@ func NewAuditTransactionDB(opts postgres.Opts) (*AuditTransactionDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewAuditTransactionDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
+	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
 }
 
 func NewTransactionDB(opts postgres.Opts) (*TransactionDB, error) {
