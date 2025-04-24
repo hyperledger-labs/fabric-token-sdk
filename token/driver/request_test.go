@@ -126,6 +126,7 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("extra_signer1"),
 					[]byte("extra_signer2"),
 				},
+				Issuer: Identity([]byte("issuer")),
 			},
 		},
 		Application: map[string][]byte{

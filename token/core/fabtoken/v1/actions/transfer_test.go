@@ -273,3 +273,12 @@ func TestTransferAction_Serialization(t *testing.T) {
 	assert.NoError(t, err, "failed to deserialize a new transfer action")
 	assert.Equal(t, action2, action3, "deserialized action is not equal to the original one")
 }
+
+func TestTransferAction_GetIssuer(t *testing.T) {
+	issuerId := []byte("issuer")
+	action := &TransferAction{
+		Issuer: issuerId,
+	}
+	issuer := action.GetIssuer()
+	assert.True(t, issuer.Equal(issuerId), "unexpected issuer id in TransferAction")
+}
