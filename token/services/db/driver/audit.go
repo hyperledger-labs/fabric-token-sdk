@@ -8,6 +8,8 @@ package driver
 
 import (
 	"context"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 )
 
 // AuditTransactionStore defines the interface for a database to store the audit records of token transactions.
@@ -27,7 +29,7 @@ type AuditTransactionStore interface {
 	GetStatus(txID string) (TxStatus, string, error)
 
 	// QueryTransactions returns a list of transactions that match the passed params
-	QueryTransactions(params QueryTransactionsParams) (TransactionIterator, error)
+	QueryTransactions(params QueryTransactionsParams, pagination driver.Pagination) (*driver.PageIterator[*TransactionRecord], error)
 
 	// QueryMovements returns a list of movement records
 	QueryMovements(params QueryMovementsParams) ([]*MovementRecord, error)

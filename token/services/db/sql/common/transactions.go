@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -38,29 +39,31 @@ type TransactionStore struct {
 	writeDB *sql.DB
 	table   transactionTables
 	ci      TokenInterpreter
+	pi      common.PaginationInterpreter
 }
 
-func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci TokenInterpreter) *TransactionStore {
+func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci TokenInterpreter, pi common.PaginationInterpreter) *TransactionDB {
 	return &TransactionStore{
 		readDB:  readDB,
 		writeDB: writeDB,
 		table:   tables,
 		ci:      ci,
+		pi:      pi,
 	}
 }
 
-func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter) (*TransactionStore, error) {
-	return NewOwnerTransactionStore(readDB, writeDB, tables, ci)
+func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter, pi common.PaginationInterpreter) (*TransactionStore, error) {
+	return NewOwnerTransactionStore(readDB, writeDB, tables, ci, pi)
 }
 
-func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter) (*TransactionStore, error) {
+func NewTransactionDB(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter, pi common.PaginationInterpreter) (*TransactionStore, error) {
 	return newTransactionStore(readDB, writeDB, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
 		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
-	}, ci), nil
+	}, ci, pi), nil
 }
 
 func (db *TransactionStore) CreateSchema() error {
@@ -129,7 +132,7 @@ func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (
 	return res, nil
 }
 
-func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
+func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsParams, pagination driver3.Pagination) (*driver3.PageIterator[*driver.TransactionRecord], error) {
 	conditions, args := common.Where(db.ci.HasTransactionParams(params, db.table.Transactions))
 	orderBy := movementConditionsSql(driver.QueryMovementsParams{
 		SearchDirection: driver.FromBeginning,
@@ -140,13 +143,20 @@ func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsPar
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile query")
 	}
-	logger.Debug(query, args)
+	limit, err := db.pi.Interpret(pagination)
+	if err != nil {
+		return nil, err
+	}
+	query = query + limit
+	logger.Debug(query, args, limit)
 	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
-
-	return &TransactionIterator{txs: rows}, nil
+	return &driver3.PageIterator[*driver.TransactionRecord]{
+		Items:      &TransactionIterator{txs: rows},
+		Pagination: pagination,
+	}, nil
 }
 
 func (db *TransactionStore) GetStatus(txID string) (driver.TxStatus, string, error) {
