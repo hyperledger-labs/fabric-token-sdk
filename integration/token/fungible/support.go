@@ -613,11 +613,14 @@ func TransferCashMultiActions(network *integration.Infrastructure, sender *token
 		RecipientEID: receivers[0].Id(),
 		TokenIDs:     []*token.ID{tokenID},
 	}
+
+	uniqueKey := fmt.Sprintf("%d", time.Now().UnixNano())
 	for i := 1; i < len(amounts); i++ {
 		transfer.TransferAction = append(transfer.TransferAction, views.TransferAction{
-			Amount:       amounts[i],
-			Recipient:    network.Identity(receivers[i].Id()),
-			RecipientEID: receivers[i].Id(),
+			Amount:         amounts[i],
+			Recipient:      network.Identity(receivers[i].Id()),
+			RecipientEID:   receivers[i].Id(),
+			PublicMetadata: map[string][]byte{fmt.Sprintf("%s_%d", uniqueKey, i): fmt.Appendf(nil, "val_%d", i)},
 		})
 	}
 
@@ -642,6 +645,16 @@ func TransferCashMultiActions(network *integration.Infrastructure, sender *token
 			Expect(sigma).ToNot(BeNil(), "endorsement ack sigma is nil for identity %s", identity)
 		}
 		Expect(len(txInfo.EndorsementAcks)).To(BeEquivalentTo(len(signers)))
+
+		params := views.ListAcceptedTransactions{SenderWallet: wallet, IDs: []string{txID}}
+		txsBoxed, err := network.Client(sender.ReplicaName()).CallView("acceptedTransactionHistory", common.JSONMarshall(&params))
+		Expect(err).NotTo(HaveOccurred())
+		var txs []*ttxdb.TransactionRecord
+		common.JSONUnmarshal(txsBoxed.([]byte), &txs)
+		Expect(len(txs)).To(BeEquivalentTo(1))
+		Expect(len(txs[0].PublicMetadata)).To(BeEquivalentTo(len(amounts)))
+		Expect(txs[0].PublicMetadata[uniqueKey+"_1"]).To(BeEquivalentTo([]byte("val_1")))
+
 		return txID
 	}
 
