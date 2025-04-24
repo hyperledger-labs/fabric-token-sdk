@@ -46,7 +46,6 @@ func NewTransferService(
 // Transfer returns a TransferAction as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
 func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.OwnerWallet, tokenIDs []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
-	var isRedeem bool
 	// select inputs
 	inputTokens, err := s.TokenLoader.GetTokens(tokenIDs)
 	if err != nil {
@@ -61,6 +60,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	}
 
 	// prepare outputs
+	var isRedeem bool
 	var outs []*actions.Output
 	for _, output := range Outputs {
 		outs = append(outs, &actions.Output{

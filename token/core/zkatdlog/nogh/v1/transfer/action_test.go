@@ -379,6 +379,7 @@ func TestAction_Validate(t *testing.T) {
 						Data:  &math.G1{},
 					},
 				},
+				Issuer: []byte("issuer"),
 			},
 			wantErr: false,
 		},
@@ -488,5 +489,15 @@ func randomAction(curve *math.Curve, rand io.Reader, b assert.TestingT) *Action 
 		"key1": getRandomBytes(b, 32),
 		"key2": getRandomBytes(b, 32),
 	}
+	action.Issuer = getRandomBytes(b, 32)
 	return action
+}
+
+func TestAction_GetIssuer(t *testing.T) {
+	issuerId := []byte("issuer")
+	action := &Action{
+		Issuer: issuerId,
+	}
+	issuer := action.GetIssuer()
+	assert.True(t, issuer.Equal(issuerId), "unexpected issuer id in Action")
 }
