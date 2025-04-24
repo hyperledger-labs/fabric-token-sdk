@@ -4,7 +4,7 @@ This document outlines the contribution and development practices to ensure a cl
 
 ## 1. Commit Sign-Off Requirement
 
-All commits must be **signed off** to certify that the contributor agrees to the [Developer Certificate of Origin (DCO)](https://developercertificate.org/). 
+All commits must be **signed off** to certify that the contributor agrees to the [Developer Certificate of Origin (DCO)](https://developercertificate.org/).  
 This is a legal statement indicating that you wrote the code or have the right to contribute it.
 
 ### How to Sign Off a Commit
@@ -72,7 +72,20 @@ We follow a **linear commit history** to keep the Git log clean and easy to foll
 - They make it harder to identify what changes were made.
 - They complicate tools that generate changelogs or audit logs.
 
-## 3. Additional Notes
+## 3. Pull Request Requirements
+
+To maintain clarity and traceability across contributions, all pull requests must adhere to the following:
+
+- **Description**: Every pull request must include a meaningful description outlining the purpose and scope of the change.
+- **Labels**: Assign appropriate labels to help with categorization and prioritization.
+- **Project Assignment**: The pull request must be added to the **Token-SDK Project** board with an appropriate status (e.g., “To Do”, “In Progress”, “In Review”, etc.).
+- **Associated Issue**: A GitHub Issue must be linked to the pull request. 
+  This should be done via the Development section of the GitHub PR interface (not just mentioned in the description). 
+  This ensures the PR is formally connected to the issue for proper project tracking and status updates.
+
+This ensures that all contributions are tracked, visible on the project board, and aligned with the roadmap.
+
+## 4. Additional Notes
 
 - Use clear, concise commit messages (preferably using [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)).
 - Squash commits as needed before submission to keep the history clean.
