@@ -12,11 +12,11 @@ import (
 )
 
 type (
-	TokenDB       = common.TokenDB
+	TokenStore    = common.TokenStore
 	TokenNotifier = postgres.Notifier
 )
 
-func NewTokenDB(opts postgres.Opts) (*TokenDB, error) {
+func NewTokenStore(opts postgres.Opts) (*TokenStore, error) {
 	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
@@ -25,7 +25,7 @@ func NewTokenDB(opts postgres.Opts) (*TokenDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewTokenDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
+	return common.NewTokenStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
 }
 
 func NewTokenNotifier(opts postgres.Opts) (*TokenNotifier, error) {

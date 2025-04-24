@@ -21,12 +21,12 @@ func NewKVSStorageProvider(kvs kvs.KVS) *KVSStorageProvider {
 	return &KVSStorageProvider{kvs: kvs}
 }
 
-func (s *KVSStorageProvider) WalletDB(tmsID token.TMSID) (driver.WalletStore, error) {
-	return kvs.NewWalletDB(s.kvs, tmsID), nil
+func (s *KVSStorageProvider) WalletStore(tmsID token.TMSID) (driver.WalletStore, error) {
+	return kvs.NewWalletStore(s.kvs, tmsID), nil
 }
 
-func (s *KVSStorageProvider) IdentityDB(tmsID token.TMSID) (driver.IdentityStore, error) {
-	return kvs.NewIdentityDB(s.kvs, tmsID), nil
+func (s *KVSStorageProvider) IdentityStore(tmsID token.TMSID) (driver.IdentityStore, error) {
+	return kvs.NewIdentityStore(s.kvs, tmsID), nil
 }
 
 func (s *KVSStorageProvider) Keystore() (identity.Keystore, error) {

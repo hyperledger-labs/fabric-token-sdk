@@ -24,15 +24,15 @@ type tokenLockTables struct {
 	Requests   string
 }
 
-type TokenLockDB struct {
+type TokenLockStore struct {
 	ReadDB  *sql.DB
 	WriteDB *sql.DB
 	Table   tokenLockTables
 	Logger  logging.Logger
 }
 
-func newTokenLockDB(readDB, writeDB *sql.DB, tables tokenLockTables) *TokenLockDB {
-	return &TokenLockDB{
+func newTokenLockStore(readDB, writeDB *sql.DB, tables tokenLockTables) *TokenLockStore {
+	return &TokenLockStore{
 		ReadDB:  readDB,
 		WriteDB: writeDB,
 		Table:   tables,
@@ -40,8 +40,8 @@ func newTokenLockDB(readDB, writeDB *sql.DB, tables tokenLockTables) *TokenLockD
 	}
 }
 
-func NewTokenLockDB(readDB, writeDB *sql.DB, tables tableNames) (*TokenLockDB, error) {
-	return newTokenLockDB(
+func NewTokenLockStore(readDB, writeDB *sql.DB, tables tableNames) (*TokenLockStore, error) {
+	return newTokenLockStore(
 		readDB,
 		writeDB,
 		tokenLockTables{
@@ -50,11 +50,11 @@ func NewTokenLockDB(readDB, writeDB *sql.DB, tables tableNames) (*TokenLockDB, e
 		}), nil
 }
 
-func (db *TokenLockDB) CreateSchema() error {
+func (db *TokenLockStore) CreateSchema() error {
 	return common.InitSchema(db.WriteDB, []string{db.GetSchema()}...)
 }
 
-func (db *TokenLockDB) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
+func (db *TokenLockStore) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
 	query, err := NewInsertInto(db.Table.TokenLocks).Rows("consumer_tx_id, tx_id, idx, created_at").Compile()
 	if err != nil {
 		return errors.Wrap(err, "failed compiling query")
@@ -64,7 +64,7 @@ func (db *TokenLockDB) Lock(tokenID *token.ID, consumerTxID transaction.ID) erro
 	return err
 }
 
-func (db *TokenLockDB) UnlockByTxID(consumerTxID transaction.ID) error {
+func (db *TokenLockStore) UnlockByTxID(consumerTxID transaction.ID) error {
 	query, err := NewDeleteFrom(db.Table.TokenLocks).Where("consumer_tx_id = $1").Compile()
 	if err != nil {
 		return errors.Wrap(err, "failed compiling query")
@@ -75,7 +75,7 @@ func (db *TokenLockDB) UnlockByTxID(consumerTxID transaction.ID) error {
 	return err
 }
 
-func (db *TokenLockDB) GetSchema() string {
+func (db *TokenLockStore) GetSchema() string {
 	return fmt.Sprintf(`
 		-- TokenLocks
 		CREATE TABLE IF NOT EXISTS %s (
@@ -89,6 +89,6 @@ func (db *TokenLockDB) GetSchema() string {
 	)
 }
 
-func (db *TokenLockDB) Close() error {
+func (db *TokenLockStore) Close() error {
 	return common2.Close(db.ReadDB, db.WriteDB)
 }

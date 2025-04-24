@@ -27,29 +27,29 @@ func NewDriver() *Driver {
 }
 
 func (d *Driver) NewTokenLock(_ driver2.PersistenceName, params ...string) (driver.TokenLockStore, error) {
-	return d.TokenLockCache.Get(mem.Op.GetConfig(params...))
+	return d.TokenLock.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewWallet(_ driver2.PersistenceName, params ...string) (driver.WalletStore, error) {
-	return d.WalletCache.Get(mem.Op.GetConfig(params...))
+	return d.Wallet.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewIdentity(_ driver2.PersistenceName, params ...string) (driver.IdentityStore, error) {
-	return d.IdentityCache.Get(mem.Op.GetConfig(params...))
+	return d.Identity.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewToken(_ driver2.PersistenceName, params ...string) (driver.TokenStore, error) {
-	return d.TokenCache.Get(mem.Op.GetConfig(params...))
+	return d.Token.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewTokenNotifier(_ driver2.PersistenceName, params ...string) (driver.TokenNotifier, error) {
-	return d.TokenNotifierCache.Get(mem.Op.GetConfig(params...))
+	return d.TokenNotifier.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewAuditTransaction(_ driver2.PersistenceName, params ...string) (driver.AuditTransactionStore, error) {
-	return d.AuditTxCache.Get(mem.Op.GetConfig(params...))
+	return d.AuditTx.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewOwnerTransaction(_ driver2.PersistenceName, params ...string) (driver.TokenTransactionStore, error) {
-	return d.OwnerTxCache.Get(mem.Op.GetConfig(params...))
+	return d.OwnerTx.Get(mem.Op.GetConfig(params...))
 }

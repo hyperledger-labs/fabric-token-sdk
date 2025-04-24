@@ -274,7 +274,7 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
 	err = registry.RegisterService(backend)
 	Expect(err).NotTo(HaveOccurred())
 
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(backend, token2.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(backend, token2.TMSID{Network: "pineapple"}))
 	err = registry.RegisterService(sigService)
 	Expect(err).NotTo(HaveOccurred())
 	config, err := crypto.NewConfig(dir)

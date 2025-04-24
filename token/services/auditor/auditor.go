@@ -62,7 +62,7 @@ type CheckService interface {
 type Auditor struct {
 	networkProvider NetworkProvider
 	tmsID           token.TMSID
-	auditDB         *auditdb.DB
+	auditDB         *auditdb.StoreService
 	tokenDB         *tokens.Tokens
 	tmsProvider     TokenManagementServiceProvider
 	finalityTracer  trace.Tracer

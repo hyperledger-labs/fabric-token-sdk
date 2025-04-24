@@ -16,7 +16,7 @@ import (
 )
 
 type TTXDBProvider interface {
-	DBByTMSId(id token.TMSID) (*ttxdb.DB, error)
+	ServiceByTMSId(id token.TMSID) (*ttxdb.StoreService, error)
 }
 
 type LockerProvider struct {
@@ -34,7 +34,7 @@ func NewLockerProvider(ttxdbProvider TTXDBProvider, sleepTimeout time.Duration, 
 }
 
 func (s *LockerProvider) New(network, channel, namespace string) (selector.Locker, error) {
-	db, err := s.ttxdbProvider.DBByTMSId(token.TMSID{
+	db, err := s.ttxdbProvider.ServiceByTMSId(token.TMSID{
 		Network:   network,
 		Channel:   channel,
 		Namespace: namespace,

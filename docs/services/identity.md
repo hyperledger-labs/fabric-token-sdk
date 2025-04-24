@@ -117,7 +117,7 @@ func NewMixedStorageProvider(client *vault.Client, prefix string, manager *ident
 }
 
 func (s *MixedStorageProvider) WalletDB(tmsID token.TMSID) (identity.WalletDB, error) {
-	return s.manager.WalletDBByTMSId(tmsID)
+	return s.manager.WalletServiceByTMSId(tmsID)
 }
 
 func (s *MixedStorageProvider) IdentityDB(tmsID token.TMSID) (identity.IdentityDB, error) {

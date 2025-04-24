@@ -15,6 +15,6 @@ type (
 	StorageProvider       = driver.StorageProvider
 	WalletID              = driver.WalletID
 	ConfigurationIterator = driver.IdentityConfigurationIterator
-	WalletDB              = driver.WalletDB
-	IdentityDB            = driver.IdentityDB
+	WalletDB              = driver.WalletStore
+	IdentityDB            = driver.IdentityStore
 )

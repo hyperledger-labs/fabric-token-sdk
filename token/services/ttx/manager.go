@@ -21,7 +21,7 @@ import (
 )
 
 type DBProvider interface {
-	DBByTMSId(id token.TMSID) (*ttxdb.DB, error)
+	ServiceByTMSId(id token.TMSID) (*ttxdb.StoreService, error)
 }
 
 type TokensProvider interface {
@@ -33,7 +33,7 @@ type TMSProvider interface {
 }
 
 type CheckServiceProvider interface {
-	CheckService(id token.TMSID, adb *ttxdb.DB, tdb *tokens.Tokens) (CheckService, error)
+	CheckService(id token.TMSID, adb *ttxdb.StoreService, tdb *tokens.Tokens) (CheckService, error)
 }
 
 // Manager handles the databases
@@ -46,10 +46,10 @@ type Manager struct {
 	checkServiceProvider CheckServiceProvider
 
 	mutex sync.Mutex
-	dbs   map[string]*DB
+	dbs   map[string]*StoreService
 }
 
-// NewManager creates a new DB manager.
+// NewManager creates a new StoreService manager.
 func NewManager(
 	np NetworkProvider,
 	tmsProvider TMSProvider,
@@ -65,12 +65,12 @@ func NewManager(
 		tokensProvider:       tokensBProvider,
 		tracerProvider:       tracerProvider,
 		checkServiceProvider: CheckServiceProvider,
-		dbs:                  map[string]*DB{},
+		dbs:                  map[string]*StoreService{},
 	}
 }
 
-// DB returns the DB for the given TMS
-func (m *Manager) DB(tmsID token.TMSID) (*DB, error) {
+// StoreService returns the StoreService for the given TMS
+func (m *Manager) StoreService(tmsID token.TMSID) (*StoreService, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -79,7 +79,7 @@ func (m *Manager) DB(tmsID token.TMSID) (*DB, error) {
 	c, ok := m.dbs[id]
 	if !ok {
 		var err error
-		c, err = m.newDB(tmsID)
+		c, err = m.newStoreService(tmsID)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to instantiate db for TMS [%s]", tmsID)
 		}
@@ -88,8 +88,8 @@ func (m *Manager) DB(tmsID token.TMSID) (*DB, error) {
 	return c, nil
 }
 
-func (m *Manager) newDB(tmsID token.TMSID) (*DB, error) {
-	ttxDB, err := m.ttxDBProvider.DBByTMSId(tmsID)
+func (m *Manager) newStoreService(tmsID token.TMSID) (*StoreService, error) {
+	ttxDB, err := m.ttxDBProvider.ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
 	}
@@ -101,7 +101,7 @@ func (m *Manager) newDB(tmsID token.TMSID) (*DB, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get checkservice for [%s]", tmsID)
 	}
-	wrapper := &DB{
+	wrapper := &StoreService{
 		networkProvider: m.networkProvider,
 		tmsID:           tmsID,
 		tmsProvider:     m.tmsProvider,
@@ -127,7 +127,7 @@ func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
 		return errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	db, err := m.DB(tmsID)
+	db, err := m.StoreService(tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
@@ -160,8 +160,8 @@ var (
 	managerType = reflect.TypeOf((*Manager)(nil))
 )
 
-// Get returns the DB instance for the passed TMS
-func Get(sp token.ServiceProvider, tms *token.ManagementService) *DB {
+// Get returns the StoreService instance for the passed TMS
+func Get(sp token.ServiceProvider, tms *token.ManagementService) *StoreService {
 	if tms == nil {
 		logger.Debugf("no TMS provided")
 		return nil
@@ -171,7 +171,7 @@ func Get(sp token.ServiceProvider, tms *token.ManagementService) *DB {
 		logger.Errorf("failed to get manager service: [%s]", err)
 		return nil
 	}
-	auditor, err := s.(*Manager).DB(tms.ID())
+	auditor, err := s.(*Manager).StoreService(tms.ID())
 	if err != nil {
 		logger.Errorf("failed to get db for TMS [%s]: [%s]", tms.ID(), err)
 		return nil
@@ -179,7 +179,7 @@ func Get(sp token.ServiceProvider, tms *token.ManagementService) *DB {
 	return auditor
 }
 
-// New returns the DB instance for the passed TMS
-func New(sp token.ServiceProvider, tms *token.ManagementService) *DB {
+// New returns the StoreService instance for the passed TMS
+func New(sp token.ServiceProvider, tms *token.ManagementService) *StoreService {
 	return Get(sp, tms)
 }

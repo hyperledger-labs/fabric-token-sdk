@@ -62,7 +62,7 @@ type LocalMembership struct {
 	defaultNetworkIdentity driver.Identity
 	signerService          idriver.SigService
 	deserializerManager    idriver.DeserializerManager
-	identityDB             idriver.IdentityDB
+	identityDB             idriver.IdentityStore
 	binderService          idriver.BinderService
 	KeyManagerProviders    []KeyManagerProvider
 	IdentityType           string
@@ -83,7 +83,7 @@ func NewLocalMembership(
 	defaultNetworkIdentity driver.Identity,
 	signerService idriver.SigService,
 	deserializerManager idriver.DeserializerManager,
-	identityDB idriver.IdentityDB,
+	identityDB idriver.IdentityStore,
 	binderService idriver.BinderService,
 	identityType string,
 	defaultAnonymous bool,

@@ -449,7 +449,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, bob, "", "LIRA", 2, auditor)
 	CheckBalanceAndHolding(network, charlie, "", "LIRA", 3, auditor)
 	CheckAuditedTransactions(network, auditor, AuditedTransactions[:], &t0, &t16)
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
 
 	IssueCash(network, "", "USD", 1, alice, auditor, true, issuer)
 
@@ -506,8 +506,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, issuer, "", "EUR", 150, auditor)
 	CheckBalanceAndHolding(network, issuer, "issuer.owner", "EUR", 10, auditor)
 
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 
 	// Check double spending
 	txIDPine := IssueCash(network, "", "PINE", 55, alice, auditor, true, issuer)
@@ -527,7 +527,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckHolding(network, bob, "", "PINE", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 20, auditor)
 	CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
-	CheckOwnerDB(network, nil, bob)
+	CheckOwnerStore(network, nil, bob)
 	fmt.Printf("prepared transactions [%s:%s]", txID1, txID2)
 	Restart(network, true, onRestart, bob)
 	Restart(network, false, onRestart, auditor)
@@ -548,8 +548,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	common2.CheckFinality(network, auditor, txID2, nil, true)
 	CheckBalanceAndHolding(network, alice, "", "PINE", 0, auditor)
 	CheckBalanceAndHolding(network, bob, "", "PINE", 55, auditor)
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 
 	// Test Auditor ability to override transaction state
 	txID3, tx3 := PrepareTransferCash(network, bob, "", "PINE", 10, alice, auditor, nil)
@@ -565,13 +565,13 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	SetTransactionOwnersStatus(network, txID3, ttx.Deleted, token3.AllNames(alice, bob)...)
 
 	// Restart
-	CheckOwnerDB(network, nil, alice, bob)
-	CheckOwnerDB(network, nil, issuer, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, alice, bob)
+	CheckOwnerStore(network, nil, issuer, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 	Restart(network, false, onRestart, alice, bob, charlie, manager)
-	CheckOwnerDB(network, nil, alice, bob)
-	CheckOwnerDB(network, nil, issuer, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, alice, bob)
+	CheckOwnerStore(network, nil, issuer, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 
 	// Addition transfers
 	TransferCash(network, issuer, "", "USD", 50, issuer, auditor)
@@ -783,8 +783,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 
 	// Check consistency
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
-	CheckOwnerDB(network, nil, issuer, auditor, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, auditor, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
 
 	for _, ref := range []*token3.NodeReference{alice, bob, charlie, manager} {
@@ -810,7 +810,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, alice, "", "Pineapples", 6, auditor)
 	CheckBalanceAndHolding(network, bob, "", "Pineapples", 0, auditor)
 	CheckBalanceAndHolding(network, charlie, "", "Pineapples", 0, auditor)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckAuditorStore(network, auditor, "", nil)
 
 	// test spendable token
 	txIssueSpendableToken := IssueCash(network, "", "Spendable", 3, alice, auditor, true, issuer)
@@ -820,7 +820,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	TransferCash(network, alice, "", "Spendable", 2, bob, auditor)
 	CheckBalanceAndHolding(network, alice, "", "Spendable", 1, auditor)
 	CheckBalanceAndHolding(network, bob, "", "Spendable", 2, auditor)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckAuditorStore(network, auditor, "", nil)
 }
 
 func TestSelector(network *integration.Infrastructure, auditorId string, sel *token3.ReplicaSelector) {
@@ -1230,8 +1230,8 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	IssueSuccessfulCash(network, "", "EUR", 110, alice, auditor, true, issuer, endorsers...)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 
 	// switch to dlog 32bits, perform a few operations
 	tms := GetTMSByAlias(network, "dlog-32bits")
@@ -1247,7 +1247,7 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 
 	// alice has one token that cannot be spent directly, it was created when the fabtoken driver was in place
-	CheckOwnerDB(network, func(errMsgs []string) error {
+	CheckOwnerStore(network, func(errMsgs []string) error {
 		if len(errMsgs) != 1 {
 			return errors.Errorf("expected one error but got %v", errMsgs)
 		}
@@ -1256,8 +1256,8 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 		}
 		return nil
 	}, alice)
-	CheckOwnerDB(network, nil, issuer, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
 
@@ -1271,8 +1271,8 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
 	// CopyDBsTo(network, "./testdata", alice)
 	// all the tokens are spendable now
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 0, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 110, auditor)
 }
@@ -1303,8 +1303,8 @@ func TestLocalTokensUpgrade(network *integration.Infrastructure, auditorId strin
 	IssueSuccessfulCash(network, "", "EUR", 110, alice, auditor, true, issuer, endorsers...)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 
 	// switch to dlog 32bits, perform a few operations
 	tms := GetTMSByAlias(network, "dlog-32bits")
@@ -1319,14 +1319,14 @@ func TestLocalTokensUpgrade(network *integration.Infrastructure, auditorId strin
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
 
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 0, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 110, auditor)
 }
@@ -1356,8 +1356,8 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	IssueSuccessfulCash(network, "", "EUR", 110, alice, auditor, true, issuer, endorsers...)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 
 	// switch to dlog 32bits, perform a few operations
 	tms := GetTMSByAlias(network, "dlog-32bits")
@@ -1372,14 +1372,14 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
 
 	TransferCash(network, alice, "", "EUR", 110, bob, auditor)
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 0, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 110, auditor)
 
@@ -1408,14 +1408,14 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	Eventually(DoesWalletExist).WithArguments(network, alice, "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 0, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 110, auditor)
 
 	TransferCash(network, bob, "", "EUR", 110, alice, auditor)
-	CheckOwnerDB(network, nil, issuer, alice, bob, charlie, manager)
-	CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
+	CheckAuditorStore(network, auditor, "", nil)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "EUR", 0, auditor)
 	CopyDBsTo(network, "./testdata", alice)

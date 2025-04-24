@@ -12,11 +12,11 @@ import (
 )
 
 type (
-	AuditTransactionDB = common.TransactionDB
-	TransactionDB      = common.TransactionDB
+	AuditTransactionStore = common.TransactionStore
+	OwnerTransactionStore = common.TransactionStore
 )
 
-func NewAuditTransactionDB(opts sqlite.Opts) (*AuditTransactionDB, error) {
+func NewAuditTransactionStore(opts sqlite.Opts) (*AuditTransactionStore, error) {
 	dbs, err := sqlite.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func NewAuditTransactionDB(opts sqlite.Opts) (*AuditTransactionDB, error) {
 	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
 }
 
-func NewTransactionDB(opts sqlite.Opts) (*TransactionDB, error) {
+func NewTransactionStore(opts sqlite.Opts) (*OwnerTransactionStore, error) {
 	dbs, err := sqlite.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
@@ -37,5 +37,5 @@ func NewTransactionDB(opts sqlite.Opts) (*TransactionDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewTransactionDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
 }

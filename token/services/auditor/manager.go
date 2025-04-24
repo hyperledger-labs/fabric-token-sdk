@@ -25,7 +25,7 @@ type TokenManagementServiceProvider interface {
 }
 
 type AuditDBProvider interface {
-	DBByTMSId(id token.TMSID) (*auditdb.DB, error)
+	ServiceByTMSId(id token.TMSID) (*auditdb.StoreService, error)
 }
 
 type TokenDBProvider interface {
@@ -33,7 +33,7 @@ type TokenDBProvider interface {
 }
 
 type CheckServiceProvider interface {
-	CheckService(id token.TMSID, adb *auditdb.DB, tdb *tokens.Tokens) (CheckService, error)
+	CheckService(id token.TMSID, adb *auditdb.StoreService, tdb *tokens.Tokens) (CheckService, error)
 }
 
 // Manager handles the databases
@@ -103,7 +103,7 @@ func (cm *Manager) getAuditor(tmsID token.TMSID) (*Auditor, error) {
 }
 
 func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
-	auditDB, err := cm.auditDBProvider.DBByTMSId(tmsID)
+	auditDB, err := cm.auditDBProvider.ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
 	}

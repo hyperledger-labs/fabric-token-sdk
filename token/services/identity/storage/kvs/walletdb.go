@@ -17,16 +17,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-type WalletDB struct {
+type WalletStore struct {
 	kvs   KVS
 	tmsID token.TMSID
 }
 
-func NewWalletDB(kvs KVS, tmsID token.TMSID) *WalletDB {
-	return &WalletDB{kvs: kvs, tmsID: tmsID}
+func NewWalletStore(kvs KVS, tmsID token.TMSID) *WalletStore {
+	return &WalletStore{kvs: kvs, tmsID: tmsID}
 }
 
-func (s *WalletDB) StoreIdentity(identity driver2.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
+func (s *WalletStore) StoreIdentity(identity driver2.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
 	idHash := identity.UniqueID()
 	if meta != nil {
 		k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID, "meta"})
@@ -55,7 +55,7 @@ func (s *WalletDB) StoreIdentity(identity driver2.Identity, eID string, wID driv
 	return nil
 }
 
-func (s *WalletDB) IdentityExists(identity driver2.Identity, wID driver.WalletID, roleID int) bool {
+func (s *WalletStore) IdentityExists(identity driver2.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.UniqueID()
 	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID})
 	if err != nil {
@@ -64,7 +64,7 @@ func (s *WalletDB) IdentityExists(identity driver2.Identity, wID driver.WalletID
 	return s.kvs.Exists(k)
 }
 
-func (s *WalletDB) GetWalletID(identity driver2.Identity, roleID int) (driver.WalletID, error) {
+func (s *WalletStore) GetWalletID(identity driver2.Identity, roleID int) (driver.WalletID, error) {
 	idHash := identity.UniqueID()
 	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash})
 	if err != nil {
@@ -77,7 +77,7 @@ func (s *WalletDB) GetWalletID(identity driver2.Identity, roleID int) (driver.Wa
 	return wID, nil
 }
 
-func (s *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
+func (s *WalletStore) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
 	it, err := s.kvs.GetByPartialCompositeID("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID)})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallets iterator")
@@ -95,7 +95,7 @@ func (s *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
 	return walletIDs.ToSlice(), nil
 }
 
-func (s *WalletDB) LoadMeta(identity driver2.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
+func (s *WalletStore) LoadMeta(identity driver2.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.UniqueID()
 	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID, "meta"})
 	if err != nil {
@@ -108,6 +108,6 @@ func (s *WalletDB) LoadMeta(identity driver2.Identity, wID driver.WalletID, role
 	return meta, nil
 }
 
-func (s *WalletDB) Close() error {
+func (s *WalletStore) Close() error {
 	return nil
 }

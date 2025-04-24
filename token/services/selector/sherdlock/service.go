@@ -28,7 +28,7 @@ func NewService(fetcherProvider FetcherProvider, tokenLockDBManager *tokenlockdb
 	}
 
 	loader := &loader{
-		tokenLockDBManager:     tokenLockDBManager,
+		tokenLockManager:       tokenLockDBManager,
 		fetcherProvider:        fetcherProvider,
 		retryInterval:          cfg.GetRetryInterval(),
 		numRetries:             cfg.GetNumRetries(),
@@ -49,7 +49,7 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 }
 
 type loader struct {
-	tokenLockDBManager     *tokenlockdb.Manager
+	tokenLockManager       *tokenlockdb.Manager
 	fetcherProvider        FetcherProvider
 	numRetries             int
 	retryInterval          time.Duration
@@ -62,7 +62,7 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
 	}
-	tokenLockDB, err := s.tokenLockDBManager.DBByTMSId(tms.ID())
+	tokenLockService, err := s.tokenLockManager.ServiceByTMSId(tms.ID())
 	if err != nil {
 		return nil, errors.Errorf("failed to create tokenLockDB: %v", err)
 	}
@@ -72,7 +72,7 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	}
 	return NewManager(
 		fetcher,
-		tokenLockDB,
+		tokenLockService,
 		pp.Precision(),
 		s.retryInterval,
 		s.numRetries,

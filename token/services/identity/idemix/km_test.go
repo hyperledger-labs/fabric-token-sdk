@@ -36,7 +36,7 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 	// prepare
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"}))
 	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
 	tracker := kvs2.NewTrackedMemoryFrom(kvs)
@@ -129,7 +129,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvs))
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
@@ -241,7 +241,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvs))
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
 	config, err := crypto2.NewConfig(configPath)
@@ -325,7 +325,7 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvs))
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
 	config, err := crypto2.NewConfig(configPath)
@@ -380,7 +380,7 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvs))
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 	keyStore, err := crypto2.NewKeyStore(curveID, kvs)
 	assert.NoError(t, err)
@@ -444,7 +444,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvs))
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
 	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
@@ -525,7 +525,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvs))
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvs, token.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
 	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))

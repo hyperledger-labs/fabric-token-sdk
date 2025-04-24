@@ -180,7 +180,7 @@ func CheckPublicParams(network *integration.Infrastructure, tmsID token.TMSID, i
 	}
 }
 
-func CheckOwnerDB(network *integration.Infrastructure, tmsID token.TMSID, expectedErrors []string, ids ...*token3.NodeReference) {
+func CheckOwnerStore(network *integration.Infrastructure, tmsID token.TMSID, expectedErrors []string, ids ...*token3.NodeReference) {
 	for _, id := range ids {
 		for _, replicaName := range id.AllNames() {
 			errorMessagesBoxed, err := network.Client(replicaName).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
@@ -205,7 +205,7 @@ func CheckOwnerDB(network *integration.Infrastructure, tmsID token.TMSID, expect
 	}
 }
 
-func CheckAuditorDB(network *integration.Infrastructure, tmsID token.TMSID, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
+func CheckAuditorStore(network *integration.Infrastructure, tmsID token.TMSID, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
 	errorMessagesBoxed, err := network.Client(auditor.ReplicaName()).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
 		Auditor:         true,
 		AuditorWalletID: walletID,

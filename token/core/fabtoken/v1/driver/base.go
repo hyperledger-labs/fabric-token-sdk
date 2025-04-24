@@ -53,7 +53,7 @@ func (d *base) newWalletService(
 	tmsID := tmsConfig.ID()
 
 	deserializerManager := sig.NewMultiplexDeserializer()
-	identityDB, err := storageProvider.IdentityDB(tmsID)
+	identityDB, err := storageProvider.IdentityStore(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
@@ -94,7 +94,7 @@ func (d *base) newWalletService(
 	roles.Register(identity.CertifierRole, role)
 
 	// Instantiate the wallet service
-	walletDB, err := storageProvider.WalletDB(tmsID)
+	walletDB, err := storageProvider.WalletStore(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}

@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Manager = db.Manager[*DB]
+type Manager = db.Manager[*StoreService]
 
 var (
 	managerType = reflect.TypeOf((*Manager)(nil))
@@ -30,15 +30,15 @@ var (
 )
 
 func NewManager(dh *db.DriverHolder) *Manager {
-	return db.MappedManager[driver.TokenTransactionStore, *DB](dh.NewOwnerTransactionManager(), newDB)
+	return db.MappedManager[driver.TokenTransactionStore, *StoreService](dh.NewOwnerTransactionManager(), newStoreService)
 }
 
-func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
+func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")
 	}
-	c, err := s.(*Manager).DBByTMSId(tmsID)
+	c, err := s.(*Manager).ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}
@@ -155,15 +155,15 @@ type Cache interface {
 	Delete(key string)
 }
 
-// DB is a database that stores token transactions related information
-type DB struct {
+// StoreService is a database that stores token transactions related information
+type StoreService struct {
 	*common.StatusSupport
 	db    driver.TokenTransactionStore
 	cache Cache
 }
 
-func newDB(p driver.TokenTransactionStore) (*DB, error) {
-	return &DB{
+func newStoreService(p driver.TokenTransactionStore) (*StoreService, error) {
+	return &StoreService{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,
 		cache:         secondcache.NewTyped[[]byte](1000),
@@ -180,17 +180,17 @@ type QueryTokenRequestsParams = driver.QueryTokenRequestsParams
 type QueryValidationRecordsParams = driver.QueryValidationRecordsParams
 
 // Transactions returns an iterators of transaction records filtered by the given params.
-func (d *DB) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
+func (d *StoreService) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
 	return d.db.QueryTransactions(params)
 }
 
 // TokenRequests returns an iterator over the token requests matching the passed params
-func (d *DB) TokenRequests(params QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
+func (d *StoreService) TokenRequests(params QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
 	return d.db.QueryTokenRequests(params)
 }
 
 // ValidationRecords returns an iterators of validation records filtered by the given params.
-func (d *DB) ValidationRecords(params QueryValidationRecordsParams) (*ValidationRecordsIterator, error) {
+func (d *StoreService) ValidationRecords(params QueryValidationRecordsParams) (*ValidationRecordsIterator, error) {
 	it, err := d.db.QueryValidations(params)
 	if err != nil {
 		return nil, errors.Errorf("failed to query validation records: %s", err)
@@ -199,7 +199,7 @@ func (d *DB) ValidationRecords(params QueryValidationRecordsParams) (*Validation
 }
 
 // AppendTransactionRecord appends the transaction records corresponding to the passed token request.
-func (d *DB) AppendTransactionRecord(req *token.Request) error {
+func (d *StoreService) AppendTransactionRecord(req *token.Request) error {
 	logger.Debugf("appending new transaction record... [%s]", req.Anchor)
 
 	ins, outs, attrs, err := req.InputsAndOutputs()
@@ -253,7 +253,7 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (d *DB) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
+func (d *StoreService) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
 	logger.Debugf("set status [%s][%s]...", txID, status)
 	if err := d.db.SetStatus(ctx, txID, status, message); err != nil {
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TxStatusMessage[status])
@@ -271,7 +271,7 @@ func (d *DB) SetStatus(ctx context.Context, txID string, status driver.TxStatus,
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (d *DB) GetStatus(txID string) (TxStatus, string, error) {
+func (d *StoreService) GetStatus(txID string) (TxStatus, string, error) {
 	logger.Debugf("get status [%s]...", txID)
 	status, message, err := d.db.GetStatus(txID)
 	if err != nil {
@@ -282,7 +282,7 @@ func (d *DB) GetStatus(txID string) (TxStatus, string, error) {
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
-func (d *DB) GetTokenRequest(txID string) ([]byte, error) {
+func (d *StoreService) GetTokenRequest(txID string) ([]byte, error) {
 	res, ok := d.cache.Get(txID)
 	if ok {
 		return res, nil
@@ -291,17 +291,17 @@ func (d *DB) GetTokenRequest(txID string) ([]byte, error) {
 }
 
 // AddTransactionEndorsementAck records the signature of a given endorser for a given transaction
-func (d *DB) AddTransactionEndorsementAck(txID string, id token.Identity, sigma []byte) error {
+func (d *StoreService) AddTransactionEndorsementAck(txID string, id token.Identity, sigma []byte) error {
 	return d.db.AddTransactionEndorsementAck(txID, id, sigma)
 }
 
 // GetTransactionEndorsementAcks returns the endorsement signatures for the given transaction id
-func (d *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
+func (d *StoreService) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
 	return d.db.GetTransactionEndorsementAcks(txID)
 }
 
 // AppendValidationRecord appends the given validation metadata related to the given transaction id
-func (d *DB) AppendValidationRecord(txID string, tokenRequest []byte, meta map[string][]byte, ppHash driver2.PPHash) error {
+func (d *StoreService) AppendValidationRecord(txID string, tokenRequest []byte, meta map[string][]byte, ppHash driver2.PPHash) error {
 	logger.Debugf("appending new validation record... [%s]", txID)
 
 	w, err := d.db.BeginAtomicWrite()

@@ -38,7 +38,7 @@ type identityTables struct {
 	Signers                string
 }
 
-type IdentityDB struct {
+type IdentityStore struct {
 	readDB  *sql.DB
 	writeDB *sql.DB
 	table   identityTables
@@ -49,8 +49,8 @@ type IdentityDB struct {
 	auditInfoCache  cache[[]byte]
 }
 
-func newIdentityDB(readDB, writeDB *sql.DB, tables identityTables, singerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) *IdentityDB {
-	return &IdentityDB{
+func newIdentityStore(readDB, writeDB *sql.DB, tables identityTables, singerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) *IdentityStore {
+	return &IdentityStore{
 		readDB:          readDB,
 		writeDB:         writeDB,
 		table:           tables,
@@ -60,8 +60,8 @@ func newIdentityDB(readDB, writeDB *sql.DB, tables identityTables, singerInfoCac
 	}
 }
 
-func NewCachedIdentityDB(readDB, writeDB *sql.DB, tables tableNames, ci common.Interpreter) (*IdentityDB, error) {
-	return NewIdentityDB(
+func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables tableNames, ci common.Interpreter) (*IdentityStore, error) {
+	return NewIdentityStore(
 		readDB,
 		writeDB,
 		tables,
@@ -71,8 +71,8 @@ func NewCachedIdentityDB(readDB, writeDB *sql.DB, tables tableNames, ci common.I
 	)
 }
 
-func NewIdentityDB(readDB, writeDB *sql.DB, tables tableNames, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) (*IdentityDB, error) {
-	return newIdentityDB(
+func NewIdentityStore(readDB, writeDB *sql.DB, tables tableNames, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) (*IdentityStore, error) {
+	return newIdentityStore(
 		readDB,
 		writeDB,
 		identityTables{
@@ -86,11 +86,11 @@ func NewIdentityDB(readDB, writeDB *sql.DB, tables tableNames, signerInfoCache c
 	), nil
 }
 
-func (db *IdentityDB) CreateSchema() error {
+func (db *IdentityStore) CreateSchema() error {
 	return common.InitSchema(db.writeDB, []string{db.GetSchema()}...)
 }
 
-func (db *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
+func (db *IdentityStore) AddConfiguration(wp driver.IdentityConfiguration) error {
 	query, err := NewInsertInto(db.table.IdentityConfigurations).Rows("id, type, url, conf, raw").Compile()
 	if err != nil {
 		return errors.Wrapf(err, "failed compiling query")
@@ -101,7 +101,7 @@ func (db *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
 	return err
 }
 
-func (db *IdentityDB) IteratorConfigurations(configurationType string) (identity.ConfigurationIterator, error) {
+func (db *IdentityStore) IteratorConfigurations(configurationType string) (identity.ConfigurationIterator, error) {
 	query, err := NewSelect("id, url, conf, raw").From(db.table.IdentityConfigurations).Where("type = $1").Compile()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed compiling query")
@@ -114,7 +114,7 @@ func (db *IdentityDB) IteratorConfigurations(configurationType string) (identity
 	return &IdentityConfigurationIterator{rows: rows, configurationType: configurationType}, nil
 }
 
-func (db *IdentityDB) ConfigurationExists(id, typ, url string) (bool, error) {
+func (db *IdentityStore) ConfigurationExists(id, typ, url string) (bool, error) {
 	query, err := NewSelect("id").From(db.table.IdentityConfigurations).Where("id=$1 AND type=$2 AND url=$3").Compile()
 	if err != nil {
 		return false, errors.Wrapf(err, "failed compiling query")
@@ -127,7 +127,7 @@ func (db *IdentityDB) ConfigurationExists(id, typ, url string) (bool, error) {
 	return len(result) != 0, nil
 }
 
-func (db *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
+func (db *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
 	// logger.Infof("store identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
 	query, err := NewInsertInto(db.table.IdentityInfo).Rows("identity_hash, identity, identity_audit_info, token_metadata, token_metadata_audit_info").Compile()
 	if err != nil {
@@ -154,7 +154,7 @@ func (db *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMe
 	return err
 }
 
-func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
+func (db *IdentityStore) GetAuditInfo(id []byte) ([]byte, error) {
 	h := token.Identity(id).String()
 
 	value, _, err := db.auditInfoCache.GetOrLoad(h, func() ([]byte, error) {
@@ -178,7 +178,7 @@ func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 	return value, err
 }
 
-func (db *IdentityDB) GetTokenInfo(id []byte) ([]byte, []byte, error) {
+func (db *IdentityStore) GetTokenInfo(id []byte) ([]byte, []byte, error) {
 	h := token.Identity(id).String()
 	// logger.Infof("get identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
 	query, err := NewSelect("token_metadata, token_metadata_audit_info").From(db.table.IdentityInfo).Where("identity_hash = $1").Compile()
@@ -199,7 +199,7 @@ func (db *IdentityDB) GetTokenInfo(id []byte) ([]byte, []byte, error) {
 	return tokenMetadata, tokenMetadataAuditInfo, nil
 }
 
-func (db *IdentityDB) StoreSignerInfo(id, info []byte) error {
+func (db *IdentityStore) StoreSignerInfo(id, info []byte) error {
 	query, err := NewInsertInto(db.table.Signers).Rows("identity_hash, identity, info").Compile()
 	if err != nil {
 		return errors.Wrapf(err, "failed compiling query")
@@ -223,7 +223,7 @@ func (db *IdentityDB) StoreSignerInfo(id, info []byte) error {
 	return nil
 }
 
-func (db *IdentityDB) GetExistingSignerInfo(ids ...tdriver.Identity) ([]string, error) {
+func (db *IdentityStore) GetExistingSignerInfo(ids ...tdriver.Identity) ([]string, error) {
 	idHashes := make([]string, len(ids))
 	for i, id := range ids {
 		idHashes[i] = id.UniqueID()
@@ -288,7 +288,7 @@ func (db *IdentityDB) GetExistingSignerInfo(ids ...tdriver.Identity) ([]string, 
 	return append(result, found.ToSlice()...), nil
 }
 
-func (db *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
+func (db *IdentityStore) SignerInfoExists(id []byte) (bool, error) {
 	existing, err := db.GetExistingSignerInfo(id)
 	if err != nil {
 		return false, err
@@ -296,7 +296,7 @@ func (db *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
 	return len(existing) > 0, nil
 }
 
-func (db *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
+func (db *IdentityStore) GetSignerInfo(identity []byte) ([]byte, error) {
 	h := token.Identity(identity).String()
 	query, err := NewSelect("info").From(db.table.Signers).Where("identity_hash = $1").Compile()
 	if err != nil {
@@ -315,7 +315,7 @@ func (db *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
 	return info, nil
 }
 
-func (db *IdentityDB) Close() error {
+func (db *IdentityStore) Close() error {
 	return common2.Close(db.readDB, db.writeDB)
 }
 
@@ -339,7 +339,7 @@ func (w *IdentityConfigurationIterator) Next() (driver.IdentityConfiguration, er
 	return c, err
 }
 
-func (db *IdentityDB) GetSchema() string {
+func (db *IdentityStore) GetSchema() string {
 	return fmt.Sprintf(`
 		-- IdentityConfigurations
 		CREATE TABLE IF NOT EXISTS %s (

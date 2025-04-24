@@ -44,7 +44,7 @@ func TestNewKeyManagerProvider(t *testing.T) {
 func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
 	backend, err := kvs.NewInMemory()
 	assert.NoError(t, err)
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs.NewIdentityDB(backend, token.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs.NewIdentityStore(backend, token.TMSID{Network: "pineapple"}))
 	config, err := crypto.NewConfig(configPath)
 	assert.NoError(t, err)
 	keyStore, err := crypto.NewKeyStore(curveID, backend)

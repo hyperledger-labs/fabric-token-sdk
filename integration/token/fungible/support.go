@@ -999,7 +999,7 @@ func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReferen
 	return exists
 }
 
-func CheckOwnerDB(network *integration.Infrastructure, errorCheck func([]string) error, ids ...*token3.NodeReference) {
+func CheckOwnerStore(network *integration.Infrastructure, errorCheck func([]string) error, ids ...*token3.NodeReference) {
 	for _, id := range ids {
 		for _, replicaName := range id.AllNames() {
 			errorMessagesBoxed, err := network.Client(replicaName).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{}))
@@ -1015,7 +1015,7 @@ func CheckOwnerDB(network *integration.Infrastructure, errorCheck func([]string)
 	}
 }
 
-func CheckAuditorDB(network *integration.Infrastructure, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
+func CheckAuditorStore(network *integration.Infrastructure, auditor *token3.NodeReference, walletID string, errorCheck func([]string) error) {
 	errorMessagesBoxed, err := network.Client(auditor.ReplicaName()).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
 		Auditor:         true,
 		AuditorWalletID: walletID,

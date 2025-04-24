@@ -19,7 +19,7 @@ import (
 )
 
 type DBProvider interface {
-	DBByTMSId(id token.TMSID) (*tokendb.DB, error)
+	ServiceByTMSId(id token.TMSID) (*tokendb.StoreService, error)
 }
 
 type TMSProvider interface {
@@ -77,7 +77,7 @@ func (cm *Manager) Tokens(tmsID token.TMSID) (*Tokens, error) {
 }
 
 func (cm *Manager) newTokens(tmsID token.TMSID) (*Tokens, error) {
-	db, err := cm.dbProvider.DBByTMSId(tmsID)
+	db, err := cm.dbProvider.ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get tokendb for [%s]", tmsID)
 	}

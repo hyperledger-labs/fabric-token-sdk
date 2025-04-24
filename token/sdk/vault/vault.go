@@ -19,22 +19,22 @@ import (
 
 type Vault struct {
 	tmsID   token2.TMSID
-	tokenDB *tokendb.DB
+	tokenDB *tokendb.StoreService
 
 	queryEngine          *QueryEngine
 	certificationStorage driver.CertificationStorage
 }
 
-func NewVault(tmsID token2.TMSID, auditdb *auditdb.DB, ttxdb *ttxdb.DB, tokenDB *tokendb.DB) (*Vault, error) {
+func NewVault(tmsID token2.TMSID, auditdb *auditdb.StoreService, ttxdb *ttxdb.StoreService, tokenDB *tokendb.StoreService) (*Vault, error) {
 	return &Vault{
 		tmsID:   tmsID,
 		tokenDB: tokenDB,
 		queryEngine: &QueryEngine{
-			DB:      tokenDB,
-			auditDB: auditdb,
-			ttxdb:   ttxdb,
+			StoreService: tokenDB,
+			auditDB:      auditdb,
+			ttxdb:        ttxdb,
 		},
-		certificationStorage: &CertificationStorage{DB: tokenDB},
+		certificationStorage: &CertificationStorage{StoreService: tokenDB},
 	}, nil
 }
 
@@ -51,9 +51,9 @@ func (v *Vault) DeleteTokens(ids ...*token.ID) error {
 }
 
 type QueryEngine struct {
-	*tokendb.DB
-	auditDB *auditdb.DB
-	ttxdb   *ttxdb.DB
+	*tokendb.StoreService
+	auditDB *auditdb.StoreService
+	ttxdb   *ttxdb.StoreService
 }
 
 func (q *QueryEngine) IsPending(id *token.ID) (bool, error) {
@@ -76,17 +76,17 @@ func (q *QueryEngine) IsMine(id *token.ID) (bool, error) {
 	if id == nil {
 		return false, nil
 	}
-	return q.DB.IsMine(id.TxId, id.Index)
+	return q.StoreService.IsMine(id.TxId, id.Index)
 }
 
 type CertificationStorage struct {
-	*tokendb.DB
+	*tokendb.StoreService
 }
 
 func (t *CertificationStorage) Exists(id *token.ID) bool {
-	return t.DB.ExistsCertification(id)
+	return t.StoreService.ExistsCertification(id)
 }
 
 func (t *CertificationStorage) Store(certifications map[*token.ID][]byte) error {
-	return t.DB.StoreCertifications(certifications)
+	return t.StoreService.StoreCertifications(certifications)
 }

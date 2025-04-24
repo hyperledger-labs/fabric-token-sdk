@@ -56,40 +56,40 @@ type FetcherProvider interface {
 	GetFetcher(tmsID token.TMSID) (tokenFetcher, error)
 }
 
-type fetchFunc func(db *tokendb.DB, notifier *tokendb.Notifier, m *Metrics) tokenFetcher
+type fetchFunc func(db *tokendb.StoreService, notifier *tokendb.Notifier, m *Metrics) tokenFetcher
 
 type fetcherProvider struct {
-	dbManager       *tokendb.Manager
-	notifierManager *tokendb.NotifierManager
-	metrics         *Metrics
-	fetch           fetchFunc
+	tokenStoreServiceManager *tokendb.Manager
+	notifierManager          *tokendb.NotifierManager
+	metrics                  *Metrics
+	fetch                    fetchFunc
 }
 
 var fetchers = map[FetcherStrategy]fetchFunc{
-	Mixed: func(db *tokendb.DB, notifier *tokendb.Notifier, m *Metrics) tokenFetcher {
+	Mixed: func(db *tokendb.StoreService, notifier *tokendb.Notifier, m *Metrics) tokenFetcher {
 		return newMixedFetcher(db, m)
 	},
 }
 
-func NewFetcherProvider(dbManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider, strategy FetcherStrategy) *fetcherProvider {
+func NewFetcherProvider(storeServiceManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider, strategy FetcherStrategy) *fetcherProvider {
 	fetcher, ok := fetchers[strategy]
 	if !ok {
 		panic("undefined fetcher strategy: " + strategy)
 	}
 	return &fetcherProvider{
-		dbManager:       dbManager,
-		notifierManager: notifierManager,
-		metrics:         newMetrics(metricsProvider),
-		fetch:           fetcher,
+		tokenStoreServiceManager: storeServiceManager,
+		notifierManager:          notifierManager,
+		metrics:                  newMetrics(metricsProvider),
+		fetch:                    fetcher,
 	}
 }
 
 func (p *fetcherProvider) GetFetcher(tmsID token.TMSID) (tokenFetcher, error) {
-	tokenDB, err := p.dbManager.DBByTMSId(tmsID)
+	tokenDB, err := p.tokenStoreServiceManager.ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, err
 	}
-	tokenNotifier, err := p.notifierManager.DBByTMSId(tmsID)
+	tokenNotifier, err := p.notifierManager.ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, err
 	}

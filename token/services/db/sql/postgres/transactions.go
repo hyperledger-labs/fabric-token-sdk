@@ -12,11 +12,11 @@ import (
 )
 
 type (
-	AuditTransactionDB = common.TransactionDB
-	TransactionDB      = common.TransactionDB
+	AuditTransactionStore = common.TransactionStore
+	TransactionStore      = common.TransactionStore
 )
 
-func NewAuditTransactionDB(opts postgres.Opts) (*AuditTransactionDB, error) {
+func NewAuditTransactionStore(opts postgres.Opts) (*AuditTransactionStore, error) {
 	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func NewAuditTransactionDB(opts postgres.Opts) (*AuditTransactionDB, error) {
 	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
 }
 
-func NewTransactionDB(opts postgres.Opts) (*TransactionDB, error) {
+func NewTransactionStore(opts postgres.Opts) (*TransactionStore, error) {
 	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
@@ -37,5 +37,5 @@ func NewTransactionDB(opts postgres.Opts) (*TransactionDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewTransactionDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
+	return common.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
 }

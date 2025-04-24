@@ -32,11 +32,11 @@ type Flags struct {
 
 type DBStorage struct {
 	notifier events.Publisher
-	tokenDB  *tokendb.DB
+	tokenDB  *tokendb.StoreService
 	tmsID    token.TMSID
 }
 
-func NewDBStorage(notifier events.Publisher, tokenDB *tokendb.DB, tmsID token.TMSID) (*DBStorage, error) {
+func NewDBStorage(notifier events.Publisher, tokenDB *tokendb.StoreService, tmsID token.TMSID) (*DBStorage, error) {
 	return &DBStorage{
 		notifier: notifier,
 		tokenDB:  tokenDB,

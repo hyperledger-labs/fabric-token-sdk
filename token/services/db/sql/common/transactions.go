@@ -33,15 +33,15 @@ type transactionTables struct {
 	TransactionEndorseAck string
 }
 
-type TransactionDB struct {
+type TransactionStore struct {
 	readDB  *sql.DB
 	writeDB *sql.DB
 	table   transactionTables
 	ci      TokenInterpreter
 }
 
-func newTransactionDB(readDB, writeDB *sql.DB, tables transactionTables, ci TokenInterpreter) *TransactionDB {
-	return &TransactionDB{
+func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci TokenInterpreter) *TransactionStore {
+	return &TransactionStore{
 		readDB:  readDB,
 		writeDB: writeDB,
 		table:   tables,
@@ -49,12 +49,12 @@ func newTransactionDB(readDB, writeDB *sql.DB, tables transactionTables, ci Toke
 	}
 }
 
-func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter) (*TransactionDB, error) {
-	return NewTransactionDB(readDB, writeDB, tables, ci)
+func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter) (*TransactionStore, error) {
+	return NewOwnerTransactionStore(readDB, writeDB, tables, ci)
 }
 
-func NewTransactionDB(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter) (*TransactionDB, error) {
-	return newTransactionDB(readDB, writeDB, transactionTables{
+func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter) (*TransactionStore, error) {
+	return newTransactionStore(readDB, writeDB, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
@@ -63,11 +63,11 @@ func NewTransactionDB(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterp
 	}, ci), nil
 }
 
-func (db *TransactionDB) CreateSchema() error {
+func (db *TransactionStore) CreateSchema() error {
 	return common.InitSchema(db.writeDB, db.GetSchema())
 }
 
-func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
+func (db *TransactionStore) GetTokenRequest(txID string) ([]byte, error) {
 	var tokenrequest []byte
 	query, err := NewSelect("request").From(db.table.Requests).Where("tx_id=$1").Compile()
 	if err != nil {
@@ -86,7 +86,7 @@ func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
 	return tokenrequest, nil
 }
 
-func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
+func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
 	where, args := common.Where(db.ci.HasMovementsParams(params))
 	conditions := where + movementConditionsSql(params)
 	query, err := NewSelect(
@@ -129,7 +129,7 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 	return res, nil
 }
 
-func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
+func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
 	conditions, args := common.Where(db.ci.HasTransactionParams(params, db.table.Transactions))
 	orderBy := movementConditionsSql(driver.QueryMovementsParams{
 		SearchDirection: driver.FromBeginning,
@@ -149,7 +149,7 @@ func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams
 	return &TransactionIterator{txs: rows}, nil
 }
 
-func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error) {
+func (db *TransactionStore) GetStatus(txID string) (driver.TxStatus, string, error) {
 	var status driver.TxStatus
 	var statusMessage string
 	query, err := NewSelect("status, status_message").From(db.table.Requests).Where("tx_id=$1").Compile()
@@ -169,7 +169,7 @@ func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error)
 	return status, statusMessage, nil
 }
 
-func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
+func (db *TransactionStore) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
 	conditions, args := common.Where(db.ci.HasValidationParams(params))
 	query, err := NewSelect(
 		fmt.Sprintf("%s.tx_id, %s.request, metadata, %s.status, %s.stored_at",
@@ -188,7 +188,7 @@ func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsPa
 }
 
 // QueryTokenRequests returns an iterator over the token requests matching the passed params
-func (db *TransactionDB) QueryTokenRequests(params driver.QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
+func (db *TransactionStore) QueryTokenRequests(params driver.QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
 	where, args := common.Where(db.ci.InInts("status", params.Statuses))
 
 	query, err := NewSelect("tx_id, request, status").From(db.table.Requests).Where(where).Compile()
@@ -203,7 +203,7 @@ func (db *TransactionDB) QueryTokenRequests(params driver.QueryTokenRequestsPara
 	return &TokenRequestIterator{txs: rows}, nil
 }
 
-func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser token.Identity, sigma []byte) (err error) {
+func (db *TransactionStore) AddTransactionEndorsementAck(txID string, endorser token.Identity, sigma []byte) (err error) {
 	logger.Debugf("adding transaction endorse ack record [%s]", txID)
 
 	now := time.Now().UTC()
@@ -222,7 +222,7 @@ func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser toke
 	return
 }
 
-func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
+func (db *TransactionStore) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
 	query, err := NewSelect("endorser, sigma").From(db.table.TransactionEndorseAck).Where("tx_id=$1").Compile()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed compiling query")
@@ -254,11 +254,11 @@ func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string]
 	return acks, nil
 }
 
-func (db *TransactionDB) Close() error {
+func (db *TransactionStore) Close() error {
 	return common2.Close(db.readDB, db.writeDB)
 }
 
-func (db *TransactionDB) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) (err error) {
+func (db *TransactionStore) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) (err error) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent("start_db_update")
 	defer span.AddEvent("end_db_update")
@@ -278,7 +278,7 @@ func (db *TransactionDB) SetStatus(ctx context.Context, txID string, status driv
 	return
 }
 
-func (db *TransactionDB) GetSchema() string {
+func (db *TransactionStore) GetSchema() string {
 	return fmt.Sprintf(`
 		-- requests
 		CREATE TABLE IF NOT EXISTS %s (
@@ -484,7 +484,7 @@ func (t *TokenRequestIterator) Next() (*driver.TokenRequestRecord, error) {
 	return &r, nil
 }
 
-func (db *TransactionDB) BeginAtomicWrite() (driver.AtomicWrite, error) {
+func (db *TransactionStore) BeginAtomicWrite() (driver.AtomicWrite, error) {
 	txn, err := db.writeDB.Begin()
 	if err != nil {
 		return nil, err

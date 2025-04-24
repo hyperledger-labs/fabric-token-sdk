@@ -11,12 +11,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
-type Manager = db.Manager[*DB]
+type Manager = db.Manager[*StoreService]
 
 func NewManager(dh *db.DriverHolder) *Manager {
-	return db.MappedManager[driver.TokenLockStore, *DB](dh.NewTokenLockManager(), newDB)
+	return db.MappedManager[driver.TokenLockStore, *StoreService](dh.NewTokenLockManager(), newStoreService)
 }
 
-type DB struct{ driver.TokenLockStore }
+type StoreService struct{ driver.TokenLockStore }
 
-func newDB(p driver.TokenLockStore) (*DB, error) { return &DB{TokenLockStore: p}, nil }
+func newStoreService(p driver.TokenLockStore) (*StoreService, error) {
+	return &StoreService{TokenLockStore: p}, nil
+}

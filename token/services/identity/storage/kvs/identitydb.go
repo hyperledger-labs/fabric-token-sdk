@@ -35,16 +35,16 @@ type RecipientData struct {
 	TokenMetadataAuditInfo []byte
 }
 
-type IdentityDB struct {
+type IdentityStore struct {
 	kvs   KVS
 	tmsID token.TMSID
 }
 
-func NewIdentityDB(kvs KVS, tmsID token.TMSID) *IdentityDB {
-	return &IdentityDB{kvs: kvs, tmsID: tmsID}
+func NewIdentityStore(kvs KVS, tmsID token.TMSID) *IdentityStore {
+	return &IdentityStore{kvs: kvs, tmsID: tmsID}
 }
 
-func (s *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
+func (s *IdentityStore) AddConfiguration(wp driver.IdentityConfiguration) error {
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,
 		[]string{
@@ -60,7 +60,7 @@ func (s *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
 	return s.kvs.Put(k, &wp)
 }
 
-func (s *IdentityDB) IteratorConfigurations(configurationType string) (identity.ConfigurationIterator, error) {
+func (s *IdentityStore) IteratorConfigurations(configurationType string) (identity.ConfigurationIterator, error) {
 	it, err := s.kvs.GetByPartialCompositeID(
 		IdentityDBPrefix,
 		[]string{
@@ -75,7 +75,7 @@ func (s *IdentityDB) IteratorConfigurations(configurationType string) (identity.
 	return &IdentityConfigurationsIterator{Iterator: it}, nil
 }
 
-func (s *IdentityDB) ConfigurationExists(id, configurationType, url string) (bool, error) {
+func (s *IdentityStore) ConfigurationExists(id, configurationType, url string) (bool, error) {
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,
 		[]string{
@@ -91,7 +91,7 @@ func (s *IdentityDB) ConfigurationExists(id, configurationType, url string) (boo
 	return s.kvs.Exists(k), nil
 }
 
-func (s *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
+func (s *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
 	k := kvs.CreateCompositeKeyOrPanic(
 		IdentityDBPrefix,
 		[]string{
@@ -109,7 +109,7 @@ func (s *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMet
 	return nil
 }
 
-func (s *IdentityDB) GetAuditInfo(identity []byte) ([]byte, error) {
+func (s *IdentityStore) GetAuditInfo(identity []byte) ([]byte, error) {
 	k := kvs.CreateCompositeKeyOrPanic(
 		IdentityDBPrefix,
 		[]string{
@@ -127,7 +127,7 @@ func (s *IdentityDB) GetAuditInfo(identity []byte) ([]byte, error) {
 	return res.AuditInfo, nil
 }
 
-func (s *IdentityDB) GetTokenInfo(identity []byte) ([]byte, []byte, error) {
+func (s *IdentityStore) GetTokenInfo(identity []byte) ([]byte, []byte, error) {
 	k := kvs.CreateCompositeKeyOrPanic(
 		IdentityDBPrefix,
 		[]string{
@@ -145,7 +145,7 @@ func (s *IdentityDB) GetTokenInfo(identity []byte) ([]byte, []byte, error) {
 	return res.TokenMetadata, res.TokenMetadataAuditInfo, nil
 }
 
-func (s *IdentityDB) StoreSignerInfo(id, info []byte) error {
+func (s *IdentityStore) StoreSignerInfo(id, info []byte) error {
 	idHash := driver2.Identity(id).UniqueID()
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,
@@ -164,7 +164,7 @@ func (s *IdentityDB) StoreSignerInfo(id, info []byte) error {
 	return nil
 }
 
-func (s *IdentityDB) GetExistingSignerInfo(identities ...driver2.Identity) ([]string, error) {
+func (s *IdentityStore) GetExistingSignerInfo(identities ...driver2.Identity) ([]string, error) {
 	keys := make([]string, len(identities))
 	for i, id := range identities {
 		k, err := kvs.CreateCompositeKey(
@@ -182,7 +182,7 @@ func (s *IdentityDB) GetExistingSignerInfo(identities ...driver2.Identity) ([]st
 	return s.kvs.GetExisting(keys...), nil
 }
 
-func (s *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
+func (s *IdentityStore) SignerInfoExists(id []byte) (bool, error) {
 	existing, err := s.GetExistingSignerInfo(id)
 	if err != nil {
 		return false, err
@@ -190,7 +190,7 @@ func (s *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
 	return len(existing) > 0, nil
 }
 
-func (s *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
+func (s *IdentityStore) GetSignerInfo(identity []byte) ([]byte, error) {
 	idHash := driver2.Identity(identity).UniqueID()
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,
@@ -209,7 +209,7 @@ func (s *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
 	return res, nil
 }
 
-func (s *IdentityDB) Close() error {
+func (s *IdentityStore) Close() error {
 	return nil
 }
 
