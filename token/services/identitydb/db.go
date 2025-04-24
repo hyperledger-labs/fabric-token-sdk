@@ -24,10 +24,10 @@ func NewManager(dh *db.DriverHolder) *Manager {
 	}
 }
 
-func (m *Manager) IdentityDBByTMSId(tmsID token.TMSID) (driver.IdentityStore, error) {
-	return m.identityManager.DBByTMSId(tmsID)
+func (m *Manager) IdentityStoreByTMSId(tmsID token.TMSID) (driver.IdentityStore, error) {
+	return m.identityManager.ServiceByTMSId(tmsID)
 }
 
-func (m *Manager) WalletDBByTMSId(tmsID token.TMSID) (driver.WalletStore, error) {
-	return m.walletManager.DBByTMSId(tmsID)
+func (m *Manager) WalletStoreByTMSId(tmsID token.TMSID) (driver.WalletStore, error) {
+	return m.walletManager.ServiceByTMSId(tmsID)
 }

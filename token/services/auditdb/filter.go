@@ -15,7 +15,7 @@ import (
 
 // PaymentsFilter is a filter for payments.
 type PaymentsFilter struct {
-	db      *DB
+	db      *StoreService
 	params  driver.QueryMovementsParams
 	records []*driver.MovementRecord
 }
@@ -58,7 +58,7 @@ func (f *PaymentsFilter) Sum() *big.Int {
 }
 
 type HoldingsFilter struct {
-	db      *DB
+	db      *StoreService
 	params  driver.QueryMovementsParams
 	records []*driver.MovementRecord
 }

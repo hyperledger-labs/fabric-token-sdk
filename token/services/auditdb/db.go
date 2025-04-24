@@ -30,7 +30,7 @@ type tokenRequest interface {
 	PublicParamsHash() token.PPHash
 }
 
-type Manager = db.Manager[*DB]
+type Manager = db.Manager[*StoreService]
 
 var (
 	managerType = reflect.TypeOf((*Manager)(nil))
@@ -38,15 +38,15 @@ var (
 )
 
 func NewManager(dh *db.DriverHolder) *Manager {
-	return db.MappedManager[driver.AuditTransactionStore, *DB](dh.NewAuditTransactionManager(), newDB)
+	return db.MappedManager[driver.AuditTransactionStore, *StoreService](dh.NewAuditTransactionManager(), newStoreService)
 }
 
-func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
+func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")
 	}
-	c, err := s.(*Manager).DBByTMSId(tmsID)
+	c, err := s.(*Manager).ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}
@@ -133,8 +133,8 @@ type Wallet interface {
 	TMS() *token.ManagementService
 }
 
-// DB is a database that stores token transactions related information
-type DB struct {
+// StoreService is a database that stores token transactions related information
+type StoreService struct {
 	*common.StatusSupport
 	db        driver.AuditTransactionStore
 	eIDsLocks sync.Map
@@ -143,8 +143,8 @@ type DB struct {
 	pendingTXs []string
 }
 
-func newDB(p driver.AuditTransactionStore) (*DB, error) {
-	return &DB{
+func newStoreService(p driver.AuditTransactionStore) (*StoreService, error) {
+	return &StoreService{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,
 		eIDsLocks:     sync.Map{},
@@ -153,7 +153,7 @@ func newDB(p driver.AuditTransactionStore) (*DB, error) {
 }
 
 // Append appends send and receive movements, and transaction records corresponding to the passed token request
-func (d *DB) Append(req tokenRequest) error {
+func (d *StoreService) Append(req tokenRequest) error {
 	logger.Debugf("appending new record... [%s]", req)
 
 	record, err := req.AuditRecord()
@@ -212,31 +212,31 @@ func (d *DB) Append(req tokenRequest) error {
 }
 
 // Transactions returns an iterators of transaction records filtered by the given params.
-func (d *DB) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
+func (d *StoreService) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
 	return d.db.QueryTransactions(params)
 }
 
 // TokenRequests returns an iterator over the token requests matching the passed params
-func (d *DB) TokenRequests(params QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
+func (d *StoreService) TokenRequests(params QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
 	return d.db.QueryTokenRequests(params)
 }
 
 // NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
-func (d *DB) NewPaymentsFilter() *PaymentsFilter {
+func (d *StoreService) NewPaymentsFilter() *PaymentsFilter {
 	return &PaymentsFilter{
 		db: d,
 	}
 }
 
 // NewHoldingsFilter returns a programmable filter over the holdings owned by enrollment IDs.
-func (d *DB) NewHoldingsFilter() *HoldingsFilter {
+func (d *StoreService) NewHoldingsFilter() *HoldingsFilter {
 	return &HoldingsFilter{
 		db: d,
 	}
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (d *DB) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
+func (d *StoreService) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
 	logger.Debugf("set status [%s][%s]...", txID, status)
 	if err := d.db.SetStatus(ctx, txID, status, message); err != nil {
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TxStatusMessage[status])
@@ -254,7 +254,7 @@ func (d *DB) SetStatus(ctx context.Context, txID string, status driver.TxStatus,
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (d *DB) GetStatus(txID string) (TxStatus, string, error) {
+func (d *StoreService) GetStatus(txID string) (TxStatus, string, error) {
 	logger.Debugf("get status [%s]...", txID)
 	status, message, err := d.db.GetStatus(txID)
 	if err != nil {
@@ -265,13 +265,13 @@ func (d *DB) GetStatus(txID string) (TxStatus, string, error) {
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
-func (d *DB) GetTokenRequest(txID string) ([]byte, error) {
+func (d *StoreService) GetTokenRequest(txID string) ([]byte, error) {
 	return d.db.GetTokenRequest(txID)
 }
 
 // AcquireLocks acquires locks for the passed anchor and enrollment ids.
 // This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
-func (d *DB) AcquireLocks(anchor string, eIDs ...string) error {
+func (d *StoreService) AcquireLocks(anchor string, eIDs ...string) error {
 	// This implementation allows concurrent calls to AcquireLocks such that if two
 	// or more calls involve non-overlapping enrollment IDs, both calls will succeed.
 	// To achieve this, we first remove any duplicates from the list of enrollment IDs.
@@ -293,7 +293,7 @@ func (d *DB) AcquireLocks(anchor string, eIDs ...string) error {
 }
 
 // ReleaseLocks releases the locks associated to the passed anchor
-func (d *DB) ReleaseLocks(anchor string) {
+func (d *StoreService) ReleaseLocks(anchor string) {
 	dedupBoxed, ok := d.eIDsLocks.LoadAndDelete(anchor)
 	if !ok {
 		logger.Debugf("nothing to release for [%s] ", anchor)

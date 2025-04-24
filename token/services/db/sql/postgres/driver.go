@@ -24,13 +24,13 @@ type configProvider interface {
 type Driver struct {
 	cp configProvider
 
-	TokenLockCache     lazy.Provider[postgres.Config, *TokenLockDB]
-	WalletCache        lazy.Provider[postgres.Config, *WalletDB]
-	IdentityCache      lazy.Provider[postgres.Config, *IdentityDB]
-	TokenCache         lazy.Provider[postgres.Config, *TokenDB]
-	TokenNotifierCache lazy.Provider[postgres.Config, *TokenNotifier]
-	AuditTxCache       lazy.Provider[postgres.Config, *AuditTransactionDB]
-	OwnerTxCache       lazy.Provider[postgres.Config, *TransactionDB]
+	TokenLock     lazy.Provider[postgres.Config, *TokenLockStore]
+	Wallet        lazy.Provider[postgres.Config, *WalletStore]
+	Identity      lazy.Provider[postgres.Config, *IdentityStore]
+	Token         lazy.Provider[postgres.Config, *TokenStore]
+	TokenNotifier lazy.Provider[postgres.Config, *TokenNotifier]
+	AuditTx       lazy.Provider[postgres.Config, *AuditTransactionStore]
+	OwnerTx       lazy.Provider[postgres.Config, *TransactionStore]
 }
 
 func NewNamedDriver(config driver.Config) driver.NamedDriver {
@@ -44,13 +44,13 @@ func NewDriver(config driver.Config) *Driver {
 	return &Driver{
 		cp: postgres.NewConfigProvider(common.NewConfig(config)),
 
-		TokenLockCache:     newProviderWithKeyMapper(NewTokenLockDB),
-		WalletCache:        newProviderWithKeyMapper(NewWalletDB),
-		IdentityCache:      newProviderWithKeyMapper(NewIdentityDB),
-		TokenCache:         newProviderWithKeyMapper(NewTokenDB),
-		TokenNotifierCache: newProviderWithKeyMapper(NewTokenNotifier),
-		AuditTxCache:       newProviderWithKeyMapper(NewAuditTransactionDB),
-		OwnerTxCache:       newProviderWithKeyMapper(NewTransactionDB),
+		TokenLock:     newProviderWithKeyMapper(NewTokenLockStore),
+		Wallet:        newProviderWithKeyMapper(NewWalletStore),
+		Identity:      newProviderWithKeyMapper(NewIdentityStore),
+		Token:         newProviderWithKeyMapper(NewTokenStore),
+		TokenNotifier: newProviderWithKeyMapper(NewTokenNotifier),
+		AuditTx:       newProviderWithKeyMapper(NewAuditTransactionStore),
+		OwnerTx:       newProviderWithKeyMapper(NewTransactionStore),
 	}
 }
 
@@ -59,7 +59,7 @@ func (d *Driver) NewTokenLock(name driver2.PersistenceName, params ...string) (d
 	if err != nil {
 		return nil, err
 	}
-	return d.TokenLockCache.Get(*opts)
+	return d.TokenLock.Get(*opts)
 }
 
 func (d *Driver) NewWallet(name driver2.PersistenceName, params ...string) (driver.WalletStore, error) {
@@ -67,7 +67,7 @@ func (d *Driver) NewWallet(name driver2.PersistenceName, params ...string) (driv
 	if err != nil {
 		return nil, err
 	}
-	return d.WalletCache.Get(*opts)
+	return d.Wallet.Get(*opts)
 }
 
 func (d *Driver) NewIdentity(name driver2.PersistenceName, params ...string) (driver.IdentityStore, error) {
@@ -75,7 +75,7 @@ func (d *Driver) NewIdentity(name driver2.PersistenceName, params ...string) (dr
 	if err != nil {
 		return nil, err
 	}
-	return d.IdentityCache.Get(*opts)
+	return d.Identity.Get(*opts)
 }
 
 func (d *Driver) NewToken(name driver2.PersistenceName, params ...string) (driver.TokenStore, error) {
@@ -83,7 +83,7 @@ func (d *Driver) NewToken(name driver2.PersistenceName, params ...string) (drive
 	if err != nil {
 		return nil, err
 	}
-	return d.TokenCache.Get(*opts)
+	return d.Token.Get(*opts)
 }
 
 func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string) (driver.TokenNotifier, error) {
@@ -91,7 +91,7 @@ func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string
 	if err != nil {
 		return nil, err
 	}
-	return d.TokenNotifierCache.Get(*opts)
+	return d.TokenNotifier.Get(*opts)
 }
 
 func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...string) (driver.AuditTransactionStore, error) {
@@ -99,7 +99,7 @@ func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...str
 	if err != nil {
 		return nil, err
 	}
-	return d.AuditTxCache.Get(*opts)
+	return d.AuditTx.Get(*opts)
 }
 
 func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...string) (driver.TokenTransactionStore, error) {
@@ -107,7 +107,7 @@ func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...str
 	if err != nil {
 		return nil, err
 	}
-	return d.OwnerTxCache.Get(*opts)
+	return d.OwnerTx.Get(*opts)
 }
 
 func newProviderWithKeyMapper[V common.DBObject](constructor common.PersistenceConstructor[postgres.Opts, V]) lazy.Provider[postgres.Config, V] {

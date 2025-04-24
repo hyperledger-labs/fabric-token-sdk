@@ -30,11 +30,11 @@ func NewAcceptTxInDBFilterProvider(ttxDBProvider *ttxdb.Manager, auditDBProvider
 }
 
 func (p *AcceptTxInDBFilterProvider) New(tmsID token3.TMSID) (*AcceptTxInDBsFilter, error) {
-	ttxDB, err := p.ttxDBProvider.DBByTMSId(tmsID)
+	ttxDB, err := p.ttxDBProvider.ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get transaction db for [%s]", tmsID)
 	}
-	auditDB, err := p.auditDBProvider.DBByTMSId(tmsID)
+	auditDB, err := p.auditDBProvider.ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get audit db for [%s]", tmsID)
 	}
@@ -47,8 +47,8 @@ func (p *AcceptTxInDBFilterProvider) New(tmsID token3.TMSID) (*AcceptTxInDBsFilt
 // AcceptTxInDBsFilter uses the transaction db and the audit db to decide if a given transaction needs
 // to be further processed by the token-sdk upon a network event about its finality
 type AcceptTxInDBsFilter struct {
-	ttxDB   *ttxdb.DB
-	auditDB *auditdb.DB
+	ttxDB   *ttxdb.StoreService
+	auditDB *auditdb.StoreService
 }
 
 func (t *AcceptTxInDBsFilter) Accept(txID string, env []byte) (bool, error) {

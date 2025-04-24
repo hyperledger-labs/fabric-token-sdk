@@ -33,11 +33,11 @@ type CheckService interface {
 	Check(context context.Context) ([]string, error)
 }
 
-// DB is the interface for the owner service
-type DB struct {
+// StoreService is the interface for the owner service
+type StoreService struct {
 	networkProvider NetworkProvider
 	tmsID           token.TMSID
-	ttxDB           *ttxdb.DB
+	ttxDB           *ttxdb.StoreService
 	tokenDB         *tokens.Tokens
 	tmsProvider     TMSProvider
 	finalityTracer  trace.Tracer
@@ -45,7 +45,7 @@ type DB struct {
 }
 
 // Append adds the passed transaction to the database
-func (a *DB) Append(tx *Transaction) error {
+func (a *StoreService) Append(tx *Transaction) error {
 	// append request to the db
 	if err := a.ttxDB.AppendTransactionRecord(tx.Request()); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
@@ -66,13 +66,13 @@ func (a *DB) Append(tx *Transaction) error {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *DB) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
+func (a *StoreService) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
 	return a.ttxDB.SetStatus(ctx, txID, status, message)
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (a *DB) GetStatus(txID string) (TxStatus, string, error) {
+func (a *StoreService) GetStatus(txID string) (TxStatus, string, error) {
 	st, sm, err := a.ttxDB.GetStatus(txID)
 	if err != nil {
 		return Unknown, "", err
@@ -81,18 +81,18 @@ func (a *DB) GetStatus(txID string) (TxStatus, string, error) {
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
-func (a *DB) GetTokenRequest(txID string) ([]byte, error) {
+func (a *StoreService) GetTokenRequest(txID string) ([]byte, error) {
 	return a.ttxDB.GetTokenRequest(txID)
 }
 
-func (a *DB) AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error {
+func (a *StoreService) AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error {
 	return a.ttxDB.AddTransactionEndorsementAck(txID, id, sigma)
 }
 
-func (a *DB) GetTransactionEndorsementAcks(id string) (map[string][]byte, error) {
+func (a *StoreService) GetTransactionEndorsementAcks(id string) (map[string][]byte, error) {
 	return a.ttxDB.GetTransactionEndorsementAcks(id)
 }
 
-func (a *DB) Check(context context.Context) ([]string, error) {
+func (a *StoreService) Check(context context.Context) ([]string, error) {
 	return a.checkService.Check(context)
 }

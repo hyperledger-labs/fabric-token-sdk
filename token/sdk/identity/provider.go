@@ -22,12 +22,12 @@ func NewDBStorageProvider(kvs identity.Keystore, manager *identitydb.Manager) *D
 	return &DBStorageProvider{kvs: kvs, manager: manager}
 }
 
-func (s *DBStorageProvider) WalletDB(tmsID token.TMSID) (driver.WalletDB, error) {
-	return s.manager.WalletDBByTMSId(tmsID)
+func (s *DBStorageProvider) WalletStore(tmsID token.TMSID) (driver.WalletStore, error) {
+	return s.manager.WalletStoreByTMSId(tmsID)
 }
 
-func (s *DBStorageProvider) IdentityDB(tmsID token.TMSID) (driver.IdentityDB, error) {
-	return s.manager.IdentityDBByTMSId(tmsID)
+func (s *DBStorageProvider) IdentityStore(tmsID token.TMSID) (driver.IdentityStore, error) {
+	return s.manager.IdentityStoreByTMSId(tmsID)
 }
 
 func (s *DBStorageProvider) Keystore() (identity.Keystore, error) {

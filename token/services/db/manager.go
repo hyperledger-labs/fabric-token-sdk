@@ -32,7 +32,7 @@ func newManager[V any](config *config.Service, prefix string, constructor func(n
 	})}
 }
 
-func (m *Manager[S]) DBByTMSId(id token.TMSID) (S, error) {
+func (m *Manager[S]) ServiceByTMSId(id token.TMSID) (S, error) {
 	return m.Get(id)
 }
 

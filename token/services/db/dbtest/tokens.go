@@ -30,8 +30,8 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer db.(*common.TokenDB).Close()
-			c.Fn(xt, db.(*common.TokenDB))
+			defer db.(*common.TokenStore).Close()
+			c.Fn(xt, db.(*common.TokenStore))
 		})
 	}
 	// for _, c := range TokenNotifierCases {

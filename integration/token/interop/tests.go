@@ -122,8 +122,8 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 
 	CheckPublicParams(network, defaultTMSID, issuer, auditor, alice, bob)
 	<-time.After(30 * time.Second)
-	CheckOwnerDB(network, defaultTMSID, nil, issuer, alice, bob)
-	CheckAuditorDB(network, defaultTMSID, auditor, "", nil)
+	CheckOwnerStore(network, defaultTMSID, nil, issuer, alice, bob)
+	CheckAuditorStore(network, defaultTMSID, auditor, "", nil)
 
 	// lock two times with the same hash, the second lock should fail
 	_, _, hash := HTLCLock(network, defaultTMSID, alice, "", USD, 1, bob, auditor, 1*time.Hour, nil, crypto.SHA3_256)
@@ -136,8 +136,8 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 	HTLCLock(network, defaultTMSID, alice, "", USD, 1, bob, auditor, 1*time.Hour, nil, crypto.SHA3_256)
 
 	CheckPublicParams(network, defaultTMSID, issuer, auditor, alice, bob)
-	CheckOwnerDB(network, defaultTMSID, nil, issuer, auditor, alice, bob)
-	CheckAuditorDB(network, defaultTMSID, auditor, "", nil)
+	CheckOwnerStore(network, defaultTMSID, nil, issuer, auditor, alice, bob)
+	CheckAuditorStore(network, defaultTMSID, auditor, "", nil)
 	PruneInvalidUnspentTokens(network, defaultTMSID, issuer, auditor, alice, bob)
 	for _, name := range []*token2.NodeReference{alice, bob} {
 		IDs := ListVaultUnspentTokens(network, defaultTMSID, name)
@@ -198,10 +198,10 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure, sel *token2.Replic
 
 	CheckPublicParams(network, alpha, issuer, auditor, alice, bob)
 	CheckPublicParams(network, beta, issuer, auditor, alice, bob)
-	CheckOwnerDB(network, alpha, nil, issuer, auditor, alice, bob)
-	CheckOwnerDB(network, beta, nil, issuer, auditor, alice, bob)
-	CheckAuditorDB(network, alpha, sel.Get("auditor"), "", nil)
-	CheckAuditorDB(network, beta, sel.Get("auditor"), "", nil)
+	CheckOwnerStore(network, alpha, nil, issuer, auditor, alice, bob)
+	CheckOwnerStore(network, beta, nil, issuer, auditor, alice, bob)
+	CheckAuditorStore(network, alpha, sel.Get("auditor"), "", nil)
+	CheckAuditorStore(network, beta, sel.Get("auditor"), "", nil)
 	PruneInvalidUnspentTokens(network, alpha, issuer, auditor, alice, bob)
 	PruneInvalidUnspentTokens(network, beta, issuer, auditor, alice, bob)
 	for _, name := range []*token2.NodeReference{alice, bob} {
@@ -281,11 +281,11 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure, sel *t
 	CheckPublicParams(network, token.TMSID{}, alice, bob)
 	CheckPublicParams(network, alpha, issuer, auditor)
 	CheckPublicParams(network, beta, issuer, auditor)
-	CheckOwnerDB(network, token.TMSID{}, nil, auditor, alice, bob)
-	CheckOwnerDB(network, alpha, nil, issuer)
-	CheckOwnerDB(network, beta, nil, issuer)
-	CheckAuditorDB(network, alpha, auditor, "", nil)
-	CheckAuditorDB(network, beta, auditor, "", nil)
+	CheckOwnerStore(network, token.TMSID{}, nil, auditor, alice, bob)
+	CheckOwnerStore(network, alpha, nil, issuer)
+	CheckOwnerStore(network, beta, nil, issuer)
+	CheckAuditorStore(network, alpha, auditor, "", nil)
+	CheckAuditorStore(network, beta, auditor, "", nil)
 	PruneInvalidUnspentTokens(network, alpha, issuer, auditor)
 	PruneInvalidUnspentTokens(network, beta, issuer, auditor)
 

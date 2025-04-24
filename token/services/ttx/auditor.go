@@ -30,7 +30,7 @@ import (
 type TxAuditor struct {
 	w                       *token.AuditorWallet
 	auditor                 *auditor.Auditor
-	auditDB                 *auditdb.DB
+	auditDB                 *auditdb.StoreService
 	transactionInfoProvider *TransactionInfoProvider
 }
 
@@ -47,7 +47,7 @@ func NewAuditor(sp token.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, e
 	return NewTxAuditor(w, backend, auditDB, ttxDB), nil
 }
 
-func NewTxAuditor(w *token.AuditorWallet, backend *auditor.Auditor, auditDB *auditdb.DB, ttxDB *ttxdb.DB) *TxAuditor {
+func NewTxAuditor(w *token.AuditorWallet, backend *auditor.Auditor, auditDB *auditdb.StoreService, ttxDB *ttxdb.StoreService) *TxAuditor {
 	return &TxAuditor{
 		w:                       w,
 		auditor:                 backend,

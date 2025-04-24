@@ -22,29 +22,29 @@ type walletTables struct {
 	Wallets string
 }
 
-type WalletDB struct {
+type WalletStore struct {
 	readDB  *sql.DB
 	writeDB *sql.DB
 	table   walletTables
 }
 
-func newWalletDB(readDB, writeDB *sql.DB, tables walletTables) *WalletDB {
-	return &WalletDB{
+func newWalletStore(readDB, writeDB *sql.DB, tables walletTables) *WalletStore {
+	return &WalletStore{
 		readDB:  readDB,
 		writeDB: writeDB,
 		table:   tables,
 	}
 }
 
-func NewWalletDB(readDB, writeDB *sql.DB, tables tableNames) (*WalletDB, error) {
-	return newWalletDB(readDB, writeDB, walletTables{Wallets: tables.Wallets}), nil
+func NewWalletStore(readDB, writeDB *sql.DB, tables tableNames) (*WalletStore, error) {
+	return newWalletStore(readDB, writeDB, walletTables{Wallets: tables.Wallets}), nil
 }
 
-func (db *WalletDB) CreateSchema() error {
+func (db *WalletStore) CreateSchema() error {
 	return common.InitSchema(db.writeDB, []string{db.GetSchema()}...)
 }
 
-func (db *WalletDB) GetWalletID(identity token.Identity, roleID int) (driver.WalletID, error) {
+func (db *WalletStore) GetWalletID(identity token.Identity, roleID int) (driver.WalletID, error) {
 	idHash := identity.UniqueID()
 	result, err := common.QueryUnique[driver.WalletID](db.readDB,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND role_id=$2", db.table.Wallets),
@@ -57,7 +57,7 @@ func (db *WalletDB) GetWalletID(identity token.Identity, roleID int) (driver.Wal
 	return result, nil
 }
 
-func (db *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
+func (db *WalletStore) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
 	query, err := NewSelectDistinct("wallet_id").From(db.table.Wallets).Where("role_id = $1").Compile()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed compiling query")
@@ -84,7 +84,7 @@ func (db *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
 	return walletIDs, nil
 }
 
-func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
+func (db *WalletStore) StoreIdentity(identity token.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
 	if db.IdentityExists(identity, wID, roleID) {
 		return nil
 	}
@@ -104,7 +104,7 @@ func (db *WalletDB) StoreIdentity(identity token.Identity, eID string, wID drive
 	return nil
 }
 
-func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
+func (db *WalletStore) LoadMeta(identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.UniqueID()
 	result, err := common.QueryUnique[[]byte](db.readDB,
 		fmt.Sprintf("SELECT meta FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
@@ -117,7 +117,7 @@ func (db *WalletDB) LoadMeta(identity token.Identity, wID driver.WalletID, roleI
 	return result, nil
 }
 
-func (db *WalletDB) IdentityExists(identity token.Identity, wID driver.WalletID, roleID int) bool {
+func (db *WalletStore) IdentityExists(identity token.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.UniqueID()
 	result, err := common.QueryUnique[driver.WalletID](db.readDB,
 		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
@@ -131,7 +131,7 @@ func (db *WalletDB) IdentityExists(identity token.Identity, wID driver.WalletID,
 	return result != ""
 }
 
-func (db *WalletDB) GetSchema() string {
+func (db *WalletStore) GetSchema() string {
 	return fmt.Sprintf(`
 		-- Wallets
 		CREATE TABLE IF NOT EXISTS %s (
@@ -156,6 +156,6 @@ func (db *WalletDB) GetSchema() string {
 	)
 }
 
-func (db *WalletDB) Close() error {
+func (db *WalletStore) Close() error {
 	return common2.Close(db.readDB, db.writeDB)
 }

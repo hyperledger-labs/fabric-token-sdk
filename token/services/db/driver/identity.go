@@ -15,6 +15,6 @@ import (
 type (
 	WalletID              = identity.WalletID
 	IdentityConfiguration = driver.IdentityConfiguration
-	WalletStore           = driver2.WalletDB
-	IdentityStore         = driver2.IdentityDB
+	WalletStore           = driver2.WalletStore
+	IdentityStore         = driver2.IdentityStore
 )

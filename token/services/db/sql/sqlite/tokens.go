@@ -12,9 +12,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-type TokenDB = common.TokenDB
+type TokenStore = common.TokenStore
 
-func NewTokenDB(opts sqlite.Opts) (*TokenDB, error) {
+func NewTokenStore(opts sqlite.Opts) (*TokenStore, error) {
 	dbs, err := sqlite.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func NewTokenDB(opts sqlite.Opts) (*TokenDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewTokenDB(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewTokenStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
 }
 
 type TokenNotifier struct {

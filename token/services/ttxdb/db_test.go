@@ -32,15 +32,15 @@ func TestDB(t *testing.T) {
 
 	var dh = db.NewDriverHolder(cp, multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp)))
 	manager := ttxdb.NewManager(dh)
-	db1, err := manager.DBByTMSId(token.TMSID{Network: "pineapple"})
+	db1, err := manager.ServiceByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
-	db2, err := manager.DBByTMSId(token.TMSID{Network: "grapes"})
+	db2, err := manager.ServiceByTMSId(token.TMSID{Network: "grapes"})
 	assert.NoError(t, err)
 
 	TEndorserAcks(t, db1, db2)
 }
 
-func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.DB) {
+func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.StoreService) {
 	wg := sync.WaitGroup{}
 	n := 100
 	wg.Add(n)

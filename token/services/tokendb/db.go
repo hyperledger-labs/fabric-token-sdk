@@ -16,7 +16,7 @@ import (
 )
 
 type (
-	Manager         = db.Manager[*DB]
+	Manager         = db.Manager[*StoreService]
 	NotifierManager = db.Manager[*Notifier]
 )
 
@@ -31,15 +31,15 @@ func NewNotifierManager(dh *db.DriverHolder) *NotifierManager {
 }
 
 func NewManager(dh *db.DriverHolder) *Manager {
-	return db.MappedManager[driver.TokenStore, *DB](dh.NewTokenManager(), newDB)
+	return db.MappedManager[driver.TokenStore, *StoreService](dh.NewTokenManager(), newStoreService)
 }
 
-func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
+func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")
 	}
-	c, err := s.(*Manager).DBByTMSId(tmsID)
+	c, err := s.(*Manager).ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}
@@ -52,12 +52,12 @@ type Transaction struct {
 	driver.TokenStoreTransaction
 }
 
-// DB is a database that stores token transactions related information
-type DB struct {
+// StoreService is a database that stores token transactions related information
+type StoreService struct {
 	driver.TokenStore
 }
 
-func (d *DB) NewTransaction() (*Transaction, error) {
+func (d *StoreService) NewTransaction() (*Transaction, error) {
 	tx, err := d.TokenStore.NewTokenDBTransaction()
 	if err != nil {
 		return nil, err
@@ -65,6 +65,6 @@ func (d *DB) NewTransaction() (*Transaction, error) {
 	return &Transaction{TokenStoreTransaction: tx}, nil
 }
 
-func newDB(p driver.TokenStore) (*DB, error) {
-	return &DB{TokenStore: p}, nil
+func newStoreService(p driver.TokenStore) (*StoreService, error) {
+	return &StoreService{TokenStore: p}, nil
 }

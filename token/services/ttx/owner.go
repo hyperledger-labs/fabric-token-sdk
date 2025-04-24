@@ -16,7 +16,7 @@ import (
 
 type TxOwner struct {
 	tms                     *token.ManagementService
-	owner                   *DB
+	owner                   *StoreService
 	transactionInfoProvider *TransactionInfoProvider
 }
 
@@ -26,7 +26,7 @@ func NewOwner(sp token.ServiceProvider, tms *token.ManagementService) *TxOwner {
 	return NewTxOwner(tms, backend)
 }
 
-func NewTxOwner(tms *token.ManagementService, backend *DB) *TxOwner {
+func NewTxOwner(tms *token.ManagementService, backend *StoreService) *TxOwner {
 	return &TxOwner{
 		tms:                     tms,
 		owner:                   backend,

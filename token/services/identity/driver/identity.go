@@ -21,7 +21,7 @@ type IdentityConfigurationIterator = Iterator[IdentityConfiguration]
 
 type WalletID = string
 
-type WalletDB interface {
+type WalletStore interface {
 	// GetWalletID fetches a walletID that is bound to the identity passed
 	GetWalletID(identity token.Identity, roleID int) (WalletID, error)
 	// GetWalletIDs fetches all walletID's that have been stored so far without duplicates
@@ -36,7 +36,7 @@ type WalletDB interface {
 	Close() error
 }
 
-type IdentityDB interface {
+type IdentityStore interface {
 	// AddConfiguration stores an identity and the path to the credentials relevant to this identity
 	AddConfiguration(wp IdentityConfiguration) error
 	// ConfigurationExists returns true if a configuration with the given id and type exists.

@@ -24,7 +24,7 @@ import (
 type WalletRegistry struct {
 	Logger  logging.Logger
 	Role    identity.Role
-	Storage idriver.WalletDB
+	Storage idriver.WalletStore
 
 	Wallets map[string]driver.Wallet
 }
@@ -32,7 +32,7 @@ type WalletRegistry struct {
 // NewWalletRegistry returns a new registry for the passed parameters.
 // A registry is bound to a given role, and it is persistent.
 // Long-term identities are provided by the passed identity provider
-func NewWalletRegistry(logger logging.Logger, role identity.Role, storage idriver.WalletDB) *WalletRegistry {
+func NewWalletRegistry(logger logging.Logger, role identity.Role, storage idriver.WalletStore) *WalletRegistry {
 	return &WalletRegistry{
 		Logger:  logger,
 		Role:    role,

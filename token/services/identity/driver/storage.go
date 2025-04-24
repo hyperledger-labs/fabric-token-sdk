@@ -16,7 +16,7 @@ type Keystore interface {
 }
 
 type StorageProvider interface {
-	WalletDB(tmsID token.TMSID) (WalletDB, error)
-	IdentityDB(tmsID token.TMSID) (IdentityDB, error)
+	WalletStore(tmsID token.TMSID) (WalletStore, error)
+	IdentityStore(tmsID token.TMSID) (IdentityStore, error)
 	Keystore() (Keystore, error)
 }

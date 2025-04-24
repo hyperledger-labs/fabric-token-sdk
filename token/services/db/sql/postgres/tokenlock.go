@@ -17,11 +17,11 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type TokenLockDB struct {
-	*common.TokenLockDB
+type TokenLockStore struct {
+	*common.TokenLockStore
 }
 
-func NewTokenLockDB(opts postgres.Opts) (*TokenLockDB, error) {
+func NewTokenLockStore(opts postgres.Opts) (*TokenLockStore, error) {
 	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
@@ -30,14 +30,14 @@ func NewTokenLockDB(opts postgres.Opts) (*TokenLockDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	tldb, err := common.NewTokenLockDB(dbs.ReadDB, dbs.WriteDB, tableNames)
+	tldb, err := common.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames)
 	if err != nil {
 		return nil, err
 	}
-	return &TokenLockDB{TokenLockDB: tldb}, nil
+	return &TokenLockStore{TokenLockStore: tldb}, nil
 }
 
-func (db *TokenLockDB) Cleanup(leaseExpiry time.Duration) error {
+func (db *TokenLockStore) Cleanup(leaseExpiry time.Duration) error {
 	if err := db.logStaleLocks(leaseExpiry); err != nil {
 		db.Logger.Warnf("Could not log stale locks: %v", err)
 	}
@@ -58,7 +58,7 @@ func (db *TokenLockDB) Cleanup(leaseExpiry time.Duration) error {
 	return err
 }
 
-func (db *TokenLockDB) logStaleLocks(leaseExpiry time.Duration) error {
+func (db *TokenLockStore) logStaleLocks(leaseExpiry time.Duration) error {
 	if !db.Logger.IsEnabledFor(zapcore.InfoLevel) {
 		return nil
 	}

@@ -31,7 +31,7 @@ func TestGetWallet(t *testing.T) {
 	wr := db.NewWalletRegistry(
 		&logging.MockLogger{},
 		&fakeRole{},
-		kvs2.NewWalletDB(kvsStorage, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}),
+		kvs2.NewWalletStore(kvsStorage, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}),
 	)
 	assert.NoError(t, wr.RegisterWallet("hello", nil))
 	assert.NoError(t, wr.BindIdentity(alice, "alice", "hello", meta))

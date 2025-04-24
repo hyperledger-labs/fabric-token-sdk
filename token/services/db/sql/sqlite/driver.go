@@ -24,13 +24,13 @@ type configProvider interface {
 type Driver struct {
 	cp configProvider
 
-	TokenLockCache     lazy.Provider[sqlite.Config, *TokenLockDB]
-	WalletCache        lazy.Provider[sqlite.Config, *WalletDB]
-	IdentityCache      lazy.Provider[sqlite.Config, *IdentityDB]
-	TokenCache         lazy.Provider[sqlite.Config, *TokenDB]
-	TokenNotifierCache lazy.Provider[sqlite.Config, *TokenNotifier]
-	AuditTxCache       lazy.Provider[sqlite.Config, *AuditTransactionDB]
-	OwnerTxCache       lazy.Provider[sqlite.Config, *TransactionDB]
+	TokenLock     lazy.Provider[sqlite.Config, *TokenLockStore]
+	Wallet        lazy.Provider[sqlite.Config, *WalletStore]
+	Identity      lazy.Provider[sqlite.Config, *IdentityStore]
+	Token         lazy.Provider[sqlite.Config, *TokenStore]
+	TokenNotifier lazy.Provider[sqlite.Config, *TokenNotifier]
+	AuditTx       lazy.Provider[sqlite.Config, *AuditTransactionStore]
+	OwnerTx       lazy.Provider[sqlite.Config, *OwnerTransactionStore]
 }
 
 func NewNamedDriver(config driver.Config) driver.NamedDriver {
@@ -44,13 +44,13 @@ func NewDriver(config driver.Config) *Driver {
 	return &Driver{
 		cp: sqlite.NewConfigProvider(common.NewConfig(config)),
 
-		TokenLockCache:     newProviderWithKeyMapper(NewTokenLockDB),
-		WalletCache:        newProviderWithKeyMapper(NewWalletDB),
-		IdentityCache:      newProviderWithKeyMapper(NewIdentityDB),
-		TokenCache:         newProviderWithKeyMapper(NewTokenDB),
-		TokenNotifierCache: newProviderWithKeyMapper(NewTokenNotifier),
-		AuditTxCache:       newProviderWithKeyMapper(NewAuditTransactionDB),
-		OwnerTxCache:       newProviderWithKeyMapper(NewTransactionDB),
+		TokenLock:     newProviderWithKeyMapper(NewTokenLockStore),
+		Wallet:        newProviderWithKeyMapper(NewWalletStore),
+		Identity:      newProviderWithKeyMapper(NewIdentityStore),
+		Token:         newProviderWithKeyMapper(NewTokenStore),
+		TokenNotifier: newProviderWithKeyMapper(NewTokenNotifier),
+		AuditTx:       newProviderWithKeyMapper(NewAuditTransactionStore),
+		OwnerTx:       newProviderWithKeyMapper(NewTransactionStore),
 	}
 }
 
@@ -59,7 +59,7 @@ func (d *Driver) NewTokenLock(name driver2.PersistenceName, params ...string) (d
 	if err != nil {
 		return nil, err
 	}
-	return d.TokenLockCache.Get(*opts)
+	return d.TokenLock.Get(*opts)
 }
 
 func (d *Driver) NewWallet(name driver2.PersistenceName, params ...string) (driver.WalletStore, error) {
@@ -67,7 +67,7 @@ func (d *Driver) NewWallet(name driver2.PersistenceName, params ...string) (driv
 	if err != nil {
 		return nil, err
 	}
-	return d.WalletCache.Get(*opts)
+	return d.Wallet.Get(*opts)
 }
 
 func (d *Driver) NewIdentity(name driver2.PersistenceName, params ...string) (driver.IdentityStore, error) {
@@ -75,7 +75,7 @@ func (d *Driver) NewIdentity(name driver2.PersistenceName, params ...string) (dr
 	if err != nil {
 		return nil, err
 	}
-	return d.IdentityCache.Get(*opts)
+	return d.Identity.Get(*opts)
 }
 
 func (d *Driver) NewToken(name driver2.PersistenceName, params ...string) (driver.TokenStore, error) {
@@ -84,7 +84,7 @@ func (d *Driver) NewToken(name driver2.PersistenceName, params ...string) (drive
 		return nil, err
 	}
 
-	return d.TokenCache.Get(*opts)
+	return d.Token.Get(*opts)
 }
 
 func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string) (driver.TokenNotifier, error) {
@@ -92,7 +92,7 @@ func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string
 	if err != nil {
 		return nil, err
 	}
-	return d.TokenNotifierCache.Get(*opts)
+	return d.TokenNotifier.Get(*opts)
 }
 
 func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...string) (driver.AuditTransactionStore, error) {
@@ -100,7 +100,7 @@ func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...str
 	if err != nil {
 		return nil, err
 	}
-	return d.AuditTxCache.Get(*opts)
+	return d.AuditTx.Get(*opts)
 }
 
 func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...string) (driver.TokenTransactionStore, error) {
@@ -108,7 +108,7 @@ func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...str
 	if err != nil {
 		return nil, err
 	}
-	return d.OwnerTxCache.Get(*opts)
+	return d.OwnerTx.Get(*opts)
 }
 
 func newProviderWithKeyMapper[V common.DBObject](constructor common.PersistenceConstructor[sqlite.Opts, V]) lazy.Provider[sqlite.Config, V] {

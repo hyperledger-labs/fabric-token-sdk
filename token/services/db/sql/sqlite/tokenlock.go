@@ -15,11 +15,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-type TokenLockDB struct {
-	*common.TokenLockDB
+type TokenLockStore struct {
+	*common.TokenLockStore
 }
 
-func (db *TokenLockDB) Cleanup(leaseExpiry time.Duration) error {
+func (db *TokenLockStore) Cleanup(leaseExpiry time.Duration) error {
 	query := fmt.Sprintf(
 		"DELETE FROM %s WHERE tx_id IN ("+
 			"SELECT %s.tx_id FROM %s JOIN %s ON %s.tx_id = %s.tx_id WHERE %s.status IN (%d) "+
@@ -37,7 +37,7 @@ func (db *TokenLockDB) Cleanup(leaseExpiry time.Duration) error {
 	return err
 }
 
-func NewTokenLockDB(opts sqlite.Opts) (*TokenLockDB, error) {
+func NewTokenLockStore(opts sqlite.Opts) (*TokenLockStore, error) {
 	dbs, err := sqlite.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
@@ -46,9 +46,9 @@ func NewTokenLockDB(opts sqlite.Opts) (*TokenLockDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	tldb, err := common.NewTokenLockDB(dbs.ReadDB, dbs.WriteDB, tableNames)
+	tldb, err := common.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames)
 	if err != nil {
 		return nil, err
 	}
-	return &TokenLockDB{TokenLockDB: tldb}, nil
+	return &TokenLockStore{TokenLockStore: tldb}, nil
 }

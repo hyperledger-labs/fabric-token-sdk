@@ -11,9 +11,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-type IdentityDB = common.IdentityDB
+type IdentityStore = common.IdentityStore
 
-func NewIdentityDB(opts postgres.Opts) (*IdentityDB, error) {
+func NewIdentityStore(opts postgres.Opts) (*IdentityStore, error) {
 	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
@@ -22,5 +22,5 @@ func NewIdentityDB(opts postgres.Opts) (*IdentityDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewCachedIdentityDB(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewInterpreter())
+	return common.NewCachedIdentityStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewInterpreter())
 }

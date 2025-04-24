@@ -11,9 +11,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-type WalletDB = common.WalletDB
+type WalletStore = common.WalletStore
 
-func NewWalletDB(opts postgres.Opts) (*WalletDB, error) {
+func NewWalletStore(opts postgres.Opts) (*WalletStore, error) {
 	dbs, err := postgres.DbProvider.OpenDB(opts)
 	if err != nil {
 		return nil, err
@@ -22,5 +22,5 @@ func NewWalletDB(opts postgres.Opts) (*WalletDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewWalletDB(dbs.ReadDB, dbs.WriteDB, tableNames)
+	return common.NewWalletStore(dbs.ReadDB, dbs.WriteDB, tableNames)
 }

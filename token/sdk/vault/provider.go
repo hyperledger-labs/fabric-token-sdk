@@ -18,7 +18,7 @@ import (
 )
 
 type DBProvider[T any] interface {
-	DBByTMSId(id token.TMSID) (T, error)
+	ServiceByTMSId(id token.TMSID) (T, error)
 }
 
 type Provider struct {
@@ -64,15 +64,15 @@ func (v *Provider) Vault(network string, channel string, namespace string) (driv
 		Channel:   channel,
 		Namespace: namespace,
 	}
-	tokenDB, err := v.tokenDBProvider.DBByTMSId(tmsID)
+	tokenDB, err := v.tokenDBProvider.ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token db")
 	}
-	ttxDB, err := v.ttxDBProvider.DBByTMSId(tmsID)
+	ttxDB, err := v.ttxDBProvider.ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get ttx db")
 	}
-	auditDB, err := v.auditDBProvider.DBByTMSId(tmsID)
+	auditDB, err := v.auditDBProvider.ServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get audit db")
 	}
