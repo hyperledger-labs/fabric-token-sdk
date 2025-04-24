@@ -30,7 +30,6 @@ func TransferSignatureValidate(ctx *Context) error {
 		return errors.Errorf("invalid number of token inputs, expected at least 1")
 	}
 
-	var isRedeem bool
 	var inputToken []*actions.Output
 	for _, in := range ctx.TransferAction.Inputs {
 		tok := in.Input
@@ -51,6 +50,7 @@ func TransferSignatureValidate(ctx *Context) error {
 		ctx.Signatures = append(ctx.Signatures, sigma)
 	}
 
+	var isRedeem bool
 	for _, output := range ctx.TransferAction.Outputs {
 		if output.Owner == nil {
 			isRedeem = true
