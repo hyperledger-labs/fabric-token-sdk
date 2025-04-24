@@ -25,7 +25,7 @@ func NewAuditTransactionStore(opts sqlite.Opts) (*AuditTransactionStore, error) 
 	if err != nil {
 		return nil, err
 	}
-	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()), sqlite.NewPaginatedInterpreter())
 }
 
 func NewTransactionStore(opts sqlite.Opts) (*OwnerTransactionStore, error) {
@@ -37,5 +37,5 @@ func NewTransactionStore(opts sqlite.Opts) (*OwnerTransactionStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()), sqlite.NewPaginatedInterpreter())
 }

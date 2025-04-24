@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"time"
 
+	driver4 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -182,9 +183,15 @@ type QueryTokenRequestsParams = driver.QueryTokenRequestsParams
 // QueryValidationRecordsParams defines the parameters for querying movements
 type QueryValidationRecordsParams = driver.QueryValidationRecordsParams
 
+// Pagination defines the pagination for querying movements
+type Pagination = driver4.Pagination
+
+// Pagination iterator defines the pagination iterator for movements query results
+type PageTransactionsIterator = driver4.PageIterator[*TransactionRecord]
+
 // Transactions returns an iterators of transaction records filtered by the given params.
-func (d *StoreService) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
-	return d.db.QueryTransactions(params)
+func (d *StoreService) Transactions(params QueryTransactionsParams, pagination Pagination) (*PageTransactionsIterator, error) {
+	return d.db.QueryTransactions(params, pagination)
 }
 
 // TokenRequests returns an iterator over the token requests matching the passed params

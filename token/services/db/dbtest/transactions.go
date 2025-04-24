@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -294,28 +295,28 @@ func TTransaction(t *testing.T, db driver.TokenTransactionStore) {
 
 	// get all except last year's
 	t1 := time.Now().Add(time.Second * 3)
-	it, err := db.QueryTransactions(driver.QueryTransactionsParams{From: &t0, To: &t1})
+	it, err := db.QueryTransactions(driver.QueryTransactionsParams{From: &t0, To: &t1}, common.NewNoPagination())
 	assert.NoError(t, err)
 	for _, exp := range txs {
-		act, err := it.Next()
+		act, err := it.Items.Next()
 		assert.NoError(t, err)
 		assertTxEqual(t, exp, act)
 	}
-	it.Close()
+	it.Items.Close()
 
 	// get all tx from before the first
 	yesterday := t0.AddDate(0, 0, -1).Local().UTC().Truncate(time.Second)
-	it, err = db.QueryTransactions(driver.QueryTransactionsParams{To: &yesterday})
+	it, err = db.QueryTransactions(driver.QueryTransactionsParams{To: &yesterday}, common.NewNoPagination())
 	assert.NoError(t, err)
-	defer it.Close()
+	defer it.Items.Close()
 
 	// find 1 transaction from last year
-	tr, err := it.Next()
+	tr, err := it.Items.Next()
 	assert.NoError(t, err)
 	assertTxEqual(t, tr1, tr)
 
 	// find no other transactions
-	tr, err = it.Next()
+	tr, err = it.Items.Next()
 	assert.NoError(t, err)
 	assert.Empty(t, tr)
 
@@ -796,12 +797,12 @@ func TTransactionQueries(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func getTransactions(t *testing.T, db driver.TokenTransactionStore, params driver.QueryTransactionsParams) []*driver.TransactionRecord {
-	records, err := db.QueryTransactions(params)
+	records, err := db.QueryTransactions(params, common.NewNoPagination())
 	assert.NoError(t, err)
-	defer records.Close()
+	defer records.Items.Close()
 	var txs []*driver.TransactionRecord
 	for {
-		r, err := records.Next()
+		r, err := records.Items.Next()
 		assert.NoError(t, err)
 		if r == nil {
 			return txs

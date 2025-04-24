@@ -25,7 +25,7 @@ func NewAuditTransactionStore(opts postgres.Opts) (*AuditTransactionStore, error
 	if err != nil {
 		return nil, err
 	}
-	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
+	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()), postgres.NewPaginatedInterpreter())
 }
 
 func NewTransactionStore(opts postgres.Opts) (*TransactionStore, error) {
@@ -37,5 +37,5 @@ func NewTransactionStore(opts postgres.Opts) (*TransactionStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
+	return common.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()), postgres.NewPaginatedInterpreter())
 }

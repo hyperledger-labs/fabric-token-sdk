@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
@@ -63,7 +64,8 @@ type TransactionStore interface {
 	GetStatus(txID string) (TxStatus, string, error)
 
 	// QueryTransactions returns a list of transactions that match the given criteria
-	QueryTransactions(params QueryTransactionsParams) (TransactionIterator, error)
+
+	QueryTransactions(params QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*TransactionRecord], error)
 
 	// QueryMovements returns a list of movement records
 	QueryMovements(params QueryMovementsParams) ([]*MovementRecord, error)
