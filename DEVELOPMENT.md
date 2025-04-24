@@ -83,11 +83,12 @@ To maintain clarity and traceability across contributions, all pull requests mus
   This should be done via the Development section of the GitHub PR interface (not just mentioned in the description). 
   This ensures the PR is formally connected to the issue for proper project tracking and status updates.
 - **One Approve Policy**: Each PR must receive at least one `approve` from the maintainers of the project before it can be merged.
+  The approver must ensure that the PR has been reviewed properly and that all CI/CD tests finish successfully. 
 
 This ensures that all contributions are tracked, visible on the project board, and aligned with the roadmap.
 
 ## 4. Additional Notes
-
+- Name a branch with a concise description of its purpose.
 - Use clear, concise commit messages (preferably using [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)).
 - Squash commits as needed before submission to keep the history clean.
 - Open a pull request only after your branch is up-to-date and rebased on `main`.
