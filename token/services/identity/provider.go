@@ -18,6 +18,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+type StorageProvider = idriver.StorageProvider
+
 // enrollmentIDUnmarshaler decodes an enrollment ID form an audit info
 type enrollmentIDUnmarshaler interface {
 	// GetEnrollmentID returns the enrollment ID from the audit info

@@ -70,11 +70,11 @@ type DefaultCheckers struct {
 	tmsProvider     TokenManagementServiceProvider
 	networkProvider NetworkProvider
 	db              TokenTransactionDB
-	tokenDB         *tokens.Tokens
+	tokenDB         *tokens.Service
 	tmsID           token.TMSID
 }
 
-func NewDefaultCheckers(tmsProvider TokenManagementServiceProvider, networkProvider NetworkProvider, db TokenTransactionDB, tokenDB *tokens.Tokens, tmsID token.TMSID) []NamedChecker {
+func NewDefaultCheckers(tmsProvider TokenManagementServiceProvider, networkProvider NetworkProvider, db TokenTransactionDB, tokenDB *tokens.Service, tmsID token.TMSID) []NamedChecker {
 	checkers := &DefaultCheckers{tmsProvider: tmsProvider, networkProvider: networkProvider, db: db, tokenDB: tokenDB, tmsID: tmsID}
 	return []NamedChecker{
 		{

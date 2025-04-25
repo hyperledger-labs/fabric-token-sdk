@@ -21,20 +21,20 @@ type TransactionFilterProvider[F driver2.TransactionFilter] interface {
 // AcceptTxInDBFilterProvider provides instances of AcceptTxInDBsFilter based on the transaction db and audit db
 // for a given TMS
 type AcceptTxInDBFilterProvider struct {
-	ttxDBProvider   *ttxdb.Manager
-	auditDBProvider *auditdb.Manager
+	ttxStoreServiceManager   ttxdb.StoreServiceManager
+	auditStoreServiceManager auditdb.StoreServiceManager
 }
 
-func NewAcceptTxInDBFilterProvider(ttxDBProvider *ttxdb.Manager, auditDBProvider *auditdb.Manager) *AcceptTxInDBFilterProvider {
-	return &AcceptTxInDBFilterProvider{ttxDBProvider: ttxDBProvider, auditDBProvider: auditDBProvider}
+func NewAcceptTxInDBFilterProvider(ttxStoreServiceManager ttxdb.StoreServiceManager, auditStoreServiceManager auditdb.StoreServiceManager) *AcceptTxInDBFilterProvider {
+	return &AcceptTxInDBFilterProvider{ttxStoreServiceManager: ttxStoreServiceManager, auditStoreServiceManager: auditStoreServiceManager}
 }
 
 func (p *AcceptTxInDBFilterProvider) New(tmsID token3.TMSID) (*AcceptTxInDBsFilter, error) {
-	ttxDB, err := p.ttxDBProvider.ServiceByTMSId(tmsID)
+	ttxDB, err := p.ttxStoreServiceManager.StoreServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get transaction db for [%s]", tmsID)
 	}
-	auditDB, err := p.auditDBProvider.ServiceByTMSId(tmsID)
+	auditDB, err := p.auditStoreServiceManager.StoreServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get audit db for [%s]", tmsID)
 	}

@@ -37,7 +37,7 @@ type NetworkPublicParamsFetcher interface {
 
 type Driver struct {
 	fnsProvider                     *fabric.NetworkServiceProvider
-	tokensManager                   *tokens.Manager
+	tokensManager                   *tokens.ServiceManager
 	configService                   *config.Service
 	viewManager                     *view.Manager
 	viewRegistry                    driver2.Registry
@@ -57,7 +57,7 @@ type Driver struct {
 
 func NewGenericDriver(
 	fnsProvider *fabric.NetworkServiceProvider,
-	tokensManager *tokens.Manager,
+	tokensManager *tokens.ServiceManager,
 	configProvider *config.Service,
 	viewManager *view.Manager,
 	viewRegistry driver2.Registry,
@@ -73,7 +73,7 @@ func NewGenericDriver(
 
 func NewDriver(
 	fnsProvider *fabric.NetworkServiceProvider,
-	tokensManager *tokens.Manager,
+	tokensManager *tokens.ServiceManager,
 	configService *config.Service,
 	viewManager *view.Manager,
 	viewRegistry driver2.Registry,

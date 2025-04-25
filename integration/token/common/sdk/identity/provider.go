@@ -9,7 +9,7 @@ package identity
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 )
 
@@ -29,6 +29,6 @@ func (s *KVSStorageProvider) IdentityStore(tmsID token.TMSID) (driver.IdentitySt
 	return kvs.NewIdentityStore(s.kvs, tmsID), nil
 }
 
-func (s *KVSStorageProvider) Keystore() (identity.Keystore, error) {
+func (s *KVSStorageProvider) Keystore() (driver2.Keystore, error) {
 	return s.kvs, nil
 }

@@ -17,25 +17,25 @@ import (
 	"github.com/pkg/errors"
 )
 
-type DBProvider[T any] interface {
-	ServiceByTMSId(id token.TMSID) (T, error)
-}
-
 type Provider struct {
-	tokenDBProvider tokens.DBProvider
-	ttxDBProvider   ttx.DBProvider
-	auditDBProvider auditor.AuditDBProvider
+	tokenStoreServiceManager tokens.StoreServiceManager
+	ttxStoreServiceManager   ttx.StoreServiceManager
+	auditStoreServiceManager auditor.StoreServiceManager
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
 }
 
-func NewVaultProvider(tokenDBProvider tokens.DBProvider, ttxDBProvider ttx.DBProvider, auditDBProvider auditor.AuditDBProvider) *Provider {
+func NewVaultProvider(
+	tokenStoreServiceManager tokens.StoreServiceManager,
+	ttxStoreServiceManager ttx.StoreServiceManager,
+	auditStoreServiceManager auditor.StoreServiceManager,
+) *Provider {
 	return &Provider{
-		ttxDBProvider:   ttxDBProvider,
-		tokenDBProvider: tokenDBProvider,
-		auditDBProvider: auditDBProvider,
-		vaultCache:      make(map[string]driver.Vault),
+		ttxStoreServiceManager:   ttxStoreServiceManager,
+		tokenStoreServiceManager: tokenStoreServiceManager,
+		auditStoreServiceManager: auditStoreServiceManager,
+		vaultCache:               make(map[string]driver.Vault),
 	}
 }
 
@@ -64,15 +64,15 @@ func (v *Provider) Vault(network string, channel string, namespace string) (driv
 		Channel:   channel,
 		Namespace: namespace,
 	}
-	tokenDB, err := v.tokenDBProvider.ServiceByTMSId(tmsID)
+	tokenDB, err := v.tokenStoreServiceManager.StoreServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token db")
 	}
-	ttxDB, err := v.ttxDBProvider.ServiceByTMSId(tmsID)
+	ttxDB, err := v.ttxStoreServiceManager.StoreServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get ttx db")
 	}
-	auditDB, err := v.auditDBProvider.ServiceByTMSId(tmsID)
+	auditDB, err := v.auditStoreServiceManager.StoreServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get audit db")
 	}

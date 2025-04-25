@@ -82,9 +82,7 @@ type PruneInvalidUnspentTokensView struct {
 func (p *PruneInvalidUnspentTokensView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(p.TMSID))
 	assert.NotNil(tms, "cannot find tms [%s]", p.TMSID)
-	tokensProvider, err := tokens.GetProvider(context)
-	assert.NoError(err, "failed to get tokens provider")
-	tokens, err := tokensProvider.Tokens(tms.ID())
+	tokens, err := tokens.GetService(context, tms.ID())
 	assert.NoError(err, "failed to get tokens for [%s]", p.TMSID)
 
 	return tokens.PruneInvalidUnspentTokens(context.Context())

@@ -37,12 +37,12 @@ type FinalityListener struct {
 	tmsProvider TokenManagementServiceProvider
 	tmsID       token.TMSID
 	ttxDB       transactionDB
-	tokens      *tokens.Tokens
+	tokens      *tokens.Service
 	tracer      trace.Tracer
 	retryRunner common.RetryRunner
 }
 
-func NewFinalityListener(logger logging.Logger, tmsProvider TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Tokens, tracer trace.Tracer) *FinalityListener {
+func NewFinalityListener(logger logging.Logger, tmsProvider TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Service, tracer trace.Tracer) *FinalityListener {
 	return &FinalityListener{
 		logger:      logger,
 		tmsProvider: tmsProvider,

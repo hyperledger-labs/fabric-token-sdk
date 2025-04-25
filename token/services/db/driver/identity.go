@@ -8,13 +8,12 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 )
 
 type (
-	WalletID              = identity.WalletID
+	WalletID              = driver2.WalletID
 	IdentityConfiguration = driver.IdentityConfiguration
-	WalletStore           = driver2.WalletStore
-	IdentityStore         = driver2.IdentityStore
+	WalletStore           = driver2.WalletStoreService
+	IdentityStore         = driver2.IdentityStoreService
 )

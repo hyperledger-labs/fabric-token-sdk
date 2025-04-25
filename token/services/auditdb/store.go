@@ -14,10 +14,13 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
@@ -30,15 +33,15 @@ type tokenRequest interface {
 	PublicParamsHash() token.PPHash
 }
 
-type Manager = db.Manager[*StoreService]
+type StoreServiceManager db.StoreServiceManager[*StoreService]
 
 var (
-	managerType = reflect.TypeOf((*Manager)(nil))
+	managerType = reflect.TypeOf((*StoreServiceManager)(nil))
 	logger      = logging.MustGetLogger("token-sdk.auditdb")
 )
 
-func NewManager(dh *db.DriverHolder) *Manager {
-	return db.MappedManager[driver.AuditTransactionStore, *StoreService](dh.NewAuditTransactionManager(), newStoreService)
+func NewStoreServiceManager(cp driver2.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
+	return db.NewStoreServiceManager(config.NewService(cp), "auditdb.persistence", drivers.NewAuditTransaction, newStoreService)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
@@ -46,7 +49,7 @@ func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, err
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")
 	}
-	c, err := s.(*Manager).ServiceByTMSId(tmsID)
+	c, err := s.(StoreServiceManager).StoreServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}

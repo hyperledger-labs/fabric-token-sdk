@@ -10,31 +10,32 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple/inmemory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 )
 
-type TTXDBProvider interface {
-	ServiceByTMSId(id token.TMSID) (*ttxdb.StoreService, error)
-}
-
 type LockerProvider struct {
-	ttxdbProvider          TTXDBProvider
+	ttxStoreServiceManager db.StoreServiceManager[*ttxdb.StoreService]
 	sleepTimeout           time.Duration
 	validTxEvictionTimeout time.Duration
 }
 
-func NewLockerProvider(ttxdbProvider TTXDBProvider, sleepTimeout time.Duration, validTxEvictionTimeout time.Duration) *LockerProvider {
+func NewLockerProvider(
+	ttxStoreServiceManager db.StoreServiceManager[*ttxdb.StoreService],
+	sleepTimeout time.Duration,
+	validTxEvictionTimeout time.Duration,
+) *LockerProvider {
 	return &LockerProvider{
-		ttxdbProvider:          ttxdbProvider,
+		ttxStoreServiceManager: ttxStoreServiceManager,
 		sleepTimeout:           sleepTimeout,
 		validTxEvictionTimeout: validTxEvictionTimeout,
 	}
 }
 
 func (s *LockerProvider) New(network, channel, namespace string) (selector.Locker, error) {
-	db, err := s.ttxdbProvider.ServiceByTMSId(token.TMSID{
+	db, err := s.ttxStoreServiceManager.StoreServiceByTMSId(token.TMSID{
 		Network:   network,
 		Channel:   channel,
 		Namespace: namespace,

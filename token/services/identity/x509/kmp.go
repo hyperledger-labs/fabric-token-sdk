@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
@@ -26,7 +25,7 @@ const (
 	ExtraPathElement   = "msp"
 )
 
-func NewKeyStore(kvs identity.Keystore) crypto.KeyStore {
+func NewKeyStore(kvs idriver.Keystore) crypto.KeyStore {
 	return csp.NewKVSStore(kvs)
 }
 

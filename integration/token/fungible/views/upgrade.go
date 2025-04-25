@@ -49,9 +49,7 @@ func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, er
 	w := tms.WalletManager().OwnerWallet(i.Wallet)
 	assert.NotNil(w, "cannot find wallet [%s:%s]", i.TMSID, i.Wallet)
 
-	tokensProvider, err := tokens.GetProvider(context)
-	assert.NoError(err, "failed getting tokens provider")
-	tokens, err := tokensProvider.Tokens(tms.ID())
+	tokens, err := tokens.GetService(context, tms.ID())
 	assert.NoError(err, "failed getting tokens")
 	assert.NotNil(tokens, "failed getting tokens")
 	it, err := tokens.UnsupportedTokensIteratorBy(context.Context(), w.ID(), i.TokenType)

@@ -12,25 +12,28 @@ import (
 	"reflect"
 	"time"
 
+	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
 
-type Manager = db.Manager[*StoreService]
+type StoreServiceManager db.StoreServiceManager[*StoreService]
 
 var (
-	managerType = reflect.TypeOf((*Manager)(nil))
+	managerType = reflect.TypeOf((*StoreServiceManager)(nil))
 	logger      = logging.MustGetLogger("token-sdk.ttxdb")
 )
 
-func NewManager(dh *db.DriverHolder) *Manager {
-	return db.MappedManager[driver.TokenTransactionStore, *StoreService](dh.NewOwnerTransactionManager(), newStoreService)
+func NewStoreServiceManager(cp driver3.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
+	return db.NewStoreServiceManager(config.NewService(cp), "ttxdb.persistence", drivers.NewOwnerTransaction, newStoreService)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
@@ -38,7 +41,7 @@ func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, err
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")
 	}
-	c, err := s.(*Manager).ServiceByTMSId(tmsID)
+	c, err := s.(StoreServiceManager).StoreServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}

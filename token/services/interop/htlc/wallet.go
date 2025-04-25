@@ -323,11 +323,7 @@ func Wallet(sp token.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
 	}
 
 	tms := wallet.TMS()
-	tokensProvider, err := tokens.GetProvider(sp)
-	if err != nil {
-		return nil
-	}
-	tokens, err := tokensProvider.Tokens(tms.ID())
+	tokens, err := tokens.GetService(sp, tms.ID())
 	if err != nil {
 		return nil
 	}
