@@ -8,10 +8,11 @@ package ttx
 
 import (
 	"reflect"
-	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -20,119 +21,88 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type DBProvider interface {
-	ServiceByTMSId(id token.TMSID) (*ttxdb.StoreService, error)
-}
+type StoreServiceManager db.StoreServiceManager[*ttxdb.StoreService]
 
-type TokensProvider interface {
-	Tokens(tmsID token.TMSID) (*tokens.Tokens, error)
-}
+type TokensServiceManager db.ServiceManager[*tokens.Service]
 
 type TMSProvider interface {
 	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
 }
 
 type CheckServiceProvider interface {
-	CheckService(id token.TMSID, adb *ttxdb.StoreService, tdb *tokens.Tokens) (CheckService, error)
+	CheckService(id token.TMSID, adb *ttxdb.StoreService, tdb *tokens.Service) (CheckService, error)
 }
 
-// Manager handles the databases
-type Manager struct {
-	networkProvider      NetworkProvider
-	tmsProvider          TMSProvider
-	ttxDBProvider        DBProvider
-	tokensProvider       TokensProvider
-	tracerProvider       trace.TracerProvider
-	checkServiceProvider CheckServiceProvider
+// ServiceManager handles the services
+type ServiceManager struct {
+	p lazy.Provider[token.TMSID, *Service]
 
-	mutex sync.Mutex
-	dbs   map[string]*StoreService
+	networkProvider NetworkProvider
 }
 
-// NewManager creates a new StoreService manager.
-func NewManager(
-	np NetworkProvider,
+// NewServiceManager creates a new Service manager.
+func NewServiceManager(
+	networkProvider NetworkProvider,
 	tmsProvider TMSProvider,
-	ttxDBProvider DBProvider,
-	tokensBProvider TokensProvider,
+	ttxStoreServiceManager StoreServiceManager,
+	tokensServiceManager TokensServiceManager,
 	tracerProvider trace.TracerProvider,
-	CheckServiceProvider CheckServiceProvider,
-) *Manager {
-	return &Manager{
-		networkProvider:      np,
-		tmsProvider:          tmsProvider,
-		ttxDBProvider:        ttxDBProvider,
-		tokensProvider:       tokensBProvider,
-		tracerProvider:       tracerProvider,
-		checkServiceProvider: CheckServiceProvider,
-		dbs:                  map[string]*StoreService{},
+	checkServiceProvider CheckServiceProvider,
+) *ServiceManager {
+	return &ServiceManager{
+		p: lazy.NewProviderWithKeyMapper(db.Key, func(tmsID token.TMSID) (*Service, error) {
+			ttxStoreService, err := ttxStoreServiceManager.StoreServiceByTMSId(tmsID)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
+			}
+			tokensService, err := tokensServiceManager.ServiceByTMSId(tmsID)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
+			}
+			checkService, err := checkServiceProvider.CheckService(tmsID, ttxStoreService, tokensService)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to get checkservice for [%s]", tmsID)
+			}
+			wrapper := &Service{
+				networkProvider: networkProvider,
+				tmsID:           tmsID,
+				tmsProvider:     tmsProvider,
+				ttxStoreService: ttxStoreService,
+				tokensService:   tokensService,
+				finalityTracer: tracerProvider.Tracer("db", tracing.WithMetricsOpts(tracing.MetricsOpts{
+					Namespace:  "tokensdk",
+					LabelNames: []tracing.LabelName{txIdLabel},
+				})),
+				checkService: checkService,
+			}
+			_, err = networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
+			}
+			return wrapper, nil
+		}),
+		networkProvider: networkProvider,
 	}
 }
 
-// StoreService returns the StoreService for the given TMS
-func (m *Manager) StoreService(tmsID token.TMSID) (*StoreService, error) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	id := tmsID.String()
-	logger.Debugf("get ttxdb for [%s]", id)
-	c, ok := m.dbs[id]
-	if !ok {
-		var err error
-		c, err = m.newStoreService(tmsID)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to instantiate db for TMS [%s]", tmsID)
-		}
-		m.dbs[id] = c
-	}
-	return c, nil
-}
-
-func (m *Manager) newStoreService(tmsID token.TMSID) (*StoreService, error) {
-	ttxDB, err := m.ttxDBProvider.ServiceByTMSId(tmsID)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
-	}
-	tokenDB, err := m.tokensProvider.Tokens(tmsID)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
-	}
-	checkService, err := m.checkServiceProvider.CheckService(tmsID, ttxDB, tokenDB)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get checkservice for [%s]", tmsID)
-	}
-	wrapper := &StoreService{
-		networkProvider: m.networkProvider,
-		tmsID:           tmsID,
-		tmsProvider:     m.tmsProvider,
-		ttxDB:           ttxDB,
-		tokenDB:         tokenDB,
-		finalityTracer: m.tracerProvider.Tracer("db", tracing.WithMetricsOpts(tracing.MetricsOpts{
-			Namespace:  "tokensdk",
-			LabelNames: []tracing.LabelName{txIdLabel},
-		})),
-		checkService: checkService,
-	}
-	_, err = m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
-	}
-	return wrapper, nil
+// ServiceByTMSId returns the Service for the given TMS
+func (m *ServiceManager) ServiceByTMSId(tmsID token.TMSID) (*Service, error) {
+	return m.p.Get(tmsID)
 }
 
 // RestoreTMS restores the ttxdb corresponding to the passed TMS ID.
-func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
+func (m *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 	net, err := m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	db, err := m.StoreService(tmsID)
+	db, err := m.ServiceByTMSId(tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	it, err := db.ttxDB.TokenRequests(ttxdb.QueryTokenRequestsParams{Statuses: []TxStatus{driver.Pending}})
+	it, err := db.ttxStoreService.TokenRequests(ttxdb.QueryTokenRequestsParams{Statuses: []TxStatus{driver.Pending}})
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
@@ -147,7 +117,7 @@ func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
 			break
 		}
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, common.NewFinalityListener(logger, db.tmsProvider, db.tmsID, db.ttxDB, db.tokenDB, db.finalityTracer)); err != nil {
+		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, common.NewFinalityListener(logger, db.tmsProvider, db.tmsID, db.ttxStoreService, db.tokensService, db.finalityTracer)); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tmsID.Network, tmsID.Channel, record.TxID)
 		}
 		counter++
@@ -157,11 +127,11 @@ func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
 }
 
 var (
-	managerType = reflect.TypeOf((*Manager)(nil))
+	managerType = reflect.TypeOf((*ServiceManager)(nil))
 )
 
-// Get returns the StoreService instance for the passed TMS
-func Get(sp token.ServiceProvider, tms *token.ManagementService) *StoreService {
+// Get returns the Service instance for the passed TMS
+func Get(sp token.ServiceProvider, tms *token.ManagementService) *Service {
 	if tms == nil {
 		logger.Debugf("no TMS provided")
 		return nil
@@ -171,7 +141,7 @@ func Get(sp token.ServiceProvider, tms *token.ManagementService) *StoreService {
 		logger.Errorf("failed to get manager service: [%s]", err)
 		return nil
 	}
-	auditor, err := s.(*Manager).StoreService(tms.ID())
+	auditor, err := s.(*ServiceManager).ServiceByTMSId(tms.ID())
 	if err != nil {
 		logger.Errorf("failed to get db for TMS [%s]: [%s]", tms.ID(), err)
 		return nil
@@ -179,7 +149,7 @@ func Get(sp token.ServiceProvider, tms *token.ManagementService) *StoreService {
 	return auditor
 }
 
-// New returns the StoreService instance for the passed TMS
-func New(sp token.ServiceProvider, tms *token.ManagementService) *StoreService {
+// New returns the Service instance for the passed TMS
+func New(sp token.ServiceProvider, tms *token.ManagementService) *Service {
 	return Get(sp, tms)
 }

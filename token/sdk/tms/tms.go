@@ -17,14 +17,14 @@ import (
 )
 
 type PostInitializer struct {
-	tokensProvider *tokens2.Manager
+	tokensProvider *tokens2.ServiceManager
 
 	networkProvider *network.Provider
-	ownerManager    *ttx.Manager
-	auditorManager  *auditor.Manager
+	ownerManager    *ttx.ServiceManager
+	auditorManager  *auditor.ServiceManager
 }
 
-func NewPostInitializer(tokensProvider *tokens2.Manager, networkProvider *network.Provider, ownerManager *ttx.Manager, auditorManager *auditor.Manager) (*PostInitializer, error) {
+func NewPostInitializer(tokensProvider *tokens2.ServiceManager, networkProvider *network.Provider, ownerManager *ttx.ServiceManager, auditorManager *auditor.ServiceManager) (*PostInitializer, error) {
 	return &PostInitializer{
 		tokensProvider:  tokensProvider,
 		networkProvider: networkProvider,
@@ -51,7 +51,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	}
 
 	// set supported tokens
-	tokens, err := p.tokensProvider.Tokens(tmsID)
+	tokens, err := p.tokensProvider.ServiceByTMSId(tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tokens for [%s]", tmsID)
 	}

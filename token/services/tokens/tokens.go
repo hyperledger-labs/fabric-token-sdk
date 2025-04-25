@@ -52,8 +52,8 @@ type CacheEntry struct {
 	ToAppend []TokenToAppend
 }
 
-// Tokens is the interface for the token service
-type Tokens struct {
+// Service is the interface for the token service
+type Service struct {
 	TMSProvider     TMSProvider
 	NetworkProvider NetworkProvider
 	Storage         *DBStorage
@@ -61,7 +61,7 @@ type Tokens struct {
 	RequestsCache Cache
 }
 
-func (t *Tokens) Append(ctx context.Context, tmsID token.TMSID, txID string, request *token.Request) (err error) {
+func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID string, request *token.Request) (err error) {
 	span := trace.SpanFromContext(ctx)
 	if request == nil {
 		logger.Debugf("transaction [%s], no request found, skip it", txID)
@@ -127,7 +127,7 @@ func (t *Tokens) Append(ctx context.Context, tmsID token.TMSID, txID string, req
 	return nil
 }
 
-func (t *Tokens) AppendRaw(ctx context.Context, tmsID token.TMSID, txID string, requestRaw []byte) (err error) {
+func (t *Service) AppendRaw(ctx context.Context, tmsID token.TMSID, txID string, requestRaw []byte) (err error) {
 	logger.Debugf("get tms for [%s]", txID)
 	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
 	if err != nil {
@@ -142,7 +142,7 @@ func (t *Tokens) AppendRaw(ctx context.Context, tmsID token.TMSID, txID string, 
 	return t.Append(ctx, tmsID, txID, tr)
 }
 
-func (t *Tokens) CacheRequest(tmsID token.TMSID, request *token.Request) error {
+func (t *Service) CacheRequest(tmsID token.TMSID, request *token.Request) error {
 	toSpend, toAppend, err := t.extractActions(tmsID, request.Anchor, request)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to extract actions for request [%s]", request.ID())
@@ -157,7 +157,7 @@ func (t *Tokens) CacheRequest(tmsID token.TMSID, request *token.Request) error {
 	return nil
 }
 
-func (t *Tokens) GetCachedTokenRequest(txID string) *token.Request {
+func (t *Service) GetCachedTokenRequest(txID string) *token.Request {
 	res, ok := t.RequestsCache.Get(txID)
 	if !ok {
 		return nil
@@ -168,7 +168,7 @@ func (t *Tokens) GetCachedTokenRequest(txID string) *token.Request {
 // AppendTransaction appends the content of the passed transaction to the token db.
 // If the transaction is already in there, nothing more happens.
 // The operation is atomic.
-func (t *Tokens) AppendTransaction(ctx context.Context, tx Transaction) (err error) {
+func (t *Service) AppendTransaction(ctx context.Context, tx Transaction) (err error) {
 	return t.Append(ctx, token.TMSID{
 		Network:   tx.Network(),
 		Channel:   tx.Channel(),
@@ -177,23 +177,23 @@ func (t *Tokens) AppendTransaction(ctx context.Context, tx Transaction) (err err
 }
 
 // StorePublicParams stores the passed public parameters in the token db
-func (t *Tokens) StorePublicParams(raw []byte) error {
+func (t *Service) StorePublicParams(raw []byte) error {
 	return t.Storage.StorePublicParams(raw)
 }
 
 // DeleteTokensBy marks the entries corresponding to the passed token ids as deleted.
 // The deletion is attributed to the passed deletedBy argument.
-func (t *Tokens) DeleteTokensBy(deletedBy string, ids ...*token2.ID) (err error) {
+func (t *Service) DeleteTokensBy(deletedBy string, ids ...*token2.ID) (err error) {
 	return t.Storage.tokenDB.DeleteTokens(deletedBy, ids...)
 }
 
 // DeleteTokens marks the entries corresponding to the passed token ids as deleted.
 // The deletion is attributed to the caller of this function.
-func (t *Tokens) DeleteTokens(ids ...*token2.ID) (err error) {
+func (t *Service) DeleteTokens(ids ...*token2.ID) (err error) {
 	return t.DeleteTokensBy(string(debug.Stack()), ids...)
 }
 
-func (t *Tokens) SetSpendableFlag(value bool, ids ...*token2.ID) error {
+func (t *Service) SetSpendableFlag(value bool, ids ...*token2.ID) error {
 	tx, err := t.Storage.NewTransaction()
 	if err != nil {
 		return errors.Wrapf(err, "failed initiating transaction")
@@ -207,7 +207,7 @@ func (t *Tokens) SetSpendableFlag(value bool, ids ...*token2.ID) error {
 	return tx.Commit()
 }
 
-func (t *Tokens) SetSpendableBySupportedTokenTypes(types []token2.Format) error {
+func (t *Service) SetSpendableBySupportedTokenTypes(types []token2.Format) error {
 	tx, err := t.Storage.NewTransaction()
 	if err != nil {
 		return errors.WithMessagef(err, "error creating new transaction")
@@ -224,19 +224,19 @@ func (t *Tokens) SetSpendableBySupportedTokenTypes(types []token2.Format) error 
 	return nil
 }
 
-func (t *Tokens) SetSupportedTokenFormats(tokenTypes []token2.Format) error {
+func (t *Service) SetSupportedTokenFormats(tokenTypes []token2.Format) error {
 	return t.Storage.tokenDB.SetSupportedTokenFormats(tokenTypes)
 }
 
 // UnsupportedTokensIteratorBy returns the minimum information for upgrade about the tokens that are not supported
-func (t *Tokens) UnsupportedTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.UnsupportedTokensIterator, error) {
+func (t *Service) UnsupportedTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.UnsupportedTokensIterator, error) {
 	return t.Storage.tokenDB.UnsupportedTokensIteratorBy(ctx, walletID, typ)
 }
 
 // PruneInvalidUnspentTokens checks that each unspent token is actually available on the ledger.
 // Those that are not available are deleted.
 // The function returns the list of deleted token ids
-func (t *Tokens) PruneInvalidUnspentTokens(ctx context.Context) ([]*token2.ID, error) {
+func (t *Service) PruneInvalidUnspentTokens(ctx context.Context) ([]*token2.ID, error) {
 	tmsID := t.Storage.tmsID
 	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
 	if err != nil {
@@ -286,7 +286,7 @@ func (t *Tokens) PruneInvalidUnspentTokens(ctx context.Context) ([]*token2.ID, e
 	return deleted, nil
 }
 
-func (t *Tokens) deleteTokens(context context.Context, network *network.Network, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
+func (t *Service) deleteTokens(context context.Context, network *network.Network, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
 	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
 	if len(tokens) == 0 {
 		return nil, nil
@@ -323,7 +323,7 @@ func (t *Tokens) deleteTokens(context context.Context, network *network.Network,
 	return toDelete, nil
 }
 
-func (t *Tokens) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
+func (t *Service) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
 	// check the cache first
 	entry, ok := t.RequestsCache.Get(txID)
 	if ok {
@@ -333,7 +333,7 @@ func (t *Tokens) getActions(tmsID token.TMSID, txID string, request *token.Reque
 	return t.extractActions(tmsID, txID, request)
 }
 
-func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
+func (t *Service) extractActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
 	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
@@ -364,7 +364,7 @@ func (t *Tokens) extractActions(tmsID token.TMSID, txID string, request *token.R
 }
 
 // parse returns the tokens to store and spend as the result of a transaction
-func (t *Tokens) parse(
+func (t *Service) parse(
 	auth driver.Authorization,
 	txID string,
 	md MetaData,

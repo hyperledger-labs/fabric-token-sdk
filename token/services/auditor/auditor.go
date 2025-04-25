@@ -58,26 +58,26 @@ type CheckService interface {
 	Check(context context.Context) ([]string, error)
 }
 
-// Auditor is the interface for the auditor service
-type Auditor struct {
+// Service is the interface for the auditor service
+type Service struct {
 	networkProvider NetworkProvider
 	tmsID           token.TMSID
 	auditDB         *auditdb.StoreService
-	tokenDB         *tokens.Tokens
+	tokenDB         *tokens.Service
 	tmsProvider     TokenManagementServiceProvider
 	finalityTracer  trace.Tracer
 	checkService    CheckService
 }
 
 // Validate validates the passed token request
-func (a *Auditor) Validate(context context.Context, request *token.Request) error {
+func (a *Service) Validate(context context.Context, request *token.Request) error {
 	return request.AuditCheck(context)
 }
 
 // Audit extracts the list of inputs and outputs from the passed transaction.
 // In addition, the Audit locks the enrollment named ids.
 // Release must be invoked in case
-func (a *Auditor) Audit(tx Transaction) (*token.InputStream, *token.OutputStream, error) {
+func (a *Service) Audit(tx Transaction) (*token.InputStream, *token.OutputStream, error) {
 	logger.Debugf("audit transaction [%s]....", tx.ID())
 	request := tx.Request()
 	record, err := request.AuditRecord()
@@ -99,7 +99,7 @@ func (a *Auditor) Audit(tx Transaction) (*token.InputStream, *token.OutputStream
 
 // Append adds the passed transaction to the auditor database.
 // It also releases the locks acquired by Audit.
-func (a *Auditor) Append(tx Transaction) error {
+func (a *Service) Append(tx Transaction) error {
 	defer a.Release(tx)
 
 	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
@@ -126,27 +126,27 @@ func (a *Auditor) Append(tx Transaction) error {
 }
 
 // Release releases the lock acquired of the passed transaction.
-func (a *Auditor) Release(tx Transaction) {
+func (a *Service) Release(tx Transaction) {
 	a.auditDB.ReleaseLocks(tx.Request().Anchor)
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *Auditor) SetStatus(ctx context.Context, txID string, status db.TxStatus, message string) error {
+func (a *Service) SetStatus(ctx context.Context, txID string, status db.TxStatus, message string) error {
 	return a.auditDB.SetStatus(ctx, txID, status, message)
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (a *Auditor) GetStatus(txID string) (TxStatus, string, error) {
+func (a *Service) GetStatus(txID string) (TxStatus, string, error) {
 	return a.auditDB.GetStatus(txID)
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
-func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
+func (a *Service) GetTokenRequest(txID string) ([]byte, error) {
 	return a.auditDB.GetTokenRequest(txID)
 }
 
-func (a *Auditor) Check(context context.Context) ([]string, error) {
+func (a *Service) Check(context context.Context) ([]string, error) {
 	return a.checkService.Check(context)
 }
 

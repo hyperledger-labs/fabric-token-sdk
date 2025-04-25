@@ -7,17 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
-	"reflect"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
-
-type serviceProvider interface {
-	// GetService returns an instance of the given type
-	GetService(v interface{}) (interface{}, error)
-}
 
 type configProvider interface {
 	UnmarshalKey(key string, rawVal interface{}) error
@@ -99,14 +92,6 @@ func NewService(cp configProvider) *Service {
 		enabled:  enabled,
 		tmsCache: lazy.NewGetter(loader.load),
 	}
-}
-
-func GetService(sp serviceProvider) (*Service, error) {
-	s, err := sp.GetService(reflect.TypeOf((*Service)(nil)))
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed getting config service")
-	}
-	return s.(*Service), nil
 }
 
 func (m *Service) Version() string {

@@ -16,7 +16,7 @@ import (
 
 type TxOwner struct {
 	tms                     *token.ManagementService
-	owner                   *StoreService
+	owner                   *Service
 	transactionInfoProvider *TransactionInfoProvider
 }
 
@@ -26,7 +26,7 @@ func NewOwner(sp token.ServiceProvider, tms *token.ManagementService) *TxOwner {
 	return NewTxOwner(tms, backend)
 }
 
-func NewTxOwner(tms *token.ManagementService, backend *StoreService) *TxOwner {
+func NewTxOwner(tms *token.ManagementService, backend *Service) *TxOwner {
 	return &TxOwner{
 		tms:                     tms,
 		owner:                   backend,
@@ -41,7 +41,7 @@ func (a *TxOwner) Append(tx *Transaction) error {
 
 // Transactions returns an iterators of transaction records filtered by the given params.
 func (a *TxOwner) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
-	return a.owner.ttxDB.Transactions(params)
+	return a.owner.ttxStoreService.Transactions(params)
 }
 
 // TransactionInfo returns the transaction info for the given transaction ID.

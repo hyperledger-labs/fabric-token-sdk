@@ -21,19 +21,23 @@ type SelectorService struct {
 	managerLazyCache lazy2.Provider[*token.ManagementService, token.SelectorManager]
 }
 
-func NewService(fetcherProvider FetcherProvider, tokenLockDBManager *tokenlockdb.Manager, c core.ConfigProvider) *SelectorService {
+func NewService(
+	fetcherProvider FetcherProvider,
+	tokenLockStoreServiceManager tokenlockdb.StoreServiceManager,
+	c core.ConfigProvider,
+) *SelectorService {
 	cfg, err := config.New(c)
 	if err != nil {
 		logger.Errorf("error getting selector config, using defaults. %s", err.Error())
 	}
 
 	loader := &loader{
-		tokenLockManager:       tokenLockDBManager,
-		fetcherProvider:        fetcherProvider,
-		retryInterval:          cfg.GetRetryInterval(),
-		numRetries:             cfg.GetNumRetries(),
-		leaseExpiry:            cfg.GetLeaseExpiry(),
-		leaseCleanupTickPeriod: cfg.GetLeaseCleanupTickPeriod(),
+		tokenLockStoreServiceManager: tokenLockStoreServiceManager,
+		fetcherProvider:              fetcherProvider,
+		retryInterval:                cfg.GetRetryInterval(),
+		numRetries:                   cfg.GetNumRetries(),
+		leaseExpiry:                  cfg.GetLeaseExpiry(),
+		leaseCleanupTickPeriod:       cfg.GetLeaseCleanupTickPeriod(),
 	}
 	return &SelectorService{
 		managerLazyCache: lazy2.NewProviderWithKeyMapper(key, loader.load),
@@ -49,12 +53,12 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 }
 
 type loader struct {
-	tokenLockManager       *tokenlockdb.Manager
-	fetcherProvider        FetcherProvider
-	numRetries             int
-	retryInterval          time.Duration
-	leaseExpiry            time.Duration
-	leaseCleanupTickPeriod time.Duration
+	tokenLockStoreServiceManager tokenlockdb.StoreServiceManager
+	fetcherProvider              FetcherProvider
+	numRetries                   int
+	retryInterval                time.Duration
+	leaseExpiry                  time.Duration
+	leaseCleanupTickPeriod       time.Duration
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -62,7 +66,7 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
 	}
-	tokenLockService, err := s.tokenLockManager.ServiceByTMSId(tms.ID())
+	tokenLockStoreService, err := s.tokenLockStoreServiceManager.StoreServiceByTMSId(tms.ID())
 	if err != nil {
 		return nil, errors.Errorf("failed to create tokenLockDB: %v", err)
 	}
@@ -72,7 +76,7 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	}
 	return NewManager(
 		fetcher,
-		tokenLockService,
+		tokenLockStoreService,
 		pp.Precision(),
 		s.retryInterval,
 		s.numRetries,

@@ -8,19 +8,20 @@ package tokens
 
 import (
 	"reflect"
-	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/pkg/errors"
 )
 
-type DBProvider interface {
-	ServiceByTMSId(id token.TMSID) (*tokendb.StoreService, error)
-}
+var managerType = reflect.TypeOf((*ServiceManager)(nil))
+
+type StoreServiceManager db.StoreServiceManager[*tokendb.StoreService]
 
 type TMSProvider interface {
 	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
@@ -30,92 +31,57 @@ type NetworkProvider interface {
 	GetNetwork(network string, channel string) (*network.Network, error)
 }
 
-// Manager handles the databases
-type Manager struct {
-	tmsProvider     TMSProvider
-	dbProvider      DBProvider
-	networkProvider NetworkProvider
-	notifier        events.Publisher
-
-	mutex  sync.Mutex
-	tokens map[string]*Tokens
+// ServiceManager handles the services
+type ServiceManager struct {
+	p lazy.Provider[token.TMSID, *Service]
 }
 
-// NewManager creates a new Tokens manager.
-func NewManager(
+// NewServiceManager creates a new Service manager.
+func NewServiceManager(
 	tmsProvider TMSProvider,
-	dbManager DBProvider,
+	storeServiceManager StoreServiceManager,
 	networkProvider NetworkProvider,
 	notifier events.Publisher,
-) *Manager {
-	return &Manager{
-		tmsProvider:     tmsProvider,
-		dbProvider:      dbManager,
-		networkProvider: networkProvider,
-		notifier:        notifier,
-		tokens:          map[string]*Tokens{},
+) *ServiceManager {
+	return &ServiceManager{
+		p: lazy.NewProviderWithKeyMapper(db.Key, func(tmsID token.TMSID) (*Service, error) {
+			db, err := storeServiceManager.StoreServiceByTMSId(tmsID)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to get tokendb for [%s]", tmsID)
+			}
+
+			storage, err := NewDBStorage(notifier, db, tmsID)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to get token store for [%s]", tmsID)
+			}
+			tokens := &Service{
+				TMSProvider:     tmsProvider,
+				NetworkProvider: networkProvider,
+				Storage:         storage,
+				RequestsCache:   secondcache.NewTyped[*CacheEntry](1000),
+			}
+			return tokens, nil
+		}),
 	}
 }
 
-// Tokens returns the Tokens for the given TMS
-func (cm *Manager) Tokens(tmsID token.TMSID) (*Tokens, error) {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
-
-	id := tmsID.String()
-	logger.Debugf("get ttxdb for [%s]", id)
-	c, ok := cm.tokens[id]
-	if !ok {
-		var err error
-		c, err = cm.newTokens(tmsID)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to instantiate owner for wallet [%s]", tmsID)
-		}
-		cm.tokens[id] = c
-	}
-	return c, nil
+// ServiceByTMSId returns the Service for the given TMS
+func (cm *ServiceManager) ServiceByTMSId(tmsID token.TMSID) (*Service, error) {
+	return cm.p.Get(tmsID)
 }
 
-func (cm *Manager) newTokens(tmsID token.TMSID) (*Tokens, error) {
-	db, err := cm.dbProvider.ServiceByTMSId(tmsID)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get tokendb for [%s]", tmsID)
-	}
-
-	storage, err := NewDBStorage(cm.notifier, db, tmsID)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get token store for [%s]", tmsID)
-	}
-	tokens := &Tokens{
-		TMSProvider:     cm.tmsProvider,
-		NetworkProvider: cm.networkProvider,
-		Storage:         storage,
-		RequestsCache:   secondcache.NewTyped[*CacheEntry](1000),
-	}
-	return tokens, nil
-}
-
-var (
-	managerType = reflect.TypeOf((*Manager)(nil))
-)
-
-// GetService returns the Tokens instance for the passed TMS
-func GetService(sp token.ServiceProvider, tmsID token.TMSID) (*Tokens, error) {
-	s, err := GetProvider(sp)
-	if err != nil {
-		return nil, err
-	}
-	tokens, err := s.Tokens(tmsID)
-	if err != nil {
-		return nil, err
-	}
-	return tokens, nil
-}
-
-func GetProvider(sp token.ServiceProvider) (*Manager, error) {
+// GetService returns the Service instance for the passed TMS
+func GetService(sp token.ServiceProvider, tmsID token.TMSID) (*Service, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")
 	}
-	return s.(*Manager), nil
+	if err != nil {
+		return nil, err
+	}
+	tokens, err := s.(*ServiceManager).ServiceByTMSId(tmsID)
+	if err != nil {
+		return nil, err
+	}
+	return tokens, nil
 }

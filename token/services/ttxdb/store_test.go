@@ -15,7 +15,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
@@ -30,11 +29,10 @@ func TestDB(t *testing.T) {
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 
-	var dh = db.NewDriverHolder(cp, multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp)))
-	manager := ttxdb.NewManager(dh)
-	db1, err := manager.ServiceByTMSId(token.TMSID{Network: "pineapple"})
+	manager := ttxdb.NewStoreServiceManager(cp, multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp)))
+	db1, err := manager.StoreServiceByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
-	db2, err := manager.ServiceByTMSId(token.TMSID{Network: "grapes"})
+	db2, err := manager.StoreServiceByTMSId(token.TMSID{Network: "grapes"})
 	assert.NoError(t, err)
 
 	TEndorserAcks(t, db1, db2)

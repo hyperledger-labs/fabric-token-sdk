@@ -20,7 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -101,7 +101,7 @@ func (db *IdentityStore) AddConfiguration(wp driver.IdentityConfiguration) error
 	return err
 }
 
-func (db *IdentityStore) IteratorConfigurations(configurationType string) (identity.ConfigurationIterator, error) {
+func (db *IdentityStore) IteratorConfigurations(configurationType string) (driver3.IdentityConfigurationIterator, error) {
 	query, err := NewSelect("id, url, conf, raw").From(db.table.IdentityConfigurations).Where("type = $1").Compile()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed compiling query")

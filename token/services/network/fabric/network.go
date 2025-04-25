@@ -91,7 +91,7 @@ type Network struct {
 	ledger         *ledger
 	configuration  common2.Configuration
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
-	tokensProvider *tokens2.Manager
+	tokensProvider *tokens2.ServiceManager
 	finalityTracer trace.Tracer
 
 	flm                        finality.ListenerManager
@@ -108,7 +108,7 @@ func NewNetwork(
 	ch *fabric.Channel,
 	configuration common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
-	tokensProvider *tokens2.Manager,
+	tokensProvider *tokens2.ServiceManager,
 	viewManager ViewManager,
 	tmsProvider *token2.ManagementServiceProvider,
 	endorsementServiceProvider EndorsementServiceProvider,
@@ -197,8 +197,8 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 			GetTMSProvider: func() *token2.ManagementServiceProvider {
 				return n.tmsProvider
 			},
-			GetTokens: lazy.NewGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
-				return n.tokensProvider.Tokens(tmsID)
+			GetTokens: lazy.NewGetter[*tokens2.Service](func() (*tokens2.Service, error) {
+				return n.tokensProvider.ServiceByTMSId(tmsID)
 			}).Get,
 			TMSID: token2.TMSID{
 				Network:   n.Name(),
@@ -214,8 +214,8 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 			NewTokenRWSetProcessor(
 				n.Name(),
 				ns,
-				lazy.NewGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
-					return n.tokensProvider.Tokens(tmsID)
+				lazy.NewGetter[*tokens2.Service](func() (*tokens2.Service, error) {
+					return n.tokensProvider.ServiceByTMSId(tmsID)
 				}).Get,
 				func() *token2.ManagementServiceProvider {
 					return n.tmsProvider

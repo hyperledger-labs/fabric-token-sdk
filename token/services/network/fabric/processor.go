@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type GetTokensFunc = func() (*tokens.Tokens, error)
+type GetTokensFunc = func() (*tokens.Service, error)
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 
 type RWSetProcessor struct {

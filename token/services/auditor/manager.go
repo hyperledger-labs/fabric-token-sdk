@@ -8,11 +8,12 @@ package auditor
 
 import (
 	"reflect"
-	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -24,127 +25,88 @@ type TokenManagementServiceProvider interface {
 	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
 }
 
-type AuditDBProvider interface {
-	ServiceByTMSId(id token.TMSID) (*auditdb.StoreService, error)
-}
+type StoreServiceManager db.StoreServiceManager[*auditdb.StoreService]
 
-type TokenDBProvider interface {
-	Tokens(id token.TMSID) (*tokens.Tokens, error)
-}
+type TokensServiceManager db.ServiceManager[*tokens.Service]
 
 type CheckServiceProvider interface {
-	CheckService(id token.TMSID, adb *auditdb.StoreService, tdb *tokens.Tokens) (CheckService, error)
+	CheckService(id token.TMSID, adb *auditdb.StoreService, tdb *tokens.Service) (CheckService, error)
 }
 
-// Manager handles the databases
-type Manager struct {
-	networkProvider      NetworkProvider
-	auditDBProvider      AuditDBProvider
-	tokenDBProvider      TokenDBProvider
-	tmsProvider          TokenManagementServiceProvider
-	tracerProvider       trace.TracerProvider
-	checkServiceProvider CheckServiceProvider
+// ServiceManager handles the services
+type ServiceManager struct {
+	p lazy.Provider[token.TMSID, *Service]
 
-	mutex    sync.Mutex
-	auditors map[string]*Auditor
+	networkProvider     NetworkProvider
+	tokenServiceManager TokensServiceManager
+	tmsProvider         TokenManagementServiceProvider
 }
 
-// NewManager creates a new Auditor manager.
-func NewManager(
+// NewServiceManager creates a new Service manager.
+func NewServiceManager(
 	networkProvider NetworkProvider,
-	auditDBProvider AuditDBProvider,
-	tokenDBProvider TokenDBProvider,
+	auditStoreServiceManager StoreServiceManager,
+	tokensServiceManager TokensServiceManager,
 	tmsProvider TokenManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
 	checkServiceProvider CheckServiceProvider,
-) *Manager {
-	return &Manager{
-		networkProvider:      networkProvider,
-		auditDBProvider:      auditDBProvider,
-		tokenDBProvider:      tokenDBProvider,
-		tmsProvider:          tmsProvider,
-		tracerProvider:       tracerProvider,
-		auditors:             map[string]*Auditor{},
-		checkServiceProvider: checkServiceProvider,
+) *ServiceManager {
+	return &ServiceManager{
+		p: lazy.NewProviderWithKeyMapper(db.Key, func(tmsID token.TMSID) (*Service, error) {
+			auditDB, err := auditStoreServiceManager.StoreServiceByTMSId(tmsID)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
+			}
+			tokenDB, err := tokensServiceManager.ServiceByTMSId(tmsID)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
+			}
+			_, err = networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
+			}
+			checkService, err := checkServiceProvider.CheckService(tmsID, auditDB, tokenDB)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to get checkservice for [%s]", tmsID)
+			}
+
+			auditor := &Service{
+				networkProvider: networkProvider,
+				tmsID:           tmsID,
+				auditDB:         auditDB,
+				tokenDB:         tokenDB,
+				tmsProvider:     tmsProvider,
+				finalityTracer: tracerProvider.Tracer("auditor", tracing.WithMetricsOpts(tracing.MetricsOpts{
+					Namespace:  "tokensdk",
+					LabelNames: []tracing.LabelName{txIdLabel},
+				})),
+				checkService: checkService,
+			}
+			return auditor, nil
+		}),
+		networkProvider:     networkProvider,
+		tokenServiceManager: tokensServiceManager,
+		tmsProvider:         tmsProvider,
 	}
 }
 
-// Auditor returns the Auditor for the given wallet
-func (cm *Manager) Auditor(tmsID token.TMSID) (*Auditor, error) {
-	return cm.getAuditor(tmsID)
+// Auditor returns the Service for the given wallet
+func (cm *ServiceManager) Auditor(tmsID token.TMSID) (*Service, error) {
+	return cm.p.Get(tmsID)
 }
 
 // RestoreTMS restores the auditdb corresponding to the passed TMS ID.
-func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
+func (cm *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 	logger.Infof("restore audit dbs for entry [%s]...", tmsID)
-	if err := cm.restore(tmsID); err != nil {
-		return errors.Wrapf(err, "cannot bootstrap auditdb for [%s]", tmsID)
-	}
-	logger.Infof("restore audit dbs for entry [%s]...done", tmsID)
-	return nil
-}
-
-func (cm *Manager) getAuditor(tmsID token.TMSID) (*Auditor, error) {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
-
-	id := tmsID.String()
-	logger.Debugf("get auditdb for [%s]", id)
-	c, ok := cm.auditors[id]
-	if !ok {
-		var err error
-		c, err = cm.newAuditor(tmsID)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to instantiate auditor for wallet [%s]", tmsID)
-		}
-		cm.auditors[id] = c
-	}
-	return c, nil
-}
-
-func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
-	auditDB, err := cm.auditDBProvider.ServiceByTMSId(tmsID)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
-	}
-	tokenDB, err := cm.tokenDBProvider.Tokens(tmsID)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
-	}
-	_, err = cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
-	}
-	checkService, err := cm.checkServiceProvider.CheckService(tmsID, auditDB, tokenDB)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get checkservice for [%s]", tmsID)
-	}
-
-	auditor := &Auditor{
-		networkProvider: cm.networkProvider,
-		tmsID:           tmsID,
-		auditDB:         auditDB,
-		tokenDB:         tokenDB,
-		tmsProvider:     cm.tmsProvider,
-		finalityTracer: cm.tracerProvider.Tracer("auditor", tracing.WithMetricsOpts(tracing.MetricsOpts{
-			Namespace:  "tokensdk",
-			LabelNames: []tracing.LabelName{txIdLabel},
-		})),
-		checkService: checkService,
-	}
-	return auditor, nil
-}
-
-func (cm *Manager) restore(tmsID token.TMSID) error {
 	net, err := cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
 	}
-	tokenDB, err := cm.tokenDBProvider.Tokens(tmsID)
+	tokenDB, err := cm.tokenServiceManager.ServiceByTMSId(tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
 	}
-	auditor, err := cm.getAuditor(tmsID)
+	auditor, err := cm.p.Get(tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get auditor for [%s]", tmsID)
 	}
@@ -170,15 +132,16 @@ func (cm *Manager) restore(tmsID token.TMSID) error {
 		counter++
 	}
 	logger.Debugf("checked [%d] token requests", counter)
+	logger.Infof("restore audit dbs for entry [%s]...done", tmsID)
 	return nil
 }
 
 var (
-	managerType = reflect.TypeOf((*Manager)(nil))
+	managerType = reflect.TypeOf((*ServiceManager)(nil))
 )
 
-// Get returns the Auditor instance for the passed auditor wallet
-func Get(sp token.ServiceProvider, w *token.AuditorWallet) *Auditor {
+// Get returns the Service instance for the passed auditor wallet
+func Get(sp token.ServiceProvider, w *token.AuditorWallet) *Service {
 	if w == nil {
 		logger.Debugf("no wallet provided")
 		return nil
@@ -186,14 +149,14 @@ func Get(sp token.ServiceProvider, w *token.AuditorWallet) *Auditor {
 	return GetByTMSID(sp, w.TMS().ID())
 }
 
-// GetByTMSID returns the Auditor instance for the passed auditor wallet
-func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) *Auditor {
+// GetByTMSID returns the Service instance for the passed auditor wallet
+func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) *Service {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		logger.Errorf("failed to get manager service: [%s]", err)
 		return nil
 	}
-	auditor, err := s.(*Manager).Auditor(tmsID)
+	auditor, err := s.(*ServiceManager).Auditor(tmsID)
 	if err != nil {
 		logger.Errorf("failed to get db for tms [%s]: [%s]", tmsID, err)
 		return nil
@@ -201,7 +164,7 @@ func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) *Auditor {
 	return auditor
 }
 
-// New returns the Auditor instance for the passed auditor wallet
-func New(sp token.ServiceProvider, w *token.AuditorWallet) *Auditor {
+// New returns the Service instance for the passed auditor wallet
+func New(sp token.ServiceProvider, w *token.AuditorWallet) *Service {
 	return Get(sp, w)
 }

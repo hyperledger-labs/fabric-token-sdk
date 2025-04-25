@@ -9,29 +9,32 @@ package tokendb
 import (
 	"reflect"
 
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
 	"github.com/pkg/errors"
 )
 
 type (
-	Manager         = db.Manager[*StoreService]
-	NotifierManager = db.Manager[*Notifier]
+	StoreServiceManager db.StoreServiceManager[*StoreService]
+	NotifierManager     db.StoreServiceManager[*Notifier]
 )
 
 type Notifier struct {
 	driver.TokenNotifier
 }
 
-var managerType = reflect.TypeOf((*Manager)(nil))
+var managerType = reflect.TypeOf((*StoreServiceManager)(nil))
 
-func NewNotifierManager(dh *db.DriverHolder) *NotifierManager {
-	return db.MappedManager[driver.TokenNotifier, *Notifier](dh.NewTokenNotifierManager(), func(p driver.TokenNotifier) (*Notifier, error) { return &Notifier{p}, nil })
+func NewNotifierManager(cp driver2.ConfigService, drivers multiplexed.Driver) NotifierManager {
+	return db.NewStoreServiceManager(config.NewService(cp), "tokendb.persistence", drivers.NewTokenNotifier, func(p driver.TokenNotifier) (*Notifier, error) { return &Notifier{p}, nil })
 }
 
-func NewManager(dh *db.DriverHolder) *Manager {
-	return db.MappedManager[driver.TokenStore, *StoreService](dh.NewTokenManager(), newStoreService)
+func NewStoreServiceManager(cp driver2.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
+	return db.NewStoreServiceManager(config.NewService(cp), "tokendb.persistence", drivers.NewToken, newStoreService)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
@@ -39,7 +42,7 @@ func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, err
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")
 	}
-	c, err := s.(*Manager).ServiceByTMSId(tmsID)
+	c, err := s.(StoreServiceManager).StoreServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}

@@ -21,7 +21,7 @@ type ONS interface {
 	MetadataService() *orion.MetadataService
 }
 
-type GetTokensFunc = func() (*tokens.Tokens, error)
+type GetTokensFunc = func() (*tokens.Service, error)
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 type GetTokenRequestFunc = func(tms *token.ManagementService, txID string) ([]byte, error)
 

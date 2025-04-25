@@ -59,8 +59,8 @@ type FetcherProvider interface {
 type fetchFunc func(db *tokendb.StoreService, notifier *tokendb.Notifier, m *Metrics) tokenFetcher
 
 type fetcherProvider struct {
-	tokenStoreServiceManager *tokendb.Manager
-	notifierManager          *tokendb.NotifierManager
+	tokenStoreServiceManager tokendb.StoreServiceManager
+	notifierManager          tokendb.NotifierManager
 	metrics                  *Metrics
 	fetch                    fetchFunc
 }
@@ -71,7 +71,7 @@ var fetchers = map[FetcherStrategy]fetchFunc{
 	},
 }
 
-func NewFetcherProvider(storeServiceManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider, strategy FetcherStrategy) *fetcherProvider {
+func NewFetcherProvider(storeServiceManager tokendb.StoreServiceManager, notifierManager tokendb.NotifierManager, metricsProvider metrics.Provider, strategy FetcherStrategy) *fetcherProvider {
 	fetcher, ok := fetchers[strategy]
 	if !ok {
 		panic("undefined fetcher strategy: " + strategy)
@@ -85,11 +85,11 @@ func NewFetcherProvider(storeServiceManager *tokendb.Manager, notifierManager *t
 }
 
 func (p *fetcherProvider) GetFetcher(tmsID token.TMSID) (tokenFetcher, error) {
-	tokenDB, err := p.tokenStoreServiceManager.ServiceByTMSId(tmsID)
+	tokenDB, err := p.tokenStoreServiceManager.StoreServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, err
 	}
-	tokenNotifier, err := p.notifierManager.ServiceByTMSId(tmsID)
+	tokenNotifier, err := p.notifierManager.StoreServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, err
 	}

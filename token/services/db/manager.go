@@ -14,40 +14,63 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	"github.com/pkg/errors"
 )
 
 var logger = logging.MustGetLogger("token-db")
 
-type Manager[S any] struct{ lazy.Provider[token.TMSID, S] }
-
-func newManager[V any](config *config.Service, prefix string, constructor func(name driver2.PersistenceName, params ...string) (V, error)) *Manager[V] {
-	return &Manager[V]{Provider: lazy.NewProviderWithKeyMapper(Key, func(tmsID token.TMSID) (V, error) {
-		logger.Infof("Creating manager for %T for [%s] and prefix [%s]", new(V), tmsID, prefix)
-		cfg, err := config.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
-		if err != nil {
-			return utils.Zero[V](), err
-		}
-
-		return constructor(common.GetPersistenceName(cfg, prefix), tmsID.Network, tmsID.Channel, tmsID.Namespace)
-	})}
+type StoreServiceManager[S any] interface {
+	StoreServiceByTMSId(token.TMSID) (S, error)
 }
 
-func (m *Manager[S]) ServiceByTMSId(id token.TMSID) (S, error) {
-	return m.Get(id)
+type ServiceManager[S any] interface {
+	ServiceByTMSId(token.TMSID) (S, error)
 }
 
-func Key(tmsID token.TMSID) string {
-	return tmsID.String()
-}
+type manager[S any] struct{ lazy.Provider[token.TMSID, S] }
 
-func MappedManager[S any, T any](m *Manager[S], mapper func(S) (T, error)) *Manager[T] {
-	return &Manager[T]{
+func NewStoreServiceManager[S any, T any](config *config.Service, prefix string, constructor func(name driver2.PersistenceName, params ...string) (S, error), mapper func(S) (T, error)) StoreServiceManager[T] {
+	return &manager[T]{
 		Provider: lazy.NewProviderWithKeyMapper(Key, func(tmsID token.TMSID) (T, error) {
-			s, err := m.Get(tmsID)
+			logger.Infof("Creating manager for %T for [%s] and prefix [%s]", new(T), tmsID, prefix)
+			cfg, err := config.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
+			if err != nil {
+				return utils.Zero[T](), err
+			}
+
+			s, err := constructor(common.GetPersistenceName(cfg, prefix), tmsID.Network, tmsID.Channel, tmsID.Namespace)
 			if err != nil {
 				return utils.Zero[T](), err
 			}
 			return mapper(s)
 		}),
 	}
+}
+
+func (m *manager[S]) StoreServiceByTMSId(id token.TMSID) (S, error) { return m.Get(id) }
+
+func Key(tmsID token.TMSID) string { return tmsID.String() }
+
+func GetStoreService[S any, M StoreServiceManager[S]](sp token.ServiceProvider, tmsID token.TMSID) (S, error) {
+	s, err := sp.GetService(new(M))
+	if err != nil {
+		return utils.Zero[S](), errors.Wrapf(err, "failed to get manager service")
+	}
+	c, err := s.(M).StoreServiceByTMSId(tmsID)
+	if err != nil {
+		return utils.Zero[S](), errors.Wrapf(err, "failed to get store service for tms [%s]", tmsID)
+	}
+	return c, nil
+}
+
+func GetService[S any, M ServiceManager[S]](sp token.ServiceProvider, tmsID token.TMSID) (S, error) {
+	s, err := sp.GetService(new(M))
+	if err != nil {
+		return utils.Zero[S](), errors.Wrapf(err, "failed to get manager service")
+	}
+	c, err := s.(M).ServiceByTMSId(tmsID)
+	if err != nil {
+		return utils.Zero[S](), errors.Wrapf(err, "failed to get store service for tms [%s]", tmsID)
+	}
+	return c, nil
 }

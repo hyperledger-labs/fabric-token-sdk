@@ -33,12 +33,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	driver4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -52,6 +52,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/walletdb"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/dig"
@@ -112,8 +113,8 @@ func (p *SDK) Install() error {
 		p.Container().Provide(digutils.Identity[*core2.TMSProvider](), dig.As(new(driver2.TokenManagerServiceProvider))),
 		p.Container().Provide(func(service driver.ConfigService) *config2.Service { return config2.NewService(service) }),
 		p.Container().Provide(digutils.Identity[*config2.Service](), dig.As(new(core2.ConfigProvider))),
-		p.Container().Provide(func(ttxdbManager *ttxdb.Manager) *network2.LockerProvider {
-			return network2.NewLockerProvider(ttxdbManager, 2*time.Second, 5*time.Minute)
+		p.Container().Provide(func(ttxStoreServiceManager ttxdb.StoreServiceManager) *network2.LockerProvider {
+			return network2.NewLockerProvider(ttxStoreServiceManager, 2*time.Second, 5*time.Minute)
 		}, dig.As(new(selector.LockerProvider))),
 		p.Container().Provide(selectorProviders[sdriver.Driver(p.ConfigService().GetString("token.selector.driver"))], dig.As(new(token.SelectorManagerProvider))),
 		p.Container().Provide(network2.NewCertificationClientProvider, dig.As(new(token.CertificationClientProvider))),
@@ -128,28 +129,28 @@ func (p *SDK) Install() error {
 				new(common2.TokenManagementServiceProvider),
 			),
 		),
-		p.Container().Provide(ttxdb.NewManager),
-		p.Container().Provide(digutils.Identity[*ttxdb.Manager](), dig.As(new(ttx.DBProvider), new(network2.TTXDBProvider))),
-		p.Container().Provide(tokendb.NewManager),
+		p.Container().Provide(ttxdb.NewStoreServiceManager),
+		p.Container().Provide(digutils.Identity[ttxdb.StoreServiceManager](), dig.As(new(ttx.StoreServiceManager))),
+		p.Container().Provide(tokendb.NewStoreServiceManager),
 		p.Container().Provide(tokendb.NewNotifierManager),
-		p.Container().Provide(digutils.Identity[*tokendb.Manager](), dig.As(new(tokens.DBProvider))),
-		p.Container().Provide(db2.NewDriverHolder),
+		p.Container().Provide(digutils.Identity[tokendb.StoreServiceManager](), dig.As(new(tokens.StoreServiceManager))),
 		p.Container().Provide(newMultiplexedDriver),
-		p.Container().Provide(auditdb.NewManager),
-		p.Container().Provide(digutils.Identity[*auditdb.Manager](), dig.As(new(auditor.AuditDBProvider))),
-		p.Container().Provide(identitydb.NewManager),
-		p.Container().Provide(tokenlockdb.NewManager),
-		p.Container().Provide(digutils.Identity[*kvs.KVS](), dig.As(new(identity2.Keystore))),
+		p.Container().Provide(auditdb.NewStoreServiceManager),
+		p.Container().Provide(digutils.Identity[auditdb.StoreServiceManager](), dig.As(new(auditor.StoreServiceManager))),
+		p.Container().Provide(identitydb.NewStoreServiceManager),
+		p.Container().Provide(walletdb.NewStoreServiceManager),
+		p.Container().Provide(tokenlockdb.NewStoreServiceManager),
+		p.Container().Provide(digutils.Identity[*kvs.KVS](), dig.As(new(driver4.Keystore))),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(NewAuditorCheckServiceProvider),
 		p.Container().Provide(digutils.Identity[*db.AuditorCheckServiceProvider](), dig.As(new(auditor.CheckServiceProvider))),
-		p.Container().Provide(auditor.NewManager),
+		p.Container().Provide(auditor.NewServiceManager),
 		p.Container().Provide(NewOwnerCheckServiceProvider),
 		p.Container().Provide(digutils.Identity[*db.OwnerCheckServiceProvider](), dig.As(new(ttx.CheckServiceProvider))),
-		p.Container().Provide(ttx.NewManager),
-		p.Container().Provide(tokens.NewManager),
-		p.Container().Provide(digutils.Identity[*tokens.Manager](), dig.As(new(ttx.TokensProvider), new(auditor.TokenDBProvider))),
+		p.Container().Provide(ttx.NewServiceManager),
+		p.Container().Provide(tokens.NewServiceManager),
+		p.Container().Provide(digutils.Identity[*tokens.ServiceManager](), dig.As(new(ttx.TokensServiceManager), new(auditor.TokensServiceManager))),
 		p.Container().Provide(vault.NewVaultProvider),
 		p.Container().Provide(digutils.Identity[*vault.Provider](), dig.As(new(token.VaultProvider))),
 		p.Container().Provide(tms.NewPostInitializer),
@@ -158,8 +159,8 @@ func (p *SDK) Install() error {
 		p.Container().Provide(sqlite.NewNamedDriver, dig.Group("token-db-drivers")),
 		p.Container().Provide(postgres.NewNamedDriver, dig.Group("token-db-drivers")),
 		p.Container().Provide(memory.NewNamedDriver, dig.Group("token-db-drivers")),
-		p.Container().Provide(func(dbManager *tokendb.Manager, notifierManager *tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
-			return sherdlock.NewFetcherProvider(dbManager, notifierManager, metricsProvider, sherdlock.Mixed)
+		p.Container().Provide(func(tokenStoreServiceManager tokendb.StoreServiceManager, notifierManager tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
+			return sherdlock.NewFetcherProvider(tokenStoreServiceManager, notifierManager, metricsProvider, sherdlock.Mixed)
 		}),
 	)
 	if err != nil {
@@ -184,18 +185,18 @@ func (p *SDK) Install() error {
 		digutils.Register[*core2.TokenDriverService](p.Container()),
 		digutils.Register[*network.Provider](p.Container()),
 		digutils.Register[*token.ManagementServiceProvider](p.Container()),
-		digutils.Register[*ttxdb.Manager](p.Container()),
-		digutils.Register[*tokendb.Manager](p.Container()),
-		digutils.Register[*auditdb.Manager](p.Container()),
-		digutils.Register[*identitydb.Manager](p.Container()),
+		digutils.Register[ttxdb.StoreServiceManager](p.Container()),
+		digutils.Register[tokendb.StoreServiceManager](p.Container()),
+		digutils.Register[auditdb.StoreServiceManager](p.Container()),
+		digutils.Register[identitydb.StoreServiceManager](p.Container()),
 		digutils.Register[*vault.Provider](p.Container()),
 		digutils.Register[driver.ConfigService](p.Container()),
 		digutils.Register[*identity.DBStorageProvider](p.Container()),
 		digutils.Register[*ttx.Metrics](p.Container()),
-		digutils.Register[*auditor.Manager](p.Container()),
+		digutils.Register[*auditor.ServiceManager](p.Container()),
 		digutils.Register[*config2.Service](p.Container()),
-		digutils.Register[*ttx.Manager](p.Container()),
-		digutils.Register[*tokens.Manager](p.Container()),
+		digutils.Register[*ttx.ServiceManager](p.Container()),
+		digutils.Register[*tokens.ServiceManager](p.Container()),
 		digutils.Register[trace.TracerProvider](p.Container()),
 		digutils.Register[metrics.Provider](p.Container()),
 	)

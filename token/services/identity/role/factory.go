@@ -25,7 +25,7 @@ var toString = map[identity.RoleType]string{
 }
 
 type StorageProvider interface {
-	IdentityStore(tmsID token.TMSID) (driver.IdentityStore, error)
+	IdentityStore(tmsID token.TMSID) (driver.IdentityStoreService, error)
 }
 
 // Factory is the factory for creating wallets, idemix and x509
