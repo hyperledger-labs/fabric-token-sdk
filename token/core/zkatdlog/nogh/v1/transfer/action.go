@@ -218,6 +218,16 @@ func (t *Action) IsRedeemAt(index int) bool {
 	return t.Outputs[index].IsRedeem()
 }
 
+// IsRedeem checks if this action is a Redeem Transfer
+func (t *Action) IsRedeem() bool {
+	for _, output := range t.Outputs {
+		if output.IsRedeem() {
+			return true
+		}
+	}
+	return false
+}
+
 // SerializeOutputAt marshals the output in the Action at the passed index
 func (t *Action) SerializeOutputAt(index int) ([]byte, error) {
 	return t.Outputs[index].Serialize()
@@ -289,6 +299,9 @@ func (t *Action) Validate() error {
 		if err := out.Validate(false); err != nil {
 			return errors.Wrapf(err, "invalid output at index [%d]", i)
 		}
+	}
+	if t.IsRedeem() && (t.Issuer == nil) {
+		return errors.Errorf("Expected Issuer for a Redeem action (to validate)")
 	}
 	return nil
 }
