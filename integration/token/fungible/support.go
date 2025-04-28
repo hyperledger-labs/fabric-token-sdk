@@ -830,36 +830,49 @@ func TransferCashWithSelector(network *integration.Infrastructure, sender *token
 	}
 }
 
-func RedeemCash(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference) {
-	RedeemCashForTMSID(network, id, wallet, typ, amount, auditor, issuer, nil)
+func RedeemCash(network *integration.Infrastructure, networkName string, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference) {
+	RedeemCashForTMSID(network, networkName, id, wallet, typ, amount, auditor, issuer, nil)
 }
 
-func RedeemCashForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference, tmsID *token2.TMSID) {
+func RedeemCashForTMSID(network *integration.Infrastructure, networkName string, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference, tmsID *token2.TMSID) {
 	issuerName := ""
+	var issuerSigningKey view.Identity = nil
 	if issuer != nil {
 		issuerName = issuer.Id()
+		tms := GetTMSByNetworkName(network, networkName)
+		issuerSigningKey = GetIssuerIdentity(tms, issuer.Id())
 	}
 
 	txid, err := network.Client(id.ReplicaName()).CallView("redeem", common.JSONMarshall(&views.Redeem{
-		Auditor: auditor.Id(),
-		Issuer:  issuerName,
-		Wallet:  wallet,
-		Type:    typ,
-		Amount:  amount,
-		TMSID:   tmsID,
+		Auditor:          auditor.Id(),
+		Issuer:           issuerName,
+		IssuerSigningKey: issuerSigningKey,
+		Wallet:           wallet,
+		Type:             typ,
+		Amount:           amount,
+		TMSID:            tmsID,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), tmsID, false)
 }
 
-func RedeemCashByIDs(network *integration.Infrastructure, id *token3.NodeReference, wallet string, ids []*token.ID, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference) {
+func RedeemCashByIDs(network *integration.Infrastructure, networkName string, id *token3.NodeReference, wallet string, ids []*token.ID, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference) {
+	issuerName := ""
+	var issuerSigningKey view.Identity = nil
+	if issuer != nil {
+		issuerName = issuer.Id()
+		tms := GetTMSByNetworkName(network, networkName)
+		issuerSigningKey = GetIssuerIdentity(tms, issuer.Id())
+	}
+
 	txid, err := network.Client(id.ReplicaName()).CallView("redeem", common.JSONMarshall(&views.Redeem{
-		Auditor:  auditor.Id(),
-		Issuer:   issuer.Id(),
-		Wallet:   wallet,
-		Type:     "",
-		TokenIDs: ids,
-		Amount:   amount,
+		Auditor:          auditor.Id(),
+		Issuer:           issuerName,
+		IssuerSigningKey: issuerSigningKey,
+		Wallet:           wallet,
+		Type:             "",
+		TokenIDs:         ids,
+		Amount:           amount,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), nil, false)

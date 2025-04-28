@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -253,12 +254,24 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 	}
 
 	if isRedeem {
-		issuers := s.PublicParametersManager.PublicParameters().Issuers()
-		if len(issuers) == 0 {
-			return nil, nil, errors.New("no issuers found")
+		var issuer driver.Identity
+		issuerNetworkIdentity, err := ttx.GetFSCIssuerIdentityFromOpts(opts.Attributes)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to get issuer network identity")
 		}
-		issuer := issuers[0]
-
+		if !issuerNetworkIdentity.IsNone() {
+			issuerSigningKey, err := ttx.GetIssuerSigningKeyFromOpts(opts.Attributes)
+			if (err != nil) || (issuerSigningKey == nil) {
+				return nil, nil, errors.Wrap(err, "failed to get issuer signing key")
+			}
+			issuer = issuerSigningKey
+		} else {
+			issuers := s.PublicParametersManager.PublicParameters().Issuers()
+			if len(issuers) < 1 {
+				return nil, nil, errors.New("no issuer found")
+			}
+			issuer = issuers[0]
+		}
 		transfer.Issuer = issuer
 		transferMetadata.Issuer = issuer
 	}

@@ -415,7 +415,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	gomega.Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(111))).To(gomega.BeEquivalentTo(0), "got [%d], expected 111", ut.Sum(64).ToBigInt())
 	gomega.Expect(ut.ByType("USD").Count()).To(gomega.BeEquivalentTo(ut.Count()))
 
-	RedeemCash(network, bob, "", "USD", 11, auditor, issuer)
+	RedeemCash(network, networkName, bob, "", "USD", 11, auditor, issuer)
 	t10 := time.Now()
 	CheckAcceptedTransactions(network, bob, "", BobAcceptedTransactions[:6], nil, nil, nil)
 	CheckAcceptedTransactions(network, bob, "", BobAcceptedTransactions[5:6], nil, nil, nil, ttxdb.Redeem)
@@ -471,7 +471,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// so the endorsement process could automatically idntify the issuer
 	// that needs to sign the Redeem.
 	BindIssuerNetworkAndSigningIdentities(network, issuer, GetIssuerIdentity(GetTMSByNetworkName(network, networkName), issuer.Id()), bob)
-	RedeemCash(network, bob, "", "USD", 10, auditor, nil)
+	RedeemCash(network, networkName, bob, "", "USD", 10, auditor, nil)
 	CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
 	CheckSpending(network, bob, "", "USD", auditor, 21)
 
@@ -766,7 +766,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 		WhoDeletedToken(network, alice, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
 		WhoDeletedToken(network, auditor, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
 		// redeem newly created token
-		RedeemCashByIDs(network, bob, "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor, issuer)
+		RedeemCashByIDs(network, networkName, bob, "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor, issuer)
 	}
 
 	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
@@ -979,7 +979,7 @@ func TestMixed(network *integration.Infrastructure, onRestart OnRestartFunc, sel
 	TransferCashForTMSID(network, alice, "", "USD", 20, bob, auditor1, dlogId)
 	TransferCashForTMSID(network, alice, "", "USD", 30, bob, auditor2, fabTokenId)
 
-	RedeemCashForTMSID(network, bob, "", "USD", 11, auditor1, issuer1, dlogId)
+	RedeemCashForTMSID(network, DLogNamespace, bob, "", "USD", 11, auditor1, issuer1, dlogId)
 	CheckSpendingForTMSID(network, bob, "", "USD", auditor1, 11, dlogId)
 
 	CheckBalanceAndHoldingForTMSID(network, alice, "", "USD", 90, auditor1, dlogId)
