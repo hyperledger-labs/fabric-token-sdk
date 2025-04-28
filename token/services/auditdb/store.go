@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -130,10 +130,10 @@ type QueryTransactionsParams = driver.QueryTransactionsParams
 type QueryTokenRequestsParams = driver.QueryTokenRequestsParams
 
 // Pagination defines the pagination for querying movements
-type Pagination = driver2.Pagination
+type Pagination = driver3.Pagination
 
 // Pagination iterator defines the pagination iterator for movements query results
-type PageTransactionsIterator = driver2.PageIterator[*TransactionRecord]
+type PageTransactionsIterator = driver3.PageIterator[*TransactionRecord]
 
 // Wallet models a wallet
 type Wallet interface {
