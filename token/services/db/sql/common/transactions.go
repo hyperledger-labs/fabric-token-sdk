@@ -42,7 +42,7 @@ type TransactionStore struct {
 	pi      common.PaginationInterpreter
 }
 
-func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci TokenInterpreter, pi common.PaginationInterpreter) *TransactionDB {
+func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci TokenInterpreter, pi common.PaginationInterpreter) *TransactionStore {
 	return &TransactionStore{
 		readDB:  readDB,
 		writeDB: writeDB,
