@@ -56,7 +56,7 @@ func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci Tok
 	return NewOwnerTransactionStore(readDB, writeDB, tables, ci, pi)
 }
 
-func NewTransactionDB(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter, pi common.PaginationInterpreter) (*TransactionStore, error) {
+func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter, pi common.PaginationInterpreter) (*TransactionStore, error) {
 	return newTransactionStore(readDB, writeDB, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
