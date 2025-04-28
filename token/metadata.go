@@ -272,6 +272,11 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 			return errors.Errorf("expected extra signer [%s] but got [%s]", m.ExtraSigners[i], signer)
 		}
 	}
+
+	if !m.Issuer.Equal(action.a.GetIssuer()) {
+		return errors.Errorf("expected issuer [%s] but got [%s]", m.Issuer, action.a.GetIssuer())
+	}
+
 	return nil
 }
 
