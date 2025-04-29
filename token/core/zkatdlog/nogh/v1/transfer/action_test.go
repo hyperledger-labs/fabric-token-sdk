@@ -354,6 +354,37 @@ func TestAction_Validate(t *testing.T) {
 			expectedError: "invalid output at index [0]: token data cannot be empty",
 		},
 		{
+			name: "A Redeem action must have an issuer",
+			action: &Action{
+				Inputs: []*ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{
+								Owner:    []byte("owner"),
+								Type:     "type",
+								Quantity: "10",
+							},
+							BlindingFactor: &math.Zr{},
+						},
+					},
+				},
+				Outputs: []*token2.Token{
+					{
+						Owner: []byte(nil),
+						Data:  &math.G1{},
+					},
+				},
+				Issuer: []byte(nil),
+			},
+			wantErr:       true,
+			expectedError: "Expected Issuer for a Redeem action",
+		},
+		{
 			name: "",
 			action: &Action{
 				Inputs: []*ActionInput{

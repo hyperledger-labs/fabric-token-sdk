@@ -301,7 +301,7 @@ func (t *Action) Validate() error {
 		}
 	}
 	if t.IsRedeem() && (t.Issuer == nil) {
-		return errors.Errorf("Expected Issuer for a Redeem action (to validate)")
+		return errors.Errorf("Expected Issuer for a Redeem action")
 	}
 	return nil
 }
