@@ -13,6 +13,7 @@ import (
 
 	vault2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/core/generic/vault"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	logging2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/committer"
@@ -206,7 +207,7 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string)
 	txInfos := make(map[driver2.Namespace]KeyInfo, len(rwSet.WriteSet.Writes))
 	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.WriteSet.Writes))
 	for ns, writes := range rwSet.WriteSet.Writes {
-		logger.Debugf("TX [%s:%s] has [%d] writes", txID, ns, len(writes))
+		logger.Debugf("TX [%s:%s] has [%d] writes: %v", txID, ns, len(writes), logging2.Keys(writes))
 		for key, value := range writes {
 			if slices.ContainsFunc(m.prefixes, func(prefix string) bool { return strings.HasPrefix(key, prefix) }) {
 				logger.Debugf("TX [%s:%s] does have key [%s].", txID, ns, key)
