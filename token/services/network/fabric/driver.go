@@ -53,6 +53,7 @@ type Driver struct {
 	flmProvider                     finality.ListenerManagerProvider
 	llmProvider                     lookup.ListenerManagerProvider
 	EndorsementServiceProvider      EndorsementServiceProvider
+	setupListenerProvider           SetupListenerProvider
 }
 
 func NewGenericDriver(
@@ -68,7 +69,7 @@ func NewGenericDriver(
 	configService driver2.ConfigService,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
-	return NewDriver(fnsProvider, tokensManager, configProvider, viewManager, viewRegistry, filterProvider, tmsProvider, tracerProvider, identityProvider, NewChaincodePublicParamsFetcher(viewManager), NewTokenExecutorProvider(fnsProvider), NewSpentTokenExecutorProvider(fnsProvider, keyTranslator), keyTranslator, finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)), lookup.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)), endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator), config2.GenericDriver)
+	return NewDriver(fnsProvider, tokensManager, configProvider, viewManager, viewRegistry, filterProvider, tmsProvider, tracerProvider, identityProvider, NewChaincodePublicParamsFetcher(viewManager), NewTokenExecutorProvider(fnsProvider), NewSpentTokenExecutorProvider(fnsProvider, keyTranslator), keyTranslator, finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)), lookup.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)), endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator), NewSetupListenerProvider(tmsProvider, tokensManager), config2.GenericDriver)
 }
 
 func NewDriver(
@@ -88,6 +89,7 @@ func NewDriver(
 	flmProvider finality.ListenerManagerProvider,
 	llmProvider lookup.ListenerManagerProvider,
 	endorsementServiceProvider EndorsementServiceProvider,
+	setupListenerProvider SetupListenerProvider,
 	supportedDrivers ...string,
 ) *Driver {
 	return &Driver{
@@ -108,6 +110,7 @@ func NewDriver(
 		flmProvider:                     flmProvider,
 		llmProvider:                     llmProvider,
 		EndorsementServiceProvider:      endorsementServiceProvider,
+		setupListenerProvider:           setupListenerProvider,
 	}
 }
 
@@ -141,5 +144,5 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		return nil, errors.Wrapf(err, "failed to create a new llm")
 	}
 
-	return NewNetwork(fns, ch, d.configService, d.filterProvider, d.tokensManager, d.viewManager, d.tmsProvider, d.EndorsementServiceProvider, tokenQueryExecutor, d.tracerProvider, d.defaultPublicParamsFetcher, spentTokenQueryExecutor, d.keyTranslator, flm, llm), nil
+	return NewNetwork(fns, ch, d.configService, d.filterProvider, d.tokensManager, d.viewManager, d.tmsProvider, d.EndorsementServiceProvider, tokenQueryExecutor, d.tracerProvider, d.defaultPublicParamsFetcher, spentTokenQueryExecutor, d.keyTranslator, flm, llm, d.setupListenerProvider), nil
 }
