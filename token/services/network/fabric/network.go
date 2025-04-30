@@ -94,6 +94,7 @@ type Network struct {
 	tokensProvider *tokens2.ServiceManager
 	finalityTracer trace.Tracer
 
+	setupListenerProvider      SetupListenerProvider
 	flm                        finality.ListenerManager
 	llm                        lookup.ListenerManager
 	defaultPublicParamsFetcher NetworkPublicParamsFetcher
@@ -119,6 +120,7 @@ func NewNetwork(
 	keyTranslator translator.KeyTranslator,
 	flm finality.ListenerManager,
 	llm lookup.ListenerManager,
+	setupListenerProvider SetupListenerProvider,
 ) *Network {
 	return &Network{
 		n:                          n,
@@ -139,7 +141,8 @@ func NewNetwork(
 			Namespace:  "tokensdk_fabric",
 			LabelNames: []tracing.LabelName{},
 		})),
-		keyTranslator: keyTranslator,
+		keyTranslator:         keyTranslator,
+		setupListenerProvider: setupListenerProvider,
 	}
 }
 
@@ -181,6 +184,10 @@ func (n *Network) Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions,
 	return opt, nil
 }
 
+type SetupListenerProvider interface {
+	GetListener(token2.TMSID) lookup.Listener
+}
+
 func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 	tmsID := token2.TMSID{
 		Network:   n.n.Name(),
@@ -193,19 +200,7 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 		if err != nil {
 			return nil, errors.Errorf("failed creating setup key")
 		}
-		if err := n.llm.AddPermanentLookupListener(ns, setUpKey, &setupListener{
-			GetTMSProvider: func() *token2.ManagementServiceProvider {
-				return n.tmsProvider
-			},
-			GetTokens: lazy.NewGetter[*tokens2.Service](func() (*tokens2.Service, error) {
-				return n.tokensProvider.ServiceByTMSId(tmsID)
-			}).Get,
-			TMSID: token2.TMSID{
-				Network:   n.Name(),
-				Channel:   n.Channel(),
-				Namespace: ns,
-			},
-		}); err != nil {
+		if err := n.llm.AddPermanentLookupListener(ns, setUpKey, n.setupListenerProvider.GetListener(tmsID)); err != nil {
 			return nil, errors.Errorf("failed adding setup key listener")
 		}
 	} else {
@@ -359,6 +354,28 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) error {
 		return nil
 	case <-time.After(timeout):
 		return errors.Errorf("context done")
+	}
+}
+
+func NewSetupListenerProvider(tmsProvider *token2.ManagementServiceProvider, tokensProvider *tokens2.ServiceManager) *setupListenerProvider {
+	return &setupListenerProvider{
+		tmsProvider:    tmsProvider,
+		tokensProvider: tokensProvider,
+	}
+}
+
+type setupListenerProvider struct {
+	tmsProvider    *token2.ManagementServiceProvider
+	tokensProvider *tokens2.ServiceManager
+}
+
+func (p *setupListenerProvider) GetListener(tmsID token2.TMSID) lookup.Listener {
+	return &setupListener{
+		GetTMSProvider: func() *token2.ManagementServiceProvider { return p.tmsProvider },
+		GetTokens: lazy.NewGetter[*tokens2.Service](func() (*tokens2.Service, error) {
+			return p.tokensProvider.ServiceByTMSId(tmsID)
+		}).Get,
+		TMSID: tmsID,
 	}
 }
 

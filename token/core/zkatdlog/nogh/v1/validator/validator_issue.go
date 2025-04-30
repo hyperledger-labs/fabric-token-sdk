@@ -7,12 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
-	"bytes"
+	"slices"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
+
+var logger = logging.MustGetLogger("zkat.validator")
 
 func IssueValidate(ctx *Context) error {
 	action := ctx.IssueAction
@@ -31,20 +33,11 @@ func IssueValidate(ctx *Context) error {
 		return err
 	}
 
-	issuers := ctx.PP.Issuers()
-	if len(issuers) != 0 {
-		// Check the issuer is among those known
-		found := false
-		for _, issuer := range issuers {
-			if bytes.Equal(action.Issuer, issuer) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return errors.Errorf("issuer [%s] is not in issuers", driver.Identity(action.Issuer).String())
-		}
+	// Check the issuer is among those known
+	if issuers := ctx.PP.Issuers(); len(issuers) != 0 && !slices.ContainsFunc(issuers, action.Issuer.Equal) {
+		return errors.Errorf("issuer [%s] is not in issuers", action.Issuer)
 	}
+	logger.Debugf("Found issue owner [%s]", action.Issuer)
 
 	verifier, err := ctx.Deserializer.GetIssuerVerifier(action.Issuer)
 	if err != nil {
