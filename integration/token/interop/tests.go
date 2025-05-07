@@ -143,6 +143,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 		IDs := ListVaultUnspentTokens(network, defaultTMSID, name)
 		CheckIfExistsInVault(network, defaultTMSID, auditor, IDs)
 	}
+	panic("all ok")
 }
 
 func TestHTLCTwoNetworks(network *integration.Infrastructure, sel *token2.ReplicaSelector) {
