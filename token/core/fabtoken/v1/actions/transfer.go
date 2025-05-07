@@ -117,6 +117,16 @@ func (t *TransferAction) IsRedeemAt(index int) bool {
 	return t.Outputs[index].IsRedeem()
 }
 
+// IsRedeem checks if this action is a Redeem Transfer
+func (t *TransferAction) IsRedeem() bool {
+	for _, output := range t.Outputs {
+		if output.IsRedeem() {
+			return true
+		}
+	}
+	return false
+}
+
 // IsGraphHiding returns false, indicating that fabtoken does not hide the transaction graph
 func (t *TransferAction) IsGraphHiding() bool {
 	return false
@@ -203,6 +213,9 @@ func (t *TransferAction) Validate() error {
 		if len(out.Quantity) == 0 {
 			return errors.Errorf("invalid output's quantity at index [%d], output quantity is empty", i)
 		}
+	}
+	if t.IsRedeem() && (t.Issuer == nil) {
+		return errors.Errorf("Expected Issuer for a Redeem action (to validate)")
 	}
 	return nil
 }
