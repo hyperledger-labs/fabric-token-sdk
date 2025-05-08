@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type MultiplexDeserializer struct {
@@ -63,20 +62,14 @@ func deserialize[V any](copyDeserial []idriver.Deserializer, extractor func(idri
 	var errs []error
 
 	for _, des := range copyDeserial {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying signer deserialization with [%s]", des)
-		}
+		logger.Debugf("trying signer deserialization with [%s]", des)
 		v, err := extractor(des)
 		if err == nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("trying signer deserialization with [%s] succeeded", des)
-			}
+			logger.Debugf("trying signer deserialization with [%s] succeeded", des)
 			return v, nil
 		}
 
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying signer deserialization with [%s] failed [%s]", des, err)
-		}
+		logger.Debugf("trying signer deserialization with [%s] failed [%s]", des, err)
 		errs = append(errs, err)
 	}
 

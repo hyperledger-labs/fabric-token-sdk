@@ -9,7 +9,6 @@ package ttx
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type TokenTransactionDB interface {
@@ -62,16 +61,12 @@ func (a *TransactionInfoProvider) TransactionInfo(txID string) (*TransactionInfo
 
 func (a *TransactionInfoProvider) loadTransient(trRaw []byte, txID string) (map[string][]byte, error) {
 	if len(trRaw) == 0 {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], no token request found, skip it", txID)
-		}
+		logger.Debugf("transaction [%s], no token request found, skip it", txID)
 		return nil, nil
 	}
 	request, err := a.tms.NewFullRequestFromBytes(trRaw)
 	if err != nil {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
-		}
+		logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
 		return nil, err
 	}
 	if request.Metadata == nil {

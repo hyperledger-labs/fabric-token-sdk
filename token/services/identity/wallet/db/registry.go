@@ -17,7 +17,6 @@ import (
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 // WalletRegistry manages wallets whose long-term identities have a given role.
@@ -75,9 +74,7 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, idrive
 			return nil, nil, "", errors.WithMessagef(err, "failed to lookup wallet [%s]", id)
 		}
 	}
-	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.Logger.Debugf("looked-up identifier [%s:%s]", identity, toString(walletID))
-	}
+	r.Logger.Debugf("looked-up identifier [%s:%s]", identity, logging.WalletID(walletID))
 	wID := walletID
 	walletEntry, ok := r.Wallets[wID]
 	if ok {
@@ -103,9 +100,7 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, idrive
 		walletIdentifiers = append(walletIdentifiers, passedWalletID)
 	}
 
-	if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		r.Logger.Debugf("no wallet found for [%s] at [%s]", passedIdentity, toString(wID))
-	}
+	r.Logger.Debugf("no wallet found for [%s] at [%s]", passedIdentity, logging.WalletID(wID))
 	if len(identity) != 0 {
 		identityWID, err := r.GetWalletID(identity)
 		r.Logger.Debugf("wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
@@ -127,14 +122,10 @@ func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, idrive
 		var idInfo idriver.IdentityInfo
 		idInfo, err = r.Role.GetIdentityInfo(id)
 		if err == nil {
-			if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
-				r.Logger.Debugf("identity info found at [%s]", toString(id))
-			}
+			r.Logger.Debugf("identity info found at [%s]", logging.WalletID(id))
 			return nil, idInfo, id, nil
 		} else {
-			if r.Logger.IsEnabledFor(zapcore.DebugLevel) {
-				r.Logger.Debugf("identity info not found at [%s]", toString(id))
-			}
+			r.Logger.Debugf("identity info not found at [%s]", logging.WalletID(id))
 		}
 	}
 	return nil, nil, "", errors.Errorf("failed to get wallet info for [%s:%v]", toString(walletID), walletIdentifiers)

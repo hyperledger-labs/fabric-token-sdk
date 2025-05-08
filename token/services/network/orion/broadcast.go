@@ -187,7 +187,7 @@ func (r *BroadcastResponderView) broadcast(context view.Context, sm *SessionMana
 		return nil, "", errors.Wrap(err, "failed to unmarshal envelope")
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("commit envelope... [%s][%s]", env.TxID(), env.String())
+		logger.Debugf("commit envelope... [%s][%s]", env.TxID(), env)
 	}
 	if err := sm.Orion.TransactionManager().CommitEnvelope(oSession, env); err != nil {
 		return nil, env.TxID(), err

@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 var logger = logging.MustGetLogger("token-sdk.services.identity.deserializer")
@@ -58,9 +57,7 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(id driver.Ident
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Deserializing [%s] with type [%s]", id, si.Type)
-	}
+	logger.Debugf("Deserializing [%s] with type [%s]", id, si.Type)
 	var errs []error
 	for _, deserializer := range dess {
 		verifier, err := deserializer.DeserializeVerifier(si.Type, si.Identity)

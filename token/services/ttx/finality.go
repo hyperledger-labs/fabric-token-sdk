@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap/zapcore"
 )
 
 const finalityTimeout = 10 * time.Minute
@@ -69,9 +68,7 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, timeout time.Duration) (interface{}, error) {
 	span := trace.SpanFromContext(ctx.Context())
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Listen to finality of [%s]", txID)
-	}
+	logger.Debugf("Listen to finality of [%s]", txID)
 
 	c := ctx.Context()
 	if timeout != 0 {
@@ -164,9 +161,7 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 		case event := <-dbChannel:
 			span.AddEvent("receive_db_event")
 			span.AddLink(trace.LinkFromContext(event.Ctx))
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("Got an answer to finality of [%s]: [%s]", txID, event)
-			}
+			logger.Debugf("Got an answer to finality of [%s]: [%s]", txID, event)
 			timeout.Stop()
 			if event.ValidationCode == ttxdb.Confirmed {
 				return i, nil
@@ -175,9 +170,7 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 			return i, errors.Errorf("transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
 		case <-timeout.C:
 			timeout.Stop()
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("Got a timeout for finality of [%s], check the status", txID)
-			}
+			logger.Debugf("Got a timeout for finality of [%s], check the status", txID)
 			vd, _, err := finalityDB.GetStatus(txID)
 			if err != nil {
 				logger.Debugf("Is [%s] final? not available yet, wait [err:%s, vc:%d]", txID, err, vd)
@@ -185,14 +178,11 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 			}
 			switch vd {
 			case ttxdb.Confirmed:
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("Listen to finality of [%s]. VALID", txID)
-				}
+				logger.Debugf("Listen to finality of [%s]. VALID", txID)
+
 				return i, nil
 			case ttxdb.Deleted:
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("Listen to finality of [%s]. NOT VALID", txID)
-				}
+				logger.Debugf("Listen to finality of [%s]. NOT VALID", txID)
 				span.RecordError(errors.New("deleted transactino"))
 				return i, errors.Errorf("transaction [%s] is not valid", txID)
 			}

@@ -13,7 +13,6 @@ import (
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type Actions struct {
@@ -69,9 +68,7 @@ func (c *collectActionsView) Call(context view.Context) (interface{}, error) {
 
 func (c *collectActionsView) collectLocal(context view.Context, actionTransfer *ActionTransfer, w *token.OwnerWallet) error {
 	party := actionTransfer.From
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("collect local from [%s]", party)
-	}
+	logger.Debugf("collect local from [%s]", party)
 
 	err := c.tx.Transfer(w, actionTransfer.Type, []uint64{actionTransfer.Amount}, []view.Identity{actionTransfer.Recipient})
 	if err != nil {
@@ -93,9 +90,7 @@ func (c *collectActionsView) collectLocal(context view.Context, actionTransfer *
 
 func (c *collectActionsView) collectRemote(context view.Context, actionTransfer *ActionTransfer) error {
 	party := actionTransfer.From
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("collect remote from [%s]", party)
-	}
+	logger.Debugf("collect remote from [%s]", party)
 
 	session, err := session2.NewJSON(context, context.Initiator(), party)
 	if err != nil {

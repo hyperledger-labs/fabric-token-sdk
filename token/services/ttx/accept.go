@@ -99,9 +99,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed collecting requests of signature")
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("respond to signature requests [%s][%d]", s.tx.ID(), len(requestsToBeSigned))
-	}
+	logger.Debugf("respond to signature requests [%s][%d]", s.tx.ID(), len(requestsToBeSigned))
 
 	span.AddEvent(fmt.Sprintf("Sign %d requests", len(requestsToBeSigned)))
 	session := context.Session()
@@ -130,9 +128,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			}
 		} else {
 			span.AddEvent("Fetch request from session")
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("Receiving signature request...")
-			}
+			logger.Debugf("Receiving signature request...")
 			jsonSession := session2.JSON(context)
 			err := jsonSession.ReceiveWithTimeout(signatureRequest, time.Minute)
 			if err != nil {
@@ -157,9 +153,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed signing request")
 		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("Send back signature...")
-		}
+		logger.Debugf("Send back signature...")
 		span.AddEvent("Send message back")
 		err = session.Send(sigma)
 		if err != nil {
@@ -168,9 +162,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 	}
 
 	if len(requestsToBeSigned) > 0 {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("wait the transaction to be sent back [%s]", s.tx.ID())
-		}
+		logger.Debugf("wait the transaction to be sent back [%s]", s.tx.ID())
 		// expect again to receive a transaction
 		span.AddEvent("Wait to receive transaction")
 		tx, err := ReceiveTransaction(context)
@@ -179,13 +171,9 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 		}
 		// TODO: check that the token requests match
 		s.tx = tx
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("wait the transaction to be sent back [%s], received", s.tx.ID())
-		}
+		logger.Debugf("wait the transaction to be sent back [%s], received", s.tx.ID())
 	} else {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("no need to wait the transaction to be sent back [%s]", s.tx.ID())
-		}
+		logger.Debugf("no need to wait the transaction to be sent back [%s]", s.tx.ID())
 	}
 
 	span.AddEvent("All requests signed")

@@ -361,9 +361,7 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	logger.Debugf("Waiting for envelope...transaction received[%s]", a.tx.ID())
 
 	// Processes
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Processes envelope...")
-	}
+	logger.Debugf("Processes envelope...")
 	if tx.Payload == nil {
 		return errors.Errorf("expected transaction payload not found")
 	}

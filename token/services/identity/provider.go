@@ -140,9 +140,7 @@ func (p *Provider) IsMe(identity driver.Identity) bool {
 }
 
 func (p *Provider) RegisterRecipientIdentity(id driver.Identity) error {
-	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		p.Logger.Debugf("Registering identity [%s]", id)
-	}
+	p.Logger.Debugf("Registering identity [%s]", id)
 	p.isMeCacheLock.Lock()
 	p.isMeCache[id.String()] = false
 	p.isMeCacheLock.Unlock()
@@ -179,9 +177,7 @@ func (p *Provider) GetRevocationHandler(identity driver.Identity, auditInfo []by
 
 func (p *Provider) Bind(longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error {
 	if copyAll {
-		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			p.Logger.Debugf("Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
-		}
+		p.Logger.Debugf("Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
 		setSV := true
 		signer, err := p.GetSigner(longTerm)
 		if err != nil {
@@ -201,9 +197,7 @@ func (p *Provider) Bind(longTerm driver.Identity, ephemeral driver.Identity, cop
 		setAI := true
 		auditInfo, err := p.GetAuditInfo(longTerm)
 		if err != nil {
-			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-				p.Logger.Debugf("failed getting audit info for [%s][%s]", longTerm, err)
-			}
+			p.Logger.Debugf("failed getting audit info for [%s][%s]", longTerm, err)
 			setAI = false
 		}
 
