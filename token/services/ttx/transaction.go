@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -152,9 +151,7 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	if err := unmarshal(networkProvider, tx.Payload, raw); err != nil {
 		return nil, err
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.TxID.String())
-	}
+	logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.TxID)
 	tms := token.GetManagementService(context,
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
@@ -175,9 +172,7 @@ func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, e
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to parse options")
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("receive a new transaction...")
-	}
+	logger.Debugf("receive a new transaction...")
 
 	txBoxed, err := context.RunView(NewReceiveTransactionView(), view.WithSameContext())
 	if err != nil {
@@ -188,9 +183,7 @@ func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, e
 	if !ok {
 		return nil, errors.Errorf("received transaction of wrong type [%T]", cctx)
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("received transaction with id [%s]", cctx.ID())
-	}
+	logger.Debugf("received transaction with id [%s]", cctx.ID())
 	if !opt.NoTransactionVerification {
 		// Check that the transaction is valid
 		if err := cctx.IsValid(); err != nil {
@@ -229,9 +222,7 @@ func (t *Transaction) NetworkTxID() network.TxID {
 // Bytes returns the serialized version of the transaction.
 // If eIDs is not nil, then metadata is filtered by the passed eIDs.
 func (t *Transaction) Bytes(eIDs ...string) ([]byte, error) {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("marshalling tx, id [%s], for EIDs [%x]", t.Payload.TxID.String(), eIDs)
-	}
+	logger.Debugf("marshalling tx, id [%s], for EIDs [%x]", t.Payload.TxID, eIDs)
 	return marshal(t, eIDs...)
 }
 
@@ -330,9 +321,7 @@ func (t *Transaction) CloseSelector() error {
 }
 
 func (t *Transaction) Release() {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("releasing resources for tx [%s]", t.ID())
-	}
+	logger.Debugf("releasing resources for tx [%s]", t.ID())
 	sm, err := t.TokenService().SelectorManager()
 	if err != nil {
 		logger.Warnf("failed to get token selector [%s]", err)

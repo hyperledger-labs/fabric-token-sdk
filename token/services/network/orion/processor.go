@@ -80,22 +80,16 @@ func (r *RWSetProcessor) tokenRequest(ctx context.Context, tx orion.ProcessTrans
 	}
 	trRaw, err := r.GetTokenRequest(tms, txID)
 	if err != nil {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], failed getting token request [%s]", txID, err)
-		}
+		logger.Debugf("transaction [%s], failed getting token request [%s]", txID, err)
 		return errors.WithMessagef(err, "failed to get token request for [%s]", txID)
 	}
 	if len(trRaw) == 0 {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], no token request found, skip it", txID)
-		}
+		logger.Debugf("transaction [%s], no token request found, skip it", txID)
 		return nil
 	}
 	request, err := tms.NewFullRequestFromBytes(trRaw)
 	if err != nil {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
-		}
+		logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
 		return err
 	}
 	if request.Metadata == nil {

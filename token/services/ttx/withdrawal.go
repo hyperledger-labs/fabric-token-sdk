@@ -17,7 +17,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap/zapcore"
 )
 
 type WithdrawalRequest struct {
@@ -178,13 +177,9 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 
 	// Update the Endpoint Resolver
 	caller := context.Session().Info().Caller
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
-	}
+	logger.Debugf("update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
 	if err := view2.GetEndpointService(context).Bind(caller, request.RecipientData.Identity); err != nil {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
-		}
+		logger.Debugf("failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 	}
 
