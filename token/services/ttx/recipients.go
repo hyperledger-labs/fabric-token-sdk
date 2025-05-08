@@ -18,7 +18,6 @@ import (
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap/zapcore"
 )
 
 type RecipientData = token.RecipientData
@@ -532,18 +531,14 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		}
 
 		// Update the Endpoint Resolver
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("bind [%s] to other [%s]", remoteRecipientData.Identity, f.Other)
-		}
+		logger.Debugf("bind [%s] to other [%s]", remoteRecipientData.Identity, f.Other)
 		resolver := view2.GetEndpointService(context)
 		err = resolver.Bind(f.Other, remoteRecipientData.Identity)
 		if err != nil {
 			return nil, err
 		}
 
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("bind me [%s] to [%s]", localRecipientData.Identity, context.Me())
-		}
+		logger.Debugf("bind me [%s] to [%s]", localRecipientData.Identity, context.Me())
 		err = resolver.Bind(context.Me(), localRecipientData.Identity)
 		if err != nil {
 			return nil, err

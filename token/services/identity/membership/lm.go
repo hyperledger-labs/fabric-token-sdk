@@ -120,9 +120,7 @@ func (l *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
 	defer l.localIdentitiesMutex.RUnlock()
 
 	for _, label := range []string{string(id), id.String()} {
-		if l.logger.IsEnabledFor(zapcore.DebugLevel) {
-			l.logger.Debugf("get local identity by label [%s]", label)
-		}
+		l.logger.Debugf("get local identity by label [%s]", label)
 		r := l.getLocalIdentity(label)
 		if r == nil {
 			if l.logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -451,9 +449,7 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 
 	// if the keyManager is not anonymous
 	if !keyManager.Anonymous() {
-		if l.logger.IsEnabledFor(zapcore.DebugLevel) {
-			l.logger.Debugf("adding identity mapping for [%s]", identity)
-		}
+		l.logger.Debugf("adding identity mapping for [%s]", identity)
 		l.localIdentitiesByIdentity[identity.String()] = localIdentity
 		if l.binderService != nil {
 			if err := l.binderService.Bind(l.defaultNetworkIdentity, identity, false); err != nil {

@@ -193,9 +193,7 @@ func (o *Service) AreMe(identities ...driver.Identity) []string {
 }
 
 func (o *Service) IsMe(identity driver.Identity) bool {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("is me [%s]?", identity)
-	}
+	logger.Debugf("is me [%s]?", identity)
 	idHash := identity.UniqueID()
 
 	// check local cache
@@ -203,25 +201,19 @@ func (o *Service) IsMe(identity driver.Identity) bool {
 	_, ok := o.signers[idHash]
 	o.sync.RUnlock()
 	if ok {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("is me [%s]? yes, from cache", identity)
-		}
+		logger.Debugf("is me [%s]? yes, from cache", identity)
 		return true
 	}
 
 	// check storage
 	if o.storage != nil {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("is me [%s]? ask the storage", identity)
-		}
+		logger.Debugf("is me [%s]? ask the storage", identity)
 		exists, err := o.storage.SignerInfoExists(identity)
 		if err != nil {
 			logger.Errorf("failed checking if a signer exists [%s]", err)
 		}
 		if exists {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("is me [%s]? yes, from storage", identity)
-			}
+			logger.Debugf("is me [%s]? yes, from storage", identity)
 			return true
 		}
 	}
@@ -231,9 +223,7 @@ func (o *Service) IsMe(identity driver.Identity) bool {
 
 func (o *Service) GetSigner(identity driver.Identity) (driver.Signer, error) {
 	idHash := identity.UniqueID()
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("get signer for [%s]", idHash)
-	}
+	logger.Debugf("get signer for [%s]", idHash)
 	// check the cache
 	o.sync.RLock()
 	entry, ok := o.signers[idHash]
@@ -256,9 +246,7 @@ func (o *Service) getSigner(identity driver.Identity, idHash string) (driver.Sig
 		return entry.Signer, nil
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signer for [%s] not found, try to deserialize", idHash)
-	}
+	logger.Debugf("signer for [%s] not found, try to deserialize", idHash)
 	// ask the deserializer
 	signer, err := o.deserializeSigner(identity)
 	if err != nil {

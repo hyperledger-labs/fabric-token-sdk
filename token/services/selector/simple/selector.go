@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type QueryService interface {
@@ -115,9 +114,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			if _, err := s.locker.Lock(t.Id, s.txID, reclaim); err != nil {
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("token [%s,%v] cannot be locked [%s]", q, tokenType, err)
-				}
+				logger.Debugf("token [%s,%v] cannot be locked [%s]", q, tokenType, err)
 				continue
 			}
 
