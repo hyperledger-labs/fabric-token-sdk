@@ -71,7 +71,7 @@ func TestIssueAction_GetMetadata(t *testing.T) {
 func TestTransferAction_Serialize(t *testing.T) {
 	mockTransferAction := &mock.TransferAction{}
 	mockTransferAction.SerializeReturns([]byte{1, 2, 3}, nil)
-	transferAction := &TransferAction{a: mockTransferAction}
+	transferAction := &TransferAction{mockTransferAction}
 	serialized, err := transferAction.Serialize()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1, 2, 3}, serialized)
@@ -80,7 +80,7 @@ func TestTransferAction_Serialize(t *testing.T) {
 func TestTransferAction_NumOutputs(t *testing.T) {
 	mockTransferAction := &mock.TransferAction{}
 	mockTransferAction.NumOutputsReturns(5)
-	transferAction := &TransferAction{a: mockTransferAction}
+	transferAction := &TransferAction{mockTransferAction}
 	numOutputs := transferAction.NumOutputs()
 	assert.Equal(t, 5, numOutputs)
 }
@@ -89,7 +89,7 @@ func TestTransferAction_GetSerializedOutputs(t *testing.T) {
 	mockTransferAction := &mock.TransferAction{}
 	mockSerializedOutputs := [][]byte{{1, 2}, {3, 4}}
 	mockTransferAction.GetSerializedOutputsReturns(mockSerializedOutputs, nil)
-	transferAction := &TransferAction{a: mockTransferAction}
+	transferAction := &TransferAction{mockTransferAction}
 	serializedOutputs, err := transferAction.GetSerializedOutputs()
 	assert.NoError(t, err)
 	assert.Equal(t, mockSerializedOutputs, serializedOutputs)
@@ -98,7 +98,7 @@ func TestTransferAction_GetSerializedOutputs(t *testing.T) {
 func TestTransferAction_IsRedeemAt(t *testing.T) {
 	mockTransferAction := &mock.TransferAction{}
 	mockTransferAction.IsRedeemAtReturns(true)
-	transferAction := &TransferAction{a: mockTransferAction}
+	transferAction := &TransferAction{mockTransferAction}
 	isRedeemAt := transferAction.IsRedeemAt(0)
 	assert.True(t, isRedeemAt)
 }
@@ -107,7 +107,7 @@ func TestTransferAction_SerializeOutputAt(t *testing.T) {
 	mockTransferAction := &mock.TransferAction{}
 	mockSerializedOutput := []byte{1, 2, 3}
 	mockTransferAction.SerializeOutputAtReturns(mockSerializedOutput, nil)
-	transferAction := &TransferAction{a: mockTransferAction}
+	transferAction := &TransferAction{mockTransferAction}
 	serializedOutput, err := transferAction.SerializeOutputAt(0)
 	assert.NoError(t, err)
 	assert.Equal(t, mockSerializedOutput, serializedOutput)
@@ -117,7 +117,7 @@ func TestTransferAction_GetInputs(t *testing.T) {
 	mockTransferAction := &mock.TransferAction{}
 	mockInputs := []*token.ID{{TxId: "input1"}, {TxId: "input2"}}
 	mockTransferAction.GetInputsReturns(mockInputs)
-	transferAction := &TransferAction{a: mockTransferAction}
+	transferAction := &TransferAction{mockTransferAction}
 	inputs := transferAction.GetInputs()
 	assert.Equal(t, mockInputs, inputs)
 }
@@ -125,7 +125,7 @@ func TestTransferAction_GetInputs(t *testing.T) {
 func TestTransferAction_IsGraphHiding(t *testing.T) {
 	mockTransferAction := &mock.TransferAction{}
 	mockTransferAction.IsGraphHidingReturns(true)
-	transferAction := &TransferAction{a: mockTransferAction}
+	transferAction := &TransferAction{mockTransferAction}
 	isGraphHiding := transferAction.IsGraphHiding()
 	assert.True(t, isGraphHiding)
 }
