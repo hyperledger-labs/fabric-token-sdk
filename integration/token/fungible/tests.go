@@ -1464,3 +1464,31 @@ func TestMultiSig(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckCoOwnedBalance(network, charlie, "", "USD", 0)
 	CheckCoOwnedBalance(network, manager, "", "USD", 0)
 }
+
+func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector, networkName string) {
+	auditor := sel.Get("auditor")
+	issuer := sel.Get("issuer")
+	alice := sel.Get("alice")
+
+	RegisterAuditor(network, auditor)
+
+	// give some time to the nodes to get the public parameters - Q - may now be needed. waiting in UpdatePublicParamsAndWait.
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditor.Id())
+	CheckPublicParams(network, issuer, auditor, alice)
+
+	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+
+	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
+	CheckBalance(network, alice, "", "USD", 110)
+	CheckHolding(network, alice, "", "USD", 110, auditor)
+
+	RedeemCash(network, alice, "", "USD", 10, auditor, issuer)
+	CheckBalance(network, alice, "", "USD", 100)
+	CheckHolding(network, alice, "", "USD", 100, auditor)
+
+	TransferCash(network, alice, "", "USD", 10, issuer, auditor)
+	CheckBalance(network, alice, "", "USD", 90)
+}
