@@ -346,7 +346,7 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 	r.Actions.Transfers = append(r.Actions.Transfers, raw)
 	r.Metadata.Transfers = append(r.Metadata.Transfers, transferMetadata)
 
-	return &TransferAction{a: transfer}, nil
+	return &TransferAction{transfer}, nil
 }
 
 // Redeem appends a redeem action to the request. The action will be prepared using the provided owner wallet.
@@ -397,7 +397,7 @@ func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Typ
 	r.Actions.Transfers = append(r.Actions.Transfers, raw)
 	r.Metadata.Transfers = append(r.Metadata.Transfers, transferMetadata)
 
-	return &TransferAction{a: transfer}, nil
+	return &TransferAction{transfer}, nil
 }
 
 // Upgrade performs an upgrade operation of the passed ledger tokens.
@@ -511,7 +511,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting transfer metadata [%d]", i)
 		}
-		if err := transferMeta.Match(&TransferAction{a: transferAction}); err != nil {
+		if err := transferMeta.Match(&TransferAction{transferAction}); err != nil {
 			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 		if len(transferAction.GetOutputs()) != len(transferMeta.Outputs) {
@@ -789,7 +789,7 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting transfer metadata [%d]", i)
 		}
-		if err := transferMeta.Match(&TransferAction{a: transferAction}); err != nil {
+		if err := transferMeta.Match(&TransferAction{transferAction}); err != nil {
 			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 
@@ -929,7 +929,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions, noOutputForReci
 		if err != nil {
 			return nil, nil, nil, errors.Wrapf(err, "failed getting transfer metadata [%d]", i)
 		}
-		if err := transferMeta.Match(&TransferAction{a: transferAction}); err != nil {
+		if err := transferMeta.Match(&TransferAction{transferAction}); err != nil {
 			return nil, nil, nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 		if verifyActions {
