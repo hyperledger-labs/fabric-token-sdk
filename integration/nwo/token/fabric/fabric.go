@@ -28,7 +28,7 @@ import (
 	"github.com/onsi/gomega"
 )
 
-var logger = logging.MustGetLogger("token-sdk.integration.token.fabric")
+var logger = logging.MustGetLogger()
 
 type Entry struct {
 	TMS     *topology2.TMS

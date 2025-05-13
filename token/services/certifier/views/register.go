@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-sdk.certifier")
+var logger = logging.MustGetLogger()
 
 type RegisterView struct {
 	Network   string

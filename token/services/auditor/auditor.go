@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var logger = logging.MustGetLogger("token-sdk.auditor")
+var logger = logging.MustGetLogger()
 
 // TxStatus is the status of a transaction
 type TxStatus = auditdb.TxStatus

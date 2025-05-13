@@ -37,7 +37,7 @@ const (
 	DefaultTokenGenPath = "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen"
 )
 
-var logger = logging.MustGetLogger("token-sdk.integration.token")
+var logger = logging.MustGetLogger()
 
 type PF interface {
 	GetTopology() *Topology

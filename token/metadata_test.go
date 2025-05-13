@@ -113,7 +113,7 @@ func testFilterByCase0(t *testing.T) {
 				"application": []byte("application"),
 			},
 		},
-		Logger: logging.MustGetLogger("test"),
+		Logger: logging.MustGetLogger(),
 	}
 	// Filter by Bob
 	filteredMetadata, err := metadata.FilterBy("Bob")
@@ -249,7 +249,7 @@ func testFilterByCase1(t *testing.T) {
 				bobIssue,
 			},
 		},
-		Logger: logging.MustGetLogger("test"),
+		Logger: logging.MustGetLogger(),
 	}
 
 	// Filter by Alice

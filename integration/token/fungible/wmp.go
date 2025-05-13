@@ -26,7 +26,7 @@ import (
 	"github.com/onsi/gomega"
 )
 
-var logger = logging.MustGetLogger("token-sdk.fungible")
+var logger = logging.MustGetLogger()
 
 // WalletManagerProvider is used to simulate external wallets.
 // It can generate recipient data and signatures for given users and wallets

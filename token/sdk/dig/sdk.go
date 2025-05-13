@@ -58,7 +58,7 @@ import (
 	"go.uber.org/dig"
 )
 
-var logger = logging.MustGetLogger("token-sdk")
+var logger = logging.MustGetLogger()
 
 var selectorProviders = map[sdriver.Driver]any{
 	sdriver.Simple:    selector.NewService,
@@ -108,7 +108,7 @@ func (p *SDK) Install() error {
 			return &vault.PublicParamsStorage{Provider: vaultProvider}
 		}, dig.As(new(core2.PublicParametersStorage))),
 		p.Container().Provide(digutils.Identity[driver.ConfigService](), dig.As(new(core.ConfigProvider))),
-		p.Container().Provide(func() logging.Logger { return logging.MustGetLogger("token-sdk.core") }),
+		p.Container().Provide(func() logging.Logger { return logging.MustGetLogger() }),
 		p.Container().Provide(core2.NewTMSProvider),
 		p.Container().Provide(digutils.Identity[*core2.TMSProvider](), dig.As(new(driver2.TokenManagerServiceProvider))),
 		p.Container().Provide(func(service driver.ConfigService) *config2.Service { return config2.NewService(service) }),

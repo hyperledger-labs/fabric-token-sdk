@@ -15,7 +15,7 @@ import (
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-var logger = logging.MustGetLogger("token-sdk.services.multisig")
+var logger = logging.MustGetLogger()
 
 // EscrowAuth implements the Authorization interface for this script
 type EscrowAuth struct {

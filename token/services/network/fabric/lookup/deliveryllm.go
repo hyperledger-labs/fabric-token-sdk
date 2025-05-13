@@ -118,7 +118,7 @@ func (p *deliveryBasedLLMProvider) NewManager(network, channel string) (Listener
 	if err != nil {
 		return nil, err
 	}
-	logger := logging.MustGetLogger("token-sdk.network.fabric.llm")
+	logger := logging.MustGetLogger()
 	flm, err := events.NewListenerManager[KeyInfo](
 		logger,
 		p.config,

@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	logger = logging.MustGetLogger("token-sdk.db.common.checks")
+	logger = logging.MustGetLogger()
 )
 
 type TokenTransactionDB interface {

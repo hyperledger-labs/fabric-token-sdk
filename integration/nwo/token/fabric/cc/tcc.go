@@ -31,7 +31,7 @@ const (
 	DefaultTokenChaincodeParamsReplaceSuffix = "/token/services/network/fabric/tcc/params.go"
 )
 
-var logger = logging.MustGetLogger("token-sdk.integration.token.fabric.cc")
+var logger = logging.MustGetLogger()
 
 type fabricPlatform interface {
 	Topology() *topology.Topology

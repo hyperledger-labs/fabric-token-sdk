@@ -20,7 +20,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-sdk.selector.simple")
+var logger = logging.MustGetLogger()
 
 type LockerProvider interface {
 	New(network, channel, namespace string) (Locker, error)
