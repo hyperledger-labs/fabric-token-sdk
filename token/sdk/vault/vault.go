@@ -84,9 +84,9 @@ type CertificationStorage struct {
 }
 
 func (t *CertificationStorage) Exists(id *token.ID) bool {
-	return t.StoreService.ExistsCertification(id)
+	return t.ExistsCertification(id)
 }
 
 func (t *CertificationStorage) Store(certifications map[*token.ID][]byte) error {
-	return t.StoreService.StoreCertifications(certifications)
+	return t.StoreCertifications(certifications)
 }

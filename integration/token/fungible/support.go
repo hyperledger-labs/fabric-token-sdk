@@ -1408,7 +1408,7 @@ func BindIssuerNetworkAndSigningIdentities(network *integration.Infrastructure, 
 					Alias:           issuerPublicKey,              // issuer's public key for the token issuance
 				}))
 
-				Expect(err).NotTo(HaveOccurred())
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			}
 		}
 	}

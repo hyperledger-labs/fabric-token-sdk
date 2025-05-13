@@ -61,7 +61,7 @@ type StoreService struct {
 }
 
 func (d *StoreService) NewTransaction() (*Transaction, error) {
-	tx, err := d.TokenStore.NewTokenDBTransaction()
+	tx, err := d.NewTokenDBTransaction()
 	if err != nil {
 		return nil, err
 	}
