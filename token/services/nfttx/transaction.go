@@ -18,7 +18,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-sdk.nfttx")
+var logger = logging.MustGetLogger()
 
 type TxOption ttx.TxOption
 

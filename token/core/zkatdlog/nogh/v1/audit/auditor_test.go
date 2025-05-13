@@ -53,7 +53,7 @@ var _ = Describe("Auditor", func() {
 		des := deserializer.NewTypedVerifierDeserializerMultiplex()
 		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 		auditor = audit.NewAuditor(
-			logging.MustGetLogger("auditor"),
+			logging.MustGetLogger(),
 			&noop.Tracer{},
 			des,
 			pp.PedersenGenerators,

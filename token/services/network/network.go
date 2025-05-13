@@ -31,7 +31,7 @@ const (
 	Unknown = driver.Unknown // Transaction is unknown
 )
 
-var logger = logging.MustGetLogger("token-sdk.network")
+var logger = logging.MustGetLogger()
 
 // FinalityListener is the interface that must be implemented to receive transaction status change notifications
 type FinalityListener interface {

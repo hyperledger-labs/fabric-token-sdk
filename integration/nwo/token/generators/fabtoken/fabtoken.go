@@ -71,7 +71,7 @@ PeerOrgs:{{ range .PeerOrgs }}
 `
 )
 
-var logger = logging.MustGetLogger("token-sdk.integration.token.generators.fabtoken")
+var logger = logging.MustGetLogger()
 
 type Peer struct {
 	Name         string

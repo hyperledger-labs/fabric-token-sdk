@@ -46,7 +46,7 @@ func IsAries(tms *topology.TMS) bool {
 	return false
 }
 
-var logger = logging.MustGetLogger("token-sdk.integration.token.generators.dlog")
+var logger = logging.MustGetLogger()
 
 type CryptoMaterialGenerator struct {
 	FabTokenGenerator *fabtoken.CryptoMaterialGenerator

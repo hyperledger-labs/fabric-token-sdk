@@ -39,7 +39,7 @@ const (
 	AreTokensSpent            = "areTokensSpent"
 )
 
-var logger = logging.MustGetLogger("token-sdk.network.fabric")
+var logger = logging.MustGetLogger()
 
 type lm struct {
 	lm *fabric.LocalMembership

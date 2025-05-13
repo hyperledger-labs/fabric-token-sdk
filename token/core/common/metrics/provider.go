@@ -15,7 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var logger = logging.MustGetLogger("token-sdk.metrics")
+var logger = logging.MustGetLogger()
 
 const (
 	NetworkLabel   MetricLabel = "network"

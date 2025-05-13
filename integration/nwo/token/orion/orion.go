@@ -38,7 +38,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var logger = logging.MustGetLogger("token-sdk.integration.token.orion")
+var logger = logging.MustGetLogger()
 
 type Entry struct {
 	TMS     *topology2.TMS

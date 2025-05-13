@@ -89,7 +89,7 @@ var _ = Describe("validator", func() {
 		des := deserializer.NewTypedVerifierDeserializerMultiplex()
 		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 		des.AddTypedVerifierDeserializer(ix509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&Deserializer{}, &Deserializer{}))
-		auditor = audit.NewAuditor(logging.MustGetLogger("auditor"), &noop.Tracer{}, des, pp.PedersenGenerators, asigner, c)
+		auditor = audit.NewAuditor(logging.MustGetLogger(), &noop.Tracer{}, des, pp.PedersenGenerators, asigner, c)
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.SetAuditors([]driver.Identity{araw})
@@ -97,7 +97,7 @@ var _ = Describe("validator", func() {
 		// initialize enginw with pp
 		deserializer, err := zkatdlog.NewDeserializer(pp)
 		Expect(err).NotTo(HaveOccurred())
-		engine = enginedlog.New(logging.MustGetLogger("validator"), pp, deserializer)
+		engine = enginedlog.New(logging.MustGetLogger(), pp, deserializer)
 
 		// non-anonymous issue
 		_, ir, _ = prepareNonAnonymousIssueRequest(pp, auditor)

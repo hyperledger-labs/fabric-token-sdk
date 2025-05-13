@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var logger = logging.MustGetLogger("token-sdk.network.fabric")
+var logger = logging.MustGetLogger()
 
 type ListenerManagerProvider interface {
 	NewManager(network, channel string) (ListenerManager, error)
