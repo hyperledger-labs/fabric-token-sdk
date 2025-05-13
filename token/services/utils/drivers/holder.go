@@ -22,7 +22,7 @@ type Holder[K comparable, D any] struct {
 
 func NewHolder[K comparable, D any]() *Holder[K, D] {
 	return &Holder[K, D]{
-		Logger:  logging.MustGetLogger("token-sdk.manager.drivers"),
+		Logger:  logging.MustGetLogger(),
 		Drivers: make(map[K]D),
 	}
 }

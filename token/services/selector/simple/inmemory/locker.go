@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	logger             = logging.MustGetLogger("token-sdk.selector.inmemory")
+	logger             = logging.MustGetLogger()
 	AlreadyLockedError = errors.New("already locked")
 )
 

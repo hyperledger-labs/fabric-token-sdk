@@ -20,7 +20,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-sdk.services.identity.idemix")
+var logger = logging.MustGetLogger()
 
 type KeyManagerProvider struct {
 	issuerPublicKey []byte

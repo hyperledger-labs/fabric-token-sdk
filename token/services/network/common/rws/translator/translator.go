@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	logger   = logging.MustGetLogger("token-sdk.services.network.common.rws.translator")
+	logger   = logging.MustGetLogger()
 	NotEmpty = []byte{1}
 )
 

@@ -8,4 +8,4 @@ package ttx
 
 import "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 
-var logger = logging.MustGetLogger("token-sdk.ttx")
+var logger = logging.MustGetLogger()

@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-var logger = logging.MustGetLogger("token-sdk.sql")
+var logger = logging.MustGetLogger()
 
 var ncProvider = db.NewTableNameCreator("fsc")
 

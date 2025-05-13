@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-sdk.tcc")
+var logger = logging.MustGetLogger()
 
 const (
 	InvokeFunction            = "invoke"

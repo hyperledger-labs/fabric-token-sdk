@@ -30,7 +30,7 @@ type StoreServiceManager db.StoreServiceManager[*StoreService]
 
 var (
 	managerType = reflect.TypeOf((*StoreServiceManager)(nil))
-	logger      = logging.MustGetLogger("token-sdk.ttxdb")
+	logger      = logging.MustGetLogger()
 )
 
 func NewStoreServiceManager(cp driver3.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
