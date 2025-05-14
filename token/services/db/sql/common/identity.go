@@ -16,6 +16,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query"
+	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -42,14 +45,14 @@ type IdentityStore struct {
 	readDB  *sql.DB
 	writeDB *sql.DB
 	table   identityTables
-	ci      common.Interpreter
+	ci      common3.CondInterpreter
 
 	signerCacheLock sync.RWMutex
 	signerInfoCache cache[bool]
 	auditInfoCache  cache[[]byte]
 }
 
-func newIdentityStore(readDB, writeDB *sql.DB, tables identityTables, singerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) *IdentityStore {
+func newIdentityStore(readDB, writeDB *sql.DB, tables identityTables, singerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common3.CondInterpreter) *IdentityStore {
 	return &IdentityStore{
 		readDB:          readDB,
 		writeDB:         writeDB,
@@ -60,7 +63,7 @@ func newIdentityStore(readDB, writeDB *sql.DB, tables identityTables, singerInfo
 	}
 }
 
-func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables tableNames, ci common.Interpreter) (*IdentityStore, error) {
+func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables tableNames, ci common3.CondInterpreter) (*IdentityStore, error) {
 	return NewIdentityStore(
 		readDB,
 		writeDB,
@@ -71,7 +74,7 @@ func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables tableNames, ci commo
 	)
 }
 
-func NewIdentityStore(readDB, writeDB *sql.DB, tables tableNames, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common.Interpreter) (*IdentityStore, error) {
+func NewIdentityStore(readDB, writeDB *sql.DB, tables tableNames, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common3.CondInterpreter) (*IdentityStore, error) {
 	return newIdentityStore(
 		readDB,
 		writeDB,
@@ -262,14 +265,15 @@ func (db *IdentityStore) GetExistingSignerInfo(ids ...tdriver.Identity) ([]strin
 	}
 
 	idHashes = notFound
-	condition := db.ci.InStrings("identity_hash", idHashes)
-	ctr := 1
-	query, err := NewSelect("identity_hash").From(db.table.Signers).Where(condition.ToString(&ctr)).Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed compiling query")
-	}
-	logger.Debug(query, condition.Params())
-	rows, err := db.readDB.Query(query, condition.Params()...)
+
+	query, args := q.Select().
+		FieldsByName("identity_hash").
+		From(q.Table(db.table.Signers)).
+		Where(cond.In("identity_hash", idHashes...)).
+		Format(db.ci, nil)
+
+	logger.Debug(query, args)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}

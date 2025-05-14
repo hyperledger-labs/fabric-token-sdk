@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -112,7 +112,7 @@ func (a *DefaultCheckers) CheckTransactions(context context.Context) ([]string, 
 		return nil, errors.WithMessagef(err, "failed to get ledger [%s]", tms.ID())
 	}
 
-	it, err := a.db.Transactions(driver.QueryTransactionsParams{}, common.NewNoPagination())
+	it, err := a.db.Transactions(driver.QueryTransactionsParams{}, pagination.None())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed querying transactions [%s]", tms.ID())
 	}

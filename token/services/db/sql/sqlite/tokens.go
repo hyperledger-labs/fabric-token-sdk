@@ -23,7 +23,7 @@ func NewTokenStore(opts sqlite.Opts) (*TokenStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewTokenStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()))
+	return common.NewTokenStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter())
 }
 
 type TokenNotifier struct {

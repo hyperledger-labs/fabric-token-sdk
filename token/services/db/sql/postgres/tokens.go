@@ -25,7 +25,7 @@ func NewTokenStore(opts postgres.Opts) (*TokenStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewTokenStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()))
+	return common.NewTokenStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewConditionInterpreter())
 }
 
 func NewTokenNotifier(opts postgres.Opts) (*TokenNotifier, error) {

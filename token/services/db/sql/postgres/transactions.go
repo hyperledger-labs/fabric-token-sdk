@@ -8,6 +8,7 @@ package postgres
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
@@ -25,7 +26,7 @@ func NewAuditTransactionStore(opts postgres.Opts) (*AuditTransactionStore, error
 	if err != nil {
 		return nil, err
 	}
-	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()), postgres.NewPaginatedInterpreter())
+	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewConditionInterpreter(), pagination.NewDefaultInterpreter())
 }
 
 func NewTransactionStore(opts postgres.Opts) (*TransactionStore, error) {
@@ -37,5 +38,5 @@ func NewTransactionStore(opts postgres.Opts) (*TransactionStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(postgres.NewInterpreter()), postgres.NewPaginatedInterpreter())
+	return common.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewConditionInterpreter(), pagination.NewDefaultInterpreter())
 }
