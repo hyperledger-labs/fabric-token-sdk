@@ -60,10 +60,9 @@ func HasTokenDetails(params driver.QueryTokenDetailsParams, tokenTable common.Ta
 	if !params.IncludeDeleted {
 		conds = append(conds, cond.Eq("is_deleted", false))
 	}
-	switch params.Spendable {
-	case driver.NonSpendableOnly:
+	if params.Spendable == driver.NonSpendableOnly {
 		conds = append(conds, cond.Eq("spendable", false))
-	case driver.SpendableOnly:
+	} else if params.Spendable == driver.SpendableOnly {
 		conds = append(conds, cond.Eq("spendable", true))
 	}
 
@@ -83,10 +82,9 @@ func HasMovementsParams(params driver.QueryMovementsParams) cond.Condition {
 		conds = append(conds, cond.Neq("status", driver.Deleted))
 	}
 
-	switch params.MovementDirection {
-	case driver.Sent:
+	if params.MovementDirection == driver.Sent {
 		conds = append(conds, cond.Lt("amount", 0))
-	case driver.Received:
+	} else if params.MovementDirection == driver.Received {
 		conds = append(conds, cond.Gt("amount", 0))
 	}
 	return cond.And(conds...)
