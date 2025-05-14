@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sqlite
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
@@ -25,7 +26,7 @@ func NewAuditTransactionStore(opts sqlite.Opts) (*AuditTransactionStore, error) 
 	if err != nil {
 		return nil, err
 	}
-	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()), sqlite.NewPaginatedInterpreter())
+	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter(), pagination.NewDefaultInterpreter())
 }
 
 func NewTransactionStore(opts sqlite.Opts) (*OwnerTransactionStore, error) {
@@ -37,5 +38,5 @@ func NewTransactionStore(opts sqlite.Opts) (*OwnerTransactionStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, common.NewTokenInterpreter(sqlite.NewInterpreter()), sqlite.NewPaginatedInterpreter())
+	return common.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter(), pagination.NewDefaultInterpreter())
 }

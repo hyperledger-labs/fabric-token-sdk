@@ -19,6 +19,10 @@ import (
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query"
+	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/cond"
+	_select "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/select"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -38,11 +42,11 @@ type TransactionStore struct {
 	readDB  *sql.DB
 	writeDB *sql.DB
 	table   transactionTables
-	ci      TokenInterpreter
-	pi      common.PaginationInterpreter
+	ci      common3.CondInterpreter
+	pi      common3.PagInterpreter
 }
 
-func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci TokenInterpreter, pi common.PaginationInterpreter) *TransactionStore {
+func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci common3.CondInterpreter, pi common3.PagInterpreter) *TransactionStore {
 	return &TransactionStore{
 		readDB:  readDB,
 		writeDB: writeDB,
@@ -52,11 +56,11 @@ func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci T
 	}
 }
 
-func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter, pi common.PaginationInterpreter) (*TransactionStore, error) {
+func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
 	return NewOwnerTransactionStore(readDB, writeDB, tables, ci, pi)
 }
 
-func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci TokenInterpreter, pi common.PaginationInterpreter) (*TransactionStore, error) {
+func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
 	return newTransactionStore(readDB, writeDB, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
@@ -89,15 +93,28 @@ func (db *TransactionStore) GetTokenRequest(txID string) ([]byte, error) {
 	return tokenrequest, nil
 }
 
-func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
-	where, args := common.Where(db.ci.HasMovementsParams(params))
-	conditions := where + movementConditionsSql(params)
-	query, err := NewSelect(
-		fmt.Sprintf("%s.tx_id, enrollment_id, token_type, amount, %s.status", db.table.Movements, db.table.Requests),
-	).From(db.table.Movements, joinOnTxID(db.table.Movements, db.table.Requests)).Where(conditions).Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compile query")
+func orderBy(f common3.FieldName, direction driver.SearchDirection) _select.OrderBy {
+	if direction == driver.FromBeginning {
+		return q.Asc(f)
 	}
+	return q.Desc(f)
+}
+
+func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
+	movementsTable, requestsTable := q.Table(db.table.Movements), q.Table(db.table.Requests)
+	query, args := q.Select().
+		Fields(
+			movementsTable.Field("tx_id"), common3.FieldName("enrollment_id"), common3.FieldName("token_type"),
+			common3.FieldName("amount"), requestsTable.Field("status"),
+		).
+		From(movementsTable.Join(requestsTable,
+			cond.Cmp(movementsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
+		).
+		Where(HasMovementsParams(params)).
+		OrderBy(orderBy("stored_at", params.SearchDirection)).
+		Limit(params.NumRecords).
+		Format(db.ci, db.pi)
+
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
@@ -133,22 +150,23 @@ func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (
 }
 
 func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsParams, pagination driver3.Pagination) (*driver3.PageIterator[*driver.TransactionRecord], error) {
-	conditions, args := common.Where(db.ci.HasTransactionParams(params, db.table.Transactions))
-	orderBy := movementConditionsSql(driver.QueryMovementsParams{
-		SearchDirection: driver.FromBeginning,
-	})
-	query, err := NewSelect(
-		fmt.Sprintf("%s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, %s.application_metadata, %s.public_metadata, stored_at", db.table.Transactions, db.table.Requests, db.table.Requests, db.table.Requests),
-	).From(db.table.Transactions, joinOnTxID(db.table.Transactions, db.table.Requests)).Where(conditions).OrderBy(orderBy).Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compile query")
-	}
-	limit, err := db.pi.Interpret(pagination)
-	if err != nil {
-		return nil, err
-	}
-	query = query + limit
-	logger.Debug(query, args, limit)
+	transactionsTable, requestsTable := q.Table(db.table.Transactions), q.Table(db.table.Requests)
+	query, args := q.Select().
+		Fields(
+			transactionsTable.Field("tx_id"), common3.FieldName("action_type"), common3.FieldName("sender_eid"),
+			common3.FieldName("recipient_eid"), common3.FieldName("token_type"), common3.FieldName("amount"),
+			requestsTable.Field("status"), requestsTable.Field("application_metadata"),
+			requestsTable.Field("public_metadata"), common3.FieldName("stored_at"),
+		).
+		From(transactionsTable.Join(requestsTable,
+			cond.Cmp(transactionsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
+		).
+		Where(HasTransactionParams(params, transactionsTable)).
+		Paginated(pagination).
+		OrderBy(q.Asc(common3.FieldName("stored_at"))).
+		Format(db.ci, db.pi)
+
+	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
@@ -180,14 +198,18 @@ func (db *TransactionStore) GetStatus(txID string) (driver.TxStatus, string, err
 }
 
 func (db *TransactionStore) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
-	conditions, args := common.Where(db.ci.HasValidationParams(params))
-	query, err := NewSelect(
-		fmt.Sprintf("%s.tx_id, %s.request, metadata, %s.status, %s.stored_at",
-			db.table.Validations, db.table.Requests, db.table.Requests, db.table.Validations),
-	).From(db.table.Validations, joinOnTxID(db.table.Validations, db.table.Requests)).Where(conditions).Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compile query")
-	}
+	validationsTable, requestsTable := q.Table(db.table.Validations), q.Table(db.table.Requests)
+	query, args := q.Select().
+		Fields(
+			validationsTable.Field("tx_id"), requestsTable.Field("request"), common3.FieldName("metadata"),
+			requestsTable.Field("status"), validationsTable.Field("stored_at"),
+		).
+		From(validationsTable.Join(requestsTable,
+			cond.Cmp(validationsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
+		).
+		Where(HasValidationParams(params)).
+		Format(db.ci, db.pi)
+
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
@@ -199,12 +221,12 @@ func (db *TransactionStore) QueryValidations(params driver.QueryValidationRecord
 
 // QueryTokenRequests returns an iterator over the token requests matching the passed params
 func (db *TransactionStore) QueryTokenRequests(params driver.QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
-	where, args := common.Where(db.ci.InInts("status", params.Statuses))
+	query, args := q.Select().
+		FieldsByName("tx_id", "request", "status").
+		From(q.Table(db.table.Requests)).
+		Where(cond.In("status", params.Statuses...)).
+		Format(db.ci, db.pi)
 
-	query, err := NewSelect("tx_id, request, status").From(db.table.Requests).Where(where).Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "error compiling query")
-	}
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
 	if err != nil {

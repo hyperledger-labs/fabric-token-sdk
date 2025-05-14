@@ -22,5 +22,5 @@ func NewIdentityStore(opts sqlite.Opts) (*IdentityStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewCachedIdentityStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewInterpreter())
+	return common.NewCachedIdentityStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter())
 }

@@ -22,5 +22,5 @@ func NewIdentityStore(opts postgres.Opts) (*IdentityStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.NewCachedIdentityStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewInterpreter())
+	return common.NewCachedIdentityStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewConditionInterpreter())
 }
