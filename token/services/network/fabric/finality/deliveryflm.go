@@ -105,7 +105,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 		return nil, err
 	}
 	mapper := p.newMapper(network, channel)
-	logger := logging.MustGetLogger("token-sdk.network.fabric.finality")
+	logger := logging.MustGetLogger()
 	flm, err := events.NewListenerManager[TxInfo](
 		logger,
 		p.config,

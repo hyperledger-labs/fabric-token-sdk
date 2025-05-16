@@ -8,4 +8,4 @@ package views
 
 import "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 
-var logger = logging.MustGetLogger("token-sdk.fungible.views")
+var logger = logging.MustGetLogger()

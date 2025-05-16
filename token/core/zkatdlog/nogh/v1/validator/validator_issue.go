@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("zkat.validator")
+var logger = logging.MustGetLogger()
 
 func IssueValidate(ctx *Context) error {
 	action := ctx.IssueAction

@@ -21,7 +21,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = logging.MustGetLogger("token-sdk.tokens")
+var logger = logging.MustGetLogger()
 
 type MetaData interface {
 	SpentTokenID() []*token2.ID

@@ -27,7 +27,7 @@ import (
 const defaultCurrency = "CHF"
 
 var (
-	logger                    = logging.MustGetLogger("token-sdk.selector.tests")
+	logger                    = logging.MustGetLogger()
 	defaultWalletOwner        = []byte{1, 2, 3}
 	defaultTokenFilter        = &TokenFilter{Wallet: defaultWalletOwner}
 	txId               uint32 = 0

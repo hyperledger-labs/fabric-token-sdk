@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-sdk.services.identity.deserializer")
+var logger = logging.MustGetLogger()
 
 type TypedVerifierDeserializer interface {
 	DeserializeVerifier(typ identity.Type, raw []byte) (driver.Verifier, error)

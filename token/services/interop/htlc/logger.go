@@ -8,4 +8,4 @@ package htlc
 
 import "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 
-var logger = logging.MustGetLogger("token-sdk.htlc")
+var logger = logging.MustGetLogger()
