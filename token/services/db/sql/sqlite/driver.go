@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
 type configProvider interface {
@@ -41,16 +42,17 @@ func NewNamedDriver(config driver.Config) driver.NamedDriver {
 }
 
 func NewDriver(config driver.Config) *Driver {
+	dbProvider := sqlite.NewDbProvider()
 	return &Driver{
 		cp: sqlite.NewConfigProvider(common.NewConfig(config)),
 
-		TokenLock:     newProviderWithKeyMapper(NewTokenLockStore),
-		Wallet:        newProviderWithKeyMapper(NewWalletStore),
-		Identity:      newProviderWithKeyMapper(NewIdentityStore),
-		Token:         newProviderWithKeyMapper(NewTokenStore),
-		TokenNotifier: newProviderWithKeyMapper(NewTokenNotifier),
-		AuditTx:       newProviderWithKeyMapper(NewAuditTransactionStore),
-		OwnerTx:       newProviderWithKeyMapper(NewTransactionStore),
+		TokenLock:     newProviderWithKeyMapper(dbProvider, NewTokenLockStore),
+		Wallet:        newProviderWithKeyMapper(dbProvider, NewWalletStore),
+		Identity:      newProviderWithKeyMapper(dbProvider, NewIdentityStore),
+		Token:         newProviderWithKeyMapper(dbProvider, NewTokenStore),
+		TokenNotifier: newProviderWithKeyMapper(dbProvider, NewTokenNotifier),
+		AuditTx:       newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore),
+		OwnerTx:       newProviderWithKeyMapper(dbProvider, NewTransactionStore),
 	}
 }
 
@@ -96,7 +98,7 @@ func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string
 }
 
 func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...string) (driver.AuditTransactionStore, error) {
-	opts, err := d.cp.GetOpts(name, params...)
+	opts, err := d.cp.GetOpts(name, append(params, "aud")...)
 	if err != nil {
 		return nil, err
 	}
@@ -111,9 +113,9 @@ func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...str
 	return d.OwnerTx.Get(*opts)
 }
 
-func newProviderWithKeyMapper[V common.DBObject](constructor common.PersistenceConstructor[sqlite.Opts, V]) lazy.Provider[sqlite.Config, V] {
+func newProviderWithKeyMapper[V common.DBObject](dbProvider sqlite.DbProvider, constructor common2.PersistenceConstructor[V]) lazy.Provider[sqlite.Config, V] {
 	return lazy.NewProviderWithKeyMapper(key, func(o sqlite.Config) (V, error) {
-		p, err := constructor(sqlite.Opts{
+		opts := sqlite.Opts{
 			DataSource:      o.DataSource,
 			SkipPragmas:     o.SkipPragmas,
 			MaxOpenConns:    o.MaxOpenConns,
@@ -121,7 +123,16 @@ func newProviderWithKeyMapper[V common.DBObject](constructor common.PersistenceC
 			MaxIdleTime:     *o.MaxIdleTime,
 			TablePrefix:     o.TablePrefix,
 			TableNameParams: o.TableNameParams,
-		})
+		}
+		dbs, err := dbProvider.Get(opts)
+		if err != nil {
+			return utils.Zero[V](), err
+		}
+		tableNames, err := common2.GetTableNames(o.TablePrefix, o.TableNameParams...)
+		if err != nil {
+			return utils.Zero[V](), err
+		}
+		p, err := constructor(dbs, tableNames)
 		if err != nil {
 			return utils.Zero[V](), err
 		}

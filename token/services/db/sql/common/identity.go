@@ -63,7 +63,7 @@ func newIdentityStore(readDB, writeDB *sql.DB, tables identityTables, singerInfo
 	}
 }
 
-func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables tableNames, ci common3.CondInterpreter) (*IdentityStore, error) {
+func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*IdentityStore, error) {
 	return NewIdentityStore(
 		readDB,
 		writeDB,
@@ -74,7 +74,7 @@ func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables tableNames, ci commo
 	)
 }
 
-func NewIdentityStore(readDB, writeDB *sql.DB, tables tableNames, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common3.CondInterpreter) (*IdentityStore, error) {
+func NewIdentityStore(readDB, writeDB *sql.DB, tables TableNames, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common3.CondInterpreter) (*IdentityStore, error) {
 	return newIdentityStore(
 		readDB,
 		writeDB,

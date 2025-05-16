@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
@@ -17,26 +18,10 @@ type (
 	TransactionStore      = common.TransactionStore
 )
 
-func NewAuditTransactionStore(opts postgres.Opts) (*AuditTransactionStore, error) {
-	dbs, err := postgres.DbProvider.OpenDB(opts)
-	if err != nil {
-		return nil, err
-	}
-	tableNames, err := common.GetTableNames(opts.TablePrefix+"_aud", opts.TableNameParams...)
-	if err != nil {
-		return nil, err
-	}
+func NewAuditTransactionStore(dbs *common2.RWDB, tableNames common.TableNames) (*AuditTransactionStore, error) {
 	return common.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewConditionInterpreter(), pagination.NewDefaultInterpreter())
 }
 
-func NewTransactionStore(opts postgres.Opts) (*TransactionStore, error) {
-	dbs, err := postgres.DbProvider.OpenDB(opts)
-	if err != nil {
-		return nil, err
-	}
-	tableNames, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
-	if err != nil {
-		return nil, err
-	}
+func NewTransactionStore(dbs *common2.RWDB, tableNames common.TableNames) (*TransactionStore, error) {
 	return common.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewConditionInterpreter(), pagination.NewDefaultInterpreter())
 }

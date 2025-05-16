@@ -11,7 +11,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250515124101-a0f098af3c23
+	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250519110815-2cfdb3c8d9d8
 	github.com/hyperledger-labs/orion-sdk-go v0.2.10
 	github.com/hyperledger-labs/orion-server v0.2.10
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
@@ -240,6 +240,7 @@ require (
 	github.com/sykesm/zap-logfmt v0.0.4 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
+	github.com/uptrace/opentelemetry-go-extra/otelsql v0.3.2 // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
