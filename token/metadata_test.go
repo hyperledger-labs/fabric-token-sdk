@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
@@ -364,4 +365,55 @@ func assertEqualTransferMetadata(t *testing.T, original, filtered *driver.Transf
 	}
 	assert.Equal(t, original.Outputs, filtered.Outputs)
 	assert.Equal(t, original.ExtraSigners, filtered.ExtraSigners)
+}
+
+func TestMetadata_TestMatchTransferAction(t *testing.T) {
+
+	transferActionWithIssuer := &mock.TransferAction{}
+	mockIssuer := identity.Identity{0x1, 0x2, 0x3}
+	transferActionWithIssuer.GetIssuerReturns(mockIssuer)
+
+	tests := []struct {
+		name          string
+		action        *token.TransferAction
+		meta          *token.TransferMetadata
+		wantErr       bool
+		expectedError string
+	}{
+		{
+			name:   "action and meta with issuer",
+			action: &token.TransferAction{transferActionWithIssuer},
+			meta: &token.TransferMetadata{
+				&driver.TransferMetadata{
+					Issuer: mockIssuer,
+				},
+			},
+
+			wantErr: false,
+		},
+		{
+			name:   "error: meta with no issuer",
+			action: &token.TransferAction{transferActionWithIssuer},
+			meta: &token.TransferMetadata{
+				&driver.TransferMetadata{
+					Issuer: nil,
+				},
+			},
+
+			wantErr:       true,
+			expectedError: "expected issuer [<empty>] but got [\x01\x02\x03]",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.meta.Match(tt.action)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
