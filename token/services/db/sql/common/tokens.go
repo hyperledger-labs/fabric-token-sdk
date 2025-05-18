@@ -1238,10 +1238,13 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 func (t *TokenTransaction) SetSpendable(ctx context.Context, tokenID token.ID, spendable bool) error {
 	span := trace.SpanFromContext(ctx)
-	query := fmt.Sprintf("UPDATE %s SET spendable = $1 WHERE tx_id = $2 AND idx = $3;", t.table.Tokens)
-	logger.Infof(query, spendable, tokenID.TxId, tokenID.Index)
+	query, args := q.Update(t.table.Tokens).
+		Set("spendable", spendable).
+		Where(cond.And(cond.Eq("tx_id", tokenID.TxId), cond.Eq("idx", tokenID.Index))).
+		Format(t.ci)
+	logger.Infof(query, args...)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query, spendable, tokenID.TxId, tokenID.Index); err != nil {
+	if _, err := t.tx.Exec(query, args...); err != nil {
 		span.RecordError(err)
 		return errors.Wrapf(err, "error setting spendable flag to [%v] for [%s]", spendable, tokenID.TxId)
 	}
