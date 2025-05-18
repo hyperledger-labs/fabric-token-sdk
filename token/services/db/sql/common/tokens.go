@@ -1257,17 +1257,19 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Conte
 	span := trace.SpanFromContext(ctx)
 
 	// first set all spendable flags to false
-	query := fmt.Sprintf("UPDATE %s SET spendable = $1;", t.table.Tokens)
+	query, args := q.Update(t.table.Tokens).
+		Set("spendable", false).
+		Format(t.ci)
 	logger.Infof(query, false)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query, false); err != nil {
+	if _, err := t.tx.Exec(query, args...); err != nil {
 		span.RecordError(err)
 		return errors.Wrapf(err, "error setting spendable flag to false for all tokens")
 	}
 	span.AddEvent("end_query")
 
 	// then set the spendable flags to true only for the supported token types
-	query, args := q.Update(t.table.Tokens).
+	query, args = q.Update(t.table.Tokens).
 		Set("spendable", true).
 		Where(cond.In("ledger_type", formats...)).
 		Format(t.ci)
