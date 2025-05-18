@@ -26,6 +26,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/party"
 )
 
+const (
+	issuerId  = "issuer.id1"
+	endorser1 = "endorser-1"
+	endorser2 = "endorser-2"
+	endorser3 = "endorser-3"
+)
+
 func Topology(opts common.Opts) []api.Topology {
 	var backendNetwork api.Topology
 	backendChannel := ""
@@ -59,7 +66,7 @@ func Topology(opts common.Opts) []api.Topology {
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
 		token.WithDefaultIssuerIdentity(opts.HSM),
-		token.WithIssuerIdentity("issuer.id1", opts.HSM),
+		token.WithIssuerIdentity(issuerId, opts.HSM),
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
@@ -151,9 +158,9 @@ func Topology(opts common.Opts) []api.Topology {
 			fabric.WithOrganization("Org1"),
 			fabric2.WithEndorserRole(),
 		)
-		fscTopology.AddNodeFromTemplate("endorser-1", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-1")...)
-		fscTopology.AddNodeFromTemplate("endorser-2", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-2")...)
-		fscTopology.AddNodeFromTemplate("endorser-3", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-3")...)
+		fscTopology.AddNodeFromTemplate(endorser1, endorserTemplate).AddOptions(opts.ReplicationOpts.For(endorser1)...)
+		fscTopology.AddNodeFromTemplate(endorser2, endorserTemplate).AddOptions(opts.ReplicationOpts.For(endorser2)...)
+		fscTopology.AddNodeFromTemplate(endorser3, endorserTemplate).AddOptions(opts.ReplicationOpts.For(endorser3)...)
 	}
 
 	tokenTopology := token.NewTopology()
@@ -166,7 +173,7 @@ func Topology(opts common.Opts) []api.Topology {
 		fabric2.WithFabricCA(tms)
 	}
 	if opts.FSCBasedEndorsement {
-		fabric2.WithFSCEndorsers(tms, "endorser-1", "endorser-2", "endorser-3")
+		fabric2.WithFSCEndorsers(tms, endorser1, endorser2, endorser3)
 	}
 	fabric2.SetOrgs(tms, "Org1")
 	var nodeList []*node.Node
@@ -191,7 +198,7 @@ func Topology(opts common.Opts) []api.Topology {
 		tms.AddAuditor(auditor)
 	}
 	tms.AddIssuer(issuer)
-	tms.AddIssuerByID("issuer.id1")
+	tms.AddIssuerByID(issuerId)
 
 	if len(opts.SDKs) > 0 {
 		// business SDKs
@@ -216,7 +223,7 @@ func Topology(opts common.Opts) []api.Topology {
 
 		// endorsers
 		if opts.FSCBasedEndorsement {
-			for _, node := range fscTopology.ListNodes("endorser-1", "endorser-2", "endorser-3") {
+			for _, node := range fscTopology.ListNodes(endorser1, endorser2, endorser3) {
 				node.AddSDKWithBase(opts.SDKs[0], &endorser.SDK{})
 			}
 		}
@@ -248,7 +255,7 @@ func Topology(opts common.Opts) []api.Topology {
 			tms.AddAuditor(auditor)
 		}
 		tms.AddIssuer(issuer)
-		tms.AddIssuerByID("issuer.id1")
+		tms.AddIssuerByID(issuerId)
 	}
 
 	if opts.Monitoring {

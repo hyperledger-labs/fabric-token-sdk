@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	USD = token2.Type("USD")
+	USD       = token2.Type("USD")
+	avenue5th = "5th Avenue"
 )
 
 func TestAll(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
@@ -40,11 +41,11 @@ func TestAll(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
 	checkBalance(network, buyer, "", USD, 10)
 	checkBalance(network, seller, "", USD, 0)
 	houseID := issueHouse(network, 4, houseIssuer, seller)
-	queryHouse(network, seller, houseID, "5th Avenue")
-	queryHouse(network, buyer, houseID, "5th Avenue", "failed loading house with id")
+	queryHouse(network, seller, houseID, avenue5th)
+	queryHouse(network, buyer, houseID, avenue5th, "failed loading house with id")
 	sellHouse(network, houseID, seller, buyer)
-	queryHouse(network, buyer, houseID, "5th Avenue")
-	queryHouse(network, seller, houseID, "5th Avenue", "failed loading house with id")
+	queryHouse(network, buyer, houseID, avenue5th)
+	queryHouse(network, seller, houseID, avenue5th, "failed loading house with id")
 	checkBalance(network, buyer, "", USD, 6)
 	checkBalance(network, seller, "", USD, 4)
 }
@@ -69,7 +70,7 @@ func issueHouse(network *integration.Infrastructure, valuation uint64, issuer *t
 	houseIDBoxed, err := network.Client(issuer.ReplicaName()).CallView("issue_house", common.JSONMarshall(house.IssueHouse{
 		IssuerWallet: "",
 		Recipient:    seller.Id(),
-		Address:      "5th Avenue",
+		Address:      avenue5th,
 		Valuation:    valuation,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())

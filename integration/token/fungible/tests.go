@@ -36,6 +36,15 @@ import (
 const (
 	DLogNamespace     = "dlog-token-chaincode"
 	FabTokenNamespace = "fabtoken-token-chaincode"
+	issuerOwner       = "issuer.owner"
+	manager1          = "manager.id1"
+	manager2          = "manager.id2"
+	manager3          = "manager.id3"
+	aliceId           = "alice.id1"
+	bobId             = "bob.id1"
+	charlieExtraId1   = "charlie.ExtraId1"
+	charlieExtraId2   = "charlie.ExtraId2"
+	dlog32bits        = "dlog-32bits"
 )
 
 var AuditedTransactions = []TransactionRecord{
@@ -482,7 +491,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// Check self endpoints
 	IssueCash(network, "", "USD", 110, issuer, auditor, true, issuer)
 	IssueCash(network, "newIssuerWallet", "EUR", 150, issuer, auditor, true, issuer)
-	IssueCash(network, "issuer.id1", "EUR", 10, sel.Get("issuer.owner"), auditor, true, issuer)
+	IssueCash(network, "issuer.id1", "EUR", 10, sel.Get(issuerOwner), auditor, true, issuer)
 
 	h = ListIssuerHistory(network, "", "USD", issuer)
 	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
@@ -496,7 +505,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 
 	CheckBalanceAndHolding(network, issuer, "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, issuer, "", "EUR", 150, auditor)
-	CheckBalanceAndHolding(network, issuer, "issuer.owner", "EUR", 10, auditor)
+	CheckBalanceAndHolding(network, issuer, issuerOwner, "EUR", 10, auditor)
 
 	// Restart the auditor
 	Restart(network, true, onRestart, auditor)
@@ -504,7 +513,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 
 	CheckBalanceAndHolding(network, issuer, "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, issuer, "", "EUR", 150, auditor)
-	CheckBalanceAndHolding(network, issuer, "issuer.owner", "EUR", 10, auditor)
+	CheckBalanceAndHolding(network, issuer, issuerOwner, "EUR", 10, auditor)
 
 	CheckOwnerStore(network, nil, issuer, alice, bob, charlie, manager)
 	CheckAuditorStore(network, auditor, "", nil)
@@ -586,34 +595,34 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, manager, "", "EUR", 20, auditor)
 
 	// Play with wallets
-	TransferCash(network, manager, "", "USD", 10, sel.Get("manager.id1"), auditor)
-	TransferCash(network, manager, "", "USD", 10, sel.Get("manager.id2"), auditor)
-	TransferCash(network, manager, "", "USD", 10, sel.Get("manager.id3"), auditor)
+	TransferCash(network, manager, "", "USD", 10, sel.Get(manager1), auditor)
+	TransferCash(network, manager, "", "USD", 10, sel.Get(manager2), auditor)
+	TransferCash(network, manager, "", "USD", 10, sel.Get(manager3), auditor)
 	CheckBalanceAndHolding(network, manager, "", "USD", 20, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id1", "USD", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id2", "USD", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id3", "USD", 10, auditor)
+	CheckBalanceAndHolding(network, manager, manager1, "USD", 10, auditor)
+	CheckBalanceAndHolding(network, manager, manager2, "USD", 10, auditor)
+	CheckBalanceAndHolding(network, manager, manager3, "USD", 10, auditor)
 
-	TransferCash(network, manager, "manager.id1", "USD", 10, sel.Get("manager.id2"), auditor)
-	CheckSpending(network, manager, "manager.id1", "USD", auditor, 10)
+	TransferCash(network, manager, manager1, "USD", 10, sel.Get(manager2), auditor)
+	CheckSpending(network, manager, manager1, "USD", auditor, 10)
 	CheckBalanceAndHolding(network, manager, "", "USD", 20, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id1", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id2", "USD", 20, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id3", "USD", 10, auditor)
+	CheckBalanceAndHolding(network, manager, manager1, "USD", 0, auditor)
+	CheckBalanceAndHolding(network, manager, manager2, "USD", 20, auditor)
+	CheckBalanceAndHolding(network, manager, manager3, "USD", 10, auditor)
 
 	// Swap among wallets
-	TransferCash(network, manager, "", "EUR", 10, sel.Get("manager.id1"), auditor)
+	TransferCash(network, manager, "", "EUR", 10, sel.Get(manager1), auditor)
 	CheckBalanceAndHolding(network, manager, "", "EUR", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id1", "EUR", 10, auditor)
+	CheckBalanceAndHolding(network, manager, manager1, "EUR", 10, auditor)
 
-	SwapCash(network, manager, "manager.id1", "EUR", 10, "USD", 10, sel.Get("manager.id2"), auditor)
+	SwapCash(network, manager, manager1, "EUR", 10, "USD", 10, sel.Get(manager2), auditor)
 	CheckBalanceAndHolding(network, manager, "", "USD", 20, auditor)
 	CheckBalanceAndHolding(network, manager, "", "EUR", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id1", "USD", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id1", "EUR", 0, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id2", "USD", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id2", "EUR", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id3", "USD", 10, auditor)
+	CheckBalanceAndHolding(network, manager, manager1, "USD", 10, auditor)
+	CheckBalanceAndHolding(network, manager, manager1, "EUR", 0, auditor)
+	CheckBalanceAndHolding(network, manager, manager2, "USD", 10, auditor)
+	CheckBalanceAndHolding(network, manager, manager2, "EUR", 10, auditor)
+	CheckBalanceAndHolding(network, manager, manager3, "USD", 10, auditor)
 
 	// no more USD can be issued, reached quota of 220
 	IssueCash(network, "", "USD", 10, alice, auditor, true, issuer, "no more USD can be issued, reached quota of 241")
@@ -665,11 +674,11 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
 
 	// Routing
-	IssueCash(network, "", "EUR", 10, sel.Get("alice.id1"), auditor, true, issuer)
-	CheckAcceptedTransactions(network, alice, "alice.id1", AliceID1AcceptedTransactions[:], nil, nil, nil)
-	TransferCash(network, alice, "alice.id1", "EUR", 10, sel.Get("bob.id1"), auditor)
-	CheckBalanceAndHolding(network, alice, "alice.id1", "EUR", 0, auditor)
-	CheckBalanceAndHolding(network, bob, "bob.id1", "EUR", 10, auditor)
+	IssueCash(network, "", "EUR", 10, sel.Get(aliceId), auditor, true, issuer)
+	CheckAcceptedTransactions(network, alice, aliceId, AliceID1AcceptedTransactions[:], nil, nil, nil)
+	TransferCash(network, alice, aliceId, "EUR", 10, sel.Get(bobId), auditor)
+	CheckBalanceAndHolding(network, alice, aliceId, "EUR", 0, auditor)
+	CheckBalanceAndHolding(network, bob, bobId, "EUR", 10, auditor)
 
 	// Concurrent transfers
 	transferErrors := make([]chan error, 5)
@@ -845,11 +854,12 @@ func TestSelector(network *integration.Infrastructure, auditorId string, sel *to
 
 	IssueCash(network, "", "USD", 100, alice, auditor, true, issuer)
 	IssueCash(network, "", "USD", 50, alice, auditor, true, issuer)
-	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
+	const insufficientFundsErr = "insufficient funds, only [150] tokens of type [USD] are available"
+	TransferCash(network, alice, "", "USD", 160, bob, auditor, insufficientFundsErr)
 	time.Sleep(10 * time.Second)
-	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
+	TransferCash(network, alice, "", "USD", 160, bob, auditor, insufficientFundsErr)
 	time.Sleep(2 * time.Minute)
-	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds, only [150] tokens of type [USD] are available")
+	TransferCash(network, alice, "", "USD", 160, bob, auditor, insufficientFundsErr)
 }
 
 func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID string, ppBytes []byte, networkName string, issuerAsAuditor bool, sel *token3.ReplicaSelector, updateWithAppend bool) {
@@ -884,7 +894,7 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID st
 		gomega.Eventually(DoesWalletExist).WithArguments(network, newAuditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 	}
 	gomega.Eventually(DoesWalletExist).WithArguments(network, alice, "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
-	gomega.Eventually(DoesWalletExist).WithArguments(network, manager, "manager.id1", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, manager, manager1, views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
 
 	txId = IssueCash(network, "", "USD", 110, alice, newAuditor, true, newIssuer)
 	gomega.Expect(txId).NotTo(gomega.BeEmpty())
@@ -903,7 +913,7 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID st
 		}
 	}
 
-	CheckOwnerWalletIDs(network, manager, "manager.id1", "manager.id2", "manager.id3")
+	CheckOwnerWalletIDs(network, manager, manager1, manager2, manager3)
 }
 
 func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor *token3.NodeReference, useFabricCA bool, sel *token3.ReplicaSelector, onRestart OnRestartFunc) {
@@ -912,19 +922,19 @@ func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, a
 	charlie := sel.Get("charlie")
 
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
-	idConfig1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), charlie.Id(), "charlie.ExtraId1", false)
+	idConfig1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), charlie.Id(), charlieExtraId1, false)
 	RegisterOwnerIdentity(network, charlie, idConfig1)
-	idConfig2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), charlie.Id(), "charlie.ExtraId2", useFabricCA)
+	idConfig2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), charlie.Id(), charlieExtraId2, useFabricCA)
 	RegisterOwnerIdentity(network, charlie, idConfig2)
 
 	IssueCash(network, "", "SPE", 100, charlie, auditor, true, issuer)
-	TransferCash(network, charlie, "", "SPE", 25, sel.Get("charlie.ExtraId1"), auditor)
+	TransferCash(network, charlie, "", "SPE", 25, sel.Get(charlieExtraId1), auditor)
 	Restart(network, false, onRestart, charlie)
-	TransferCash(network, charlie, "charlie.ExtraId1", "SPE", 15, sel.Get("charlie.ExtraId2"), auditor)
+	TransferCash(network, charlie, charlieExtraId1, "SPE", 15, sel.Get(charlieExtraId2), auditor)
 
 	CheckBalanceAndHolding(network, charlie, "", "SPE", 75, auditor)
-	CheckBalanceAndHolding(network, charlie, "charlie.ExtraId1", "SPE", 10, auditor)
-	CheckBalanceAndHolding(network, charlie, "charlie.ExtraId2", "SPE", 15, auditor)
+	CheckBalanceAndHolding(network, charlie, charlieExtraId1, "SPE", 10, auditor)
+	CheckBalanceAndHolding(network, charlie, charlieExtraId2, "SPE", 15, auditor)
 }
 
 func TestRevokeIdentity(network *integration.Infrastructure, auditorId string, sel *token3.ReplicaSelector) {
@@ -938,7 +948,7 @@ func TestRevokeIdentity(network *integration.Infrastructure, auditorId string, s
 	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
 	CheckBalanceAndHolding(network, alice, "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, bob, "bob.id1", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, bob, bobId, "USD", 0, auditor)
 
 	rId := GetRevocationHandle(network, bob)
 	RevokeIdentity(network, auditor, rId)
@@ -948,13 +958,13 @@ func TestRevokeIdentity(network *integration.Infrastructure, auditorId string, s
 	TransferCash(network, alice, "", "USD", 22, bob, auditor, hash.Hashable(rId).String()+" Identity is in revoked state")
 	CheckBalanceAndHolding(network, alice, "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, bob, "bob.id1", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, bob, bobId, "USD", 0, auditor)
 
 	// Issuer to bob.id1
-	IssueCash(network, "", "USD", 90, sel.Get("bob.id1"), auditor, true, issuer)
+	IssueCash(network, "", "USD", 90, sel.Get(bobId), auditor, true, issuer)
 	CheckBalanceAndHolding(network, alice, "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, bob, "", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, bob, "bob.id1", "USD", 90, auditor)
+	CheckBalanceAndHolding(network, bob, bobId, "USD", 90, auditor)
 }
 
 func TestMixed(network *integration.Infrastructure, onRestart OnRestartFunc, sel *token3.ReplicaSelector) {
@@ -1234,7 +1244,7 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	CheckAuditorStore(network, auditor, "", nil)
 
 	// switch to dlog 32bits, perform a few operations
-	tms := GetTMSByAlias(network, "dlog-32bits")
+	tms := GetTMSByAlias(network, dlog32bits)
 	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	gomega.Expect(ppBytes).NotTo(gomega.BeNil())
@@ -1307,7 +1317,7 @@ func TestLocalTokensUpgrade(network *integration.Infrastructure, auditorId strin
 	CheckAuditorStore(network, auditor, "", nil)
 
 	// switch to dlog 32bits, perform a few operations
-	tms := GetTMSByAlias(network, "dlog-32bits")
+	tms := GetTMSByAlias(network, dlog32bits)
 	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	gomega.Expect(ppBytes).NotTo(gomega.BeNil())
@@ -1360,7 +1370,7 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	CheckAuditorStore(network, auditor, "", nil)
 
 	// switch to dlog 32bits, perform a few operations
-	tms := GetTMSByAlias(network, "dlog-32bits")
+	tms := GetTMSByAlias(network, dlog32bits)
 	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	gomega.Expect(ppBytes).NotTo(gomega.BeNil())

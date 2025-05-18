@@ -71,13 +71,15 @@ func gen(args []string) error {
 		return errors.Wrapf(err, "failed reading topology file [%s]", topologyFile)
 	}
 	names := &Topologies{}
+	unmarshalling_err := fmt.Sprintf("failed unmarshalling topology file [%s]", topologyFile)
+	remarshalling_err := fmt.Sprintf("failed remarshalling topology configuration [%s]", topologyFile)
 	if err := yaml.Unmarshal(raw, names); err != nil {
-		return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
+		return errors.Wrapf(err, unmarshalling_err)
 	}
 
 	t := &T{}
 	if err := yaml.Unmarshal(raw, t); err != nil {
-		return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
+		return errors.Wrapf(err, unmarshalling_err)
 	}
 	t2 := []api.Topology{}
 	for i, topology := range names.Topologies {
@@ -86,30 +88,30 @@ func gen(args []string) error {
 			top := fabric.NewDefaultTopology()
 			r, err := yaml.Marshal(t.Topologies[i])
 			if err != nil {
-				return errors.Wrapf(err, "failed remarshalling topology configuration [%s]", topologyFile)
+				return errors.Wrapf(err, remarshalling_err)
 			}
 			if err := yaml.Unmarshal(r, top); err != nil {
-				return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
+				return errors.Wrapf(err, unmarshalling_err)
 			}
 			t2 = append(t2, top)
 		case fsc.TopologyName:
 			top := fsc.NewTopology()
 			r, err := yaml.Marshal(t.Topologies[i])
 			if err != nil {
-				return errors.Wrapf(err, "failed remarshalling topology configuration [%s]", topologyFile)
+				return errors.Wrapf(err, remarshalling_err)
 			}
 			if err := yaml.Unmarshal(r, top); err != nil {
-				return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
+				return errors.Wrapf(err, unmarshalling_err)
 			}
 			t2 = append(t2, top)
 		case token.TopologyName:
 			top := token.NewTopology()
 			r, err := yaml.Marshal(t.Topologies[i])
 			if err != nil {
-				return errors.Wrapf(err, "failed remarshalling topology configuration [%s]", topologyFile)
+				return errors.Wrapf(err, remarshalling_err)
 			}
 			if err := yaml.Unmarshal(r, top); err != nil {
-				return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
+				return errors.Wrapf(err, unmarshalling_err)
 			}
 			t2 = append(t2, top)
 		}

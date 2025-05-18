@@ -31,6 +31,8 @@ type SellHouseView struct {
 	*Sell
 }
 
+const failedGettingWalletErr = "failed getting default wallet"
+
 func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	// Prepare a new token transaction.
 	// It will contain two legs:
@@ -64,7 +66,7 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 func (d *SellHouseView) preparePayment(context view.Context, tx *ttx.Transaction, house *house.House) (*ttx.Transaction, error) {
 	// we need the house's valuation
 	wallet := nfttx.MyWallet(context)
-	assert.NotNil(wallet, "failed getting default wallet")
+	assert.NotNil(wallet, failedGettingWalletErr)
 
 	// exchange pseudonyms for the token transfer
 	me, other, err := ttx.ExchangeRecipientIdentities(context, d.Wallet, view.Identity(d.Buyer))
@@ -86,7 +88,7 @@ func (d *SellHouseView) preparePayment(context view.Context, tx *ttx.Transaction
 func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttx.Transaction) (*ttx.Transaction, *house.House, error) {
 	// let's prepare the NFT transfer
 	wallet := nfttx.MyWallet(context)
-	assert.NotNil(wallet, "failed getting default wallet")
+	assert.NotNil(wallet, failedGettingWalletErr)
 
 	house := &house.House{}
 	assert.NoError(wallet.QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
@@ -94,7 +96,7 @@ func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttx.Trans
 	buyer, err := nfttx.RequestRecipientIdentity(context, view.Identity(d.Buyer))
 	assert.NoError(err, "failed getting buyer identity")
 
-	assert.NotNil(wallet, "failed getting default wallet")
+	assert.NotNil(wallet, failedGettingWalletErr)
 
 	// Transfer ownership of the house to the buyer
 	assert.NoError(nfttx.Wrap(tx).Transfer(wallet, house, buyer), "failed transferring house")

@@ -18,6 +18,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	internalServerError = "Internal Server Error"
+)
+
 //go:embed resources/config.yaml
 var embeddedFiles embed.FS
 
@@ -51,7 +55,7 @@ func Load() (*model.Configuration, api.Error) {
 	if err != nil {
 		appErr := api.NewInternalServerError(
 			fmt.Errorf("cannot unmarshal the configuration file: %s", err),
-			"Internal Server Error",
+			internalServerError,
 		)
 		return nil, appErr
 	}
@@ -70,7 +74,7 @@ func loadConfig(configFile string) api.Error {
 	if err != nil {
 		return api.NewInternalServerError(
 			fmt.Errorf("couldn't read the config file '%s': %s", configFile, err),
-			"Internal Server Error",
+			internalServerError,
 		)
 	}
 
@@ -83,7 +87,7 @@ func loadDefaultConfig() api.Error {
 	if err != nil {
 		return api.NewInternalServerError(
 			fmt.Errorf("couldn't find the default config file 'config.yaml': %s", err),
-			"Internal Server Error",
+			internalServerError,
 		)
 	}
 
@@ -93,7 +97,7 @@ func loadDefaultConfig() api.Error {
 	if err != nil {
 		return api.NewInternalServerError(
 			fmt.Errorf("couldn't read the default config file 'config.yaml': %s", err),
-			"Internal Server Error",
+			internalServerError,
 		)
 	}
 

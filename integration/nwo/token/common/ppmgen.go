@@ -24,6 +24,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	failedToGetIdentityErr = "failed to get identity"
+)
+
 type FabTokenPublicParamsGenerator struct{}
 
 func NewFabTokenPublicParamsGenerator() *FabTokenPublicParamsGenerator {
@@ -64,7 +68,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 			}
 			id, _, err := km.Identity(nil)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to get identity")
+				return nil, errors.WithMessage(err, failedToGetIdentityErr)
 			}
 			if tms.Auditors[0] == auditor.ID {
 				wrap, err := identity.WrapWithType(x509.IdentityType, id)
@@ -89,7 +93,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 			}
 			id, _, err := km.Identity(nil)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to get identity")
+				return nil, errors.WithMessage(err, failedToGetIdentityErr)
 			}
 			if issuersSet.Contains(issuer.ID) {
 				wrap, err := identity.WrapWithType(x509.IdentityType, id)
@@ -168,7 +172,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 			}
 			id, _, err := km.Identity(nil)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to get identity")
+				return nil, errors.WithMessage(err, failedToGetIdentityErr)
 			}
 			if tms.Auditors[0] == auditor.ID {
 				wrap, err := identity.WrapWithType(x509.IdentityType, id)
@@ -193,7 +197,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 			}
 			id, _, err := km.Identity(nil)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to get identity")
+				return nil, errors.WithMessage(err, failedToGetIdentityErr)
 			}
 			if issuersSet.Contains(issuer.ID) {
 				wrap, err := identity.WrapWithType(x509.IdentityType, id)

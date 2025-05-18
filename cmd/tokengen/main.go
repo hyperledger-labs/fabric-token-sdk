@@ -36,11 +36,12 @@ func main() {
 	// subcommands.
 	mainFlags := mainCmd.PersistentFlags()
 
-	mainFlags.String("logging-level", "", "Legacy logging level flag")
-	if err := viper.BindPFlag("logging_level", mainFlags.Lookup("logging-level")); err != nil {
+	const loggingLevel = "logging-level"
+	mainFlags.String(loggingLevel, "", "Legacy logging level flag")
+	if err := viper.BindPFlag("logging_level", mainFlags.Lookup(loggingLevel)); err != nil {
 		panic(err)
 	}
-	if err := mainFlags.MarkHidden("logging-level"); err != nil {
+	if err := mainFlags.MarkHidden(loggingLevel); err != nil {
 		panic(err)
 	}
 

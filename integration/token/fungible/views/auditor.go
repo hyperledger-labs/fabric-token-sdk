@@ -25,6 +25,13 @@ type AuditView struct {
 	*token.TMSID
 }
 
+const (
+	failedGettingWalletErr  = "failed getting default auditor wallet"
+	failedGettingAuditorErr = "failed to get auditor instance"
+	emptyEnrollmentIdErr    = "enrollment id should not be empty"
+	failedUnmarshallingErr  = "failed unmarshalling input"
+)
+
 func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("AuditView: [%s]", context.ID())
 	tx, err := ttx.ReceiveTransaction(context, TxOpts(a.TMSID, ttx.WithNoTransactionVerification())...)
@@ -33,12 +40,12 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("AuditView: [%s]", tx.ID())
 
 	w := ttx.MyAuditorWallet(context, ServiceOpts(a.TMSID)...)
-	assert.NotNil(w, "failed getting default auditor wallet")
+	assert.NotNil(w, failedGettingWalletErr)
 
 	// Validate
 	logger.Debugf("AuditView: get auditor [%s]", tx.ID())
 	auditor, err := ttx.NewAuditor(context, w)
-	assert.NoError(err, "failed to get auditor instance")
+	assert.NoError(err, failedGettingAuditorErr)
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 	logger.Debugf("AuditView: get auditor done [%s]", tx.ID())
 
@@ -68,7 +75,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	tokenTypes := inputs.TokenTypes()
 	fmt.Printf("Limits on inputs [%v][%v]\n", eIDs, tokenTypes)
 	for _, eID := range eIDs {
-		assert.NotEmpty(eID, "enrollment id should not be empty")
+		assert.NotEmpty(eID, emptyEnrollmentIdErr)
 		for _, tokenType := range tokenTypes {
 			if tokenType == "MAX" {
 				continue
@@ -91,7 +98,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	// R2: Default cumulative payment limit is set to 2000.
 	for _, eID := range eIDs {
-		assert.NotEmpty(eID, "enrollment id should not be empty")
+		assert.NotEmpty(eID, emptyEnrollmentIdErr)
 		for _, tokenType := range tokenTypes {
 			if tokenType == "MAX" {
 				continue
@@ -123,7 +130,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	eIDs = outputs.EnrollmentIDs()
 	tokenTypes = outputs.TokenTypes()
 	for _, eID := range eIDs {
-		assert.NotEmpty(eID, "enrollment id should not be empty")
+		assert.NotEmpty(eID, emptyEnrollmentIdErr)
 		for _, tokenType := range tokenTypes {
 			if tokenType == "MAX" {
 				continue
@@ -201,7 +208,7 @@ func (p *RegisterAuditorViewFactory) NewView(in []byte) (view.View, error) {
 	f := &RegisterAuditorView{RegisterAuditor: &RegisterAuditor{}}
 	if in != nil {
 		err := json.Unmarshal(in, f.RegisterAuditor)
-		assert.NoError(err, "failed unmarshalling input")
+		assert.NoError(err, failedUnmarshallingErr)
 	}
 	return f, nil
 }
@@ -222,10 +229,10 @@ func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 
 	w := tms.WalletManager().AuditorWallet("")
-	assert.NotNil(w, "failed getting default auditor wallet")
+	assert.NotNil(w, failedGettingWalletErr)
 
 	auditor, err := ttx.NewAuditor(context, w)
-	assert.NoError(err, "failed to get auditor instance")
+	assert.NoError(err, failedGettingAuditorErr)
 
 	filter, err := auditor.NewHoldingsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
 	assert.NoError(err, "failed retrieving holding for [%s][%s]", r.EnrollmentID, r.TokenType)
@@ -241,7 +248,7 @@ type CurrentHoldingViewFactory struct{}
 func (p *CurrentHoldingViewFactory) NewView(in []byte) (view.View, error) {
 	f := &CurrentHoldingView{CurrentHolding: &CurrentHolding{}}
 	err := json.Unmarshal(in, f.CurrentHolding)
-	assert.NoError(err, "failed unmarshalling input")
+	assert.NoError(err, failedUnmarshallingErr)
 
 	return f, nil
 }
@@ -259,10 +266,10 @@ type CurrentSpendingView struct {
 
 func (r *CurrentSpendingView) Call(context view.Context) (interface{}, error) {
 	w := ttx.MyAuditorWallet(context, ServiceOpts(r.TMSID)...)
-	assert.NotNil(w, "failed getting default auditor wallet")
+	assert.NotNil(w, failedGettingWalletErr)
 
 	auditor, err := ttx.NewAuditor(context, w)
-	assert.NoError(err, "failed to get auditor instance")
+	assert.NoError(err, failedGettingAuditorErr)
 
 	filter, err := auditor.NewPaymentsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
 	assert.NoError(err, "failed retrieving spending for [%s][%s]", r.EnrollmentID, r.TokenType)
@@ -278,7 +285,7 @@ type CurrentSpendingViewFactory struct{}
 func (p *CurrentSpendingViewFactory) NewView(in []byte) (view.View, error) {
 	f := &CurrentSpendingView{CurrentSpending: &CurrentSpending{}}
 	err := json.Unmarshal(in, f.CurrentSpending)
-	assert.NoError(err, "failed unmarshalling input")
+	assert.NoError(err, failedUnmarshallingErr)
 
 	return f, nil
 }
@@ -296,10 +303,10 @@ type SetTransactionAuditStatusView struct {
 
 func (r *SetTransactionAuditStatusView) Call(context view.Context) (interface{}, error) {
 	w := ttx.MyAuditorWallet(context)
-	assert.NotNil(w, "failed getting default auditor wallet")
+	assert.NotNil(w, failedGettingWalletErr)
 
 	auditor, err := ttx.NewAuditor(context, w)
-	assert.NoError(err, "failed to get auditor instance")
+	assert.NoError(err, failedGettingAuditorErr)
 	assert.NoError(auditor.SetStatus(context.Context(), r.TxID, r.Status, r.Message), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
 
 	return nil, nil
@@ -310,7 +317,7 @@ type SetTransactionAuditStatusViewFactory struct{}
 func (p *SetTransactionAuditStatusViewFactory) NewView(in []byte) (view.View, error) {
 	f := &SetTransactionAuditStatusView{SetTransactionAuditStatus: &SetTransactionAuditStatus{}}
 	err := json.Unmarshal(in, f.SetTransactionAuditStatus)
-	assert.NoError(err, "failed unmarshalling input")
+	assert.NoError(err, failedUnmarshallingErr)
 
 	return f, nil
 }

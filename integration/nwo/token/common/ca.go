@@ -146,7 +146,7 @@ func (i *IdemixCASupport) Start() error {
 	fabricCAServerExePath := findCmdAtEnv(fabricCaServerCMD)
 	command := &CAServer{
 		NetworkPrefix: "",
-		ConfigPath:    filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server", "fabric-ca-server.yaml"),
+		ConfigPath:    filepath.Join(i.IssuerCryptoMaterialPath, fabricCaServerCMD, "fabric-ca-server.yaml"),
 	}
 	cmd := common.NewCommand(fabricCAServerExePath, command)
 
@@ -169,7 +169,7 @@ func (i *IdemixCASupport) Start() error {
 		Home:        "",
 		CAServerURL: fmt.Sprintf("http://%s:%s@localhost:%s", "admin", "adminpw", i.CAPort),
 		CAName:      caName,
-		Output:      filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server", "admin", "msp"),
+		Output:      filepath.Join(i.IssuerCryptoMaterialPath, fabricCaServerCMD, "admin", "msp"),
 	}
 	cmd = common.NewCommand(fabricCAClientExePath, enrollCommand)
 	sess, err := i.StartSession(cmd, enrollCommand.SessionName())
@@ -203,7 +203,7 @@ func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, er
 
 	// register
 	registerCommand := &CAClientRegister{
-		MSPDir:         filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server", "admin", "msp"),
+		MSPDir:         filepath.Join(i.IssuerCryptoMaterialPath, fabricCaServerCMD, "admin", "msp"),
 		CAServerURL:    fmt.Sprintf("http://localhost:%s", i.CAPort),
 		CAName:         caName,
 		IDName:         owner,
@@ -240,7 +240,7 @@ func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, er
 }
 
 func (i *IdemixCASupport) GenerateConfiguration() error {
-	fabricCARoot := filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server")
+	fabricCARoot := filepath.Join(i.IssuerCryptoMaterialPath, fabricCaServerCMD)
 	if err := os.MkdirAll(fabricCARoot, 0766); err != nil {
 		return err
 	}
@@ -260,7 +260,7 @@ func (i *IdemixCASupport) GenerateConfiguration() error {
 		return err
 	}
 
-	t, err := template.New("fabric-ca-server").Funcs(template.FuncMap{
+	t, err := template.New(fabricCaServerCMD).Funcs(template.FuncMap{
 		"caname": func() string {
 			return i.TMS.ID() + ".example.com"
 		},
@@ -276,10 +276,10 @@ func (i *IdemixCASupport) GenerateConfiguration() error {
 	if err := t.Execute(io.MultiWriter(ext), i); err != nil {
 		return errors.Wrap(err, "failed to generate fabric-ca-server configuration")
 	}
-	if err := os.MkdirAll(filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server"), 0766); err != nil {
+	if err := os.MkdirAll(filepath.Join(i.IssuerCryptoMaterialPath, fabricCaServerCMD), 0766); err != nil {
 		return errors.Wrap(err, "failed to create fabric-ca-server configuration folder")
 	}
-	if err := os.WriteFile(filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server", "fabric-ca-server.yaml"), ext.Bytes(), 0766); err != nil {
+	if err := os.WriteFile(filepath.Join(i.IssuerCryptoMaterialPath, fabricCaServerCMD, "fabric-ca-server.yaml"), ext.Bytes(), 0766); err != nil {
 		return errors.Wrap(err, "failed to write fabric-ca-server configuration")
 	}
 	return nil
