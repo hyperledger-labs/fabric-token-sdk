@@ -47,7 +47,7 @@ jobs:
         run: make checks
 
   utest:
-    needs: checks
+#    needs: checks
     runs-on: ubuntu-latest
     strategy:
       matrix:
