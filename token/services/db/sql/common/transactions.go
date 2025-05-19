@@ -56,11 +56,11 @@ func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci c
 	}
 }
 
-func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
+func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
 	return NewOwnerTransactionStore(readDB, writeDB, tables, ci, pi)
 }
 
-func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables tableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
+func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
 	return newTransactionStore(readDB, writeDB, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,

@@ -36,7 +36,7 @@ func newWalletStore(readDB, writeDB *sql.DB, tables walletTables) *WalletStore {
 	}
 }
 
-func NewWalletStore(readDB, writeDB *sql.DB, tables tableNames) (*WalletStore, error) {
+func NewWalletStore(readDB, writeDB *sql.DB, tables TableNames) (*WalletStore, error) {
 	return newWalletStore(readDB, writeDB, walletTables{Wallets: tables.Wallets}), nil
 }
 

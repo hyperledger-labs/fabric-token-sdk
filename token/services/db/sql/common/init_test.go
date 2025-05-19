@@ -18,7 +18,7 @@ import (
 func TestGetTableNames(t *testing.T) {
 	names, err := GetTableNames("")
 	assert.NoError(t, err)
-	assert.Equal(t, tableNames{
+	assert.Equal(t, TableNames{
 		Movements:              "fsc_movements",
 		Transactions:           "fsc_txs",
 		Requests:               "fsc_requests",
@@ -64,7 +64,7 @@ func TestGetTableNames(t *testing.T) {
 		t.Run(fmt.Sprintf("Prefix: %s", inv), func(t *testing.T) {
 			names, err := GetTableNames(inv)
 			assert.Error(t, err)
-			assert.Equal(t, tableNames{}, names)
+			assert.Equal(t, TableNames{}, names)
 		})
 	}
 }

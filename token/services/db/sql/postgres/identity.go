@@ -7,20 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
 type IdentityStore = common.IdentityStore
 
-func NewIdentityStore(opts postgres.Opts) (*IdentityStore, error) {
-	dbs, err := postgres.DbProvider.OpenDB(opts)
-	if err != nil {
-		return nil, err
-	}
-	tableNames, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
-	if err != nil {
-		return nil, err
-	}
+func NewIdentityStore(dbs *common2.RWDB, tableNames common.TableNames) (*IdentityStore, error) {
 	return common.NewCachedIdentityStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewConditionInterpreter())
 }

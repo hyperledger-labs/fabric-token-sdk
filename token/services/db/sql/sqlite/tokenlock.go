@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
@@ -37,15 +37,7 @@ func (db *TokenLockStore) Cleanup(leaseExpiry time.Duration) error {
 	return err
 }
 
-func NewTokenLockStore(opts sqlite.Opts) (*TokenLockStore, error) {
-	dbs, err := sqlite.DbProvider.OpenDB(opts)
-	if err != nil {
-		return nil, err
-	}
-	tableNames, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
-	if err != nil {
-		return nil, err
-	}
+func NewTokenLockStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenLockStore, error) {
 	tldb, err := common.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames)
 	if err != nil {
 		return nil, err

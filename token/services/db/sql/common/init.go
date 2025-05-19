@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
@@ -15,7 +16,7 @@ var logger = logging.MustGetLogger("token-sdk.sql")
 
 var ncProvider = db.NewTableNameCreator("fsc")
 
-type tableNames struct {
+type TableNames struct {
 	Movements              string
 	Transactions           string
 	Requests               string
@@ -32,13 +33,15 @@ type tableNames struct {
 	TokenLocks             string
 }
 
-func GetTableNames(prefix string, params ...string) (tableNames, error) {
+type PersistenceConstructor[V common.DBObject] func(*common.RWDB, TableNames) (V, error)
+
+func GetTableNames(prefix string, params ...string) (TableNames, error) {
 	nc, err := ncProvider.GetFormatter(prefix)
 	if err != nil {
-		return tableNames{}, err
+		return TableNames{}, err
 	}
 
-	return tableNames{
+	return TableNames{
 		Movements:              nc.MustFormat("movements", params...),
 		Transactions:           nc.MustFormat("txs", params...),
 		TransactionEndorseAck:  nc.MustFormat("tx_ends", params...),
