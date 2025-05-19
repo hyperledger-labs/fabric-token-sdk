@@ -76,14 +76,15 @@ func (db *TransactionStore) CreateSchema() error {
 
 func (db *TransactionStore) GetTokenRequest(txID string) ([]byte, error) {
 	var tokenrequest []byte
-	query, err := NewSelect("request").From(db.table.Requests).Where("tx_id=$1").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compile query")
-	}
-	logger.Debug(query, txID)
+	query, args := q.Select().
+		FieldsByName("request").
+		From(q.Table(db.table.Requests)).
+		Where(cond.Eq("tx_id", txID)).
+		Format(db.ci, nil)
+	logger.Debug(query, args[0])
 
-	row := db.readDB.QueryRow(query, txID)
-	err = row.Scan(&tokenrequest)
+	row := db.readDB.QueryRow(query, args...)
+	err := row.Scan(&tokenrequest)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -180,13 +181,14 @@ func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsPar
 func (db *TransactionStore) GetStatus(txID string) (driver.TxStatus, string, error) {
 	var status driver.TxStatus
 	var statusMessage string
-	query, err := NewSelect("status, status_message").From(db.table.Requests).Where("tx_id=$1").Compile()
-	if err != nil {
-		return driver.Unknown, "", errors.Wrapf(err, "failed to compile query")
-	}
+	query, args := q.Select().
+		FieldsByName("status", "status_message").
+		From(q.Table(db.table.Requests)).
+		Where(cond.Eq("tx_id", txID)).
+		Format(db.ci, nil)
 	logger.Debug(query, txID)
 
-	row := db.readDB.QueryRow(query, txID)
+	row := db.readDB.QueryRow(query, args...)
 	if err := row.Scan(&status, &statusMessage); err != nil {
 		if err == sql.ErrNoRows {
 			logger.Debugf("tried to get status for non-existent tx [%s], returning unknown", txID)
@@ -255,13 +257,14 @@ func (db *TransactionStore) AddTransactionEndorsementAck(txID string, endorser t
 }
 
 func (db *TransactionStore) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
-	query, err := NewSelect("endorser, sigma").From(db.table.TransactionEndorseAck).Where("tx_id=$1").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed compiling query")
-	}
+	query, args := q.Select().
+		FieldsByName("endorser", "sigma").
+		From(q.Table(db.table.TransactionEndorseAck)).
+		Where(cond.Eq("tx_id", txID)).
+		Format(db.ci, nil)
 	logger.Debug(query, txID)
 
-	rows, err := db.readDB.Query(query, txID)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query")
 	}

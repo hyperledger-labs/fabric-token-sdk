@@ -111,16 +111,15 @@ func (db *TokenStore) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 // IsMine just checks if the token is in the local storage and not deleted
 func (db *TokenStore) IsMine(txID string, index uint64) (bool, error) {
 	id := ""
-	query, err := NewSelect("tx_id").
-		From(db.table.Tokens).
-		Where("tx_id = $1 AND idx = $2 AND is_deleted = false AND owner = true LIMIT 1").
-		Compile()
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to compile query")
-	}
+	query, args := q.Select().
+		FieldsByName("tx_id").
+		From(q.Table(db.table.Tokens)).
+		Where(cond.And(cond.Eq("tx_id", txID), cond.Eq("idx", index), cond.Eq("is_deleted", false), cond.Eq("owner", 1))).
+		Limit(1).
+		Format(db.ci, nil)
 	logger.Debug(query, txID, index)
 
-	row := db.readDB.QueryRow(query, txID, index)
+	row := db.readDB.QueryRow(query, args...)
 	if err := row.Scan(&id); err != nil {
 		if errors2.Is(err, sql.ErrNoRows) {
 			return false, nil
@@ -386,12 +385,14 @@ func (db *TokenStore) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) 
 
 // ListHistoryIssuedTokens returns the list of issued tokens
 func (db *TokenStore) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
-	query, err := NewSelect("tx_id, idx, owner_raw, token_type, quantity, issuer_raw").From(db.table.Tokens).Where("issuer = true").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compile query")
-	}
+	query, args := q.Select().
+		FieldsByName("tx_id", "idx", "owner_raw", "token_type", "quantity", "issuer_raw").
+		From(q.Table(db.table.Tokens)).
+		Where(cond.Eq("issuer", true)).
+		Format(db.ci, nil)
+
 	logger.Debug(query)
-	rows, err := db.readDB.Query(query)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -752,14 +753,16 @@ func (db *TokenStore) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, e
 
 func (db *TokenStore) TransactionExists(ctx context.Context, id string) (bool, error) {
 	span := trace.SpanFromContext(ctx)
-	query, err := NewSelect("tx_id").From(db.table.Tokens).Where("tx_id=$1 LIMIT 1").Compile()
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to compile query")
-	}
+	query, args := q.Select().
+		FieldsByName("tx_id").
+		From(q.Table(db.table.Tokens)).
+		Where(cond.Eq("tx_id", id)).
+		Limit(1).
+		Format(db.ci, nil)
 	logger.Debug(query, id)
 
 	span.AddEvent("query", trace.WithAttributes(tracing.String(QueryLabel, query)))
-	row := db.readDB.QueryRow(query, id)
+	row := db.readDB.QueryRow(query, args...)
 	var found string
 	span.AddEvent("scan_rows")
 	if err := row.Scan(&found); err != nil {
@@ -793,14 +796,16 @@ func (db *TokenStore) StorePublicParams(raw []byte) error {
 
 func (db *TokenStore) PublicParams() ([]byte, error) {
 	var params []byte
-	query, err := NewSelect("raw").From(db.table.PublicParams).OrderBy("stored_at DESC LIMIT 1").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compile query")
-	}
+	query, args := q.Select().
+		FieldsByName("raw").
+		From(q.Table(db.table.PublicParams)).
+		OrderBy(q.Desc(common3.FieldName("stored_at"))).
+		Limit(1).
+		Format(db.ci, nil)
 	logger.Debug(query)
 
-	row := db.readDB.QueryRow(query)
-	err = row.Scan(&params)
+	row := db.readDB.QueryRow(query, args)
+	err := row.Scan(&params)
 	if err != nil {
 		if errors.HasCause(err, sql.ErrNoRows) {
 			return nil, nil
@@ -812,14 +817,16 @@ func (db *TokenStore) PublicParams() ([]byte, error) {
 
 func (db *TokenStore) PublicParamsByHash(rawHash tdriver.PPHash) ([]byte, error) {
 	var params []byte
-	query, err := NewSelect("raw").From(db.table.PublicParams).Where("raw_hash = $1").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compile query")
-	}
+	query, args := q.Select().
+		FieldsByName("raw").
+		From(q.Table(db.table.PublicParams)).
+		Where(cond.Eq("raw_hash", rawHash)).
+		Limit(1).
+		Format(db.ci, nil)
 	logger.Debug(query)
 
-	row := db.readDB.QueryRow(query, rawHash)
-	err = row.Scan(&params)
+	row := db.readDB.QueryRow(query, args...)
+	err := row.Scan(&params)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
