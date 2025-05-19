@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/multiplexed"
 	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
@@ -78,11 +79,11 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 }
 
 func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
-	d := postgres.NewDriver(multiplexed.MockTypeConfig(postgres2.Persistence, postgres2.Config{
+	d := postgres.NewDriverWithDbProvider(multiplexed.MockTypeConfig(postgres2.Persistence, postgres2.Config{
 		TablePrefix:  "test",
 		DataSource:   pgConnStr,
 		MaxOpenConns: 10,
-	}))
+	}), &dbProvider{})
 	lockDB, err := d.NewTokenLock("")
 	if err != nil {
 		return nil, err
@@ -104,3 +105,7 @@ func startContainer(t *testing.T) (func(), string) {
 	assert.NoError(t, err)
 	return terminate, cfg.DataSource()
 }
+
+type dbProvider struct{}
+
+func (p *dbProvider) Get(opts postgres2.Opts) (*common.RWDB, error) { return postgres2.Open(opts) }

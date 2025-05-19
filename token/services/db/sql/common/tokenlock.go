@@ -40,7 +40,7 @@ func newTokenLockStore(readDB, writeDB *sql.DB, tables tokenLockTables) *TokenLo
 	}
 }
 
-func NewTokenLockStore(readDB, writeDB *sql.DB, tables tableNames) (*TokenLockStore, error) {
+func NewTokenLockStore(readDB, writeDB *sql.DB, tables TableNames) (*TokenLockStore, error) {
 	return newTokenLockStore(
 		readDB,
 		writeDB,

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -21,15 +21,7 @@ type TokenLockStore struct {
 	*common.TokenLockStore
 }
 
-func NewTokenLockStore(opts postgres.Opts) (*TokenLockStore, error) {
-	dbs, err := postgres.DbProvider.OpenDB(opts)
-	if err != nil {
-		return nil, err
-	}
-	tableNames, err := common.GetTableNames(opts.TablePrefix, opts.TableNameParams...)
-	if err != nil {
-		return nil, err
-	}
+func NewTokenLockStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenLockStore, error) {
 	tldb, err := common.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames)
 	if err != nil {
 		return nil, err

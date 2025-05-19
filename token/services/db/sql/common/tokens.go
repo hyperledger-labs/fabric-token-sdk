@@ -39,7 +39,7 @@ type tokenTables struct {
 	Certifications string
 }
 
-func NewTokenStore(readDB, writeDB *sql.DB, tables tableNames, ci common3.CondInterpreter) (*TokenStore, error) {
+func NewTokenStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*TokenStore, error) {
 	return newTokenStore(readDB, writeDB, tokenTables{
 		Tokens:         tables.Tokens,
 		Ownership:      tables.Ownership,
