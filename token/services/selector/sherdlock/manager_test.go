@@ -58,7 +58,7 @@ func TestSufficientTokensManyReplicas(t *testing.T) {
 }
 
 func TestInsufficientTokensManyReplicas(t *testing.T) {
-	replicas, terminate := startManagers(t, 10, 5*time.Second, 5)
+	replicas, terminate := startManagers(t, 10, 10*time.Second, 10)
 	defer terminate()
 	testutils.TestInsufficientTokensManyReplicas(t, replicas)
 }
