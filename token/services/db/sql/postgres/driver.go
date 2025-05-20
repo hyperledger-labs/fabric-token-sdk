@@ -34,10 +34,10 @@ type Driver struct {
 	OwnerTx       lazy.Provider[postgres.Config, *TransactionStore]
 }
 
-func NewNamedDriver(config driver.Config) driver.NamedDriver {
+func NewNamedDriver(config driver.Config, dbProvider postgres.DbProvider) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name:   postgres.Persistence,
-		Driver: NewDriver(config),
+		Driver: NewDriverWithDbProvider(config, dbProvider),
 	}
 }
 

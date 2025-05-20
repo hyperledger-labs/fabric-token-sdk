@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
+	sqlite2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
@@ -29,7 +30,7 @@ func TestDB(t *testing.T) {
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 
-	manager := ttxdb.NewStoreServiceManager(cp, multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp)))
+	manager := ttxdb.NewStoreServiceManager(cp, multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp, sqlite2.NewDbProvider())))
 	db1, err := manager.StoreServiceByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	db2, err := manager.StoreServiceByTMSId(token.TMSID{Network: "grapes"})

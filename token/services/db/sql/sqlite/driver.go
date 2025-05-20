@@ -34,15 +34,18 @@ type Driver struct {
 	OwnerTx       lazy.Provider[sqlite.Config, *OwnerTransactionStore]
 }
 
-func NewNamedDriver(config driver.Config) driver.NamedDriver {
+func NewNamedDriver(config driver.Config, dbProvider sqlite.DbProvider) driver.NamedDriver {
 	return driver.NamedDriver{
 		Name:   sqlite.Persistence,
-		Driver: NewDriver(config),
+		Driver: NewDriverWithDbProvider(config, dbProvider),
 	}
 }
 
 func NewDriver(config driver.Config) *Driver {
-	dbProvider := sqlite.NewDbProvider()
+	return NewDriverWithDbProvider(config, sqlite.NewDbProvider())
+}
+
+func NewDriverWithDbProvider(config driver.Config, dbProvider sqlite.DbProvider) *Driver {
 	return &Driver{
 		cp: sqlite.NewConfigProvider(common.NewConfig(config)),
 
