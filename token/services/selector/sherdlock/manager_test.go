@@ -21,6 +21,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var dbProvider = postgres2.NewDbProvider()
+
 func TestSufficientTokensOneReplica(t *testing.T) {
 	replicas, terminate := startManagers(t, 1, NoBackoff, 5)
 	defer terminate()
@@ -78,11 +80,11 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 }
 
 func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
-	d := postgres.NewDriver(multiplexed.MockTypeConfig(postgres2.Persistence, postgres2.Config{
+	d := postgres.NewDriverWithDbProvider(multiplexed.MockTypeConfig(postgres2.Persistence, postgres2.Config{
 		TablePrefix:  "test",
 		DataSource:   pgConnStr,
 		MaxOpenConns: 10,
-	}))
+	}), dbProvider)
 	lockDB, err := d.NewTokenLock("")
 	if err != nil {
 		return nil, err
