@@ -252,8 +252,8 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	}
 
 	// inputs
-	if len(m.Inputs) != action.a.NumInputs() {
-		return errors.Errorf("expected [%d] inputs but got [%d]", len(m.Inputs), action.a.NumInputs())
+	if len(m.Inputs) != action.NumInputs() {
+		return errors.Errorf("expected [%d] inputs but got [%d]", len(m.Inputs), action.NumInputs())
 	}
 
 	// outputs
@@ -262,7 +262,7 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	}
 
 	// extra signer
-	extraSigner := action.a.ExtraSigners()
+	extraSigner := action.ExtraSigners()
 	if len(m.ExtraSigners) != len(extraSigner) {
 		return errors.Errorf("expected [%d] extra signers but got [%d]", len(m.ExtraSigners), len(extraSigner))
 	}
@@ -272,6 +272,11 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 			return errors.Errorf("expected extra signer [%s] but got [%s]", m.ExtraSigners[i], signer)
 		}
 	}
+
+	if !m.Issuer.Equal(action.GetIssuer()) {
+		return errors.Errorf("expected issuer [%s] but got [%s]", m.Issuer, action.GetIssuer().Bytes())
+	}
+
 	return nil
 }
 
