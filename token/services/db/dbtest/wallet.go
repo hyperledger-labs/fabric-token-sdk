@@ -7,13 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/stretchr/testify/assert"
 )
 
-func WalletTest(t *testing.T, cfgProvider cfgProvider) {
+func WalletTest(ctx context.Context, t *testing.T, cfgProvider cfgProvider) {
 	for _, c := range walletCases {
 		driver := cfgProvider(c.Name)
 		db, err := driver.NewWallet("", c.Name)
@@ -21,7 +22,7 @@ func WalletTest(t *testing.T, cfgProvider cfgProvider) {
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			c.Fn(xt, db)
+			c.Fn(ctx, xt, db)
 		})
 		assert.NoError(t, db.Close())
 	}
@@ -29,13 +30,13 @@ func WalletTest(t *testing.T, cfgProvider cfgProvider) {
 
 var walletCases = []struct {
 	Name string
-	Fn   func(*testing.T, driver.WalletStore)
+	Fn   func(context.Context, *testing.T, driver.WalletStore)
 }{
 	{"TDuplicate", TDuplicate},
 	{"TWalletIdentities", TWalletIdentities},
 }
 
-func TDuplicate(t *testing.T, db driver.WalletStore) {
+func TDuplicate(ctx context.Context, t *testing.T, db driver.WalletStore) {
 	id := []byte{254, 0, 155, 1}
 
 	err := db.StoreIdentity(id, "eID", "duplicate", 0, []byte("meta"))
@@ -53,7 +54,7 @@ func TDuplicate(t *testing.T, db driver.WalletStore) {
 	assert.Equal(t, "meta", string(meta))
 }
 
-func TWalletIdentities(t *testing.T, db driver.WalletStore) {
+func TWalletIdentities(ctx context.Context, t *testing.T, db driver.WalletStore) {
 	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 0, nil))
 	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 1, nil))
 	assert.NoError(t, db.StoreIdentity([]byte("bob"), "eID", "bob_wallet", 0, nil))

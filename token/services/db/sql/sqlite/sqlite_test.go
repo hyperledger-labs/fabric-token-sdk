@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sqlite
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"testing"
@@ -19,23 +20,23 @@ import (
 )
 
 func TestTokens(t *testing.T) {
-	dbtest.TokensTest(t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
+	dbtest.TokensTest(context.Background(), t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
 }
 
 func TestTransactions(t *testing.T) {
-	dbtest.TransactionsTest(t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
+	dbtest.TransactionsTest(context.Background(), t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
 }
 
 func TestTokenLocks(t *testing.T) {
-	dbtest.TokenLocksTest(t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
+	dbtest.TokenLocksTest(context.Background(), t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
 }
 
 func TestIdentity(t *testing.T) {
-	dbtest.IdentityTest(t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
+	dbtest.IdentityTest(context.Background(), t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
 }
 
 func TestWallet(t *testing.T) {
-	dbtest.WalletTest(t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
+	dbtest.WalletTest(context.Background(), t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
 }
 
 func sqliteCfg(tempDir string, name string) *mock.ConfigProvider {

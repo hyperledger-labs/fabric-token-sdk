@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -16,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
+func IdentityTest(ctx context.Context, t *testing.T, cfgProvider cfgProvider) {
 	for _, c := range identityCases {
 		driver := cfgProvider(c.Name)
 		db, err := driver.NewIdentity("", c.Name)
@@ -24,14 +25,14 @@ func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
-			c.Fn(xt, db)
+			c.Fn(ctx, xt, db)
 		})
 	}
 }
 
 var identityCases = []struct {
 	Name string
-	Fn   func(*testing.T, driver.IdentityStore)
+	Fn   func(context.Context, *testing.T, driver.IdentityStore)
 }{
 	{"IdentityInfo", TIdentityInfo},
 	{"SignerInfo", TSignerInfo},
@@ -39,7 +40,7 @@ var identityCases = []struct {
 	{"SignerInfoConcurrent", TSignerInfoConcurrent},
 }
 
-func TConfigurations(t *testing.T, db driver.IdentityStore) {
+func TConfigurations(ctx context.Context, t *testing.T, db driver.IdentityStore) {
 	expected := driver.IdentityConfiguration{
 		ID:     "pineapple",
 		Type:   "core",
@@ -79,7 +80,7 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 	assert.NoError(t, db.AddConfiguration(expected))
 }
 
-func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
+func TIdentityInfo(ctx context.Context, t *testing.T, db driver.IdentityStore) {
 	id := []byte("alice")
 	auditInfo := []byte("alice_audit_info")
 	tokMeta := []byte("tok_meta")
@@ -96,18 +97,18 @@ func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
 	assert.Equal(t, tokMetaAudit, tokMetaAudit2)
 }
 
-func TSignerInfo(t *testing.T, db driver.IdentityStore) {
-	tSignerInfo(t, db, 0)
+func TSignerInfo(ctx context.Context, t *testing.T, db driver.IdentityStore) {
+	tSignerInfo(ctx, t, db, 0)
 }
 
-func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
+func TSignerInfoConcurrent(ctx context.Context, t *testing.T, db driver.IdentityStore) {
 	wg := sync.WaitGroup{}
 	n := 100
 	wg.Add(n)
 
 	for i := 0; i < n; i++ {
 		go func(i int) {
-			tSignerInfo(t, db, i)
+			tSignerInfo(ctx, t, db, i)
 			t.Log(i)
 			wg.Done()
 		}(i)
@@ -122,7 +123,7 @@ func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
 	}
 }
 
-func tSignerInfo(t *testing.T, db driver.IdentityStore, index int) {
+func tSignerInfo(ctx context.Context, t *testing.T, db driver.IdentityStore, index int) {
 	alice := []byte(fmt.Sprintf("alice_%d", index))
 	bob := []byte(fmt.Sprintf("bob_%d", index))
 	signerInfo := []byte("signer_info")
