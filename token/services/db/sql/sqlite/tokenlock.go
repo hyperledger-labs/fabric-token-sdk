@@ -7,10 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package sqlite
 
 import (
-	"fmt"
 	"time"
 
-	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
+	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
+	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query"
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
@@ -18,30 +19,58 @@ import (
 
 type TokenLockStore struct {
 	*common.TokenLockStore
+	ci common2.CondInterpreter
+}
+
+func IsStale(tokenLocks common2.TableName, requests common2.TableName, leaseExpiry time.Duration) *isStale {
+	return &isStale{tokenLocks: tokenLocks, requests: requests, leaseExpiry: leaseExpiry}
+}
+
+type isStale struct {
+	tokenLocks  common2.TableName
+	requests    common2.TableName
+	leaseExpiry time.Duration
+}
+
+func (c *isStale) WriteString(_ common2.CondInterpreter, sb common2.Builder) {
+	sb.WriteString("tx_id IN (SELECT ").
+		WriteString(string(c.tokenLocks)).
+		WriteString(".tx_id FROM ").
+		WriteString(string(c.tokenLocks)).
+		WriteString(" JOIN ").
+		WriteString(string(c.requests)).
+		WriteString(" ON ").
+		WriteString(string(c.tokenLocks)).
+		WriteString(".tx_id = ").
+		WriteString(string(c.requests)).
+		WriteString(".tx_id WHERE ").
+		WriteString(string(c.requests)).
+		WriteString(".status IN (").
+		WriteParam(driver.Deleted).
+		WriteString(") OR ").
+		WriteString(string(c.tokenLocks)).
+		WriteString(".created_at < datetime('now', '-").
+		WriteParam(c.leaseExpiry.Seconds()).
+		WriteString(" seconds')")
 }
 
 func (db *TokenLockStore) Cleanup(leaseExpiry time.Duration) error {
-	query := fmt.Sprintf(
-		"DELETE FROM %s WHERE tx_id IN ("+
-			"SELECT %s.tx_id FROM %s JOIN %s ON %s.tx_id = %s.tx_id WHERE %s.status IN (%d) "+
-			"OR %s.created_at < datetime('now', '-%d seconds')"+
-			");",
-		db.Table.TokenLocks,
-		db.Table.TokenLocks, db.Table.TokenLocks, db.Table.Requests, db.Table.TokenLocks, db.Table.Requests, db.Table.Requests, driver.Deleted,
-		db.Table.TokenLocks, int(leaseExpiry.Seconds()),
-	)
-	db.Logger.Debug(query)
-	_, err := db.WriteDB.Exec(query)
+	query, params := q.DeleteFrom(db.Table.TokenLocks).
+		Where(IsStale(common2.TableName(db.Table.TokenLocks), common2.TableName(db.Table.Requests), leaseExpiry)).
+		Format(db.ci)
+
+	db.Logger.Debug(query, params)
+	_, err := db.WriteDB.Exec(query, params...)
 	if err != nil {
 		db.Logger.Errorf("query failed: %s", query)
 	}
 	return err
 }
 
-func NewTokenLockStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenLockStore, error) {
+func NewTokenLockStore(dbs *common3.RWDB, tableNames common.TableNames) (*TokenLockStore, error) {
 	tldb, err := common.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter())
 	if err != nil {
 		return nil, err
 	}
-	return &TokenLockStore{TokenLockStore: tldb}, nil
+	return &TokenLockStore{TokenLockStore: tldb, ci: sqlite.NewConditionInterpreter()}, nil
 }
