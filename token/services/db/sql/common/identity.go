@@ -94,13 +94,13 @@ func (db *IdentityStore) CreateSchema() error {
 }
 
 func (db *IdentityStore) AddConfiguration(wp driver.IdentityConfiguration) error {
-	query, err := NewInsertInto(db.table.IdentityConfigurations).Rows("id, type, url, conf, raw").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed compiling query")
-	}
+	query, args := q.InsertInto(db.table.IdentityConfigurations).
+		Fields("id", "type", "url", "conf", "raw").
+		Row(wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw).
+		Format()
 	logger.Debug(query, wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw)
 
-	_, err = db.writeDB.Exec(query, wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw)
+	_, err := db.writeDB.Exec(query, args...)
 	return err
 }
 
@@ -134,14 +134,14 @@ func (db *IdentityStore) ConfigurationExists(id, typ, url string) (bool, error) 
 
 func (db *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
 	// logger.Infof("store identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
-	query, err := NewInsertInto(db.table.IdentityInfo).Rows("identity_hash, identity, identity_audit_info, token_metadata, token_metadata_audit_info").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed compiling query")
-	}
+	h := token.Identity(id).String()
+	query, args := q.InsertInto(db.table.IdentityInfo).
+		Fields("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
+		Row(h, id, identityAudit, tokenMetadata, tokenMetadataAudit).
+		Format()
 	logger.Debug(query)
 
-	h := token.Identity(id).String()
-	_, err = db.writeDB.Exec(query, h, id, identityAudit, tokenMetadata, tokenMetadataAudit)
+	_, err := db.writeDB.Exec(query, args)
 	if err != nil {
 		// does the record already exists?
 		auditInfo, err2 := db.GetAuditInfo(id)
@@ -207,15 +207,17 @@ func (db *IdentityStore) GetTokenInfo(id []byte) ([]byte, []byte, error) {
 }
 
 func (db *IdentityStore) StoreSignerInfo(id, info []byte) error {
-	query, err := NewInsertInto(db.table.Signers).Rows("identity_hash, identity, info").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed compiling query")
-	}
 	h := token.Identity(id).String()
+
+	query, args := q.InsertInto(db.table.Signers).
+		Fields("identity_hash", "identity", "info").
+		Row(h, id, info).
+		Format()
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("store signer info [%s]: [%s][%s]", query, h, hash.Hashable(info))
 	}
-	_, err = db.writeDB.Exec(query, h, id, info)
+	_, err := db.writeDB.Exec(query, args)
 	if err != nil {
 		if exists, err2 := db.SignerInfoExists(id); err2 == nil && exists {
 			logger.Debugf("signer info [%s] exists, no error to return", h)

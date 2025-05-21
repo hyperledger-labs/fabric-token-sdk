@@ -36,12 +36,12 @@ func NewSelect(columns ...string) *Select {
 	}
 }
 
-// func NewSelectDistinct(columns ...string) *Select {
-// 	return &Select{
-// 		stmt:    SelectDistinctStatement,
-// 		columns: columns,
-// 	}
-// }
+func NewSelectDistinct(columns ...string) *Select {
+	return &Select{
+		stmt:    SelectDistinctStatement,
+		columns: columns,
+	}
+}
 
 func (s *Select) From(tables ...string) *Select {
 	s.from = tables
@@ -140,105 +140,105 @@ func (i *Insert) Compile() (string, error) {
 	return sb.String(), nil
 }
 
-// type Update struct {
-// 	stmt  string
-// 	table string
-// 	rows  string
-// 	where string
-// }
+type Update struct {
+	stmt  string
+	table string
+	rows  string
+	where string
+}
 
-// func NewUpdate(table string) *Update {
-// 	return &Update{
-// 		stmt:  UpdateStatement,
-// 		table: table,
-// 	}
-// }
+func NewUpdate(table string) *Update {
+	return &Update{
+		stmt:  UpdateStatement,
+		table: table,
+	}
+}
 
-// func (u *Update) Set(rows string) *Update {
-// 	u.rows = rows
-// 	return u
-// }
+func (u *Update) Set(rows string) *Update {
+	u.rows = rows
+	return u
+}
 
-// func (u *Update) Where(where string) *Update {
-// 	u.where = where
-// 	return u
-// }
+func (u *Update) Where(where string) *Update {
+	u.where = where
+	return u
+}
 
-// func (u *Update) Compile() (string, error) {
-// 	counter := 1
-// 	sb := new(strings.Builder)
-// 	sb.WriteString(u.stmt)
-// 	sb.WriteString(" ")
-// 	if len(u.table) == 0 {
-// 		return "", errors.New("no table specified")
-// 	}
-// 	sb.WriteString(u.table)
-// 	sb.WriteString(" SET ")
-// 	splitRows := strings.Split(u.rows, ",")
-// 	for i, row := range splitRows {
-// 		if _, err := fmt.Fprintf(sb, "%s = $%d", strings.TrimSpace(row), counter); err != nil {
-// 			return "", err
-// 		}
-// 		if i < len(splitRows)-1 {
-// 			sb.WriteString(", ")
-// 		}
-// 		counter++
-// 	}
-// 	// sb.WriteString(" ")
+func (u *Update) Compile() (string, error) {
+	counter := 1
+	sb := new(strings.Builder)
+	sb.WriteString(u.stmt)
+	sb.WriteString(" ")
+	if len(u.table) == 0 {
+		return "", errors.New("no table specified")
+	}
+	sb.WriteString(u.table)
+	sb.WriteString(" SET ")
+	splitRows := strings.Split(u.rows, ",")
+	for i, row := range splitRows {
+		if _, err := fmt.Fprintf(sb, "%s = $%d", strings.TrimSpace(row), counter); err != nil {
+			return "", err
+		}
+		if i < len(splitRows)-1 {
+			sb.WriteString(", ")
+		}
+		counter++
+	}
+	// sb.WriteString(" ")
 
-// 	if len(u.where) > 0 {
-// 		if !strings.HasPrefix(u.where, "WHERE") {
-// 			sb.WriteString(" WHERE ")
-// 		}
-// 		if !strings.Contains(u.where, "$") {
-// 			splitWhere := strings.Split(u.where, ",")
-// 			for i, row := range splitWhere {
-// 				if _, err := fmt.Fprintf(sb, "%s = $%d", row, counter); err != nil {
-// 					return "", err
-// 				}
-// 				if i < len(splitWhere)-1 {
-// 					sb.WriteString(" AND ")
-// 				}
-// 				counter++
-// 			}
-// 		} else {
-// 			sb.WriteString(u.where)
-// 		}
-// 	}
-// 	return sb.String(), nil
-// }
+	if len(u.where) > 0 {
+		if !strings.HasPrefix(u.where, "WHERE") {
+			sb.WriteString(" WHERE ")
+		}
+		if !strings.Contains(u.where, "$") {
+			splitWhere := strings.Split(u.where, ",")
+			for i, row := range splitWhere {
+				if _, err := fmt.Fprintf(sb, "%s = $%d", row, counter); err != nil {
+					return "", err
+				}
+				if i < len(splitWhere)-1 {
+					sb.WriteString(" AND ")
+				}
+				counter++
+			}
+		} else {
+			sb.WriteString(u.where)
+		}
+	}
+	return sb.String(), nil
+}
 
-// type Delete struct {
-// 	stmt  string
-// 	table string
-// 	where string
-// }
+type Delete struct {
+	stmt  string
+	table string
+	where string
+}
 
-// func NewDeleteFrom(table string) *Delete {
-// 	return &Delete{
-// 		stmt:  DeleteStatement,
-// 		table: table,
-// 	}
-// }
+func NewDeleteFrom(table string) *Delete {
+	return &Delete{
+		stmt:  DeleteStatement,
+		table: table,
+	}
+}
 
-// func (s *Delete) Where(where string) *Delete {
-// 	s.where = where
-// 	return s
-// }
+func (s *Delete) Where(where string) *Delete {
+	s.where = where
+	return s
+}
 
-// func (s *Delete) Compile() (string, error) {
-// 	sb := new(strings.Builder)
-// 	sb.WriteString(s.stmt)
-// 	sb.WriteString(" ")
-// 	if len(s.table) == 0 {
-// 		return "", errors.New("no table specified")
-// 	}
-// 	sb.WriteString(s.table)
-// 	if len(s.where) > 0 {
-// 		if !strings.HasPrefix(s.where, "WHERE") {
-// 			sb.WriteString(" WHERE ")
-// 		}
-// 		sb.WriteString(s.where)
-// 	}
-// 	return sb.String(), nil
-// }
+func (s *Delete) Compile() (string, error) {
+	sb := new(strings.Builder)
+	sb.WriteString(s.stmt)
+	sb.WriteString(" ")
+	if len(s.table) == 0 {
+		return "", errors.New("no table specified")
+	}
+	sb.WriteString(s.table)
+	if len(s.where) > 0 {
+		if !strings.HasPrefix(s.where, "WHERE") {
+			sb.WriteString(" WHERE ")
+		}
+		sb.WriteString(s.where)
+	}
+	return sb.String(), nil
+}

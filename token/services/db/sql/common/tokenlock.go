@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 type tokenLockTables struct {
@@ -61,12 +60,12 @@ func (db *TokenLockStore) CreateSchema() error {
 }
 
 func (db *TokenLockStore) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
-	query, err := NewInsertInto(db.Table.TokenLocks).Rows("consumer_tx_id, tx_id, idx, created_at").Compile()
-	if err != nil {
-		return errors.Wrap(err, "failed compiling query")
-	}
+	query, args := q.InsertInto(db.Table.TokenLocks).
+		Fields("consumer_tx_id, tx_id, idx, created_at").
+		Row(consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC()).
+		Format()
 	logger.Debug(query, tokenID, consumerTxID)
-	_, err = db.WriteDB.Exec(query, consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC())
+	_, err := db.WriteDB.Exec(query, args...)
 	return err
 }
 

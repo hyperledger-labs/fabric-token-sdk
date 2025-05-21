@@ -51,15 +51,13 @@ func TestSelect_Compile(t *testing.T) {
 
 func TestInsert_Compile(t *testing.T) {
 	// Simple INSERT
-	insertStmt := common.NewInsertInto("users").Rows("id, name")
-	query, err := insertStmt.Compile()
-	assert.NoError(t, err)
+	query, args := q.InsertInto("users").
+		Fields("id", "name").
+		Row(1, "nnn").
+		Format()
 	assert.Equal(t, "INSERT INTO users (id, name) VALUES ($1, $2)", query)
-
-	// Missing rows
-	insertStmt = common.NewInsertInto("users")
-	_, err = insertStmt.Compile()
-	assert.Error(t, err)
+	assert.Equal(t, args[0], 1)
+	assert.Equal(t, args[1], "nnn")
 }
 
 func TestUpdate_Compile(t *testing.T) {

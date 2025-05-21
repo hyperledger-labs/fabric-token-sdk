@@ -785,12 +785,13 @@ func (db *TokenStore) StorePublicParams(raw []byte) error {
 	}
 
 	now := time.Now().UTC()
-	query, err := NewInsertInto(db.table.PublicParams).Rows("raw, raw_hash, stored_at").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed to compile query")
-	}
+
+	query, args := q.InsertInto(db.table.PublicParams).
+		Fields("raw", "raw_hash", "stored_at").
+		Row(raw, rawHash, now).
+		Format()
 	logger.Debugf(query, fmt.Sprintf("store public parameters (%d bytes) [%v], hash [%s]", len(raw), now, base64.StdEncoding.EncodeToString(rawHash)))
-	_, err = db.writeDB.Exec(query, raw, rawHash, now)
+	_, err = db.writeDB.Exec(query, args)
 	return err
 }
 
@@ -836,10 +837,6 @@ func (db *TokenStore) PublicParamsByHash(rawHash tdriver.PPHash) ([]byte, error)
 // TODO Convert to multi-row query
 func (db *TokenStore) StoreCertifications(certifications map[*token.ID][]byte) (err error) {
 	now := time.Now().UTC()
-	query, err := NewInsertInto(db.table.Certifications).Rows("tx_id, idx, certification, stored_at").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed to compile query")
-	}
 
 	tx, err := db.writeDB.Begin()
 	if err != nil {
@@ -857,8 +854,12 @@ func (db *TokenStore) StoreCertifications(certifications map[*token.ID][]byte) (
 		if tokenID == nil {
 			return errors.Errorf("invalid token-id, cannot be nil")
 		}
+		query, args := q.InsertInto(db.table.Certifications).
+			Fields("tx_id", "idx", "certification", "stored_at").
+			Row(tokenID.TxId, tokenID.Index, certification, now).
+			Format()
 		logger.Debug(query, fmt.Sprintf("(%d bytes)", len(certification)), now)
-		if _, err = tx.Exec(query, tokenID.TxId, tokenID.Index, certification, now); err != nil {
+		if _, err = tx.Exec(query, args...); err != nil {
 			return tokenDBError(err)
 		}
 	}
@@ -1182,11 +1183,10 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 	// Store token
 	now := time.Now().UTC()
-	query, err := NewInsertInto(t.table.Tokens).Rows(
-		"tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_type, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed building insert")
-	}
+	query, args := q.InsertInto(t.table.Tokens).
+		Fields("tx_id", "idx", "issuer_raw", "owner_raw", "owner_type", "owner_identity", "owner_wallet_id", "ledger", "ledger_type", "ledger_metadata", "token_type", "quantity", "amount", "stored_at", "owner", "auditor", "issuer").
+		Row(tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.OwnerType, tr.OwnerIdentity, tr.OwnerWalletID, tr.Ledger, tr.LedgerFormat, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer).
+		Format()
 	logger.Debug(query,
 		tr.TxID,
 		tr.Index,
@@ -1206,24 +1206,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		tr.Auditor,
 		tr.Issuer)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query,
-		tr.TxID,
-		tr.Index,
-		tr.IssuerRaw,
-		tr.OwnerRaw,
-		tr.OwnerType,
-		tr.OwnerIdentity,
-		tr.OwnerWalletID,
-		tr.Ledger,
-		tr.LedgerFormat,
-		tr.LedgerMetadata,
-		tr.Type,
-		tr.Quantity,
-		tr.Amount,
-		now,
-		tr.Owner,
-		tr.Auditor,
-		tr.Issuer); err != nil {
+	if _, err := t.tx.Exec(query, args...); err != nil {
 		logger.Errorf("error storing token [%s] in table [%s]: [%s][%s]", tr.TxID, t.table.Tokens, err, string(debug.Stack()))
 		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, t.table.Tokens)
 	}
@@ -1231,13 +1214,13 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 	// Store ownership
 	span.AddEvent("store_ownerships")
 	for _, eid := range owners {
-		query, err := NewInsertInto(t.table.Ownership).Rows("tx_id, idx, wallet_id").Compile()
-		if err != nil {
-			return errors.Wrapf(err, "failed building insert")
-		}
+		query, args := q.InsertInto(t.table.Ownership).
+			Fields("tx_id", "idx", "wallet_id").
+			Row(tr.TxID, tr.Index, eid).
+			Format()
 		logger.Debug(query, tr.TxID, tr.Index, eid)
 		span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-		if _, err := t.tx.Exec(query, tr.TxID, tr.Index, eid); err != nil {
+		if _, err := t.tx.Exec(query, args...); err != nil {
 			return errors.Wrapf(err, "error storing token ownership [%s]", tr.TxID)
 		}
 	}

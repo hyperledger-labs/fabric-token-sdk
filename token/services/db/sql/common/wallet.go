@@ -98,14 +98,14 @@ func (db *WalletStore) StoreIdentity(identity token.Identity, eID string, wID dr
 		return nil
 	}
 
-	query, err := NewInsertInto(db.table.Wallets).Rows("identity_hash, meta, wallet_id, role_id, created_at, enrollment_id").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed compiling query")
-	}
+	idHash := identity.UniqueID()
+	query, args := q.InsertInto(db.table.Wallets).
+		Fields("identity_hash, meta, wallet_id, role_id, created_at, enrollment_id").
+		Row(idHash, meta, wID, roleID, time.Now().UTC(), eID).
+		Format()
 	logger.Debug(query)
 
-	idHash := identity.UniqueID()
-	_, err = db.writeDB.Exec(query, idHash, meta, wID, roleID, time.Now().UTC(), eID)
+	_, err := db.writeDB.Exec(query, args...)
 	if err != nil {
 		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%v]", wID, idHash)
 	}

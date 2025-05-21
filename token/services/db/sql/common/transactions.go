@@ -241,16 +241,17 @@ func (db *TransactionStore) AddTransactionEndorsementAck(txID string, endorser t
 	logger.Debugf("adding transaction endorse ack record [%s]", txID)
 
 	now := time.Now().UTC()
-	query, err := NewInsertInto(db.table.TransactionEndorseAck).Rows("id, tx_id, endorser, sigma, stored_at").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "error compiling query")
-	}
-	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(endorser)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		return errors.Wrapf(err, "error generating uuid")
 	}
-	if _, err = db.writeDB.Exec(query, id, txID, endorser, sigma, now); err != nil {
+	query, args := q.InsertInto(db.table.TransactionEndorseAck).
+		Fields("id", "tx_id", "endorser", "sigma", "stored_at").
+		Row(id, txID, endorser, sigma, now).
+		Format()
+
+	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(endorser)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
+	if _, err = db.writeDB.Exec(query, args...); err != nil {
 		return ttxDBError(err)
 	}
 	return
@@ -570,11 +571,10 @@ func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 		return errors.Wrapf(err, "error generating uuid")
 	}
 
-	query, err := NewInsertInto(w.table.Transactions).Rows("id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, stored_at").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "error compiling insert")
-	}
-	args := []any{id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Timestamp.UTC()}
+	query, args := q.InsertInto(w.table.Transactions).
+		Fields("id", "tx_id", "action_type", "sender_eid", "recipient_eid", "token_type", "amount", "stored_at").
+		Row(id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Timestamp.UTC()).
+		Format()
 	logger.Debug(query, args)
 	_, err = w.txn.Exec(query, args...)
 
@@ -601,13 +601,13 @@ func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadat
 		return errors.New("error marshaling application metadata")
 	}
 
-	query, err := NewInsertInto(w.table.Requests).Rows("tx_id, request, status, status_message, application_metadata, public_metadata, pp_hash").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "error compiling query")
-	}
+	query, args := q.InsertInto(w.table.Requests).
+		Fields("tx_id", "request", "status", "status_message", "application_metadata", "public_metadata", "pp_hash").
+		Row(txID, tr, driver.Pending, "", ja, jp, ppHash).
+		Format()
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(publicMetadata), len(ppHash))
+	_, err = w.txn.Exec(query, args...)
 
-	_, err = w.txn.Exec(query, txID, tr, driver.Pending, "", ja, jp, ppHash)
 	return ttxDBError(err)
 }
 
@@ -627,11 +627,10 @@ func (w *AtomicWrite) AddMovement(r *driver.MovementRecord) error {
 	}
 	now := time.Now().UTC()
 
-	query, err := NewInsertInto(w.table.Movements).Rows("id, tx_id, enrollment_id, token_type, amount, stored_at").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "error compiling query")
-	}
-	args := []any{id, r.TxID, r.EnrollmentID, r.TokenType, amount, now}
+	query, args := q.InsertInto(w.table.Movements).
+		Fields("id", "tx_id", "enrollment_id", "token_type", "amount", "stored_at").
+		Row(id, r.TxID, r.EnrollmentID, r.TokenType, amount, now).
+		Format()
 	logger.Debug(query, args)
 	_, err = w.txn.Exec(query, args...)
 
@@ -649,13 +648,13 @@ func (w *AtomicWrite) AddValidationRecord(txID string, meta map[string][]byte) e
 	}
 	now := time.Now().UTC()
 
-	query, err := NewInsertInto(w.table.Validations).Rows("tx_id, metadata, stored_at").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed to compile query")
-	}
+	query, args := q.InsertInto(w.table.Validations).
+		Fields("tx_id", "metadata", "stored_at").
+		Row(txID, len(md), now).
+		Format()
 	logger.Debug(query, txID, len(md), now)
 
-	_, err = w.txn.Exec(query, txID, md, now)
+	_, err = w.txn.Exec(query, args)
 	return ttxDBError(err)
 }
 
