@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package memory
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/dbtest"
@@ -14,21 +15,21 @@ import (
 )
 
 func TestTokens(t *testing.T) {
-	dbtest.TokensTest(t, func(string) driver.Driver { return NewDriver() })
+	dbtest.TokensTest(context.Background(), t, func(string) driver.Driver { return NewDriver() })
 }
 
 func TestTransactions(t *testing.T) {
-	dbtest.TransactionsTest(t, func(string) driver.Driver { return NewDriver() })
+	dbtest.TransactionsTest(context.Background(), t, func(string) driver.Driver { return NewDriver() })
 }
 
 func TestTokenLocks(t *testing.T) {
-	dbtest.TokenLocksTest(t, func(string) driver.Driver { return NewDriver() })
+	dbtest.TokenLocksTest(context.Background(), t, func(string) driver.Driver { return NewDriver() })
 }
 
 func TestIdentity(t *testing.T) {
-	dbtest.IdentityTest(t, func(string) driver.Driver { return NewDriver() })
+	dbtest.IdentityTest(context.Background(), t, func(string) driver.Driver { return NewDriver() })
 }
 
 func TestWallet(t *testing.T) {
-	dbtest.WalletTest(t, func(string) driver.Driver { return NewDriver() })
+	dbtest.WalletTest(context.Background(), t, func(string) driver.Driver { return NewDriver() })
 }

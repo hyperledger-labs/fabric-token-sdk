@@ -32,7 +32,7 @@ const (
 
 var TokenNotifierCases = []struct {
 	Name string
-	Fn   func(*testing.T, TestTokenDB, driver.TokenNotifier)
+	Fn   func(context.Context, *testing.T, TestTokenDB, driver.TokenNotifier)
 }{
 	{"SubscribeStore", TSubscribeStore},
 	{"SubscribeStoreDelete", TSubscribeStoreDelete},
@@ -45,7 +45,7 @@ type dbEvent struct {
 	vals map[driver2.ColumnKey]string
 }
 
-func collectDBEvents(db driver.TokenNotifier) (*[]dbEvent, error) {
+func collectDBEvents(ctx context.Context, db driver.TokenNotifier) (*[]dbEvent, error) {
 	ch := make(chan dbEvent)
 	err := db.Subscribe(func(operation driver2.Operation, m map[driver2.ColumnKey]string) {
 		ch <- dbEvent{op: operation, vals: m}
@@ -62,8 +62,8 @@ func collectDBEvents(db driver.TokenNotifier) (*[]dbEvent, error) {
 	return &result, nil
 }
 
-func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
-	result, err := collectDBEvents(notifier)
+func TSubscribeStore(ctx context.Context, t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
+	result, err := collectDBEvents(ctx, notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
@@ -74,8 +74,8 @@ func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier
 	assert2.Eventually(t, func() bool { return len(*result) == 2 }, time.Second, 20*time.Millisecond)
 }
 
-func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
-	result, err := collectDBEvents(notifier)
+func TSubscribeStoreDelete(ctx context.Context, t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
+	result, err := collectDBEvents(ctx, notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
@@ -87,8 +87,8 @@ func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNo
 	assert2.Eventually(t, func() bool { return len(*result) == 3 }, time.Second, 20*time.Millisecond)
 }
 
-func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
-	result, err := collectDBEvents(notifier)
+func TSubscribeStoreNoCommit(ctx context.Context, t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
+	result, err := collectDBEvents(ctx, notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
@@ -98,8 +98,8 @@ func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.Token
 	assert2.Eventually(t, func() bool { return len(*result) == 0 }, time.Second, 20*time.Millisecond)
 }
 
-func TSubscribeRead(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
-	result, err := collectDBEvents(notifier)
+func TSubscribeRead(ctx context.Context, t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
+	result, err := collectDBEvents(ctx, notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
