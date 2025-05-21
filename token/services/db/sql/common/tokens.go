@@ -1156,13 +1156,15 @@ func (t *TokenTransaction) Delete(ctx context.Context, tokenID token.ID, deleted
 	// logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
-	query, err := NewUpdate(t.table.Tokens).Set("is_deleted, spent_by, spent_at").Where("tx_id, idx").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed building query")
-	}
+	query, args := q.Update(t.table.Tokens).
+		Set("is_deleted", true).
+		Set("spent_by", deletedBy).
+		Set("spent_at", now).
+		Where(cond.And(cond.Eq("tx_id", tokenID.TxId), cond.Eq("idx", tokenID.Index))).
+		Format(t.ci)
 	logger.Debugf(query, true, deletedBy, now, tokenID.TxId, tokenID.Index)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query, true, deletedBy, now, tokenID.TxId, tokenID.Index); err != nil {
+	if _, err := t.tx.Exec(query, args...); err != nil {
 		span.RecordError(err)
 		return errors.Wrapf(err, "error setting token to deleted [%s]", tokenID.TxId)
 	}

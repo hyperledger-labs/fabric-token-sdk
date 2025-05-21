@@ -32,10 +32,12 @@ func TestSelect_Compile(t *testing.T) {
 	assert.Equal(t, "SELECT id,name FROM users citizen WHERE id = 1", query)
 
 	// SELECT DISTINCT
-	selectDistinctStmt := common.NewSelectDistinct("email").From("customers")
-	query, err = selectDistinctStmt.Compile()
-	assert.NoError(t, err)
+	query, args = q.SelectDistinct().
+		FieldsByName("email_id").
+		From(q.Table("customers")).
+		Format(sqlite.NewConditionInterpreter(), nil)
 	assert.Equal(t, "SELECT DISTINCT email FROM customers", query)
+	assert.Empty(t, args)
 
 	// No columns selected
 	query, args = q.Select().
@@ -44,6 +46,7 @@ func TestSelect_Compile(t *testing.T) {
 		Format(sqlite.NewConditionInterpreter(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "SELECT * FROM users", query)
+	assert.Empty(t, args)
 }
 
 func TestInsert_Compile(t *testing.T) {
@@ -61,26 +64,22 @@ func TestInsert_Compile(t *testing.T) {
 
 func TestUpdate_Compile(t *testing.T) {
 	// Simple UPDATE
-	updateStmt := common.NewUpdate("users").Set("name, age").Where("id")
-	query, err := updateStmt.Compile()
-	assert.NoError(t, err)
+	query, args := q.Update("users").
+		Set("name", "TheName").
+		Set("age", 16).
+		Where(cond.Eq("id", 1)).
+		Format(sqlite.NewConditionInterpreter())
 	assert.Equal(t, "UPDATE users SET name = $1, age = $2 WHERE id = $3", query)
-
-	// Missing table
-	updateStmt = common.NewUpdate("").Set("name")
-	_, err = updateStmt.Compile()
-	assert.Error(t, err)
+	assert.Equal(t, args[0], "TheName")
+	assert.Equal(t, args[1], 16)
+	assert.Equal(t, args[2], 1)
 }
 
 func TestDelete_Compile(t *testing.T) {
 	// Simple DELETE
-	deleteStmt := common.NewDeleteFrom("users").Where("id = 1")
-	query, err := deleteStmt.Compile()
-	assert.NoError(t, err)
-	assert.Equal(t, "DELETE FROM users WHERE id = 1", query)
-
-	// Missing table
-	deleteStmt = common.NewDeleteFrom("").Where("id = 1")
-	_, err = deleteStmt.Compile()
-	assert.Error(t, err)
+	query, args := q.DeleteFrom("users").
+		Where(cond.Eq("id", 1)).
+		Format(sqlite.NewConditionInterpreter())
+	assert.Equal(t, "DELETE FROM users WHERE id = $1", query)
+	assert.Equal(t, args[0], 1)
 }

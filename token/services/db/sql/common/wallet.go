@@ -66,12 +66,13 @@ func (db *WalletStore) GetWalletID(identity token.Identity, roleID int) (driver.
 }
 
 func (db *WalletStore) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
-	query, err := NewSelectDistinct("wallet_id").From(db.table.Wallets).Where("role_id = $1").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed compiling query")
-	}
+	query, args := q.SelectDistinct().
+		FieldsByName("wallet_id").
+		From(q.Table(db.table.Wallets)).
+		Where(cond.Eq("role_id", roleID)).
+		Format(db.ci, nil)
 	logger.Debug(query)
-	rows, err := db.readDB.Query(query, roleID)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

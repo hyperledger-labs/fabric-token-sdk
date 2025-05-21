@@ -11,6 +11,7 @@ import (
 	"time"
 
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
@@ -38,7 +39,7 @@ func (db *TokenLockStore) Cleanup(leaseExpiry time.Duration) error {
 }
 
 func NewTokenLockStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenLockStore, error) {
-	tldb, err := common.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames)
+	tldb, err := common.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter())
 	if err != nil {
 		return nil, err
 	}
