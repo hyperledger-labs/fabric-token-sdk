@@ -23,7 +23,7 @@ import (
 
 type cfgProvider func(string) driver.Driver
 
-func TokensTest(t *testing.T, cfgProvider cfgProvider) {
+func TokensTest(ctx context.Context, t *testing.T, cfgProvider cfgProvider) {
 	for _, c := range tokensCases {
 		t.Run(c.Name, func(xt *testing.T) {
 			driver := cfgProvider(c.Name)
@@ -34,7 +34,7 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 			tokenDB, ok := db.(*common.TokenStore)
 			assert.True(xt, ok)
 			defer utils.IgnoreError(tokenDB.Close)
-			c.Fn(xt, db.(*common.TokenStore))
+			c.Fn(ctx, xt, db.(*common.TokenStore))
 		})
 	}
 	// for _, c := range TokenNotifierCases {
@@ -51,7 +51,7 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 
 var tokensCases = []struct {
 	Name string
-	Fn   func(*testing.T, TestTokenDB)
+	Fn   func(context.Context, *testing.T, TestTokenDB)
 }{
 	{"Transaction", TTokenTransaction},
 	{"SaveAndGetToken", TSaveAndGetToken},
@@ -66,7 +66,7 @@ var tokensCases = []struct {
 	{"TTokenTypes", TTokenTypes},
 }
 
-func TTokenTransaction(t *testing.T, db TestTokenDB) {
+func TTokenTransaction(ctx context.Context, t *testing.T, db TestTokenDB) {
 	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +133,7 @@ func TTokenTransaction(t *testing.T, db TestTokenDB) {
 	assert.NoError(t, tx.Commit())
 }
 
-func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
+func TSaveAndGetToken(ctx context.Context, t *testing.T, db TestTokenDB) {
 	for i := 0; i < 20; i++ {
 		tr := driver.TokenRecord{
 			TxID:           fmt.Sprintf("tx%d", i),
@@ -217,14 +217,14 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 		assert.NotEmpty(t, token.Owner, "expected owner raw to not be empty")
 	}
 
-	tokens := getTokensBy(t, db, "alice", "")
+	tokens := getTokensBy(ctx, t, db, "alice", "")
 	assert.NoError(t, err)
 	assert.Len(t, tokens, 22, "unspentTokensIteratorBy: expected only Alice tokens to be returned")
 
-	tokens = getTokensBy(t, db, "", ABC)
+	tokens = getTokensBy(ctx, t, db, "", ABC)
 	assert.Len(t, tokens, 1, "unspentTokensIteratorBy: expected only ABC tokens to be returned")
 
-	tokens = getTokensBy(t, db, "alice", ABC)
+	tokens = getTokensBy(ctx, t, db, "alice", ABC)
 	assert.Len(t, tokens, 1, "unspentTokensIteratorBy: expected only Alice ABC tokens to be returned")
 
 	unsp, err := db.GetTokens(&token.ID{TxId: "tx101", Index: 0})
@@ -262,7 +262,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 	assert.NoError(t, tx.Rollback())
 }
 
-func getTokensBy(t *testing.T, db TestTokenDB, ownerEID string, typ token.Type) []*token.UnspentToken {
+func getTokensBy(ctx context.Context, t *testing.T, db TestTokenDB, ownerEID string, typ token.Type) []*token.UnspentToken {
 	it, err := db.UnspentTokensIteratorBy(context.TODO(), ownerEID, typ)
 	assert.NoError(t, err)
 	defer it.Close()
@@ -281,7 +281,7 @@ func getTokensBy(t *testing.T, db TestTokenDB, ownerEID string, typ token.Type) 
 	return tokens
 }
 
-func TDeleteAndMine(t *testing.T, db TestTokenDB) {
+func TDeleteAndMine(ctx context.Context, t *testing.T, db TestTokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -360,7 +360,7 @@ func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 }
 
 // // ListAuditTokens returns the audited tokens associated to the passed ids
-func TListAuditTokens(t *testing.T, db TestTokenDB) {
+func TListAuditTokens(ctx context.Context, t *testing.T, db TestTokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -432,7 +432,7 @@ func TListAuditTokens(t *testing.T, db TestTokenDB) {
 	assert.Len(t, tok, 0)
 }
 
-func TListIssuedTokens(t *testing.T, db TestTokenDB) {
+func TListIssuedTokens(ctx context.Context, t *testing.T, db TestTokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -517,7 +517,7 @@ func TListIssuedTokens(t *testing.T, db TestTokenDB) {
 
 // GetTokenMetadata retrieves the token information for the passed ids.
 // For each id, the callback is invoked to unmarshal the token information
-func TGetTokenInfos(t *testing.T, db TestTokenDB) {
+func TGetTokenInfos(ctx context.Context, t *testing.T, db TestTokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -619,7 +619,7 @@ func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 	assert.Equal(t, "tx101l", string(toks[2]))
 }
 
-func TDeleteMultiple(t *testing.T, db TestTokenDB) {
+func TDeleteMultiple(ctx context.Context, t *testing.T, db TestTokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -674,7 +674,7 @@ func TDeleteMultiple(t *testing.T, db TestTokenDB) {
 	assert.True(t, mine, "expected existing token to be mine")
 }
 
-func TPublicParams(t *testing.T, db TestTokenDB) {
+func TPublicParams(ctx context.Context, t *testing.T, db TestTokenDB) {
 	b := []byte("test bytes")
 	bHash := hash.Hashable(b).Raw()
 	b1 := []byte("test bytes1")
@@ -709,7 +709,7 @@ func TPublicParams(t *testing.T, db TestTokenDB) {
 	assert.Equal(t, res, b1)
 }
 
-func TCertification(t *testing.T, db TestTokenDB) {
+func TCertification(ctx context.Context, t *testing.T, db TestTokenDB) {
 	wg := sync.WaitGroup{}
 	wg.Add(40)
 	for i := 0; i < 40; i++ {
@@ -782,7 +782,7 @@ func TCertification(t *testing.T, db TestTokenDB) {
 	assert.Empty(t, certifications)
 }
 
-func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
+func TQueryTokenDetails(ctx context.Context, t *testing.T, db TestTokenDB) {
 	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
 		t.Fatal(err)
@@ -922,7 +922,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	assertEqual(t, tx2, res[1])
 }
 
-func TTokenTypes(t *testing.T, db TestTokenDB) {
+func TTokenTypes(ctx context.Context, t *testing.T, db TestTokenDB) {
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
 	tx1 := driver.TokenRecord{
@@ -965,10 +965,10 @@ func TTokenTypes(t *testing.T, db TestTokenDB) {
 
 	it, err := db.SpendableTokensIteratorBy(context.TODO(), "", TST)
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, TST, 1)
+	consumeSpendableTokensIterator(ctx, t, it, TST, 1)
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST1")
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, "TST1", 1)
+	consumeSpendableTokensIterator(ctx, t, it, "TST1", 1)
 
 	// make all non-spendable
 	tx, err = db.NewTokenDBTransaction()
@@ -978,10 +978,10 @@ func TTokenTypes(t *testing.T, db TestTokenDB) {
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, TST, 0)
+	consumeSpendableTokensIterator(ctx, t, it, TST, 0)
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST1")
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, "TST1", 0)
+	consumeSpendableTokensIterator(ctx, t, it, "TST1", 0)
 
 	// make TST spendable
 	tx, err = db.NewTokenDBTransaction()
@@ -991,10 +991,10 @@ func TTokenTypes(t *testing.T, db TestTokenDB) {
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, TST, 1)
+	consumeSpendableTokensIterator(ctx, t, it, TST, 1)
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST1")
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, "TST1", 0)
+	consumeSpendableTokensIterator(ctx, t, it, "TST1", 0)
 
 	// make TST1 spendable
 	tx, err = db.NewTokenDBTransaction()
@@ -1004,10 +1004,10 @@ func TTokenTypes(t *testing.T, db TestTokenDB) {
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, TST, 0)
+	consumeSpendableTokensIterator(ctx, t, it, TST, 0)
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST1")
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, "TST1", 1)
+	consumeSpendableTokensIterator(ctx, t, it, "TST1", 1)
 
 	// make both spendable
 	tx, err = db.NewTokenDBTransaction()
@@ -1017,13 +1017,13 @@ func TTokenTypes(t *testing.T, db TestTokenDB) {
 
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", TST)
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, TST, 1)
+	consumeSpendableTokensIterator(ctx, t, it, TST, 1)
 	it, err = db.SpendableTokensIteratorBy(context.TODO(), "", "TST1")
 	assert.NoError(t, err)
-	consumeSpendableTokensIterator(t, it, "TST1", 1)
+	consumeSpendableTokensIterator(ctx, t, it, "TST1", 1)
 }
 
-func consumeSpendableTokensIterator(t *testing.T, it tdriver.SpendableTokensIterator, tokenType token.Type, count int) {
+func consumeSpendableTokensIterator(ctx context.Context, t *testing.T, it tdriver.SpendableTokensIterator, tokenType token.Type, count int) {
 	defer it.Close()
 	for i := 0; i < count; i++ {
 		tok, err := it.Next()

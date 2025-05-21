@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
-func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
+func TokenLocksTest(ctx context.Context, t *testing.T, cfgProvider cfgProvider) {
 	for _, c := range tokenLockDBCases {
 		driver := cfgProvider(c.Name)
 		tokenLockDB, err := driver.NewTokenLock("", c.Name)
@@ -32,19 +33,19 @@ func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
 		t.Run(c.Name, func(xt *testing.T) {
 			defer utils.IgnoreError(tokenLockDB.Close)
 			defer utils.IgnoreError(tokenTransactionDB.Close)
-			c.Fn(xt, tokenLockDB, tokenTransactionDB)
+			c.Fn(ctx, xt, tokenLockDB, tokenTransactionDB)
 		})
 	}
 }
 
 var tokenLockDBCases = []struct {
 	Name string
-	Fn   func(*testing.T, driver.TokenLockStore, driver.TokenTransactionStore)
+	Fn   func(context.Context, *testing.T, driver.TokenLockStore, driver.TokenTransactionStore)
 }{
 	{"TestFully", TestFully},
 }
 
-func TestFully(t *testing.T, tokenLockDB driver.TokenLockStore, tokenTransactionDB driver.TokenTransactionStore) {
+func TestFully(ctx context.Context, t *testing.T, tokenLockDB driver.TokenLockStore, tokenTransactionDB driver.TokenTransactionStore) {
 	tx, err := tokenTransactionDB.BeginAtomicWrite()
 	assert.NoError(t, err)
 	assert.NoError(t, tx.AddTokenRequest("apple", []byte("apple_tx_content"), nil, nil, driver2.PPHash("tr")))
