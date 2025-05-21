@@ -1075,8 +1075,8 @@ github.com/hidal-go/hidalgo v0.0.0-20201109092204-05749a6d73df/go.mod h1:bPkrxDl
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huin/goupnp v1.3.0 h1:UvLUlWDNpoUdYzb2TCn+MuTWtcjXKSza2n6CBdQ0xXc=
 github.com/huin/goupnp v1.3.0/go.mod h1:gnGPsThkYa7bFi/KWmEysQRf48l2dvR5bxr2OFckNX8=
-github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250520115431-d207d5d1af20 h1:NTDaNkZb/VHdH9tyOTONcL0C5cV18r/ia1B1zRYukx8=
-github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250520115431-d207d5d1af20/go.mod h1:HV4I55q8VuXE8QiAyPnM+bLKHS7LVEOMhpK2oL/EY0w=
+github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250521092954-cfc8b4da453c h1:NCHB0rtsSMcXl5fYS8M3U/x6bKrhjTA0tgcqkUBQ+ac=
+github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250521092954-cfc8b4da453c/go.mod h1:yrvapF5x5OMQD/cqDZARaFUXjliWBA8rGn7oqEKl1Yo=
 github.com/hyperledger-labs/orion-sdk-go v0.2.10 h1:lFgWgxyvngIhWnIqymYGBmtmq9D6uC5d0uLG9cbyh5s=
 github.com/hyperledger-labs/orion-sdk-go v0.2.10/go.mod h1:iN2xZB964AqwVJwL+EnwPOs8z1EkMEbbIg/qYeC7gDY=
 github.com/hyperledger-labs/orion-server v0.2.10 h1:G4zbQEL5Egk0Oj+TwHCZWdTOLDBHOjaAEvYOT4G7ozw=
@@ -1568,6 +1568,10 @@ github.com/ugorji/go/codec v1.2.12 h1:9LC83zGrHhuUA9l16C9AHXAqEV/2wBQ4nkvumAE65E
 github.com/ugorji/go/codec v1.2.12/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
 github.com/uptrace/opentelemetry-go-extra/otelsql v0.3.2 h1:ZjUj9BLYf9PEqBn8W/OapxhPjVRdC6CsXTdULHsyk5c=
 github.com/uptrace/opentelemetry-go-extra/otelsql v0.3.2/go.mod h1:O8bHQfyinKwTXKkiKNGmLQS7vRsqRxIQTFZpYpHK3IQ=
+github.com/uptrace/opentelemetry-go-extra/otelutil v0.3.2 h1:3/aHKUq7qaFMWxyQV0W2ryNgg8x8rVeKVA20KJUkfS0=
+github.com/uptrace/opentelemetry-go-extra/otelutil v0.3.2/go.mod h1:Zit4b8AQXaXvA68+nzmbyDzqiyFRISyw1JiD5JqUBjw=
+github.com/uptrace/opentelemetry-go-extra/otelzap v0.3.2 h1:cj/Z6FKTTYBnstI0Lni9PA+k2foounKIPUmj1LBwNiQ=
+github.com/uptrace/opentelemetry-go-extra/otelzap v0.3.2/go.mod h1:LDaXk90gKEC2nC7JH3Lpnhfu+2V7o/TsqomJJmqA39o=
 github.com/urfave/cli v1.22.2/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/urfave/cli v1.22.10/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/viant/assertly v0.4.8/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49uaYMPRU=
@@ -1630,6 +1634,8 @@ go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.29.0 h1:WDdP9acbMYjbKI
 go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.29.0/go.mod h1:BLbf7zbNIONBLPwvFnwNHGj4zge8uTCM/UPIVW1Mq2I=
 go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.28.0 h1:EVSnY9JbEEW92bEkIYOVMw4q1WJxIAGoFTrtYOzWuRQ=
 go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.28.0/go.mod h1:Ea1N1QQryNXpCD0I1fdLibBAIpQuBkznMmkdKrapk1Y=
+go.opentelemetry.io/otel/log v0.6.0 h1:nH66tr+dmEgW5y+F9LanGJUBYPrRgP4g2EkmPE3LeK8=
+go.opentelemetry.io/otel/log v0.6.0/go.mod h1:KdySypjQHhP069JX0z/t26VHwa8vSwzgaKmXtIB3fJM=
 go.opentelemetry.io/otel/metric v1.30.0 h1:4xNulvn9gjzo4hjg+wzIKG7iNFEaBMX00Qd4QIZs7+w=
 go.opentelemetry.io/otel/metric v1.30.0/go.mod h1:aXTfST94tswhWEb+5QjlSqG+cZlmyXy/u8jFpor3WqQ=
 go.opentelemetry.io/otel/sdk v1.29.0 h1:vkqKjk7gwhS8VaWb0POZKmIEDimRCMsopNYnriHyryo=
