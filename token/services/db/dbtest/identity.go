@@ -17,7 +17,7 @@ import (
 )
 
 func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
-	for _, c := range identityCases {
+	for _, c := range IdentityCases {
 		driver := cfgProvider(c.Name)
 		db, err := driver.NewIdentity("", c.Name)
 		if err != nil {
@@ -29,7 +29,7 @@ func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
 	}
 }
 
-var identityCases = []struct {
+var IdentityCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.IdentityStore)
 }{

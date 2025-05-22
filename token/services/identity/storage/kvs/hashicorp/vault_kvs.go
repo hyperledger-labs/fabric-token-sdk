@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	logger = logging.MustGetLogger("token-sdk.services.identity.storage.kvs.hashicorp")
+	logger = logging.MustGetLogger()
 )
 
 type KVS struct {
