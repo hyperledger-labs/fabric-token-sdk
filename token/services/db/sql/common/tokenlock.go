@@ -61,7 +61,7 @@ func (db *TokenLockStore) CreateSchema() error {
 
 func (db *TokenLockStore) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
 	query, args := q.InsertInto(db.Table.TokenLocks).
-		Fields("consumer_tx_id, tx_id, idx, created_at").
+		Fields("consumer_tx_id", "tx_id", "idx", "created_at").
 		Row(consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC()).
 		Format()
 	logger.Debug(query, tokenID, consumerTxID)

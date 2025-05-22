@@ -117,7 +117,7 @@ func (db *TokenStore) IsMine(txID string, index uint64) (bool, error) {
 		Where(cond.And(cond.Eq("tx_id", txID), cond.Eq("idx", index), cond.Eq("is_deleted", false), cond.Eq("owner", 1))).
 		Limit(1).
 		Format(db.ci, nil)
-	logger.Debug(query, txID, index)
+	logger.Debug(query, args)
 
 	row := db.readDB.QueryRow(query, args...)
 	if err := row.Scan(&id); err != nil {
@@ -759,7 +759,7 @@ func (db *TokenStore) TransactionExists(ctx context.Context, id string) (bool, e
 		Where(cond.Eq("tx_id", id)).
 		Limit(1).
 		Format(db.ci, nil)
-	logger.Debug(query, id)
+	logger.Debug(query, args)
 
 	span.AddEvent("query", trace.WithAttributes(tracing.String(QueryLabel, query)))
 	row := db.readDB.QueryRow(query, args...)
@@ -1187,24 +1187,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		Fields("tx_id", "idx", "issuer_raw", "owner_raw", "owner_type", "owner_identity", "owner_wallet_id", "ledger", "ledger_type", "ledger_metadata", "token_type", "quantity", "amount", "stored_at", "owner", "auditor", "issuer").
 		Row(tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.OwnerType, tr.OwnerIdentity, tr.OwnerWalletID, tr.Ledger, tr.LedgerFormat, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer).
 		Format()
-	logger.Debug(query,
-		tr.TxID,
-		tr.Index,
-		len(tr.IssuerRaw),
-		len(tr.OwnerRaw),
-		tr.OwnerType,
-		len(tr.OwnerIdentity),
-		tr.OwnerWalletID,
-		len(tr.Ledger),
-		tr.LedgerFormat,
-		len(tr.LedgerMetadata),
-		tr.Type,
-		tr.Quantity,
-		tr.Amount,
-		now,
-		tr.Owner,
-		tr.Auditor,
-		tr.Issuer)
+	logger.Debug(query, args)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	if _, err := t.tx.Exec(query, args...); err != nil {
 		logger.Errorf("error storing token [%s] in table [%s]: [%s][%s]", tr.TxID, t.table.Tokens, err, string(debug.Stack()))
@@ -1218,7 +1201,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 			Fields("tx_id", "idx", "wallet_id").
 			Row(tr.TxID, tr.Index, eid).
 			Format()
-		logger.Debug(query, tr.TxID, tr.Index, eid)
+		logger.Debug(query, args)
 		span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 		if _, err := t.tx.Exec(query, args...); err != nil {
 			return errors.Wrapf(err, "error storing token ownership [%s]", tr.TxID)

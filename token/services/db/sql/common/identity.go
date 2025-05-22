@@ -98,7 +98,7 @@ func (db *IdentityStore) AddConfiguration(wp driver.IdentityConfiguration) error
 		Fields("id", "type", "url", "conf", "raw").
 		Row(wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw).
 		Format()
-	logger.Debug(query, wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw)
+	logger.Debug(query, args)
 
 	_, err := db.writeDB.Exec(query, args...)
 	return err
@@ -110,7 +110,7 @@ func (db *IdentityStore) IteratorConfigurations(configurationType string) (drive
 		From(q.Table(db.table.IdentityConfigurations)).
 		Where(cond.Eq("type", configurationType)).
 		Format(db.ci, nil)
-	logger.Debug(query)
+	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
@@ -139,9 +139,9 @@ func (db *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, toke
 		Fields("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
 		Row(h, id, identityAudit, tokenMetadata, tokenMetadataAudit).
 		Format()
-	logger.Debug(query)
+	logger.Debug(query, args)
 
-	_, err := db.writeDB.Exec(query, args)
+	_, err := db.writeDB.Exec(query, args...)
 	if err != nil {
 		// does the record already exists?
 		auditInfo, err2 := db.GetAuditInfo(id)
@@ -169,17 +169,8 @@ func (db *IdentityStore) GetAuditInfo(id []byte) ([]byte, error) {
 			From(q.Table(db.table.IdentityInfo)).
 			Where(cond.Eq("identity_hash", h)).
 			Format(db.ci, nil)
-		logger.Debug(query)
-		row := db.readDB.QueryRow(query, args...)
-		var info []byte
-		err := row.Scan(&info)
-		if err == nil {
-			return info, nil
-		}
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, errors.Wrapf(err, "error querying db")
+		logger.Debug(query, args)
+		return common.QueryUnique[[]byte](db.readDB, query, args...)
 	})
 	return value, err
 }
@@ -192,7 +183,8 @@ func (db *IdentityStore) GetTokenInfo(id []byte) ([]byte, []byte, error) {
 		From(q.Table(db.table.IdentityInfo)).
 		Where(cond.Eq("identity_hash", h)).
 		Format(db.ci, nil)
-	logger.Debug(query)
+	logger.Debug(query, args)
+
 	row := db.readDB.QueryRow(query, args...)
 	var tokenMetadata []byte
 	var tokenMetadataAuditInfo []byte
@@ -217,7 +209,7 @@ func (db *IdentityStore) StoreSignerInfo(id, info []byte) error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("store signer info [%s]: [%s][%s]", query, h, hash.Hashable(info))
 	}
-	_, err := db.writeDB.Exec(query, args)
+	_, err := db.writeDB.Exec(query, args...)
 	if err != nil {
 		if exists, err2 := db.SignerInfoExists(id); err2 == nil && exists {
 			logger.Debugf("signer info [%s] exists, no error to return", h)
@@ -313,17 +305,8 @@ func (db *IdentityStore) GetSignerInfo(identity []byte) ([]byte, error) {
 		From(q.Table(db.table.Signers)).
 		Where(cond.Eq("identity_hash", h)).
 		Format(db.ci, nil)
-	logger.Debug(query)
-	row := db.readDB.QueryRow(query, args...)
-	var info []byte
-	err := row.Scan(&info)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, errors.Wrapf(err, "error querying db")
-	}
-	return info, nil
+	logger.Debug(query, args)
+	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
 func (db *IdentityStore) Close() error {

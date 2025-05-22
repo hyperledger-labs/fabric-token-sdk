@@ -23,7 +23,7 @@ func TestSelect_Compile(t *testing.T) {
 		Where(cond.Eq("id", 1)).
 		Format(sqlite.NewConditionInterpreter(), nil)
 	assert.Equal(t, "SELECT id,name FROM users WHERE id = $1", query)
-	assert.Equal(t, args[0], 1)
+	assert.Equal(t, 1, args[0])
 
 	// SELECT DISTINCT
 	query, args = q.SelectDistinct().
@@ -49,8 +49,8 @@ func TestInsert_Compile(t *testing.T) {
 		Row(1, "nnn").
 		Format()
 	assert.Equal(t, "INSERT INTO users (id, name) VALUES ($1, $2)", query)
-	assert.Equal(t, args[0], 1)
-	assert.Equal(t, args[1], "nnn")
+	assert.Equal(t, 1, args[0])
+	assert.Equal(t, "nnn", args[1])
 }
 
 func TestUpdate_Compile(t *testing.T) {
@@ -61,9 +61,9 @@ func TestUpdate_Compile(t *testing.T) {
 		Where(cond.Eq("id", 1)).
 		Format(sqlite.NewConditionInterpreter())
 	assert.Equal(t, "UPDATE users SET name = $1, age = $2 WHERE id = $3", query)
-	assert.Equal(t, args[0], "TheName")
-	assert.Equal(t, args[1], 16)
-	assert.Equal(t, args[2], 1)
+	assert.Equal(t, "TheName", args[0])
+	assert.Equal(t, 16, args[1])
+	assert.Equal(t, 1, args[2])
 }
 
 func TestDelete_Compile(t *testing.T) {
@@ -72,5 +72,5 @@ func TestDelete_Compile(t *testing.T) {
 		Where(cond.Eq("id", 1)).
 		Format(sqlite.NewConditionInterpreter())
 	assert.Equal(t, "DELETE FROM users WHERE id = $1", query)
-	assert.Equal(t, args[0], 1)
+	assert.Equal(t, 1, args[0])
 }
