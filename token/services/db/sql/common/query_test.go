@@ -12,7 +12,6 @@ import (
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,11 +24,6 @@ func TestSelect_Compile(t *testing.T) {
 		Format(sqlite.NewConditionInterpreter(), nil)
 	assert.Equal(t, "SELECT id,name FROM users WHERE id = $1", query)
 	assert.Equal(t, args[0], 1)
-
-	selectStmt := common.NewSelect("id", "name").From("users", "citizen").Where("id = 1")
-	query, err := selectStmt.Compile()
-	assert.NoError(t, err)
-	assert.Equal(t, "SELECT id,name FROM users citizen WHERE id = 1", query)
 
 	// SELECT DISTINCT
 	query, args = q.SelectDistinct().
@@ -44,7 +38,6 @@ func TestSelect_Compile(t *testing.T) {
 		AllFields().
 		From(q.Table("users")).
 		Format(sqlite.NewConditionInterpreter(), nil)
-	assert.NoError(t, err)
 	assert.Equal(t, "SELECT * FROM users", query)
 	assert.Empty(t, args)
 }
