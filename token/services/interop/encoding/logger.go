@@ -8,4 +8,4 @@ package encoding
 
 import "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 
-var logger = logging.MustGetLogger("token-sdk.interop.encoding")
+var logger = logging.MustGetLogger()

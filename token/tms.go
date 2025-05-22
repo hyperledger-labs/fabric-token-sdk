@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-sdk")
+var logger = logging.MustGetLogger()
 
 // TMSID models a TMS identifier
 type TMSID = driver.TMSID

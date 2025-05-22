@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"golang.org/x/exp/slices"
 )
 
@@ -18,10 +19,13 @@ const loggerNameSeparator = "."
 // Logger provides logging API
 type Logger = logging.Logger
 
-func MustGetLogger(loggerName string) Logger {
-	return logging.MustGetLogger(loggerName)
+func MustGetLogger(params ...string) Logger {
+	return utils.MustGet(GetLogger(params...))
 }
 
+func GetLogger(params ...string) (Logger, error) {
+	return logging.GetLoggerWithReplacements(map[string]string{"github.com.hyperledger-labs.fabric-token-sdk.token": "fts"}, params)
+}
 func DriverLogger(prefix string, networkID string, channel string, namespace string) Logger {
 	return logging.MustGetLogger(loggerName(prefix, networkID, channel, namespace))
 }

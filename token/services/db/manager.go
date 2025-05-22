@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = logging.MustGetLogger("token-db")
+var logger = logging.MustGetLogger()
 
 type StoreServiceManager[S any] interface {
 	StoreServiceByTMSId(token.TMSID) (S, error)

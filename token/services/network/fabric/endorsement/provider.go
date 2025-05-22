@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	logger = logging.MustGetLogger("token-sdk.network.fabric.endorsement")
+	logger = logging.MustGetLogger()
 )
 
 type IdentityProvider interface {

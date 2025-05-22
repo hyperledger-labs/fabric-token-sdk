@@ -19,7 +19,7 @@ const (
 	SignerConfigFull = "SignerConfigFull"
 )
 
-var logger = logging.MustGetLogger("token-sdk.services.identity.idemix")
+var logger = logging.MustGetLogger()
 
 type Identity struct {
 	NymPublicKey bccsp.Key

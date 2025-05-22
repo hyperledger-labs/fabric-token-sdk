@@ -20,7 +20,7 @@ const (
 	IdentityType identity.Type = "x509"
 )
 
-var logger = logging.MustGetLogger("token-sdk.services.identity.x509")
+var logger = logging.MustGetLogger()
 
 type SignerService interface {
 	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error

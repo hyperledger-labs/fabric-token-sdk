@@ -26,7 +26,7 @@ const (
 	Add Op = iota
 )
 
-var logger = logging.MustGetLogger("token-sdk.certifier.interactive")
+var logger = logging.MustGetLogger()
 
 type QueryEngine interface {
 	UnspentTokensIterator() (*token2.UnspentTokensIterator, error)

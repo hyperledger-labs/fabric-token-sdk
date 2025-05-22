@@ -30,7 +30,7 @@ func NewSuiteExecutor(userProviderConfig model.UserProviderConfig, intermediaryC
 	c := dig.New()
 
 	err := errors.Join(
-		c.Provide(func() logging.Logger { return logging.MustGetLogger("client") }),
+		c.Provide(func() logging.Logger { return logging.MustGetLogger() }),
 		c.Provide(func() model.IntermediaryConfig { return intermediaryConfig }),
 		c.Provide(func() model.UserProviderConfig { return userProviderConfig }),
 		c.Provide(metrics.NewProvider),

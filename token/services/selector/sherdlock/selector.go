@@ -28,7 +28,7 @@ const (
 	NoBackoff           = -1
 )
 
-var logger = logging.MustGetLogger("token-sdk.selector.shared")
+var logger = logging.MustGetLogger()
 
 type Iterator[V any] interface {
 	Next() V
