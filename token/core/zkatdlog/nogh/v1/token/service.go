@@ -12,7 +12,6 @@ import (
 
 	math2 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
@@ -26,36 +25,50 @@ import (
 )
 
 var Precisions = map[token.Format]uint64{
-	utils.MustGet(v1.SupportedTokenFormat(16)): 16,
-	utils.MustGet(v1.SupportedTokenFormat(32)): 32,
-	utils.MustGet(v1.SupportedTokenFormat(64)): 64,
+	utils.MustGet(v1.ComputeTokenFormat(16)): 16,
+	utils.MustGet(v1.ComputeTokenFormat(32)): 32,
+	utils.MustGet(v1.ComputeTokenFormat(64)): 64,
+}
+
+//go:generate counterfeiter -o mock/id.go -fake-name IdentityDeserializer . IdentityDeserializer
+
+type IdentityDeserializer interface {
+	// Recipients returns the recipient identities from the given serialized representation
+	Recipients(raw driver.Identity) ([]driver.Identity, error)
 }
 
 type TokensService struct {
-	Logger                  logging.Logger
-	PublicParametersManager common.PublicParametersManager[*setup.PublicParams]
-	IdentityDeserializer    driver.Deserializer
+	Logger               logging.Logger
+	PublicParameters     *setup.PublicParams
+	IdentityDeserializer IdentityDeserializer
 
 	OutputTokenFormat        token.Format
 	SupportedTokenFormatList []token.Format
 }
 
-func NewTokensService(logger logging.Logger, publicParametersManager common.PublicParametersManager[*setup.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
+func NewTokensService(logger logging.Logger, publicParams *setup.PublicParams, identityDeserializer IdentityDeserializer) (*TokensService, error) {
+	// validate input
+	if publicParams == nil {
+		return nil, errors.New("publicParams cannot be nil")
+	}
+	if identityDeserializer == nil {
+		return nil, errors.New("identityDeserializer cannot be nil")
+	}
+
 	// compute supported tokens
-	pp := publicParametersManager.PublicParams()
-	maxPrecision := pp.RangeProofParams.BitLength
+	maxPrecision := publicParams.Precision()
 
 	// dlog without graph hiding
-	outputTokenFormat, err := supportedTokenFormat(pp, maxPrecision)
+	outputTokenFormat, err := ComputeTokenFormat(publicParams, maxPrecision)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed computing comm token types")
 	}
 
-	supportedTokenFormatList := make([]token.Format, 0, 3*len(pp.IdemixIssuerPublicKeys))
+	supportedTokenFormatList := make([]token.Format, 0, 3*len(publicParams.IdemixIssuerPublicKeys))
 	for _, precision := range setup.SupportedPrecisions {
 		// these Precisions are supported directly
 		if precision <= maxPrecision {
-			format, err := supportedTokenFormat(pp, precision)
+			format, err := ComputeTokenFormat(publicParams, precision)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed computing comm token types")
 			}
@@ -65,7 +78,7 @@ func NewTokensService(logger logging.Logger, publicParametersManager common.Publ
 
 	// in addition, we support all fabtoken with precision less than maxPrecision
 	for _, precision := range []uint64{16, 32, 64} {
-		format, err := v1.SupportedTokenFormat(precision)
+		format, err := v1.ComputeTokenFormat(precision)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed computing fabtoken token format with precision [%d]", precision)
 		}
@@ -76,7 +89,7 @@ func NewTokensService(logger logging.Logger, publicParametersManager common.Publ
 
 	return &TokensService{
 		Logger:                   logger,
-		PublicParametersManager:  publicParametersManager,
+		PublicParameters:         publicParams,
 		IdentityDeserializer:     identityDeserializer,
 		OutputTokenFormat:        outputTokenFormat,
 		SupportedTokenFormatList: supportedTokenFormatList,
@@ -107,8 +120,20 @@ func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata dr
 	if err == nil {
 		return tok, issuer, recipients, format, nil
 	}
+	err = errors.Wrapf(err, "failed to deobfuscate comm token")
+
 	// try fabtoken type
-	return s.deobfuscateAsFabtokenType(output, outputMetadata)
+	tok, issuer, recipients, format, err2 := s.deobfuscateAsFabtokenType(output, outputMetadata)
+	if err2 != nil {
+		return nil, nil, nil, "", errors.Wrapf(
+			errors2.Join(
+				err,
+				errors.Wrapf(err2, "failed to deobfuscate fabtoken token"),
+			),
+			"failed to deobfuscate",
+		)
+	}
+	return tok, issuer, recipients, format, nil
 }
 
 func (s *TokensService) deobfuscateAsCommType(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
@@ -132,7 +157,7 @@ func (s *TokensService) deobfuscateAsFabtokenType(output driver.TokenOutput, out
 
 	metadata := &actions.OutputMetadata{}
 	if err := metadata.Deserialize(outputMetadata); err != nil {
-		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
+		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token metadata")
 	}
 
 	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
@@ -173,13 +198,12 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 	if !ok {
 		return nil, nil, nil, errors.Errorf("unsupported token format [%s]", outputFormat)
 	}
-	fabToken, value, err := ParseFabtokenToken(outputRaw, precision, s.PublicParametersManager.PublicParams().RangeProofParams.BitLength)
+	fabToken, value, err := ParseFabtokenToken(outputRaw, precision, s.PublicParameters.RangeProofParams.BitLength)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to unmarshal fabtoken token")
 	}
-	pp := s.PublicParametersManager.PublicParams()
-	curve := math2.Curves[pp.Curve]
-	tokens, meta, err := GetTokensWithWitness([]uint64{value}, fabToken.Type, pp.PedersenGenerators, curve)
+	curve := math2.Curves[s.PublicParameters.Curve]
+	tokens, meta, err := GetTokensWithWitness([]uint64{value}, fabToken.Type, s.PublicParameters.PedersenGenerators, curve)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to compute commitment")
 	}
@@ -226,9 +250,8 @@ func (s *TokensService) deserializeCommToken(outputRaw []byte, metadataRaw []byt
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to deserialize token metadata [%d][%v]", len(metadataRaw), metadataRaw)
 	}
-	pp := s.PublicParametersManager.PublicParams()
 
-	tok, err := output.ToClear(metadata, pp)
+	tok, err := output.ToClear(metadata, s.PublicParameters)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to deserialize token")
 	}
@@ -243,13 +266,13 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*Token, er
 	if checkOwner && len(output.Owner) == 0 {
 		return nil, errors.Errorf("token owner not found in output")
 	}
-	if err := math.CheckElement(output.Data, s.PublicParametersManager.PublicParams().Curve); err != nil {
+	if err := math.CheckElement(output.Data, s.PublicParameters.Curve); err != nil {
 		return nil, errors.Wrap(err, "data in invalid in output")
 	}
 	return output, nil
 }
 
-func supportedTokenFormat(pp *setup.PublicParams, precision uint64) (token.Format, error) {
+func ComputeTokenFormat(pp *setup.PublicParams, precision uint64) (token.Format, error) {
 	hasher := utils2.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),
