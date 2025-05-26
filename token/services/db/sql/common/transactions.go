@@ -122,33 +122,16 @@ func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (
 	if err != nil {
 		return nil, err
 	}
-	defer Close(rows)
 
-	// Loop through rows, using Scan to assign column data to struct fields.
-	for rows.Next() {
-		var r driver.MovementRecord
+	return iterators.ReadAllPointers[driver.MovementRecord](common.NewIterator(rows, func(r *driver.MovementRecord) error {
 		var amount int64
-		var status int
-		err = rows.Scan(
-			&r.TxID,
-			&r.EnrollmentID,
-			&r.TokenType,
-			&amount,
-			&status,
-		)
-		if err != nil {
-			return res, err
+		if err := rows.Scan(&r.TxID, &r.EnrollmentID, &r.TokenType, &amount, &r.Status); err != nil {
+			return err
 		}
 		r.Amount = big.NewInt(amount)
-		r.Status = driver.TxStatus(status)
 		logger.Debugf("movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
-
-		res = append(res, &r)
-	}
-	if err = rows.Err(); err != nil {
-		return res, err
-	}
-	return res, nil
+		return nil
+	})), nil
 }
 
 func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsParams, pagination driver3.Pagination) (*driver3.PageIterator[*driver.TransactionRecord], error) {
@@ -178,7 +161,7 @@ func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsPar
 		var amount int64
 		var appMeta []byte
 		var pubMeta []byte
-		if err := rows.Scan(r.TxID, r.ActionType, r.SenderEID, r.RecipientEID, r.TokenType, &amount, r.Status, &appMeta, &pubMeta, r.Timestamp); err != nil {
+		if err := rows.Scan(&r.TxID, &r.ActionType, &r.SenderEID, &r.RecipientEID, &r.TokenType, &amount, &r.Status, &appMeta, &pubMeta, &r.Timestamp); err != nil {
 			return err
 		}
 		r.Amount = big.NewInt(amount)
@@ -235,7 +218,7 @@ func (db *TransactionStore) QueryValidations(params driver.QueryValidationRecord
 
 	results := common.NewIterator(rows, func(r *driver.ValidationRecord) error {
 		var meta []byte
-		if err := rows.Scan(r.TxID, r.TokenRequest, &meta, r.Status, r.Timestamp); err != nil {
+		if err := rows.Scan(&r.TxID, &r.TokenRequest, &meta, &r.Status, &r.Timestamp); err != nil {
 			return err
 		}
 		return unmarshal(meta, &r.Metadata)
@@ -260,7 +243,7 @@ func (db *TransactionStore) QueryTokenRequests(params driver.QueryTokenRequestsP
 		return nil, err
 	}
 	// TODO: AF remove r.TokenRequest. Not used
-	return common.NewIterator(rows, func(r *driver.TokenRequestRecord) error { return rows.Scan(r.TxID, r.TokenRequest, r.Status) }), nil
+	return common.NewIterator(rows, func(r *driver.TokenRequestRecord) error { return rows.Scan(&r.TxID, &r.TokenRequest, &r.Status) }), nil
 }
 
 func (db *TransactionStore) AddTransactionEndorsementAck(txID string, endorser token.Identity, sigma []byte) (err error) {
