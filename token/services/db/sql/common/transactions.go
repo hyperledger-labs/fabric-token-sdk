@@ -131,7 +131,7 @@ func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (
 		r.Amount = big.NewInt(amount)
 		logger.Debugf("movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
 		return nil
-	})), nil
+	}))
 }
 
 func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsParams, pagination driver3.Pagination) (*driver3.PageIterator[*driver.TransactionRecord], error) {
@@ -226,7 +226,7 @@ func (db *TransactionStore) QueryValidations(params driver.QueryValidationRecord
 	if params.Filter == nil {
 		return results, nil
 	}
-	return iterators.Filter[*driver.ValidationRecord](results, params.Filter), nil
+	return iterators.Filter[driver.ValidationRecord](results, params.Filter), nil
 }
 
 // QueryTokenRequests returns an iterator over the token requests matching the passed params

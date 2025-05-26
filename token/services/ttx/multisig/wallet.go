@@ -64,7 +64,11 @@ func (w *OwnerWallet) ListTokens(opts ...token.ListTokensOption) (*token2.Unspen
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
-	return &token2.UnspentTokens{Tokens: iterators.ReadAllPointers[token2.UnspentToken](it)}, nil
+	tokens, err := iterators.ReadAllPointers[token2.UnspentToken](it)
+	if err != nil {
+		return nil, err
+	}
+	return &token2.UnspentTokens{Tokens: tokens}, nil
 }
 
 // ListTokensIterator returns an iterator of tokens that matches the passed options and whose recipient belongs to this wallet
@@ -82,7 +86,7 @@ func (w *OwnerWallet) filterIterator(tokenType token2.Type) (collections.Iterato
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get iterator over unspent tokens")
 	}
-	return iterators.Filter[*token2.UnspentToken](it, containsEscrow), nil
+	return iterators.Filter[token2.UnspentToken](it, containsEscrow), nil
 }
 
 // GetWallet returns the wallet whose id is the passed id
@@ -131,7 +135,7 @@ func containsEscrow(tok *token2.UnspentToken) bool {
 // Sum  computes the sum of the quantities of the tokens in the iterator.
 // Sum closes the iterator at the end of the execution.
 func Sum(f collections.Iterator[*token2.UnspentToken], precision uint64) (token2.Quantity, error) {
-	f = iterators.Filter[*token2.UnspentToken](f, iterators.DuplicatesBy(func(t *token2.UnspentToken) string { return t.Id.TxId }))
+	f = iterators.Filter[token2.UnspentToken](f, iterators.DuplicatesBy(func(t *token2.UnspentToken) string { return t.Id.TxId }))
 	return iterators.ReduceValue[token2.UnspentToken, token2.Quantity](f, token2.NewZeroQuantity(precision), func(sum token2.Quantity, t *token2.UnspentToken) (token2.Quantity, error) {
 		if q, err := token2.ToQuantity(t.Quantity, precision); err != nil {
 			return nil, err
