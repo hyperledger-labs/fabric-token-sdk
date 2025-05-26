@@ -66,7 +66,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	multisigWallet := multisig.Wallet(context, wallet)
 	coOwnedTokens, err := multisigWallet.ListTokensIterator(token.WithType(b.Type))
 	assert.NoError(err, "failed to get co-owned tokens")
-	coOwned, err := coOwnedTokens.Sum(precision)
+	coOwned, err := multisig.Sum(coOwnedTokens, precision)
 	assert.NoError(err, "failed to compute the sum of the co-owned tokens")
 
 	if !b.SkipCheck {
@@ -120,7 +120,7 @@ func (b *CoOwnedBalanceView) Call(context view.Context) (interface{}, error) {
 	multisigWallet := multisig.Wallet(context, wallet)
 	coOwnedTokens, err := multisigWallet.ListTokensIterator(token.WithType(b.Type))
 	assert.NoError(err, "failed to get co-owned tokens")
-	coOwned, err := coOwnedTokens.Sum(precision)
+	coOwned, err := multisig.Sum(coOwnedTokens, precision)
 	assert.NoError(err, "failed to compute the sum of the co-owned tokens")
 
 	return Balance{

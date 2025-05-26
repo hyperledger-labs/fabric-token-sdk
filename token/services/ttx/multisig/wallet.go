@@ -9,6 +9,8 @@ package multisig
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -42,7 +44,7 @@ type OwnerWallet struct {
 }
 
 // ListTokensAsEscrow returns a list of tokens which are co-owned by OwnerWallet
-func (w *OwnerWallet) ListTokensAsEscrow(opts ...token.ListTokensOption) (*FilteredIterator, error) {
+func (w *OwnerWallet) ListTokensAsEscrow(opts ...token.ListTokensOption) (collections.Iterator[*token2.UnspentToken], error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
@@ -58,11 +60,15 @@ func (w *OwnerWallet) ListTokens(opts ...token.ListTokensOption) (*token2.Unspen
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType)
+	it, err := w.filterIterator(compiledOpts.TokenType)
+	if err != nil {
+		return nil, errors.Wrap(err, "token selection failed")
+	}
+	return &token2.UnspentTokens{Tokens: iterators.ReadAllPointers[token2.UnspentToken](it)}, nil
 }
 
 // ListTokensIterator returns an iterator of tokens that matches the passed options and whose recipient belongs to this wallet
-func (w *OwnerWallet) ListTokensIterator(opts ...token.ListTokensOption) (*FilteredIterator, error) {
+func (w *OwnerWallet) ListTokensIterator(opts ...token.ListTokensOption) (collections.Iterator[*token2.UnspentToken], error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
@@ -70,37 +76,13 @@ func (w *OwnerWallet) ListTokensIterator(opts ...token.ListTokensOption) (*Filte
 	return w.filterIterator(compiledOpts.TokenType)
 }
 
-func (w *OwnerWallet) filter(tokenType token2.Type) (*token2.UnspentTokens, error) {
-	it, err := w.filterIterator(tokenType)
-	if err != nil {
-		return nil, errors.Wrap(err, "token selection failed")
-	}
-	defer it.Close()
-	var tokens []*token2.UnspentToken
-	for {
-		tok, err := it.Next()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get next unspent token from iterator")
-		}
-		if tok == nil {
-			break
-		}
-		logger.Debugf("filtered token [%s]", tok.Id)
-
-		tokens = append(tokens, tok)
-	}
-	return &token2.UnspentTokens{Tokens: tokens}, nil
-}
-
-func (w *OwnerWallet) filterIterator(tokenType token2.Type) (*FilteredIterator, error) {
+func (w *OwnerWallet) filterIterator(tokenType token2.Type) (collections.Iterator[*token2.UnspentToken], error) {
 	walletID := escrowWallet(w.wallet)
 	it, err := w.queryEngine.UnspentTokensIteratorBy(context.TODO(), walletID, tokenType)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get iterator over unspent tokens")
 	}
-	return &FilteredIterator{
-		it: it,
-	}, nil
+	return iterators.Filter[*token2.UnspentToken](it, containsEscrow), nil
 }
 
 // GetWallet returns the wallet whose id is the passed id
@@ -127,74 +109,34 @@ func Wallet(sp token.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
 	}
 }
 
-type FilteredIterator struct {
-	it driver.UnspentTokensIterator
-}
-
-func (f *FilteredIterator) Close() {
-	f.it.Close()
-}
-
-func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
-	for {
-		tok, err := f.it.Next()
-		if err != nil {
-			return nil, err
-		}
-		if tok == nil {
-			logger.Debugf("no more tokens!")
-			return nil, nil
-		}
-		owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
-		if err != nil {
-			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
-			continue
-		}
-		if owner.Type == multisig.Multisig {
-			escrow := &multisig.MultiIdentity{}
-			if err := escrow.Deserialize(owner.Identity); err != nil {
-				logger.Debugf("token [%s,%s,%s,%s] contains an escrow? No", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
-				continue
-			}
-
-			logger.Debugf("token [%s,%s,%s,%s] contains an escrow? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
-			return tok, nil
-		}
+func containsEscrow(tok *token2.UnspentToken) bool {
+	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
+	if err != nil {
+		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+		return false
 	}
+	if owner.Type != multisig.Multisig {
+		return false
+	}
+
+	if err := (&multisig.MultiIdentity{}).Deserialize(owner.Identity); err != nil {
+		logger.Debugf("token [%s,%s,%s,%s] contains an escrow? No", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
+		return false
+	}
+
+	logger.Debugf("token [%s,%s,%s,%s] contains an escrow? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
+	return true
 }
 
 // Sum  computes the sum of the quantities of the tokens in the iterator.
 // Sum closes the iterator at the end of the execution.
-func (f *FilteredIterator) Sum(precision uint64) (token2.Quantity, error) {
-	defer f.Close()
-	sum := token2.NewZeroQuantity(precision)
-	var tokens []*token2.UnspentToken
-	counter := 0
-
-	for {
-		isDuplicate := false
-		tok, err := f.Next()
-		if err != nil {
+func Sum(f collections.Iterator[*token2.UnspentToken], precision uint64) (token2.Quantity, error) {
+	f = iterators.Filter[*token2.UnspentToken](f, iterators.DuplicatesBy(func(t *token2.UnspentToken) string { return t.Id.TxId }))
+	return iterators.ReduceValue[token2.UnspentToken, token2.Quantity](f, token2.NewZeroQuantity(precision), func(sum token2.Quantity, t *token2.UnspentToken) (token2.Quantity, error) {
+		if q, err := token2.ToQuantity(t.Quantity, precision); err != nil {
 			return nil, err
+		} else {
+			return sum.Add(q), nil
 		}
-		if tok == nil {
-			break
-		}
-		for _, t := range tokens {
-			if t.Id.TxId == tok.Id.TxId {
-				isDuplicate = true
-				break
-			}
-		}
-		if !isDuplicate {
-			q, err := token2.ToQuantity(tok.Quantity, precision)
-			if err != nil {
-				return nil, err
-			}
-			sum = sum.Add(q)
-			tokens = append(tokens, tok)
-		}
-		counter++
-	}
-	return sum, nil
+	})
 }
