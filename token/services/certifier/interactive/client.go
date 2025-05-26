@@ -157,9 +157,9 @@ func (cc *CertificationClient) Scan() error {
 		}
 
 		// does token have a certification?
-		if !cc.certificationStorage.Exists(token.Id) {
+		if !cc.certificationStorage.Exists(&token.Id) {
 			// if no, batch it
-			toBeCertified = append(toBeCertified, token.Id)
+			toBeCertified = append(toBeCertified, &token.Id)
 		}
 	}
 

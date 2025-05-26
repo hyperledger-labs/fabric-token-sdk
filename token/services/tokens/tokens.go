@@ -295,7 +295,7 @@ func (t *Service) deleteTokens(context context.Context, network *network.Network
 	// get spent flags
 	ids := make([]*token2.ID, len(tokens))
 	for i, tok := range tokens {
-		ids[i] = tok.Id
+		ids[i] = &tok.Id
 	}
 	meta, err := tms.WalletManager().SpentIDs(ids)
 	if err != nil {
@@ -311,7 +311,7 @@ func (t *Service) deleteTokens(context context.Context, network *network.Network
 	for i, tok := range tokens {
 		if spent[i] {
 			logger.Debugf("token [%s] is spent", tok.Id)
-			toDelete = append(toDelete, tok.Id)
+			toDelete = append(toDelete, &tok.Id)
 		} else {
 			logger.Debugf("token [%s] is not spent", tok.Id)
 		}

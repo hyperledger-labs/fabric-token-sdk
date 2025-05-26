@@ -135,7 +135,7 @@ func (s *selector) Select(owner token.OwnerFilter, q string, currency token2.Typ
 
 			immediateRetries++
 			tokensLockedByOthersExist = false
-		} else if locked := s.locker.TryLock(t.Id); !locked {
+		} else if locked := s.locker.TryLock(&t.Id); !locked {
 			s.logger.Debugf("Tried to lock token [%v], but it was already locked by another process", t)
 			tokensLockedByOthersExist = true
 		} else {
@@ -147,7 +147,7 @@ func (s *selector) Select(owner token.OwnerFilter, q string, currency token2.Typ
 			s.logger.Debugf("Found token [%s] to add: [%s:%s].", t.Id, q.Decimal(), t.Type)
 			immediateRetries = 0
 			sum.Add(q)
-			selected.Add(t.Id)
+			selected.Add(&t.Id)
 			if sum.Cmp(quantity) >= 0 {
 				return selected.ToSlice(), sum, nil
 			}

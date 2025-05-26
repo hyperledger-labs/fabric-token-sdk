@@ -239,7 +239,7 @@ func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.Unspen
 	// get spent flags
 	ids := make([]*token2.ID, len(tokens))
 	for i, tok := range tokens {
-		ids[i] = tok.Id
+		ids[i] = &tok.Id
 	}
 	tms := w.wallet.TMS()
 	meta, err := tms.WalletManager().SpentIDs(ids)
@@ -260,7 +260,7 @@ func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.Unspen
 	for i, tok := range tokens {
 		if spent[i] {
 			logger.Debugf("token [%s] is spent", tok.Id)
-			toDelete = append(toDelete, tok.Id)
+			toDelete = append(toDelete, &tok.Id)
 		} else {
 			logger.Debugf("token [%s] is not spent", tok.Id)
 		}

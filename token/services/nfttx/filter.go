@@ -97,7 +97,7 @@ func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Q
 
 		// Append token
 		logger.Debugf("adding quantity [%s]", q.Decimal())
-		toBeSpent = append(toBeSpent, t.Id)
+		toBeSpent = append(toBeSpent, &t.Id)
 		sum = sum.Add(q)
 		if target.Cmp(sum) <= 0 {
 			return toBeSpent, sum, nil
