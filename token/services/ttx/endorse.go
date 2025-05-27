@@ -626,7 +626,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		if isMe {
 			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
 		} else {
-			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
+			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(context.Context(), party)
 			if err != nil {
 				return nil, errors.Wrapf(err, "cannot resolve long term identity for [%s]", party.UniqueID())
 			}
@@ -672,7 +672,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		if isMe {
 			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
 		} else {
-			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
+			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(context.Context(), party)
 			if err != nil {
 				return nil, errors.Wrapf(err, "cannot resolve long term auitor identity for [%s]", party.UniqueID())
 			}

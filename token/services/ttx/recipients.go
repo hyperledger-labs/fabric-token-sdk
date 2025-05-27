@@ -219,7 +219,7 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	// Update the Endpoint Resolver
 	logger.Debugf("update endpoint resolver for [%s], bind to [%s]", recipientData.Identity, recipient.Identity)
 	span.AddEvent("Bind identity")
-	if err := view2.GetEndpointService(context).Bind(recipient.Identity, recipientData.Identity); err != nil {
+	if err := view2.GetEndpointService(context).Bind(context.Context(), recipient.Identity, recipientData.Identity); err != nil {
 		span.RecordError(err)
 		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", recipientData.Identity, recipient.Identity)
 	}
@@ -356,7 +356,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	resolver := view2.GetEndpointService(context)
 	logger.Debugf("bind me [%s] to [%s]", context.Me(), recipientData)
 	span.AddEvent("Bind identity")
-	err = resolver.Bind(context.Me(), recipientIdentity)
+	err = resolver.Bind(context.Context(), context.Me(), recipientIdentity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to bind me to recipient identity")
 	}
@@ -446,7 +446,7 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 	// Update the Endpoint Resolver
 	resolver := view2.GetEndpointService(context)
 	for i, node := range multisigRecipientData.Nodes {
-		err = resolver.Bind(node, multisigRecipientData.Recipients[i])
+		err = resolver.Bind(context.Context(), node, multisigRecipientData.Recipients[i])
 		if err != nil {
 			return errors.Wrapf(err, "failed to bind me to recipient identity")
 		}
@@ -533,13 +533,13 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		// Update the Endpoint Resolver
 		logger.Debugf("bind [%s] to other [%s]", remoteRecipientData.Identity, f.Other)
 		resolver := view2.GetEndpointService(context)
-		err = resolver.Bind(f.Other, remoteRecipientData.Identity)
+		err = resolver.Bind(context.Context(), f.Other, remoteRecipientData.Identity)
 		if err != nil {
 			return nil, err
 		}
 
 		logger.Debugf("bind me [%s] to [%s]", localRecipientData.Identity, context.Me())
-		err = resolver.Bind(context.Me(), localRecipientData.Identity)
+		err = resolver.Bind(context.Context(), context.Me(), localRecipientData.Identity)
 		if err != nil {
 			return nil, err
 		}
@@ -598,11 +598,11 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 
 	// Update the Endpoint Resolver
 	resolver := view2.GetEndpointService(context)
-	err = resolver.Bind(context.Me(), recipientData.Identity)
+	err = resolver.Bind(context.Context(), context.Me(), recipientData.Identity)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
 	}
-	err = resolver.Bind(session.Info().Caller, other)
+	err = resolver.Bind(context.Context(), session.Info().Caller, other)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
 	}

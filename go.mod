@@ -11,7 +11,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250522090351-f71dcac29580
+	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250527161440-b908f26f9db2
 	github.com/hyperledger-labs/orion-sdk-go v0.2.10
 	github.com/hyperledger-labs/orion-server v0.2.10
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
@@ -35,7 +35,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.30.0
 	go.uber.org/dig v1.18.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.35.0
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
 	google.golang.org/protobuf v1.36.1
 	gopkg.in/yaml.v2 v2.4.0
@@ -269,9 +269,9 @@ require (
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/oauth2 v0.25.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect
 	gonum.org/v1/gonum v0.15.0 // indirect

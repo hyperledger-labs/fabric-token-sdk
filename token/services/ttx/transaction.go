@@ -258,7 +258,7 @@ func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ token2.Type, value u
 		return errors.Wrap(err, "failed to get issuer identity")
 	}
 	if !issuerNetworkIdentity.IsNone() {
-		if err := t.EndpointResolver.Bind(issuerNetworkIdentity, action.GetIssuer()); err != nil {
+		if err := t.EndpointResolver.Bind(t.Context, issuerNetworkIdentity, action.GetIssuer()); err != nil {
 			return errors.Wrapf(err, "failed to bind issuer identity [%s]", action.GetIssuer())
 		}
 	}

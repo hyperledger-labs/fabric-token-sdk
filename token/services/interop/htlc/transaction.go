@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"context"
 	"crypto"
 	"crypto/rand"
 	"encoding/base64"
@@ -72,7 +73,7 @@ func compileTransferOptions(opts ...token.TransferOption) (*token.TransferOption
 }
 
 type Binder interface {
-	Bind(longTerm view.Identity, ephemeral view.Identity) error
+	Bind(ctx context.Context, longTerm view.Identity, ephemeral view.Identity) error
 }
 
 // Transaction holds a ttx transaction
@@ -232,7 +233,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 		return err
 	}
 
-	if err := t.Binder.Bind(script.Sender, tok.Owner); err != nil {
+	if err := t.Binder.Bind(t.Context, script.Sender, tok.Owner); err != nil {
 		return err
 	}
 
@@ -306,7 +307,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return err
 	}
 
-	if err := t.Binder.Bind(script.Recipient, tok.Owner); err != nil {
+	if err := t.Binder.Bind(t.Context, script.Recipient, tok.Owner); err != nil {
 		return err
 	}
 
