@@ -196,7 +196,7 @@ func (f *cachedFetcher) update() {
 	}
 	its := map[string]permutatableIterator[*token2.UnspentTokenInWallet]{}
 	for key, toks := range m {
-		its[key] = iterators.NewSlice(toks)
+		its[key] = iterators.Slice(toks)
 	}
 
 	f.cache = its
