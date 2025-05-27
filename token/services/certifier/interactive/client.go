@@ -10,7 +10,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -139,17 +138,29 @@ func (cc *CertificationClient) RequestCertification(ids ...*token.ID) error {
 func (cc *CertificationClient) Scan() error {
 	logger.Debugf("check the certification of unspent tokens from the vault...")
 	// Check the unspent tokens
-
-	allTokens, err := cc.queryEngine.UnspentTokensIterator()
+	var err error
+	tokens, err := cc.queryEngine.UnspentTokensIterator()
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get an iterator over unspent tokens")
 	}
+	defer tokens.Close()
 
-	tokenIds := iterators.Map(allTokens.UnspentTokensIterator, func(t *token.UnspentToken) (*token.ID, error) { return &t.Id, nil })
-	uncertifiedTokenIds := iterators.Filter(tokenIds, func(t *token.ID) bool { return !cc.certificationStorage.Exists(t) })
-	toBeCertified, err := iterators.ReadAllPointers(uncertifiedTokenIds)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to read tokens to be certified")
+	var toBeCertified []*token.ID
+	for {
+		token, err := tokens.Next()
+		if err != nil {
+			logger.Errorf("failed to get next unspent tokens, stop here [%s]", err)
+			break
+		}
+		if token == nil {
+			break
+		}
+
+		// does token have a certification?
+		if !cc.certificationStorage.Exists(&token.Id) {
+			// if no, batch it
+			toBeCertified = append(toBeCertified, &token.Id)
+		}
 	}
 
 	if len(toBeCertified) != 0 {

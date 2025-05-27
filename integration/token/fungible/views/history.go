@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -82,7 +81,7 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying transactions")
 	}
-	return iterators.ReadAllPointers[ttxdb.TransactionRecord](it.Items)
+	return ToSlice(it.Items)
 }
 
 type ListAuditedTransactionsViewFactory struct{}
@@ -169,5 +168,16 @@ func (p *TransactionInfoViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 func ToSlice[T any](it collections.Iterator[*T]) ([]*T, error) {
-	return iterators.ReadAllPointers[T](it)
+	defer it.Close()
+	var items []*T
+	for {
+		if tx, err := it.Next(); err != nil {
+			return nil, errors.Wrapf(err, "failed iterating over transactions")
+		} else if tx == nil {
+			break
+		} else {
+			items = append(items, tx)
+		}
+	}
+	return items, nil
 }

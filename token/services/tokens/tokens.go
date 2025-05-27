@@ -10,7 +10,6 @@ import (
 	"context"
 	"runtime/debug"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -255,16 +254,39 @@ func (t *Service) PruneInvalidUnspentTokens(ctx context.Context) ([]*token2.ID, 
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get an iterator of unspent tokens")
 	}
+	defer it.Close()
 
-	allBatches := iterators.Batch[token2.UnspentToken](it, 50)
-	deletedBatches := iterators.Map[*[]*token2.UnspentToken, *[]*token2.ID](allBatches, func(buffer *[]*token2.UnspentToken) (*[]*token2.ID, error) {
-		return t.deleteTokens(ctx, net, tms, *buffer)
-	})
-	return iterators.Reduce(deletedBatches, iterators.ToFlattened[*token2.ID]())
+	var deleted []*token2.ID
+	var buffer []*token2.UnspentToken
+	bufferSize := 50
+	for {
+		tok, err := it.Next()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get next unspent token")
+		}
+		if tok == nil {
+			break
+		}
+		buffer = append(buffer, tok)
+		if len(buffer) > bufferSize {
+			newDeleted, err := t.deleteTokens(ctx, net, tms, buffer)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+			}
+			deleted = append(deleted, newDeleted...)
+			buffer = nil
+		}
+	}
+	newDeleted, err := t.deleteTokens(ctx, net, tms, buffer)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+	}
+	deleted = append(deleted, newDeleted...)
 
+	return deleted, nil
 }
 
-func (t *Service) deleteTokens(context context.Context, network *network.Network, tms *token.ManagementService, tokens []*token2.UnspentToken) (*[]*token2.ID, error) {
+func (t *Service) deleteTokens(context context.Context, network *network.Network, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
 	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
 	if len(tokens) == 0 {
 		return nil, nil
@@ -298,7 +320,7 @@ func (t *Service) deleteTokens(context context.Context, network *network.Network
 		return nil, errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
 	}
 
-	return &toDelete, nil
+	return toDelete, nil
 }
 
 func (t *Service) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {

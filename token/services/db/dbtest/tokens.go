@@ -12,7 +12,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -266,10 +265,19 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 func getTokensBy(t *testing.T, db TestTokenDB, ownerEID string, typ token.Type) []*token.UnspentToken {
 	it, err := db.UnspentTokensIteratorBy(context.TODO(), ownerEID, typ)
 	assert.NoError(t, err)
+	defer it.Close()
 
-	tokens, err := iterators.ReadAllPointers[token.UnspentToken](it)
-	assert.NoError(t, err, "error iterating over tokens")
-
+	var tokens []*token.UnspentToken
+	for {
+		tok, err := it.Next()
+		if err != nil {
+			t.Errorf("error iterating over tokens: %s", err.Error())
+		}
+		if tok == nil {
+			break
+		}
+		tokens = append(tokens, tok)
+	}
 	return tokens
 }
 

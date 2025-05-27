@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -181,11 +180,18 @@ func (a *DefaultCheckers) CheckUnspentTokens(context context.Context) ([]string,
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed querying utxo engine")
 	}
-	unspentTokenIDs, err := iterators.ReadAllPointers(iterators.Map(uit.UnspentTokensIterator, func(t *token2.UnspentToken) (*token2.ID, error) { return &t.Id, nil }))
-	if err != nil {
-		return nil, err
+	defer uit.Close()
+	var unspentTokenIDs []*token2.ID
+	for {
+		tok, err := uit.Next()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed querying next unspent token")
+		}
+		if tok == nil {
+			break
+		}
+		unspentTokenIDs = append(unspentTokenIDs, &tok.Id)
 	}
-
 	ledgerTokenContent, err := net.QueryTokens(context, tms.Namespace(), unspentTokenIDs)
 	if err != nil {
 		errorMessages = append(errorMessages, fmt.Sprintf("failed to query tokens: [%s]", err))

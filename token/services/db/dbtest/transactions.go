@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -801,9 +800,16 @@ func TTransactionQueries(t *testing.T, db driver.TokenTransactionStore) {
 func getTransactions(t *testing.T, db driver.TokenTransactionStore, params driver.QueryTransactionsParams) []*driver.TransactionRecord {
 	records, err := db.QueryTransactions(params, pagination.None())
 	assert.NoError(t, err)
-	txs, err := iterators.ReadAllPointers(records.Items)
-	assert.NoError(t, err)
-	return txs
+	defer records.Items.Close()
+	var txs []*driver.TransactionRecord
+	for {
+		r, err := records.Items.Next()
+		assert.NoError(t, err)
+		if r == nil {
+			return txs
+		}
+		txs = append(txs, r)
+	}
 }
 
 func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionStore) {
@@ -889,9 +895,16 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionStore) {
 func getValidationRecords(t *testing.T, db driver.TokenTransactionStore, params driver.QueryValidationRecordsParams) []*driver.ValidationRecord {
 	records, err := db.QueryValidations(params)
 	assert.NoError(t, err)
-	txs, err := iterators.ReadAllPointers[driver.ValidationRecord](records)
-	assert.NoError(t, err)
-	return txs
+	defer records.Close()
+	var txs []*driver.ValidationRecord
+	for {
+		r, err := records.Next()
+		assert.NoError(t, err)
+		if r == nil {
+			return txs
+		}
+		txs = append(txs, r)
+	}
 }
 
 func TEndorserAcks(t *testing.T, db driver.TokenTransactionStore) {

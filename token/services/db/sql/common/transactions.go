@@ -123,7 +123,7 @@ func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (
 		return nil, err
 	}
 
-	it := common.NewIterator(rows, func(r *driver.MovementRecord) error {
+	return iterators.ReadAllPointers[driver.MovementRecord](common.NewIterator(rows, func(r *driver.MovementRecord) error {
 		var amount int64
 		if err := rows.Scan(&r.TxID, &r.EnrollmentID, &r.TokenType, &amount, &r.Status); err != nil {
 			return err
@@ -131,8 +131,7 @@ func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (
 		r.Amount = big.NewInt(amount)
 		logger.Debugf("movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
 		return nil
-	})
-	return iterators.ReadAllPointers(it)
+	}))
 }
 
 func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsParams, pagination driver3.Pagination) (*driver3.PageIterator[*driver.TransactionRecord], error) {
@@ -217,7 +216,7 @@ func (db *TransactionStore) QueryValidations(params driver.QueryValidationRecord
 		return nil, err
 	}
 
-	it := common.NewIterator(rows, func(r *driver.ValidationRecord) error {
+	results := common.NewIterator(rows, func(r *driver.ValidationRecord) error {
 		var meta []byte
 		if err := rows.Scan(&r.TxID, &r.TokenRequest, &meta, &r.Status, &r.Timestamp); err != nil {
 			return err
@@ -225,9 +224,9 @@ func (db *TransactionStore) QueryValidations(params driver.QueryValidationRecord
 		return unmarshal(meta, &r.Metadata)
 	})
 	if params.Filter == nil {
-		return it, nil
+		return results, nil
 	}
-	return iterators.Filter(it, params.Filter), nil
+	return iterators.Filter[driver.ValidationRecord](results, params.Filter), nil
 }
 
 // QueryTokenRequests returns an iterator over the token requests matching the passed params

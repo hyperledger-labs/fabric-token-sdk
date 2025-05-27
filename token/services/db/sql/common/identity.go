@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
@@ -277,11 +277,14 @@ func (db *IdentityStore) GetExistingSignerInfo(ids ...tdriver.Identity) ([]strin
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
-	it := common.NewIterator(rows, func(idHash *string) error { return rows.Scan(idHash) })
-
-	found, err := iterators.Reduce(it, iterators.ToSet[string]())
-	if err != nil {
-		return nil, err
+	defer Close(rows)
+	found := collections.NewSet[string]()
+	for rows.Next() {
+		var idHash string
+		if err := rows.Scan(&idHash); err != nil {
+			return nil, err
+		}
+		found.Add(idHash)
 	}
 	for _, idHash := range idHashes {
 		db.signerInfoCache.Add(idHash, found.Contains(idHash))
