@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -17,7 +19,7 @@ type SigService interface {
 }
 
 type NetworkBinderService interface {
-	Bind(longTerm driver.Identity, ephemeral driver.Identity) error
+	Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error
 }
 
 type BinderService interface {

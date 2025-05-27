@@ -77,7 +77,7 @@ func (c *collectActionsView) collectLocal(context view.Context, actionTransfer *
 
 	// Binds identities
 	es := view2.GetEndpointService(context)
-	longTermIdentity, _, _, err := es.Resolve(party)
+	longTermIdentity, _, _, err := es.Resolve(context.Context(), party)
 	if err != nil {
 		return errors.Wrapf(err, "cannot resolve long term network identity for [%s]", party)
 	}
@@ -139,7 +139,7 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 
 	// Bind to party
 	es := view2.GetEndpointService(context)
-	longTermIdentity, _, _, err := es.Resolve(party)
+	longTermIdentity, _, _, err := es.Resolve(context.Context(), party)
 	if err != nil {
 		return errors.Wrapf(err, "cannot resolve long term network identity for [%s]", party)
 	}

@@ -26,7 +26,7 @@ const (
 )
 
 type Binder interface {
-	Bind(longTerm Identity, ephemeral Identity) error
+	Bind(ctx context.Context, longTerm Identity, ephemeral Identity) error
 }
 
 type (
@@ -1118,7 +1118,7 @@ func (r *Request) BindTo(binder Binder, identity Identity) error {
 					continue
 				}
 				r.TokenService.logger.Debugf("bind sender [%s] to [%s]", senderIdentity, identity)
-				if err := binder.Bind(identity, senderIdentity); err != nil {
+				if err := binder.Bind(context.TODO(), identity, senderIdentity); err != nil {
 					return errors.Wrap(err, "failed binding sender identities")
 				}
 			}
@@ -1131,7 +1131,7 @@ func (r *Request) BindTo(binder Binder, identity Identity) error {
 				continue
 			}
 			r.TokenService.logger.Debugf("bind extra signer [%s] to [%s]", eid, identity)
-			if err := binder.Bind(identity, eid); err != nil {
+			if err := binder.Bind(context.TODO(), identity, eid); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
 		}
@@ -1146,7 +1146,7 @@ func (r *Request) BindTo(binder Binder, identity Identity) error {
 				}
 
 				r.TokenService.logger.Debugf("bind receiver as sender [%s] to [%s]", receiverIdentity, identity)
-				if err := binder.Bind(identity, receiverIdentity); err != nil {
+				if err := binder.Bind(context.TODO(), identity, receiverIdentity); err != nil {
 					return errors.Wrap(err, "failed binding receiver identities")
 				}
 			}

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package identity
 
 import (
+	"context"
 	"runtime/debug"
 	"slices"
 	"sync"
@@ -218,7 +219,7 @@ func (p *Provider) Bind(longTerm driver.Identity, ephemeral driver.Identity, cop
 	}
 
 	if p.Binder != nil {
-		if err := p.Binder.Bind(longTerm, ephemeral); err != nil {
+		if err := p.Binder.Bind(context.TODO(), longTerm, ephemeral); err != nil {
 			return err
 		}
 	}
