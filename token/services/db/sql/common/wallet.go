@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -67,21 +68,9 @@ func (db *WalletStore) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer Close(rows)
 
-	var walletIDs []driver.WalletID
-	for rows.Next() {
-		var walletID driver.WalletID
-		if err := rows.Scan(&walletID); err != nil {
-			return nil, err
-		}
-		walletIDs = append(walletIDs, walletID)
-	}
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-	logger.Debugf("found %d wallet ids: [%v]", len(walletIDs), walletIDs)
-	return walletIDs, nil
+	it := common.NewIterator(rows, func(walletID *driver.WalletID) error { return rows.Scan(walletID) })
+	return iterators.ReadAllValues(it)
 }
 
 func (db *WalletStore) StoreIdentity(identity token.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {

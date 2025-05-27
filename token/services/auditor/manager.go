@@ -9,13 +9,14 @@ package auditor
 import (
 	"reflect"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
@@ -114,26 +115,12 @@ func (cm *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 	if err != nil {
 		return errors.Errorf("failed to get tx iterator for [%s]", tmsID)
 	}
-	defer it.Close()
-	counter := 0
-	for {
-		record, err := it.Next()
-		if err != nil {
-			return errors.Errorf("failed to get next tx record for [%s]", tmsID)
-		}
-		if record == nil {
-			break
-		}
+	defer logger.Infof("restore audit dbs for entry [%s]...done", tmsID)
+
+	return iterators.ForEach(it.(iterators.Iterator[*driver2.TokenRequestRecord]), func(record *driver2.TokenRequestRecord) error {
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-		var r driver.FinalityListener = common.NewFinalityListener(logger, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB, auditor.finalityTracer)
-		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, r); err != nil {
-			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s] for [%s]", tmsID, record.TokenRequest)
-		}
-		counter++
-	}
-	logger.Debugf("checked [%d] token requests", counter)
-	logger.Infof("restore audit dbs for entry [%s]...done", tmsID)
-	return nil
+		return net.AddFinalityListener(tmsID.Namespace, record.TxID, common.NewFinalityListener(logger, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB, auditor.finalityTracer))
+	})
 }
 
 var (

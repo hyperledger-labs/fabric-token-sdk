@@ -380,7 +380,7 @@ func (db *TokenStore) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 	it := common.NewIterator(rows, func(tok *token.IssuedToken) error {
 		return rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner, &tok.Type, &tok.Quantity, &tok.Issuer)
 	})
-	tokens, err := iterators.ReadAllPointers[token.IssuedToken](it)
+	tokens, err := iterators.ReadAllPointers(it)
 	if err != nil {
 		return nil, err
 	}
@@ -547,47 +547,36 @@ func (db *TokenStore) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer Close(rows)
-
-	tokens := make([]*token.Token, len(inputs))
+	it := common.NewIterator(rows, func(tok *token.UnspentToken) error {
+		return rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner, &tok.Type, &tok.Quantity)
+	})
 	counter := 0
-	for rows.Next() {
-		tokID := token.ID{}
-		var typ token.Type
-		var quantity string
-		var ownerRaw []byte
-		err := rows.Scan(
-			&tokID.TxId,
-			&tokID.Index,
-			&ownerRaw,
-			&typ,
-			&quantity,
-		)
-		if err != nil {
-			return tokens, err
-		}
-		tok := &token.Token{
-			Owner:    ownerRaw,
-			Type:     typ,
-			Quantity: quantity,
-		}
-
+	tokens := make([]*token.Token, len(inputs))
+	err = iterators.ForEach(it, func(tok *token.UnspentToken) error {
 		// put in the right position
 		found := false
 		for j := 0; j < len(inputs); j++ {
-			if inputs[j].Equal(tokID) {
-				tokens[j] = tok
+			if inputs[j].Equal(tok.Id) {
+				tokens[j] = &token.Token{
+					Owner:    tok.Owner,
+					Type:     tok.Type,
+					Quantity: tok.Quantity,
+				}
 				logger.Debugf("set token at location [%s:%s]-[%d]", tok.Type, tok.Quantity, j)
 				found = true
 				break
 			}
 		}
 		if !found {
-			return nil, errors.Errorf("retrieved wrong token [%v]", tokID)
+			return errors.Errorf("retrieved wrong token [%v]", tok.Id)
 		}
-
 		counter++
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
+
 	logger.Debugf("found [%d] tokens, expected [%d]", counter, len(inputs))
 	if err = rows.Err(); err != nil {
 		return tokens, err
@@ -634,7 +623,7 @@ func (db *TokenStore) QueryTokenDetails(params driver.QueryTokenDetailsParams) (
 	it := common.NewIterator(rows, func(td *driver.TokenDetails) error {
 		return rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &td.Amount, &td.IsSpent, &td.SpentBy, &td.StoredAt)
 	})
-	return iterators.ReadAllValues[driver.TokenDetails](it)
+	return iterators.ReadAllValues(it)
 }
 
 // WhoDeletedTokens returns information about which transaction deleted the passed tokens.
@@ -1003,8 +992,8 @@ func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID stri
 	logger.Debugf("supported token formats are [%v]", supported)
 
 	all := common.NewIterator(rows, func(f *token.Format) error { return rows.Scan(f) })
-	unsupported := collections.Filter[token.Format](all, func(f *token.Format) bool { return !supported.Contains(*f) })
-	return collections.ReadAll(unsupported)
+	unsupported := iterators.Filter(all, func(f *token.Format) bool { return !supported.Contains(*f) })
+	return iterators.ReadAllValues(unsupported)
 
 }
 

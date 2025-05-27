@@ -9,6 +9,7 @@ package ttx
 import (
 	"reflect"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -106,24 +107,10 @@ func (m *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
-	defer it.Close()
-	counter := 0
-	for {
-		record, err := it.Next()
-		if err != nil {
-			return errors.WithMessagef(err, "failed to get next tx record for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
-		}
-		if record == nil {
-			break
-		}
+	return iterators.ForEach[driver.TokenRequestRecord](it, func(record *driver.TokenRequestRecord) error {
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, common.NewFinalityListener(logger, db.tmsProvider, db.tmsID, db.ttxStoreService, db.tokensService, db.finalityTracer)); err != nil {
-			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tmsID.Network, tmsID.Channel, record.TxID)
-		}
-		counter++
-	}
-	logger.Debugf("checked [%d] token requests", counter)
-	return nil
+		return net.AddFinalityListener(tmsID.Namespace, record.TxID, common.NewFinalityListener(logger, db.tmsProvider, db.tmsID, db.ttxStoreService, db.tokensService, db.finalityTracer))
+	})
 }
 
 var (

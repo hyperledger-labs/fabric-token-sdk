@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
+	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -70,18 +72,13 @@ func (db *TokenLockStore) logStaleLocks(leaseExpiry time.Duration) error {
 	if err != nil {
 		return err
 	}
-	defer common.Close(rows)
 
-	var lockEntries []lockEntry
-	for rows.Next() {
-		var entry lockEntry
-		if err := rows.Scan(&entry.ConsumerTxID, &entry.TokenID.TxId, &entry.TokenID.Index, &entry.Status, &entry.CreatedAt, &entry.Expired); err != nil {
-			return err
-		}
-		lockEntries = append(lockEntries, entry)
-	}
-	if rows.Err() != nil {
-		return rows.Err()
+	it := common3.NewIterator(rows, func(entry *lockEntry) error {
+		return rows.Scan(&entry.ConsumerTxID, &entry.TokenID.TxId, &entry.TokenID.Index, &entry.Status, &entry.CreatedAt, &entry.Expired)
+	})
+	lockEntries, err := iterators.ReadAllPointers[lockEntry](it)
+	if err != nil {
+		return err
 	}
 	db.Logger.Infof("Found following entries ready for deletion: [%v]", lockEntries)
 	return nil
