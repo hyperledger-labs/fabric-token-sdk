@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -53,7 +54,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	// locked
 	lockedToTokens, err := htlcWallet.ListTokensIterator(token.WithType(b.Type))
 	assert.NoError(err, "failed to get locked tokens")
-	lockedSum, err := lockedToTokens.Sum(precision)
+	lockedSum, err := iterators.Reduce(lockedToTokens, token2.ToQuantitySum(precision))
 	assert.NoError(err, "failed to compute the sum of the htlc locked tokens")
 
 	// expired
@@ -61,7 +62,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to delete expired tokens")
 	expiredTokens, err := htlcWallet.ListExpiredReceivedTokensIterator(token.WithType(b.Type))
 	assert.NoError(err, "failed to get expired tokens")
-	expiredSum, err := expiredTokens.Sum(precision)
+	expiredSum, err := iterators.Reduce(expiredTokens, token2.ToQuantitySum(precision))
 	assert.NoError(err, "failed to compute the sum of the htlc expired tokens")
 
 	return BalanceResult{
