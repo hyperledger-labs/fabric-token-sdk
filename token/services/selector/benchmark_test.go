@@ -139,7 +139,7 @@ func setup(s *Setting) {
 	for i := 0; i < s.tokens; i++ {
 		q := token2.NewOneQuantity(testutils.TokenQuantityPrecision)
 		t := &token2.UnspentToken{
-			Id:       &token2.ID{TxId: strconv.Itoa(i), Index: 0},
+			Id:       token2.ID{TxId: strconv.Itoa(i), Index: 0},
 			Owner:    walletOwner,
 			Type:     testutils.TokenType,
 			Quantity: q.Decimal(),

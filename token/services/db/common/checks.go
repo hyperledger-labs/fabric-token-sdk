@@ -190,7 +190,7 @@ func (a *DefaultCheckers) CheckUnspentTokens(context context.Context) ([]string,
 		if tok == nil {
 			break
 		}
-		unspentTokenIDs = append(unspentTokenIDs, tok.Id)
+		unspentTokenIDs = append(unspentTokenIDs, &tok.Id)
 	}
 	ledgerTokenContent, err := net.QueryTokens(context, tms.Namespace(), unspentTokenIDs)
 	if err != nil {

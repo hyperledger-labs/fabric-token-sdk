@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
@@ -285,9 +286,7 @@ func TestUnspentTokensIterator_Sum(t *testing.T) {
 	mockIterator.NextReturnsOnCall(1, staticToken2, nil)
 	mockIterator.NextReturnsOnCall(2, nil, nil)
 
-	iterator := &UnspentTokensIterator{mockIterator}
-	precision := uint64(64)
-	sum, err := iterator.Sum(precision)
+	sum, err := iterators.Reduce[token.UnspentToken](mockIterator, token.ToQuantitySum(64))
 	assert.NoError(t, err, "Expected no error while summing tokens")
 	assert.NotNil(t, sum, "Expected a non-nil sum")
 	expectedSum := token.NewQuantityFromUInt64(30)
@@ -302,9 +301,7 @@ func TestUnspentTokensIterator_Sum_ErrorInNext(t *testing.T) {
 	mockIterator.NextReturns(nil, mockErr)
 	mockIterator.CloseCalls(func() {})
 
-	iterator := &UnspentTokensIterator{mockIterator}
-	precision := uint64(64)
-	sum, err := iterator.Sum(precision)
+	sum, err := iterators.Reduce[token.UnspentToken](mockIterator, token.ToQuantitySum(64))
 	assert.Nil(t, sum, "Expected a nil sum when Next returns an error")
 	assert.Error(t, err, "Expected an error when Next returns an error")
 	assert.EqualError(t, err, mockErr.Error(), "Expected the same error returned by Next")
@@ -317,9 +314,7 @@ func TestUnspentTokensIterator_Sum_ErrorInToQuantity(t *testing.T) {
 	mockIterator.NextReturns(&token.UnspentToken{Quantity: "invalid"}, nil)
 	mockIterator.CloseCalls(func() {})
 
-	iterator := &UnspentTokensIterator{mockIterator}
-	precision := uint64(64)
-	sum, err := iterator.Sum(precision)
+	sum, err := iterators.Reduce[token.UnspentToken](mockIterator, token.ToQuantitySum(64))
 	assert.Nil(t, sum, "Expected a nil sum when ToQuantity fails")
 	assert.Error(t, err, "Expected an error when ToQuantity fails")
 	assert.Equal(t, 1, mockIterator.NextCallCount(), "Next method should be called once")

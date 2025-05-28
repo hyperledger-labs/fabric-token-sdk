@@ -78,7 +78,7 @@ func NewMockQueryService() *MockQueryService {
 
 func (q *MockQueryService) Add(key string, t *token2.UnspentToken) {
 	q.kvs[key] = t
-	q.tokenIDs[*t.Id] = t
+	q.tokenIDs[t.Id] = t
 	q.allKeys = append(q.allKeys, key)
 
 	to := &token2.Token{
@@ -86,7 +86,7 @@ func (q *MockQueryService) Add(key string, t *token2.UnspentToken) {
 		Type:     t.Type,
 		Quantity: t.Quantity,
 	}
-	q.asTokens[*t.Id] = to
+	q.asTokens[t.Id] = to
 }
 
 func (q *MockQueryService) WarmupCache(walletID, tokenType string) {
