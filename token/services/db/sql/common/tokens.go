@@ -155,7 +155,7 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 			WalletID:  walletID,
 			TokenType: tokenType,
 		}, tokenTable)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
@@ -183,7 +183,7 @@ func (db *TokenStore) SpendableTokensIteratorBy(ctx context.Context, walletID st
 			Spendable:          driver.SpendableOnly,
 			LedgerTokenFormats: db.getSupportedTokenFormats(),
 		}, nil)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Warn(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
@@ -224,7 +224,7 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 	query, args := q.Select().FieldsByName("tx_id", "idx", "ledger", "ledger_metadata", "ledger_type").
 		From(q.Table(db.table.Tokens)).
 		Where(HasTokenDetails(details, nil)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 
@@ -254,7 +254,7 @@ func (db *TokenStore) balance(opts driver.QueryTokenDetailsParams) (uint64, erro
 			cond.Cmp(tokenTable.Field("idx"), "=", ownershipTable.Field("idx"))),
 		)).
 		Where(HasTokenDetails(opts, tokenTable)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	row := db.readDB.QueryRow(query, args...)
@@ -312,7 +312,7 @@ func (db *TokenStore) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) 
 			HasTokens("tx_id", "idx", ids...),
 			cond.Eq("auditor", true)),
 		).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
@@ -437,7 +437,7 @@ func (db *TokenStore) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 		FieldsByName("tx_id, idx, ledger").
 		From(q.Table(db.table.Tokens)).
 		Where(HasTokens("tx_id", "idx", ids...)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
@@ -483,7 +483,7 @@ func (db *TokenStore) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID
 		FieldsByName("tx_id", "idx", "ledger", "ledger_type", "ledger_metadata").
 		From(q.Table(db.table.Tokens)).
 		Where(HasTokens("tx_id", "idx", ids...)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
@@ -540,7 +540,7 @@ func (db *TokenStore) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 			cond.Eq("is_deleted", false),
 			cond.Eq("owner", true),
 		)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
@@ -612,7 +612,7 @@ func (db *TokenStore) QueryTokenDetails(params driver.QueryTokenDetailsParams) (
 			cond.Cmp(tokenTable.Field("idx"), "=", ownershipTable.Field("idx"))),
 		)).
 		Where(HasTokenDetails(params, tokenTable)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
@@ -637,7 +637,7 @@ func (db *TokenStore) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, e
 		FieldsByName("tx_id", "idx", "spent_by", "is_deleted").
 		From(q.Table(db.table.Tokens)).
 		Where(HasTokens("tx_id", "idx", inputs...)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
@@ -808,7 +808,7 @@ func (db *TokenStore) ExistsCertification(tokenID *token.ID) bool {
 		FieldsByName("certification").
 		From(q.Table(db.table.Certifications)).
 		Where(HasTokens("tx_id", "idx", tokenID)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	row := db.readDB.QueryRow(query, args...)
@@ -837,7 +837,7 @@ func (db *TokenStore) GetCertifications(ids []*token.ID) ([][]byte, error) {
 		FieldsByName("tx_id", "idx", "certification").
 		From(q.Table(db.table.Certifications)).
 		Where(HasTokens("tx_id", "idx", ids...)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
@@ -974,7 +974,7 @@ func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID stri
 			TokenType: tokenType,
 			Spendable: driver.Any,
 		}, nil)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
@@ -1020,7 +1020,7 @@ func (t *TokenTransaction) GetToken(ctx context.Context, tokenID token.ID, inclu
 			IDs:            []*token.ID{&tokenID},
 			IncludeDeleted: includeDeleted,
 		}, tokenTable)).
-		Format(t.ci, nil)
+		Format(t.ci)
 
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Info(query, args)

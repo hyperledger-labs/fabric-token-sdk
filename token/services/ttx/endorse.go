@@ -403,7 +403,7 @@ func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Ide
 
 	if !c.tx.Opts.Auditor.IsNone() {
 		logger.Debugf("ask auditing to [%s]", c.tx.Opts.Auditor)
-		local := view2.GetSigService(context).IsMe(c.tx.Opts.Auditor)
+		local := view2.GetSigService(context).IsMe(context.Context(), c.tx.Opts.Auditor)
 		sessionBoxed, err := context.RunView(newAuditingViewInitiator(c.tx, local, c.Opts.SkipAuditorSignatureVerification))
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.Auditor.String())
@@ -590,7 +590,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 	distributionList = allIds
 	allIds = append(allIds, auditors...)
 
-	mine := collections.NewSet(view2.GetSigService(context).AreMe(allIds...)...)
+	mine := collections.NewSet(view2.GetSigService(context).AreMe(context.Context(), allIds...)...)
 	remainingIds := make([]view.Identity, 0, len(allIds)-mine.Length())
 	for _, id := range allIds {
 		if !mine.Contains(id.UniqueID()) {
