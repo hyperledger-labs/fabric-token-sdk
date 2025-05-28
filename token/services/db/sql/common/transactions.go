@@ -115,7 +115,7 @@ func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (
 		Where(HasMovementsParams(params)).
 		OrderBy(orderBy("stored_at", params.SearchDirection)).
 		Limit(params.NumRecords).
-		Format(db.ci, db.pi)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
@@ -148,9 +148,9 @@ func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsPar
 			cond.Cmp(transactionsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
 		).
 		Where(HasTransactionParams(params, transactionsTable)).
-		Paginated(pagination).
 		OrderBy(q.Asc(common3.FieldName("stored_at"))).
-		Format(db.ci, db.pi)
+		Paginated(pagination).
+		FormatPaginated(db.ci, db.pi)
 
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
@@ -209,7 +209,7 @@ func (db *TransactionStore) QueryValidations(params driver.QueryValidationRecord
 			cond.Cmp(validationsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
 		).
 		Where(HasValidationParams(params)).
-		Format(db.ci, db.pi)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
@@ -236,7 +236,7 @@ func (db *TransactionStore) QueryTokenRequests(params driver.QueryTokenRequestsP
 		FieldsByName("tx_id", "request", "status").
 		From(q.Table(db.table.Requests)).
 		Where(cond.In("status", params.Statuses...)).
-		Format(db.ci, db.pi)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)

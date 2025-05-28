@@ -270,7 +270,7 @@ func (db *IdentityStore) GetExistingSignerInfo(ids ...tdriver.Identity) ([]strin
 		FieldsByName("identity_hash").
 		From(q.Table(db.table.Signers)).
 		Where(cond.In("identity_hash", idHashes...)).
-		Format(db.ci, nil)
+		Format(db.ci)
 
 	logger.Debug(query, args)
 	rows, err := db.readDB.Query(query, args...)
