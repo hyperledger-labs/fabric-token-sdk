@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -171,13 +171,13 @@ type TokenRequestRecord struct {
 }
 
 // TransactionIterator is an iterator for transactions
-type TransactionIterator = collections.Iterator[*TransactionRecord]
+type TransactionIterator = iterators.Iterator[*TransactionRecord]
 
 // ValidationRecordsIterator is an iterator for transactions
-type ValidationRecordsIterator = collections.Iterator[*ValidationRecord]
+type ValidationRecordsIterator = iterators.Iterator[*ValidationRecord]
 
 // TokenRequestIterator is an iterator for token requests
-type TokenRequestIterator = collections.Iterator[*TokenRequestRecord]
+type TokenRequestIterator = iterators.Iterator[*TokenRequestRecord]
 
 // QueryMovementsParams defines the parameters for querying movements.
 // Movement records will be filtered by EnrollmentID, TokenFormat, and Status.

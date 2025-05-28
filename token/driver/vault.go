@@ -9,6 +9,7 @@ package driver
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -32,25 +33,13 @@ const (
 
 //go:generate counterfeiter -o mock/uti.go -fake-name UnspentTokensIterator . UnspentTokensIterator
 
-type UnspentTokensIterator interface {
-	Close()
-	Next() (*token.UnspentToken, error)
-}
+type UnspentTokensIterator = iterators.Iterator[*token.UnspentToken]
 
-type SpendableTokensIterator interface {
-	Close()
-	Next() (*token.UnspentTokenInWallet, error)
-}
+type SpendableTokensIterator = iterators.Iterator[*token.UnspentTokenInWallet]
 
-type UnsupportedTokensIterator interface {
-	Close()
-	Next() (*token.LedgerToken, error)
-}
+type UnsupportedTokensIterator = iterators.Iterator[*token.LedgerToken]
 
-type LedgerTokensIterator interface {
-	Close()
-	Next() (*token.LedgerToken, error)
-}
+type LedgerTokensIterator = iterators.Iterator[*token.LedgerToken]
 
 type Vault interface {
 	QueryEngine() QueryEngine

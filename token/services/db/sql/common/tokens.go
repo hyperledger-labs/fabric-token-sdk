@@ -13,12 +13,13 @@ import (
 	errors2 "errors"
 	"fmt"
 	"runtime/debug"
-	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query"
@@ -160,8 +161,13 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	rows, err := db.readDB.Query(query, args...)
 	span.AddEvent("end_query")
+	if err != nil {
+		return nil, err
+	}
 
-	return &UnspentTokensIterator{txs: rows}, err
+	return common.NewIterator(rows, func(r *token.UnspentToken) error {
+		return rows.Scan(&r.Id.TxId, &r.Id.Index, &r.Owner, &r.Type, &r.Quantity)
+	}), nil
 }
 
 // SpendableTokensIteratorBy returns the minimum information about the tokens needed for the selector
@@ -186,26 +192,14 @@ func (db *TokenStore) SpendableTokensIteratorBy(ctx context.Context, walletID st
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
-	return &UnspentTokensInWalletIterator{txs: rows}, nil
+	return common.NewIterator(rows, func(r *token.UnspentTokenInWallet) error {
+		return rows.Scan(&r.Id.TxId, &r.Id.Index, &r.Type, &r.Quantity, &r.WalletID)
+	}), nil
 }
 
 // UnspentLedgerTokensIteratorBy returns an iterator over all unspent ledger tokens
 func (db *TokenStore) UnspentLedgerTokensIteratorBy(ctx context.Context) (tdriver.LedgerTokensIterator, error) {
-	span := trace.SpanFromContext(ctx)
-	// now, select the tokens with the list of ledger tokens
-	query, args := q.Select().FieldsByName("tx_id", "idx", "ledger", "ledger_metadata", "ledger_type").
-		From(q.Table(db.table.Tokens)).
-		Where(HasTokenDetails(driver.QueryTokenDetailsParams{Spendable: driver.Any}, nil)).
-		Format(db.ci, nil)
-
-	logger.Debug(query, args)
-	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	rows, err := db.readDB.Query(query, args...)
-	span.AddEvent("end_query")
-	if err != nil {
-		return nil, errors.Wrapf(err, "error querying db")
-	}
-	return &LedgerTokensIterator{txs: rows}, nil
+	return db.queryLedgerTokens(ctx, driver.QueryTokenDetailsParams{Spendable: driver.Any})
 }
 
 // UnsupportedTokensIteratorBy returns the minimum information for upgrade about the tokens that are not supported
@@ -217,26 +211,31 @@ func (db *TokenStore) UnsupportedTokensIteratorBy(ctx context.Context, walletID 
 	}
 	logger.Debugf("after filtering we have [%v]", includeFormats)
 
-	span := trace.SpanFromContext(ctx)
 	// now, select the tokens with the list of ledger tokens
+	return db.queryLedgerTokens(ctx, driver.QueryTokenDetailsParams{
+		WalletID:           walletID,
+		TokenType:          tokenType,
+		Spendable:          driver.Any,
+		LedgerTokenFormats: includeFormats,
+	})
+}
+
+func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.QueryTokenDetailsParams) (tdriver.UnsupportedTokensIterator, error) {
 	query, args := q.Select().FieldsByName("tx_id", "idx", "ledger", "ledger_metadata", "ledger_type").
 		From(q.Table(db.table.Tokens)).
-		Where(HasTokenDetails(driver.QueryTokenDetailsParams{
-			WalletID:           walletID,
-			TokenType:          tokenType,
-			Spendable:          driver.Any,
-			LedgerTokenFormats: includeFormats,
-		}, nil)).
+		Where(HasTokenDetails(details, nil)).
 		Format(db.ci, nil)
 
 	logger.Debug(query, args)
-	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
+
 	rows, err := db.readDB.Query(query, args...)
-	span.AddEvent("end_query")
+
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
-	return &LedgerTokensIterator{txs: rows}, nil
+	return common.NewIterator(rows, func(tok *token.LedgerToken) error {
+		return rows.Scan(&tok.ID.TxId, &tok.ID.Index, &tok.Token, &tok.TokenMetadata, &tok.Format)
+	}), nil
 }
 
 // Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
@@ -279,20 +278,11 @@ func (db *TokenStore) ListUnspentTokensBy(walletID string, typ token.Type) (*tok
 	if err != nil {
 		return nil, err
 	}
-	defer it.Close()
-	tokens := make([]*token.UnspentToken, 0)
-	for {
-		next, err := it.Next()
-		switch {
-		case err != nil:
-			logger.Errorf("scan failed [%s]", err)
-			return nil, err
-		case next == nil:
-			return &token.UnspentTokens{Tokens: tokens}, nil
-		default:
-			tokens = append(tokens, next)
-		}
+	tokens, err := iterators.ReadAllPointers(it)
+	if err != nil {
+		return nil, err
 	}
+	return &token.UnspentTokens{Tokens: tokens}, nil
 }
 
 // ListUnspentTokens returns the list of unspent tokens
@@ -302,20 +292,11 @@ func (db *TokenStore) ListUnspentTokens() (*token.UnspentTokens, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer it.Close()
-	tokens := make([]*token.UnspentToken, 0)
-	for {
-		next, err := it.Next()
-		switch {
-		case err != nil:
-			logger.Errorf("scan failed [%s]", err)
-			return nil, err
-		case next == nil:
-			return &token.UnspentTokens{Tokens: tokens}, nil
-		default:
-			tokens = append(tokens, next)
-		}
+	tokens, err := iterators.ReadAllPointers(it)
+	if err != nil {
+		return nil, err
 	}
+	return &token.UnspentTokens{Tokens: tokens}, nil
 }
 
 // ListAuditTokens returns the audited tokens associated to the passed ids
@@ -395,24 +376,13 @@ func (db *TokenStore) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer Close(rows)
 
-	var tokens []*token.IssuedToken
-	for rows.Next() {
-		tok := token.IssuedToken{
-			Id: &token.ID{
-				TxId:  "",
-				Index: 0,
-			},
-			Owner:    []byte{},
-			Type:     "",
-			Quantity: "",
-			Issuer:   []byte{},
-		}
-		if err := rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner, &tok.Type, &tok.Quantity, &tok.Issuer); err != nil {
-			return nil, err
-		}
-		tokens = append(tokens, &tok)
+	it := common.NewIterator(rows, func(tok *token.IssuedToken) error {
+		return rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner, &tok.Type, &tok.Quantity, &tok.Issuer)
+	})
+	tokens, err := iterators.ReadAllPointers(it)
+	if err != nil {
+		return nil, err
 	}
 	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
 }
@@ -577,47 +547,36 @@ func (db *TokenStore) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer Close(rows)
-
-	tokens := make([]*token.Token, len(inputs))
+	it := common.NewIterator(rows, func(tok *token.UnspentToken) error {
+		return rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner, &tok.Type, &tok.Quantity)
+	})
 	counter := 0
-	for rows.Next() {
-		tokID := token.ID{}
-		var typ token.Type
-		var quantity string
-		var ownerRaw []byte
-		err := rows.Scan(
-			&tokID.TxId,
-			&tokID.Index,
-			&ownerRaw,
-			&typ,
-			&quantity,
-		)
-		if err != nil {
-			return tokens, err
-		}
-		tok := &token.Token{
-			Owner:    ownerRaw,
-			Type:     typ,
-			Quantity: quantity,
-		}
-
+	tokens := make([]*token.Token, len(inputs))
+	err = iterators.ForEach(it, func(tok *token.UnspentToken) error {
 		// put in the right position
 		found := false
 		for j := 0; j < len(inputs); j++ {
-			if inputs[j].Equal(tokID) {
-				tokens[j] = tok
+			if inputs[j].Equal(tok.Id) {
+				tokens[j] = &token.Token{
+					Owner:    tok.Owner,
+					Type:     tok.Type,
+					Quantity: tok.Quantity,
+				}
 				logger.Debugf("set token at location [%s:%s]-[%d]", tok.Type, tok.Quantity, j)
 				found = true
 				break
 			}
 		}
 		if !found {
-			return nil, errors.Errorf("retrieved wrong token [%v]", tokID)
+			return errors.Errorf("retrieved wrong token [%v]", tok.Id)
 		}
-
 		counter++
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
+
 	logger.Debugf("found [%d] tokens, expected [%d]", counter, len(inputs))
 	if err = rows.Err(); err != nil {
 		return tokens, err
@@ -660,32 +619,11 @@ func (db *TokenStore) QueryTokenDetails(params driver.QueryTokenDetailsParams) (
 	if err != nil {
 		return nil, err
 	}
-	defer Close(rows)
 
-	var tokenDetails []driver.TokenDetails
-	for rows.Next() {
-		td := driver.TokenDetails{}
-		if err := rows.Scan(
-			&td.TxID,
-			&td.Index,
-			&td.OwnerIdentity,
-			&td.OwnerType,
-			&td.OwnerEnrollment,
-			&td.Type,
-			&td.Amount,
-			&td.IsSpent,
-			&td.SpentBy,
-			&td.StoredAt,
-		); err != nil {
-			return tokenDetails, err
-		}
-		tokenDetails = append(tokenDetails, td)
-	}
-	logger.Debugf("found [%d] tokens", len(tokenDetails))
-	if err = rows.Err(); err != nil {
-		return tokenDetails, err
-	}
-	return tokenDetails, nil
+	it := common.NewIterator(rows, func(td *driver.TokenDetails) error {
+		return rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &td.Amount, &td.IsSpent, &td.SpentBy, &td.StoredAt)
+	})
+	return iterators.ReadAllValues(it)
 }
 
 // WhoDeletedTokens returns information about which transaction deleted the passed tokens.
@@ -1050,29 +988,13 @@ func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID stri
 		return nil, errors.Wrapf(err, "error querying db")
 	}
 	// read the types from the query result and remove discard those in db.getSupportedTokenFormats()
-	supportedFormats := db.getSupportedTokenFormats()
-	logger.Debugf("supported token formats are [%v]", supportedFormats)
-	includeFormats := make([]token.Format, 0)
-	for rows.Next() {
-		var tmp string
-		if err := rows.Scan(&tmp); err != nil {
-			return nil, errors.Wrapf(err, "failed to scan row")
-		}
-		format := token.Format(tmp)
+	supported := collections.NewSet(db.getSupportedTokenFormats()...)
+	logger.Debugf("supported token formats are [%v]", supported)
 
-		logger.Debugf("format from db [%s]", format)
+	all := common.NewIterator(rows, func(f *token.Format) error { return rows.Scan(f) })
+	unsupported := iterators.Filter(all, func(f *token.Format) bool { return !supported.Contains(*f) })
+	return iterators.ReadAllValues(unsupported)
 
-		// include format only if it is not in supportedFormats
-		if !slices.Contains(supportedFormats, format) {
-			includeFormats = append(includeFormats, format)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, errors.Wrapf(err, "error querying db")
-	}
-	logger.Debugf("after filtering we have [%v]", includeFormats)
-
-	return includeFormats, nil
 }
 
 type TokenTransaction struct {
@@ -1292,67 +1214,6 @@ func (t *TokenTransaction) Rollback() error {
 	return t.tx.Rollback()
 }
 
-type UnspentTokensInWalletIterator struct {
-	txs *sql.Rows
-}
-
-func (u *UnspentTokensInWalletIterator) Close() {
-	Close(u.txs)
-}
-
-func (u *UnspentTokensInWalletIterator) Next() (*token.UnspentTokenInWallet, error) {
-	if !u.txs.Next() {
-		return nil, nil
-	}
-
-	tok := &token.UnspentTokenInWallet{
-		Id:       &token.ID{},
-		WalletID: "",
-		Type:     "",
-		Quantity: "",
-	}
-	if err := u.txs.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Type, &tok.Quantity, &tok.WalletID); err != nil {
-		return nil, err
-	}
-	return tok, nil
-}
-
-type UnspentTokensIterator struct {
-	txs *sql.Rows
-}
-
-func (u *UnspentTokensIterator) Close() {
-	Close(u.txs)
-}
-
-func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
-	if !u.txs.Next() {
-		return nil, nil
-	}
-
-	var typ token.Type
-	var quantity string
-	var owner []byte
-	var id token.ID
-	// tx_id, idx, owner_raw, token_type, quantity
-	err := u.txs.Scan(
-		&id.TxId,
-		&id.Index,
-		&owner,
-		&typ,
-		&quantity,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &token.UnspentToken{
-		Id:       &id,
-		Owner:    owner,
-		Type:     typ,
-		Quantity: quantity,
-	}, err
-}
-
 func tokenDBError(err error) error {
 	if err == nil {
 		return nil
@@ -1363,24 +1224,4 @@ func tokenDBError(err error) error {
 		return driver.ErrTokenDoesNotExist
 	}
 	return err
-}
-
-type LedgerTokensIterator struct {
-	txs *sql.Rows
-}
-
-func (u *LedgerTokensIterator) Close() {
-	Close(u.txs)
-}
-
-func (u *LedgerTokensIterator) Next() (*token.LedgerToken, error) {
-	if !u.txs.Next() {
-		return nil, nil
-	}
-
-	tok := &token.LedgerToken{}
-	if err := u.txs.Scan(&tok.ID.TxId, &tok.ID.Index, &tok.Token, &tok.TokenMetadata, &tok.Format); err != nil {
-		return nil, err
-	}
-	return tok, nil
 }

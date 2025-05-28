@@ -47,6 +47,6 @@ func (t *Transaction) Spend(senderWallet *token2.OwnerWallet, at *token.UnspentT
 		at.Type,
 		[]uint64{q.ToBigInt().Uint64()},
 		[]token2.Identity{recipient},
-		append(opts, token2.WithTokenIDs(at.Id))...,
+		append(opts, token2.WithTokenIDs(&at.Id))...,
 	)
 }

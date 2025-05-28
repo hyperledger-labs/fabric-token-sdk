@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/pkg/errors"
 )
 
@@ -67,6 +68,17 @@ func ToQuantity(q string, precision uint64) (Quantity, error) {
 	default:
 		return &BigQuantity{Int: v, Precision: precision}, nil
 	}
+}
+
+// ToQuantitySum computes the sum of the quantities of the tokens in the iterator.
+func ToQuantitySum(precision uint64) iterators.Reducer[*UnspentToken, Quantity] {
+	return iterators.NewReducer(NewZeroQuantity(precision), func(sum Quantity, tok *UnspentToken) (Quantity, error) {
+		q, err := ToQuantity(tok.Quantity, precision)
+		if err != nil {
+			return nil, err
+		}
+		return sum.Add(q), nil
+	})
 }
 
 // UInt64ToQuantity converts an uint64 q to a Quantity of a given precision.

@@ -51,7 +51,7 @@ type Token struct {
 
 type IssuedToken struct {
 	// Id is used to uniquely identify the token in the ledger
-	Id *ID `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id ID `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Owner is the token owner
 	Owner []byte `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	// Type is the type of the token
@@ -97,7 +97,7 @@ func (it *IssuedTokens) Count() int {
 // UnspentTokenInWallet models an unspent token owner solely by a given wallet
 type UnspentTokenInWallet struct {
 	// Id is used to uniquely identify the token in the ledger
-	Id *ID
+	Id ID
 	// WalletID is the ID of the wallet owning this token
 	WalletID string
 	// Type is the type of the token
@@ -124,7 +124,7 @@ func (t LedgerToken) Equal(right LedgerToken) bool {
 // UnspentToken models an unspent token
 type UnspentToken struct {
 	// Id is used to uniquely identify the token in the ledger
-	Id *ID
+	Id ID
 	// Owner is the token owner
 	Owner []byte
 	// Type is the type of the token
