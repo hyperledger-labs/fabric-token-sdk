@@ -9,13 +9,11 @@ package nfttx
 import (
 	"context"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
-
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 // Filter is a filter for NFTCC
@@ -67,6 +65,8 @@ func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Q
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "token selection failed")
 	}
+	unspentTokens = iterators.Filter(unspentTokens, filter.ContainsToken)
+
 	defer unspentTokens.Close()
 	logger.Debugf("select token for a quantity of [%s]", q)
 
@@ -86,18 +86,9 @@ func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Q
 			return nil, nil, errors.Wrap(err, "failed to convert quantity")
 		}
 
-		// check type and ownership
-		selected := filter.ContainsToken(t)
-		if !selected {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("token [%s,%s,%v] owner does not belong to the passed wallet", view.Identity(t.Owner), q, selected)
-			}
-			continue
-		}
-
 		// Append token
 		logger.Debugf("adding quantity [%s]", q.Decimal())
-		toBeSpent = append(toBeSpent, t.Id)
+		toBeSpent = append(toBeSpent, &t.Id)
 		sum = sum.Add(q)
 		if target.Cmp(sum) <= 0 {
 			return toBeSpent, sum, nil

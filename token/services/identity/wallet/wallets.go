@@ -9,6 +9,7 @@ package wallet
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -240,20 +241,11 @@ func (w *LongTermOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
-	defer it.Close()
-
-	unspentTokens := &token.UnspentTokens{}
-	for {
-		t, err := it.Next()
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to get next unspent token")
-		}
-		if t == nil {
-			break
-		}
-		unspentTokens.Tokens = append(unspentTokens.Tokens, t)
+	tokens, err := iterators.ReadAllPointers(it)
+	if err != nil {
+		return nil, err
 	}
-	return unspentTokens, nil
+	return &token.UnspentTokens{Tokens: tokens}, nil
 }
 
 func (w *LongTermOwnerWallet) Balance(opts *driver.ListTokensOptions) (uint64, error) {

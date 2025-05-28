@@ -244,7 +244,7 @@ func ListVaultUnspentTokens(network *integration.Infrastructure, tmsID token.TMS
 	var IDs []*token2.ID
 	for i := 0; i < count; i++ {
 		tok := unspentTokens.At(i)
-		IDs = append(IDs, tok.Id)
+		IDs = append(IDs, &tok.Id)
 	}
 	return IDs
 }

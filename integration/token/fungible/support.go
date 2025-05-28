@@ -1051,7 +1051,7 @@ func ListVaultUnspentTokens(network *integration.Infrastructure, id *token3.Node
 	var IDs []*token.ID
 	for i := 0; i < count; i++ {
 		tok := unspentTokens.At(i)
-		IDs = append(IDs, tok.Id)
+		IDs = append(IDs, &tok.Id)
 	}
 	return IDs
 }

@@ -111,7 +111,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			}
 
 			// lock the token
-			if _, err := s.locker.Lock(t.Id, s.txID, reclaim); err != nil {
+			if _, err := s.locker.Lock(&t.Id, s.txID, reclaim); err != nil {
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 
 				logger.Debugf("token [%s,%v] cannot be locked [%s]", q, tokenType, err)
@@ -120,7 +120,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 
 			// Append token
 			logger.Debugf("adding quantity [%s]", q.Decimal())
-			toBeSpent = append(toBeSpent, t.Id)
+			toBeSpent = append(toBeSpent, &t.Id)
 			sum = sum.Add(q)
 			potentialSumWithLocked = potentialSumWithLocked.Add(q)
 

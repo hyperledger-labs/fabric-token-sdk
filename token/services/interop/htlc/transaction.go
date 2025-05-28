@@ -242,7 +242,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 		tok.Type,
 		[]uint64{q.ToBigInt().Uint64()},
 		[]view.Identity{script.Sender},
-		append(opts, token.WithTokenIDs(tok.Id))...,
+		append(opts, token.WithTokenIDs(&tok.Id))...,
 	)
 }
 
@@ -316,7 +316,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		tok.Type,
 		[]uint64{q.ToBigInt().Uint64()},
 		[]view.Identity{script.Recipient},
-		append(opts, token.WithTokenIDs(tok.Id), token.WithTransferMetadata(ClaimKey(image), preImage))...,
+		append(opts, token.WithTokenIDs(&tok.Id), token.WithTransferMetadata(ClaimKey(image), preImage))...,
 	)
 }
 
