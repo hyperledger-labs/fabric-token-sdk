@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -38,8 +39,8 @@ type enhancedIterator[T any] interface {
 }
 
 type permutatableIterator[T any] interface {
-	collections.Iterator[T]
-	NewPermutation() collections.Iterator[T]
+	iterators.Iterator[T]
+	NewPermutation() iterators.Iterator[T]
 }
 
 type FetcherStrategy string
@@ -195,7 +196,7 @@ func (f *cachedFetcher) update() {
 	}
 	its := map[string]permutatableIterator[*token2.UnspentTokenInWallet]{}
 	for key, toks := range m {
-		its[key] = collections.NewSliceIterator(toks)
+		its[key] = iterators.Slice(toks)
 	}
 
 	f.cache = its
