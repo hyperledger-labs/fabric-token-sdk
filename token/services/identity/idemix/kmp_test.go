@@ -47,7 +47,7 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs.NewIdentityStore(backend, token.TMSID{Network: "pineapple"}))
 	config, err := crypto.NewConfig(configPath)
 	assert.NoError(t, err)
-	keyStore, err := crypto.NewKeyStore(curveID, backend)
+	keyStore, err := crypto.NewKeyStore(curveID, kvs.Keystore(backend))
 	assert.NoError(t, err)
 
 	kmp := NewKeyManagerProvider(

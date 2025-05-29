@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package kvs
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -57,11 +58,12 @@ func (s *IdentityStore) AddConfiguration(wp driver.IdentityConfiguration) error 
 	if err != nil {
 		return errors.Wrapf(err, "failed to create key")
 	}
-	return s.kvs.Put(k, &wp)
+	return s.kvs.Put(context.Background(), k, &wp)
 }
 
 func (s *IdentityStore) IteratorConfigurations(configurationType string) (driver3.IdentityConfigurationIterator, error) {
 	it, err := s.kvs.GetByPartialCompositeID(
+		context.Background(),
 		IdentityDBPrefix,
 		[]string{
 			IdentityDBConfigurationPrefix,
@@ -88,7 +90,7 @@ func (s *IdentityStore) ConfigurationExists(id, configurationType, url string) (
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to create key")
 	}
-	return s.kvs.Exists(k), nil
+	return s.kvs.Exists(context.Background(), k), nil
 }
 
 func (s *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
@@ -99,7 +101,7 @@ func (s *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, token
 			driver2.Identity(id).String(),
 		},
 	)
-	if err := s.kvs.Put(k, &RecipientData{
+	if err := s.kvs.Put(context.Background(), k, &RecipientData{
 		AuditInfo:              identityAudit,
 		TokenMetadata:          tokenMetadata,
 		TokenMetadataAuditInfo: tokenMetadataAudit,
@@ -117,11 +119,11 @@ func (s *IdentityStore) GetAuditInfo(identity []byte) ([]byte, error) {
 			driver2.Identity(identity).String(),
 		},
 	)
-	if !s.kvs.Exists(k) {
+	if !s.kvs.Exists(context.Background(), k) {
 		return nil, nil
 	}
 	var res RecipientData
-	if err := s.kvs.Get(k, &res); err != nil {
+	if err := s.kvs.Get(context.Background(), k, &res); err != nil {
 		return nil, err
 	}
 	return res.AuditInfo, nil
@@ -135,11 +137,11 @@ func (s *IdentityStore) GetTokenInfo(identity []byte) ([]byte, []byte, error) {
 			driver2.Identity(identity).String(),
 		},
 	)
-	if !s.kvs.Exists(k) {
+	if !s.kvs.Exists(context.Background(), k) {
 		return nil, nil, nil
 	}
 	var res RecipientData
-	if err := s.kvs.Get(k, &res); err != nil {
+	if err := s.kvs.Get(context.Background(), k, &res); err != nil {
 		return nil, nil, err
 	}
 	return res.TokenMetadata, res.TokenMetadataAuditInfo, nil
@@ -157,7 +159,7 @@ func (s *IdentityStore) StoreSignerInfo(id, info []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create composite key to store entry in kvs")
 	}
-	err = s.kvs.Put(k, info)
+	err = s.kvs.Put(context.Background(), k, info)
 	if err != nil {
 		return errors.Wrap(err, "failed to store entry in kvs for the passed signer")
 	}
@@ -179,7 +181,7 @@ func (s *IdentityStore) GetExistingSignerInfo(identities ...driver2.Identity) ([
 		}
 		keys[i] = k
 	}
-	return s.kvs.GetExisting(keys...), nil
+	return s.kvs.GetExisting(context.Background(), keys...), nil
 }
 
 func (s *IdentityStore) SignerInfoExists(id []byte) (bool, error) {
@@ -203,7 +205,7 @@ func (s *IdentityStore) GetSignerInfo(identity []byte) ([]byte, error) {
 		return nil, err
 	}
 	var res []byte
-	if err := s.kvs.Get(k, &res); err != nil {
+	if err := s.kvs.Get(context.Background(), k, &res); err != nil {
 		return nil, err
 	}
 	return res, nil

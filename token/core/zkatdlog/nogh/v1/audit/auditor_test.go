@@ -280,7 +280,7 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
 	config, err := crypto.NewConfig(dir)
 	Expect(err).NotTo(HaveOccurred())
 
-	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, kvs2.Keystore(backend))
 	Expect(err).NotTo(HaveOccurred())
 	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	Expect(err).NotTo(HaveOccurred())

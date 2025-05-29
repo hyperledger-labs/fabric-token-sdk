@@ -6,12 +6,16 @@ SPDX-License-Identifier: Apache-2.0
 
 package kvs
 
-import "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+import (
+	"context"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+)
 
 type KVS interface {
-	Exists(id string) bool
-	GetExisting(ids ...string) []string
-	Put(id string, state interface{}) error
-	Get(id string, state interface{}) error
-	GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error)
+	Exists(ctx context.Context, id string) bool
+	GetExisting(ctx context.Context, ids ...string) []string
+	Put(ctx context.Context, id string, state interface{}) error
+	Get(ctx context.Context, id string, state interface{}) error
+	GetByPartialCompositeID(ctx context.Context, prefix string, attrs []string) (kvs.Iterator, error)
 }

@@ -33,7 +33,7 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, 
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(backend, token.TMSID{Network: "pineapple"}))
 	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
-	keyStore, err := crypto2.NewKeyStore(curveID, backend)
+	keyStore, err := crypto2.NewKeyStore(curveID, kvs2.Keystore(backend))
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)

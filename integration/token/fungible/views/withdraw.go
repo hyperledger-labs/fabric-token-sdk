@@ -136,7 +136,7 @@ func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error
 		var tx *ttx.Transaction
 		var auditorID string
 		if len(p.Auditor) == 0 {
-			assert.NoError(GetKVS(context).Get("auditor", &auditorID), "failed to retrieve auditor id")
+			assert.NoError(GetKVS(context).Get(context.Context(), "auditor", &auditorID), "failed to retrieve auditor id")
 		} else {
 			auditorID = p.Auditor
 		}

@@ -116,7 +116,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			var srStr string
 			if kvss, err := context.GetService(&kvs.KVS{}); err != nil {
 				return errors.Wrap(err, "failed to get KVS from context")
-			} else if err := kvss.(*kvs.KVS).Get(k, &srStr); err != nil {
+			} else if err := kvss.(*kvs.KVS).Get(context.Context(), k, &srStr); err != nil {
 				return errors.Wrap(err, "failed to to store signature request")
 			}
 			srRaw, err := base64.StdEncoding.DecodeString(srStr)

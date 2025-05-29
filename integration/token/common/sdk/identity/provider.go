@@ -30,5 +30,5 @@ func (s *KVSStorageProvider) IdentityStore(tmsID token.TMSID) (driver.IdentitySt
 }
 
 func (s *KVSStorageProvider) Keystore() (driver2.Keystore, error) {
-	return s.kvs, nil
+	return kvs.Keystore(s.kvs), nil
 }
