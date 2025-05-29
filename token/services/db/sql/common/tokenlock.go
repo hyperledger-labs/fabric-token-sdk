@@ -13,10 +13,13 @@ import (
 
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query"
+	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/cond"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 type tokenLockTables struct {
@@ -29,25 +32,28 @@ type TokenLockStore struct {
 	WriteDB *sql.DB
 	Table   tokenLockTables
 	Logger  logging.Logger
+	ci      common3.CondInterpreter
 }
 
-func newTokenLockStore(readDB, writeDB *sql.DB, tables tokenLockTables) *TokenLockStore {
+func newTokenLockStore(readDB, writeDB *sql.DB, tables tokenLockTables, ci common3.CondInterpreter) *TokenLockStore {
 	return &TokenLockStore{
 		ReadDB:  readDB,
 		WriteDB: writeDB,
 		Table:   tables,
 		Logger:  logger,
+		ci:      ci,
 	}
 }
 
-func NewTokenLockStore(readDB, writeDB *sql.DB, tables TableNames) (*TokenLockStore, error) {
+func NewTokenLockStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*TokenLockStore, error) {
 	return newTokenLockStore(
 		readDB,
 		writeDB,
 		tokenLockTables{
 			TokenLocks: tables.TokenLocks,
 			Requests:   tables.Requests,
-		}), nil
+		},
+		ci), nil
 }
 
 func (db *TokenLockStore) CreateSchema() error {
@@ -55,23 +61,22 @@ func (db *TokenLockStore) CreateSchema() error {
 }
 
 func (db *TokenLockStore) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
-	query, err := NewInsertInto(db.Table.TokenLocks).Rows("consumer_tx_id, tx_id, idx, created_at").Compile()
-	if err != nil {
-		return errors.Wrap(err, "failed compiling query")
-	}
+	query, args := q.InsertInto(db.Table.TokenLocks).
+		Fields("consumer_tx_id", "tx_id", "idx", "created_at").
+		Row(consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC()).
+		Format()
 	logger.Debug(query, tokenID, consumerTxID)
-	_, err = db.WriteDB.Exec(query, consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC())
+	_, err := db.WriteDB.Exec(query, args...)
 	return err
 }
 
 func (db *TokenLockStore) UnlockByTxID(consumerTxID transaction.ID) error {
-	query, err := NewDeleteFrom(db.Table.TokenLocks).Where("consumer_tx_id = $1").Compile()
-	if err != nil {
-		return errors.Wrap(err, "failed compiling query")
-	}
+	query, args := q.DeleteFrom(db.Table.TokenLocks).
+		Where(cond.Eq("consumer_tx_id", consumerTxID)).
+		Format(db.ci)
 	logger.Debug(query, consumerTxID)
 
-	_, err = db.WriteDB.Exec(query, consumerTxID)
+	_, err := db.WriteDB.Exec(query, args...)
 	return err
 }
 
@@ -91,4 +96,11 @@ func (db *TokenLockStore) GetSchema() string {
 
 func (db *TokenLockStore) Close() error {
 	return common2.Close(db.ReadDB, db.WriteDB)
+}
+
+func IsExpiredToken(tokenRequests, tokenLocks common3.Table, leaseExpiry time.Duration) cond.Condition {
+	return cond.Or(
+		cond.FieldIn(tokenRequests.Field("status"), driver.Deleted),
+		cond.OlderThan(tokenLocks.Field("created_at"), leaseExpiry),
+	)
 }
