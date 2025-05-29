@@ -9,8 +9,6 @@ package common
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
-	errors2 "errors"
 	"fmt"
 	"runtime/debug"
 	"strings"
@@ -18,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
@@ -111,24 +110,16 @@ func (db *TokenStore) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 
 // IsMine just checks if the token is in the local storage and not deleted
 func (db *TokenStore) IsMine(txID string, index uint64) (bool, error) {
-	id := ""
-	query, err := NewSelect("tx_id").
-		From(db.table.Tokens).
-		Where("tx_id = $1 AND idx = $2 AND is_deleted = false AND owner = true LIMIT 1").
-		Compile()
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to compile query")
-	}
-	logger.Debug(query, txID, index)
+	query, args := q.Select().
+		FieldsByName("tx_id").
+		From(q.Table(db.table.Tokens)).
+		Where(cond.And(cond.Eq("tx_id", txID), cond.Eq("idx", index), cond.Eq("is_deleted", false), cond.Eq("owner", true))).
+		Limit(1).
+		Format(db.ci)
 
-	row := db.readDB.QueryRow(query, txID, index)
-	if err := row.Scan(&id); err != nil {
-		if errors2.Is(err, sql.ErrNoRows) {
-			return false, nil
-		}
-		return false, errors.Wrapf(err, "error querying db")
-	}
-	return id == txID, nil
+	id, err := common.QueryUnique[string](db.readDB, query, args...)
+
+	return id == txID, err
 }
 
 // UnspentTokensIterator returns an iterator over all unspent tokens
@@ -256,17 +247,9 @@ func (db *TokenStore) balance(opts driver.QueryTokenDetailsParams) (uint64, erro
 		Where(HasTokenDetails(opts, tokenTable)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
-	row := db.readDB.QueryRow(query, args...)
-	var sum *uint64
-	if err := row.Scan(&sum); err != nil {
-		if errors.HasCause(err, sql.ErrNoRows) {
-			return 0, nil
-		}
-		return 0, errors.Wrapf(err, "error querying db")
-	}
-	if sum == nil {
-		return 0, nil
+	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
+	if err != nil || sum == nil {
+		return 0, err
 	}
 	return *sum, nil
 }
@@ -367,12 +350,14 @@ func (db *TokenStore) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) 
 
 // ListHistoryIssuedTokens returns the list of issued tokens
 func (db *TokenStore) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
-	query, err := NewSelect("tx_id, idx, owner_raw, token_type, quantity, issuer_raw").From(db.table.Tokens).Where("issuer = true").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compile query")
-	}
+	query, args := q.Select().
+		FieldsByName("tx_id", "idx", "owner_raw", "token_type", "quantity", "issuer_raw").
+		From(q.Table(db.table.Tokens)).
+		Where(cond.Eq("issuer", true)).
+		Format(db.ci)
+
 	logger.Debug(query)
-	rows, err := db.readDB.Query(query)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -689,114 +674,78 @@ func (db *TokenStore) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, e
 }
 
 func (db *TokenStore) TransactionExists(ctx context.Context, id string) (bool, error) {
-	span := trace.SpanFromContext(ctx)
-	query, err := NewSelect("tx_id").From(db.table.Tokens).Where("tx_id=$1 LIMIT 1").Compile()
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to compile query")
-	}
-	logger.Debug(query, id)
+	query, args := q.Select().
+		FieldsByName("tx_id").
+		From(q.Table(db.table.Tokens)).
+		Where(cond.Eq("tx_id", id)).
+		Limit(1).
+		Format(db.ci)
 
-	span.AddEvent("query", trace.WithAttributes(tracing.String(QueryLabel, query)))
-	row := db.readDB.QueryRow(query, id)
-	var found string
-	span.AddEvent("scan_rows")
-	if err := row.Scan(&found); err != nil {
-		if errors2.Is(err, sql.ErrNoRows) {
-			return false, nil
-		}
-		logger.Warnf("tried to check transaction existence for id %s, err %s", id, err)
-		return false, err
-	}
-	return true, nil
+	txID, err := common.QueryUniqueContext[string](ctx, db.readDB, query, args...)
+
+	return len(txID) > 0, err
 }
 
 func (db *TokenStore) StorePublicParams(raw []byte) error {
 	rawHash := hash.Hashable(raw).Raw()
-	_, err := db.PublicParamsByHash(rawHash)
-	if err == nil {
-		logger.Debugf("public params [%s] already in the database", base64.StdEncoding.EncodeToString(rawHash))
+
+	if pps, err := db.PublicParamsByHash(rawHash); err == nil && len(pps) > 0 {
+		logger.Debugf("public params [%s] already in the database", logging.Base64(rawHash))
 		// no need to update the public parameters
 		return nil
 	}
 
-	now := time.Now().UTC()
-	query, err := NewInsertInto(db.table.PublicParams).Rows("raw, raw_hash, stored_at").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed to compile query")
-	}
-	logger.Debugf(query, fmt.Sprintf("store public parameters (%d bytes) [%v], hash [%s]", len(raw), now, base64.StdEncoding.EncodeToString(rawHash)))
-	_, err = db.writeDB.Exec(query, raw, rawHash, now)
+	query, args := q.InsertInto(db.table.PublicParams).
+		Fields("raw", "raw_hash", "stored_at").
+		Row(raw, rawHash, time.Now().UTC()).
+		Format()
+	logger.Debugf(query, fmt.Sprintf("store public parameters (%d bytes), hash [%s]", len(raw), logging.Base64(rawHash)))
+	_, err := db.writeDB.Exec(query, args...)
 	return err
 }
 
 func (db *TokenStore) PublicParams() ([]byte, error) {
-	var params []byte
-	query, err := NewSelect("raw").From(db.table.PublicParams).OrderBy("stored_at DESC LIMIT 1").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compile query")
-	}
-	logger.Debug(query)
+	query, args := q.Select().
+		FieldsByName("raw").
+		From(q.Table(db.table.PublicParams)).
+		OrderBy(q.Desc(common3.FieldName("stored_at"))).
+		Limit(1).
+		Format(db.ci)
 
-	row := db.readDB.QueryRow(query)
-	err = row.Scan(&params)
-	if err != nil {
-		if errors.HasCause(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, errors.Wrapf(err, "error querying db")
-	}
-	return params, nil
+	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
 func (db *TokenStore) PublicParamsByHash(rawHash tdriver.PPHash) ([]byte, error) {
-	var params []byte
-	query, err := NewSelect("raw").From(db.table.PublicParams).Where("raw_hash = $1").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compile query")
-	}
-	logger.Debug(query)
+	query, args := q.Select().
+		FieldsByName("raw").
+		From(q.Table(db.table.PublicParams)).
+		Where(cond.Eq("raw_hash", rawHash)).
+		Format(db.ci)
 
-	row := db.readDB.QueryRow(query, rawHash)
-	err = row.Scan(&params)
-	if err != nil {
-		return nil, errors.Wrapf(err, "error querying db")
-	}
-	return params, nil
+	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
-// TODO Convert to multi-row query
-func (db *TokenStore) StoreCertifications(certifications map[*token.ID][]byte) (err error) {
+func (db *TokenStore) StoreCertifications(certifications map[*token.ID][]byte) error {
+	if len(certifications) == 0 {
+		return nil
+	}
 	now := time.Now().UTC()
-	query, err := NewInsertInto(db.table.Certifications).Rows("tx_id, idx, certification, stored_at").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed to compile query")
-	}
 
-	tx, err := db.writeDB.Begin()
-	if err != nil {
-		return errors.Errorf("failed starting a transaction")
-	}
-	defer func() {
-		if err != nil && tx != nil {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
-			}
-		}
-	}()
-
+	rows := make([]common3.Tuple, 0, len(certifications))
 	for tokenID, certification := range certifications {
 		if tokenID == nil {
 			return errors.Errorf("invalid token-id, cannot be nil")
 		}
-		logger.Debug(query, fmt.Sprintf("(%d bytes)", len(certification)), now)
-		if _, err = tx.Exec(query, tokenID.TxId, tokenID.Index, certification, now); err != nil {
-			return tokenDBError(err)
-		}
+		rows = append(rows, common3.Tuple{tokenID.TxId, tokenID.Index, certification, now})
 	}
-	if err = tx.Commit(); err != nil {
-		return errors.Wrap(err, "failed committing certifications")
+	query, args := q.InsertInto(db.table.Certifications).
+		Fields("tx_id", "idx", "certification", "stored_at").
+		Rows(rows).
+		Format()
+	if _, err := db.writeDB.Exec(query, args...); err != nil {
+		return tokenDBError(err)
 	}
-	return
+	return nil
 }
 
 func (db *TokenStore) ExistsCertification(tokenID *token.ID) bool {
@@ -810,17 +759,12 @@ func (db *TokenStore) ExistsCertification(tokenID *token.ID) bool {
 		Where(HasTokens("tx_id", "idx", tokenID)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
-	row := db.readDB.QueryRow(query, args...)
-
-	var certification []byte
-	if err := row.Scan(&certification); err != nil {
-		if errors.HasCause(err, sql.ErrNoRows) {
-			return false
-		}
+	certification, err := common.QueryUnique[[]byte](db.readDB, query, args...)
+	if err != nil {
 		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenID, err)
 		return false
 	}
+
 	result := len(certification) != 0
 	if !result {
 		logger.Warnf("tried to check certification existence for token id %s, got an empty certification", tokenID)
@@ -1067,21 +1011,19 @@ func (t *TokenTransaction) GetToken(ctx context.Context, tokenID token.ID, inclu
 }
 
 func (t *TokenTransaction) Delete(ctx context.Context, tokenID token.ID, deletedBy string) error {
-	span := trace.SpanFromContext(ctx)
-	// logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
-	now := time.Now().UTC()
-	query, err := NewUpdate(t.table.Tokens).Set("is_deleted, spent_by, spent_at").Where("tx_id, idx").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed building query")
-	}
-	logger.Debugf(query, true, deletedBy, now, tokenID.TxId, tokenID.Index)
-	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query, true, deletedBy, now, tokenID.TxId, tokenID.Index); err != nil {
-		span.RecordError(err)
+	query, args := q.Update(t.table.Tokens).
+		Set("is_deleted", true).
+		Set("spent_by", deletedBy).
+		Set("spent_at", time.Now().UTC()).
+		Where(cond.And(cond.Eq("tx_id", tokenID.TxId), cond.Eq("idx", tokenID.Index))).
+		Format(t.ci)
+
+	logger.Debug(query, args)
+	if _, err := t.tx.Exec(query, args...); err != nil {
 		return errors.Wrapf(err, "error setting token to deleted [%s]", tokenID.TxId)
 	}
-	span.AddEvent("end_query")
+
 	return nil
 }
 
@@ -1090,69 +1032,35 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		return errors.Errorf("no owners specified [%s]", string(debug.Stack()))
 	}
 
-	span := trace.SpanFromContext(ctx)
-	// logger.Debugf("store record [%s:%d,%v] in table [%s]", tr.TxID, tr.Index, owners, t.db.table.Tokens)
-
 	// Store token
-	now := time.Now().UTC()
-	query, err := NewInsertInto(t.table.Tokens).Rows(
-		"tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, owner_wallet_id, ledger, ledger_type, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed building insert")
-	}
-	logger.Debug(query,
-		tr.TxID,
-		tr.Index,
-		len(tr.IssuerRaw),
-		len(tr.OwnerRaw),
-		tr.OwnerType,
-		len(tr.OwnerIdentity),
-		tr.OwnerWalletID,
-		len(tr.Ledger),
-		tr.LedgerFormat,
-		len(tr.LedgerMetadata),
-		tr.Type,
-		tr.Quantity,
-		tr.Amount,
-		now,
-		tr.Owner,
-		tr.Auditor,
-		tr.Issuer)
-	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query,
-		tr.TxID,
-		tr.Index,
-		tr.IssuerRaw,
-		tr.OwnerRaw,
-		tr.OwnerType,
-		tr.OwnerIdentity,
-		tr.OwnerWalletID,
-		tr.Ledger,
-		tr.LedgerFormat,
-		tr.LedgerMetadata,
-		tr.Type,
-		tr.Quantity,
-		tr.Amount,
-		now,
-		tr.Owner,
-		tr.Auditor,
-		tr.Issuer); err != nil {
-		logger.Errorf("error storing token [%s] in table [%s]: [%s][%s]", tr.TxID, t.table.Tokens, err, string(debug.Stack()))
+	query, args := q.InsertInto(t.table.Tokens).
+		Fields("tx_id", "idx", "issuer_raw", "owner_raw", "owner_type", "owner_identity", "owner_wallet_id", "ledger", "ledger_type", "ledger_metadata", "token_type", "quantity", "amount", "stored_at", "owner", "auditor", "issuer").
+		Row(tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.OwnerType, tr.OwnerIdentity, tr.OwnerWalletID, tr.Ledger, tr.LedgerFormat, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, time.Now().UTC(), tr.Owner, tr.Auditor, tr.Issuer).
+		Format()
+	logger.Debug(query, args)
+	if _, err := t.tx.Exec(query, args...); err != nil {
+		logger.Errorf("error storing token [%s] in table [%s] [%s]: [%s][%s]", tr.TxID, t.table.Tokens, query, err, string(debug.Stack()))
 		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, t.table.Tokens)
 	}
 
+	if len(owners) == 0 {
+		return nil
+	}
+
 	// Store ownership
-	span.AddEvent("store_ownerships")
-	for _, eid := range owners {
-		query, err := NewInsertInto(t.table.Ownership).Rows("tx_id, idx, wallet_id").Compile()
-		if err != nil {
-			return errors.Wrapf(err, "failed building insert")
-		}
-		logger.Debug(query, tr.TxID, tr.Index, eid)
-		span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-		if _, err := t.tx.Exec(query, tr.TxID, tr.Index, eid); err != nil {
-			return errors.Wrapf(err, "error storing token ownership [%s]", tr.TxID)
-		}
+	rows := make([]common3.Tuple, len(owners))
+	for i, eid := range owners {
+		rows[i] = common3.Tuple{tr.TxID, tr.Index, eid}
+	}
+	query, args = q.InsertInto(t.table.Ownership).
+		Fields("tx_id", "idx", "wallet_id").
+		Rows(rows).
+		Format()
+	logger.Debug(query, args)
+
+	if _, err := t.tx.Exec(query, args...); err != nil {
+		logger.Errorf("error storing token ownerships [%s]: %s", query, err)
+		return errors.Wrapf(err, "error storing token ownership [%s]", tr.TxID)
 	}
 
 	return nil
@@ -1160,10 +1068,13 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 func (t *TokenTransaction) SetSpendable(ctx context.Context, tokenID token.ID, spendable bool) error {
 	span := trace.SpanFromContext(ctx)
-	query := fmt.Sprintf("UPDATE %s SET spendable = $1 WHERE tx_id = $2 AND idx = $3;", t.table.Tokens)
-	logger.Infof(query, spendable, tokenID.TxId, tokenID.Index)
+	query, args := q.Update(t.table.Tokens).
+		Set("spendable", spendable).
+		Where(cond.And(cond.Eq("tx_id", tokenID.TxId), cond.Eq("idx", tokenID.Index))).
+		Format(t.ci)
+	logger.Info(query, args)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query, spendable, tokenID.TxId, tokenID.Index); err != nil {
+	if _, err := t.tx.Exec(query, args...); err != nil {
 		span.RecordError(err)
 		return errors.Wrapf(err, "error setting spendable flag to [%v] for [%s]", spendable, tokenID.TxId)
 	}
@@ -1176,17 +1087,19 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Conte
 	span := trace.SpanFromContext(ctx)
 
 	// first set all spendable flags to false
-	query := fmt.Sprintf("UPDATE %s SET spendable = $1;", t.table.Tokens)
-	logger.Infof(query, false)
+	query, args := q.Update(t.table.Tokens).
+		Set("spendable", false).
+		Format(t.ci)
+	logger.Infof(query, args)
 	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query, false); err != nil {
+	if _, err := t.tx.Exec(query, args...); err != nil {
 		span.RecordError(err)
 		return errors.Wrapf(err, "error setting spendable flag to false for all tokens")
 	}
 	span.AddEvent("end_query")
 
 	// then set the spendable flags to true only for the supported token types
-	query, args := q.Update(t.table.Tokens).
+	query, args = q.Update(t.table.Tokens).
 		Set("spendable", true).
 		Where(cond.In("ledger_type", formats...)).
 		Format(t.ci)
