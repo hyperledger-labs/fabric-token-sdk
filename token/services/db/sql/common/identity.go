@@ -94,23 +94,24 @@ func (db *IdentityStore) CreateSchema() error {
 }
 
 func (db *IdentityStore) AddConfiguration(wp driver.IdentityConfiguration) error {
-	query, err := NewInsertInto(db.table.IdentityConfigurations).Rows("id, type, url, conf, raw").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed compiling query")
-	}
-	logger.Debug(query, wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw)
+	query, args := q.InsertInto(db.table.IdentityConfigurations).
+		Fields("id", "type", "url", "conf", "raw").
+		Row(wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw).
+		Format()
+	logger.Debug(query, args)
 
-	_, err = db.writeDB.Exec(query, wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw)
+	_, err := db.writeDB.Exec(query, args...)
 	return err
 }
 
 func (db *IdentityStore) IteratorConfigurations(configurationType string) (driver3.IdentityConfigurationIterator, error) {
-	query, err := NewSelect("id, url, conf, raw").From(db.table.IdentityConfigurations).Where("type = $1").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed compiling query")
-	}
-	logger.Debug(query)
-	rows, err := db.readDB.Query(query, configurationType)
+	query, args := q.Select().
+		FieldsByName("id", "url", "conf", "raw").
+		From(q.Table(db.table.IdentityConfigurations)).
+		Where(cond.Eq("type", configurationType)).
+		Format(db.ci)
+	logger.Debug(query, args)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -118,11 +119,12 @@ func (db *IdentityStore) IteratorConfigurations(configurationType string) (drive
 }
 
 func (db *IdentityStore) ConfigurationExists(id, typ, url string) (bool, error) {
-	query, err := NewSelect("id").From(db.table.IdentityConfigurations).Where("id=$1 AND type=$2 AND url=$3").Compile()
-	if err != nil {
-		return false, errors.Wrapf(err, "failed compiling query")
-	}
-	result, err := common.QueryUnique[string](db.readDB, query, id, typ, url)
+	query, args := q.Select().
+		FieldsByName("id").
+		From(q.Table(db.table.IdentityConfigurations)).
+		Where(cond.And(cond.Eq("id", id), cond.Eq("type", typ), cond.Eq("url", url))).
+		Format(db.ci)
+	result, err := common.QueryUnique[string](db.readDB, query, args...)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed getting configuration for [%s:%s:%s]", id, typ, url)
 	}
@@ -132,14 +134,14 @@ func (db *IdentityStore) ConfigurationExists(id, typ, url string) (bool, error) 
 
 func (db *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
 	// logger.Infof("store identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
-	query, err := NewInsertInto(db.table.IdentityInfo).Rows("identity_hash, identity, identity_audit_info, token_metadata, token_metadata_audit_info").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed compiling query")
-	}
-	logger.Debug(query)
-
 	h := token.Identity(id).String()
-	_, err = db.writeDB.Exec(query, h, id, identityAudit, tokenMetadata, tokenMetadataAudit)
+	query, args := q.InsertInto(db.table.IdentityInfo).
+		Fields("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
+		Row(h, id, identityAudit, tokenMetadata, tokenMetadataAudit).
+		Format()
+	logger.Debug(query, args)
+
+	_, err := db.writeDB.Exec(query, args...)
 	if err != nil {
 		// does the record already exists?
 		auditInfo, err2 := db.GetAuditInfo(id)
@@ -162,21 +164,12 @@ func (db *IdentityStore) GetAuditInfo(id []byte) ([]byte, error) {
 
 	value, _, err := db.auditInfoCache.GetOrLoad(h, func() ([]byte, error) {
 		// logger.Infof("get identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
-		query, err := NewSelect("identity_audit_info").From(db.table.IdentityInfo).Where("identity_hash = $1").Compile()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed compiling query")
-		}
-		logger.Debug(query)
-		row := db.readDB.QueryRow(query, h)
-		var info []byte
-		err = row.Scan(&info)
-		if err == nil {
-			return info, nil
-		}
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, errors.Wrapf(err, "error querying db")
+		query, args := q.Select().
+			FieldsByName("identity_audit_info").
+			From(q.Table(db.table.IdentityInfo)).
+			Where(cond.Eq("identity_hash", h)).
+			Format(db.ci)
+		return common.QueryUnique[[]byte](db.readDB, query, args...)
 	})
 	return value, err
 }
@@ -184,15 +177,17 @@ func (db *IdentityStore) GetAuditInfo(id []byte) ([]byte, error) {
 func (db *IdentityStore) GetTokenInfo(id []byte) ([]byte, []byte, error) {
 	h := token.Identity(id).String()
 	// logger.Infof("get identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
-	query, err := NewSelect("token_metadata, token_metadata_audit_info").From(db.table.IdentityInfo).Where("identity_hash = $1").Compile()
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed compiling query")
-	}
-	logger.Debug(query)
-	row := db.readDB.QueryRow(query, h)
+	query, args := q.Select().
+		FieldsByName("token_metadata", "token_metadata_audit_info").
+		From(q.Table(db.table.IdentityInfo)).
+		Where(cond.Eq("identity_hash", h)).
+		Format(db.ci)
+	logger.Debug(query, args)
+
+	row := db.readDB.QueryRow(query, args...)
 	var tokenMetadata []byte
 	var tokenMetadataAuditInfo []byte
-	err = row.Scan(&tokenMetadata, &tokenMetadataAuditInfo)
+	err := row.Scan(&tokenMetadata, &tokenMetadataAuditInfo)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil, nil
@@ -203,15 +198,17 @@ func (db *IdentityStore) GetTokenInfo(id []byte) ([]byte, []byte, error) {
 }
 
 func (db *IdentityStore) StoreSignerInfo(id, info []byte) error {
-	query, err := NewInsertInto(db.table.Signers).Rows("identity_hash, identity, info").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed compiling query")
-	}
 	h := token.Identity(id).String()
+
+	query, args := q.InsertInto(db.table.Signers).
+		Fields("identity_hash", "identity", "info").
+		Row(h, id, info).
+		Format()
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("store signer info [%s]: [%s][%s]", query, h, hash.Hashable(info))
 	}
-	_, err = db.writeDB.Exec(query, h, id, info)
+	_, err := db.writeDB.Exec(query, args...)
 	if err != nil {
 		if exists, err2 := db.SignerInfoExists(id); err2 == nil && exists {
 			logger.Debugf("signer info [%s] exists, no error to return", h)
@@ -298,22 +295,12 @@ func (db *IdentityStore) SignerInfoExists(id []byte) (bool, error) {
 }
 
 func (db *IdentityStore) GetSignerInfo(identity []byte) ([]byte, error) {
-	h := token.Identity(identity).String()
-	query, err := NewSelect("info").From(db.table.Signers).Where("identity_hash = $1").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed compiling query")
-	}
-	logger.Debug(query)
-	row := db.readDB.QueryRow(query, h)
-	var info []byte
-	err = row.Scan(&info)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, errors.Wrapf(err, "error querying db")
-	}
-	return info, nil
+	query, args := q.Select().
+		FieldsByName("info").
+		From(q.Table(db.table.Signers)).
+		Where(cond.Eq("identity_hash", token.Identity(identity).UniqueID())).
+		Format(db.ci)
+	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
 func (db *IdentityStore) Close() error {
