@@ -62,53 +62,53 @@ func (i *IssueAction) Validate() error {
 
 // TransferAction represents an action that transfers tokens.
 type TransferAction struct {
-	a driver.TransferAction
+	driver.TransferAction
 }
 
 // Serialize returns the byte representation of the action.
 func (t *TransferAction) Serialize() ([]byte, error) {
-	return t.a.Serialize()
+	return t.TransferAction.Serialize()
 }
 
 // NumOutputs returns the number of outputs in the action.
 func (t *TransferAction) NumOutputs() int {
-	return t.a.NumOutputs()
+	return t.TransferAction.NumOutputs()
 }
 
 // GetSerializedOutputs returns the serialized outputs of the action.
 func (t *TransferAction) GetSerializedOutputs() ([][]byte, error) {
-	return t.a.GetSerializedOutputs()
+	return t.TransferAction.GetSerializedOutputs()
 }
 
 // IsRedeemAt returns true if the i-th output redeems.
 func (t *TransferAction) IsRedeemAt(i int) bool {
-	return t.a.IsRedeemAt(i)
+	return t.TransferAction.IsRedeemAt(i)
 }
 
 // SerializeOutputAt returns the serialized output at the i-th position.
 func (t *TransferAction) SerializeOutputAt(i int) ([]byte, error) {
-	return t.a.SerializeOutputAt(i)
+	return t.TransferAction.SerializeOutputAt(i)
 }
 
 // GetInputs returns the input ids used in the action.
 func (t *TransferAction) GetInputs() []*token.ID {
-	return t.a.GetInputs()
+	return t.TransferAction.GetInputs()
 }
 
 func (t *TransferAction) GetSerialNumbers() []string {
-	return t.a.GetSerialNumbers()
+	return t.TransferAction.GetSerialNumbers()
 }
 
 // IsGraphHiding returns true if the action supports graph hiding.
 func (t *TransferAction) IsGraphHiding() bool {
-	return t.a.IsGraphHiding()
+	return t.TransferAction.IsGraphHiding()
 }
 
 func (t *TransferAction) Validate() error {
-	return t.a.Validate()
+	return t.TransferAction.Validate()
 }
 
 // GetIssuer returns a non-empty identity of the issuer in case the transfer contains redeeming outputs
 func (t *TransferAction) GetIssuer() Identity {
-	return t.a.GetIssuer()
+	return t.TransferAction.GetIssuer()
 }
