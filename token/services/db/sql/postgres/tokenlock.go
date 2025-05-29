@@ -10,7 +10,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
+	common4 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
+	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query"
+	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -19,31 +25,37 @@ import (
 
 type TokenLockStore struct {
 	*common.TokenLockStore
+
+	ci common3.CondInterpreter
 }
 
 func NewTokenLockStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenLockStore, error) {
-	tldb, err := common.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames)
+	ci := postgres.NewConditionInterpreter()
+	tldb, err := common.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames, ci)
 	if err != nil {
 		return nil, err
 	}
-	return &TokenLockStore{TokenLockStore: tldb}, nil
+	return &TokenLockStore{TokenLockStore: tldb, ci: ci}, nil
 }
 
 func (db *TokenLockStore) Cleanup(leaseExpiry time.Duration) error {
 	if err := db.logStaleLocks(leaseExpiry); err != nil {
 		db.Logger.Warnf("Could not log stale locks: %v", err)
 	}
-	query := fmt.Sprintf(
-		"DELETE FROM %s "+
-			"USING %s WHERE %s.consumer_tx_id = %s.tx_id AND (%s.status IN (%d) "+
-			"OR %s.created_at < NOW() - INTERVAL '%d seconds'"+
-			");",
-		db.Table.TokenLocks,
-		db.Table.Requests, db.Table.TokenLocks, db.Table.Requests, db.Table.Requests, driver.Deleted,
-		db.Table.TokenLocks, int(leaseExpiry.Seconds()),
-	)
+	tokenLocks, tokenRequests := q.Table(db.Table.TokenLocks), q.Table(db.Table.Requests)
+	query, args := common3.NewBuilder().
+		WriteString("DELETE FROM ").
+		WriteConditionSerializable(tokenLocks, db.ci).
+		WriteString(" USING ").
+		WriteConditionSerializable(tokenRequests, db.ci).
+		WriteString(" WHERE ").
+		WriteConditionSerializable(cond.And(
+			cond.Cmp(tokenLocks.Field("consumer_tx_id"), "=", tokenRequests.Field("tx_id")),
+			common.IsExpiredToken(tokenRequests, tokenLocks, leaseExpiry)), db.ci).
+		Build()
+
 	db.Logger.Debug(query)
-	_, err := db.WriteDB.Exec(query)
+	_, err := db.WriteDB.Exec(query, args...)
 	if err != nil {
 		db.Logger.Errorf("query failed: %s", query)
 	}
@@ -54,35 +66,31 @@ func (db *TokenLockStore) logStaleLocks(leaseExpiry time.Duration) error {
 	if !db.Logger.IsEnabledFor(zapcore.InfoLevel) {
 		return nil
 	}
-	query := fmt.Sprintf(
-		"SELECT %s.consumer_tx_id, %s.tx_id, %s.idx, %s.status, %s.created_at, %s.created_at < NOW() - INTERVAL '%d seconds' AS expired "+
-			"FROM %s "+
-			"LEFT JOIN %s ON %s.consumer_tx_id = %s.tx_id "+
-			"WHERE %s.status = %d OR %s.created_at < NOW() - INTERVAL '%d seconds'",
-		db.Table.TokenLocks, db.Table.TokenLocks, db.Table.TokenLocks, db.Table.Requests, db.Table.TokenLocks, db.Table.TokenLocks, int(leaseExpiry.Seconds()),
-		db.Table.TokenLocks,
-		db.Table.Requests, db.Table.TokenLocks, db.Table.Requests,
-		db.Table.Requests, driver.Deleted, db.Table.TokenLocks, int(leaseExpiry.Seconds()),
-	)
-	db.Logger.Debug(query)
+	tokenLocks, tokenRequests := q.Table(db.Table.TokenLocks), q.Table(db.Table.Requests)
 
-	rows, err := db.ReadDB.Query(query)
+	query, args := q.Select().
+		Fields(
+			tokenLocks.Field("consumer_tx_id"), tokenLocks.Field("tx_id"), tokenLocks.Field("idx"),
+			tokenRequests.Field("status"), tokenLocks.Field("created_at"), common3.FieldName("NOW() AS now"),
+		).
+		From(tokenLocks.Join(tokenRequests, cond.Cmp(tokenLocks.Field("consumer_tx_id"), "=", tokenRequests.Field("tx_id")))).
+		Where(common.IsExpiredToken(tokenRequests, tokenLocks, leaseExpiry)).Format(db.ci)
+	db.Logger.Debug(query, args)
+
+	rows, err := db.ReadDB.Query(query, args...)
 	if err != nil {
 		return err
 	}
-	defer common.Close(rows)
 
-	var lockEntries []lockEntry
-	for rows.Next() {
-		var entry lockEntry
-		if err := rows.Scan(&entry.ConsumerTxID, &entry.TokenID.TxId, &entry.TokenID.Index, &entry.Status, &entry.CreatedAt, &entry.Expired); err != nil {
-			return err
-		}
-		lockEntries = append(lockEntries, entry)
+	it := common4.NewIterator(rows, func(entry *lockEntry) error {
+		entry.LeaseExpiry = leaseExpiry
+		return rows.Scan(&entry.ConsumerTxID, &entry.TokenID.TxId, &entry.TokenID.Index, &entry.Status, &entry.CreatedAt, &entry.Now)
+	})
+	lockEntries, err := iterators.ReadAllValues(it)
+	if err != nil {
+		return err
 	}
-	if rows.Err() != nil {
-		return rows.Err()
-	}
+
 	db.Logger.Infof("Found following entries ready for deletion: [%v]", lockEntries)
 	return nil
 }
@@ -92,15 +100,20 @@ type lockEntry struct {
 	TokenID      token.ID
 	Status       *driver.TxStatus
 	CreatedAt    time.Time
-	Expired      bool
+	Now          time.Time
+	LeaseExpiry  time.Duration
+}
+
+func (e lockEntry) Expired() bool {
+	return e.CreatedAt.Add(e.LeaseExpiry).Before(e.Now)
 }
 
 func (e lockEntry) String() string {
-	if e.Status == nil && e.Expired {
+	if expired := e.Expired(); e.Status == nil && expired {
 		return fmt.Sprintf("Expired lock created at [%v] for token [%s] consumed by [%s]", e.CreatedAt, e.TokenID, e.ConsumerTxID)
-	} else if e.Status != nil && *e.Status == driver.Deleted && !e.Expired {
+	} else if e.Status != nil && *e.Status == driver.Deleted && !expired {
 		return fmt.Sprintf("Lock created at [%v] of spent token [%s] consumed by [%s]", e.CreatedAt, e.TokenID, e.ConsumerTxID)
 	} else {
-		return fmt.Sprintf("Invalid token lock state: [%s] created at [%v], expired [%v], status: [%v]", e.TokenID, e.CreatedAt, e.Expired, e.Status)
+		return fmt.Sprintf("Invalid token lock state: [%s] created at [%v], expired [%v], status: [%v]", e.TokenID, e.CreatedAt, expired, e.Status)
 	}
 }
