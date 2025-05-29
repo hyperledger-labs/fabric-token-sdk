@@ -246,7 +246,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
 
-	keyStore, err := crypto2.NewKeyStore(curveID, kvs)
+	keyStore, err := crypto2.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
@@ -268,7 +268,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(curveID, kvs)
+	keyStore, err = crypto2.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
@@ -290,7 +290,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(curveID, kvs)
+	keyStore, err = crypto2.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
@@ -329,7 +329,7 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 
 	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
-	keyStore, err := crypto2.NewKeyStore(curveID, kvs)
+	keyStore, err := crypto2.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
@@ -339,7 +339,7 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 
 	config, err = crypto2.NewConfig(configPath + "2")
 	assert.NoError(t, err)
-	keyStore, err = crypto2.NewKeyStore(curveID, kvs)
+	keyStore, err = crypto2.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
@@ -381,7 +381,7 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 	assert.NoError(t, registry.RegisterService(kvs))
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
-	keyStore, err := crypto2.NewKeyStore(curveID, kvs)
+	keyStore, err := crypto2.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
@@ -451,7 +451,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
-	keyStore, err := crypto2.NewKeyStore(math.BN254, kvs)
+	keyStore, err := crypto2.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
@@ -473,7 +473,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(math.BN254, kvs)
+	keyStore, err = crypto2.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
@@ -495,7 +495,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(math.BN254, kvs)
+	keyStore, err = crypto2.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
@@ -532,7 +532,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
-	keyStore, err := crypto2.NewKeyStore(math.BN254, kvs)
+	keyStore, err := crypto2.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
@@ -563,7 +563,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(math.BN254, kvs)
+	keyStore, err = crypto2.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)

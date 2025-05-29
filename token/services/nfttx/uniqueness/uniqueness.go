@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package uniqueness
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -19,9 +20,9 @@ import (
 )
 
 type KVS interface {
-	Exists(k string) bool
-	Get(k string, v interface{}) error
-	Put(k string, key interface{}) error
+	Exists(ctx context.Context, k string) bool
+	Get(ctx context.Context, k string, v interface{}) error
+	Put(ctx context.Context, k string, key interface{}) error
 }
 
 // Service is a uniqueness service.
@@ -44,8 +45,8 @@ func (s *Service) ComputeID(state interface{}) (string, error) {
 
 	k := "github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/uniqueness/key"
 	var key []byte
-	if s.kvs.Exists(k) {
-		if err := s.kvs.Get(k, &key); err != nil {
+	if s.kvs.Exists(context.Background(), k) {
+		if err := s.kvs.Get(context.Background(), k, &key); err != nil {
 			return "", errors.WithMessagef(err, "failed to get key %s", k)
 		}
 	} else {
@@ -59,7 +60,7 @@ func (s *Service) ComputeID(state interface{}) (string, error) {
 		if n != size {
 			return "", errors.New("error getting random bytes")
 		}
-		if err := s.kvs.Put(k, key); err != nil {
+		if err := s.kvs.Put(context.Background(), k, key); err != nil {
 			return "", errors.WithMessagef(err, "failed to put key %s", k)
 		}
 	}

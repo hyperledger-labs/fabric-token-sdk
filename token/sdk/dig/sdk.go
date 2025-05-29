@@ -39,6 +39,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	driver4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -140,7 +141,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(identitydb.NewStoreServiceManager),
 		p.Container().Provide(walletdb.NewStoreServiceManager),
 		p.Container().Provide(tokenlockdb.NewStoreServiceManager),
-		p.Container().Provide(digutils.Identity[*kvs.KVS](), dig.As(new(driver4.Keystore))),
+		p.Container().Provide(func(kvs *kvs.KVS) driver4.Keystore { return kvs2.Keystore(kvs) }),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(NewAuditorCheckServiceProvider),

@@ -159,7 +159,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 		// logger.Infof("input RH [%s]", rh)
 		assert.NotNil(rID, "found an input with empty RH")
 		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
-		if kvsInstance.Exists(k) {
+		if kvsInstance.Exists(context.Context(), k) {
 			return nil, errors.Errorf("%s Identity is in revoked state", rh)
 		}
 	}
@@ -169,7 +169,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 		// logger.Infof("output RH [%s]", rh)
 		assert.NotNil(rID, "found an output with empty RH")
 		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
-		if kvsInstance.Exists(k) {
+		if kvsInstance.Exists(context.Context(), k) {
 			return nil, errors.Errorf("%s Identity is in revoked state", rh)
 		}
 	}

@@ -29,8 +29,8 @@ func (u *RevokeUserView) Call(context view.Context) (interface{}, error) {
 	logger.Infof("revoke [%s][%s]", u.RH, rh)
 	kvsInstance := GetKVS(context)
 	k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
-	assert.False(kvsInstance.Exists(k), "Identity already in revoked state")
-	assert.NoError(kvsInstance.Put(k, rh), "failed to put revocation handle")
+	assert.False(kvsInstance.Exists(context.Context(), k), "Identity already in revoked state")
+	assert.NoError(kvsInstance.Put(context.Context(), k, rh), "failed to put revocation handle")
 	return nil, nil
 }
 

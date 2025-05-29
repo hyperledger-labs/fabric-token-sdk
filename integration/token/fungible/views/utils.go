@@ -80,7 +80,7 @@ type SetKVSEntryView struct {
 }
 
 func (s *SetKVSEntryView) Call(context view.Context) (interface{}, error) {
-	assert.NoError(GetKVS(context).Put(s.Key, s.Value), "failed to put in KVS [%s:%s]", s.Key, s.Value)
+	assert.NoError(GetKVS(context).Put(context.Context(), s.Key, s.Value), "failed to put in KVS [%s:%s]", s.Key, s.Value)
 	return nil, nil
 }
 

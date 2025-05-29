@@ -8,13 +8,11 @@ require (
 	github.com/docker/docker v28.0.2+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/hashicorp/vault/api v1.16.0
-	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250520115431-d207d5d1af20
-	github.com/hyperledger-labs/fabric-token-sdk v0.4.1-0.20250520141519-275d84688390
+	github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250528125052-def7caae5d48
+	github.com/hyperledger-labs/fabric-token-sdk v0.4.1-0.20250528165839-032fb9265504
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 )
-
-replace github.com/hyperledger-labs/fabric-token-sdk => ../../../../../../
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
@@ -75,6 +73,8 @@ require (
 	github.com/sykesm/zap-logfmt v0.0.4 // indirect
 	github.com/test-go/testify v1.1.4 // indirect
 	github.com/uptrace/opentelemetry-go-extra/otelsql v0.3.2 // indirect
+	github.com/uptrace/opentelemetry-go-extra/otelutil v0.3.2 // indirect
+	github.com/uptrace/opentelemetry-go-extra/otelzap v0.3.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
 	go.opentelemetry.io/otel v1.35.0 // indirect
@@ -82,13 +82,14 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.28.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.35.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.28.0 // indirect
+	go.opentelemetry.io/otel/log v0.6.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
