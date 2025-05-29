@@ -14,6 +14,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/common"
+	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query"
+	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
@@ -27,18 +30,20 @@ type WalletStore struct {
 	readDB  *sql.DB
 	writeDB *sql.DB
 	table   walletTables
+	ci      common3.CondInterpreter
 }
 
-func newWalletStore(readDB, writeDB *sql.DB, tables walletTables) *WalletStore {
+func newWalletStore(readDB, writeDB *sql.DB, tables walletTables, ci common3.CondInterpreter) *WalletStore {
 	return &WalletStore{
 		readDB:  readDB,
 		writeDB: writeDB,
 		table:   tables,
+		ci:      ci,
 	}
 }
 
-func NewWalletStore(readDB, writeDB *sql.DB, tables TableNames) (*WalletStore, error) {
-	return newWalletStore(readDB, writeDB, walletTables{Wallets: tables.Wallets}), nil
+func NewWalletStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*WalletStore, error) {
+	return newWalletStore(readDB, writeDB, walletTables{Wallets: tables.Wallets}, ci), nil
 }
 
 func (db *WalletStore) CreateSchema() error {
@@ -47,10 +52,13 @@ func (db *WalletStore) CreateSchema() error {
 
 func (db *WalletStore) GetWalletID(identity token.Identity, roleID int) (driver.WalletID, error) {
 	idHash := identity.UniqueID()
-	result, err := common.QueryUnique[driver.WalletID](db.readDB,
-		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND role_id=$2", db.table.Wallets),
-		idHash, roleID,
-	)
+	query, args := q.Select().
+		FieldsByName("wallet_id").
+		From(q.Table(db.table.Wallets)).
+		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("role_id", roleID))).
+		Format(db.ci)
+
+	result, err := common.QueryUnique[driver.WalletID](db.readDB, query, args...)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed getting wallet id for identity [%v]", idHash)
 	}
@@ -59,12 +67,13 @@ func (db *WalletStore) GetWalletID(identity token.Identity, roleID int) (driver.
 }
 
 func (db *WalletStore) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
-	query, err := NewSelectDistinct("wallet_id").From(db.table.Wallets).Where("role_id = $1").Compile()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed compiling query")
-	}
+	query, args := q.SelectDistinct().
+		FieldsByName("wallet_id").
+		From(q.Table(db.table.Wallets)).
+		Where(cond.Eq("role_id", roleID)).
+		Format(db.ci)
 	logger.Debug(query)
-	rows, err := db.readDB.Query(query, roleID)
+	rows, err := db.readDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -78,27 +87,28 @@ func (db *WalletStore) StoreIdentity(identity token.Identity, eID string, wID dr
 		return nil
 	}
 
-	query, err := NewInsertInto(db.table.Wallets).Rows("identity_hash, meta, wallet_id, role_id, created_at, enrollment_id").Compile()
-	if err != nil {
-		return errors.Wrapf(err, "failed compiling query")
-	}
+	query, args := q.InsertInto(db.table.Wallets).
+		Fields("identity_hash", "meta", "wallet_id", "role_id", "created_at", "enrollment_id").
+		Row(identity.UniqueID(), meta, wID, roleID, time.Now().UTC(), eID).
+		Format()
 	logger.Debug(query)
 
-	idHash := identity.UniqueID()
-	_, err = db.writeDB.Exec(query, idHash, meta, wID, roleID, time.Now().UTC(), eID)
+	_, err := db.writeDB.Exec(query, args...)
 	if err != nil {
-		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%v]", wID, idHash)
+		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%s]", wID, identity)
 	}
-	logger.Debugf("stored wallet [%v] for identity [%v]", wID, idHash)
+	logger.Debugf("stored wallet [%v] for identity [%s]", wID, identity)
 	return nil
 }
 
 func (db *WalletStore) LoadMeta(identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.UniqueID()
-	result, err := common.QueryUnique[[]byte](db.readDB,
-		fmt.Sprintf("SELECT meta FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
-		idHash, wID, roleID,
-	)
+	query, args := q.Select().
+		FieldsByName("meta").
+		From(q.Table(db.table.Wallets)).
+		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("wallet_id", wID), cond.Eq("role_id", roleID))).
+		Format(db.ci)
+	result, err := common.QueryUnique[[]byte](db.readDB, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed loading meta for id [%v]", idHash)
 	}
@@ -108,10 +118,12 @@ func (db *WalletStore) LoadMeta(identity token.Identity, wID driver.WalletID, ro
 
 func (db *WalletStore) IdentityExists(identity token.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.UniqueID()
-	result, err := common.QueryUnique[driver.WalletID](db.readDB,
-		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
-		idHash, wID, roleID,
-	)
+	query, args := q.Select().
+		FieldsByName("wallet_id").
+		From(q.Table(db.table.Wallets)).
+		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("wallet_id", wID), cond.Eq("role_id", roleID))).
+		Format(db.ci)
+	result, err := common.QueryUnique[driver.WalletID](db.readDB, query, args...)
 	if err != nil {
 		logger.Errorf("failed looking up wallet-identity [%s-%s]: %w", wID, idHash, err)
 	}
