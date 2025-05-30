@@ -27,7 +27,7 @@ const (
 )
 
 type tokenFetcher interface {
-	UnspentTokensIteratorBy(walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error)
+	UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error)
 }
 
 type TokenDB interface {
@@ -116,9 +116,9 @@ func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
 	}
 }
 
-func (f *mixedFetcher) UnspentTokensIteratorBy(walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+func (f *mixedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
 	logger.Debugf("call unspent tokens iterator")
-	it, err := f.eagerFetcher.UnspentTokensIteratorBy(walletID, currency)
+	it, err := f.eagerFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
 	logger.Debugf("fetched eager iterator")
 	if err == nil && it.(enhancedIterator[*token2.UnspentTokenInWallet]).HasNext() {
 		logger.Debugf("eager iterator had tokens. Returning iterator")
@@ -128,7 +128,7 @@ func (f *mixedFetcher) UnspentTokensIteratorBy(walletID string, currency token2.
 	logger.Debugf("eager iterator had no tokens. Returning lazy iterator")
 
 	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
-	return f.lazyFetcher.UnspentTokensIteratorBy(walletID, currency)
+	return f.lazyFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
 }
 
 // lazyFetcher only looks up the results when requested
@@ -140,9 +140,9 @@ func NewLazyFetcher(tokenDB TokenDB) *lazyFetcher {
 	return &lazyFetcher{tokenDB: tokenDB}
 }
 
-func (f *lazyFetcher) UnspentTokensIteratorBy(walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+func (f *lazyFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
 	logger.Debugf("Query the DB for new tokens")
-	it, err := f.tokenDB.SpendableTokensIteratorBy(context.TODO(), walletID, currency)
+	it, err := f.tokenDB.SpendableTokensIteratorBy(ctx, walletID, currency)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func (f *cachedFetcher) update() {
 	atomic.StoreUint32(&f.queriesResponded, 0)
 }
 
-func (f *cachedFetcher) UnspentTokensIteratorBy(walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+func (f *cachedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
 	defer atomic.AddUint32(&f.queriesResponded, 1)
 	if f.isCacheOverused() {
 		logger.Debugf("Overused data. Soft refresh (in the background)...")

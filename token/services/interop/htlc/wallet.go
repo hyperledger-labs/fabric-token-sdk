@@ -21,7 +21,7 @@ import (
 )
 
 type Vault interface {
-	DeleteTokens(toDelete ...*token2.ID) error
+	DeleteTokens(ctx context.Context, toDelete ...*token2.ID) error
 }
 
 type QueryEngine interface {
@@ -30,7 +30,7 @@ type QueryEngine interface {
 }
 
 type TokenVault interface {
-	DeleteTokens(toDelete ...*token2.ID) error
+	DeleteTokens(ctx context.Context, toDelete ...*token2.ID) error
 }
 
 // OwnerWallet is a combination of a wallet and a query service
@@ -42,24 +42,24 @@ type OwnerWallet struct {
 }
 
 // ListTokensAsSender returns a list of non-expired htlc-tokens whose sender id is in this wallet
-func (w *OwnerWallet) ListTokensAsSender(opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
+func (w *OwnerWallet) ListTokensAsSender(ctx context.Context, opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filterIterator(compiledOpts.TokenType, true, SelectNonExpired)
+	return w.filterIterator(ctx, compiledOpts.TokenType, true, SelectNonExpired)
 }
 
 // GetExpiredByHash returns the expired htlc-token whose sender id is in this wallet and whose hash is equal to the one passed as argument.
 // It fails if no tokens are found or if more than one token is found.
-func (w *OwnerWallet) GetExpiredByHash(hash []byte, opts ...token.ListTokensOption) (*token2.UnspentToken, error) {
+func (w *OwnerWallet) GetExpiredByHash(ctx context.Context, hash []byte, opts ...token.ListTokensOption) (*token2.UnspentToken, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	tokens, err := w.filter(compiledOpts.TokenType, true, (&ExpiredAndHashSelector{Hash: hash}).Select)
+	tokens, err := w.filter(ctx, compiledOpts.TokenType, true, (&ExpiredAndHashSelector{Hash: hash}).Select)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to filter")
 	}
@@ -70,74 +70,74 @@ func (w *OwnerWallet) GetExpiredByHash(hash []byte, opts ...token.ListTokensOpti
 }
 
 // ListExpired returns a list of expired htlc-tokens whose sender id is in this wallet
-func (w *OwnerWallet) ListExpired(opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
+func (w *OwnerWallet) ListExpired(ctx context.Context, opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, true, SelectExpired)
+	return w.filter(ctx, compiledOpts.TokenType, true, SelectExpired)
 }
 
 // ListExpiredIterator returns an iterator of expired htlc-tokens whose sender id is in this wallet
-func (w *OwnerWallet) ListExpiredIterator(opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
+func (w *OwnerWallet) ListExpiredIterator(ctx context.Context, opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filterIterator(compiledOpts.TokenType, true, SelectExpired)
+	return w.filterIterator(ctx, compiledOpts.TokenType, true, SelectExpired)
 }
 
 // ListByPreImage returns a list of tokens whose recipient is this wallet and with a matching preimage
-func (w *OwnerWallet) ListByPreImage(preImage []byte, opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
+func (w *OwnerWallet) ListByPreImage(ctx context.Context, preImage []byte, opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, false, (&PreImageSelector{preImage: preImage}).Filter)
+	return w.filter(ctx, compiledOpts.TokenType, false, (&PreImageSelector{preImage: preImage}).Filter)
 }
 
 // ListByPreImageIterator returns an iterator of tokens whose recipient is this wallet and with a matching preimage
-func (w *OwnerWallet) ListByPreImageIterator(preImage []byte, opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
+func (w *OwnerWallet) ListByPreImageIterator(ctx context.Context, preImage []byte, opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filterIterator(compiledOpts.TokenType, false, (&PreImageSelector{preImage: preImage}).Filter)
+	return w.filterIterator(ctx, compiledOpts.TokenType, false, (&PreImageSelector{preImage: preImage}).Filter)
 }
 
 // ListTokens returns a list of tokens that matches the passed options and whose recipient belongs to this wallet
-func (w *OwnerWallet) ListTokens(opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
+func (w *OwnerWallet) ListTokens(ctx context.Context, opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, false, SelectNonExpired)
+	return w.filter(ctx, compiledOpts.TokenType, false, SelectNonExpired)
 }
 
 // ListTokensIterator returns an iterator of tokens that matches the passed options and whose recipient belongs to this wallet
-func (w *OwnerWallet) ListTokensIterator(opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
+func (w *OwnerWallet) ListTokensIterator(ctx context.Context, opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filterIterator(compiledOpts.TokenType, false, SelectNonExpired)
+	return w.filterIterator(ctx, compiledOpts.TokenType, false, SelectNonExpired)
 }
 
 // GetExpiredReceivedTokenByHash returns the expired htlc-token that matches the passed options, whose recipient belongs to this wallet, is expired, and hash the same hash.
 // It fails if no tokens are found or if more than one token is found.
-func (w *OwnerWallet) GetExpiredReceivedTokenByHash(hash []byte, opts ...token.ListTokensOption) (*token2.UnspentToken, error) {
+func (w *OwnerWallet) GetExpiredReceivedTokenByHash(ctx context.Context, hash []byte, opts ...token.ListTokensOption) (*token2.UnspentToken, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	tokens, err := w.filter(compiledOpts.TokenType, false, (&ExpiredAndHashSelector{Hash: hash}).Select)
+	tokens, err := w.filter(ctx, compiledOpts.TokenType, false, (&ExpiredAndHashSelector{Hash: hash}).Select)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to filter")
 	}
@@ -148,28 +148,28 @@ func (w *OwnerWallet) GetExpiredReceivedTokenByHash(hash []byte, opts ...token.L
 }
 
 // ListExpiredReceivedTokens returns a list of tokens that matches the passed options, whose recipient belongs to this wallet, and are expired
-func (w *OwnerWallet) ListExpiredReceivedTokens(opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
+func (w *OwnerWallet) ListExpiredReceivedTokens(ctx context.Context, opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, false, SelectExpired)
+	return w.filter(ctx, compiledOpts.TokenType, false, SelectExpired)
 }
 
 // ListExpiredReceivedTokensIterator returns an iterator of tokens that matches the passed options, whose recipient belongs to this wallet, and are expired
-func (w *OwnerWallet) ListExpiredReceivedTokensIterator(opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
+func (w *OwnerWallet) ListExpiredReceivedTokensIterator(ctx context.Context, opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filterIterator(compiledOpts.TokenType, false, SelectExpired)
+	return w.filterIterator(ctx, compiledOpts.TokenType, false, SelectExpired)
 }
 
 // DeleteExpiredReceivedTokens removes the expired htlc-tokens that have been reclaimed
 func (w *OwnerWallet) DeleteExpiredReceivedTokens(context view.Context, opts ...token.ListTokensOption) error {
-	it, err := w.ListExpiredReceivedTokensIterator(opts...)
+	it, err := w.ListExpiredReceivedTokensIterator(context.Context(), opts...)
 	if err != nil {
 		return errors.WithMessage(err, "failed to get an iterator of expired received tokens")
 	}
@@ -181,7 +181,7 @@ func (w *OwnerWallet) DeleteExpiredReceivedTokens(context view.Context, opts ...
 
 // DeleteClaimedSentTokens removes the claimed htlc-tokens whose sender id is in this wallet
 func (w *OwnerWallet) DeleteClaimedSentTokens(context view.Context, opts ...token.ListTokensOption) error {
-	it, err := w.ListTokensAsSender(opts...)
+	it, err := w.ListTokensAsSender(context.Context(), opts...)
 	if err != nil {
 		return errors.WithMessage(err, "failed to get an iterator of expired received tokens")
 	}
@@ -225,15 +225,15 @@ func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.Unspen
 			logger.Debugf("token [%s] is not spent", tok.Id)
 		}
 	}
-	if err := w.vault.DeleteTokens(toDelete...); err != nil {
+	if err := w.vault.DeleteTokens(context.Context(), toDelete...); err != nil {
 		return errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
 	}
 
 	return nil
 }
 
-func (w *OwnerWallet) filter(tokenType token2.Type, sender bool, selector SelectFunction) (*token2.UnspentTokens, error) {
-	it, err := w.filterIterator(tokenType, sender, selector)
+func (w *OwnerWallet) filter(ctx context.Context, tokenType token2.Type, sender bool, selector SelectFunction) (*token2.UnspentTokens, error) {
+	it, err := w.filterIterator(ctx, tokenType, sender, selector)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -244,12 +244,12 @@ func (w *OwnerWallet) filter(tokenType token2.Type, sender bool, selector Select
 	return &token2.UnspentTokens{Tokens: tokens}, nil
 }
 
-func (w *OwnerWallet) filterIterator(tokenType token2.Type, sender bool, selector SelectFunction) (iterators.Iterator[*token2.UnspentToken], error) {
+func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type, sender bool, selector SelectFunction) (iterators.Iterator[*token2.UnspentToken], error) {
 	var walletID string
 	if sender {
-		walletID = senderWallet(w.wallet)
+		walletID = senderWallet(ctx, w.wallet)
 	} else {
-		walletID = recipientWallet(w.wallet)
+		walletID = recipientWallet(ctx, w.wallet)
 	}
 	it, err := w.queryEngine.UnspentTokensIteratorBy(context.TODO(), walletID, tokenType)
 	if err != nil {
@@ -260,18 +260,18 @@ func (w *OwnerWallet) filterIterator(tokenType token2.Type, sender bool, selecto
 }
 
 // GetWallet returns the wallet whose id is the passed id
-func GetWallet(sp token.ServiceProvider, id string, opts ...token.ServiceOption) *token.OwnerWallet {
-	return ttx.GetWallet(sp, id, opts...)
+func GetWallet(context view.Context, id string, opts ...token.ServiceOption) *token.OwnerWallet {
+	return ttx.GetWallet(context, id, opts...)
 }
 
 // Wallet returns an OwnerWallet which contains a wallet and a query service
-func Wallet(sp token.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
+func Wallet(context view.Context, wallet *token.OwnerWallet) *OwnerWallet {
 	if wallet == nil {
 		return nil
 	}
 
 	tms := wallet.TMS()
-	tokens, err := tokens.GetService(sp, tms.ID())
+	tokens, err := tokens.GetService(context, tms.ID())
 	if err != nil {
 		return nil
 	}

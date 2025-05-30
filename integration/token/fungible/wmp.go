@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package fungible
 
 import (
+	"context"
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -42,11 +43,12 @@ func NewWalletManagerProvider(loader WalletManagerLoader) *WalletManagerProvider
 // RecipientData returns the RecipientData for the given user and wallet
 func (p *WalletManagerProvider) RecipientData(user string, wallet string) *token.RecipientData {
 	wm := p.load(user)
-	ownerWallet := wm.OwnerWallet(wallet)
+	ctx := context.Background()
+	ownerWallet := wm.OwnerWallet(ctx, wallet)
 	gomega.Expect(ownerWallet).ToNot(gomega.BeNil())
 	recipientIdentity, err := ownerWallet.GetRecipientIdentity()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	auditInfo, err := ownerWallet.GetAuditInfo(recipientIdentity)
+	auditInfo, err := ownerWallet.GetAuditInfo(ctx, recipientIdentity)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	tokenMetadata, err := ownerWallet.GetTokenMetadata(recipientIdentity)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -64,7 +66,7 @@ func (p *WalletManagerProvider) RecipientData(user string, wallet string) *token
 // GetSinger returns a signer for the given user, wallet and identity
 func (p *WalletManagerProvider) GetSinger(user string, wallet string, party view.Identity) (token.Signer, error) {
 	wm := p.load(user)
-	ownerWallet := wm.OwnerWallet(wallet)
+	ownerWallet := wm.OwnerWallet(context.Background(), wallet)
 	gomega.Expect(ownerWallet).ToNot(gomega.BeNil())
 	return ownerWallet.GetSigner(party)
 }

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package simple
 
 import (
+	"context"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -53,8 +54,8 @@ func (m *Manager) NewSelector(id string) (token.Selector, error) {
 	}, nil
 }
 
-func (m *Manager) Unlock(txID string) error {
-	m.locker.UnlockByTxID(txID)
+func (m *Manager) Unlock(ctx context.Context, txID string) error {
+	m.locker.UnlockByTxID(ctx, txID)
 	return nil
 }
 

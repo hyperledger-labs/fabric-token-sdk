@@ -22,8 +22,8 @@ func WithType(tokenType token2.Type) token.ListTokensOption {
 }
 
 // MyWallet returns the default wallet, nil if not found.
-func MyWallet(sp token.ServiceProvider, opts ...token.ServiceOption) *token.OwnerWallet {
-	w := token.GetManagementService(sp, opts...).WalletManager().OwnerWallet("")
+func MyWallet(context view.Context, opts ...token.ServiceOption) *token.OwnerWallet {
+	w := token.GetManagementService(context, opts...).WalletManager().OwnerWallet(context.Context(), "")
 	if w == nil {
 		return nil
 	}
@@ -32,13 +32,13 @@ func MyWallet(sp token.ServiceProvider, opts ...token.ServiceOption) *token.Owne
 
 // MyWalletFromTx returns the default wallet for the tuple (network, channel, namespace) as identified by the passed
 // transaction. Returns nil if no wallet is found.
-func MyWalletFromTx(sp token.ServiceProvider, tx *Transaction) *token.OwnerWallet {
+func MyWalletFromTx(context view.Context, tx *Transaction) *token.OwnerWallet {
 	w := token.GetManagementService(
-		sp,
+		context,
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
 		token.WithNamespace(tx.Namespace()),
-	).WalletManager().OwnerWallet("")
+	).WalletManager().OwnerWallet(context.Context(), "")
 	if w == nil {
 		return nil
 	}
@@ -48,8 +48,8 @@ func MyWalletFromTx(sp token.ServiceProvider, tx *Transaction) *token.OwnerWalle
 // GetWallet returns the wallet whose id is the passed id.
 // If the passed id is empty, GetWallet has the same behaviour of MyWallet.
 // It returns nil, if no wallet is found.
-func GetWallet(sp token.ServiceProvider, id string, opts ...token.ServiceOption) *token.OwnerWallet {
-	w := token.GetManagementService(sp, opts...).WalletManager().OwnerWallet(id)
+func GetWallet(context view.Context, id string, opts ...token.ServiceOption) *token.OwnerWallet {
+	w := token.GetManagementService(context, opts...).WalletManager().OwnerWallet(context.Context(), id)
 	if w == nil {
 		return nil
 	}
@@ -59,8 +59,8 @@ func GetWallet(sp token.ServiceProvider, id string, opts ...token.ServiceOption)
 // GetWalletForChannel returns the wallet whose id is the passed id for the passed channel.
 // If the passed id is empty, GetWalletForChannel has the same behaviour of MyWalletFromTx.
 // It returns nil, if no wallet is found.
-func GetWalletForChannel(sp token.ServiceProvider, channel, id string, opts ...token.ServiceOption) *token.OwnerWallet {
-	w := token.GetManagementService(sp, append(opts, token.WithChannel(channel))...).WalletManager().OwnerWallet(id)
+func GetWalletForChannel(context view.Context, channel, id string, opts ...token.ServiceOption) *token.OwnerWallet {
+	w := token.GetManagementService(context, append(opts, token.WithChannel(channel))...).WalletManager().OwnerWallet(context.Context(), id)
 	if w == nil {
 		return nil
 	}
@@ -69,7 +69,7 @@ func GetWalletForChannel(sp token.ServiceProvider, channel, id string, opts ...t
 
 // MyIssuerWallet returns the default issuer wallet, nil if not found
 func MyIssuerWallet(context view.Context, opts ...token.ServiceOption) *token.IssuerWallet {
-	w := token.GetManagementService(context, opts...).WalletManager().IssuerWallet("")
+	w := token.GetManagementService(context, opts...).WalletManager().IssuerWallet(context.Context(), "")
 	if w == nil {
 		return nil
 	}
@@ -79,8 +79,8 @@ func MyIssuerWallet(context view.Context, opts ...token.ServiceOption) *token.Is
 // GetIssuerWallet returns the issuer wallet whose id is the passed id.
 // If the passed id is empty, GetIssuerWallet has the same behaviour of MyIssuerWallet.
 // It returns nil, if no wallet is found.
-func GetIssuerWallet(sp token.ServiceProvider, id string, opts ...token.ServiceOption) *token.IssuerWallet {
-	w := token.GetManagementService(sp, opts...).WalletManager().IssuerWallet(id)
+func GetIssuerWallet(context view.Context, id string, opts ...token.ServiceOption) *token.IssuerWallet {
+	w := token.GetManagementService(context, opts...).WalletManager().IssuerWallet(context.Context(), id)
 	if w == nil {
 		return nil
 	}
@@ -90,8 +90,8 @@ func GetIssuerWallet(sp token.ServiceProvider, id string, opts ...token.ServiceO
 // GetIssuerWalletForChannel returns the issuer wallet whose id is the passed id for the passed channel.
 // If the passed id is empty, GetIssuerWalletForChannel has the same behaviour of MyIssuerWallet.
 // It returns nil, if no wallet is found.
-func GetIssuerWalletForChannel(sp token.ServiceProvider, channel, id string, opts ...token.ServiceOption) *token.IssuerWallet {
-	w := token.GetManagementService(sp, append(opts, token.WithChannel(channel))...).WalletManager().IssuerWallet(id)
+func GetIssuerWalletForChannel(context view.Context, channel, id string, opts ...token.ServiceOption) *token.IssuerWallet {
+	w := token.GetManagementService(context, append(opts, token.WithChannel(channel))...).WalletManager().IssuerWallet(context.Context(), id)
 	if w == nil {
 		return nil
 	}
@@ -99,8 +99,8 @@ func GetIssuerWalletForChannel(sp token.ServiceProvider, channel, id string, opt
 }
 
 // MyAuditorWallet returns the default auditor wallet, nil if not found.
-func MyAuditorWallet(sp token.ServiceProvider, opts ...token.ServiceOption) *token.AuditorWallet {
-	w := token.GetManagementService(sp, opts...).WalletManager().AuditorWallet("")
+func MyAuditorWallet(context view.Context, opts ...token.ServiceOption) *token.AuditorWallet {
+	w := token.GetManagementService(context, opts...).WalletManager().AuditorWallet(context.Context(), "")
 	if w == nil {
 		return nil
 	}
@@ -110,8 +110,8 @@ func MyAuditorWallet(sp token.ServiceProvider, opts ...token.ServiceOption) *tok
 // GetAuditorWallet returns the wallet whose id is the passed id.
 // If the passed id is empty, GetAuditorWallet has the same behaviour of MyAuditorWallet.
 // It returns nil, if no wallet is found.
-func GetAuditorWallet(sp token.ServiceProvider, opts ...token.ServiceOption) *token.AuditorWallet {
-	w := token.GetManagementService(sp, opts...).WalletManager().AuditorWallet("")
+func GetAuditorWallet(context view.Context, opts ...token.ServiceOption) *token.AuditorWallet {
+	w := token.GetManagementService(context, opts...).WalletManager().AuditorWallet(context.Context(), "")
 	if w == nil {
 		return nil
 	}

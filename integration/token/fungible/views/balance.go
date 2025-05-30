@@ -42,7 +42,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	defer span.AddEvent("end_balance_view")
 	span.AddEvent("start_balance_view")
 	tms := token.GetManagementService(context, ServiceOpts(b.TMSID)...)
-	wallet := tms.WalletManager().OwnerWallet(b.Wallet)
+	wallet := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
 	if wallet == nil {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
 	}
@@ -61,14 +61,14 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 
 	// co-owned
 	multisigWallet := multisig.Wallet(context, wallet)
-	coOwnedTokens, err := multisigWallet.ListTokensIterator(token.WithType(b.Type))
+	coOwnedTokens, err := multisigWallet.ListTokensIterator(context.Context(), token.WithType(b.Type))
 	assert.NoError(err, "failed to get co-owned tokens")
 	coOwned, err := iterators.Reduce(coOwnedTokens, token2.ToQuantitySum(precision))
 	assert.NoError(err, "failed to compute the sum of the co-owned tokens")
 
 	if !b.SkipCheck {
 		span.AddEvent("start_sum_calculation")
-		balance, err := wallet.Balance(token.WithType(b.Type))
+		balance, err := wallet.Balance(context.Context(), token.WithType(b.Type))
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +107,7 @@ type CoOwnedBalanceView struct {
 
 func (b *CoOwnedBalanceView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, ServiceOpts(b.TMSID)...)
-	wallet := tms.WalletManager().OwnerWallet(b.Wallet)
+	wallet := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
 	if wallet == nil {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
 	}
@@ -115,7 +115,7 @@ func (b *CoOwnedBalanceView) Call(context view.Context) (interface{}, error) {
 	// co-owned
 	precision := tms.PublicParametersManager().PublicParameters().Precision()
 	multisigWallet := multisig.Wallet(context, wallet)
-	coOwnedTokens, err := multisigWallet.ListTokensIterator(token.WithType(b.Type))
+	coOwnedTokens, err := multisigWallet.ListTokensIterator(context.Context(), token.WithType(b.Type))
 	assert.NoError(err, "failed to get co-owned tokens")
 	coOwned, err := iterators.Reduce(coOwnedTokens, token2.ToQuantitySum(precision))
 	assert.NoError(err, "failed to compute the sum of the co-owned tokens")

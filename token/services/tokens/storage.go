@@ -56,8 +56,8 @@ func (d *DBStorage) TransactionExists(ctx context.Context, id string) (bool, err
 	return d.tokenDB.TransactionExists(ctx, id)
 }
 
-func (d *DBStorage) StorePublicParams(raw []byte) error {
-	return d.tokenDB.StorePublicParams(raw)
+func (d *DBStorage) StorePublicParams(ctx context.Context, raw []byte) error {
+	return d.tokenDB.StorePublicParams(ctx, raw)
 }
 
 type TokenToAppend struct {

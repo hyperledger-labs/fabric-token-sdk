@@ -28,7 +28,7 @@ type TransferService interface {
 	Transfer(ctx context.Context, txID string, wallet OwnerWallet, ids []*token2.ID, Outputs []*token2.Token, opts *TransferOptions) (TransferAction, *TransferMetadata, error)
 
 	// VerifyTransfer checks the well-formedness of the passed TransferAction with the respect to the passed output metadata
-	VerifyTransfer(tr TransferAction, outputMetadata []*TransferOutputMetadata) error
+	VerifyTransfer(ctx context.Context, tr TransferAction, outputMetadata []*TransferOutputMetadata) error
 
 	// DeserializeTransferAction deserializes the passed bytes into an TransferAction
 	DeserializeTransferAction(raw []byte) (TransferAction, error)

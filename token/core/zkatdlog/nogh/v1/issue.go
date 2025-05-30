@@ -66,7 +66,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		opts = &driver.IssueOptions{}
 	}
 
-	pp := s.PublicParametersManager.PublicParams()
+	pp := s.PublicParametersManager.PublicParams(ctx)
 	if issuerIdentity.IsNone() && len(tokenType) == 0 && values == nil {
 		// this is a special case where the issue contains also redemption
 		// we need to extract token types and values from the passed tokens
@@ -103,7 +103,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		}
 	}
 
-	w, err := s.WalletService.IssuerWallet(issuerIdentity)
+	w, err := s.WalletService.IssuerWallet(ctx, issuerIdentity)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,7 +149,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		if err != nil {
 			return nil, nil, errors.WithMessage(err, "failed serializing token info")
 		}
-		auditInfo, err := s.Deserializer.GetAuditInfo(owner, s.WalletService)
+		auditInfo, err := s.Deserializer.GetAuditInfo(ctx, owner, s.WalletService)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -168,7 +168,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	if err != nil {
 		return nil, nil, err
 	}
-	issuerAuditInfo, err := s.Deserializer.GetAuditInfo(issuerIdentity, s.WalletService)
+	issuerAuditInfo, err := s.Deserializer.GetAuditInfo(ctx, issuerIdentity, s.WalletService)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to get audit info for issuer identity")
 	}

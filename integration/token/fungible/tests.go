@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package fungible
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -908,14 +909,15 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID st
 
 func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor *token3.NodeReference, useFabricCA bool, sel *token3.ReplicaSelector, onRestart OnRestartFunc) {
 
+	ctx := context.Background()
 	issuer := sel.Get("issuer")
 	charlie := sel.Get("charlie")
 
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
 	idConfig1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), charlie.Id(), "charlie.ExtraId1", false)
-	RegisterOwnerIdentity(network, charlie, idConfig1)
+	RegisterOwnerIdentity(ctx, network, charlie, idConfig1)
 	idConfig2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), charlie.Id(), "charlie.ExtraId2", useFabricCA)
-	RegisterOwnerIdentity(network, charlie, idConfig2)
+	RegisterOwnerIdentity(ctx, network, charlie, idConfig2)
 
 	IssueCash(network, "", "SPE", 100, charlie, auditor, true, issuer)
 	TransferCash(network, charlie, "", "SPE", 25, sel.Get("charlie.ExtraId1"), auditor)

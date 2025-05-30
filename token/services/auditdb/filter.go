@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package auditdb
 
 import (
+	"context"
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -36,11 +37,11 @@ func (f *PaymentsFilter) Last(num int) *PaymentsFilter {
 	return f
 }
 
-func (f *PaymentsFilter) Execute() (*PaymentsFilter, error) {
+func (f *PaymentsFilter) Execute(ctx context.Context) (*PaymentsFilter, error) {
 	f.params.TxStatuses = []driver.TxStatus{driver.Pending, driver.Confirmed}
 	f.params.MovementDirection = driver.Sent
 	f.params.SearchDirection = driver.FromLast
-	records, err := f.db.db.QueryMovements(f.params)
+	records, err := f.db.db.QueryMovements(ctx, f.params)
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +74,11 @@ func (f *HoldingsFilter) ByType(tokenType token.Type) *HoldingsFilter {
 	return f
 }
 
-func (f *HoldingsFilter) Execute() (*HoldingsFilter, error) {
+func (f *HoldingsFilter) Execute(ctx context.Context) (*HoldingsFilter, error) {
 	f.params.TxStatuses = []driver.TxStatus{driver.Pending, driver.Confirmed}
 	f.params.MovementDirection = driver.All
 	f.params.SearchDirection = driver.FromBeginning
-	records, err := f.db.db.QueryMovements(f.params)
+	records, err := f.db.db.QueryMovements(ctx, f.params)
 	if err != nil {
 		return nil, err
 	}

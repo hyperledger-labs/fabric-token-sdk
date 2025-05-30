@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -35,7 +36,7 @@ type CertificationClient struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *CertificationClient) IsCertified(arg1 *token.ID) bool {
+func (fake *CertificationClient) IsCertified(ctx context.Context, arg1 *token.ID) bool {
 	fake.isCertifiedMutex.Lock()
 	ret, specificReturn := fake.isCertifiedReturnsOnCall[len(fake.isCertifiedArgsForCall)]
 	fake.isCertifiedArgsForCall = append(fake.isCertifiedArgsForCall, struct {
@@ -96,7 +97,7 @@ func (fake *CertificationClient) IsCertifiedReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
-func (fake *CertificationClient) RequestCertification(arg1 ...*token.ID) error {
+func (fake *CertificationClient) RequestCertification(ctx context.Context, arg1 ...*token.ID) error {
 	fake.requestCertificationMutex.Lock()
 	ret, specificReturn := fake.requestCertificationReturnsOnCall[len(fake.requestCertificationArgsForCall)]
 	fake.requestCertificationArgsForCall = append(fake.requestCertificationArgsForCall, struct {

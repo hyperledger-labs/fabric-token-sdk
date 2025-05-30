@@ -95,14 +95,14 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	for _, action := range t.TransferAction {
 		actionRecipient, err := ttx.RequestRecipientIdentity(context, action.Recipient, ServiceOpts(t.TMSID)...)
 		assert.NoError(err, "failed getting recipient")
-		eID, err := wm.GetEnrollmentID(recipient)
+		eID, err := wm.GetEnrollmentID(context.Context(), recipient)
 		assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
 		assert.True(strings.HasPrefix(eID, t.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, t.RecipientEID)
 		additionalRecipients = append(additionalRecipients, actionRecipient)
 	}
 
 	// match recipient EID
-	eID, err := wm.GetEnrollmentID(recipient)
+	eID, err := wm.GetEnrollmentID(context.Context(), recipient)
 	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
 	assert.True(strings.HasPrefix(eID, t.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, t.RecipientEID)
 
@@ -192,7 +192,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// - the transaction is in pending state
 	span.AddEvent("verify_owner")
 	owner := ttx.NewOwner(context, tx.TokenService())
-	vc, _, err := owner.GetStatus(tx.ID())
+	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
@@ -204,7 +204,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// Sanity checks:
 	// - the transaction is in confirmed state
 	span.AddEvent("verify_tx_status")
-	vc, _, err = owner.GetStatus(tx.ID())
+	vc, _, err = owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 
@@ -301,7 +301,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 		// Here is an example. The sender double checks that the tokens selected are the expected
 
 		// First, the sender queries the vault to get the tokens
-		tokens, err := tx.TokenService().Vault().NewQueryEngine().GetTokens(ids...)
+		tokens, err := tx.TokenService().Vault().NewQueryEngine().GetTokens(context.Context(), ids...)
 		assert.NoError(err, "failed getting tokens from ids")
 
 		// Then, the sender double check that what returned by the selector is correct
@@ -346,7 +346,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	// Sanity checks:
 	// - the transaction is in pending state
 	owner := ttx.NewOwner(context, tx.TokenService())
-	vc, _, err := owner.GetStatus(tx.ID())
+	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
@@ -361,7 +361,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 
 	// Sanity checks:
 	// - the transaction is in confirmed state
-	vc, _, err = owner.GetStatus(tx.ID())
+	vc, _, err = owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 
@@ -499,7 +499,7 @@ type TokenSelectorUnlockView struct {
 func (t *TokenSelectorUnlockView) Call(context view.Context) (interface{}, error) {
 	sm, err := token2.GetManagementService(context).SelectorManager()
 	assert.NoError(err, "failed to get selector manager")
-	assert.NoError(sm.Unlock(t.TxID), "failed to unlock tokens locked by transaction [%s]", t.TxID)
+	assert.NoError(sm.Unlock(context.Context(), t.TxID), "failed to unlock tokens locked by transaction [%s]", t.TxID)
 
 	return nil, nil
 }
@@ -564,7 +564,7 @@ func (t *MaliciousTransferView) Call(context view.Context) (txID interface{}, er
 	wm := token2.GetManagementService(context, ServiceOpts(t.TMSID)...).WalletManager()
 
 	// match recipient EID
-	eID, err := wm.GetEnrollmentID(recipient)
+	eID, err := wm.GetEnrollmentID(context.Context(), recipient)
 	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
 	assert.True(strings.HasPrefix(eID, t.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, t.RecipientEID)
 

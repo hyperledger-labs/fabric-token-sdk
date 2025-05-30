@@ -79,7 +79,7 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
 	}
 	span.AddEvent("Cache token request")
-	if err := t.CacheRequest(s.tx.TMSID(), s.tx.TokenRequest); err != nil {
+	if err := t.CacheRequest(context.Context(), s.tx.TMSID(), s.tx.TokenRequest); err != nil {
 		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
 	}
 
@@ -95,7 +95,7 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 
 func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 	span := trace.SpanFromContext(context.Context())
-	requestsToBeSigned, err := requestsToBeSigned(s.tx.TokenRequest)
+	requestsToBeSigned, err := requestsToBeSigned(context.Context(), s.tx.TokenRequest)
 	if err != nil {
 		return errors.Wrapf(err, "failed collecting requests of signature")
 	}
@@ -141,7 +141,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			return errors.Errorf("failed getting TMS for [%s:%s:%s]", s.tx.Network(), s.tx.Channel(), s.tx.Namespace())
 		}
 
-		if !tms.SigService().IsMe(signatureRequest.Signer) {
+		if !tms.SigService().IsMe(context.Context(), signatureRequest.Signer) {
 			return errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
 		}
 		signer, err := s.tx.TokenService().SigService().GetSigner(signatureRequest.Signer)

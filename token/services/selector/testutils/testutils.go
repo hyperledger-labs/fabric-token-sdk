@@ -35,7 +35,7 @@ const (
 type MockVault struct {
 }
 
-func (m *MockVault) GetStatus(txID string) (ttxdb.TxStatus, string, error) {
+func (m *MockVault) GetStatus(ctx context.Context, txID string) (ttxdb.TxStatus, string, error) {
 	return ttxdb.Pending, "", nil
 }
 
@@ -102,7 +102,7 @@ func (q *MockQueryService) WarmupCache(walletID, tokenType string) {
 	q.cache[walletID] = keys
 }
 
-func (q *MockQueryService) GetUnspentToken(tokenID *token2.ID) *token2.UnspentToken {
+func (q *MockQueryService) GetUnspentToken(_ context.Context, tokenID *token2.ID) *token2.UnspentToken {
 	t, ok := q.tokenIDs[*tokenID]
 	if !ok {
 		return nil
@@ -110,7 +110,7 @@ func (q *MockQueryService) GetUnspentToken(tokenID *token2.ID) *token2.UnspentTo
 	return t
 }
 
-func (q *MockQueryService) GetUnspentTokens(inputs ...*token2.ID) ([]*token2.UnspentToken, error) {
+func (q *MockQueryService) GetUnspentTokens(_ context.Context, inputs ...*token2.ID) ([]*token2.UnspentToken, error) {
 	ts := make([]*token2.UnspentToken, len(inputs))
 	for i, input := range inputs {
 		t, ok := q.tokenIDs[*input]
@@ -122,7 +122,7 @@ func (q *MockQueryService) GetUnspentTokens(inputs ...*token2.ID) ([]*token2.Uns
 	return ts, nil
 }
 
-func (q *MockQueryService) UnspentTokensIterator() (*token.UnspentTokensIterator, error) {
+func (q *MockQueryService) UnspentTokensIterator(context.Context) (*token.UnspentTokensIterator, error) {
 	return &token.UnspentTokensIterator{UnspentTokensIterator: &MockIterator{q, q.allKeys, 0}}, nil
 }
 
@@ -145,7 +145,7 @@ func (q *MockQueryService) UnspentTokensIteratorBy(_ context.Context, walletID s
 	return &token.UnspentTokensIterator{UnspentTokensIterator: &MockIterator{q, q.cache[walletID], 0}}, nil
 }
 
-func (q *MockQueryService) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) {
+func (q *MockQueryService) GetTokens(ctx context.Context, inputs ...*token2.ID) ([]*token2.Token, error) {
 	ts := make([]*token2.Token, len(inputs))
 	for i, input := range inputs {
 		t, ok := q.asTokens[*input]
@@ -158,14 +158,14 @@ func (q *MockQueryService) GetTokens(inputs ...*token2.ID) ([]*token2.Token, err
 	return ts, nil
 }
 
-func (q *MockQueryService) GetStatus(txID string) (token.TxStatus, string, error) {
+func (q *MockQueryService) GetStatus(ctx context.Context, txID string) (token.TxStatus, string, error) {
 	return token.Pending, "", nil
 }
 
 type NoLock struct {
 }
 
-func (n *NoLock) Lock(id *token2.ID, txID string, reclaim bool) (string, error) {
+func (n *NoLock) Lock(ctx context.Context, id *token2.ID, txID string, reclaim bool) (string, error) {
 	return "", nil
 }
 
@@ -173,7 +173,7 @@ func (n *NoLock) UnlockIDs(id ...*token2.ID) []*token2.ID {
 	return id
 }
 
-func (n *NoLock) UnlockByTxID(txID string) {
+func (n *NoLock) UnlockByTxID(ctx context.Context, txID string) {
 }
 
 func (n *NoLock) IsLocked(id *token2.ID) bool {

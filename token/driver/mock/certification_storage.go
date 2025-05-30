@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -9,10 +10,11 @@ import (
 )
 
 type CertificationStorage struct {
-	ExistsStub        func(*token.ID) bool
+	ExistsStub        func(context.Context, *token.ID) bool
 	existsMutex       sync.RWMutex
 	existsArgsForCall []struct {
-		arg1 *token.ID
+		arg1 context.Context
+		arg2 *token.ID
 	}
 	existsReturns struct {
 		result1 bool
@@ -20,10 +22,11 @@ type CertificationStorage struct {
 	existsReturnsOnCall map[int]struct {
 		result1 bool
 	}
-	StoreStub        func(map[*token.ID][]byte) error
+	StoreStub        func(context.Context, map[*token.ID][]byte) error
 	storeMutex       sync.RWMutex
 	storeArgsForCall []struct {
-		arg1 map[*token.ID][]byte
+		arg1 context.Context
+		arg2 map[*token.ID][]byte
 	}
 	storeReturns struct {
 		result1 error
@@ -35,18 +38,19 @@ type CertificationStorage struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *CertificationStorage) Exists(arg1 *token.ID) bool {
+func (fake *CertificationStorage) Exists(arg1 context.Context, arg2 *token.ID) bool {
 	fake.existsMutex.Lock()
 	ret, specificReturn := fake.existsReturnsOnCall[len(fake.existsArgsForCall)]
 	fake.existsArgsForCall = append(fake.existsArgsForCall, struct {
-		arg1 *token.ID
-	}{arg1})
+		arg1 context.Context
+		arg2 *token.ID
+	}{arg1, arg2})
 	stub := fake.ExistsStub
 	fakeReturns := fake.existsReturns
-	fake.recordInvocation("Exists", []interface{}{arg1})
+	fake.recordInvocation("Exists", []interface{}{arg1, arg2})
 	fake.existsMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -60,17 +64,17 @@ func (fake *CertificationStorage) ExistsCallCount() int {
 	return len(fake.existsArgsForCall)
 }
 
-func (fake *CertificationStorage) ExistsCalls(stub func(*token.ID) bool) {
+func (fake *CertificationStorage) ExistsCalls(stub func(context.Context, *token.ID) bool) {
 	fake.existsMutex.Lock()
 	defer fake.existsMutex.Unlock()
 	fake.ExistsStub = stub
 }
 
-func (fake *CertificationStorage) ExistsArgsForCall(i int) *token.ID {
+func (fake *CertificationStorage) ExistsArgsForCall(i int) (context.Context, *token.ID) {
 	fake.existsMutex.RLock()
 	defer fake.existsMutex.RUnlock()
 	argsForCall := fake.existsArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *CertificationStorage) ExistsReturns(result1 bool) {
@@ -96,18 +100,19 @@ func (fake *CertificationStorage) ExistsReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
-func (fake *CertificationStorage) Store(arg1 map[*token.ID][]byte) error {
+func (fake *CertificationStorage) Store(arg1 context.Context, arg2 map[*token.ID][]byte) error {
 	fake.storeMutex.Lock()
 	ret, specificReturn := fake.storeReturnsOnCall[len(fake.storeArgsForCall)]
 	fake.storeArgsForCall = append(fake.storeArgsForCall, struct {
-		arg1 map[*token.ID][]byte
-	}{arg1})
+		arg1 context.Context
+		arg2 map[*token.ID][]byte
+	}{arg1, arg2})
 	stub := fake.StoreStub
 	fakeReturns := fake.storeReturns
-	fake.recordInvocation("Store", []interface{}{arg1})
+	fake.recordInvocation("Store", []interface{}{arg1, arg2})
 	fake.storeMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -121,17 +126,17 @@ func (fake *CertificationStorage) StoreCallCount() int {
 	return len(fake.storeArgsForCall)
 }
 
-func (fake *CertificationStorage) StoreCalls(stub func(map[*token.ID][]byte) error) {
+func (fake *CertificationStorage) StoreCalls(stub func(context.Context, map[*token.ID][]byte) error) {
 	fake.storeMutex.Lock()
 	defer fake.storeMutex.Unlock()
 	fake.StoreStub = stub
 }
 
-func (fake *CertificationStorage) StoreArgsForCall(i int) map[*token.ID][]byte {
+func (fake *CertificationStorage) StoreArgsForCall(i int) (context.Context, map[*token.ID][]byte) {
 	fake.storeMutex.RLock()
 	defer fake.storeMutex.RUnlock()
 	argsForCall := fake.storeArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *CertificationStorage) StoreReturns(result1 error) {

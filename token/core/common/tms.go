@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -14,7 +16,7 @@ import (
 
 type PublicParametersManager[T driver.PublicParameters] interface {
 	driver.PublicParamsManager
-	PublicParams() T
+	PublicParams(ctx context.Context) T
 }
 
 type Service[T driver.PublicParameters] struct {

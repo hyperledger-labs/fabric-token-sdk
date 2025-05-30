@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package auditor
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
@@ -111,7 +112,7 @@ func (cm *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get auditor for [%s]", tmsID)
 	}
-	it, err := auditor.auditDB.TokenRequests(auditdb.QueryTokenRequestsParams{Statuses: []TxStatus{auditdb.Pending}})
+	it, err := auditor.auditDB.TokenRequests(context.Background(), auditdb.QueryTokenRequestsParams{Statuses: []TxStatus{auditdb.Pending}})
 	if err != nil {
 		return errors.Errorf("failed to get tx iterator for [%s]", tmsID)
 	}

@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -31,13 +33,13 @@ func NewTypedIdentityDeserializer(verifierDeserializer VerifierDES, auditInfoDes
 	return &TypedIdentityDeserializer{VerifierDeserializer: verifierDeserializer, AuditInfoMatcher: auditInfoDeserializer}
 }
 
-func (d *TypedIdentityDeserializer) GetAuditInfo(id driver.Identity, typ identity.Type, rawIdentity []byte, p driver.AuditInfoProvider) ([]byte, error) {
+func (d *TypedIdentityDeserializer) GetAuditInfo(ctx context.Context, id driver.Identity, typ identity.Type, rawIdentity []byte, p driver.AuditInfoProvider) ([]byte, error) {
 	if typ != Multisig {
 		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, Multisig)
 	}
 
 	// if there is already some audit info for id, return it
-	auditInfoRaw, err := p.GetAuditInfo(id)
+	auditInfoRaw, err := p.GetAuditInfo(ctx, id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for id [%s]", id.String())
 	}
@@ -54,7 +56,7 @@ func (d *TypedIdentityDeserializer) GetAuditInfo(id driver.Identity, typ identit
 	auditInfo := &AuditInfo{}
 	auditInfo.IdentityAuditInfos = make([]IdentityAuditInfo, len(mid.Identities))
 	for k, identity := range mid.Identities {
-		auditInfo.IdentityAuditInfos[k].AuditInfo, err = p.GetAuditInfo(identity)
+		auditInfo.IdentityAuditInfos[k].AuditInfo, err = p.GetAuditInfo(ctx, identity)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting audit info for mid [%s]", id.String())
 		}

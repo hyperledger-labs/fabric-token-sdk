@@ -26,21 +26,21 @@ type AuditTransactionStore interface {
 
 	// GetStatus returns the status of a given transaction.
 	// It returns an error if the transaction is not found
-	GetStatus(txID string) (TxStatus, string, error)
+	GetStatus(ctx context.Context, txID string) (TxStatus, string, error)
 
 	// QueryTransactions returns a list of transactions that match the passed params
-	QueryTransactions(params QueryTransactionsParams, pagination driver.Pagination) (*driver.PageIterator[*TransactionRecord], error)
+	QueryTransactions(ctx context.Context, params QueryTransactionsParams, pagination driver.Pagination) (*driver.PageIterator[*TransactionRecord], error)
 
 	// QueryMovements returns a list of movement records
-	QueryMovements(params QueryMovementsParams) ([]*MovementRecord, error)
+	QueryMovements(ctx context.Context, params QueryMovementsParams) ([]*MovementRecord, error)
 
 	// QueryValidations returns an iterator over the validation records matching the passed params
-	QueryValidations(params QueryValidationRecordsParams) (ValidationRecordsIterator, error)
+	QueryValidations(ctx context.Context, params QueryValidationRecordsParams) (ValidationRecordsIterator, error)
 
 	// QueryTokenRequests returns an iterator over the token requests matching the passed params
-	QueryTokenRequests(params QueryTokenRequestsParams) (TokenRequestIterator, error)
+	QueryTokenRequests(ctx context.Context, params QueryTokenRequestsParams) (TokenRequestIterator, error)
 
 	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
 	// It returns nil without error if the key is not found.
-	GetTokenRequest(txID string) ([]byte, error)
+	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
 }

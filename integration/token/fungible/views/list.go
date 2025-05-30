@@ -52,7 +52,7 @@ func (i *ListUnspentTokensViewFactory) NewView(in []byte) (view.View, error) {
 type ListOwnerWalletIDsView struct{}
 
 func (p *ListOwnerWalletIDsView) Call(context view.Context) (interface{}, error) {
-	return token.GetManagementService(context).WalletManager().OwnerWalletIDs()
+	return token.GetManagementService(context).WalletManager().OwnerWalletIDs(context.Context())
 }
 
 type ListOwnerWalletIDsViewFactory struct{}

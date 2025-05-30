@@ -28,7 +28,7 @@ import (
 )
 
 type tokenRequest interface {
-	AuditRecord() (*token.AuditRecord, error)
+	AuditRecord(ctx context.Context) (*token.AuditRecord, error)
 	Bytes() ([]byte, error)
 	AllApplicationMetadata() map[string][]byte
 	PublicParamsHash() token.PPHash
@@ -140,10 +140,10 @@ func newStoreService(p driver.AuditTransactionStore) (*StoreService, error) {
 }
 
 // Append appends send and receive movements, and transaction records corresponding to the passed token request
-func (d *StoreService) Append(req tokenRequest) error {
+func (d *StoreService) Append(ctx context.Context, req tokenRequest) error {
 	logger.Debugf("appending new record... [%s]", req)
 
-	record, err := req.AuditRecord()
+	record, err := req.AuditRecord(ctx)
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting audit records for request [%s]", req)
 	}
@@ -169,6 +169,7 @@ func (d *StoreService) Append(req tokenRequest) error {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
 	if err := w.AddTokenRequest(
+		ctx,
 		record.Anchor,
 		raw,
 		req.AllApplicationMetadata(),
@@ -179,13 +180,13 @@ func (d *StoreService) Append(req tokenRequest) error {
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
 	for _, mv := range mov {
-		if err := w.AddMovement(&mv); err != nil {
+		if err := w.AddMovement(ctx, &mv); err != nil {
 			w.Rollback()
 			return errors.WithMessagef(err, "append sent movements for txid [%s] failed", record.Anchor)
 		}
 	}
 	for _, tx := range txs {
-		if err := w.AddTransaction(&tx); err != nil {
+		if err := w.AddTransaction(ctx, &tx); err != nil {
 			w.Rollback()
 			return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 		}
@@ -199,13 +200,13 @@ func (d *StoreService) Append(req tokenRequest) error {
 }
 
 // Transactions returns an iterators of transaction records filtered by the given params.
-func (d *StoreService) Transactions(params QueryTransactionsParams, pagination Pagination) (*PageTransactionsIterator, error) {
-	return d.db.QueryTransactions(params, pagination)
+func (d *StoreService) Transactions(ctx context.Context, params QueryTransactionsParams, pagination Pagination) (*PageTransactionsIterator, error) {
+	return d.db.QueryTransactions(ctx, params, pagination)
 }
 
 // TokenRequests returns an iterator over the token requests matching the passed params
-func (d *StoreService) TokenRequests(params QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
-	return d.db.QueryTokenRequests(params)
+func (d *StoreService) TokenRequests(ctx context.Context, params QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
+	return d.db.QueryTokenRequests(ctx, params)
 }
 
 // NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
@@ -241,9 +242,9 @@ func (d *StoreService) SetStatus(ctx context.Context, txID string, status driver
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (d *StoreService) GetStatus(txID string) (TxStatus, string, error) {
+func (d *StoreService) GetStatus(ctx context.Context, txID string) (TxStatus, string, error) {
 	logger.Debugf("get status [%s]...", txID)
-	status, message, err := d.db.GetStatus(txID)
+	status, message, err := d.db.GetStatus(ctx, txID)
 	if err != nil {
 		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
@@ -252,8 +253,8 @@ func (d *StoreService) GetStatus(txID string) (TxStatus, string, error) {
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
-func (d *StoreService) GetTokenRequest(txID string) ([]byte, error) {
-	return d.db.GetTokenRequest(txID)
+func (d *StoreService) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
+	return d.db.GetTokenRequest(ctx, txID)
 }
 
 // AcquireLocks acquires locks for the passed anchor and enrollment ids.

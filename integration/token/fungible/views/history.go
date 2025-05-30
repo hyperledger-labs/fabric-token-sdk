@@ -42,7 +42,7 @@ func (p *ListIssuedTokensView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// Return the list of issued tokens by type
-	return wallet.ListIssuedTokens(ttx.WithType(p.TokenType))
+	return wallet.ListIssuedTokens(context.Context(), ttx.WithType(p.TokenType))
 }
 
 type ListIssuedTokensViewFactory struct{}
@@ -77,7 +77,7 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 		return nil, errors.Wrapf(err, "failed to get auditor instance")
 	}
 
-	it, err := auditor.Transactions(ttxdb.QueryTransactionsParams{From: p.From, To: p.To}, pagination.None())
+	it, err := auditor.Transactions(context.Context(), ttxdb.QueryTransactionsParams{From: p.From, To: p.To}, pagination.None())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying transactions")
 	}
@@ -112,7 +112,7 @@ type ListAcceptedTransactionsView struct {
 func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, error) {
 	// Get query executor
 	owner := ttx.NewOwner(context, token.GetManagementService(context, ServiceOpts(p.TMSID)...))
-	it, err := owner.Transactions(ttxdb.QueryTransactionsParams{
+	it, err := owner.Transactions(context.Context(), ttxdb.QueryTransactionsParams{
 		SenderWallet:    p.SenderWallet,
 		RecipientWallet: p.RecipientWallet,
 		From:            p.From,
@@ -149,7 +149,7 @@ type TransactionInfoView struct {
 
 func (t *TransactionInfoView) Call(context view.Context) (interface{}, error) {
 	owner := ttx.NewOwner(context, token.GetManagementService(context, ServiceOpts(t.TMSID)...))
-	info, err := owner.TransactionInfo(t.TransactionID)
+	info, err := owner.TransactionInfo(context.Context(), t.TransactionID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting transaction info")
 	}

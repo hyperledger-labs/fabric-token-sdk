@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -60,7 +61,7 @@ func (db *TokenLockStore) CreateSchema() error {
 	return common.InitSchema(db.WriteDB, []string{db.GetSchema()}...)
 }
 
-func (db *TokenLockStore) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
+func (db *TokenLockStore) Lock(ctx context.Context, tokenID *token.ID, consumerTxID transaction.ID) error {
 	query, args := q.InsertInto(db.Table.TokenLocks).
 		Fields("consumer_tx_id", "tx_id", "idx", "created_at").
 		Row(consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC()).
@@ -70,7 +71,7 @@ func (db *TokenLockStore) Lock(tokenID *token.ID, consumerTxID transaction.ID) e
 	return err
 }
 
-func (db *TokenLockStore) UnlockByTxID(consumerTxID transaction.ID) error {
+func (db *TokenLockStore) UnlockByTxID(ctx context.Context, consumerTxID transaction.ID) error {
 	query, args := q.DeleteFrom(db.Table.TokenLocks).
 		Where(cond.Eq("consumer_tx_id", consumerTxID)).
 		Format(db.ci)

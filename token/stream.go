@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 
@@ -16,7 +17,7 @@ import (
 )
 
 type QueryService interface {
-	IsMine(id *token.ID) (bool, error)
+	IsMine(ctx context.Context, id *token.ID) (bool, error)
 }
 
 // Output models the output of a token action
@@ -229,9 +230,9 @@ func (is *InputStream) Owners() *OwnerStream {
 }
 
 // IsAnyMine returns true if any of the inputs are mine
-func (is *InputStream) IsAnyMine() (bool, error) {
+func (is *InputStream) IsAnyMine(ctx context.Context) (bool, error) {
 	for _, input := range is.inputs {
-		mine, err := is.qs.IsMine(input.Id)
+		mine, err := is.qs.IsMine(ctx, input.Id)
 		if err != nil {
 			return false, errors.WithMessagef(err, "failed to query the vault")
 		}

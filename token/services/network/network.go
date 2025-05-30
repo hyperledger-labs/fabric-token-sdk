@@ -170,12 +170,12 @@ func (n *Network) Channel() string {
 }
 
 // Broadcast sends the given blob to the network
-func (n *Network) Broadcast(context context.Context, blob interface{}) error {
+func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
 	switch b := blob.(type) {
 	case *Envelope:
-		return n.n.Broadcast(context, b.e)
+		return n.n.Broadcast(ctx, b.e)
 	default:
-		return n.n.Broadcast(context, b)
+		return n.n.Broadcast(ctx, b)
 	}
 }
 
@@ -219,13 +219,13 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 }
 
 // QueryTokens returns the tokens corresponding to the given token ids int the given namespace
-func (n *Network) QueryTokens(context context.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
-	return n.n.QueryTokens(context, namespace, IDs)
+func (n *Network) QueryTokens(ctx context.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
+	return n.n.QueryTokens(ctx, namespace, IDs)
 }
 
 // AreTokensSpent retrieves the spent flag for the passed ids
-func (n *Network) AreTokensSpent(context context.Context, namespace string, tokenIDs []*token2.ID, meta []string) ([]bool, error) {
-	return n.n.AreTokensSpent(context, namespace, tokenIDs, meta)
+func (n *Network) AreTokensSpent(ctx context.Context, namespace string, tokenIDs []*token2.ID, meta []string) ([]bool, error) {
+	return n.n.AreTokensSpent(ctx, namespace, tokenIDs, meta)
 }
 
 // LocalMembership returns the local membership for this network

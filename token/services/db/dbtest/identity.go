@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -40,6 +41,7 @@ var IdentityCases = []struct {
 }
 
 func TConfigurations(t *testing.T, db driver.IdentityStore) {
+	ctx := context.Background()
 	expected := driver.IdentityConfiguration{
 		ID:     "pineapple",
 		Type:   "core",
@@ -47,9 +49,9 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 		Config: []byte("config"),
 		Raw:    []byte("raw"),
 	}
-	assert.NoError(t, db.AddConfiguration(expected))
+	assert.NoError(t, db.AddConfiguration(ctx, expected))
 
-	it, err := db.IteratorConfigurations(expected.Type)
+	it, err := db.IteratorConfigurations(ctx, expected.Type)
 	assert.NoError(t, err)
 	assert.True(t, it.HasNext())
 	c, err := it.Next()
@@ -57,15 +59,15 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 	assert.True(t, reflect.DeepEqual(expected, c))
 	assert.NoError(t, it.Close())
 
-	exists, err := db.ConfigurationExists(expected.ID, expected.Type, expected.URL)
+	exists, err := db.ConfigurationExists(ctx, expected.ID, expected.Type, expected.URL)
 	assert.NoError(t, err)
 	assert.True(t, exists)
 
-	_, err = db.IteratorConfigurations("no core")
+	_, err = db.IteratorConfigurations(ctx, "no core")
 	assert.NoError(t, err)
 	assert.False(t, it.HasNext())
 
-	exists, err = db.ConfigurationExists("pineapple", "no core", expected.URL)
+	exists, err = db.ConfigurationExists(ctx, "pineapple", "no core", expected.URL)
 	assert.NoError(t, err)
 	assert.False(t, exists)
 
@@ -76,21 +78,22 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 		Config: []byte("config"),
 		Raw:    []byte("raw"),
 	}
-	assert.NoError(t, db.AddConfiguration(expected))
+	assert.NoError(t, db.AddConfiguration(ctx, expected))
 }
 
 func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
+	ctx := context.Background()
 	id := []byte("alice")
 	auditInfo := []byte("alice_audit_info")
 	tokMeta := []byte("tok_meta")
 	tokMetaAudit := []byte("tok_meta_audit")
-	assert.NoError(t, db.StoreIdentityData(id, auditInfo, tokMeta, tokMetaAudit))
+	assert.NoError(t, db.StoreIdentityData(ctx, id, auditInfo, tokMeta, tokMetaAudit))
 
-	auditInfo2, err := db.GetAuditInfo(id)
+	auditInfo2, err := db.GetAuditInfo(ctx, id)
 	assert.NoError(t, err, "failed to retrieve audit info for [%s]", id)
 	assert.Equal(t, auditInfo, auditInfo2)
 
-	tokMeta2, tokMetaAudit2, err := db.GetTokenInfo(id)
+	tokMeta2, tokMetaAudit2, err := db.GetTokenInfo(ctx, id)
 	assert.NoError(t, err, "failed to retrieve token info for [%s]", id)
 	assert.Equal(t, tokMeta, tokMeta2)
 	assert.Equal(t, tokMetaAudit, tokMetaAudit2)
@@ -116,25 +119,26 @@ func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
 
 	for i := 0; i < n; i++ {
 		alice := []byte(fmt.Sprintf("alice_%d", i))
-		exists, err := db.SignerInfoExists(alice)
+		exists, err := db.SignerInfoExists(context.Background(), alice)
 		assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
 		assert.True(t, exists)
 	}
 }
 
 func tSignerInfo(t *testing.T, db driver.IdentityStore, index int) {
+	ctx := context.Background()
 	alice := []byte(fmt.Sprintf("alice_%d", index))
 	bob := []byte(fmt.Sprintf("bob_%d", index))
 	signerInfo := []byte("signer_info")
-	assert.NoError(t, db.StoreSignerInfo(alice, signerInfo))
-	exists, err := db.SignerInfoExists(alice)
+	assert.NoError(t, db.StoreSignerInfo(ctx, alice, signerInfo))
+	exists, err := db.SignerInfoExists(ctx, alice)
 	assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
 	assert.True(t, exists)
-	signerInfo2, err := db.GetSignerInfo(alice)
+	signerInfo2, err := db.GetSignerInfo(ctx, alice)
 	assert.NoError(t, err, "failed to retrieve signer info for [%s]", alice)
 	assert.Equal(t, signerInfo, signerInfo2)
 
-	exists, err = db.SignerInfoExists(bob)
+	exists, err = db.SignerInfoExists(ctx, bob)
 	assert.NoError(t, err, "failed to check signer info existence for [%s]", bob)
 	assert.False(t, exists)
 }

@@ -55,7 +55,7 @@ type NetworkProvider interface {
 }
 
 type CheckService interface {
-	Check(context context.Context) ([]string, error)
+	Check(ctx context.Context) ([]string, error)
 }
 
 // Service is the interface for the auditor service
@@ -70,17 +70,17 @@ type Service struct {
 }
 
 // Validate validates the passed token request
-func (a *Service) Validate(context context.Context, request *token.Request) error {
-	return request.AuditCheck(context)
+func (a *Service) Validate(ctx context.Context, request *token.Request) error {
+	return request.AuditCheck(ctx)
 }
 
 // Audit extracts the list of inputs and outputs from the passed transaction.
 // In addition, the Audit locks the enrollment named ids.
 // Release must be invoked in case
-func (a *Service) Audit(tx Transaction) (*token.InputStream, *token.OutputStream, error) {
+func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream, *token.OutputStream, error) {
 	logger.Debugf("audit transaction [%s]....", tx.ID())
 	request := tx.Request()
-	record, err := request.AuditRecord()
+	record, err := request.AuditRecord(ctx)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed getting transaction audit record")
 	}
@@ -99,7 +99,7 @@ func (a *Service) Audit(tx Transaction) (*token.InputStream, *token.OutputStream
 
 // Append adds the passed transaction to the auditor database.
 // It also releases the locks acquired by Audit.
-func (a *Service) Append(tx Transaction) error {
+func (a *Service) Append(ctx context.Context, tx Transaction) error {
 	defer a.Release(tx)
 
 	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
@@ -107,7 +107,7 @@ func (a *Service) Append(tx Transaction) error {
 		return err
 	}
 	// append request to audit db
-	if err := a.auditDB.Append(newRequestWrapper(tx.Request(), tms)); err != nil {
+	if err := a.auditDB.Append(ctx, newRequestWrapper(tx.Request(), tms)); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 
@@ -137,17 +137,17 @@ func (a *Service) SetStatus(ctx context.Context, txID string, status db.TxStatus
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (a *Service) GetStatus(txID string) (TxStatus, string, error) {
-	return a.auditDB.GetStatus(txID)
+func (a *Service) GetStatus(ctx context.Context, txID string) (TxStatus, string, error) {
+	return a.auditDB.GetStatus(ctx, txID)
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
-func (a *Service) GetTokenRequest(txID string) ([]byte, error) {
-	return a.auditDB.GetTokenRequest(txID)
+func (a *Service) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
+	return a.auditDB.GetTokenRequest(ctx, txID)
 }
 
-func (a *Service) Check(context context.Context) ([]string, error) {
-	return a.checkService.Check(context)
+func (a *Service) Check(ctx context.Context) ([]string, error) {
+	return a.checkService.Check(ctx)
 }
 
 type requestWrapper struct {
@@ -167,18 +167,18 @@ func (r *requestWrapper) AllApplicationMetadata() map[string][]byte {
 
 func (r *requestWrapper) PublicParamsHash() token.PPHash { return r.r.PublicParamsHash() }
 
-func (r *requestWrapper) AuditRecord() (*token.AuditRecord, error) {
-	record, err := r.r.AuditRecord()
+func (r *requestWrapper) AuditRecord(ctx context.Context) (*token.AuditRecord, error) {
+	record, err := r.r.AuditRecord(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err := r.completeInputsWithEmptyEID(record); err != nil {
+	if err := r.completeInputsWithEmptyEID(ctx, record); err != nil {
 		return nil, errors.WithMessagef(err, "failed filling gaps for request [%s]", r.r.Anchor)
 	}
 	return record, nil
 }
 
-func (r *requestWrapper) completeInputsWithEmptyEID(record *token.AuditRecord) error {
+func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record *token.AuditRecord) error {
 	filter := record.Inputs.ByEnrollmentID("")
 	if filter.Count() == 0 {
 		return nil
@@ -187,7 +187,7 @@ func (r *requestWrapper) completeInputsWithEmptyEID(record *token.AuditRecord) e
 	targetEID := record.Outputs.EnrollmentIDs()[0]
 
 	// fetch all the tokens
-	tokens, err := r.tms.Vault().NewQueryEngine().ListAuditTokens(filter.IDs()...)
+	tokens, err := r.tms.Vault().NewQueryEngine().ListAuditTokens(ctx, filter.IDs()...)
 	if err != nil {
 		return errors.WithMessagef(err, "failed listing tokens for [%s]", filter.IDs())
 	}

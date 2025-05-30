@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package inmemory
 
 import (
+	"context"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
@@ -14,8 +15,8 @@ import (
 )
 
 type Locker interface {
-	Lock(id *token.ID, txID string, reclaim bool) (string, error)
-	UnlockByTxID(txID string)
+	Lock(ctx context.Context, id *token.ID, txID string, reclaim bool) (string, error)
+	UnlockByTxID(ctx context.Context, txID string)
 }
 
 type Vault interface {
@@ -30,16 +31,16 @@ func NewLocker(l Locker) *locker {
 	return &locker{Locker: l}
 }
 
-func (l *locker) Lock(tokenID *token.ID, consumerTxID transaction.ID) error {
-	_, err := l.Locker.Lock(tokenID, consumerTxID, false)
+func (l *locker) Lock(ctx context.Context, tokenID *token.ID, consumerTxID transaction.ID) error {
+	_, err := l.Locker.Lock(ctx, tokenID, consumerTxID, false)
 	return err
 }
 
-func (l *locker) UnlockByTxID(txID transaction.ID) error {
-	l.Locker.UnlockByTxID(txID)
+func (l *locker) UnlockByTxID(ctx context.Context, txID transaction.ID) error {
+	l.Locker.UnlockByTxID(ctx, txID)
 	return nil
 }
 
-func (l *locker) Cleanup(leaseExpiry time.Duration) error {
+func (l *locker) Cleanup(ctx context.Context, leaseExpiry time.Duration) error {
 	return nil
 }

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sqlite
 
 import (
+	"context"
 	"time"
 
 	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
@@ -44,7 +45,7 @@ func (c *isStale) WriteString(ci common2.CondInterpreter, sb common2.Builder) {
 	sb.WriteRune(')')
 }
 
-func (db *TokenLockStore) Cleanup(leaseExpiry time.Duration) error {
+func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration) error {
 	query, args := q.DeleteFrom(db.Table.TokenLocks).
 		Where(IsStale(common2.TableName(db.Table.TokenLocks), common2.TableName(db.Table.Requests), leaseExpiry)).
 		Format(db.ci)

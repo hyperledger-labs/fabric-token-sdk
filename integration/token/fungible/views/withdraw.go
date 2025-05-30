@@ -51,9 +51,9 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 	if i.RecipientData != nil {
 		// Use the passed RecipientData.
 		// First register it locally
-		w := token.GetManagementService(context, token.WithTMSID(i.TMSID)).WalletManager().OwnerWallet(i.Wallet)
+		w := token.GetManagementService(context, token.WithTMSID(i.TMSID)).WalletManager().OwnerWallet(context.Context(), i.Wallet)
 		assert.NotNil(w, "cannot find wallet [%s:%s]", i.TMSID, i.Wallet)
-		assert.NoError(w.RegisterRecipient(i.RecipientData), "failed to register remote recipient")
+		assert.NoError(w.RegisterRecipient(context.Context(), i.RecipientData), "failed to register remote recipient")
 		// Then request withdrawal
 		span.AddEvent("request_withdrawal_for_recipient")
 		id, session, err = ttx.RequestWithdrawalForRecipient(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, i.NotAnonymous, i.RecipientData, token.WithTMSID(i.TMSID))
@@ -128,7 +128,7 @@ func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error
 		// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
 		// have been issued already including the current request.
 		// No check is performed for other types.
-		wallet := token.GetManagementService(context, token.WithTMSID(issueRequest.TMSID)).WalletManager().IssuerWallet("")
+		wallet := token.GetManagementService(context, token.WithTMSID(issueRequest.TMSID)).WalletManager().IssuerWallet(context.Context(), "")
 		assert.NotNil(wallet, "issuer wallet not found")
 
 		// At this point, the issuer is ready to prepare the token transaction.

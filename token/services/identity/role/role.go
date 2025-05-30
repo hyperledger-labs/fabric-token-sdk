@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package role
 
 import (
+	"context"
 	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -19,11 +20,11 @@ import (
 
 type localMembership interface {
 	DefaultNetworkIdentity() driver.Identity
-	IsMe(id driver.Identity) bool
+	IsMe(ctx context.Context, id driver.Identity) bool
 	GetIdentityInfo(label string, auditInfo []byte) (idriver.IdentityInfo, error)
 	GetIdentifier(id driver.Identity) (string, error)
 	GetDefaultIdentifier() string
-	RegisterIdentity(config driver.IdentityConfiguration) error
+	RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error
 	IDs() ([]string, error)
 }
 
@@ -62,8 +63,8 @@ func (r *Role) GetIdentityInfo(id string) (idriver.IdentityInfo, error) {
 }
 
 // RegisterIdentity registers the given identity
-func (r *Role) RegisterIdentity(config driver.IdentityConfiguration) error {
-	return r.localMembership.RegisterIdentity(config)
+func (r *Role) RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error {
+	return r.localMembership.RegisterIdentity(ctx, config)
 }
 
 func (r *Role) IdentityIDs() ([]string, error) {
@@ -71,20 +72,20 @@ func (r *Role) IdentityIDs() ([]string, error) {
 }
 
 // MapToIdentity returns the identity for the given argument
-func (r *Role) MapToIdentity(v driver.WalletLookupID) (driver.Identity, string, error) {
+func (r *Role) MapToIdentity(ctx context.Context, v driver.WalletLookupID) (driver.Identity, string, error) {
 	switch vv := v.(type) {
 	case driver.Identity:
-		return r.mapIdentityToID(vv)
+		return r.mapIdentityToID(ctx, vv)
 	case []byte:
-		return r.mapIdentityToID(vv)
+		return r.mapIdentityToID(ctx, vv)
 	case string:
-		return r.mapStringToID(vv)
+		return r.mapStringToID(ctx, vv)
 	default:
 		return nil, "", errors.Errorf("identifier not recognised, expected []byte or driver.Identity, got [%T], [%s]", v, string(debug.Stack()))
 	}
 }
 
-func (r *Role) mapStringToID(v string) (driver.Identity, string, error) {
+func (r *Role) mapStringToID(ctx context.Context, v string) (driver.Identity, string, error) {
 	defaultNetworkIdentity := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
@@ -117,7 +118,7 @@ func (r *Role) mapStringToID(v string) (driver.Identity, string, error) {
 	case r.nodeIdentity.Equal(labelAsIdentity):
 		r.logger.Debugf("passed node identity as view identity")
 		return nil, defaultIdentifier, nil
-	case r.localMembership.IsMe(labelAsIdentity):
+	case r.localMembership.IsMe(ctx, labelAsIdentity):
 		r.logger.Debugf("passed a local member")
 		id := labelAsIdentity
 		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
@@ -134,7 +135,7 @@ func (r *Role) mapStringToID(v string) (driver.Identity, string, error) {
 	return nil, label, nil
 }
 
-func (r *Role) mapIdentityToID(v driver.Identity) (driver.Identity, string, error) {
+func (r *Role) mapIdentityToID(ctx context.Context, v driver.Identity) (driver.Identity, string, error) {
 	defaultNetworkIdentity := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
@@ -159,7 +160,7 @@ func (r *Role) mapIdentityToID(v driver.Identity) (driver.Identity, string, erro
 	case id.Equal(r.nodeIdentity):
 		r.logger.Debugf("passed identity is the node identity (same bytes)")
 		return nil, defaultIdentifier, nil
-	case r.localMembership.IsMe(id):
+	case r.localMembership.IsMe(ctx, id):
 		r.logger.Debugf("passed identity is me")
 		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
 			return id, idIdentifier, nil

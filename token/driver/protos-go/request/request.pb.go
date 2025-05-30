@@ -12,6 +12,7 @@
 package request
 
 import (
+	"context"
 	reflect "reflect"
 	sync "sync"
 
@@ -172,7 +173,7 @@ func (x *AuditableIdentity) GetIdentity() *Identity {
 	return nil
 }
 
-func (x *AuditableIdentity) GetAuditInfo() []byte {
+func (x *AuditableIdentity) GetAuditInfo(ctx context.Context) []byte {
 	if x != nil {
 		return x.AuditInfo
 	}
@@ -339,7 +340,7 @@ func (x *OutputMetadata) GetMetadata() []byte {
 	return nil
 }
 
-func (x *OutputMetadata) GetAuditInfo() []byte {
+func (x *OutputMetadata) GetAuditInfo(ctx context.Context) []byte {
 	if x != nil {
 		return x.AuditInfo
 	}

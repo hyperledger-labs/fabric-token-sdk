@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -53,20 +55,20 @@ func (s *SignatureService) RegisterSigner(identity Identity, signer Signer, veri
 }
 
 // AreMe returns the hashes of the passed identities that have a signer registered before
-func (s *SignatureService) AreMe(identities ...Identity) []string {
-	return s.identityProvider.AreMe(identities...)
+func (s *SignatureService) AreMe(ctx context.Context, identities ...Identity) []string {
+	return s.identityProvider.AreMe(ctx, identities...)
 }
 
 // IsMe returns true if for the given identity there is a signer registered
-func (s *SignatureService) IsMe(party Identity) bool {
-	return s.identityProvider.IsMe(party)
+func (s *SignatureService) IsMe(ctx context.Context, party Identity) bool {
+	return s.identityProvider.IsMe(ctx, party)
 }
 
 // GetAuditInfo returns the audit infor
-func (s *SignatureService) GetAuditInfo(ids ...Identity) ([][]byte, error) {
+func (s *SignatureService) GetAuditInfo(ctx context.Context, ids ...Identity) ([][]byte, error) {
 	result := make([][]byte, 0, len(ids))
 	for _, id := range ids {
-		auditInfo, err := s.identityProvider.GetAuditInfo(id)
+		auditInfo, err := s.identityProvider.GetAuditInfo(ctx, id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get audit info for identity [%s]", id)
 		}

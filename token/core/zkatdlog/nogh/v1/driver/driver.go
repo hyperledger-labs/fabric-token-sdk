@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
@@ -103,7 +105,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
 
-	pp := ppm.PublicParams()
+	pp := ppm.PublicParams(context.Background())
 	logger.Infof("new token driver for tms id [%s] with label and version [%s:%s]: [%s]", tmsID, pp.Identifier(), pp.Version(), pp)
 
 	qe := vault.QueryEngine()
@@ -115,7 +117,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		logger,
 		d.identityProvider.DefaultIdentity(),
 		networkLocalMembership.DefaultIdentity(),
-		ppm.PublicParams(),
+		ppm.PublicParams(context.Background()),
 		false,
 	)
 	if err != nil {
@@ -125,7 +127,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	ip := ws.IdentityProvider
 
 	authorization := common.NewAuthorizationMultiplexer(
-		common.NewTMSAuthorization(logger, ppm.PublicParams(), ws),
+		common.NewTMSAuthorization(logger, ppm.PublicParams(context.Background()), ws),
 		htlc.NewScriptAuth(ws),
 		multisig.NewEscrowAuth(ws),
 	)
@@ -136,7 +138,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
-	tokensUpgradeService, err := upgrade.NewService(logger, ppm.PublicParams().QuantityPrecision, deserializer, ip)
+	tokensUpgradeService, err := upgrade.NewService(logger, ppm.PublicParams(context.Background()).QuantityPrecision, deserializer, ip)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token upgrade service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}

@@ -186,7 +186,7 @@ func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, e
 	logger.Debugf("received transaction with id [%s]", cctx.ID())
 	if !opt.NoTransactionVerification {
 		// Check that the transaction is valid
-		if err := cctx.IsValid(); err != nil {
+		if err := cctx.IsValid(context.Context()); err != nil {
 			return nil, errors.WithMessagef(err, "invalid transaction %s", cctx.ID())
 		}
 	}
@@ -289,14 +289,14 @@ func (t *Transaction) Inputs() (*token.InputStream, error) {
 	return t.TokenRequest.Inputs()
 }
 
-func (t *Transaction) InputsAndOutputs() (*token.InputStream, *token.OutputStream, map[string][]byte, error) {
-	return t.TokenRequest.InputsAndOutputs()
+func (t *Transaction) InputsAndOutputs(ctx context.Context) (*token.InputStream, *token.OutputStream, map[string][]byte, error) {
+	return t.TokenRequest.InputsAndOutputs(ctx)
 }
 
 // IsValid checks that the transaction is well-formed.
 // This means checking that the embedded TokenRequest is valid.
-func (t *Transaction) IsValid() error {
-	return t.TokenRequest.IsValid()
+func (t *Transaction) IsValid(ctx context.Context) error {
+	return t.TokenRequest.IsValid(ctx)
 }
 
 func (t *Transaction) MarshallToAudit() ([]byte, error) {
@@ -326,7 +326,7 @@ func (t *Transaction) Release() {
 	if err != nil {
 		logger.Warnf("failed to get token selector [%s]", err)
 	} else {
-		if err := sm.Unlock(t.ID()); err != nil {
+		if err := sm.Unlock(context.Background(), t.ID()); err != nil {
 			logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.ID(), err)
 		}
 	}

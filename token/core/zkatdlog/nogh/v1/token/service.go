@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
 	errors2 "errors"
 	"slices"
 
@@ -42,7 +43,7 @@ type TokensService struct {
 
 func NewTokensService(logger logging.Logger, publicParametersManager common.PublicParametersManager[*setup.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
 	// compute supported tokens
-	pp := publicParametersManager.PublicParams()
+	pp := publicParametersManager.PublicParams(context.Background())
 	maxPrecision := pp.RangeProofParams.BitLength
 
 	// dlog without graph hiding
@@ -103,7 +104,7 @@ func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata dr
 	// we support fabtoken.Type and comm.Type
 
 	// try first comm type
-	tok, issuer, recipients, format, err := s.deobfuscateAsCommType(output, outputMetadata)
+	tok, issuer, recipients, format, err := s.deobfuscateAsCommType(context.Background(), output, outputMetadata)
 	if err == nil {
 		return tok, issuer, recipients, format, nil
 	}
@@ -111,8 +112,8 @@ func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata dr
 	return s.deobfuscateAsFabtokenType(output, outputMetadata)
 }
 
-func (s *TokensService) deobfuscateAsCommType(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
-	_, metadata, tok, err := s.deserializeCommToken(output, outputMetadata, false)
+func (s *TokensService) deobfuscateAsCommType(ctx context.Context, output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
+	_, metadata, tok, err := s.deserializeCommToken(ctx, output, outputMetadata, false)
 	if err != nil {
 		return nil, nil, nil, "", errors.Wrapf(err, "failed to deobfuscate token")
 	}
@@ -151,7 +152,7 @@ func (s *TokensService) SupportedTokenFormats() []token.Format {
 	return s.SupportedTokenFormatList
 }
 
-func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []byte, metadataRaw []byte) (*Token, *Metadata, *UpgradeWitness, error) {
+func (s *TokensService) DeserializeToken(ctx context.Context, outputFormat token.Format, outputRaw []byte, metadataRaw []byte) (*Token, *Metadata, *UpgradeWitness, error) {
 	// Here we have to check if what we get in input is already as expected.
 	// If not, we need to check if a token upgrade is possible.
 	// If not, a failure is to be returned
@@ -161,7 +162,7 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 
 	if outputFormat == s.OutputTokenFormat {
 		// deserialize token with output token format
-		tok, meta, err := s.deserializeTokenWithOutputTokenFormat(outputRaw, metadataRaw)
+		tok, meta, err := s.deserializeTokenWithOutputTokenFormat(ctx, outputRaw, metadataRaw)
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "failed to deserialize token with output token format")
 		}
@@ -173,11 +174,11 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 	if !ok {
 		return nil, nil, nil, errors.Errorf("unsupported token format [%s]", outputFormat)
 	}
-	fabToken, value, err := ParseFabtokenToken(outputRaw, precision, s.PublicParametersManager.PublicParams().RangeProofParams.BitLength)
+	fabToken, value, err := ParseFabtokenToken(outputRaw, precision, s.PublicParametersManager.PublicParams(ctx).RangeProofParams.BitLength)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to unmarshal fabtoken token")
 	}
-	pp := s.PublicParametersManager.PublicParams()
+	pp := s.PublicParametersManager.PublicParams(ctx)
 	curve := math2.Curves[pp.Curve]
 	tokens, meta, err := GetTokensWithWitness([]uint64{value}, fabToken.Type, pp.PedersenGenerators, curve)
 	if err != nil {
@@ -196,9 +197,9 @@ func (s *TokensService) DeserializeToken(outputFormat token.Format, outputRaw []
 		}, nil
 }
 
-func (s *TokensService) deserializeTokenWithOutputTokenFormat(outputRaw []byte, metadataRaw []byte) (*Token, *Metadata, error) {
+func (s *TokensService) deserializeTokenWithOutputTokenFormat(ctx context.Context, outputRaw []byte, metadataRaw []byte) (*Token, *Metadata, error) {
 	// get zkatdlog token
-	output, err := s.getOutput(outputRaw, false)
+	output, err := s.getOutput(ctx, outputRaw, false)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting token output")
 	}
@@ -213,9 +214,9 @@ func (s *TokensService) deserializeTokenWithOutputTokenFormat(outputRaw []byte, 
 	return output, metadata, nil
 }
 
-func (s *TokensService) deserializeCommToken(outputRaw []byte, metadataRaw []byte, checkOwner bool) (*Token, *Metadata, *token.Token, error) {
+func (s *TokensService) deserializeCommToken(ctx context.Context, outputRaw []byte, metadataRaw []byte, checkOwner bool) (*Token, *Metadata, *token.Token, error) {
 	// get zkatdlog token
-	output, err := s.getOutput(outputRaw, checkOwner)
+	output, err := s.getOutput(ctx, outputRaw, checkOwner)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed getting token output")
 	}
@@ -226,7 +227,7 @@ func (s *TokensService) deserializeCommToken(outputRaw []byte, metadataRaw []byt
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to deserialize token metadata [%d][%v]", len(metadataRaw), metadataRaw)
 	}
-	pp := s.PublicParametersManager.PublicParams()
+	pp := s.PublicParametersManager.PublicParams(ctx)
 
 	tok, err := output.ToClear(metadata, pp)
 	if err != nil {
@@ -235,7 +236,7 @@ func (s *TokensService) deserializeCommToken(outputRaw []byte, metadataRaw []byt
 	return output, metadata, tok, nil
 }
 
-func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*Token, error) {
+func (s *TokensService) getOutput(ctx context.Context, outputRaw []byte, checkOwner bool) (*Token, error) {
 	output := &Token{}
 	if err := output.Deserialize(outputRaw); err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize token")
@@ -243,7 +244,7 @@ func (s *TokensService) getOutput(outputRaw []byte, checkOwner bool) (*Token, er
 	if checkOwner && len(output.Owner) == 0 {
 		return nil, errors.Errorf("token owner not found in output")
 	}
-	if err := math.CheckElement(output.Data, s.PublicParametersManager.PublicParams().Curve); err != nil {
+	if err := math.CheckElement(output.Data, s.PublicParametersManager.PublicParams(ctx).Curve); err != nil {
 		return nil, errors.Wrap(err, "data in invalid in output")
 	}
 	return output, nil

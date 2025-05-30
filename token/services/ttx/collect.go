@@ -53,7 +53,7 @@ func (c *collectActionsView) Call(context view.Context) (interface{}, error) {
 	ts := token.GetManagementService(context, token.WithChannel(c.tx.Channel()))
 
 	for _, actionTransfer := range c.actions.Transfers {
-		if w := ts.WalletManager().OwnerWallet(actionTransfer.From); w != nil {
+		if w := ts.WalletManager().OwnerWallet(context.Context(), actionTransfer.From); w != nil {
 			if err := c.collectLocal(context, actionTransfer, w); err != nil {
 				return nil, err
 			}
@@ -81,7 +81,7 @@ func (c *collectActionsView) collectLocal(context view.Context, actionTransfer *
 	if err != nil {
 		return errors.Wrapf(err, "cannot resolve long term network identity for [%s]", party)
 	}
-	if err := c.tx.TokenRequest.BindTo(es, longTermIdentity); err != nil {
+	if err := c.tx.TokenRequest.BindTo(context.Context(), es, longTermIdentity); err != nil {
 		return errors.Wrapf(err, "failed binding to [%s]", party.String())
 	}
 
@@ -128,7 +128,7 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 
 	// Check
 	txPayload.TokenRequest.SetTokenService(c.tx.TokenService())
-	if err := txPayload.TokenRequest.IsValid(); err != nil {
+	if err := txPayload.TokenRequest.IsValid(context.Context()); err != nil {
 		return errors.Wrap(err, "failed verifying response")
 	}
 
@@ -143,7 +143,7 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	if err != nil {
 		return errors.Wrapf(err, "cannot resolve long term network identity for [%s]", party)
 	}
-	if err := txPayload.TokenRequest.BindTo(es, longTermIdentity); err != nil {
+	if err := txPayload.TokenRequest.BindTo(context.Context(), es, longTermIdentity); err != nil {
 		return errors.Wrapf(err, "failed binding to [%s]", party.String())
 	}
 
@@ -172,7 +172,7 @@ func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
 	cctx := txBoxed.(*Transaction)
 
 	// Check that the transaction is valid
-	if err := cctx.IsValid(); err != nil {
+	if err := cctx.IsValid(context.Context()); err != nil {
 		return nil, errors.WithMessagef(err, "invalid transaction %s", cctx.ID())
 	}
 

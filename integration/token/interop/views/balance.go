@@ -42,17 +42,17 @@ type BalanceView struct {
 
 func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(b.TMSID))
-	wallet := tms.WalletManager().OwnerWallet(b.Wallet)
+	wallet := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
 	assert.NotNil(wallet, "failed to get wallet [%s]", b.Wallet)
 	precision := tms.PublicParametersManager().PublicParameters().Precision()
 
 	// owned
-	balance, err := wallet.Balance(token.WithType(b.Type))
+	balance, err := wallet.Balance(context.Context(), token.WithType(b.Type))
 	assert.NoError(err, "failed to get unspent tokens")
 
 	htlcWallet := htlc.Wallet(context, wallet)
 	// locked
-	lockedToTokens, err := htlcWallet.ListTokensIterator(token.WithType(b.Type))
+	lockedToTokens, err := htlcWallet.ListTokensIterator(context.Context(), token.WithType(b.Type))
 	assert.NoError(err, "failed to get locked tokens")
 	lockedSum, err := iterators.Reduce(lockedToTokens, token2.ToQuantitySum(precision))
 	assert.NoError(err, "failed to compute the sum of the htlc locked tokens")
@@ -60,7 +60,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	// expired
 	err = htlcWallet.DeleteExpiredReceivedTokens(context, token.WithType(b.Type))
 	assert.NoError(err, "failed to delete expired tokens")
-	expiredTokens, err := htlcWallet.ListExpiredReceivedTokensIterator(token.WithType(b.Type))
+	expiredTokens, err := htlcWallet.ListExpiredReceivedTokensIterator(context.Context(), token.WithType(b.Type))
 	assert.NoError(err, "failed to get expired tokens")
 	expiredSum, err := iterators.Reduce(expiredTokens, token2.ToQuantitySum(precision))
 	assert.NoError(err, "failed to compute the sum of the htlc expired tokens")

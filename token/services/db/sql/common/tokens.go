@@ -71,7 +71,7 @@ func newTokenStore(readDB, writeDB *sql.DB, tables tokenTables, ci common3.CondI
 	}
 }
 
-func (db *TokenStore) StoreToken(tr driver.TokenRecord, owners []string) (err error) {
+func (db *TokenStore) StoreToken(ctx context.Context, tr driver.TokenRecord, owners []string) (err error) {
 	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
 		return
@@ -89,7 +89,7 @@ func (db *TokenStore) StoreToken(tr driver.TokenRecord, owners []string) (err er
 }
 
 // DeleteTokens deletes multiple tokens at the same time (when spent, invalid or expired)
-func (db *TokenStore) DeleteTokens(deletedBy string, ids ...*token.ID) error {
+func (db *TokenStore) DeleteTokens(ctx context.Context, deletedBy string, ids ...*token.ID) error {
 	logger.Debugf("delete tokens [%s][%v]", deletedBy, ids)
 	if len(ids) == 0 {
 		return nil
@@ -109,7 +109,7 @@ func (db *TokenStore) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 }
 
 // IsMine just checks if the token is in the local storage and not deleted
-func (db *TokenStore) IsMine(txID string, index uint64) (bool, error) {
+func (db *TokenStore) IsMine(ctx context.Context, txID string, index uint64) (bool, error) {
 	query, args := q.Select().
 		FieldsByName("tx_id").
 		From(q.Table(db.table.Tokens)).
@@ -123,7 +123,7 @@ func (db *TokenStore) IsMine(txID string, index uint64) (bool, error) {
 }
 
 // UnspentTokensIterator returns an iterator over all unspent tokens
-func (db *TokenStore) UnspentTokensIterator() (tdriver.UnspentTokensIterator, error) {
+func (db *TokenStore) UnspentTokensIterator(ctx context.Context) (tdriver.UnspentTokensIterator, error) {
 	return db.UnspentTokensIteratorBy(context.TODO(), "", "")
 }
 
@@ -230,14 +230,14 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 }
 
 // Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-func (db *TokenStore) Balance(walletID string, typ token.Type) (uint64, error) {
-	return db.balance(driver.QueryTokenDetailsParams{
+func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (uint64, error) {
+	return db.balance(ctx, driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
 	})
 }
 
-func (db *TokenStore) balance(opts driver.QueryTokenDetailsParams) (uint64, error) {
+func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (uint64, error) {
 	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
 	query, args := q.Select().FieldsByName("SUM(amount)").
 		From(tokenTable.Join(ownershipTable, cond.And(
@@ -255,7 +255,7 @@ func (db *TokenStore) balance(opts driver.QueryTokenDetailsParams) (uint64, erro
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
-func (db *TokenStore) ListUnspentTokensBy(walletID string, typ token.Type) (*token.UnspentTokens, error) {
+func (db *TokenStore) ListUnspentTokensBy(ctx context.Context, walletID string, typ token.Type) (*token.UnspentTokens, error) {
 	logger.Debugf("list unspent token by [%s,%s]", walletID, typ)
 	it, err := db.UnspentTokensIteratorBy(context.TODO(), walletID, typ)
 	if err != nil {
@@ -269,9 +269,9 @@ func (db *TokenStore) ListUnspentTokensBy(walletID string, typ token.Type) (*tok
 }
 
 // ListUnspentTokens returns the list of unspent tokens
-func (db *TokenStore) ListUnspentTokens() (*token.UnspentTokens, error) {
+func (db *TokenStore) ListUnspentTokens(ctx context.Context) (*token.UnspentTokens, error) {
 	logger.Debugf("list unspent tokens...")
-	it, err := db.UnspentTokensIterator()
+	it, err := db.UnspentTokensIterator(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +283,7 @@ func (db *TokenStore) ListUnspentTokens() (*token.UnspentTokens, error) {
 }
 
 // ListAuditTokens returns the audited tokens associated to the passed ids
-func (db *TokenStore) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
+func (db *TokenStore) ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]*token.Token, error) {
 	if len(ids) == 0 {
 		return []*token.Token{}, nil
 	}
@@ -349,7 +349,7 @@ func (db *TokenStore) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) 
 }
 
 // ListHistoryIssuedTokens returns the list of issued tokens
-func (db *TokenStore) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
+func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error) {
 	query, args := q.Select().
 		FieldsByName("tx_id", "idx", "owner_raw", "token_type", "quantity", "issuer_raw").
 		From(q.Table(db.table.Tokens)).
@@ -372,7 +372,7 @@ func (db *TokenStore) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
 }
 
-func (db *TokenStore) GetTokenOutputs(ids []*token.ID, callback tdriver.QueryCallbackFunc) error {
+func (db *TokenStore) GetTokenOutputs(ctx context.Context, ids []*token.ID, callback tdriver.QueryCallbackFunc) error {
 	tokens, err := db.getLedgerToken(ids)
 	if err != nil {
 		return err
@@ -387,8 +387,8 @@ func (db *TokenStore) GetTokenOutputs(ids []*token.ID, callback tdriver.QueryCal
 
 // GetTokenMetadata retrieves the token metadata for the passed ids.
 // For each id, the callback is invoked to unmarshal the token metadata
-func (db *TokenStore) GetTokenMetadata(ids []*token.ID) ([][]byte, error) {
-	return db.GetAllTokenInfos(ids)
+func (db *TokenStore) GetTokenMetadata(ctx context.Context, ids []*token.ID) ([][]byte, error) {
+	return db.GetAllTokenInfos(ctx, ids)
 }
 
 // GetTokenOutputsAndMeta retrieves both the token output, metadata, and type for the passed ids.
@@ -404,7 +404,7 @@ func (db *TokenStore) GetTokenOutputsAndMeta(ctx context.Context, ids []*token.I
 }
 
 // GetAllTokenInfos retrieves the token information for the passed ids.
-func (db *TokenStore) GetAllTokenInfos(ids []*token.ID) ([][]byte, error) {
+func (db *TokenStore) GetAllTokenInfos(ctx context.Context, ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
 		return [][]byte{}, nil
 	}
@@ -512,7 +512,7 @@ func (db *TokenStore) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID
 }
 
 // GetTokens returns the owned tokens and their identifier keys for the passed ids.
-func (db *TokenStore) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
+func (db *TokenStore) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*token.Token, error) {
 	if len(inputs) == 0 {
 		return []*token.Token{}, nil
 	}
@@ -583,7 +583,7 @@ func (db *TokenStore) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 // QueryTokenDetails returns details about owned tokens, regardless if they have been spent or not.
 // Filters work cumulatively and may be left empty. If a token is owned by two enrollmentIDs and there
 // is no filter on enrollmentID, the token will be returned twice (once for each owner).
-func (db *TokenStore) QueryTokenDetails(params driver.QueryTokenDetailsParams) ([]driver.TokenDetails, error) {
+func (db *TokenStore) QueryTokenDetails(ctx context.Context, params driver.QueryTokenDetailsParams) ([]driver.TokenDetails, error) {
 	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
 	query, args := q.Select().
 		Fields(
@@ -613,7 +613,7 @@ func (db *TokenStore) QueryTokenDetails(params driver.QueryTokenDetailsParams) (
 
 // WhoDeletedTokens returns information about which transaction deleted the passed tokens.
 // The bool array is an indicator used to tell if the token at a given position has been deleted or not
-func (db *TokenStore) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error) {
+func (db *TokenStore) WhoDeletedTokens(ctx context.Context, inputs ...*token.ID) ([]string, []bool, error) {
 	if len(inputs) == 0 {
 		return []string{}, []bool{}, nil
 	}
@@ -686,10 +686,10 @@ func (db *TokenStore) TransactionExists(ctx context.Context, id string) (bool, e
 	return len(txID) > 0, err
 }
 
-func (db *TokenStore) StorePublicParams(raw []byte) error {
+func (db *TokenStore) StorePublicParams(ctx context.Context, raw []byte) error {
 	rawHash := hash.Hashable(raw).Raw()
 
-	if pps, err := db.PublicParamsByHash(rawHash); err == nil && len(pps) > 0 {
+	if pps, err := db.PublicParamsByHash(ctx, rawHash); err == nil && len(pps) > 0 {
 		logger.Debugf("public params [%s] already in the database", logging.Base64(rawHash))
 		// no need to update the public parameters
 		return nil
@@ -704,7 +704,7 @@ func (db *TokenStore) StorePublicParams(raw []byte) error {
 	return err
 }
 
-func (db *TokenStore) PublicParams() ([]byte, error) {
+func (db *TokenStore) PublicParams(ctx context.Context) ([]byte, error) {
 	query, args := q.Select().
 		FieldsByName("raw").
 		From(q.Table(db.table.PublicParams)).
@@ -715,7 +715,7 @@ func (db *TokenStore) PublicParams() ([]byte, error) {
 	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
-func (db *TokenStore) PublicParamsByHash(rawHash tdriver.PPHash) ([]byte, error) {
+func (db *TokenStore) PublicParamsByHash(ctx context.Context, rawHash tdriver.PPHash) ([]byte, error) {
 	query, args := q.Select().
 		FieldsByName("raw").
 		From(q.Table(db.table.PublicParams)).
@@ -725,7 +725,7 @@ func (db *TokenStore) PublicParamsByHash(rawHash tdriver.PPHash) ([]byte, error)
 	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
-func (db *TokenStore) StoreCertifications(certifications map[*token.ID][]byte) error {
+func (db *TokenStore) StoreCertifications(ctx context.Context, certifications map[*token.ID][]byte) error {
 	if len(certifications) == 0 {
 		return nil
 	}
@@ -748,7 +748,7 @@ func (db *TokenStore) StoreCertifications(certifications map[*token.ID][]byte) e
 	return nil
 }
 
-func (db *TokenStore) ExistsCertification(tokenID *token.ID) bool {
+func (db *TokenStore) ExistsCertification(ctx context.Context, tokenID *token.ID) bool {
 	if tokenID == nil {
 		return false
 	}
@@ -772,7 +772,7 @@ func (db *TokenStore) ExistsCertification(tokenID *token.ID) bool {
 	return result
 }
 
-func (db *TokenStore) GetCertifications(ids []*token.ID) ([][]byte, error) {
+func (db *TokenStore) GetCertifications(ctx context.Context, ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}

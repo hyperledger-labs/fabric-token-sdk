@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -45,11 +46,12 @@ var tokenLockDBCases = []struct {
 }
 
 func TestFully(t *testing.T, tokenLockDB driver.TokenLockStore, tokenTransactionDB driver.TokenTransactionStore) {
+	ctx := context.Background()
 	tx, err := tokenTransactionDB.BeginAtomicWrite()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.AddTokenRequest("apple", []byte("apple_tx_content"), nil, nil, driver2.PPHash("tr")))
+	assert.NoError(t, tx.AddTokenRequest(ctx, "apple", []byte("apple_tx_content"), nil, nil, driver2.PPHash("tr")))
 	assert.NoError(t, tx.Commit())
 
-	assert.NoError(t, tokenLockDB.Lock(&token.ID{TxId: "apple", Index: 0}, "pineapple"))
-	assert.NoError(t, tokenLockDB.Cleanup(1*time.Second))
+	assert.NoError(t, tokenLockDB.Lock(ctx, &token.ID{TxId: "apple", Index: 0}, "pineapple"))
+	assert.NoError(t, tokenLockDB.Cleanup(ctx, 1*time.Second))
 }

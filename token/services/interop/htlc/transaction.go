@@ -128,7 +128,7 @@ func (t *Transaction) Outputs() (*OutputStream, error) {
 }
 
 // Lock appends a lock action to the token request of the transaction
-func (t *Transaction) Lock(wallet *token.OwnerWallet, sender view.Identity, typ token2.Type, value uint64, recipient view.Identity, deadline time.Duration, opts ...token.TransferOption) ([]byte, error) {
+func (t *Transaction) Lock(ctx context.Context, wallet *token.OwnerWallet, sender view.Identity, typ token2.Type, value uint64, recipient view.Identity, deadline time.Duration, opts ...token.TransferOption) ([]byte, error) {
 	options, err := compileTransferOptions(opts...)
 	if err != nil {
 		return nil, err

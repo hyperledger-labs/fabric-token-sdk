@@ -193,12 +193,12 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return pp.([]byte), nil
 }
 
-func (n *Network) QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
-	return n.tokenQueryExecutor.QueryTokens(context, namespace, IDs)
+func (n *Network) QueryTokens(ctx context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
+	return n.tokenQueryExecutor.QueryTokens(ctx, namespace, IDs)
 }
 
-func (n *Network) AreTokensSpent(context context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
-	return n.spentTokenQueryExecutor.QuerySpentTokens(context, namespace, tokenIDs, meta)
+func (n *Network) AreTokensSpent(ctx context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
+	return n.spentTokenQueryExecutor.QuerySpentTokens(ctx, namespace, tokenIDs, meta)
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {

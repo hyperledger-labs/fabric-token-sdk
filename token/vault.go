@@ -46,13 +46,13 @@ func NewQueryEngine(logger logging.Logger, qe driver.QueryEngine, numRetries int
 }
 
 // IsMine returns true is the given token is in this vault and therefore owned by this client
-func (q *QueryEngine) IsMine(id *token.ID) (bool, error) {
-	return q.qe.IsMine(id)
+func (q *QueryEngine) IsMine(ctx context.Context, id *token.ID) (bool, error) {
+	return q.qe.IsMine(ctx, id)
 }
 
 // UnspentTokensIterator returns an iterator over all unspent tokens stored in the vault
-func (q *QueryEngine) UnspentTokensIterator() (*UnspentTokensIterator, error) {
-	it, err := q.qe.UnspentTokensIterator()
+func (q *QueryEngine) UnspentTokensIterator(ctx context.Context) (*UnspentTokensIterator, error) {
+	it, err := q.qe.UnspentTokensIterator(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -69,23 +69,23 @@ func (q *QueryEngine) UnspentTokensIteratorBy(ctx context.Context, id string, to
 }
 
 // ListUnspentTokens returns a list of all unspent tokens stored in the vault
-func (q *QueryEngine) ListUnspentTokens() (*token.UnspentTokens, error) {
-	return q.qe.ListUnspentTokens()
+func (q *QueryEngine) ListUnspentTokens(ctx context.Context) (*token.UnspentTokens, error) {
+	return q.qe.ListUnspentTokens(ctx)
 }
 
-func (q *QueryEngine) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
+func (q *QueryEngine) ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]*token.Token, error) {
 	var tokens []*token.Token
 	var err error
 
 	for i := 0; i < q.NumRetries; i++ {
-		tokens, err = q.qe.ListAuditTokens(ids...)
+		tokens, err = q.qe.ListAuditTokens(ctx, ids...)
 
 		if err != nil {
 			// check if there is any token id whose corresponding transaction is pending
 			// if there is, then wait a bit and retry to load the outputs
 			retry := false
 			for _, id := range ids {
-				pending, err := q.qe.IsPending(id)
+				pending, err := q.qe.IsPending(ctx, id)
 				if pending || err != nil {
 					q.logger.Warnf("cannot get audit token for id [%s] because the relative transaction is pending, retry at [%d]: with err [%s]", id, i, err)
 					if i == q.NumRetries-1 {
@@ -112,36 +112,36 @@ func (q *QueryEngine) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) 
 	return tokens, nil
 }
 
-func (q *QueryEngine) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
-	return q.qe.ListHistoryIssuedTokens()
+func (q *QueryEngine) ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error) {
+	return q.qe.ListHistoryIssuedTokens(ctx)
 }
 
 // PublicParams returns the public parameters stored in the vault
-func (q *QueryEngine) PublicParams() ([]byte, error) {
-	return q.qe.PublicParams()
+func (q *QueryEngine) PublicParams(ctx context.Context) ([]byte, error) {
+	return q.qe.PublicParams(ctx)
 }
 
 // GetTokens returns the tokens stored in the vault matching the given ids
-func (q *QueryEngine) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
-	tokens, err := q.qe.GetTokens(inputs...)
+func (q *QueryEngine) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*token.Token, error) {
+	tokens, err := q.qe.GetTokens(ctx, inputs...)
 	return tokens, err
 }
 
 // GetStatus returns the status of the passed transaction
-func (q *QueryEngine) GetStatus(txID string) (TxStatus, string, error) {
-	return q.qe.GetStatus(txID)
+func (q *QueryEngine) GetStatus(ctx context.Context, txID string) (TxStatus, string, error) {
+	return q.qe.GetStatus(ctx, txID)
 }
 
 // GetTokenOutputs retrieves the token output as stored on the ledger for the passed ids.
 // For each id, the callback is invoked to unmarshal the output
-func (q *QueryEngine) GetTokenOutputs(ds []*token.ID, f func(id *token.ID, tokenRaw []byte) error) error {
-	return q.qe.GetTokenOutputs(ds, f)
+func (q *QueryEngine) GetTokenOutputs(ctx context.Context, ds []*token.ID, f func(id *token.ID, tokenRaw []byte) error) error {
+	return q.qe.GetTokenOutputs(ctx, ds, f)
 }
 
 // WhoDeletedTokens returns info about who deleted the passed tokens.
 // The bool array is an indicator used to tell if the token at a given position has been deleted or not
-func (q *QueryEngine) WhoDeletedTokens(iDs ...*token.ID) ([]string, []bool, error) {
-	return q.qe.WhoDeletedTokens(iDs...)
+func (q *QueryEngine) WhoDeletedTokens(ctx context.Context, iDs ...*token.ID) ([]string, []bool, error) {
+	return q.qe.WhoDeletedTokens(ctx, iDs...)
 }
 
 func (q *QueryEngine) UnspentLedgerTokensIteratorBy(ctx context.Context) (driver.LedgerTokensIterator, error) {
@@ -152,12 +152,12 @@ type CertificationStorage struct {
 	c driver.CertificationStorage
 }
 
-func (c *CertificationStorage) Exists(id *token.ID) bool {
-	return c.c.Exists(id)
+func (c *CertificationStorage) Exists(ctx context.Context, id *token.ID) bool {
+	return c.c.Exists(ctx, id)
 }
 
-func (c *CertificationStorage) Store(certifications map[*token.ID][]byte) error {
-	return c.c.Store(certifications)
+func (c *CertificationStorage) Store(ctx context.Context, certifications map[*token.ID][]byte) error {
+	return c.c.Store(ctx, certifications)
 }
 
 // Vault models a token vault

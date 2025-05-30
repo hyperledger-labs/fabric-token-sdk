@@ -60,8 +60,8 @@ func (a *TxAuditor) Validate(tx *Transaction) error {
 	return a.auditor.Validate(tx.Context, tx.TokenRequest)
 }
 
-func (a *TxAuditor) Audit(tx *Transaction) (*token.InputStream, *token.OutputStream, error) {
-	return a.auditor.Audit(tx)
+func (a *TxAuditor) Audit(ctx context.Context, tx *Transaction) (*token.InputStream, *token.OutputStream, error) {
+	return a.auditor.Audit(ctx, tx)
 }
 
 // Release unlocks the passed enrollment IDs.
@@ -70,8 +70,8 @@ func (a *TxAuditor) Release(tx *Transaction) {
 }
 
 // Transactions returns an iterator of transaction records filtered by the given params.
-func (a *TxAuditor) Transactions(params QueryTransactionsParams, pagination Pagination) (*PageTransactionsIterator, error) {
-	return a.auditDB.Transactions(params, pagination)
+func (a *TxAuditor) Transactions(ctx context.Context, params QueryTransactionsParams, pagination Pagination) (*PageTransactionsIterator, error) {
+	return a.auditDB.Transactions(ctx, params, pagination)
 }
 
 // NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
@@ -89,12 +89,12 @@ func (a *TxAuditor) SetStatus(ctx context.Context, txID string, status driver.Tx
 	return a.auditDB.SetStatus(ctx, txID, status, message)
 }
 
-func (a *TxAuditor) GetTokenRequest(txID string) ([]byte, error) {
-	return a.auditor.GetTokenRequest(txID)
+func (a *TxAuditor) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
+	return a.auditor.GetTokenRequest(ctx, txID)
 }
 
-func (a *TxAuditor) Check(context context.Context) ([]string, error) {
-	return a.auditor.Check(context)
+func (a *TxAuditor) Check(ctx context.Context) ([]string, error) {
+	return a.auditor.Check(ctx)
 }
 
 type RegisterAuditorView struct {
@@ -284,7 +284,7 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	span.AddEvent("start_audit_approve_view")
 	defer span.AddEvent("end_audit_approve_view")
 	// Append audit records
-	if err := auditor.New(context, a.w).Append(a.tx); err != nil {
+	if err := auditor.New(context, a.w).Append(context.Context(), a.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed appending audit records for transaction %s", a.tx.ID())
 	}
 
@@ -297,7 +297,7 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", a.tx.TMSID())
 	}
-	if err := t.CacheRequest(a.tx.TMSID(), a.tx.TokenRequest); err != nil {
+	if err := t.CacheRequest(context.Context(), a.tx.TMSID(), a.tx.TokenRequest); err != nil {
 		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", a.tx.TokenRequest.Anchor, err)
 	}
 

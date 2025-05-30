@@ -210,7 +210,7 @@ func (fake *TransferService) TransferReturnsOnCall(i int, result1 driver.Transfe
 	}{result1, result2, result3}
 }
 
-func (fake *TransferService) VerifyTransfer(arg1 driver.TransferAction, arg2 []*driver.TransferOutputMetadata) error {
+func (fake *TransferService) VerifyTransfer(ctx context.Context, arg1 driver.TransferAction, arg2 []*driver.TransferOutputMetadata) error {
 	var arg2Copy []*driver.TransferOutputMetadata
 	if arg2 != nil {
 		arg2Copy = make([]*driver.TransferOutputMetadata, len(arg2))

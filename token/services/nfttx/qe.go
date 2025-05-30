@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package nfttx
 
 import (
+	"context"
 	"encoding/base64"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -22,7 +23,7 @@ var (
 )
 
 type vault interface {
-	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
+	GetTokens(ctx context.Context, inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
 type selector interface {
@@ -49,7 +50,7 @@ func NewQueryExecutor(sp token.ServiceProvider, wallet string, precision uint64,
 	}, nil
 }
 
-func (s *QueryExecutor) QueryByKey(state interface{}, key string, value string) error {
+func (s *QueryExecutor) QueryByKey(ctx context.Context, state interface{}, key string, value string) error {
 	ids, err := s.Filter(&jsonFilter{
 		q:     gojsonq.New(),
 		key:   key,
@@ -61,7 +62,7 @@ func (s *QueryExecutor) QueryByKey(state interface{}, key string, value string) 
 		}
 		return errors.Wrap(err, "failed to filter")
 	}
-	tokens, err := s.GetTokens(ids...)
+	tokens, err := s.GetTokens(ctx, ids...)
 	if err != nil {
 		return errors.Wrap(err, "failed to get tokens")
 	}

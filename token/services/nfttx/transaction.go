@@ -65,7 +65,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	}
 	logger.Debugf("received transaction with id [%s]", cctx.ID())
 	// Check that the transaction is valid
-	if err := cctx.IsValid(); err != nil {
+	if err := cctx.IsValid(context.Context()); err != nil {
 		return nil, errors.WithMessagef(err, "invalid transaction %s", cctx.ID())
 	}
 

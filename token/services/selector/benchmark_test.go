@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package selector
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"strconv"
@@ -25,9 +26,9 @@ import (
 type WalletIDByRawIdentityFunc func(rawIdentity []byte) string
 
 type Locker interface {
-	Lock(id *token2.ID, txID string, reclaim bool) (string, error)
+	Lock(ctx context.Context, id *token2.ID, txID string, reclaim bool) (string, error)
 	UnlockIDs(id ...*token2.ID) []*token2.ID
-	UnlockByTxID(txID string)
+	UnlockByTxID(ctx context.Context, txID string)
 	IsLocked(id *token2.ID) bool
 }
 

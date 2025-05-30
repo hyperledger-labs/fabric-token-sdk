@@ -23,7 +23,7 @@ type ONS interface {
 
 type GetTokensFunc = func() (*tokens.Service, error)
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
-type GetTokenRequestFunc = func(tms *token.ManagementService, txID string) ([]byte, error)
+type GetTokenRequestFunc = func(tms *token.ManagementService, ctx context.Context, txID string) ([]byte, error)
 
 type RWSetProcessor struct {
 	network         string
@@ -78,7 +78,7 @@ func (r *RWSetProcessor) tokenRequest(ctx context.Context, tx orion.ProcessTrans
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	}
-	trRaw, err := r.GetTokenRequest(tms, txID)
+	trRaw, err := r.GetTokenRequest(tms, ctx, txID)
 	if err != nil {
 		logger.Debugf("transaction [%s], failed getting token request [%s]", txID, err)
 		return errors.WithMessagef(err, "failed to get token request for [%s]", txID)

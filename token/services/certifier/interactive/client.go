@@ -30,12 +30,12 @@ const (
 var logger = logging.MustGetLogger()
 
 type QueryEngine interface {
-	UnspentTokensIterator() (*token2.UnspentTokensIterator, error)
+	UnspentTokensIterator(ctx context.Context) (*token2.UnspentTokensIterator, error)
 }
 
 type CertificationStorage interface {
-	Exists(id *token.ID) bool
-	Store(certifications map[*token.ID][]byte) error
+	Exists(ctx context.Context, id *token.ID) bool
+	Store(ctx context.Context, certifications map[*token.ID][]byte) error
 }
 
 type ViewManager interface {
@@ -96,14 +96,14 @@ func NewCertificationClient(
 	return cc
 }
 
-func (cc *CertificationClient) IsCertified(id *token.ID) bool {
-	return cc.certificationStorage.Exists(id)
+func (cc *CertificationClient) IsCertified(ctx context.Context, id *token.ID) bool {
+	return cc.certificationStorage.Exists(ctx, id)
 }
 
-func (cc *CertificationClient) RequestCertification(ids ...*token.ID) error {
+func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...*token.ID) error {
 	var toBeCertified []*token.ID
 	for _, id := range ids {
-		if !cc.IsCertified(id) {
+		if !cc.IsCertified(ctx, id) {
 			toBeCertified = append(toBeCertified, id)
 		}
 	}
@@ -130,7 +130,7 @@ func (cc *CertificationClient) RequestCertification(ids ...*token.ID) error {
 	if !ok {
 		return errors.Errorf("invalid type, expected map[token.ID][]byte")
 	}
-	if err := cc.certificationStorage.Store(certifications); err != nil {
+	if err := cc.certificationStorage.Store(context.Background(), certifications); err != nil {
 		return err
 	}
 	return nil
@@ -140,13 +140,13 @@ func (cc *CertificationClient) Scan() error {
 	logger.Debugf("check the certification of unspent tokens from the vault...")
 	// Check the unspent tokens
 
-	allTokens, err := cc.queryEngine.UnspentTokensIterator()
+	allTokens, err := cc.queryEngine.UnspentTokensIterator(cc.ctx)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get an iterator over unspent tokens")
 	}
 
 	tokenIds := iterators.Map(allTokens.UnspentTokensIterator, func(t *token.UnspentToken) (*token.ID, error) { return &t.Id, nil })
-	uncertifiedTokenIds := iterators.Filter(tokenIds, func(t *token.ID) bool { return !cc.certificationStorage.Exists(t) })
+	uncertifiedTokenIds := iterators.Filter(tokenIds, func(t *token.ID) bool { return !cc.certificationStorage.Exists(context.Background(), t) })
 	toBeCertified, err := iterators.ReadAllPointers(uncertifiedTokenIds)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to read tokens to be certified")
@@ -155,7 +155,7 @@ func (cc *CertificationClient) Scan() error {
 	if len(toBeCertified) != 0 {
 		// Request certification
 		logger.Debugf("request certification of [%v]", toBeCertified)
-		if err := cc.RequestCertification(toBeCertified...); err != nil {
+		if err := cc.RequestCertification(context.Background(), toBeCertified...); err != nil {
 			return errors.WithMessagef(err, "failed retrieving certification")
 		}
 		logger.Debugf("request certification of [%v] satisfied with no error", toBeCertified)
@@ -165,7 +165,7 @@ func (cc *CertificationClient) Scan() error {
 }
 
 func (cc *CertificationClient) Start() {
-	go cc.accumulatorCutter()
+	go cc.accumulatorCutter(context.Background())
 }
 
 func (cc *CertificationClient) OnReceive(event events.Event) {
@@ -196,7 +196,7 @@ func (cc *CertificationClient) OnReceive(event events.Event) {
 	}
 }
 
-func (cc *CertificationClient) accumulatorCutter() {
+func (cc *CertificationClient) accumulatorCutter(ctx context.Context) {
 	// TODO: introduce workers
 	timeout := time.NewTimer(5 * time.Second)
 	var accumulator []*token.ID
@@ -209,13 +209,13 @@ func (cc *CertificationClient) accumulatorCutter() {
 				logger.Debugf("Limit reached, certify accumulator...")
 				toCertify := accumulator
 				accumulator = nil
-				go cc.requestCertification(toCertify...)
+				go cc.requestCertification(ctx, toCertify...)
 			}
 		case <-timeout.C:
 			logger.Debugf("Timeout, certify accumulator...")
 			toCertify := accumulator
 			accumulator = nil
-			go cc.requestCertification(toCertify...)
+			go cc.requestCertification(ctx, toCertify...)
 		case <-cc.ctx.Done():
 			// time to close
 			return
@@ -223,7 +223,7 @@ func (cc *CertificationClient) accumulatorCutter() {
 	}
 }
 
-func (cc *CertificationClient) requestCertification(tokens ...*token.ID) {
+func (cc *CertificationClient) requestCertification(ctx context.Context, tokens ...*token.ID) {
 	if len(tokens) == 0 {
 		// no tokens passed, check the vault
 		logger.Debugf("request certification of 0 tokens, check the vault...")
@@ -233,7 +233,7 @@ func (cc *CertificationClient) requestCertification(tokens ...*token.ID) {
 		return
 	}
 	logger.Debugf("request certification of [%v]", tokens)
-	if err := cc.RequestCertification(tokens...); err != nil {
+	if err := cc.RequestCertification(ctx, tokens...); err != nil {
 		// push back the ids
 		logger.Warnf("failed retrieving certification [%s], push back token ids [%s]", err, tokens)
 		for _, id := range tokens {

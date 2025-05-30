@@ -7,13 +7,15 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/pkg/errors"
 )
 
 type TokenTransactionDB interface {
-	GetTokenRequest(txID string) ([]byte, error)
-	GetTransactionEndorsementAcks(id string) (map[string][]byte, error)
+	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
+	GetTransactionEndorsementAcks(ctx context.Context, id string) (map[string][]byte, error)
 }
 
 // TransactionInfo contains the transaction info.
@@ -37,13 +39,13 @@ func newTransactionInfoProvider(tms *token.ManagementService, ttxDB TokenTransac
 }
 
 // TransactionInfo returns the transaction info for the given transaction ID.
-func (a *TransactionInfoProvider) TransactionInfo(txID string) (*TransactionInfo, error) {
-	endorsementAcks, err := a.ttxDB.GetTransactionEndorsementAcks(txID)
+func (a *TransactionInfoProvider) TransactionInfo(ctx context.Context, txID string) (*TransactionInfo, error) {
+	endorsementAcks, err := a.ttxDB.GetTransactionEndorsementAcks(ctx, txID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load endorsement acks for [%s]", txID)
 	}
 
-	tr, err := a.ttxDB.GetTokenRequest(txID)
+	tr, err := a.ttxDB.GetTokenRequest(ctx, txID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load token request for [%s]", txID)
 	}

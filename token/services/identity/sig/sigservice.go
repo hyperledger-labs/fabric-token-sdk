@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sig
 
 import (
+	"context"
 	"reflect"
 	"runtime/debug"
 	"sync"
@@ -23,12 +24,12 @@ import (
 var logger = logging.MustGetLogger()
 
 type Storage interface {
-	StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
-	GetAuditInfo(id []byte) ([]byte, error)
-	StoreSignerInfo(id, info []byte) error
-	GetExistingSignerInfo(ids ...driver.Identity) ([]string, error)
-	SignerInfoExists(id []byte) (bool, error)
-	GetSignerInfo(identity []byte) ([]byte, error)
+	StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
+	GetAuditInfo(ctx context.Context, id []byte) ([]byte, error)
+	StoreSignerInfo(ctx context.Context, id, info []byte) error
+	GetExistingSignerInfo(ctx context.Context, ids ...driver.Identity) ([]string, error)
+	SignerInfoExists(ctx context.Context, id []byte) (bool, error)
+	GetSignerInfo(ctx context.Context, identity []byte) ([]byte, error)
 }
 
 type VerifierEntry struct {
@@ -97,7 +98,7 @@ func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer,
 
 	// store, if a failure happens then remove the entry
 	if o.storage != nil {
-		if err := o.storage.StoreSignerInfo(identity, signerInfo); err != nil {
+		if err := o.storage.StoreSignerInfo(context.Background(), identity, signerInfo); err != nil {
 			o.deleteSigner(idHash)
 			return errors.Wrap(err, "failed to store entry in storage for the passed signer")
 		}
@@ -156,7 +157,7 @@ func (o *Service) RegisterVerifier(identity driver.Identity, verifier driver.Ver
 	return nil
 }
 
-func (o *Service) AreMe(identities ...driver.Identity) []string {
+func (o *Service) AreMe(ctx context.Context, identities ...driver.Identity) []string {
 	logger.Debugf("is me [%s]?", identities)
 	idHashes := make([]string, len(identities))
 	for i, id := range identities {
@@ -183,7 +184,7 @@ func (o *Service) AreMe(identities ...driver.Identity) []string {
 	}
 
 	// check storage
-	found, err := o.storage.GetExistingSignerInfo(notFound...)
+	found, err := o.storage.GetExistingSignerInfo(ctx, notFound...)
 	if err != nil {
 		logger.Errorf("failed checking if a signer exists [%s]", err)
 		return result.ToSlice()
@@ -192,7 +193,7 @@ func (o *Service) AreMe(identities ...driver.Identity) []string {
 	return result.ToSlice()
 }
 
-func (o *Service) IsMe(identity driver.Identity) bool {
+func (o *Service) IsMe(ctx context.Context, identity driver.Identity) bool {
 	logger.Debugf("is me [%s]?", identity)
 	idHash := identity.UniqueID()
 
@@ -208,7 +209,7 @@ func (o *Service) IsMe(identity driver.Identity) bool {
 	// check storage
 	if o.storage != nil {
 		logger.Debugf("is me [%s]? ask the storage", identity)
-		exists, err := o.storage.SignerInfoExists(identity)
+		exists, err := o.storage.SignerInfoExists(ctx, identity)
 		if err != nil {
 			logger.Errorf("failed checking if a signer exists [%s]", err)
 		}
@@ -258,7 +259,7 @@ func (o *Service) getSigner(identity driver.Identity, idHash string) (driver.Sig
 	}
 	o.signers[idHash] = entry
 	if o.storage != nil {
-		if err := o.storage.StoreSignerInfo(identity, nil); err != nil {
+		if err := o.storage.StoreSignerInfo(context.Background(), identity, nil); err != nil {
 			return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
 		}
 	}
@@ -292,8 +293,8 @@ func (o *Service) deserializeSigner(identity driver.Identity) (driver.Signer, er
 	return signer, nil
 }
 
-func (o *Service) GetSignerInfo(identity driver.Identity) ([]byte, error) {
-	return o.storage.GetSignerInfo(identity)
+func (o *Service) GetSignerInfo(ctx context.Context, identity driver.Identity) ([]byte, error) {
+	return o.storage.GetSignerInfo(ctx, identity)
 }
 
 func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error) {

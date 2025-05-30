@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 
@@ -24,20 +25,21 @@ import (
 
 // AssertTokens checks that the tokens are or are not in the tokendb
 func AssertTokens(sp token.ServiceProvider, tx *ttx.Transaction, outputs *token.OutputStream, id view.Identity) {
+	ctx := context.Background()
 	db, err := tokendb.GetByTMSId(sp, tx.TokenService().ID())
 	assert.NoError(err, "failed to get token db for [%s]", tx.TokenService().ID())
 	for _, output := range outputs.Outputs() {
 		tokenID := output.ID(tx.ID())
-		if output.Owner.Equal(id) || tx.TokenService().SigService().IsMe(output.Owner) {
+		if output.Owner.Equal(id) || tx.TokenService().SigService().IsMe(ctx, output.Owner) {
 			// check it exists
-			toks, err := db.GetTokens(tokenID)
+			toks, err := db.GetTokens(ctx, tokenID)
 			assert.NoError(err, "failed to retrieve token [%s]", tokenID)
 			assert.Equal(1, len(toks), "expected one token")
 			assert.Equal(output.Quantity.Hex(), toks[0].Quantity, "token quantity mismatch")
 			assert.Equal(output.Type, toks[0].Type, "token type mismatch")
 		} else {
 			// check it does not exist
-			_, err := db.GetTokens(tokenID)
+			_, err := db.GetTokens(ctx, tokenID)
 			assert.Error(err, "token [%s] should not exist", tokenID)
 			assert.True(strings.Contains(err.Error(), "token not found"))
 		}

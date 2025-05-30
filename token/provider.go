@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -36,7 +38,7 @@ type SelectorManager interface {
 	// NewSelector returns a new Selector instance bound the passed id.
 	NewSelector(id string) (Selector, error)
 	// Unlock unlocks the tokens bound to the passed id, if any
-	Unlock(id string) error
+	Unlock(ctx context.Context, id string) error
 	// Close closes the selector and releases its memory/cpu resources
 	Close(id string) error
 }

@@ -6,13 +6,15 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type CertificationClient interface {
-	IsCertified(id *token2.ID) bool
-	RequestCertification(ids ...*token2.ID) error
+	IsCertified(ctx context.Context, id *token2.ID) bool
+	RequestCertification(ctx context.Context, ids ...*token2.ID) error
 }
 
 type CertificationService interface {

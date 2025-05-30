@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package nfttx
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -19,12 +21,12 @@ type OwnerWallet struct {
 	Precision uint64
 }
 
-func (o *OwnerWallet) QueryByKey(state interface{}, key string, value string) error {
+func (o *OwnerWallet) QueryByKey(ctx context.Context, state interface{}, key string, value string) error {
 	qe, err := NewQueryExecutor(o.ServiceProvider, o.ID(), o.Precision)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to create query executor")
 	}
-	return qe.QueryByKey(state, key, value)
+	return qe.QueryByKey(ctx, state, key, value)
 }
 
 // WithType returns a list token option that filter by the passed token type.
@@ -37,58 +39,58 @@ func WithType(tokenType token2.Type) token.ListTokensOption {
 }
 
 // MyWallet returns the default wallet, nil if not found.
-func MyWallet(sp token.ServiceProvider, opts ...token.ServiceOption) *OwnerWallet {
-	tms := token.GetManagementService(sp, opts...)
-	w := tms.WalletManager().OwnerWallet("")
+func MyWallet(context view.Context, opts ...token.ServiceOption) *OwnerWallet {
+	tms := token.GetManagementService(context, opts...)
+	w := tms.WalletManager().OwnerWallet(context.Context(), "")
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: context, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
 // MyWalletFromTx returns the default wallet for the tuple (network, channel, namespace) as identified by the passed
 // transaction. Returns nil if no wallet is found.
-func MyWalletFromTx(sp token.ServiceProvider, tx *Transaction) *OwnerWallet {
+func MyWalletFromTx(context view.Context, tx *Transaction) *OwnerWallet {
 	tms := token.GetManagementService(
-		sp,
+		context,
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
 		token.WithNamespace(tx.Namespace()),
 	)
-	w := tms.WalletManager().OwnerWallet("")
+	w := tms.WalletManager().OwnerWallet(context.Context(), "")
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: context, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
 // GetWallet returns the wallet whose id is the passed id.
 // If the passed id is empty, GetWallet has the same behaviour of MyWallet.
 // It returns nil, if no wallet is found.
-func GetWallet(sp token.ServiceProvider, id string, opts ...token.ServiceOption) *OwnerWallet {
-	tms := token.GetManagementService(sp, opts...)
-	w := tms.WalletManager().OwnerWallet(id)
+func GetWallet(context view.Context, id string, opts ...token.ServiceOption) *OwnerWallet {
+	tms := token.GetManagementService(context, opts...)
+	w := tms.WalletManager().OwnerWallet(context.Context(), id)
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: context, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
 // GetWalletForChannel returns the wallet whose id is the passed id for the passed channel.
 // If the passed id is empty, GetWalletForChannel has the same behaviour of MyWalletFromTx.
 // It returns nil, if no wallet is found.
-func GetWalletForChannel(sp token.ServiceProvider, channel, id string, opts ...token.ServiceOption) *OwnerWallet {
-	tms := token.GetManagementService(sp, append(opts, token.WithChannel(channel))...)
-	w := tms.WalletManager().OwnerWallet(id)
+func GetWalletForChannel(context view.Context, channel, id string, opts ...token.ServiceOption) *OwnerWallet {
+	tms := token.GetManagementService(context, append(opts, token.WithChannel(channel))...)
+	w := tms.WalletManager().OwnerWallet(context.Context(), id)
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: context, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
 // MyIssuerWallet returns the default issuer wallet, nil if not found
 func MyIssuerWallet(context view.Context, opts ...token.ServiceOption) *token.IssuerWallet {
-	w := token.GetManagementService(context, opts...).WalletManager().IssuerWallet("")
+	w := token.GetManagementService(context, opts...).WalletManager().IssuerWallet(context.Context(), "")
 	if w == nil {
 		return nil
 	}
@@ -98,8 +100,8 @@ func MyIssuerWallet(context view.Context, opts ...token.ServiceOption) *token.Is
 // GetIssuerWallet returns the issuer wallet whose id is the passed id.
 // If the passed id is empty, GetIssuerWallet has the same behaviour of MyIssuerWallet.
 // It returns nil, if no wallet is found.
-func GetIssuerWallet(sp token.ServiceProvider, id string, opts ...token.ServiceOption) *token.IssuerWallet {
-	w := token.GetManagementService(sp, opts...).WalletManager().IssuerWallet(id)
+func GetIssuerWallet(context view.Context, id string, opts ...token.ServiceOption) *token.IssuerWallet {
+	w := token.GetManagementService(context, opts...).WalletManager().IssuerWallet(context.Context(), id)
 	if w == nil {
 		return nil
 	}
@@ -109,8 +111,8 @@ func GetIssuerWallet(sp token.ServiceProvider, id string, opts ...token.ServiceO
 // GetIssuerWalletForChannel returns the issuer wallet whose id is the passed id for the passed channel.
 // If the passed id is empty, GetIssuerWalletForChannel has the same behaviour of MyIssuerWallet.
 // It returns nil, if no wallet is found.
-func GetIssuerWalletForChannel(sp token.ServiceProvider, channel, id string, opts ...token.ServiceOption) *token.IssuerWallet {
-	w := token.GetManagementService(sp, append(opts, token.WithChannel(channel))...).WalletManager().IssuerWallet(id)
+func GetIssuerWalletForChannel(context view.Context, channel, id string, opts ...token.ServiceOption) *token.IssuerWallet {
+	w := token.GetManagementService(context, append(opts, token.WithChannel(channel))...).WalletManager().IssuerWallet(context.Context(), id)
 	if w == nil {
 		return nil
 	}
@@ -118,8 +120,8 @@ func GetIssuerWalletForChannel(sp token.ServiceProvider, channel, id string, opt
 }
 
 // MyAuditorWallet returns the default auditor wallet, nil if not found.
-func MyAuditorWallet(sp token.ServiceProvider, opts ...token.ServiceOption) *token.AuditorWallet {
-	w := token.GetManagementService(sp, opts...).WalletManager().AuditorWallet("")
+func MyAuditorWallet(context view.Context, opts ...token.ServiceOption) *token.AuditorWallet {
+	w := token.GetManagementService(context, opts...).WalletManager().AuditorWallet(context.Context(), "")
 	if w == nil {
 		return nil
 	}

@@ -63,7 +63,7 @@ type OwnerWallet interface {
 	GetRecipientData() (*RecipientData, error)
 
 	// GetAuditInfo returns auditing information for the passed identity
-	GetAuditInfo(id Identity) ([]byte, error)
+	GetAuditInfo(ctx context.Context, id Identity) ([]byte, error)
 
 	// GetTokenMetadata returns the public information related to the token to be assigned to passed recipient identity.
 	GetTokenMetadata(id Identity) ([]byte, error)
@@ -78,13 +78,13 @@ type OwnerWallet interface {
 	ListTokensIterator(opts *ListTokensOptions) (UnspentTokensIterator, error)
 
 	// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-	Balance(opts *ListTokensOptions) (uint64, error)
+	Balance(ctx context.Context, opts *ListTokensOptions) (uint64, error)
 
 	// EnrollmentID returns the enrollment ID of the owner wallet
 	EnrollmentID() string
 
 	// RegisterRecipient register the given recipient data
-	RegisterRecipient(data *RecipientData) error
+	RegisterRecipient(ctx context.Context, data *RecipientData) error
 
 	// Remote returns true if this wallet is verify only, meaning that the corresponding secret key is external to this wallet
 	Remote() bool
@@ -99,7 +99,7 @@ type IssuerWallet interface {
 	GetIssuerIdentity(tokenType token.Type) (Identity, error)
 
 	// HistoryTokens returns the list of tokens issued by this wallet filtered using the passed options.
-	HistoryTokens(opts *ListTokensOptions) (*token.IssuedTokens, error)
+	HistoryTokens(ctx context.Context, opts *ListTokensOptions) (*token.IssuedTokens, error)
 }
 
 // AuditorWallet models the wallet of an auditor
@@ -141,12 +141,12 @@ type Authorization interface {
 	// It is possible that walletID is empty additionalOwners is not.
 	// If walletID is not empty, this means that the corresponding wallet can spend the token directly.
 	// If walletID is empty, then additionalOwners must cooperate in some way in order to spend the token.
-	IsMine(tok *token.Token) (walletID string, additionalOwners []string, mine bool)
+	IsMine(ctx context.Context, tok *token.Token) (walletID string, additionalOwners []string, mine bool)
 	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 	// defined in the public parameters of the passed TMS.
 	AmIAnAuditor() bool
 	// Issued returns true if the passed issuer issued the passed token
-	Issued(issuer Identity, tok *token.Token) bool
+	Issued(ctx context.Context, issuer Identity, tok *token.Token) bool
 	// OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
 	OwnerType(raw []byte) (string, []byte, error)
 }
@@ -159,7 +159,7 @@ type WalletService interface {
 	RegisterRecipientIdentity(data *RecipientData) error
 
 	// GetAuditInfo retrieves the audit information for the passed identity
-	GetAuditInfo(id Identity) ([]byte, error)
+	GetAuditInfo(ctx context.Context, id Identity) ([]byte, error)
 
 	// GetEnrollmentID extracts the enrollment id from the passed audit information
 	GetEnrollmentID(identity Identity, auditInfo []byte) (string, error)
@@ -171,32 +171,32 @@ type WalletService interface {
 	GetEIDAndRH(identity Identity, auditInfo []byte) (string, string, error)
 
 	// Wallet returns the wallet bound to the passed identity, if any is available
-	Wallet(identity Identity) Wallet
+	Wallet(ctx context.Context, identity Identity) Wallet
 
 	// RegisterOwnerIdentity registers an owner long-term identity
-	RegisterOwnerIdentity(config IdentityConfiguration) error
+	RegisterOwnerIdentity(ctx context.Context, config IdentityConfiguration) error
 
 	// RegisterIssuerIdentity registers an issuer long-term wallet
-	RegisterIssuerIdentity(config IdentityConfiguration) error
+	RegisterIssuerIdentity(ctx context.Context, config IdentityConfiguration) error
 
 	// OwnerWalletIDs returns the list of owner wallet identifiers
-	OwnerWalletIDs() ([]string, error)
+	OwnerWalletIDs(ctx context.Context) ([]string, error)
 
 	// OwnerWallet returns an instance of the OwnerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	OwnerWallet(id WalletLookupID) (OwnerWallet, error)
+	OwnerWallet(ctx context.Context, id WalletLookupID) (OwnerWallet, error)
 
 	// IssuerWallet returns an instance of the IssuerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	IssuerWallet(id WalletLookupID) (IssuerWallet, error)
+	IssuerWallet(ctx context.Context, id WalletLookupID) (IssuerWallet, error)
 
 	// AuditorWallet returns an instance of the AuditorWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	AuditorWallet(id WalletLookupID) (AuditorWallet, error)
+	AuditorWallet(ctx context.Context, id WalletLookupID) (AuditorWallet, error)
 
 	// CertifierWallet returns an instance of the CertifierWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	CertifierWallet(id WalletLookupID) (CertifierWallet, error)
+	CertifierWallet(ctx context.Context, id WalletLookupID) (CertifierWallet, error)
 
 	// SpendIDs returns the spend ids for the passed token ids
 	SpendIDs(ids ...*token.ID) ([]string, error)
@@ -217,7 +217,7 @@ type Matcher interface {
 // AuditInfoProvider models a provider of audit information
 type AuditInfoProvider interface {
 	// GetAuditInfo returns the audit information for the given identity, if available.
-	GetAuditInfo(identity Identity) ([]byte, error)
+	GetAuditInfo(ctx context.Context, identity Identity) ([]byte, error)
 }
 
 //go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
@@ -239,5 +239,5 @@ type Deserializer interface {
 	// An error otherwise.
 	MatchIdentity(identity Identity, info []byte) error
 	// GetAuditInfo returns the audit information for the passed identity
-	GetAuditInfo(id Identity, p AuditInfoProvider) ([]byte, error)
+	GetAuditInfo(ctx context.Context, id Identity, p AuditInfoProvider) ([]byte, error)
 }

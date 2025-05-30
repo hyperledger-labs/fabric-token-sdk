@@ -46,7 +46,7 @@ func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, er
 	// First, the initiator selects the tokens to upgrade, namely those that are unsupported.
 	tms := token.GetManagementService(context, token.WithTMSID(i.TMSID))
 	assert.NotNil(tms, "failed getting token management service for [%s]", i.TMSID)
-	w := tms.WalletManager().OwnerWallet(i.Wallet)
+	w := tms.WalletManager().OwnerWallet(context.Context(), i.Wallet)
 	assert.NotNil(w, "cannot find wallet [%s:%s]", i.TMSID, i.Wallet)
 
 	tokens, err := tokens.GetService(context, tms.ID())
@@ -64,7 +64,7 @@ func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, er
 	if i.RecipientData != nil {
 		// Use the passed RecipientData.
 		// First register it locally
-		assert.NoError(w.RegisterRecipient(i.RecipientData), "failed to register remote recipient")
+		assert.NoError(w.RegisterRecipient(context.Context(), i.RecipientData), "failed to register remote recipient")
 		// Then request upgrade
 		span.AddEvent("request_upgrade_for_recipient")
 		id, session, err = ttx.RequestTokensUpgradeForRecipient(
@@ -156,7 +156,7 @@ func (p *TokensUpgradeResponderView) Call(context view.Context) (interface{}, er
 		// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
 		// have been issued already including the current request.
 		// No check is performed for other types.
-		wallet := token.GetManagementService(context, token.WithTMSID(upgradeRequest.TMSID)).WalletManager().IssuerWallet("")
+		wallet := token.GetManagementService(context, token.WithTMSID(upgradeRequest.TMSID)).WalletManager().IssuerWallet(context.Context(), "")
 		assert.NotNil(wallet, "issuer wallet not found")
 
 		// At this point, the issuer is ready to prepare the token transaction.

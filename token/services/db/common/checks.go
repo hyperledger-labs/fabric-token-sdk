@@ -29,8 +29,8 @@ var (
 )
 
 type TokenTransactionDB interface {
-	GetTokenRequest(txID string) ([]byte, error)
-	Transactions(params driver.QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*driver.TransactionRecord], error)
+	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
+	Transactions(ctx context.Context, params driver.QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*driver.TransactionRecord], error)
 }
 
 type TokenManagementServiceProvider interface {
@@ -41,7 +41,7 @@ type NetworkProvider interface {
 	GetNetwork(network string, channel string) (*network.Network, error)
 }
 
-type Checker = func(context context.Context) ([]string, error)
+type Checker = func(ctx context.Context) ([]string, error)
 
 type NamedChecker struct {
 	Name    string
@@ -56,10 +56,10 @@ func NewChecksService(checkers []NamedChecker) *ChecksService {
 	return &ChecksService{checkers: checkers}
 }
 
-func (a *ChecksService) Check(context context.Context) ([]string, error) {
+func (a *ChecksService) Check(ctx context.Context) ([]string, error) {
 	var errorMessages []string
 	for _, checker := range a.checkers {
-		errs, err := checker.Checker(context)
+		errs, err := checker.Checker(ctx)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed checking with checker [%s]", checker.Name)
 		}
@@ -96,7 +96,7 @@ func NewDefaultCheckers(tmsProvider TokenManagementServiceProvider, networkProvi
 
 // CheckTransactions checks that for each transaction stored in the local database,
 // the status of this transaction matches the status of the transaction on the ledger.
-func (a *DefaultCheckers) CheckTransactions(context context.Context) ([]string, error) {
+func (a *DefaultCheckers) CheckTransactions(ctx context.Context) ([]string, error) {
 	var errorMessages []string
 
 	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
@@ -112,7 +112,7 @@ func (a *DefaultCheckers) CheckTransactions(context context.Context) ([]string, 
 		return nil, errors.WithMessagef(err, "failed to get ledger [%s]", tms.ID())
 	}
 
-	it, err := a.db.Transactions(driver.QueryTransactionsParams{}, pagination.None())
+	it, err := a.db.Transactions(ctx, driver.QueryTransactionsParams{}, pagination.None())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed querying transactions [%s]", tms.ID())
 	}
@@ -126,7 +126,7 @@ func (a *DefaultCheckers) CheckTransactions(context context.Context) ([]string, 
 			break
 		}
 
-		tokenRequest, err := a.db.GetTokenRequest(transactionRecord.TxID)
+		tokenRequest, err := a.db.GetTokenRequest(ctx, transactionRecord.TxID)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed getting token request [%s]", transactionRecord.TxID)
 		}
@@ -164,7 +164,7 @@ func (a *DefaultCheckers) CheckTransactions(context context.Context) ([]string, 
 }
 
 // CheckUnspentTokens checks that for each unspent token, the content of the local database matches the ledger
-func (a *DefaultCheckers) CheckUnspentTokens(context context.Context) ([]string, error) {
+func (a *DefaultCheckers) CheckUnspentTokens(ctx context.Context) ([]string, error) {
 	var errorMessages []string
 
 	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
@@ -176,7 +176,7 @@ func (a *DefaultCheckers) CheckUnspentTokens(context context.Context) ([]string,
 		return nil, errors.WithMessagef(err, "failed to get network [%s]", tms.ID())
 	}
 	qe := tms.Vault().NewQueryEngine()
-	uit, err := qe.UnspentTokensIterator()
+	uit, err := qe.UnspentTokensIterator(ctx)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed querying utxo engine")
 	}
@@ -192,7 +192,7 @@ func (a *DefaultCheckers) CheckUnspentTokens(context context.Context) ([]string,
 		}
 		unspentTokenIDs = append(unspentTokenIDs, &tok.Id)
 	}
-	ledgerTokenContent, err := net.QueryTokens(context, tms.Namespace(), unspentTokenIDs)
+	ledgerTokenContent, err := net.QueryTokens(ctx, tms.Namespace(), unspentTokenIDs)
 	if err != nil {
 		errorMessages = append(errorMessages, fmt.Sprintf("failed to query tokens: [%s]", err))
 	} else {
@@ -200,7 +200,7 @@ func (a *DefaultCheckers) CheckUnspentTokens(context context.Context) ([]string,
 			return nil, errors.Errorf("length diffrence")
 		}
 		index := 0
-		if err := qe.GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
+		if err := qe.GetTokenOutputs(ctx, unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
 			for _, content := range ledgerTokenContent {
 				if bytes.Equal(content, tokenRaw) {
 					return nil
@@ -223,7 +223,7 @@ func (a *DefaultCheckers) CheckUnspentTokens(context context.Context) ([]string,
 // - The token type is among the supported;
 // - The token is parsable;
 // - The token's recipients are still valid.
-func (a *DefaultCheckers) CheckTokenSpendability(context context.Context) ([]string, error) {
+func (a *DefaultCheckers) CheckTokenSpendability(ctx context.Context) ([]string, error) {
 	var errorMessages []string
 
 	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
@@ -231,7 +231,7 @@ func (a *DefaultCheckers) CheckTokenSpendability(context context.Context) ([]str
 		return nil, errors.WithMessagef(err, "failed getting tms [%s]", a.tmsID)
 	}
 	tv := tms.Vault()
-	uit, err := tv.NewQueryEngine().UnspentLedgerTokensIteratorBy(context)
+	uit, err := tv.NewQueryEngine().UnspentLedgerTokensIteratorBy(ctx)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed querying utxo engine")
 	}

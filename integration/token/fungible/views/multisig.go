@@ -67,7 +67,7 @@ func (lv *MultiSigLockView) Call(context view.Context) (txID interface{}, err er
 	assert.NoError(err, "failed creating transaction")
 
 	// lock
-	err = multisig.Wrap(tx).Lock(senderWallet, lv.Type, lv.Amount, recipient)
+	err = multisig.Wrap(tx).Lock(context.Context(), senderWallet, lv.Type, lv.Amount, recipient)
 	assert.NoError(err, "failed adding transfer action [%d:%v]", lv.Amount, recipient)
 
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
@@ -76,7 +76,7 @@ func (lv *MultiSigLockView) Call(context view.Context) (txID interface{}, err er
 	// Sanity checks:
 	// - the transaction is in pending state
 	owner := ttx.NewOwner(context, tx.TokenService())
-	vc, _, err := owner.GetStatus(tx.ID())
+	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
@@ -86,7 +86,7 @@ func (lv *MultiSigLockView) Call(context view.Context) (txID interface{}, err er
 
 	// Sanity checks:
 	// - the transaction is in confirmed state
-	vc, _, err = owner.GetStatus(tx.ID())
+	vc, _, err = owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 
@@ -129,7 +129,7 @@ func (r *MultiSigSpendView) Call(context view.Context) (res interface{}, err err
 	assert.NotNil(spendWallet, "wallet [%s] not found", r.Wallet)
 
 	// TODO: provides more ways to select multisig token
-	matched, err := multisig.Wallet(context, spendWallet).ListTokens()
+	matched, err := multisig.Wallet(context, spendWallet).ListTokens(context.Context())
 	assert.NoError(err, "failed to fetch multisig tokens")
 	assert.True(matched.Count() == 1, "expected only one multisig script to match, got [%d]", matched.Count())
 
@@ -181,7 +181,7 @@ func (m *MultiSigAcceptSpendView) Call(context view.Context) (interface{}, error
 	// Sanity checks:
 	// - the transaction is in pending state
 	owner := ttx.NewOwner(context, tx.TokenService())
-	vc, _, err := owner.GetStatus(tx.ID())
+	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
@@ -191,7 +191,7 @@ func (m *MultiSigAcceptSpendView) Call(context view.Context) (interface{}, error
 
 	// Sanity checks:
 	// - the transaction is in confirmed state
-	vc, _, err = owner.GetStatus(tx.ID())
+	vc, _, err = owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 

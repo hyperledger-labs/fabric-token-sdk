@@ -34,7 +34,7 @@ func (p *ListIssuedTokensView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(wallet, "wallet [%s] not found", p.Wallet)
 
 	// Return the list of issued tokens by type
-	return wallet.ListIssuedTokens(ttx.WithType(p.TokenType))
+	return wallet.ListIssuedTokens(context.Context(), ttx.WithType(p.TokenType))
 }
 
 type ListIssuedTokensViewFactory struct{}

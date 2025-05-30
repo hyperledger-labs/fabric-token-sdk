@@ -28,7 +28,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	tx, err := ttx.ReceiveTransaction(context)
 	assert.NoError(err, "failed receiving transaction")
 
-	assert.NoError(tx.IsValid(), "failed verifying transaction")
+	assert.NoError(tx.IsValid(context.Context()), "failed verifying transaction")
 
 	w := ttx.MyAuditorWallet(context, token.WithTMSID(tx.TokenService().ID()))
 	assert.NotNil(w, "failed getting default auditor wallet")
@@ -39,7 +39,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	// Check limits
 
 	// extract inputs and outputs
-	inputs, outputs, err := auditor.Audit(tx)
+	inputs, outputs, err := auditor.Audit(context.Context(), tx)
 	assert.NoError(err, "failed retrieving inputs and outputs")
 	defer auditor.Release(tx)
 

@@ -6,15 +6,19 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+import (
+	"context"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+)
 
 //go:generate counterfeiter -o mock/cc.go -fake-name CertificationClient . CertificationClient
 
 type CertificationClient interface {
 	// IsCertified returns true if the passed token-id has been already certified
-	IsCertified(id *token.ID) bool
+	IsCertified(ctx context.Context, id *token.ID) bool
 	// RequestCertification requests the certifications of the passed tokens
-	RequestCertification(ids ...*token.ID) error
+	RequestCertification(ctx context.Context, ids ...*token.ID) error
 }
 
 //go:generate counterfeiter -o mock/cs.go -fake-name CertificationService . CertificationService

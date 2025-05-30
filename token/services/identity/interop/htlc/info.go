@@ -7,13 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type AuditInfoProvider interface {
-	GetAuditInfo(identity driver.Identity) ([]byte, error)
+	GetAuditInfo(ctx context.Context, identity driver.Identity) ([]byte, error)
 }
 
 // ScriptInfo includes info about the sender and the recipient

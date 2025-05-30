@@ -10,11 +10,12 @@ import (
 )
 
 type QueryEngine struct {
-	BalanceStub        func(string, token.Type) (uint64, error)
+	BalanceStub        func(context.Context, string, token.Type) (uint64, error)
 	balanceMutex       sync.RWMutex
 	balanceArgsForCall []struct {
-		arg1 string
-		arg2 token.Type
+		arg1 context.Context
+		arg2 string
+		arg3 token.Type
 	}
 	balanceReturns struct {
 		result1 uint64
@@ -24,25 +25,27 @@ type QueryEngine struct {
 		result1 uint64
 		result2 error
 	}
-	GetStatusStub        func(string) (int, string, error)
+	GetStatusStub        func(context.Context, string) (driver.TxStatus, string, error)
 	getStatusMutex       sync.RWMutex
 	getStatusArgsForCall []struct {
-		arg1 string
+		arg1 context.Context
+		arg2 string
 	}
 	getStatusReturns struct {
-		result1 int
+		result1 driver.TxStatus
 		result2 string
 		result3 error
 	}
 	getStatusReturnsOnCall map[int]struct {
-		result1 int
+		result1 driver.TxStatus
 		result2 string
 		result3 error
 	}
-	GetTokenMetadataStub        func([]*token.ID) ([][]byte, error)
+	GetTokenMetadataStub        func(context.Context, []*token.ID) ([][]byte, error)
 	getTokenMetadataMutex       sync.RWMutex
 	getTokenMetadataArgsForCall []struct {
-		arg1 []*token.ID
+		arg1 context.Context
+		arg2 []*token.ID
 	}
 	getTokenMetadataReturns struct {
 		result1 [][]byte
@@ -52,11 +55,12 @@ type QueryEngine struct {
 		result1 [][]byte
 		result2 error
 	}
-	GetTokenOutputsStub        func([]*token.ID, driver.QueryCallbackFunc) error
+	GetTokenOutputsStub        func(context.Context, []*token.ID, driver.QueryCallbackFunc) error
 	getTokenOutputsMutex       sync.RWMutex
 	getTokenOutputsArgsForCall []struct {
-		arg1 []*token.ID
-		arg2 driver.QueryCallbackFunc
+		arg1 context.Context
+		arg2 []*token.ID
+		arg3 driver.QueryCallbackFunc
 	}
 	getTokenOutputsReturns struct {
 		result1 error
@@ -82,10 +86,11 @@ type QueryEngine struct {
 		result3 []token.Format
 		result4 error
 	}
-	GetTokensStub        func(...*token.ID) ([]*token.Token, error)
+	GetTokensStub        func(context.Context, ...*token.ID) ([]*token.Token, error)
 	getTokensMutex       sync.RWMutex
 	getTokensArgsForCall []struct {
-		arg1 []*token.ID
+		arg1 context.Context
+		arg2 []*token.ID
 	}
 	getTokensReturns struct {
 		result1 []*token.Token
@@ -95,10 +100,11 @@ type QueryEngine struct {
 		result1 []*token.Token
 		result2 error
 	}
-	IsMineStub        func(*token.ID) (bool, error)
+	IsMineStub        func(context.Context, *token.ID) (bool, error)
 	isMineMutex       sync.RWMutex
 	isMineArgsForCall []struct {
-		arg1 *token.ID
+		arg1 context.Context
+		arg2 *token.ID
 	}
 	isMineReturns struct {
 		result1 bool
@@ -108,10 +114,11 @@ type QueryEngine struct {
 		result1 bool
 		result2 error
 	}
-	IsPendingStub        func(*token.ID) (bool, error)
+	IsPendingStub        func(context.Context, *token.ID) (bool, error)
 	isPendingMutex       sync.RWMutex
 	isPendingArgsForCall []struct {
-		arg1 *token.ID
+		arg1 context.Context
+		arg2 *token.ID
 	}
 	isPendingReturns struct {
 		result1 bool
@@ -121,10 +128,11 @@ type QueryEngine struct {
 		result1 bool
 		result2 error
 	}
-	ListAuditTokensStub        func(...*token.ID) ([]*token.Token, error)
+	ListAuditTokensStub        func(context.Context, ...*token.ID) ([]*token.Token, error)
 	listAuditTokensMutex       sync.RWMutex
 	listAuditTokensArgsForCall []struct {
-		arg1 []*token.ID
+		arg1 context.Context
+		arg2 []*token.ID
 	}
 	listAuditTokensReturns struct {
 		result1 []*token.Token
@@ -134,9 +142,10 @@ type QueryEngine struct {
 		result1 []*token.Token
 		result2 error
 	}
-	ListHistoryIssuedTokensStub        func() (*token.IssuedTokens, error)
+	ListHistoryIssuedTokensStub        func(context.Context) (*token.IssuedTokens, error)
 	listHistoryIssuedTokensMutex       sync.RWMutex
 	listHistoryIssuedTokensArgsForCall []struct {
+		arg1 context.Context
 	}
 	listHistoryIssuedTokensReturns struct {
 		result1 *token.IssuedTokens
@@ -146,9 +155,10 @@ type QueryEngine struct {
 		result1 *token.IssuedTokens
 		result2 error
 	}
-	ListUnspentTokensStub        func() (*token.UnspentTokens, error)
+	ListUnspentTokensStub        func(context.Context) (*token.UnspentTokens, error)
 	listUnspentTokensMutex       sync.RWMutex
 	listUnspentTokensArgsForCall []struct {
+		arg1 context.Context
 	}
 	listUnspentTokensReturns struct {
 		result1 *token.UnspentTokens
@@ -158,9 +168,10 @@ type QueryEngine struct {
 		result1 *token.UnspentTokens
 		result2 error
 	}
-	PublicParamsStub        func() ([]byte, error)
+	PublicParamsStub        func(context.Context) ([]byte, error)
 	publicParamsMutex       sync.RWMutex
 	publicParamsArgsForCall []struct {
+		arg1 context.Context
 	}
 	publicParamsReturns struct {
 		result1 []byte
@@ -183,9 +194,10 @@ type QueryEngine struct {
 		result1 driver.LedgerTokensIterator
 		result2 error
 	}
-	UnspentTokensIteratorStub        func() (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorStub        func(context.Context) (driver.UnspentTokensIterator, error)
 	unspentTokensIteratorMutex       sync.RWMutex
 	unspentTokensIteratorArgsForCall []struct {
+		arg1 context.Context
 	}
 	unspentTokensIteratorReturns struct {
 		result1 driver.UnspentTokensIterator
@@ -210,10 +222,11 @@ type QueryEngine struct {
 		result1 driver.UnspentTokensIterator
 		result2 error
 	}
-	WhoDeletedTokensStub        func(...*token.ID) ([]string, []bool, error)
+	WhoDeletedTokensStub        func(context.Context, ...*token.ID) ([]string, []bool, error)
 	whoDeletedTokensMutex       sync.RWMutex
 	whoDeletedTokensArgsForCall []struct {
-		arg1 []*token.ID
+		arg1 context.Context
+		arg2 []*token.ID
 	}
 	whoDeletedTokensReturns struct {
 		result1 []string
@@ -229,19 +242,20 @@ type QueryEngine struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *QueryEngine) Balance(arg1 string, arg2 token.Type) (uint64, error) {
+func (fake *QueryEngine) Balance(arg1 context.Context, arg2 string, arg3 token.Type) (uint64, error) {
 	fake.balanceMutex.Lock()
 	ret, specificReturn := fake.balanceReturnsOnCall[len(fake.balanceArgsForCall)]
 	fake.balanceArgsForCall = append(fake.balanceArgsForCall, struct {
-		arg1 string
-		arg2 token.Type
-	}{arg1, arg2})
+		arg1 context.Context
+		arg2 string
+		arg3 token.Type
+	}{arg1, arg2, arg3})
 	stub := fake.BalanceStub
 	fakeReturns := fake.balanceReturns
-	fake.recordInvocation("Balance", []interface{}{arg1, arg2})
+	fake.recordInvocation("Balance", []interface{}{arg1, arg2, arg3})
 	fake.balanceMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -255,17 +269,17 @@ func (fake *QueryEngine) BalanceCallCount() int {
 	return len(fake.balanceArgsForCall)
 }
 
-func (fake *QueryEngine) BalanceCalls(stub func(string, token.Type) (uint64, error)) {
+func (fake *QueryEngine) BalanceCalls(stub func(context.Context, string, token.Type) (uint64, error)) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = stub
 }
 
-func (fake *QueryEngine) BalanceArgsForCall(i int) (string, token.Type) {
+func (fake *QueryEngine) BalanceArgsForCall(i int) (context.Context, string, token.Type) {
 	fake.balanceMutex.RLock()
 	defer fake.balanceMutex.RUnlock()
 	argsForCall := fake.balanceArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *QueryEngine) BalanceReturns(result1 uint64, result2 error) {
@@ -294,18 +308,19 @@ func (fake *QueryEngine) BalanceReturnsOnCall(i int, result1 uint64, result2 err
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) GetStatus(arg1 string) (int, string, error) {
+func (fake *QueryEngine) GetStatus(arg1 context.Context, arg2 string) (driver.TxStatus, string, error) {
 	fake.getStatusMutex.Lock()
 	ret, specificReturn := fake.getStatusReturnsOnCall[len(fake.getStatusArgsForCall)]
 	fake.getStatusArgsForCall = append(fake.getStatusArgsForCall, struct {
-		arg1 string
-	}{arg1})
+		arg1 context.Context
+		arg2 string
+	}{arg1, arg2})
 	stub := fake.GetStatusStub
 	fakeReturns := fake.getStatusReturns
-	fake.recordInvocation("GetStatus", []interface{}{arg1})
+	fake.recordInvocation("GetStatus", []interface{}{arg1, arg2})
 	fake.getStatusMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -319,65 +334,66 @@ func (fake *QueryEngine) GetStatusCallCount() int {
 	return len(fake.getStatusArgsForCall)
 }
 
-func (fake *QueryEngine) GetStatusCalls(stub func(string) (int, string, error)) {
+func (fake *QueryEngine) GetStatusCalls(stub func(context.Context, string) (driver.TxStatus, string, error)) {
 	fake.getStatusMutex.Lock()
 	defer fake.getStatusMutex.Unlock()
 	fake.GetStatusStub = stub
 }
 
-func (fake *QueryEngine) GetStatusArgsForCall(i int) string {
+func (fake *QueryEngine) GetStatusArgsForCall(i int) (context.Context, string) {
 	fake.getStatusMutex.RLock()
 	defer fake.getStatusMutex.RUnlock()
 	argsForCall := fake.getStatusArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *QueryEngine) GetStatusReturns(result1 int, result2 string, result3 error) {
+func (fake *QueryEngine) GetStatusReturns(result1 driver.TxStatus, result2 string, result3 error) {
 	fake.getStatusMutex.Lock()
 	defer fake.getStatusMutex.Unlock()
 	fake.GetStatusStub = nil
 	fake.getStatusReturns = struct {
-		result1 int
+		result1 driver.TxStatus
 		result2 string
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *QueryEngine) GetStatusReturnsOnCall(i int, result1 int, result2 string, result3 error) {
+func (fake *QueryEngine) GetStatusReturnsOnCall(i int, result1 driver.TxStatus, result2 string, result3 error) {
 	fake.getStatusMutex.Lock()
 	defer fake.getStatusMutex.Unlock()
 	fake.GetStatusStub = nil
 	if fake.getStatusReturnsOnCall == nil {
 		fake.getStatusReturnsOnCall = make(map[int]struct {
-			result1 int
+			result1 driver.TxStatus
 			result2 string
 			result3 error
 		})
 	}
 	fake.getStatusReturnsOnCall[i] = struct {
-		result1 int
+		result1 driver.TxStatus
 		result2 string
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *QueryEngine) GetTokenMetadata(arg1 []*token.ID) ([][]byte, error) {
-	var arg1Copy []*token.ID
-	if arg1 != nil {
-		arg1Copy = make([]*token.ID, len(arg1))
-		copy(arg1Copy, arg1)
+func (fake *QueryEngine) GetTokenMetadata(arg1 context.Context, arg2 []*token.ID) ([][]byte, error) {
+	var arg2Copy []*token.ID
+	if arg2 != nil {
+		arg2Copy = make([]*token.ID, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.getTokenMetadataMutex.Lock()
 	ret, specificReturn := fake.getTokenMetadataReturnsOnCall[len(fake.getTokenMetadataArgsForCall)]
 	fake.getTokenMetadataArgsForCall = append(fake.getTokenMetadataArgsForCall, struct {
-		arg1 []*token.ID
-	}{arg1Copy})
+		arg1 context.Context
+		arg2 []*token.ID
+	}{arg1, arg2Copy})
 	stub := fake.GetTokenMetadataStub
 	fakeReturns := fake.getTokenMetadataReturns
-	fake.recordInvocation("GetTokenMetadata", []interface{}{arg1Copy})
+	fake.recordInvocation("GetTokenMetadata", []interface{}{arg1, arg2Copy})
 	fake.getTokenMetadataMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -391,17 +407,17 @@ func (fake *QueryEngine) GetTokenMetadataCallCount() int {
 	return len(fake.getTokenMetadataArgsForCall)
 }
 
-func (fake *QueryEngine) GetTokenMetadataCalls(stub func([]*token.ID) ([][]byte, error)) {
+func (fake *QueryEngine) GetTokenMetadataCalls(stub func(context.Context, []*token.ID) ([][]byte, error)) {
 	fake.getTokenMetadataMutex.Lock()
 	defer fake.getTokenMetadataMutex.Unlock()
 	fake.GetTokenMetadataStub = stub
 }
 
-func (fake *QueryEngine) GetTokenMetadataArgsForCall(i int) []*token.ID {
+func (fake *QueryEngine) GetTokenMetadataArgsForCall(i int) (context.Context, []*token.ID) {
 	fake.getTokenMetadataMutex.RLock()
 	defer fake.getTokenMetadataMutex.RUnlock()
 	argsForCall := fake.getTokenMetadataArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *QueryEngine) GetTokenMetadataReturns(result1 [][]byte, result2 error) {
@@ -430,24 +446,25 @@ func (fake *QueryEngine) GetTokenMetadataReturnsOnCall(i int, result1 [][]byte, 
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) GetTokenOutputs(arg1 []*token.ID, arg2 driver.QueryCallbackFunc) error {
-	var arg1Copy []*token.ID
-	if arg1 != nil {
-		arg1Copy = make([]*token.ID, len(arg1))
-		copy(arg1Copy, arg1)
+func (fake *QueryEngine) GetTokenOutputs(arg1 context.Context, arg2 []*token.ID, arg3 driver.QueryCallbackFunc) error {
+	var arg2Copy []*token.ID
+	if arg2 != nil {
+		arg2Copy = make([]*token.ID, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.getTokenOutputsMutex.Lock()
 	ret, specificReturn := fake.getTokenOutputsReturnsOnCall[len(fake.getTokenOutputsArgsForCall)]
 	fake.getTokenOutputsArgsForCall = append(fake.getTokenOutputsArgsForCall, struct {
-		arg1 []*token.ID
-		arg2 driver.QueryCallbackFunc
-	}{arg1Copy, arg2})
+		arg1 context.Context
+		arg2 []*token.ID
+		arg3 driver.QueryCallbackFunc
+	}{arg1, arg2Copy, arg3})
 	stub := fake.GetTokenOutputsStub
 	fakeReturns := fake.getTokenOutputsReturns
-	fake.recordInvocation("GetTokenOutputs", []interface{}{arg1Copy, arg2})
+	fake.recordInvocation("GetTokenOutputs", []interface{}{arg1, arg2Copy, arg3})
 	fake.getTokenOutputsMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -461,17 +478,17 @@ func (fake *QueryEngine) GetTokenOutputsCallCount() int {
 	return len(fake.getTokenOutputsArgsForCall)
 }
 
-func (fake *QueryEngine) GetTokenOutputsCalls(stub func([]*token.ID, driver.QueryCallbackFunc) error) {
+func (fake *QueryEngine) GetTokenOutputsCalls(stub func(context.Context, []*token.ID, driver.QueryCallbackFunc) error) {
 	fake.getTokenOutputsMutex.Lock()
 	defer fake.getTokenOutputsMutex.Unlock()
 	fake.GetTokenOutputsStub = stub
 }
 
-func (fake *QueryEngine) GetTokenOutputsArgsForCall(i int) ([]*token.ID, driver.QueryCallbackFunc) {
+func (fake *QueryEngine) GetTokenOutputsArgsForCall(i int) (context.Context, []*token.ID, driver.QueryCallbackFunc) {
 	fake.getTokenOutputsMutex.RLock()
 	defer fake.getTokenOutputsMutex.RUnlock()
 	argsForCall := fake.getTokenOutputsArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *QueryEngine) GetTokenOutputsReturns(result1 error) {
@@ -573,18 +590,19 @@ func (fake *QueryEngine) GetTokenOutputsAndMetaReturnsOnCall(i int, result1 [][]
 	}{result1, result2, result3, result4}
 }
 
-func (fake *QueryEngine) GetTokens(arg1 ...*token.ID) ([]*token.Token, error) {
+func (fake *QueryEngine) GetTokens(arg1 context.Context, arg2 ...*token.ID) ([]*token.Token, error) {
 	fake.getTokensMutex.Lock()
 	ret, specificReturn := fake.getTokensReturnsOnCall[len(fake.getTokensArgsForCall)]
 	fake.getTokensArgsForCall = append(fake.getTokensArgsForCall, struct {
-		arg1 []*token.ID
-	}{arg1})
+		arg1 context.Context
+		arg2 []*token.ID
+	}{arg1, arg2})
 	stub := fake.GetTokensStub
 	fakeReturns := fake.getTokensReturns
-	fake.recordInvocation("GetTokens", []interface{}{arg1})
+	fake.recordInvocation("GetTokens", []interface{}{arg1, arg2})
 	fake.getTokensMutex.Unlock()
 	if stub != nil {
-		return stub(arg1...)
+		return stub(arg1, arg2...)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -598,17 +616,17 @@ func (fake *QueryEngine) GetTokensCallCount() int {
 	return len(fake.getTokensArgsForCall)
 }
 
-func (fake *QueryEngine) GetTokensCalls(stub func(...*token.ID) ([]*token.Token, error)) {
+func (fake *QueryEngine) GetTokensCalls(stub func(context.Context, ...*token.ID) ([]*token.Token, error)) {
 	fake.getTokensMutex.Lock()
 	defer fake.getTokensMutex.Unlock()
 	fake.GetTokensStub = stub
 }
 
-func (fake *QueryEngine) GetTokensArgsForCall(i int) []*token.ID {
+func (fake *QueryEngine) GetTokensArgsForCall(i int) (context.Context, []*token.ID) {
 	fake.getTokensMutex.RLock()
 	defer fake.getTokensMutex.RUnlock()
 	argsForCall := fake.getTokensArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *QueryEngine) GetTokensReturns(result1 []*token.Token, result2 error) {
@@ -637,18 +655,19 @@ func (fake *QueryEngine) GetTokensReturnsOnCall(i int, result1 []*token.Token, r
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) IsMine(arg1 *token.ID) (bool, error) {
+func (fake *QueryEngine) IsMine(arg1 context.Context, arg2 *token.ID) (bool, error) {
 	fake.isMineMutex.Lock()
 	ret, specificReturn := fake.isMineReturnsOnCall[len(fake.isMineArgsForCall)]
 	fake.isMineArgsForCall = append(fake.isMineArgsForCall, struct {
-		arg1 *token.ID
-	}{arg1})
+		arg1 context.Context
+		arg2 *token.ID
+	}{arg1, arg2})
 	stub := fake.IsMineStub
 	fakeReturns := fake.isMineReturns
-	fake.recordInvocation("IsMine", []interface{}{arg1})
+	fake.recordInvocation("IsMine", []interface{}{arg1, arg2})
 	fake.isMineMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -662,17 +681,17 @@ func (fake *QueryEngine) IsMineCallCount() int {
 	return len(fake.isMineArgsForCall)
 }
 
-func (fake *QueryEngine) IsMineCalls(stub func(*token.ID) (bool, error)) {
+func (fake *QueryEngine) IsMineCalls(stub func(context.Context, *token.ID) (bool, error)) {
 	fake.isMineMutex.Lock()
 	defer fake.isMineMutex.Unlock()
 	fake.IsMineStub = stub
 }
 
-func (fake *QueryEngine) IsMineArgsForCall(i int) *token.ID {
+func (fake *QueryEngine) IsMineArgsForCall(i int) (context.Context, *token.ID) {
 	fake.isMineMutex.RLock()
 	defer fake.isMineMutex.RUnlock()
 	argsForCall := fake.isMineArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *QueryEngine) IsMineReturns(result1 bool, result2 error) {
@@ -701,18 +720,19 @@ func (fake *QueryEngine) IsMineReturnsOnCall(i int, result1 bool, result2 error)
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) IsPending(arg1 *token.ID) (bool, error) {
+func (fake *QueryEngine) IsPending(arg1 context.Context, arg2 *token.ID) (bool, error) {
 	fake.isPendingMutex.Lock()
 	ret, specificReturn := fake.isPendingReturnsOnCall[len(fake.isPendingArgsForCall)]
 	fake.isPendingArgsForCall = append(fake.isPendingArgsForCall, struct {
-		arg1 *token.ID
-	}{arg1})
+		arg1 context.Context
+		arg2 *token.ID
+	}{arg1, arg2})
 	stub := fake.IsPendingStub
 	fakeReturns := fake.isPendingReturns
-	fake.recordInvocation("IsPending", []interface{}{arg1})
+	fake.recordInvocation("IsPending", []interface{}{arg1, arg2})
 	fake.isPendingMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -726,17 +746,17 @@ func (fake *QueryEngine) IsPendingCallCount() int {
 	return len(fake.isPendingArgsForCall)
 }
 
-func (fake *QueryEngine) IsPendingCalls(stub func(*token.ID) (bool, error)) {
+func (fake *QueryEngine) IsPendingCalls(stub func(context.Context, *token.ID) (bool, error)) {
 	fake.isPendingMutex.Lock()
 	defer fake.isPendingMutex.Unlock()
 	fake.IsPendingStub = stub
 }
 
-func (fake *QueryEngine) IsPendingArgsForCall(i int) *token.ID {
+func (fake *QueryEngine) IsPendingArgsForCall(i int) (context.Context, *token.ID) {
 	fake.isPendingMutex.RLock()
 	defer fake.isPendingMutex.RUnlock()
 	argsForCall := fake.isPendingArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *QueryEngine) IsPendingReturns(result1 bool, result2 error) {
@@ -765,18 +785,19 @@ func (fake *QueryEngine) IsPendingReturnsOnCall(i int, result1 bool, result2 err
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) ListAuditTokens(arg1 ...*token.ID) ([]*token.Token, error) {
+func (fake *QueryEngine) ListAuditTokens(arg1 context.Context, arg2 ...*token.ID) ([]*token.Token, error) {
 	fake.listAuditTokensMutex.Lock()
 	ret, specificReturn := fake.listAuditTokensReturnsOnCall[len(fake.listAuditTokensArgsForCall)]
 	fake.listAuditTokensArgsForCall = append(fake.listAuditTokensArgsForCall, struct {
-		arg1 []*token.ID
-	}{arg1})
+		arg1 context.Context
+		arg2 []*token.ID
+	}{arg1, arg2})
 	stub := fake.ListAuditTokensStub
 	fakeReturns := fake.listAuditTokensReturns
-	fake.recordInvocation("ListAuditTokens", []interface{}{arg1})
+	fake.recordInvocation("ListAuditTokens", []interface{}{arg1, arg2})
 	fake.listAuditTokensMutex.Unlock()
 	if stub != nil {
-		return stub(arg1...)
+		return stub(arg1, arg2...)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -790,17 +811,17 @@ func (fake *QueryEngine) ListAuditTokensCallCount() int {
 	return len(fake.listAuditTokensArgsForCall)
 }
 
-func (fake *QueryEngine) ListAuditTokensCalls(stub func(...*token.ID) ([]*token.Token, error)) {
+func (fake *QueryEngine) ListAuditTokensCalls(stub func(context.Context, ...*token.ID) ([]*token.Token, error)) {
 	fake.listAuditTokensMutex.Lock()
 	defer fake.listAuditTokensMutex.Unlock()
 	fake.ListAuditTokensStub = stub
 }
 
-func (fake *QueryEngine) ListAuditTokensArgsForCall(i int) []*token.ID {
+func (fake *QueryEngine) ListAuditTokensArgsForCall(i int) (context.Context, []*token.ID) {
 	fake.listAuditTokensMutex.RLock()
 	defer fake.listAuditTokensMutex.RUnlock()
 	argsForCall := fake.listAuditTokensArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *QueryEngine) ListAuditTokensReturns(result1 []*token.Token, result2 error) {
@@ -829,17 +850,18 @@ func (fake *QueryEngine) ListAuditTokensReturnsOnCall(i int, result1 []*token.To
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
+func (fake *QueryEngine) ListHistoryIssuedTokens(arg1 context.Context) (*token.IssuedTokens, error) {
 	fake.listHistoryIssuedTokensMutex.Lock()
 	ret, specificReturn := fake.listHistoryIssuedTokensReturnsOnCall[len(fake.listHistoryIssuedTokensArgsForCall)]
 	fake.listHistoryIssuedTokensArgsForCall = append(fake.listHistoryIssuedTokensArgsForCall, struct {
-	}{})
+		arg1 context.Context
+	}{arg1})
 	stub := fake.ListHistoryIssuedTokensStub
 	fakeReturns := fake.listHistoryIssuedTokensReturns
-	fake.recordInvocation("ListHistoryIssuedTokens", []interface{}{})
+	fake.recordInvocation("ListHistoryIssuedTokens", []interface{}{arg1})
 	fake.listHistoryIssuedTokensMutex.Unlock()
 	if stub != nil {
-		return stub()
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -853,10 +875,17 @@ func (fake *QueryEngine) ListHistoryIssuedTokensCallCount() int {
 	return len(fake.listHistoryIssuedTokensArgsForCall)
 }
 
-func (fake *QueryEngine) ListHistoryIssuedTokensCalls(stub func() (*token.IssuedTokens, error)) {
+func (fake *QueryEngine) ListHistoryIssuedTokensCalls(stub func(context.Context) (*token.IssuedTokens, error)) {
 	fake.listHistoryIssuedTokensMutex.Lock()
 	defer fake.listHistoryIssuedTokensMutex.Unlock()
 	fake.ListHistoryIssuedTokensStub = stub
+}
+
+func (fake *QueryEngine) ListHistoryIssuedTokensArgsForCall(i int) context.Context {
+	fake.listHistoryIssuedTokensMutex.RLock()
+	defer fake.listHistoryIssuedTokensMutex.RUnlock()
+	argsForCall := fake.listHistoryIssuedTokensArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *QueryEngine) ListHistoryIssuedTokensReturns(result1 *token.IssuedTokens, result2 error) {
@@ -885,17 +914,18 @@ func (fake *QueryEngine) ListHistoryIssuedTokensReturnsOnCall(i int, result1 *to
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) ListUnspentTokens() (*token.UnspentTokens, error) {
+func (fake *QueryEngine) ListUnspentTokens(arg1 context.Context) (*token.UnspentTokens, error) {
 	fake.listUnspentTokensMutex.Lock()
 	ret, specificReturn := fake.listUnspentTokensReturnsOnCall[len(fake.listUnspentTokensArgsForCall)]
 	fake.listUnspentTokensArgsForCall = append(fake.listUnspentTokensArgsForCall, struct {
-	}{})
+		arg1 context.Context
+	}{arg1})
 	stub := fake.ListUnspentTokensStub
 	fakeReturns := fake.listUnspentTokensReturns
-	fake.recordInvocation("ListUnspentTokens", []interface{}{})
+	fake.recordInvocation("ListUnspentTokens", []interface{}{arg1})
 	fake.listUnspentTokensMutex.Unlock()
 	if stub != nil {
-		return stub()
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -909,10 +939,17 @@ func (fake *QueryEngine) ListUnspentTokensCallCount() int {
 	return len(fake.listUnspentTokensArgsForCall)
 }
 
-func (fake *QueryEngine) ListUnspentTokensCalls(stub func() (*token.UnspentTokens, error)) {
+func (fake *QueryEngine) ListUnspentTokensCalls(stub func(context.Context) (*token.UnspentTokens, error)) {
 	fake.listUnspentTokensMutex.Lock()
 	defer fake.listUnspentTokensMutex.Unlock()
 	fake.ListUnspentTokensStub = stub
+}
+
+func (fake *QueryEngine) ListUnspentTokensArgsForCall(i int) context.Context {
+	fake.listUnspentTokensMutex.RLock()
+	defer fake.listUnspentTokensMutex.RUnlock()
+	argsForCall := fake.listUnspentTokensArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *QueryEngine) ListUnspentTokensReturns(result1 *token.UnspentTokens, result2 error) {
@@ -941,17 +978,18 @@ func (fake *QueryEngine) ListUnspentTokensReturnsOnCall(i int, result1 *token.Un
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) PublicParams() ([]byte, error) {
+func (fake *QueryEngine) PublicParams(arg1 context.Context) ([]byte, error) {
 	fake.publicParamsMutex.Lock()
 	ret, specificReturn := fake.publicParamsReturnsOnCall[len(fake.publicParamsArgsForCall)]
 	fake.publicParamsArgsForCall = append(fake.publicParamsArgsForCall, struct {
-	}{})
+		arg1 context.Context
+	}{arg1})
 	stub := fake.PublicParamsStub
 	fakeReturns := fake.publicParamsReturns
-	fake.recordInvocation("PublicParams", []interface{}{})
+	fake.recordInvocation("PublicParams", []interface{}{arg1})
 	fake.publicParamsMutex.Unlock()
 	if stub != nil {
-		return stub()
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -965,10 +1003,17 @@ func (fake *QueryEngine) PublicParamsCallCount() int {
 	return len(fake.publicParamsArgsForCall)
 }
 
-func (fake *QueryEngine) PublicParamsCalls(stub func() ([]byte, error)) {
+func (fake *QueryEngine) PublicParamsCalls(stub func(context.Context) ([]byte, error)) {
 	fake.publicParamsMutex.Lock()
 	defer fake.publicParamsMutex.Unlock()
 	fake.PublicParamsStub = stub
+}
+
+func (fake *QueryEngine) PublicParamsArgsForCall(i int) context.Context {
+	fake.publicParamsMutex.RLock()
+	defer fake.publicParamsMutex.RUnlock()
+	argsForCall := fake.publicParamsArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *QueryEngine) PublicParamsReturns(result1 []byte, result2 error) {
@@ -1061,17 +1106,18 @@ func (fake *QueryEngine) UnspentLedgerTokensIteratorByReturnsOnCall(i int, resul
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) UnspentTokensIterator() (driver.UnspentTokensIterator, error) {
+func (fake *QueryEngine) UnspentTokensIterator(arg1 context.Context) (driver.UnspentTokensIterator, error) {
 	fake.unspentTokensIteratorMutex.Lock()
 	ret, specificReturn := fake.unspentTokensIteratorReturnsOnCall[len(fake.unspentTokensIteratorArgsForCall)]
 	fake.unspentTokensIteratorArgsForCall = append(fake.unspentTokensIteratorArgsForCall, struct {
-	}{})
+		arg1 context.Context
+	}{arg1})
 	stub := fake.UnspentTokensIteratorStub
 	fakeReturns := fake.unspentTokensIteratorReturns
-	fake.recordInvocation("UnspentTokensIterator", []interface{}{})
+	fake.recordInvocation("UnspentTokensIterator", []interface{}{arg1})
 	fake.unspentTokensIteratorMutex.Unlock()
 	if stub != nil {
-		return stub()
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1085,10 +1131,17 @@ func (fake *QueryEngine) UnspentTokensIteratorCallCount() int {
 	return len(fake.unspentTokensIteratorArgsForCall)
 }
 
-func (fake *QueryEngine) UnspentTokensIteratorCalls(stub func() (driver.UnspentTokensIterator, error)) {
+func (fake *QueryEngine) UnspentTokensIteratorCalls(stub func(context.Context) (driver.UnspentTokensIterator, error)) {
 	fake.unspentTokensIteratorMutex.Lock()
 	defer fake.unspentTokensIteratorMutex.Unlock()
 	fake.UnspentTokensIteratorStub = stub
+}
+
+func (fake *QueryEngine) UnspentTokensIteratorArgsForCall(i int) context.Context {
+	fake.unspentTokensIteratorMutex.RLock()
+	defer fake.unspentTokensIteratorMutex.RUnlock()
+	argsForCall := fake.unspentTokensIteratorArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *QueryEngine) UnspentTokensIteratorReturns(result1 driver.UnspentTokensIterator, result2 error) {
@@ -1183,18 +1236,19 @@ func (fake *QueryEngine) UnspentTokensIteratorByReturnsOnCall(i int, result1 dri
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) WhoDeletedTokens(arg1 ...*token.ID) ([]string, []bool, error) {
+func (fake *QueryEngine) WhoDeletedTokens(arg1 context.Context, arg2 ...*token.ID) ([]string, []bool, error) {
 	fake.whoDeletedTokensMutex.Lock()
 	ret, specificReturn := fake.whoDeletedTokensReturnsOnCall[len(fake.whoDeletedTokensArgsForCall)]
 	fake.whoDeletedTokensArgsForCall = append(fake.whoDeletedTokensArgsForCall, struct {
-		arg1 []*token.ID
-	}{arg1})
+		arg1 context.Context
+		arg2 []*token.ID
+	}{arg1, arg2})
 	stub := fake.WhoDeletedTokensStub
 	fakeReturns := fake.whoDeletedTokensReturns
-	fake.recordInvocation("WhoDeletedTokens", []interface{}{arg1})
+	fake.recordInvocation("WhoDeletedTokens", []interface{}{arg1, arg2})
 	fake.whoDeletedTokensMutex.Unlock()
 	if stub != nil {
-		return stub(arg1...)
+		return stub(arg1, arg2...)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -1208,17 +1262,17 @@ func (fake *QueryEngine) WhoDeletedTokensCallCount() int {
 	return len(fake.whoDeletedTokensArgsForCall)
 }
 
-func (fake *QueryEngine) WhoDeletedTokensCalls(stub func(...*token.ID) ([]string, []bool, error)) {
+func (fake *QueryEngine) WhoDeletedTokensCalls(stub func(context.Context, ...*token.ID) ([]string, []bool, error)) {
 	fake.whoDeletedTokensMutex.Lock()
 	defer fake.whoDeletedTokensMutex.Unlock()
 	fake.WhoDeletedTokensStub = stub
 }
 
-func (fake *QueryEngine) WhoDeletedTokensArgsForCall(i int) []*token.ID {
+func (fake *QueryEngine) WhoDeletedTokensArgsForCall(i int) (context.Context, []*token.ID) {
 	fake.whoDeletedTokensMutex.RLock()
 	defer fake.whoDeletedTokensMutex.RUnlock()
 	argsForCall := fake.whoDeletedTokensArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *QueryEngine) WhoDeletedTokensReturns(result1 []string, result2 []bool, result3 error) {

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
@@ -35,8 +36,8 @@ type Iterator[V any] interface {
 }
 
 type tokenLocker interface {
-	TryLock(*token2.ID) bool
-	UnlockAll() error
+	TryLock(context.Context, *token2.ID) bool
+	UnlockAll(ctx context.Context) error
 }
 
 type selector struct {
@@ -90,6 +91,7 @@ func NewSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker
 }
 
 func (s *selector) Select(owner token.OwnerFilter, q string, currency token2.Type) ([]*token2.ID, token2.Quantity, error) {
+	ctx := context.Background()
 	if s.isClosed() {
 		return nil, nil, errors.Errorf("selector is already closed")
 	}
@@ -100,7 +102,7 @@ func (s *selector) Select(owner token.OwnerFilter, q string, currency token2.Typ
 	sum, selected, tokensLockedByOthersExist, immediateRetries := token2.NewZeroQuantity(s.precision), collections.NewSet[*token2.ID](), true, 0
 	for {
 		if t, err := s.cache.Next(); err != nil {
-			err2 := s.locker.UnlockAll()
+			err2 := s.locker.UnlockAll(ctx)
 			return nil, nil, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), currency, err2)
 		} else if t == nil {
 			if !tokensLockedByOthersExist {
@@ -115,7 +117,7 @@ func (s *selector) Select(owner token.OwnerFilter, q string, currency token2.Typ
 
 			if immediateRetries > maxImmediateRetries {
 				s.logger.Warnf("Exceeded max number of immediate retries. Unlock tokens and abort...")
-				if err := s.locker.UnlockAll(); err != nil {
+				if err := s.locker.UnlockAll(ctx); err != nil {
 					return nil, nil, errors.Wrapf(err, "exceeded number of retries: %d and unlock failed", maxImmediateRetries)
 				}
 
@@ -128,14 +130,14 @@ func (s *selector) Select(owner token.OwnerFilter, q string, currency token2.Typ
 			}
 
 			s.logger.Debugf("Fetch all non-deleted tokens from the DB and refresh the token cache.")
-			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(owner.ID(), currency); err != nil {
-				err2 := s.locker.UnlockAll()
+			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), currency); err != nil {
+				err2 := s.locker.UnlockAll(ctx)
 				return nil, nil, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s] - unlock: %v", immediateRetries, owner.ID(), currency, err2)
 			}
 
 			immediateRetries++
 			tokensLockedByOthersExist = false
-		} else if locked := s.locker.TryLock(&t.Id); !locked {
+		} else if locked := s.locker.TryLock(ctx, &t.Id); !locked {
 			s.logger.Debugf("Tried to lock token [%v], but it was already locked by another process", t)
 			tokensLockedByOthersExist = true
 		} else {
@@ -168,8 +170,8 @@ func (s *selector) isClosed() bool {
 	return s.cache == nil
 }
 
-func (s *selector) UnlockAll() error {
-	return s.locker.UnlockAll()
+func (s *selector) UnlockAll(ctx context.Context) error {
+	return s.locker.UnlockAll(ctx)
 }
 
 func tokenKey(walletID string, typ token2.Type) string {
@@ -181,16 +183,16 @@ type locker struct {
 	txID transaction.ID
 }
 
-func (l *locker) TryLock(tokenID *token2.ID) bool {
-	err := l.Lock(tokenID, l.txID)
+func (l *locker) TryLock(ctx context.Context, tokenID *token2.ID) bool {
+	err := l.Lock(ctx, tokenID, l.txID)
 	if err != nil {
 		logger.Debugf("failed to lock [%v] for [%s]: [%s]", tokenID, l.txID, err)
 	}
 	return err == nil
 }
 
-func (l *locker) UnlockAll() error {
-	return l.UnlockByTxID(l.txID)
+func (l *locker) UnlockAll(ctx context.Context) error {
+	return l.UnlockByTxID(ctx, l.txID)
 }
 
 func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB Locker, precision uint64, backoff time.Duration, maxRetriesAfterBackoff int) tokenSelectorUnlocker {

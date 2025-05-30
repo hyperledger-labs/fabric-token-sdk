@@ -59,11 +59,11 @@ type GetRevocationHandleView struct {
 func (r *GetRevocationHandle) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
-	w := tms.WalletManager().OwnerWallet(r.Wallet)
+	w := tms.WalletManager().OwnerWallet(context.Context(), r.Wallet)
 	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
 	id, err := w.GetRecipientIdentity()
 	assert.NoError(err, "error getting recipient id")
-	rh, err := tms.WalletManager().GetRevocationHandle(id)
+	rh, err := tms.WalletManager().GetRevocationHandle(context.Context(), id)
 	logger.Infof("RH for [%s] is [%s]", r.Wallet, hash.Hashable(rh).String())
 	return &RevocationHandle{RH: rh}, err
 }

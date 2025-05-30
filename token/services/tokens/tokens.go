@@ -84,7 +84,7 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID string, re
 	}
 
 	span.AddEvent("get_actions")
-	toSpend, toAppend, err := t.getActions(tmsID, txID, request)
+	toSpend, toAppend, err := t.getActions(ctx, tmsID, txID, request)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to extract actions", txID)
 	}
@@ -142,8 +142,8 @@ func (t *Service) AppendRaw(ctx context.Context, tmsID token.TMSID, txID string,
 	return t.Append(ctx, tmsID, txID, tr)
 }
 
-func (t *Service) CacheRequest(tmsID token.TMSID, request *token.Request) error {
-	toSpend, toAppend, err := t.extractActions(tmsID, request.Anchor, request)
+func (t *Service) CacheRequest(ctx context.Context, tmsID token.TMSID, request *token.Request) error {
+	toSpend, toAppend, err := t.extractActions(ctx, tmsID, request.Anchor, request)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to extract actions for request [%s]", request.ID())
 	}
@@ -177,20 +177,20 @@ func (t *Service) AppendTransaction(ctx context.Context, tx Transaction) (err er
 }
 
 // StorePublicParams stores the passed public parameters in the token db
-func (t *Service) StorePublicParams(raw []byte) error {
-	return t.Storage.StorePublicParams(raw)
+func (t *Service) StorePublicParams(ctx context.Context, raw []byte) error {
+	return t.Storage.StorePublicParams(ctx, raw)
 }
 
 // DeleteTokensBy marks the entries corresponding to the passed token ids as deleted.
 // The deletion is attributed to the passed deletedBy argument.
-func (t *Service) DeleteTokensBy(deletedBy string, ids ...*token2.ID) (err error) {
-	return t.Storage.tokenDB.DeleteTokens(deletedBy, ids...)
+func (t *Service) DeleteTokensBy(ctx context.Context, deletedBy string, ids ...*token2.ID) (err error) {
+	return t.Storage.tokenDB.DeleteTokens(ctx, deletedBy, ids...)
 }
 
 // DeleteTokens marks the entries corresponding to the passed token ids as deleted.
 // The deletion is attributed to the caller of this function.
-func (t *Service) DeleteTokens(ids ...*token2.ID) (err error) {
-	return t.DeleteTokensBy(string(debug.Stack()), ids...)
+func (t *Service) DeleteTokens(ctx context.Context, ids ...*token2.ID) (err error) {
+	return t.DeleteTokensBy(ctx, string(debug.Stack()), ids...)
 }
 
 func (t *Service) SetSpendableFlag(value bool, ids ...*token2.ID) error {
@@ -250,7 +250,7 @@ func (t *Service) PruneInvalidUnspentTokens(ctx context.Context) ([]*token2.ID, 
 	}
 
 	// get unspent tokens
-	it, err := tms.Vault().NewQueryEngine().UnspentTokensIterator()
+	it, err := tms.Vault().NewQueryEngine().UnspentTokensIterator(ctx)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get an iterator of unspent tokens")
 	}
@@ -286,7 +286,7 @@ func (t *Service) PruneInvalidUnspentTokens(ctx context.Context) ([]*token2.ID, 
 	return deleted, nil
 }
 
-func (t *Service) deleteTokens(context context.Context, network *network.Network, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
+func (t *Service) deleteTokens(ctx context.Context, network *network.Network, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
 	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
 	if len(tokens) == 0 {
 		return nil, nil
@@ -301,7 +301,7 @@ func (t *Service) deleteTokens(context context.Context, network *network.Network
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
 	}
-	spent, err := network.AreTokensSpent(context, tms.Namespace(), ids, meta)
+	spent, err := network.AreTokensSpent(ctx, tms.Namespace(), ids, meta)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "cannot fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
 	}
@@ -316,24 +316,24 @@ func (t *Service) deleteTokens(context context.Context, network *network.Network
 			logger.Debugf("token [%s] is not spent", tok.Id)
 		}
 	}
-	if err := t.DeleteTokens(toDelete...); err != nil {
+	if err := t.DeleteTokens(ctx, toDelete...); err != nil {
 		return nil, errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
 	}
 
 	return toDelete, nil
 }
 
-func (t *Service) getActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
+func (t *Service) getActions(ctx context.Context, tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
 	// check the cache first
 	entry, ok := t.RequestsCache.Get(txID)
 	if ok {
 		return entry.ToSpend, entry.ToAppend, nil
 	}
 	// extract
-	return t.extractActions(tmsID, txID, request)
+	return t.extractActions(ctx, tmsID, txID, request)
 }
 
-func (t *Service) extractActions(tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
+func (t *Service) extractActions(ctx context.Context, tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
 	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
@@ -354,17 +354,18 @@ func (t *Service) extractActions(tmsID token.TMSID, txID string, request *token.
 		return nil, nil, errors.WithMessagef(err, "transaction [%s], failed to get request metadata", txID)
 	}
 
-	is, os, err := request.InputsAndOutputsNoRecipients()
+	is, os, err := request.InputsAndOutputsNoRecipients(ctx)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get request's outputs")
 	}
-	toSpend, toAppend, err := t.parse(auth, txID, md, is, os, auditorFlag, precision, graphHiding)
+	toSpend, toAppend, err := t.parse(ctx, auth, txID, md, is, os, auditorFlag, precision, graphHiding)
 	logger.Debugf("transaction [%s] parsed [%d] inputs and [%d] outputs", txID, len(toSpend), len(toAppend))
 	return toSpend, toAppend, err
 }
 
 // parse returns the tokens to store and spend as the result of a transaction
 func (t *Service) parse(
+	ctx context.Context,
 	auth driver.Authorization,
 	txID string,
 	md MetaData,
@@ -402,8 +403,8 @@ func (t *Service) parse(
 		}
 
 		// process the output to identify the relations with the current TMS
-		issuerFlag := !output.Issuer.IsNone() && auth.Issued(output.Issuer, &output.Token)
-		ownerWalletID, ids, mine := auth.IsMine(&output.Token)
+		issuerFlag := !output.Issuer.IsNone() && auth.Issued(ctx, output.Issuer, &output.Token)
+		ownerWalletID, ids, mine := auth.IsMine(ctx, &output.Token)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			if mine {
 				logger.Debugf("transaction [%s], found a token and it is mine with [%s][%v]", txID, ownerWalletID, ids)

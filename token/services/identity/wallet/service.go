@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package wallet
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -23,13 +24,13 @@ var (
 )
 
 type Registry interface {
-	WalletIDs() ([]string, error)
-	RegisterIdentity(config driver.IdentityConfiguration) error
-	Lookup(id driver.WalletLookupID) (driver.Wallet, identity.Info, string, error)
-	RegisterWallet(id string, wallet driver.Wallet) error
-	BindIdentity(identity driver.Identity, eID string, wID string, meta any) error
-	ContainsIdentity(i driver.Identity, id string) bool
-	GetIdentityMetadata(identity driver.Identity, wID string, meta any) error
+	WalletIDs(ctx context.Context) ([]string, error)
+	RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error
+	Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, identity.Info, string, error)
+	RegisterWallet(ctx context.Context, id string, wallet driver.Wallet) error
+	BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID string, meta any) error
+	ContainsIdentity(ctx context.Context, i driver.Identity, id string) bool
+	GetIdentityMetadata(ctx context.Context, identity driver.Identity, wID string, meta any) error
 }
 
 type walletFactory interface {
@@ -73,16 +74,16 @@ func NewService(
 	}
 }
 
-func (s *Service) RegisterOwnerIdentity(config driver.IdentityConfiguration) error {
-	return s.Registries[identity.OwnerRole].Registry.RegisterIdentity(config)
+func (s *Service) RegisterOwnerIdentity(ctx context.Context, config driver.IdentityConfiguration) error {
+	return s.Registries[identity.OwnerRole].Registry.RegisterIdentity(ctx, config)
 }
 
-func (s *Service) RegisterIssuerIdentity(config driver.IdentityConfiguration) error {
-	return s.Registries[identity.IssuerRole].Registry.RegisterIdentity(config)
+func (s *Service) RegisterIssuerIdentity(ctx context.Context, config driver.IdentityConfiguration) error {
+	return s.Registries[identity.IssuerRole].Registry.RegisterIdentity(ctx, config)
 }
 
-func (s *Service) GetAuditInfo(id driver.Identity) ([]byte, error) {
-	return s.IdentityProvider.GetAuditInfo(id)
+func (s *Service) GetAuditInfo(ctx context.Context, id driver.Identity) ([]byte, error) {
+	return s.IdentityProvider.GetAuditInfo(ctx, id)
 }
 
 func (s *Service) GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error) {
@@ -132,48 +133,48 @@ func (s *Service) RegisterRecipientIdentity(data *driver.RecipientData) error {
 	return nil
 }
 
-func (s *Service) Wallet(identity driver.Identity) driver.Wallet {
-	w, _ := s.OwnerWallet(identity)
+func (s *Service) Wallet(ctx context.Context, identity driver.Identity) driver.Wallet {
+	w, _ := s.OwnerWallet(ctx, identity)
 	if w != nil {
 		return w
 	}
-	iw, _ := s.IssuerWallet(identity)
+	iw, _ := s.IssuerWallet(ctx, identity)
 	if iw != nil {
 		return iw
 	}
 	return nil
 }
 
-func (s *Service) OwnerWalletIDs() ([]string, error) {
-	return s.Registries[identity.OwnerRole].Registry.WalletIDs()
+func (s *Service) OwnerWalletIDs(ctx context.Context) ([]string, error) {
+	return s.Registries[identity.OwnerRole].Registry.WalletIDs(ctx)
 }
 
-func (s *Service) OwnerWallet(id driver.WalletLookupID) (driver.OwnerWallet, error) {
-	w, err := s.walletByID(identity.OwnerRole, id)
+func (s *Service) OwnerWallet(ctx context.Context, id driver.WalletLookupID) (driver.OwnerWallet, error) {
+	w, err := s.walletByID(ctx, identity.OwnerRole, id)
 	if err != nil {
 		return nil, err
 	}
 	return w.(driver.OwnerWallet), nil
 }
 
-func (s *Service) IssuerWallet(id driver.WalletLookupID) (driver.IssuerWallet, error) {
-	w, err := s.walletByID(identity.IssuerRole, id)
+func (s *Service) IssuerWallet(ctx context.Context, id driver.WalletLookupID) (driver.IssuerWallet, error) {
+	w, err := s.walletByID(ctx, identity.IssuerRole, id)
 	if err != nil {
 		return nil, err
 	}
 	return w.(driver.IssuerWallet), nil
 }
 
-func (s *Service) AuditorWallet(id driver.WalletLookupID) (driver.AuditorWallet, error) {
-	w, err := s.walletByID(identity.AuditorRole, id)
+func (s *Service) AuditorWallet(ctx context.Context, id driver.WalletLookupID) (driver.AuditorWallet, error) {
+	w, err := s.walletByID(ctx, identity.AuditorRole, id)
 	if err != nil {
 		return nil, err
 	}
 	return w.(driver.AuditorWallet), nil
 }
 
-func (s *Service) CertifierWallet(id driver.WalletLookupID) (driver.CertifierWallet, error) {
-	w, err := s.walletByID(identity.CertifierRole, id)
+func (s *Service) CertifierWallet(ctx context.Context, id driver.WalletLookupID) (driver.CertifierWallet, error) {
+	w, err := s.walletByID(ctx, identity.CertifierRole, id)
 	if err != nil {
 		return nil, err
 	}
@@ -185,13 +186,13 @@ func (s *Service) SpendIDs(ids ...*token.ID) ([]string, error) {
 	return nil, nil
 }
 
-func (s *Service) walletByID(role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
+func (s *Service) walletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
 	entry := s.Registries[role]
 	registry := entry.Registry
 	mutex := entry.Mutex
 
 	mutex.RLock()
-	w, _, _, err := registry.Lookup(id)
+	w, _, _, err := registry.Lookup(ctx, id)
 	if err != nil {
 		mutex.RUnlock()
 		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%s]", id)
@@ -205,7 +206,7 @@ func (s *Service) walletByID(role identity.RoleType, id driver.WalletLookupID) (
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	w, idInfo, wID, err := registry.Lookup(id)
+	w, idInfo, wID, err := registry.Lookup(ctx, id)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%s]", id)
 	}
@@ -218,7 +219,7 @@ func (s *Service) walletByID(role identity.RoleType, id driver.WalletLookupID) (
 	if err != nil {
 		return nil, err
 	}
-	if err := registry.RegisterWallet(wID, newWallet); err != nil {
+	if err := registry.RegisterWallet(ctx, wID, newWallet); err != nil {
 		return nil, err
 	}
 	return newWallet, nil

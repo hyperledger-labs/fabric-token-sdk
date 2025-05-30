@@ -17,17 +17,17 @@ import (
 )
 
 type QueryService interface {
-	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
+	UnspentTokensIterator(ctx context.Context) (*token.UnspentTokensIterator, error)
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type) (driver.UnspentTokensIterator, error)
-	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
+	GetTokens(ctx context.Context, inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
 type Locker interface {
-	Lock(id *token2.ID, txID string, reclaim bool) (string, error)
+	Lock(ctx context.Context, id *token2.ID, txID string, reclaim bool) (string, error)
 	// UnlockIDs unlocks the passed IDS. It returns the list of tokens that were not locked in the first place among
 	// those passed.
 	UnlockIDs(ids ...*token2.ID) []*token2.ID
-	UnlockByTxID(txID string)
+	UnlockByTxID(ctx context.Context, txID string)
 	IsLocked(id *token2.ID) bool
 }
 
@@ -52,8 +52,8 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q string, tokenType tok
 
 func (s *selector) Close() error { return nil }
 
-func (s *selector) concurrencyCheck(ids []*token2.ID) error {
-	_, err := s.queryService.GetTokens(ids...)
+func (s *selector) concurrencyCheck(ctx context.Context, ids []*token2.ID) error {
+	_, err := s.queryService.GetTokens(ctx, ids...)
 	return err
 }
 
@@ -111,7 +111,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			}
 
 			// lock the token
-			if _, err := s.locker.Lock(&t.Id, s.txID, reclaim); err != nil {
+			if _, err := s.locker.Lock(context.Background(), &t.Id, s.txID, reclaim); err != nil {
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 
 				logger.Debugf("token [%s,%v] cannot be locked [%s]", q, tokenType, err)
@@ -131,7 +131,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 
 		concurrencyIssue := false
 		if target.Cmp(sum) <= 0 {
-			err := s.concurrencyCheck(toBeSpent)
+			err := s.concurrencyCheck(context.Background(), toBeSpent)
 			if err == nil {
 				return toBeSpent, sum, nil
 			}
