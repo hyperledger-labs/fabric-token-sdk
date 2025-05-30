@@ -56,7 +56,7 @@ func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration
 		Build()
 
 	db.Logger.Debug(query)
-	_, err := db.WriteDB.Exec(query, args...)
+	_, err := db.WriteDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		db.Logger.Errorf("query failed: %s", query)
 	}
@@ -78,7 +78,7 @@ func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Du
 		Where(common.IsExpiredToken(tokenRequests, tokenLocks, leaseExpiry)).Format(db.ci)
 	db.Logger.Debug(query, args)
 
-	rows, err := db.ReadDB.Query(query, args...)
+	rows, err := db.ReadDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}

@@ -74,7 +74,7 @@ func (db *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.W
 		Where(cond.Eq("role_id", roleID)).
 		Format(db.ci)
 	logger.Debug(query)
-	rows, err := db.readDB.Query(query, args...)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (db *WalletStore) StoreIdentity(ctx context.Context, identity token.Identit
 		Format()
 	logger.Debug(query)
 
-	_, err := db.writeDB.Exec(query, args...)
+	_, err := db.writeDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%s]", wID, identity)
 	}

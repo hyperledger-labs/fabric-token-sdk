@@ -108,7 +108,7 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params driver.Qu
 		Format(db.ci)
 
 	logger.Debug(query, args)
-	rows, err := db.readDB.Query(query, args...)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (db *TransactionStore) QueryTransactions(ctx context.Context, params driver
 		FormatPaginated(db.ci, db.pi)
 
 	logger.Debug(query, args)
-	rows, err := db.readDB.Query(query, args...)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (db *TransactionStore) GetStatus(ctx context.Context, txID string) (driver.
 		Format(db.ci)
 	logger.Debug(query, txID)
 
-	row := db.readDB.QueryRow(query, args...)
+	row := db.readDB.QueryRowContext(ctx, query, args...)
 	if err := row.Scan(&status, &statusMessage); err != nil {
 		if err == sql.ErrNoRows {
 			logger.Debugf("tried to get status for non-existent tx [%s], returning unknown", txID)
@@ -203,7 +203,7 @@ func (db *TransactionStore) QueryValidations(ctx context.Context, params driver.
 		Format(db.ci)
 
 	logger.Debug(query, args)
-	rows, err := db.readDB.Query(query, args...)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func (db *TransactionStore) QueryTokenRequests(ctx context.Context, params drive
 		Format(db.ci)
 
 	logger.Debug(query, args)
-	rows, err := db.readDB.Query(query, args...)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func (db *TransactionStore) AddTransactionEndorsementAck(ctx context.Context, tx
 		Format()
 
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(endorser)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
-	if _, err = db.writeDB.Exec(query, args...); err != nil {
+	if _, err = db.writeDB.ExecContext(ctx, query, args...); err != nil {
 		return ttxDBError(err)
 	}
 	return
@@ -266,7 +266,7 @@ func (db *TransactionStore) GetTransactionEndorsementAcks(ctx context.Context, t
 		Format(db.ci)
 	logger.Debug(query, txID)
 
-	rows, err := db.readDB.Query(query, args...)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query")
 	}
@@ -454,7 +454,7 @@ func (w *AtomicWrite) AddTransaction(ctx context.Context, r *driver.TransactionR
 		Row(id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Timestamp.UTC()).
 		Format()
 	logger.Debug(query, args)
-	_, err = w.txn.Exec(query, args...)
+	_, err = w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }
@@ -484,7 +484,7 @@ func (w *AtomicWrite) AddTokenRequest(ctx context.Context, txID string, tr []byt
 		Row(txID, tr, driver.Pending, "", ja, jp, ppHash).
 		Format()
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(publicMetadata), len(ppHash))
-	_, err = w.txn.Exec(query, args...)
+	_, err = w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }
@@ -510,7 +510,7 @@ func (w *AtomicWrite) AddMovement(ctx context.Context, r *driver.MovementRecord)
 		Row(id, r.TxID, r.EnrollmentID, r.TokenType, amount, now).
 		Format()
 	logger.Debug(query, args)
-	_, err = w.txn.Exec(query, args...)
+	_, err = w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }
@@ -532,7 +532,7 @@ func (w *AtomicWrite) AddValidationRecord(ctx context.Context, txID string, meta
 		Format()
 	logger.Debug(query, txID, len(md), now)
 
-	_, err = w.txn.Exec(query, args...)
+	_, err = w.txn.ExecContext(ctx, query, args...)
 	return ttxDBError(err)
 }
 

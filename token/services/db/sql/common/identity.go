@@ -101,7 +101,7 @@ func (db *IdentityStore) AddConfiguration(ctx context.Context, wp driver.Identit
 		Format()
 	logger.Debug(query, args)
 
-	_, err := db.writeDB.Exec(query, args...)
+	_, err := db.writeDB.ExecContext(ctx, query, args...)
 	return err
 }
 
@@ -112,7 +112,7 @@ func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurati
 		Where(cond.Eq("type", configurationType)).
 		Format(db.ci)
 	logger.Debug(query, args)
-	rows, err := db.readDB.Query(query, args...)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func (db *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, ident
 		Format()
 	logger.Debug(query, args)
 
-	_, err := db.writeDB.Exec(query, args...)
+	_, err := db.writeDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		// does the record already exists?
 		auditInfo, err2 := db.GetAuditInfo(ctx, id)
@@ -185,7 +185,7 @@ func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, [
 		Format(db.ci)
 	logger.Debug(query, args)
 
-	row := db.readDB.QueryRow(query, args...)
+	row := db.readDB.QueryRowContext(ctx, query, args...)
 	var tokenMetadata []byte
 	var tokenMetadataAuditInfo []byte
 	err := row.Scan(&tokenMetadata, &tokenMetadataAuditInfo)
@@ -209,7 +209,7 @@ func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) e
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("store signer info [%s]: [%s][%s]", query, h, hash.Hashable(info))
 	}
-	_, err := db.writeDB.Exec(query, args...)
+	_, err := db.writeDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		if exists, err2 := db.SignerInfoExists(ctx, id); err2 == nil && exists {
 			logger.Debugf("signer info [%s] exists, no error to return", h)
@@ -271,7 +271,7 @@ func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriv
 		Format(db.ci)
 
 	logger.Debug(query, args)
-	rows, err := db.readDB.Query(query, args...)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}

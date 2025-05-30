@@ -51,7 +51,7 @@ func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration
 		Format(db.ci)
 
 	db.Logger.Info(query, args)
-	_, err := db.WriteDB.Exec(query, args...)
+	_, err := db.WriteDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		db.Logger.Errorf("query failed: %s", query)
 	}
