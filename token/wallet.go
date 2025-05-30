@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // WalletLookupID defines the type of identifiers that can be used to retrieve a given wallet.
@@ -276,10 +275,6 @@ func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token.Unspen
 		return nil, err
 	}
 
-	span := trace.SpanFromContext(compiledOpts.Context)
-	span.AddEvent("get_unspent_tokens_iterator")
-	defer span.AddEvent("end_iterate_tokens")
-
 	return o.w.ListTokens(compiledOpts)
 }
 
@@ -364,5 +359,6 @@ func CompileListTokensOption(opts ...ListTokensOption) (*driver.ListTokensOption
 	}
 	return &driver.ListTokensOptions{
 		TokenType: txOptions.TokenType,
+		Context:   txOptions.Context,
 	}, nil
 }

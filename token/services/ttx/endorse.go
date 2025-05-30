@@ -10,11 +10,10 @@ import (
 	"context"
 	"encoding/base64"
 	errors2 "errors"
-	"fmt"
-	"reflect"
 	"runtime/debug"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -22,11 +21,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -87,34 +86,31 @@ func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *Colle
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
 func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
 	metrics := GetMetrics(context)
 
 	externalWallets := make(map[string]ExternalWalletSigner)
 	// 1. First collect signatures on the token request
-	span.AddEvent("Request signatures on issues")
 	issueSigmas, err := c.requestSignaturesOnIssues(context, externalWallets)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed requesting signatures on issues")
 	}
 
-	span.AddEvent("Request signatures on transfers")
 	transferSigmas, err := c.requestSignaturesOnTransfers(context, externalWallets)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed requesting signatures on transfers")
 	}
 
 	// signal the external wallets that the process is completed
-	span.AddEvent("Inform external wallets that endorsement is complete")
+	logger.DebugfContext(context.Context(), "Inform external wallets that endorsement is complete")
 	for id, signer := range externalWallets {
 		if err := signer.Done(); err != nil {
-			span.RecordError(err)
+			logger.ErrorfContext(context.Context(), "failed to signal done external wallet [%s]", id)
 			logger.Errorf("failed to signal done external wallet [%s]", id)
 		}
 	}
 
 	// Add the signatures to the token request
-	span.AddEvent("Add the signatures to the token request")
+	logger.DebugfContext(context.Context(), "Add the signatures to the token request")
 	if !c.tx.TokenRequest.SetSignatures(mergeSigmas(issueSigmas, transferSigmas)) {
 		return nil, errors.New("failed setting signatures on token request, some signatures are missing")
 	}
@@ -122,7 +118,6 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	// 2. Audit
 	var auditors []view.Identity
 	if !c.Opts.SkipAuditing {
-		span.AddEvent("Request audit")
 		auditors, err = c.requestAudit(context)
 		if err != nil {
 			return nil, errors.WithMessage(err, "failed requesting auditing")
@@ -131,7 +126,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	// 3. Endorse and return the transaction envelope
 	var env *network.Envelope
 	if !c.Opts.SkipApproval {
-		span.AddEvent("Request approval from endorser")
+		logger.DebugfContext(context.Context(), "Request approval from endorser")
 		env, err = c.requestApproval(context)
 		if err != nil {
 			return nil, errors.WithMessage(err, "failed requesting approval")
@@ -139,16 +134,16 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	}
 	// Distribute Env to all parties
 	distributionList := append(IssueDistributionList(c.tx.TokenRequest), TransferDistributionList(c.tx.TokenRequest)...)
-	span.AddEvent(fmt.Sprintf("Distribute envelope to %d involved parties", len(distributionList)))
+	logger.DebugfContext(context.Context(), "Distribute envelope to %d involved parties", len(distributionList))
 	if err := c.distributeEnvToParties(context, env, distributionList, auditors); err != nil {
-		span.RecordError(err)
+		logger.ErrorfContext(context.Context(), "failed distributing envelope: %w", err)
 		return nil, errors.WithMessage(err, "failed distributing envelope")
 	}
 
 	// Cleanup audit
-	span.AddEvent("Cleanup audit")
+	logger.DebugfContext(context.Context(), "Cleanup audit")
 	if err := c.cleanupAudit(context); err != nil {
-		span.RecordError(err)
+		logger.ErrorfContext(context.Context(), "failed cleaning up audit: %w", err)
 		return nil, errors.WithMessage(err, "failed cleaning up audit")
 	}
 
@@ -164,7 +159,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 }
 
 func (c *CollectEndorsementsView) requestSignaturesOnIssues(context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
-	logger.Debugf("collecting signature on [%d] request issue", len(c.tx.TokenRequest.Metadata.Issues))
+	logger.DebugfContext(context.Context(), "collecting signature on [%d] request issue", len(c.tx.TokenRequest.Metadata.Issues))
 	return c.requestSignatures(
 		c.tx.TokenRequest.IssueSigners(),
 		c.tx.TokenService().SigService().IssuerVerifier,
@@ -174,7 +169,7 @@ func (c *CollectEndorsementsView) requestSignaturesOnIssues(context view.Context
 }
 
 func (c *CollectEndorsementsView) requestSignaturesOnTransfers(context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
-	logger.Debugf("collecting signature on [%d] request transfer", len(c.tx.TokenRequest.Metadata.Transfers))
+	logger.DebugfContext(context.Context(), "collecting signature on [%d] request transfer", len(c.tx.TokenRequest.Metadata.Transfers))
 
 	return c.requestSignatures(
 		c.tx.TokenRequest.TransferSigners(),
@@ -185,8 +180,7 @@ func (c *CollectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 }
 
 func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, verifierGetter verifierGetterFunc, context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
-	span := trace.SpanFromContext(context.Context())
-	span.AddEvent(fmt.Sprintf("Request %d signatures", len(signers)))
+	logger.DebugfContext(context.Context(), "Request %d signatures", len(signers))
 	requestRaw, err := c.requestBytes()
 	if err != nil {
 		return nil, err
@@ -199,7 +193,6 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 
 	sigmas := make(map[string][]byte)
 	for i, signerIdentity := range signers {
-		span.AddEvent(fmt.Sprintf("Request signature no %d", i))
 		// we have the following possibilities:
 		// - there is a signer locally bound to the party, use it to generate the signature
 		// - there is a wallet bound to the party but the signer is not local, the signature is generated externally
@@ -212,7 +205,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			TxID:    txIDRaw,
 			Signer:  signerIdentity,
 		}
-		logger.Debugf("collecting signature on request from [%s]", signerIdentity)
+		logger.Debugf("collecting signature [%d] on request from [%s]", i, signerIdentity)
 
 		// Case: the identity is a multi-sig identity
 		ok, multiSigners, err := multisig.Unwrap(signerIdentity)
@@ -220,42 +213,37 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			return nil, errors.Wrapf(err, "failed unwrapping multi-sig identity [%s]", signerIdentity)
 		}
 		if ok {
-			span.AddEvent(fmt.Sprintf("%d. Multi-sig signer", i))
-			logger.Debugf("found multi-sig identity [%s], request multi-sig signature to [%d] parties", signerIdentity, len(multiSigners))
+			logger.DebugfContext(context.Context(), "found multi-sig identity [%s], request multi-sig signature to [%d] parties", signerIdentity, len(multiSigners))
 			// collect the signatures from multiSigners
 			multiSignersSigmas, err := c.requestSignatures(multiSigners, verifierGetter, context, externalWallets)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed requesting signatures")
 			}
-			logger.Debugf("collected [%d] signatures for multi-sig identity [%s]", len(multiSignersSigmas), signerIdentity)
+			logger.DebugfContext(context.Context(), "collected [%d] signatures for multi-sig identity [%s]", len(multiSignersSigmas), signerIdentity)
 			sigma, err := multisig.JoinSignatures(multiSigners, multiSignersSigmas)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed joining multi-sig signatures")
 			}
 			sigmas[signerIdentity.UniqueID()] = sigma
-			span.AddEvent("Done requesting multi-sig")
 			continue
 		}
 
 		// Case: there is a signer locally bound to the party, use it to generate the signature
 		if signer, err := c.tx.TokenService().SigService().GetSigner(signerIdentity); err == nil {
-			span.AddEvent(fmt.Sprintf("%d. Local signer", i))
-			logger.Debugf("found signer for party [%s], request local signature", signerIdentity)
+			logger.DebugfContext(context.Context(), "found signer for party [%s], request local signature", signerIdentity)
 			sigma, err := c.signLocal(signerIdentity, signer, signatureRequest)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed signing local for party [%s]", signerIdentity)
 			}
 			sigmas[signerIdentity.UniqueID()] = sigma
-			span.AddEvent("Done local signing")
 			continue
 		} else {
-			logger.Debugf("failed to find a signer for party [%s]: [%s]", signerIdentity, err)
+			logger.DebugfContext(context.Context(), "failed to find a signer for party [%s]: [%s]", signerIdentity, err)
 		}
 
 		// Case: there is a wallet bound to the party but the signer is not local, the signature is generated externally
 		if w := c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), signerIdentity); w != nil {
-			span.AddEvent(fmt.Sprintf("%d. External signer", i))
-			logger.Debugf("found wallet for party [%s], request external signature", signerIdentity)
+			logger.DebugfContext(context.Context(), "found wallet for party [%s], request external signature", signerIdentity)
 			ews := c.Opts.ExternalWalletSigner(w.ID())
 			if ews == nil {
 				return nil, errors.Errorf("no external wallet signer found for [%s][%s]", w.ID(), signerIdentity)
@@ -266,39 +254,36 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 				return nil, errors.WithMessagef(err, "failed signing external for party [%s]", signerIdentity)
 			}
 			sigmas[signerIdentity.UniqueID()] = sigma
-			span.AddEvent("Done external signing")
 			continue
 		}
 
 		// Case: the signature must be generated by a remote party
-		logger.Debugf("no signer or wallet found for party [%s], request remote signature", signerIdentity)
-		span.AddEvent(fmt.Sprintf("%d. Remote signing", i))
+		logger.DebugfContext(context.Context(), "no signer or wallet found for party [%s], request remote signature", signerIdentity)
 		sigma, err := c.signRemote(context, signerIdentity, signatureRequest, verifierGetter)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed signing remote for party [%s]", signerIdentity)
 		}
 		sigmas[signerIdentity.UniqueID()] = sigma
-		span.AddEvent("Done remote signing")
 	}
+	logger.DebugfContext(context.Context(), "Done signing")
 
 	return sigmas, nil
 }
 
 func (c *CollectEndorsementsView) signLocal(party view.Identity, signer token.Signer, signatureRequest *SignatureRequest) ([]byte, error) {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signing [%s][%s]", hash.Hashable(signatureRequest.Request).String(), c.tx.ID())
-		logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
-	}
+	logger.Debugf("signing [request_hash=%s][tx_id=%s][nonce=%s]", hash.Hashable(signatureRequest.Request), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
+
 	sigma, err := signer.Sign(signatureRequest.MessageToSign())
 	if err != nil {
 		return nil, err
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		var f any = signer
 		logger.Debugf("signature generated (local, me) [%s,%s,%s,%v]",
-			hash.Hashable(signatureRequest.MessageToSign()).String(),
-			hash.Hashable(sigma).String(),
-			party.UniqueID(),
-			getIdentifier(signer),
+			hash.Hashable(signatureRequest.MessageToSign()),
+			hash.Hashable(sigma),
+			party,
+			sig.GetIdentifier(f),
 		)
 	}
 	return sigma, nil
@@ -377,9 +362,7 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 		return nil, errors.Wrapf(err, "failed marshalling request")
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("call chaincode for endorsement [nonce=%s]", base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
-	}
+	logger.Debugf("call chaincode for endorsement [nonce=%s]", logging.Base64(c.tx.TxID.Nonce))
 
 	env, err := network.GetInstance(context, c.tx.Network(), c.tx.Channel()).RequestApproval(
 		context,
@@ -397,13 +380,13 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 
 func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Identity, error) {
 	auditors := c.tx.TokenService().PublicParametersManager().PublicParameters().Auditors()
-	logger.Debugf("# auditors in public parameters [%d]", len(auditors))
+	logger.DebugfContext(context.Context(), "# auditors in public parameters [%d]", len(auditors))
 	if len(c.tx.TokenService().PublicParametersManager().PublicParameters().Auditors()) == 0 {
 		return nil, nil
 	}
 
 	if !c.tx.Opts.Auditor.IsNone() {
-		logger.Debugf("ask auditing to [%s]", c.tx.Opts.Auditor)
+		logger.DebugfContext(context.Context(), "ask auditing to [%s]", c.tx.Opts.Auditor)
 		local := view2.GetSigService(context).IsMe(context.Context(), c.tx.Opts.Auditor)
 		sessionBoxed, err := context.RunView(newAuditingViewInitiator(c.tx, local, c.Opts.SkipAuditorSignatureVerification))
 		if err != nil {
@@ -429,22 +412,18 @@ func (c *CollectEndorsementsView) cleanupAudit(context view.Context) error {
 }
 
 func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
-	span := trace.SpanFromContext(context.Context())
-	span.AddEvent("Start distribute to parties")
+	logger.DebugfContext(context.Context(), "Start distribute to parties")
 	if c.Opts.SkipDistributeEnv {
-		span.AddEvent("Skip distribute envelopes")
+		logger.DebugfContext(context.Context(), "Skip distribute envelopes")
 		return nil
 	}
-	span.AddEvent("Start distributing envelopes")
 
 	if !c.Opts.SkipApproval {
 		// perform sanity checks
 		if env == nil {
 			return errors.New("transaction envelope is empty")
 		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("distribute env [%s]", env.String())
-		}
+		logger.DebugfContext(context.Context(), "distribute env [%s]", env)
 	}
 
 	// TODO: double check that the transaction is valid
@@ -455,7 +434,6 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 	// Distribute the transaction to all parties in the distribution list.
 	// Filter the metadata by Enrollment ID.
 	// The auditor will receive the full set of metadata
-	span.AddEvent("Prepare final distribution list")
 	finalDistributionList, err := c.prepareDistributionList(context, auditors, distributionList)
 	if err != nil {
 		return errors.Wrap(err, "failed preparing distribution list")
@@ -464,29 +442,19 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 	owner := NewOwner(context, c.tx.TokenService())
 
 	// Store transaction in the token transaction database
-	span.AddEvent("Store transaction records")
+	logger.DebugfContext(context.Context(), "Store transaction records")
 	if err := StoreTransactionRecords(context, c.tx); err != nil {
 		return errors.Wrapf(err, "failed adding transaction %s to the token transaction database", c.tx.ID())
 	}
 
-	span.AddEvent(fmt.Sprintf("Start distributing to %d parties", len(finalDistributionList)))
+	logger.DebugfContext(context.Context(), "Start distributing to %d parties", len(finalDistributionList))
 	for i, entry := range finalDistributionList {
-		span.AddEvent(fmt.Sprintf("%d. Distribute to %s", i, entry.EID))
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("distribute transaction envelope to [%s]", entry.ID.UniqueID())
-		}
-
 		// If it is me, no need to open a remote connection. Just store the envelope locally.
 		if entry.IsMe && !entry.Auditor {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("This is me [%s], endorse locally", entry.ID.UniqueID())
-			}
-			span.AddEvent("Skip myself")
+			logger.DebugfContext(context.Context(), "tx [%d] is me [%s], endorse locally", i, entry.ID)
 			continue
 		} else {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("This is not me [%s:%s], ask endorse", entry.ID.UniqueID(), entry.EID)
-			}
+			logger.DebugfContext(context.Context(), "tx [%d] is not me [%s:%s], ask endorse", i, entry.ID, entry.EID)
 		}
 
 		// The party is not mex, open a connection to the party.
@@ -495,17 +463,13 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 		var txRaw []byte
 		var err error
 		if entry.Auditor {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("This is an auditor [%s], send the full set of metadata", entry.ID.UniqueID())
-			}
+			logger.Debugf("This is an auditor [%s], send the full set of metadata", entry.ID)
 			txRaw, err = c.tx.Bytes()
 			if err != nil {
 				return errors.Wrap(err, "failed marshalling transaction content")
 			}
 		} else {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("This is not an auditor [%s], send the filtered metadata", entry.ID.UniqueID())
-			}
+			logger.Debugf("This is not an auditor [%s], send the filtered metadata", entry.ID)
 			txRaw, err = c.tx.Bytes(entry.EID)
 			if err != nil {
 				return errors.Wrap(err, "failed marshalling transaction content")
@@ -515,31 +479,30 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 		// TODO:
 		// This operation might be retried, but this requires a change of protocol to make sure the recipient can always receive.
 		// It could be done by using a new context.
-		span.AddEvent(fmt.Sprintf("Distribute to %s", entry.EID))
+		logger.DebugfContext(context.Context(), "Distribute to %s", entry.EID)
 		if err := c.distributeEvnToParty(context, &entry, txRaw, owner); err != nil {
 			return errors.Wrapf(err, "failed distribute evn of tx [%s] to party [%s:%s]", c.tx.ID(), entry.EID, entry.ID)
 		}
-		span.AddEvent(fmt.Sprintf("Done distributing to %s", entry.EID))
+		logger.DebugfContext(context.Context(), "Done distributing to %s", entry.EID)
 	}
 
 	return nil
 }
 
 func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, entry *distributionListEntry, txRaw []byte, owner *TxOwner) error {
-	span := trace.SpanFromContext(context.Context())
 	// Open a session to the party. and send the transaction.
 	session, err := c.getSession(context, entry.ID)
 	if err != nil {
 		return errors.Wrap(err, "failed getting session")
 	}
 	// Send the content
-	span.AddEvent("Send transaction content")
+	logger.DebugfContext(context.Context(), "Send transaction content")
 	err = session.SendWithContext(context.Context(), txRaw)
 	if err != nil {
 		return errors.Wrap(err, "failed sending transaction content")
 	}
 
-	span.AddEvent("Wait for ack")
+	logger.DebugfContext(context.Context(), "Wait for ack")
 	jsonSession := session2.NewFromSession(context, session)
 	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
@@ -549,7 +512,7 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 		entry.LongTerm, hash.Hashable(sigma).String(),
 		hash.Hashable(txRaw).String())
 
-	span.AddEvent("Verify signature")
+	logger.DebugfContext(context.Context(), "Verify signature")
 	verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for identity [%s]", entry.ID)
@@ -558,9 +521,8 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 		return errors.Wrapf(err, "failed verifying ack signature from [%s]", entry.ID)
 	}
 
-	logger.Debugf("CollectEndorsementsView: collected signature from %s", entry.ID)
+	logger.DebugfContext(context.Context(), "CollectEndorsementsView: collected signature from %s", entry.ID)
 
-	span.AddEvent("Append ack to Endorsement table")
 	if err := owner.appendTransactionEndorseAck(context.Context(), c.tx, entry.LongTerm, sigma); err != nil {
 		return errors.Wrapf(err, "failed appending transaction endorsement ack to transaction %s", c.tx.ID())
 	}
@@ -710,27 +672,21 @@ func NewReceiveTransactionView() *ReceiveTransactionView {
 }
 
 func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-	span.AddEvent("start_receive_transaction_view")
-	defer span.AddEvent("end_receive_transaction_view")
 	jsonSession := session2.JSON(context)
 	msg, err := jsonSession.ReceiveRawWithTimeout(time.Minute * 4)
 	if err != nil {
-		span.RecordError(err)
+		logger.ErrorfContext(context.Context(), err.Error())
 	}
-	span.AddEvent("receive_tx")
+	logger.DebugfContext(context.Context(), "ReceiveTransactionView: received transaction, len [%d][%s]", len(msg), hash.Hashable(msg))
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("ReceiveTransactionView: received transaction, len [%d][%s]", len(msg), hash.Hashable(msg))
-	}
 	if len(msg) == 0 {
 		info := context.Session().Info()
-		logger.Errorf("received empty message, session closed [%s:%v]: [%s]", info.ID, info.Closed, string(debug.Stack()))
+		logger.ErrorfContext(context.Context(), "received empty message, session closed [%s:%v]: [%s]", info.ID, info.Closed, string(debug.Stack()))
 		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
 	}
 	tx, err := NewTransactionFromBytes(context, msg)
 	if err != nil {
-		logger.Warnf("failed creating transaction from bytes: [%v], try to unmarshal as signature request...", err)
+		logger.WarnfContext(context.Context(), "failed creating transaction from bytes: [%v], try to unmarshal as signature request...", err)
 		// try to unmarshal as SignatureRequest
 		var err2 error
 		tx, err2 = f.unmarshalAsSignatureRequest(context, msg)
@@ -971,15 +927,4 @@ func TransferDistributionList(r *token.Request) []view.Identity {
 		distributionList = append(distributionList, transfer.Receivers...)
 	}
 	return distributionList
-}
-
-func getIdentifier(f any) string {
-	if f == nil {
-		return "<nil view>"
-	}
-	t := reflect.TypeOf(f)
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	return t.PkgPath() + "/" + t.Name()
 }

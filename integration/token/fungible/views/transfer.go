@@ -19,7 +19,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // TransferAction defines a transfer action
@@ -76,7 +75,6 @@ type TransferView struct {
 }
 
 func (t *TransferView) Call(context view.Context) (txID interface{}, err error) {
-	span := trace.SpanFromContext(context.Context())
 
 	// As a first step operation, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
@@ -84,11 +82,9 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// identity the recipient wants to use.
 	// If t.RecipientData is different from nil, then this recipient data will be advertised to the recipient
 	// to make sure the recipient is aware of this identity the will be used to transfer tokens to
-	span.AddEvent("receive_recipient_identity")
 	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient, ServiceOpts(t.TMSID, ttx.WithRecipientData(t.RecipientData), ttx.WithRecipientWalletID(t.RecipientWalletID))...)
 	assert.NoError(err, "failed getting recipient")
 
-	span.AddEvent("add_additional_recipients")
 	wm := token2.GetManagementService(context, ServiceOpts(t.TMSID)...).WalletManager()
 	// if there are more recipients, ask for their recipient identity
 	var additionalRecipients []view.Identity
@@ -111,7 +107,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// and specify the auditor that must be contacted to approve the operation.
 	var tx *ttx.Transaction
 	txOpts := TxOpts(t.TMSID, ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))
-	span.AddEvent("create_transfer")
+	logger.DebugfContext(context.Context(), "Create transfer")
 	if !t.NotAnonymous {
 		// create an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 		tx, err = ttx.NewAnonymousTransaction(context, txOpts...)
@@ -139,7 +135,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// selector.Select(wallet, amount, tokenType)
 	// It is also possible to pass a custom token selector to the Transfer function by using the relative opt:
 	// token2.WithTokenSelector(selector).
-	span.AddEvent("append_transfer")
+	logger.DebugfContext(context.Context(), "Append transfer")
 	err = tx.Transfer(
 		senderWallet,
 		t.Type,
@@ -151,7 +147,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
 
 	// add additional transfers
-	span.AddEvent("add_additional_transfers")
+	logger.DebugfContext(context.Context(), "Append additional actions")
 	for i, action := range t.TransferAction {
 		err = tx.Transfer(
 			senderWallet,
@@ -184,26 +180,24 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 		stream := view4.GetStream(context)
 		endorserOpts = append(endorserOpts, ttx.WithExternalWalletSigner(t.Wallet, ttx.NewStreamExternalWalletSignerServer(stream)))
 	}
-	span.AddEvent("collect_endorsements")
+
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx, endorserOpts...))
 	assert.NoError(err, "failed to sign transaction [<<<%s>>>]", tx.ID())
 
 	// Sanity checks:
 	// - the transaction is in pending state
-	span.AddEvent("verify_owner")
+	logger.DebugfContext(context.Context(), "Verify owner")
 	owner := ttx.NewOwner(context, tx.TokenService())
 	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	// Send to the ordering service and wait for finality
-	span.AddEvent("ask_ordering_finality")
 	_, err = context.RunView(ttx.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed asking ordering")
 
 	// Sanity checks:
 	// - the transaction is in confirmed state
-	span.AddEvent("verify_tx_status")
 	vc, _, err = owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())

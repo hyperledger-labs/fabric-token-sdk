@@ -140,17 +140,14 @@ func (a *Auditor) Check(
 	txID string,
 ) error {
 	// TODO: inputTokens should be checked against the actions
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent("start_check")
-	defer span.AddEvent("end_check")
 	// De-obfuscate issue requests
-	span.AddEvent("get_issue_audit_info")
+	a.Logger.DebugfContext(ctx, "Get audit info for %d issues", len(tokenRequest.Issues))
 	outputsFromIssue, identitiesFromIssue, err := a.GetAuditInfoForIssues(tokenRequest.Issues, tokenRequestMetadata.Issues)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for issues for [%s]", txID)
 	}
 	// check validity of issue requests
-	span.AddEvent("check_issue_requests")
+	a.Logger.DebugfContext(ctx, "Check %d issue outputs", len(outputsFromIssue))
 	err = a.CheckIssueRequests(outputsFromIssue, txID)
 	if err != nil {
 		return errors.Wrapf(err, "failed checking issues for [%s]", txID)
@@ -162,13 +159,13 @@ func (a *Auditor) Check(
 		}
 	}
 	// De-obfuscate transfer requests
-	span.AddEvent("get_transfer_audit_info")
+	a.Logger.DebugfContext(ctx, "Get audit info for %d transfers", len(tokenRequest.Transfers))
 	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfers(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for transfers for [%s]", txID)
 	}
 	// check validity of transfer requests
-	span.AddEvent("check_transfer_requests")
+	a.Logger.DebugfContext(ctx, "Check %d transfer outputs", len(outputsFromTransfer))
 	if err := a.CheckTransferRequests(auditableInputs, outputsFromTransfer, txID); err != nil {
 		return errors.Wrapf(err, "failed checking transfers [%s]", txID)
 	}

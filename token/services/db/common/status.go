@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type StatusEvent struct {
@@ -65,9 +64,8 @@ func (c *StatusSupport) DeleteStatusListener(txID string, ch chan StatusEvent) {
 }
 
 func (c *StatusSupport) Notify(event StatusEvent) {
-	span := trace.SpanFromContext(event.Ctx)
-	span.AddEvent("start_notify")
-	defer span.AddEvent("end_notify")
+	logger.DebugfContext(event.Ctx, "Start notify for [%s]", event.TxID)
+	defer logger.DebugfContext(event.Ctx, "Notified for [%s]", event.TxID)
 	c.mutex.RLock()
 	listeners := c.listeners[event.TxID]
 	if len(listeners) == 0 {

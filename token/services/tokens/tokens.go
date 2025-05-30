@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -62,35 +61,31 @@ type Service struct {
 }
 
 func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID string, request *token.Request) (err error) {
-	span := trace.SpanFromContext(ctx)
 	if request == nil {
-		logger.Debugf("transaction [%s], no request found, skip it", txID)
+		logger.DebugfContext(ctx, "transaction [%s], no request found, skip it", txID)
 		return nil
 	}
 	if request.Metadata == nil {
-		logger.Debugf("transaction [%s], no metadata found, skip it", txID)
+		logger.DebugfContext(ctx, "transaction [%s], no metadata found, skip it", txID)
 		return nil
 	}
 
-	span.AddEvent("check_tx_exists")
 	exists, err := t.Storage.TransactionExists(ctx, txID)
 	if err != nil {
-		logger.Errorf("transaction [%s], failed to check existence in db [%s]", txID, err)
+		logger.ErrorfContext(ctx, "transaction [%s], failed to check existence in db [%s]", txID, err)
 		return errors.WithMessagef(err, "transaction [%s], failed to check existence in db", txID)
 	}
 	if exists {
-		logger.Debugf("transaction [%s], exists in db, skipping", txID)
+		logger.DebugfContext(ctx, "transaction [%s], exists in db, skipping", txID)
 		return nil
 	}
 
-	span.AddEvent("get_actions")
 	toSpend, toAppend, err := t.getActions(ctx, tmsID, txID, request)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to extract actions", txID)
 	}
 
-	logger.Debugf("transaction [%s] start db transaction", txID)
-	span.AddEvent("create_new_tx")
+	logger.DebugfContext(ctx, "transaction [%s] start db transaction", txID)
 	ts, err := t.Storage.NewTransaction()
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to start db transaction", txID)
@@ -99,30 +94,29 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID string, re
 		if err == nil {
 			return
 		}
-		span.RecordError(err)
 		if err1 := ts.Rollback(); err1 != nil {
-			logger.Errorf("error rolling back [%s][%s]", err1, debug.Stack())
+			logger.ErrorfContext(ctx, "error rolling back [%s][%s]", err1, debug.Stack())
 		} else {
-			logger.Infof("transaction [%s] rolled back", txID)
+			logger.InfofContext(ctx, "transaction [%s] rolled back", txID)
 		}
 	}()
-	span.AddEvent("append_tokens")
+
 	for _, tta := range toAppend {
-		err = ts.AppendToken(context.TODO(), tta)
+		err = ts.AppendToken(ctx, tta)
 		if err != nil {
 			return errors.WithMessagef(err, "transaction [%s], failed to append token", txID)
 		}
 	}
-	span.AddEvent("delete_tokens")
-	err = ts.DeleteTokens(context.TODO(), txID, toSpend)
+
+	err = ts.DeleteTokens(ctx, txID, toSpend)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 	}
-	span.AddEvent("commit")
+
 	if err = ts.Commit(); err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to commit tokens to database", txID)
 	}
-	logger.Debugf("transaction [%s], committed tokens [%d:%d] to database", txID, len(toAppend), len(toSpend))
+	logger.DebugfContext(ctx, "transaction [%s], committed tokens [%d:%d] to database", txID, len(toAppend), len(toSpend))
 
 	return nil
 }
@@ -147,7 +141,7 @@ func (t *Service) CacheRequest(ctx context.Context, tmsID token.TMSID, request *
 	if err != nil {
 		return errors.WithMessagef(err, "failed to extract actions for request [%s]", request.ID())
 	}
-	logger.Debugf("cache request [%s]", request.ID())
+	logger.DebugfContext(ctx, "cache request [%s]", request.ID())
 	// append to cache
 	t.RequestsCache.Add(request.Anchor, &CacheEntry{
 		Request:  request,

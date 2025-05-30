@@ -23,8 +23,6 @@ import (
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap/zapcore"
 )
 
 type TxAuditor struct {
@@ -132,10 +130,9 @@ func newAuditingViewInitiator(tx *Transaction, local, skipAuditorSignatureVerifi
 }
 
 func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
 	var err error
 	var session view.Session
-	span.AddEvent("start_session")
+
 	if a.local {
 		session, err = a.startLocal(context)
 	} else {
@@ -146,23 +143,21 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	}
 
 	// Receive signature
-	logger.Debugf("Receiving signature for [%s]", a.tx.ID())
-	span.AddEvent("start_receiving")
+	logger.DebugfContext(context.Context(), "Receiving signature for [%s]", a.tx.ID())
+
 	jsonSession := session2.NewFromSession(context, session)
 	signature, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
-		span.RecordError(err)
+		logger.ErrorfContext(context.Context(), "failed to read audit event: %v", err)
 		return nil, errors.WithMessage(err, "failed to read audit event")
 	}
-	span.AddEvent("received_message")
-	logger.Debugf("reply received from %s", a.tx.Opts.Auditor)
+	logger.DebugfContext(context.Context(), "reply received from %s", a.tx.Opts.Auditor)
 
 	auditorIdentity, err := a.verifyAuditorSignature(context, signature)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed verifying auditor signature")
 	}
 
-	span.AddEvent("append_auditor_signature")
 	a.tx.TokenRequest.AddAuditorSignature(auditorIdentity, signature)
 
 	logger.Debug("auditor signature verified")
@@ -170,7 +165,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 }
 
 func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session, error) {
-	logger.Debugf("Starting remote auditing session with [%s] for [%s]", a.tx.Opts.Auditor.UniqueID(), a.tx.ID())
+	logger.DebugfContext(context.Context(), "Starting remote auditing session with [%s] for [%s]", a.tx.Opts.Auditor.UniqueID(), a.tx.ID())
 	session, err := context.GetSession(a, a.tx.Opts.Auditor)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting session")
@@ -190,7 +185,7 @@ func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session,
 }
 
 func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, error) {
-	logger.Debugf("Starting local auditing for %s", a.tx.ID())
+	logger.DebugfContext(context.Context(), "Starting local auditing for %s", a.tx.ID())
 
 	// This code is executed everytime the auditor is the same as the
 	// initiator of a token transaction.
@@ -235,8 +230,7 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 }
 
 func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, signature []byte) (token.Identity, error) {
-	span := trace.SpanFromContext(context.Context())
-	span.AddEvent("validate_auditing")
+	logger.DebugfContext(context.Context(), "Validate auditing")
 
 	if a.skipAuditorSignatureVerification {
 		return a.tx.Opts.Auditor, nil
@@ -247,9 +241,7 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling message to sign")
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
-	}
+	logger.DebugfContext(context.Context(), "Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor, hash.Hashable(signed), a.tx.ID())
 
 	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
 		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditorID)
@@ -257,13 +249,11 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 			logger.Debugf("failed to get auditor verifier for [%s]", auditorID)
 			continue
 		}
-		span.AddEvent("verify_auditor_signature")
+		logger.DebugfContext(context.Context(), "Verify auditor signature")
 		if err := v.Verify(signed, signature); err != nil {
-			logger.Errorf("failed verifying auditor signature [%s][%s][%s]", auditorID, hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
+			logger.ErrorfContext(context.Context(), "failed verifying auditor signature [%s][%s][%s]", auditorID, hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 		} else {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("auditor signature verified [%s][%s][%s]", auditorID, base64.StdEncoding.EncodeToString(signature), hash.Hashable(signed))
-			}
+			logger.DebugfContext(context.Context(), "auditor signature verified [%s][%s][%s]", auditorID, base64.StdEncoding.EncodeToString(signature), hash.Hashable(signed))
 			return auditorID, nil
 		}
 	}
@@ -280,9 +270,6 @@ func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *AuditApproveV
 }
 
 func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-	span.AddEvent("start_audit_approve_view")
-	defer span.AddEvent("end_audit_approve_view")
 	// Append audit records
 	if err := auditor.New(context, a.w).Append(context.Context(), a.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed appending audit records for transaction %s", a.tx.ID())
@@ -311,8 +298,7 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 }
 
 func (a *AuditApproveView) signAndSendBack(context view.Context) error {
-	span := trace.SpanFromContext(context.Context())
-	logger.Debugf("Signing and sending back transaction... [%s]", a.tx.ID())
+	logger.DebugfContext(context.Context(), "Signing and sending back transaction... [%s]", a.tx.ID())
 	// Sign
 	aid, err := a.w.GetAuditorIdentity()
 	if err != nil {
@@ -327,24 +313,19 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed marshalling tx [%s] to audit", a.tx.ID())
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Audit Approve [%s][%s][%s]", aid.UniqueID(), hash.Hashable(raw).String(), a.tx.TokenRequest.Anchor)
-	}
-	span.AddEvent("sign_tx")
+
+	logger.DebugfContext(context.Context(), "Audit Approve [%s][%s][%s]", aid, hash.Hashable(raw), a.tx.TokenRequest.Anchor)
 	sigma, err := signer.Sign(raw)
 	if err != nil {
 		return errors.Wrapf(err, "failed sign audit message for tx [%s]", a.tx.ID())
 	}
-	logger.Debug("auditor sending sigma back", hash.Hashable(sigma))
-	session := context.Session()
-	span.AddEvent("send_back_tx")
-	if err := session.Send(sigma); err != nil {
+
+	logger.DebugfContext(context.Context(), "auditor sending sigma back", hash.Hashable(sigma))
+	if err := context.Session().Send(sigma); err != nil {
 		return errors.WithMessagef(err, "failed sending back auditor signature")
 	}
+	logger.DebugfContext(context.Context(), "Signing and sending back transaction...done [%s]", a.tx.ID())
 
-	logger.Debugf("Signing and sending back transaction...done [%s]", a.tx.ID())
-
-	span.AddEvent("wait_envelope")
 	if err := a.waitEnvelope(context); err != nil {
 		return errors.WithMessagef(err, "failed obtaining auditor signature")
 	}
@@ -352,13 +333,12 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 }
 
 func (a *AuditApproveView) waitEnvelope(context view.Context) error {
-	span := trace.SpanFromContext(context.Context())
-	logger.Debugf("Waiting for envelope... [%s]", a.tx.ID())
+	logger.DebugfContext(context.Context(), "Waiting for envelope... [%s]", a.tx.ID())
 	tx, err := ReceiveTransaction(context, WithNoTransactionVerification())
 	if err != nil {
 		return errors.Wrapf(err, "failed to receive transaction with network envelope")
 	}
-	logger.Debugf("Waiting for envelope...transaction received[%s]", a.tx.ID())
+	logger.DebugfContext(context.Context(), "Waiting for envelope...transaction received[%s]", a.tx.ID())
 
 	// Processes
 	logger.Debugf("Processes envelope...")
@@ -368,27 +348,23 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	// Ack for distribution
 	// Send the signature back
 
-	var sigma []byte
-	logger.Debugf("auditor signing ack response [%s] with identity [%s]", hash.Hashable(tx.FromRaw), view2.GetIdentityProvider(context).DefaultIdentity())
-	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
+	defaultIdentity := view2.GetIdentityProvider(context).DefaultIdentity()
+	logger.DebugfContext(context.Context(), "auditor signing ack response [%s] with identity [%s]", hash.Hashable(tx.FromRaw), defaultIdentity)
+	signer, err := view2.GetSigService(context).GetSigner(defaultIdentity)
 	if err != nil {
-		return errors.WithMessagef(err, "failed getting signing identity for [%s]", view2.GetIdentityProvider(context).DefaultIdentity())
+		return errors.WithMessagef(err, "failed getting signing identity for [%s]", defaultIdentity)
 	}
-	span.AddEvent("sign_ack")
-	sigma, err = signer.Sign(tx.FromRaw)
+
+	sigma, err := signer.Sign(tx.FromRaw)
 	if err != nil {
 		return errors.WithMessage(err, "failed to sign ack response")
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
-	}
-	session := context.Session()
-	span.AddEvent("send_back_ack")
-	if err := session.Send(sigma); err != nil {
+	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
+
+	if err := context.Session().Send(sigma); err != nil {
 		return errors.WithMessage(err, "failed sending ack")
 	}
-
-	logger.Debugf("Waiting for envelope...done [%s]", a.tx.ID())
+	logger.DebugfContext(context.Context(), "Waiting for envelope...done [%s]", a.tx.ID())
 
 	return nil
 }

@@ -25,11 +25,9 @@ import (
 	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type tokenTables struct {
@@ -124,14 +122,12 @@ func (db *TokenStore) IsMine(ctx context.Context, txID string, index uint64) (bo
 
 // UnspentTokensIterator returns an iterator over all unspent tokens
 func (db *TokenStore) UnspentTokensIterator(ctx context.Context) (tdriver.UnspentTokensIterator, error) {
-	return db.UnspentTokensIteratorBy(context.TODO(), "", "")
+	return db.UnspentTokensIteratorBy(ctx, "", "")
 }
 
 // UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 // The token type can be empty. In that case, tokens of any type are returned.
 func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (tdriver.UnspentTokensIterator, error) {
-	span := trace.SpanFromContext(ctx)
-
 	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
 	query, args := q.Select().
 		Fields(
@@ -149,9 +145,7 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 		Format(db.ci)
 
 	logger.Debug(query, args)
-	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	rows, err := db.readDB.Query(query, args...)
-	span.AddEvent("end_query")
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +157,6 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 
 // SpendableTokensIteratorBy returns the minimum information about the tokens needed for the selector
 func (db *TokenStore) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token.Type) (tdriver.SpendableTokensIterator, error) {
-	span := trace.SpanFromContext(ctx)
-
 	query, args := q.Select().
 		FieldsByName("tx_id", "idx", "token_type", "quantity", "owner_wallet_id").
 		From(q.Table(db.table.Tokens)).
@@ -176,13 +168,12 @@ func (db *TokenStore) SpendableTokensIteratorBy(ctx context.Context, walletID st
 		}, nil)).
 		Format(db.ci)
 
-	logger.Warn(query, args)
-	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	rows, err := db.readDB.Query(query, args...)
-	span.AddEvent("end_query")
+	logger.Debug(query, args)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
+
 	return common.NewIterator(rows, func(r *token.UnspentTokenInWallet) error {
 		return rows.Scan(&r.Id.TxId, &r.Id.Index, &r.Type, &r.Quantity, &r.WalletID)
 	}), nil
@@ -393,13 +384,10 @@ func (db *TokenStore) GetTokenMetadata(ctx context.Context, ids []*token.ID) ([]
 
 // GetTokenOutputsAndMeta retrieves both the token output, metadata, and type for the passed ids.
 func (db *TokenStore) GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error) {
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent("get_ledger_token_meta")
 	tokens, metas, types, err := db.getLedgerTokenAndMeta(ctx, ids)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	span.AddEvent("create_outputs")
 	return tokens, metas, types, nil
 }
 
@@ -459,7 +447,6 @@ func (db *TokenStore) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 }
 
 func (db *TokenStore) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error) {
-	span := trace.SpanFromContext(ctx)
 	if len(ids) == 0 {
 		return nil, nil, nil, nil
 	}
@@ -470,15 +457,13 @@ func (db *TokenStore) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID
 		Where(HasTokens("tx_id", "idx", ids...)).
 		Format(db.ci)
 
-	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
 	logger.Debug(query, args)
-	rows, err := db.readDB.Query(query, args...)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	defer Close(rows)
 
-	span.AddEvent("start_scan_rows")
 	infoMap := make(map[string][3][]byte, len(ids))
 	for rows.Next() {
 		var tok []byte
@@ -493,9 +478,7 @@ func (db *TokenStore) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID
 	if err = rows.Err(); err != nil {
 		return nil, nil, nil, err
 	}
-	span.AddEvent("end_scan_rows", tracing.WithAttributes(tracing.Int(ResultRowsLabel, len(ids))))
 
-	span.AddEvent("combine_results")
 	tokens := make([][]byte, len(ids))
 	metas := make([][]byte, len(ids))
 	types := make([]token.Format, len(ids))
@@ -909,7 +892,6 @@ func (db *TokenStore) getSupportedTokenFormats() []token.Format {
 }
 
 func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID string, tokenType token.Type) ([]token.Format, error) {
-	span := trace.SpanFromContext(ctx)
 	query, args := q.SelectDistinct().
 		FieldsByName("ledger_type").
 		From(q.Table(db.table.Tokens)).
@@ -921,9 +903,7 @@ func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID stri
 		Format(db.ci)
 
 	logger.Debug(query, args)
-	span.AddEvent("start_query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	rows, err := db.readDB.Query(query, args...)
-	span.AddEvent("end_query")
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
@@ -932,6 +912,7 @@ func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID stri
 		return nil, errors.Wrapf(err, "error querying db")
 	}
 	// read the types from the query result and remove discard those in db.getSupportedTokenFormats()
+
 	supported := collections.NewSet(db.getSupportedTokenFormats()...)
 	logger.Debugf("supported token formats are [%v]", supported)
 
@@ -948,8 +929,6 @@ type TokenTransaction struct {
 }
 
 func (t *TokenTransaction) GetToken(ctx context.Context, tokenID token.ID, includeDeleted bool) (*token.Token, []string, error) {
-	span := trace.SpanFromContext(ctx)
-
 	tokenTable, ownershipTable := q.Table(t.table.Tokens), q.Table(t.table.Ownership)
 	query, args := q.Select().
 		Fields(
@@ -966,15 +945,13 @@ func (t *TokenTransaction) GetToken(ctx context.Context, tokenID token.ID, inclu
 		}, tokenTable)).
 		Format(t.ci)
 
-	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	logger.Info(query, args)
-	rows, err := t.tx.Query(query, args...)
+	logger.Debug(query, args)
+	rows, err := t.tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer Close(rows)
 
-	span.AddEvent("start_scan_rows")
 	var raw []byte
 	var tokenType token.Type
 	var quantity string
@@ -999,7 +976,7 @@ func (t *TokenTransaction) GetToken(ctx context.Context, tokenID token.ID, inclu
 	if walletID != nil && len(*walletID) != 0 {
 		owners = append(owners, *walletID)
 	}
-	span.AddEvent("end_scan_rows", tracing.WithAttributes(tracing.Int(ResultRowsLabel, len(owners))))
+
 	if len(raw) == 0 {
 		return nil, owners, nil
 	}
@@ -1067,36 +1044,28 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 }
 
 func (t *TokenTransaction) SetSpendable(ctx context.Context, tokenID token.ID, spendable bool) error {
-	span := trace.SpanFromContext(ctx)
 	query, args := q.Update(t.table.Tokens).
 		Set("spendable", spendable).
 		Where(cond.And(cond.Eq("tx_id", tokenID.TxId), cond.Eq("idx", tokenID.Index))).
 		Format(t.ci)
-	logger.Info(query, args)
-	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query, args...); err != nil {
-		span.RecordError(err)
+
+	logger.Debug(query, args)
+	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
 		return errors.Wrapf(err, "error setting spendable flag to [%v] for [%s]", spendable, tokenID.TxId)
 	}
-	span.AddEvent("end_query")
 	return nil
-
 }
 
 func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Context, formats []token.Format) error {
-	span := trace.SpanFromContext(ctx)
-
 	// first set all spendable flags to false
 	query, args := q.Update(t.table.Tokens).
 		Set("spendable", false).
 		Format(t.ci)
-	logger.Infof(query, args)
-	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	if _, err := t.tx.Exec(query, args...); err != nil {
-		span.RecordError(err)
+
+	logger.Debug(query, args)
+	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
 		return errors.Wrapf(err, "error setting spendable flag to false for all tokens")
 	}
-	span.AddEvent("end_query")
 
 	// then set the spendable flags to true only for the supported token types
 	query, args = q.Update(t.table.Tokens).
@@ -1104,17 +1073,14 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Conte
 		Where(cond.In("ledger_type", formats...)).
 		Format(t.ci)
 
-	logger.Infof(query, args)
-	span.AddEvent("query", tracing.WithAttributes(tracing.String(QueryLabel, query)))
-	res, err := t.tx.Exec(query, args...)
+	logger.Debug(query, args)
+	res, err := t.tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		span.RecordError(err)
 		return errors.Wrapf(err, "error setting spendable flag to true for token types [%v]", formats)
 	} else {
 		rows, _ := res.RowsAffected()
-		logger.Infof("row affected [%d]", rows)
+		logger.InfofContext(ctx, "rows affected [%d]", rows)
 	}
-	span.AddEvent("end_query")
 
 	return nil
 }

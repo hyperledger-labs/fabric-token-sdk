@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/multisig"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type BalanceQuery struct {
@@ -38,17 +37,13 @@ type BalanceView struct {
 }
 
 func (b *BalanceView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-	defer span.AddEvent("end_balance_view")
-	span.AddEvent("start_balance_view")
 	tms := token.GetManagementService(context, ServiceOpts(b.TMSID)...)
 	wallet := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
 	if wallet == nil {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
 	}
 
-	span.AddEvent("start_sum_calculation_unspent")
-	unspentTokens, err := wallet.ListUnspentTokensIterator(token.WithType(b.Type))
+	unspentTokens, err := wallet.ListUnspentTokensIterator(token.WithType(b.Type), token.WithContext(context.Context()))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed listing unspent tokens")
 	}
@@ -57,7 +52,6 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	span.AddEvent("end_sum_calculation_unspent")
 
 	// co-owned
 	multisigWallet := multisig.Wallet(context, wallet)
@@ -67,12 +61,10 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to compute the sum of the co-owned tokens")
 
 	if !b.SkipCheck {
-		span.AddEvent("start_sum_calculation")
 		balance, err := wallet.Balance(context.Context(), token.WithType(b.Type))
 		if err != nil {
 			return nil, err
 		}
-		span.AddEvent("end_sum_calculation")
 		if sum.ToBigInt().Uint64() != balance {
 			return nil, errors.Errorf("balance doesn't match [%d]!=[%d]", balance, sum.ToBigInt().Uint64())
 		}

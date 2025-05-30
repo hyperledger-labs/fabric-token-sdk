@@ -13,10 +13,12 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 )
+
+var logger = logging.MustGetLogger()
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
 
@@ -52,11 +54,11 @@ func NewSender(signers []driver.Signer, tokens []*token.Token, ids []*token2.ID,
 // GenerateZKTransfer produces a Action and an array of ValidationRecords
 // that corresponds to the openings of the newly created outputs
 func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners [][]byte) (*Action, []*token.Metadata, error) {
-	span := trace.SpanFromContext(ctx)
+
 	if len(values) != len(owners) {
 		return nil, nil, errors.Errorf("cannot generate transfer: number of values [%d] does not match number of recipients [%d]", len(values), len(owners))
 	}
-	span.AddEvent("get_token_data")
+	logger.DebugfContext(ctx, "Get token data for %d inputs", len(s.Inputs))
 	in := getTokenData(s.Inputs)
 	intw := make([]*token.Metadata, len(s.InputInformation))
 	for i := 0; i < len(s.InputInformation); i++ {
@@ -69,23 +71,23 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 			BlindingFactor: s.InputInformation[i].BlindingFactor,
 		}
 	}
-	span.AddEvent("get_tokens_with_witness")
+	logger.DebugfContext(ctx, "Get tokens with witness")
 	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.PedersenGenerators, math.Curves[s.PublicParams.Curve])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot generate transfer")
 	}
-	span.AddEvent("create_new_prover")
+	logger.DebugfContext(ctx, "Create new prover")
 	prover, err := NewProver(intw, outtw, in, out, s.PublicParams)
 	if err != nil {
 		return nil, nil, errors.New("cannot generate transfer")
 	}
-	span.AddEvent("prove")
+	logger.DebugfContext(ctx, "Prove")
 	proof, err := prover.Prove()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot generate zero-knowledge proof for transfer")
 	}
 
-	span.AddEvent("create_new_transfer")
+	logger.DebugfContext(ctx, "Create new transfer")
 	transfer, err := NewTransfer(s.InputIDs, s.Inputs, out, owners, proof)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to produce transfer action")

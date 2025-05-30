@@ -6,15 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 
 package common
 
-import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-)
-
-const (
-	QueryLabel      tracing.LabelName = "query"
-	ResultRowsLabel tracing.LabelName = "result_rows"
-)
-
 type Closer interface {
 	Close() error
 }

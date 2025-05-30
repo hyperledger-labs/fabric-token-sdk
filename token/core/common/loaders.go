@@ -17,6 +17,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+var logger = logging.MustGetLogger()
+
 type TokenVault interface {
 	IsPending(ctx context.Context, id *token.ID) (bool, error)
 	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error)
@@ -66,13 +68,8 @@ func NewLedgerTokenLoader[T any](logger logging.Logger, _ trace.TracerProvider, 
 
 // GetTokenOutputs takes an array of token identifiers (txID, index) and returns the corresponding token outputs
 func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*token.ID) (map[string]T, error) {
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent("start_get_token_outputs")
-	defer span.AddEvent("end_get_token_outputs")
-
 	var err error
 	for i := 0; i < s.NumRetries; i++ {
-		span.AddEvent("try_fetch")
 		tokens := make(map[string]T, len(ids))
 		counter := 0
 		err = s.TokenVault.GetTokenOutputs(ctx, ids, func(id *token.ID, bytes []byte) error {
@@ -95,7 +92,6 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*
 
 		// check if there is any token id whose corresponding transaction is pending
 		// if there is, then wait a bit and retry to load the outputs
-		span.AddEvent("check_any_pending")
 		anyPending, anyError := s.isAnyPending(ctx, ids...)
 		if anyError != nil {
 			err = anyError
@@ -144,14 +140,13 @@ func NewVaultLedgerTokenAndMetadataLoader[T any, M any](tokenVault TokenVault, d
 // tokens in clear text and the identities of their owners
 // LoadToken returns an error in case of failure
 func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context, ids []*token.ID) ([]LoadedToken[T, M], error) {
-	span := trace.SpanFromContext(ctx)
 	// return token outputs and the corresponding opening
 	outputs, metadata, types, err := s.TokenVault.GetTokenOutputsAndMeta(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
 
-	span.AddEvent("iterate_tokens")
+	logger.DebugfContext(ctx, "Deserialize %d tokens", len(ids))
 	result := make([]LoadedToken[T, M], len(ids))
 	for i, id := range ids {
 		if len(outputs[i]) == 0 {
@@ -160,12 +155,10 @@ func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context
 		if len(metadata[i]) == 0 {
 			return nil, errors.Errorf("failed getting state for id [%v], nil info value", id)
 		}
-		span.AddEvent("deserialize_token")
 		tok, err := s.Deserializer.DeserializeToken(outputs[i])
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(outputs[i]))
 		}
-		span.AddEvent("deserialize_metadata")
 		meta, err := s.Deserializer.DeserializeMetadata(metadata[i])
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)

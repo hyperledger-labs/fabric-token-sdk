@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type TxStatusRequest struct {
@@ -41,8 +40,6 @@ func NewRequestTxStatusView(network string, namespace string, txID string, dbMan
 }
 
 func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	sm, err := r.dbManager.GetSessionManager(r.Network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting session manager for network [%s]", r.Network)
@@ -60,16 +57,16 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 		Namespace: r.Namespace,
 		TxID:      r.TxID,
 	}
-	span.AddEvent("send_tx_status_request")
+	logger.DebugfContext(context.Context(), "Send tx status request")
 	if err := session.SendWithContext(context.Context(), request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
 	response := &TxStatusResponse{}
-	span.AddEvent("receive_tx_status_response")
+	logger.DebugfContext(context.Context(), "Receive tx status response")
 	if err := session.Receive(response); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
-	logger.Debugf("got tx status response for [%s]: [%d]", r.TxID, response.Status)
+	logger.DebugfContext(context.Context(), "got tx status response for [%s]: [%d]", r.TxID, response.Status)
 	return response, nil
 }
 
@@ -80,19 +77,17 @@ type RequestTxStatusResponderView struct {
 }
 
 func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	// receive request
 	session := session2.JSON(context)
 	request := &TxStatusRequest{}
-	span.AddEvent("receive_tx_status_request")
+	logger.DebugfContext(context.Context(), "Receive tx status request")
 	if err := session.Receive(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive request")
 	}
 	logger.Debugf("got tx status request for [%s]: [%+v]", request.TxID, request)
 
-	span.AddEvent("process_tx_status_request")
-	response, err := r.process(context, request)
+	logger.DebugfContext(context.Context(), "Process tx status request")
+	response, err := r.process(request)
 	if err != nil {
 		if err2 := session.SendError(err.Error()); err2 != nil {
 			return nil, errors.Wrapf(errors2.Join(err, err2), "failed to process request")
@@ -102,15 +97,15 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 	if response.Status == driver.Valid && len(response.TokenRequestReference) == 0 {
 		panic("invalid result for [" + request.TxID + "]")
 	}
-	span.AddEvent("send_tx_status_response")
-	logger.Debugf("send tx status response for [%s]: [%d]", request.TxID, response.Status)
+
+	logger.DebugfContext(context.Context(), "send tx status response for [%s]: [%d]", request.TxID, response.Status)
 	if err := session.SendWithContext(context.Context(), response); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil
 }
 
-func (r *RequestTxStatusResponderView) process(context view.Context, request *TxStatusRequest) (*TxStatusResponse, error) {
+func (r *RequestTxStatusResponderView) process(request *TxStatusRequest) (*TxStatusResponse, error) {
 	if status, ok := r.statusCache.Get(request.TxID); ok && status.Status != driver.Busy {
 		if status.Status != driver.Valid || len(status.TokenRequestReference) != 0 {
 			return status, nil
