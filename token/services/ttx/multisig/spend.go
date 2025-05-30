@@ -131,7 +131,7 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 	if tms == nil {
 		return nil, errors.Errorf("failed getting TMS for [%s]", c.options.TMSID())
 	}
-	areMe := tms.SigService().AreMe(c.parties...)
+	areMe := tms.SigService().AreMe(context.Context(), c.parties...)
 	for _, party := range c.parties {
 		logger.Debugf("notify party [%s] about request...", party)
 		if slices.Contains(areMe, party.UniqueID()) {

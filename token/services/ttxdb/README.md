@@ -23,7 +23,7 @@ A Token Request can be assembled directly using the Token API or by using servic
 Once a Token Request is assembled, it can be appended to the Token Transactions DB as follows:
 
 ```go
-	if err := ttxDB.Append(tokenRequest); err != nil {
+	if err := ttxDB.Append(ctx, tokenRequest); err != nil {
 		return errors.WithMessagef(err, "failed appending audit records for tx [%s]", tx.ID())
 	}
 ```
@@ -72,7 +72,7 @@ the entire history.
 The following example shows how to retrieve the total amount of transactions for a given business party,
 
 ```go
-	it, err := qe.Transactions(ttxdb.QueryTransactionsParams{From: p.From, To: p.To})
+	it, err := qe.Transactions(ctx, ttxdb.QueryTransactionsParams{From: p.From, To: p.To})
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting transactions for enrollment id [%s]", eID)
 	}

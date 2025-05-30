@@ -6,7 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+import (
+	"context"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+)
 
 // Identity represents a generic identity
 type Identity = view.Identity
@@ -19,7 +23,7 @@ type IdentityProvider interface {
 	RegisterRecipientData(data *RecipientData) error
 
 	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
-	GetAuditInfo(identity Identity) ([]byte, error)
+	GetAuditInfo(ctx context.Context, identity Identity) ([]byte, error)
 
 	// GetSigner returns a Signer for passed identity.
 	GetSigner(identity Identity) (Signer, error)
@@ -31,10 +35,10 @@ type IdentityProvider interface {
 	RegisterSigner(identity Identity, signer Signer, verifier Verifier, signerInfo []byte) error
 
 	// AreMe returns the hashes of the passed identities that have a signer registered before
-	AreMe(identities ...Identity) []string
+	AreMe(ctx context.Context, identities ...Identity) []string
 
 	// IsMe returns true if a signer was ever registered for the passed identity
-	IsMe(party Identity) bool
+	IsMe(ctx context.Context, party Identity) bool
 
 	// GetEnrollmentID extracts the enrollment ID from the passed audit info
 	GetEnrollmentID(identity Identity, auditInfo []byte) (string, error)
@@ -47,7 +51,7 @@ type IdentityProvider interface {
 
 	// Bind binds longTerm to the passed ephemeral identity. The same signer, verifier, and audit of the long term
 	// identity is associated to id, if copyAll is true.
-	Bind(longTerm Identity, ephemeral Identity, copyAll bool) error
+	Bind(ctx context.Context, longTerm Identity, ephemeral Identity, copyAll bool) error
 
 	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
 	RegisterRecipientIdentity(id Identity) error

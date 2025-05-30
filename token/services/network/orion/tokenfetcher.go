@@ -33,8 +33,8 @@ type tokenFetcher struct {
 	viewManager *view2.Manager
 }
 
-func (f *tokenFetcher) QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
-	resBoxed, err := f.viewManager.InitiateView(NewRequestQueryTokensView(f.network, namespace, IDs), context)
+func (f *tokenFetcher) QueryTokens(ctx context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
+	resBoxed, err := f.viewManager.InitiateView(NewRequestQueryTokensView(f.network, namespace, IDs), ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ type spentTokenFetcher struct {
 	viewManager   *view2.Manager
 }
 
-func (f *spentTokenFetcher) QuerySpentTokens(context context.Context, namespace string, IDs []*token.ID, meta []string) ([]bool, error) {
+func (f *spentTokenFetcher) QuerySpentTokens(ctx context.Context, namespace string, IDs []*token.ID, meta []string) ([]bool, error) {
 	sIDs := make([]string, len(IDs))
 	var err error
 	for i, id := range IDs {
@@ -76,7 +76,7 @@ func (f *spentTokenFetcher) QuerySpentTokens(context context.Context, namespace 
 		}
 	}
 
-	resBoxed, err := f.viewManager.InitiateView(NewRequestSpentTokensView(f.network, namespace, sIDs), context)
+	resBoxed, err := f.viewManager.InitiateView(NewRequestSpentTokensView(f.network, namespace, sIDs), ctx)
 	if err != nil {
 		return nil, err
 	}

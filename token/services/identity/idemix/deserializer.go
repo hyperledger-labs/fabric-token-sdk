@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
 	"fmt"
 
 	idemix2 "github.com/IBM/idemix"
@@ -125,8 +126,8 @@ func (i *Deserializer) MatchIdentity(id driver.Identity, auditInfo []byte) error
 	return matcher.Match(id)
 }
 
-func (i *Deserializer) GetAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
-	auditInfo, err := p.GetAuditInfo(raw)
+func (i *Deserializer) GetAuditInfo(ctx context.Context, raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
+	auditInfo, err := p.GetAuditInfo(ctx, raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", driver.Identity(raw).String())
 	}

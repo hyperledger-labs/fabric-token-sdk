@@ -47,7 +47,7 @@ func NewTransferService(
 // It also returns the corresponding TransferMetadata
 func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.OwnerWallet, tokenIDs []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	// select inputs
-	inputTokens, err := s.TokenLoader.GetTokens(tokenIDs)
+	inputTokens, err := s.TokenLoader.GetTokens(ctx, tokenIDs)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
@@ -80,7 +80,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	// inputs
 	transferInputsMetadata := make([]*driver.TransferInputMetadata, 0, len(inputTokens))
 	for i, t := range inputTokens {
-		auditInfo, err := s.Deserializer.GetAuditInfo(t.Owner, ws)
+		auditInfo, err := s.Deserializer.GetAuditInfo(ctx, t.Owner, ws)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner).String())
 		}
@@ -114,7 +114,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 			receiversAuditInfo = append(receiversAuditInfo, []byte{})
 			outputReceivers = make([]*driver.AuditableIdentity, 0, 1)
 		} else {
-			outputAudiInfo, err = s.Deserializer.GetAuditInfo(output.Owner, ws)
+			outputAudiInfo, err = s.Deserializer.GetAuditInfo(ctx, output.Owner, ws)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
 			}
@@ -124,7 +124,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 			}
 			receivers = append(receivers, recipients...)
 			for _, receiver := range receivers {
-				receiverAudiInfo, err := s.Deserializer.GetAuditInfo(receiver, ws)
+				receiverAudiInfo, err := s.Deserializer.GetAuditInfo(ctx, receiver, ws)
 				if err != nil {
 					return nil, nil, errors.Wrapf(err, "failed getting audit info for receiver identity [%s]", receiver)
 				}
@@ -182,7 +182,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 }
 
 // VerifyTransfer checks the outputs in the TransferAction against the passed tokenInfos
-func (s *TransferService) VerifyTransfer(tr driver.TransferAction, outputMetadata []*driver.TransferOutputMetadata) error {
+func (s *TransferService) VerifyTransfer(ctx context.Context, tr driver.TransferAction, outputMetadata []*driver.TransferOutputMetadata) error {
 	// TODO:
 	return nil
 }

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -36,34 +37,36 @@ var walletCases = []struct {
 }
 
 func TDuplicate(t *testing.T, db driver.WalletStore) {
+	ctx := context.Background()
 	id := []byte{254, 0, 155, 1}
 
-	err := db.StoreIdentity(id, "eID", "duplicate", 0, []byte("meta"))
+	err := db.StoreIdentity(ctx, id, "eID", "duplicate", 0, []byte("meta"))
 	assert.NoError(t, err)
 
-	meta, err := db.LoadMeta(id, "duplicate", 0)
+	meta, err := db.LoadMeta(ctx, id, "duplicate", 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "meta", string(meta))
 
-	err = db.StoreIdentity(id, "eID", "duplicate", 0, nil)
+	err = db.StoreIdentity(ctx, id, "eID", "duplicate", 0, nil)
 	assert.NoError(t, err)
 
-	meta, err = db.LoadMeta(id, "duplicate", 0)
+	meta, err = db.LoadMeta(ctx, id, "duplicate", 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "meta", string(meta))
 }
 
 func TWalletIdentities(t *testing.T, db driver.WalletStore) {
-	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 0, nil))
-	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 1, nil))
-	assert.NoError(t, db.StoreIdentity([]byte("bob"), "eID", "bob_wallet", 0, nil))
-	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 0, nil))
+	ctx := context.Background()
+	assert.NoError(t, db.StoreIdentity(ctx, []byte("alice"), "eID", "alice_wallet", 0, nil))
+	assert.NoError(t, db.StoreIdentity(ctx, []byte("alice"), "eID", "alice_wallet", 1, nil))
+	assert.NoError(t, db.StoreIdentity(ctx, []byte("bob"), "eID", "bob_wallet", 0, nil))
+	assert.NoError(t, db.StoreIdentity(ctx, []byte("alice"), "eID", "alice_wallet", 0, nil))
 
-	ids, err := db.GetWalletIDs(0)
+	ids, err := db.GetWalletIDs(ctx, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.WalletID{"alice_wallet", "bob_wallet"}, ids)
 
-	ids, err = db.GetWalletIDs(1)
+	ids, err = db.GetWalletIDs(ctx, 1)
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.WalletID{"alice_wallet"}, ids)
 }

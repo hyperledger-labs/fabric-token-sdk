@@ -18,13 +18,13 @@ import (
 )
 
 type TokenVault interface {
-	IsPending(id *token.ID) (bool, error)
+	IsPending(ctx context.Context, id *token.ID) (bool, error)
 	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error)
-	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
+	GetTokenOutputs(ctx context.Context, ids []*token.ID, callback driver.QueryCallbackFunc) error
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error)
-	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
-	PublicParams() ([]byte, error)
-	Balance(id string, tokenType token.Type) (uint64, error)
+	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
+	PublicParams(ctx context.Context) ([]byte, error)
+	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
 }
 
 type LedgerToken interface {
@@ -75,7 +75,7 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*
 		span.AddEvent("try_fetch")
 		tokens := make(map[string]T, len(ids))
 		counter := 0
-		err = s.TokenVault.GetTokenOutputs(ids, func(id *token.ID, bytes []byte) error {
+		err = s.TokenVault.GetTokenOutputs(ctx, ids, func(id *token.ID, bytes []byte) error {
 			if len(bytes) == 0 {
 				return errors.Errorf("failed getting serialized token output for id [%v], nil value", id)
 			}
@@ -96,7 +96,7 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*
 		// check if there is any token id whose corresponding transaction is pending
 		// if there is, then wait a bit and retry to load the outputs
 		span.AddEvent("check_any_pending")
-		anyPending, anyError := s.isAnyPending(ids...)
+		anyPending, anyError := s.isAnyPending(ctx, ids...)
 		if anyError != nil {
 			err = anyError
 			break
@@ -115,9 +115,9 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*
 	return nil, errors.Wrapf(err, "failed to get token outputs")
 }
 
-func (s *VaultLedgerTokenLoader[T]) isAnyPending(ids ...*token.ID) (anyPending bool, anyError error) {
+func (s *VaultLedgerTokenLoader[T]) isAnyPending(ctx context.Context, ids ...*token.ID) (anyPending bool, anyError error) {
 	for _, id := range ids {
-		if pending, error := s.TokenVault.IsPending(id); pending || error != nil {
+		if pending, error := s.TokenVault.IsPending(ctx, id); pending || error != nil {
 			return pending, error
 		}
 	}
@@ -189,8 +189,8 @@ func NewVaultTokenInfoLoader[M any](tokenVault driver.QueryEngine, deserializer 
 	return &VaultTokenInfoLoader[M]{TokenVault: tokenVault, Deserializer: deserializer}
 }
 
-func (s *VaultTokenInfoLoader[M]) GetTokenInfos(ids []*token.ID) ([]M, error) {
-	infos, err := s.TokenVault.GetTokenMetadata(ids)
+func (s *VaultTokenInfoLoader[M]) GetTokenInfos(ctx context.Context, ids []*token.ID) ([]M, error) {
+	infos, err := s.TokenVault.GetTokenMetadata(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -216,20 +216,20 @@ func NewVaultTokenLoader(tokenVault driver.QueryEngine) *VaultTokenLoader {
 
 // GetTokens takes an array of token identifiers (txID, index) and returns the keys of the identified tokens
 // in the vault and the content of the tokens
-func (s *VaultTokenLoader) GetTokens(ids []*token.ID) ([]*token.Token, error) {
-	return s.TokenVault.GetTokens(ids...)
+func (s *VaultTokenLoader) GetTokens(ctx context.Context, ids []*token.ID) ([]*token.Token, error) {
+	return s.TokenVault.GetTokens(ctx, ids...)
 }
 
 type TokenCertificationStorage interface {
-	GetCertifications(ids []*token.ID) ([][]byte, error)
+	GetCertifications(ctx context.Context, ids []*token.ID) ([][]byte, error)
 }
 
 type VaultTokenCertificationLoader struct {
 	TokenCertificationStorage TokenCertificationStorage
 }
 
-func (s *VaultTokenCertificationLoader) GetCertifications(ids []*token.ID) ([][]byte, error) {
-	return s.TokenCertificationStorage.GetCertifications(ids)
+func (s *VaultTokenCertificationLoader) GetCertifications(ctx context.Context, ids []*token.ID) ([][]byte, error) {
+	return s.TokenCertificationStorage.GetCertifications(ctx, ids)
 }
 
 type IdentityTokenAndMetadataDeserializer struct{}

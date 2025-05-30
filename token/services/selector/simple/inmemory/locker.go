@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package inmemory
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -25,7 +26,7 @@ var (
 )
 
 type TXStatusProvider interface {
-	GetStatus(txID string) (ttxdb.TxStatus, string, error)
+	GetStatus(ctx context.Context, txID string) (ttxdb.TxStatus, string, error)
 }
 
 type lockEntry struct {
@@ -58,7 +59,7 @@ func NewLocker(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTim
 	return r
 }
 
-func (d *locker) Lock(id *token2.ID, txID string, reclaim bool) (string, error) {
+func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim bool) (string, error) {
 	k := *id
 
 	// check quickly if the token is locked
@@ -80,7 +81,7 @@ func (d *locker) Lock(id *token2.ID, txID string, reclaim bool) (string, error) 
 		if reclaim {
 			// Second chance
 			logger.Debugf("[%s] already locked by [%s], try to reclaim...", id, e)
-			reclaimed, status := d.reclaim(id, e.TxID)
+			reclaimed, status := d.reclaim(context.Background(), id, e.TxID)
 			if !reclaimed {
 				logger.Debugf("[%s] already locked by [%s], reclaim failed, tx status [%s]", id, e, ttxdb.TxStatusMessage[status])
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -125,7 +126,7 @@ func (d *locker) UnlockIDs(ids ...*token2.ID) []*token2.ID {
 	return notFound
 }
 
-func (d *locker) UnlockByTxID(txID string) {
+func (d *locker) UnlockByTxID(ctx context.Context, txID string) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -146,8 +147,8 @@ func (d *locker) IsLocked(id *token2.ID) bool {
 	return ok
 }
 
-func (d *locker) reclaim(id *token2.ID, txID string) (bool, int) {
-	status, _, err := d.ttxdb.GetStatus(txID)
+func (d *locker) reclaim(ctx context.Context, id *token2.ID, txID string) (bool, int) {
+	status, _, err := d.ttxdb.GetStatus(ctx, txID)
 	if err != nil {
 		return false, status
 	}
@@ -161,16 +162,16 @@ func (d *locker) reclaim(id *token2.ID, txID string) (bool, int) {
 }
 
 func (d *locker) Start() {
-	go d.scan()
+	go d.scan(context.Background())
 }
 
-func (d *locker) scan() {
+func (d *locker) scan(ctx context.Context) {
 	for {
 		logger.Debugf("token collector: scan locked tokens")
 		var removeList []token2.ID
 		d.lock.RLock()
 		for id, entry := range d.locked {
-			status, _, err := d.ttxdb.GetStatus(entry.TxID)
+			status, _, err := d.ttxdb.GetStatus(ctx, entry.TxID)
 			if err != nil {
 				logger.Warnf("failed getting status for token [%s] locked by [%s], remove", id, entry)
 				removeList = append(removeList, id)

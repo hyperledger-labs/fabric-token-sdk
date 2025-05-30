@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"context"
 	"encoding/base64"
 	errors2 "errors"
 	"fmt"
@@ -252,7 +253,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 		}
 
 		// Case: there is a wallet bound to the party but the signer is not local, the signature is generated externally
-		if w := c.tx.TokenService().WalletManager().OwnerWallet(signerIdentity); w != nil {
+		if w := c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), signerIdentity); w != nil {
 			span.AddEvent(fmt.Sprintf("%d. External signer", i))
 			logger.Debugf("found wallet for party [%s], request external signature", signerIdentity)
 			ews := c.Opts.ExternalWalletSigner(w.ID())
@@ -560,7 +561,7 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	logger.Debugf("CollectEndorsementsView: collected signature from %s", entry.ID)
 
 	span.AddEvent("Append ack to Endorsement table")
-	if err := owner.appendTransactionEndorseAck(c.tx, entry.LongTerm, sigma); err != nil {
+	if err := owner.appendTransactionEndorseAck(context.Context(), c.tx, entry.LongTerm, sigma); err != nil {
 		return errors.Wrapf(err, "failed appending transaction endorsement ack to transaction %s", c.tx.ID())
 	}
 
@@ -597,7 +598,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 			remainingIds = append(remainingIds, id)
 		}
 	}
-	mine.Add(c.tx.TokenService().SigService().AreMe(remainingIds...)...)
+	mine.Add(c.tx.TokenService().SigService().AreMe(context.Context(), remainingIds...)...)
 	logger.Debugf("%d/%d ids were mine", mine.Length(), len(allIds))
 
 	var distributionListCompressed []distributionListEntry
@@ -615,7 +616,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		isMe := mine.Contains(party.UniqueID())
 		if !isMe {
 			// check if there is a wallet that contains that identity
-			isMe = c.tx.TokenService().WalletManager().OwnerWallet(party) != nil
+			isMe = c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), party) != nil
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to [%s], it is me [%v].", party.UniqueID(), isMe)
@@ -643,7 +644,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 			logger.Debugf("adding [%s] to distribution list", party)
 			eID := ""
 			if !isMe {
-				eID, err = c.tx.TokenService().WalletManager().GetEnrollmentID(party)
+				eID, err = c.tx.TokenService().WalletManager().GetEnrollmentID(context.Context(), party)
 				if err != nil {
 					return nil, errors.Wrapf(err, "failed getting enrollment ID for [%s]", party.UniqueID())
 				}
@@ -791,7 +792,7 @@ func NewEndorseView(tx *Transaction) *EndorseView {
 func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	// Process signature requests
 	logger.Debugf("check expected number of requests to sign for txid [%s]", s.tx.ID())
-	requestsToBeSigned, err := requestsToBeSigned(s.tx.Request())
+	requestsToBeSigned, err := requestsToBeSigned(context.Context(), s.tx.Request())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed collecting requests of signature")
 	}
@@ -832,7 +833,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		}
 
 		sigService := s.tx.TokenService().SigService()
-		if !sigService.IsMe(signatureRequest.Signer) {
+		if !sigService.IsMe(context.Context(), signatureRequest.Signer) {
 			return nil, errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
 		}
 		signer, err := sigService.GetSigner(signatureRequest.Signer)
@@ -887,7 +888,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
 	}
-	if err := t.CacheRequest(s.tx.TMSID(), s.tx.TokenRequest); err != nil {
+	if err := t.CacheRequest(context.Context(), s.tx.TMSID(), s.tx.TokenRequest); err != nil {
 		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
 	}
 
@@ -912,31 +913,31 @@ func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, er
 	return tx, nil
 }
 
-func requestsToBeSigned(request *token.Request) ([]any, error) {
+func requestsToBeSigned(ctx context.Context, request *token.Request) ([]any, error) {
 	var res []any
 	transfers := request.Transfers()
 	issues := request.Issues()
 	sigService := request.TokenService.SigService()
 	for _, issue := range issues {
 		for _, sender := range issue.ExtraSigners {
-			if sigService.IsMe(sender) {
+			if sigService.IsMe(ctx, sender) {
 				res = append(res, issue)
 			}
 		}
 	}
 	for _, transfer := range transfers {
 		for _, sender := range transfer.Senders {
-			if sigService.IsMe(sender) {
+			if sigService.IsMe(ctx, sender) {
 				res = append(res, transfer)
 			}
 		}
 
-		if transfer.Issuer != nil && sigService.IsMe(transfer.Issuer) {
+		if transfer.Issuer != nil && sigService.IsMe(ctx, transfer.Issuer) {
 			res = append(res, transfer)
 		}
 
 		for _, sender := range transfer.ExtraSigners {
-			if sigService.IsMe(sender) {
+			if sigService.IsMe(ctx, sender) {
 				res = append(res, transfer)
 			}
 		}

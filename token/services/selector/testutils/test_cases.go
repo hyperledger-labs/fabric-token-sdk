@@ -132,7 +132,7 @@ func NewEnhancedManager(manager token2.SelectorManager, tokenDB driver.TokenStor
 }
 
 func (m *enhancedManager) TokenSum() (token.Quantity, error) {
-	unspent, err := m.tokenDB.ListUnspentTokens()
+	unspent, err := m.tokenDB.ListUnspentTokens(context.Background())
 	if err != nil {
 		return nil, err
 	}

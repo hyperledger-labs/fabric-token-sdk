@@ -90,7 +90,6 @@ func (p *SDK) Install() error {
 	}
 
 	logger.Infof("Token platform enabled, installing...")
-
 	err := errors2.Join(
 		p.Container().Provide(common.NewAcceptTxInDBFilterProvider),
 		p.Container().Provide(network.NewProvider),

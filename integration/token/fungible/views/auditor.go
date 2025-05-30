@@ -56,7 +56,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	// extract inputs and outputs
 	logger.Debugf("AuditView: audit [%s]", tx.ID())
-	inputs, outputs, err := auditor.Audit(tx)
+	inputs, outputs, err := auditor.Audit(context.Context(), tx)
 	assert.NoError(err, "failed retrieving inputs and outputs")
 	logger.Debugf("AuditView: audit done [%s]", tx.ID())
 	defer auditor.Release(tx)
@@ -108,7 +108,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			fmt.Printf("Cumulative Limit: [%s] Diff [%d], type [%s]\n", eID, diff.Int64(), tokenType)
 
 			// load last 10 payments, add diff, and check that it is below the threshold
-			filter, err := auditor.NewPaymentsFilter().ByEnrollmentId(eID).ByType(tokenType).Last(10).Execute()
+			filter, err := auditor.NewPaymentsFilter().ByEnrollmentId(eID).ByType(tokenType).Last(10).Execute(context.Context())
 			assert.NoError(err, "failed retrieving last 10 payments")
 			sumLastPayments := filter.Sum()
 			fmt.Printf("Cumulative Limit: [%s] Last NewPaymentsFilter [%s], type [%s]\n", eID, sumLastPayments.Text(10), tokenType)
@@ -141,7 +141,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			fmt.Printf("Holding Limit: [%s] Diff [%d], type [%s]\n", eID, diff.Int64(), tokenType)
 
 			// load current holding, add diff, and check that it is below the threshold
-			filter, err := auditor.NewHoldingsFilter().ByEnrollmentId(eID).ByType(tokenType).Execute()
+			filter, err := auditor.NewHoldingsFilter().ByEnrollmentId(eID).ByType(tokenType).Execute(context.Context())
 			assert.NoError(err, "failed retrieving holding for [%s][%s]", eIDs, tokenTypes)
 			currentHolding := filter.Sum()
 
@@ -221,13 +221,13 @@ func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 
-	w := tms.WalletManager().AuditorWallet("")
+	w := tms.WalletManager().AuditorWallet(context.Context(), "")
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	auditor, err := ttx.NewAuditor(context, w)
 	assert.NoError(err, "failed to get auditor instance")
 
-	filter, err := auditor.NewHoldingsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
+	filter, err := auditor.NewHoldingsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute(context.Context())
 	assert.NoError(err, "failed retrieving holding for [%s][%s]", r.EnrollmentID, r.TokenType)
 	currentHolding := filter.Sum()
 	decimal := currentHolding.Text(10)
@@ -264,7 +264,7 @@ func (r *CurrentSpendingView) Call(context view.Context) (interface{}, error) {
 	auditor, err := ttx.NewAuditor(context, w)
 	assert.NoError(err, "failed to get auditor instance")
 
-	filter, err := auditor.NewPaymentsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
+	filter, err := auditor.NewPaymentsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute(context.Context())
 	assert.NoError(err, "failed retrieving spending for [%s][%s]", r.EnrollmentID, r.TokenType)
 	currentSpending := filter.Sum()
 	decimal := currentSpending.Text(10)

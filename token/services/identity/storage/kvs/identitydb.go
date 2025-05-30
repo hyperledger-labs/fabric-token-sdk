@@ -45,7 +45,7 @@ func NewIdentityStore(kvs KVS, tmsID token.TMSID) *IdentityStore {
 	return &IdentityStore{kvs: kvs, tmsID: tmsID}
 }
 
-func (s *IdentityStore) AddConfiguration(wp driver.IdentityConfiguration) error {
+func (s *IdentityStore) AddConfiguration(ctx context.Context, wp driver.IdentityConfiguration) error {
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,
 		[]string{
@@ -61,7 +61,7 @@ func (s *IdentityStore) AddConfiguration(wp driver.IdentityConfiguration) error 
 	return s.kvs.Put(context.Background(), k, &wp)
 }
 
-func (s *IdentityStore) IteratorConfigurations(configurationType string) (driver3.IdentityConfigurationIterator, error) {
+func (s *IdentityStore) IteratorConfigurations(ctx context.Context, configurationType string) (driver3.IdentityConfigurationIterator, error) {
 	it, err := s.kvs.GetByPartialCompositeID(
 		context.Background(),
 		IdentityDBPrefix,
@@ -77,7 +77,7 @@ func (s *IdentityStore) IteratorConfigurations(configurationType string) (driver
 	return &IdentityConfigurationsIterator{Iterator: it}, nil
 }
 
-func (s *IdentityStore) ConfigurationExists(id, configurationType, url string) (bool, error) {
+func (s *IdentityStore) ConfigurationExists(ctx context.Context, id, configurationType, url string) (bool, error) {
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,
 		[]string{
@@ -93,7 +93,7 @@ func (s *IdentityStore) ConfigurationExists(id, configurationType, url string) (
 	return s.kvs.Exists(context.Background(), k), nil
 }
 
-func (s *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
+func (s *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
 	k := kvs.CreateCompositeKeyOrPanic(
 		IdentityDBPrefix,
 		[]string{
@@ -111,7 +111,7 @@ func (s *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, token
 	return nil
 }
 
-func (s *IdentityStore) GetAuditInfo(identity []byte) ([]byte, error) {
+func (s *IdentityStore) GetAuditInfo(ctx context.Context, identity []byte) ([]byte, error) {
 	k := kvs.CreateCompositeKeyOrPanic(
 		IdentityDBPrefix,
 		[]string{
@@ -129,7 +129,7 @@ func (s *IdentityStore) GetAuditInfo(identity []byte) ([]byte, error) {
 	return res.AuditInfo, nil
 }
 
-func (s *IdentityStore) GetTokenInfo(identity []byte) ([]byte, []byte, error) {
+func (s *IdentityStore) GetTokenInfo(ctx context.Context, identity []byte) ([]byte, []byte, error) {
 	k := kvs.CreateCompositeKeyOrPanic(
 		IdentityDBPrefix,
 		[]string{
@@ -147,7 +147,7 @@ func (s *IdentityStore) GetTokenInfo(identity []byte) ([]byte, []byte, error) {
 	return res.TokenMetadata, res.TokenMetadataAuditInfo, nil
 }
 
-func (s *IdentityStore) StoreSignerInfo(id, info []byte) error {
+func (s *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) error {
 	idHash := driver2.Identity(id).UniqueID()
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,
@@ -166,7 +166,7 @@ func (s *IdentityStore) StoreSignerInfo(id, info []byte) error {
 	return nil
 }
 
-func (s *IdentityStore) GetExistingSignerInfo(identities ...driver2.Identity) ([]string, error) {
+func (s *IdentityStore) GetExistingSignerInfo(ctx context.Context, identities ...driver2.Identity) ([]string, error) {
 	keys := make([]string, len(identities))
 	for i, id := range identities {
 		k, err := kvs.CreateCompositeKey(
@@ -184,15 +184,15 @@ func (s *IdentityStore) GetExistingSignerInfo(identities ...driver2.Identity) ([
 	return s.kvs.GetExisting(context.Background(), keys...), nil
 }
 
-func (s *IdentityStore) SignerInfoExists(id []byte) (bool, error) {
-	existing, err := s.GetExistingSignerInfo(id)
+func (s *IdentityStore) SignerInfoExists(ctx context.Context, id []byte) (bool, error) {
+	existing, err := s.GetExistingSignerInfo(ctx, id)
 	if err != nil {
 		return false, err
 	}
 	return len(existing) > 0, nil
 }
 
-func (s *IdentityStore) GetSignerInfo(identity []byte) ([]byte, error) {
+func (s *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]byte, error) {
 	idHash := driver2.Identity(identity).UniqueID()
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,

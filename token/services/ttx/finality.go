@@ -24,7 +24,7 @@ const finalityTimeout = 10 * time.Minute
 type finalityDB interface {
 	AddStatusListener(txID string, ch chan common.StatusEvent)
 	DeleteStatusListener(txID string, ch chan common.StatusEvent)
-	GetStatus(txID string) (TxStatus, string, error)
+	GetStatus(ctx context.Context, txID string) (TxStatus, string, error)
 }
 
 type finalityView struct {
@@ -87,12 +87,12 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 	}
 	counter := 0
 	span.AddEvent("get_ttxdb_status")
-	statusTTXDB, _, err := transactionDB.GetStatus(txID)
+	statusTTXDB, _, err := transactionDB.GetStatus(ctx.Context(), txID)
 	if err == nil && statusTTXDB != ttxdb.Unknown {
 		counter++
 	}
 	span.AddEvent("get_auditdb_status")
-	statusAuditDB, _, err := auditDB.GetStatus(txID)
+	statusAuditDB, _, err := auditDB.GetStatus(ctx.Context(), txID)
 	if err == nil && statusAuditDB != ttxdb.Unknown {
 		counter++
 	}
@@ -138,7 +138,7 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 	}()
 
 	span.AddEvent("get_status")
-	status, _, err := finalityDB.GetStatus(txID)
+	status, _, err := finalityDB.GetStatus(c, txID)
 	if err == nil {
 		if status == ttxdb.Confirmed {
 			return startCounter, nil
@@ -171,7 +171,7 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 		case <-timeout.C:
 			timeout.Stop()
 			logger.Debugf("Got a timeout for finality of [%s], check the status", txID)
-			vd, _, err := finalityDB.GetStatus(txID)
+			vd, _, err := finalityDB.GetStatus(c, txID)
 			if err != nil {
 				logger.Debugf("Is [%s] final? not available yet, wait [err:%s, vc:%d]", txID, err, vd)
 				break

@@ -89,6 +89,7 @@ func (hv *LockView) Call(context view.Context) (res interface{}, err error) {
 
 	// The sender adds a lock operation to the transaction.
 	preImage, err := tx.Lock(
+		context.Context(),
 		senderWallet,
 		me,
 		hv.Type,

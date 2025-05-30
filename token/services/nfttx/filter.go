@@ -23,9 +23,9 @@ type Filter interface {
 }
 
 type QueryService interface {
-	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
+	UnspentTokensIterator(ctx context.Context) (*token.UnspentTokensIterator, error)
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type) (driver.UnspentTokensIterator, error)
-	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
+	GetTokens(ctx context.Context, inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
 type filter struct {

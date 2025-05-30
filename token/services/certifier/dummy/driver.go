@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package dummy
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -14,11 +16,11 @@ import (
 
 type CertificationClient struct{}
 
-func (c *CertificationClient) IsCertified(id *token2.ID) bool {
+func (c *CertificationClient) IsCertified(ctx context.Context, id *token2.ID) bool {
 	return true
 }
 
-func (c *CertificationClient) RequestCertification(ids ...*token2.ID) error {
+func (c *CertificationClient) RequestCertification(ctx context.Context, ids ...*token2.ID) error {
 	return nil
 }
 

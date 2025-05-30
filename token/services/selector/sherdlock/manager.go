@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock
 
 import (
+	"context"
 	"time"
 
 	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
@@ -18,18 +19,18 @@ import (
 
 type Locker interface {
 	// Lock locks a specific token for the consumer TX
-	Lock(tokenID *token2.ID, consumerTxID transaction.ID) error
+	Lock(ctx context.Context, tokenID *token2.ID, consumerTxID transaction.ID) error
 	// UnlockByTxID unlocks all tokens locked by the consumer TX
-	UnlockByTxID(consumerTxID transaction.ID) error
+	UnlockByTxID(ctx context.Context, consumerTxID transaction.ID) error
 	// Cleanup removes the locks such that either:
 	// 1. The transaction that locked that token is valid or invalid;
 	// 2. The lock is too old.
-	Cleanup(leaseExpiry time.Duration) error
+	Cleanup(ctx context.Context, leaseExpiry time.Duration) error
 }
 
 type tokenSelectorUnlocker interface {
 	token.Selector
-	UnlockAll() error
+	UnlockAll(ctx context.Context) error
 }
 
 type manager struct {
@@ -62,7 +63,7 @@ func NewManager(
 		}),
 	}
 	if leaseCleanupTickPeriod > 0 && leaseExpiry > 0 {
-		go m.cleaner()
+		go m.cleaner(context.Background())
 	}
 	return m
 }
@@ -71,8 +72,8 @@ func (m *manager) NewSelector(id transaction.ID) (token.Selector, error) {
 	return m.selectorCache.Get(id)
 }
 
-func (m *manager) Unlock(id transaction.ID) error {
-	return m.locker.UnlockByTxID(id)
+func (m *manager) Unlock(ctx context.Context, id transaction.ID) error {
+	return m.locker.UnlockByTxID(ctx, id)
 }
 
 func (m *manager) Close(id transaction.ID) error {
@@ -82,13 +83,13 @@ func (m *manager) Close(id transaction.ID) error {
 	return errors.New("selector for " + id + " not found")
 }
 
-func (m *manager) cleaner() {
+func (m *manager) cleaner(ctx context.Context) {
 	ticker := time.NewTicker(m.leaseCleanupTickPeriod)
 	defer ticker.Stop()
 
 	for range ticker.C {
 		logger.Debugf("release token locks older than [%s]", m.leaseExpiry)
-		if err := m.locker.Cleanup(m.leaseExpiry); err != nil {
+		if err := m.locker.Cleanup(ctx, m.leaseExpiry); err != nil {
 			logger.Errorf("failed to release token locks: [%s]", err)
 		}
 	}

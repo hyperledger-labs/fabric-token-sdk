@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -191,7 +192,7 @@ type WalletService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *WalletService) AuditorWallet(arg1 driver.WalletLookupID) (driver.AuditorWallet, error) {
+func (fake *WalletService) AuditorWallet(ctx context.Context, arg1 driver.WalletLookupID) (driver.AuditorWallet, error) {
 	fake.auditorWalletMutex.Lock()
 	ret, specificReturn := fake.auditorWalletReturnsOnCall[len(fake.auditorWalletArgsForCall)]
 	fake.auditorWalletArgsForCall = append(fake.auditorWalletArgsForCall, struct {
@@ -255,7 +256,7 @@ func (fake *WalletService) AuditorWalletReturnsOnCall(i int, result1 driver.Audi
 	}{result1, result2}
 }
 
-func (fake *WalletService) CertifierWallet(arg1 driver.WalletLookupID) (driver.CertifierWallet, error) {
+func (fake *WalletService) CertifierWallet(ctx context.Context, arg1 driver.WalletLookupID) (driver.CertifierWallet, error) {
 	fake.certifierWalletMutex.Lock()
 	ret, specificReturn := fake.certifierWalletReturnsOnCall[len(fake.certifierWalletArgsForCall)]
 	fake.certifierWalletArgsForCall = append(fake.certifierWalletArgsForCall, struct {
@@ -319,7 +320,7 @@ func (fake *WalletService) CertifierWalletReturnsOnCall(i int, result1 driver.Ce
 	}{result1, result2}
 }
 
-func (fake *WalletService) GetAuditInfo(arg1 driver.Identity) ([]byte, error) {
+func (fake *WalletService) GetAuditInfo(ctx context.Context, arg1 driver.Identity) ([]byte, error) {
 	fake.getAuditInfoMutex.Lock()
 	ret, specificReturn := fake.getAuditInfoReturnsOnCall[len(fake.getAuditInfoArgsForCall)]
 	fake.getAuditInfoArgsForCall = append(fake.getAuditInfoArgsForCall, struct {
@@ -596,7 +597,7 @@ func (fake *WalletService) GetRevocationHandleReturnsOnCall(i int, result1 strin
 	}{result1, result2}
 }
 
-func (fake *WalletService) IssuerWallet(arg1 driver.WalletLookupID) (driver.IssuerWallet, error) {
+func (fake *WalletService) IssuerWallet(ctx context.Context, arg1 driver.WalletLookupID) (driver.IssuerWallet, error) {
 	fake.issuerWalletMutex.Lock()
 	ret, specificReturn := fake.issuerWalletReturnsOnCall[len(fake.issuerWalletArgsForCall)]
 	fake.issuerWalletArgsForCall = append(fake.issuerWalletArgsForCall, struct {
@@ -660,7 +661,7 @@ func (fake *WalletService) IssuerWalletReturnsOnCall(i int, result1 driver.Issue
 	}{result1, result2}
 }
 
-func (fake *WalletService) OwnerWallet(arg1 driver.WalletLookupID) (driver.OwnerWallet, error) {
+func (fake *WalletService) OwnerWallet(ctx context.Context, arg1 driver.WalletLookupID) (driver.OwnerWallet, error) {
 	fake.ownerWalletMutex.Lock()
 	ret, specificReturn := fake.ownerWalletReturnsOnCall[len(fake.ownerWalletArgsForCall)]
 	fake.ownerWalletArgsForCall = append(fake.ownerWalletArgsForCall, struct {
@@ -724,7 +725,7 @@ func (fake *WalletService) OwnerWalletReturnsOnCall(i int, result1 driver.OwnerW
 	}{result1, result2}
 }
 
-func (fake *WalletService) OwnerWalletIDs() ([]string, error) {
+func (fake *WalletService) OwnerWalletIDs(ctx context.Context) ([]string, error) {
 	fake.ownerWalletIDsMutex.Lock()
 	ret, specificReturn := fake.ownerWalletIDsReturnsOnCall[len(fake.ownerWalletIDsArgsForCall)]
 	fake.ownerWalletIDsArgsForCall = append(fake.ownerWalletIDsArgsForCall, struct {
@@ -780,7 +781,7 @@ func (fake *WalletService) OwnerWalletIDsReturnsOnCall(i int, result1 []string, 
 	}{result1, result2}
 }
 
-func (fake *WalletService) RegisterIssuerIdentity(arg1 driver.IdentityConfiguration) error {
+func (fake *WalletService) RegisterIssuerIdentity(ctx context.Context, arg1 driver.IdentityConfiguration) error {
 	fake.registerIssuerIdentityMutex.Lock()
 	ret, specificReturn := fake.registerIssuerIdentityReturnsOnCall[len(fake.registerIssuerIdentityArgsForCall)]
 	fake.registerIssuerIdentityArgsForCall = append(fake.registerIssuerIdentityArgsForCall, struct {
@@ -841,7 +842,7 @@ func (fake *WalletService) RegisterIssuerIdentityReturnsOnCall(i int, result1 er
 	}{result1}
 }
 
-func (fake *WalletService) RegisterOwnerIdentity(arg1 driver.IdentityConfiguration) error {
+func (fake *WalletService) RegisterOwnerIdentity(ctx context.Context, arg1 driver.IdentityConfiguration) error {
 	fake.registerOwnerIdentityMutex.Lock()
 	ret, specificReturn := fake.registerOwnerIdentityReturnsOnCall[len(fake.registerOwnerIdentityArgsForCall)]
 	fake.registerOwnerIdentityArgsForCall = append(fake.registerOwnerIdentityArgsForCall, struct {
@@ -1027,7 +1028,7 @@ func (fake *WalletService) SpendIDsReturnsOnCall(i int, result1 []string, result
 	}{result1, result2}
 }
 
-func (fake *WalletService) Wallet(arg1 driver.Identity) driver.Wallet {
+func (fake *WalletService) Wallet(ctx context.Context, arg1 driver.Identity) driver.Wallet {
 	fake.walletMutex.Lock()
 	ret, specificReturn := fake.walletReturnsOnCall[len(fake.walletArgsForCall)]
 	fake.walletArgsForCall = append(fake.walletArgsForCall, struct {

@@ -83,7 +83,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed collecting actions")
 
 	// Alice doubles check that the content of the transaction is the one expected.
-	assert.NoError(tx.IsValid(), "failed verifying transaction")
+	assert.NoError(tx.IsValid(context.Context()), "failed verifying transaction")
 
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed getting outputs")
@@ -104,7 +104,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	// Sanity checks:
 	// - the transaction is in pending state
 	owner := ttx.NewOwner(context, tx.TokenService())
-	vc, _, err := owner.GetStatus(tx.ID())
+	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
@@ -114,7 +114,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 
 	// Sanity checks:
 	// - the transaction is in confirmed state
-	vc, _, err = owner.GetStatus(tx.ID())
+	vc, _, err = owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 
@@ -173,7 +173,7 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 	// Sanity checks:
 	// - the transaction is in pending state
 	owner := ttx.NewOwner(context, tx.TokenService())
-	vc, _, err := owner.GetStatus(tx.ID())
+	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
@@ -183,7 +183,7 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 
 	// Sanity checks:
 	// - the transaction is in confirmed state
-	vc, _, err = owner.GetStatus(tx.ID())
+	vc, _, err = owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 

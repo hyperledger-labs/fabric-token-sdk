@@ -55,7 +55,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed getting recipient identity")
 
 	// match recipient EID
-	eID, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...).WalletManager().GetEnrollmentID(recipient)
+	eID, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...).WalletManager().GetEnrollmentID(context.Context(), recipient)
 	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
 	assert.True(strings.HasPrefix(eID, p.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID)
 
@@ -69,7 +69,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 		// Retrieve the list of issued tokens using a specific wallet for a given token type.
 		precision := token.GetManagementService(context, ServiceOpts(p.TMSID)...).PublicParametersManager().PublicParameters().Precision()
 
-		history, err := wallet.ListIssuedTokens(ttx.WithType(p.TokenType))
+		history, err := wallet.ListIssuedTokens(context.Context(), ttx.WithType(p.TokenType))
 		assert.NoError(err, "failed getting history for token type [%s]", p.TokenType)
 		fmt.Printf("History [%s,%s]<[241]?\n", history.Sum(precision).ToBigInt().Text(10), p.TokenType)
 
@@ -128,7 +128,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// Sanity checks:
 	// - the transaction is in pending state
 	owner := ttx.NewOwner(context, tx.TokenService())
-	vc, _, err := owner.GetStatus(tx.ID())
+	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
@@ -138,7 +138,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 
 	// Sanity checks:
 	// - the transaction is in confirmed state
-	vc, _, err = owner.GetStatus(tx.ID())
+	vc, _, err = owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 

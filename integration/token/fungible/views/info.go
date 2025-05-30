@@ -41,7 +41,7 @@ type GetEnrollmentIDView struct {
 func (r *GetEnrollmentIDView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, ServiceOpts(r.TMSID)...)
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
-	w := tms.WalletManager().OwnerWallet(r.Wallet)
+	w := tms.WalletManager().OwnerWallet(context.Context(), r.Wallet)
 	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
 	return w.EnrollmentID(), nil
 }
@@ -116,7 +116,7 @@ type WhoDeletedTokenView struct {
 func (w *WhoDeletedTokenView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(w.TMSID))
 	assert.NotNil(tms, "failed to get TMS [%s]", w.TMSID)
-	who, deleted, err := tms.Vault().NewQueryEngine().WhoDeletedTokens(w.TokenIDs...)
+	who, deleted, err := tms.Vault().NewQueryEngine().WhoDeletedTokens(context.Context(), w.TokenIDs...)
 	assert.NoError(err, "failed to lookup who deleted tokens")
 	return &WhoDeletedTokenResult{
 		Who:     who,
@@ -205,13 +205,13 @@ func (p *DoesWalletExistView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(tms, "failed to get TMS")
 	switch p.WalletType {
 	case OwnerWallet:
-		return tms.WalletManager().OwnerWallet(p.Wallet) != nil, nil
+		return tms.WalletManager().OwnerWallet(context.Context(), p.Wallet) != nil, nil
 	case IssuerWallet:
-		return tms.WalletManager().IssuerWallet(p.Wallet) != nil, nil
+		return tms.WalletManager().IssuerWallet(context.Context(), p.Wallet) != nil, nil
 	case AuditorWallet:
-		return tms.WalletManager().AuditorWallet(p.Wallet) != nil, nil
+		return tms.WalletManager().AuditorWallet(context.Context(), p.Wallet) != nil, nil
 	default:
-		return tms.WalletManager().OwnerWallet(p.Wallet) != nil, nil
+		return tms.WalletManager().OwnerWallet(context.Context(), p.Wallet) != nil, nil
 	}
 }
 
@@ -240,7 +240,7 @@ type TxStatusView struct {
 
 func (p *TxStatusView) Call(context view.Context) (interface{}, error) {
 	owner := ttx.NewOwner(context, token.GetManagementService(context, token.WithTMSID(p.TMSID)))
-	vc, message, err := owner.GetStatus(p.TxID)
+	vc, message, err := owner.GetStatus(context.Context(), p.TxID)
 	assert.NoError(err, "failed to retrieve status of [%s]", p.TxID)
 	return &TxStatusResponse{
 		ValidationCode:    vc,

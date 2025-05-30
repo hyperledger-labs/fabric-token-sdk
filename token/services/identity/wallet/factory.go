@@ -17,10 +17,10 @@ import (
 )
 
 type TokenVault interface {
-	IsPending(id *token.ID) (bool, error)
+	IsPending(ctx context.Context, id *token.ID) (bool, error)
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error)
-	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
-	Balance(id string, tokenType token.Type) (uint64, error)
+	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
+	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
 }
 
 type WalletsConfiguration interface {
@@ -84,7 +84,7 @@ func (w *Factory) NewWallet(id string, role identity.RoleType, walletRegistry Re
 			return nil, errors.WithMessagef(err, "failed to get issuer wallet identity for [%s]", id)
 		}
 		newWallet := NewIssuerWallet(w.Logger, w.IdentityProvider, w.TokenVault, id, idInfoIdentity)
-		if err := walletRegistry.BindIdentity(idInfoIdentity, identityInfo.EnrollmentID(), id, nil); err != nil {
+		if err := walletRegistry.BindIdentity(context.Background(), idInfoIdentity, identityInfo.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
 		w.Logger.Debugf("created issuer wallet [%s]", id)
@@ -96,7 +96,7 @@ func (w *Factory) NewWallet(id string, role identity.RoleType, walletRegistry Re
 			return nil, errors.WithMessagef(err, "failed to get auditor wallet identity for [%s]", id)
 		}
 		newWallet := NewAuditorWallet(w.IdentityProvider, id, idInfoIdentity)
-		if err := walletRegistry.BindIdentity(idInfoIdentity, identityInfo.EnrollmentID(), id, nil); err != nil {
+		if err := walletRegistry.BindIdentity(context.Background(), idInfoIdentity, identityInfo.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
 		w.Logger.Debugf("created auditor wallet [%s]", id)

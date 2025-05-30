@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package v1
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
@@ -54,7 +56,7 @@ func NewTokenService(
 		return nil, err
 	}
 
-	validator, err := validator.New(logger, ppm.PublicParams(), deserializer), nil
+	validator, err := validator.New(logger, ppm.PublicParams(context.Background()), deserializer), nil
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to instantiate validator")
 	}

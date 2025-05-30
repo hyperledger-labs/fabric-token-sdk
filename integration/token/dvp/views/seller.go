@@ -89,7 +89,7 @@ func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttx.Trans
 	assert.NotNil(wallet, "failed getting default wallet")
 
 	house := &house.House{}
-	assert.NoError(wallet.QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
+	assert.NoError(wallet.QueryByKey(context.Context(), house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
 
 	buyer, err := nfttx.RequestRecipientIdentity(context, view.Identity(d.Buyer))
 	assert.NoError(err, "failed getting buyer identity")

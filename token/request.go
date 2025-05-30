@@ -309,7 +309,7 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
-	tokenIDs, outputTokens, err := r.prepareTransfer(false, wallet, typ, values, owners, opt)
+	tokenIDs, outputTokens, err := r.prepareTransfer(ctx, false, wallet, typ, values, owners, opt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed preparing transfer")
 	}
@@ -334,7 +334,7 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 	}
 	if r.TokenService.logger.IsEnabledFor(zapcore.DebugLevel) {
 		// double check
-		if err := ts.VerifyTransfer(transfer, transferMetadata.Outputs); err != nil {
+		if err := ts.VerifyTransfer(ctx, transfer, transferMetadata.Outputs); err != nil {
 			return nil, errors.Wrap(err, "failed checking generated proof")
 		}
 	}
@@ -358,7 +358,7 @@ func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Typ
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
-	tokenIDs, outputTokens, err := r.prepareTransfer(true, wallet, typ, []uint64{value}, []Identity{nil}, opt)
+	tokenIDs, outputTokens, err := r.prepareTransfer(ctx, true, wallet, typ, []uint64{value}, []Identity{nil}, opt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed preparing transfer")
 	}
@@ -384,7 +384,7 @@ func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Typ
 
 	if r.TokenService.logger.IsEnabledFor(zapcore.DebugLevel) {
 		// double check
-		if err := ts.VerifyTransfer(transfer, transferMetadata.Outputs); err != nil {
+		if err := ts.VerifyTransfer(ctx, transfer, transferMetadata.Outputs); err != nil {
 			return nil, errors.Wrap(err, "failed checking generated proof")
 		}
 	}
@@ -852,16 +852,16 @@ func (r *Request) extractTransferInputs(actionIndex int, metadata *TransferMetad
 	return inputs, nil
 }
 
-func (r *Request) InputsAndOutputs() (*InputStream, *OutputStream, map[string][]byte, error) {
-	return r.inputsAndOutputs(false, false, false)
+func (r *Request) InputsAndOutputs(ctx context.Context) (*InputStream, *OutputStream, map[string][]byte, error) {
+	return r.inputsAndOutputs(ctx, false, false, false)
 }
 
-func (r *Request) InputsAndOutputsNoRecipients() (*InputStream, *OutputStream, error) {
-	is, os, _, err := r.inputsAndOutputs(false, false, true)
+func (r *Request) InputsAndOutputsNoRecipients(ctx context.Context) (*InputStream, *OutputStream, error) {
+	is, os, _, err := r.inputsAndOutputs(ctx, false, false, true)
 	return is, os, err
 }
 
-func (r *Request) inputsAndOutputs(failOnMissing, verifyActions, noOutputForRecipient bool) (*InputStream, *OutputStream, map[string][]byte, error) {
+func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyActions, noOutputForRecipient bool) (*InputStream, *OutputStream, map[string][]byte, error) {
 	tms := r.TokenService.tms
 	if tms.PublicParamsManager() == nil || tms.PublicParamsManager().PublicParameters() == nil {
 		return nil, nil, nil, errors.New("can't get inputs: invalid token service in request")
@@ -934,7 +934,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions, noOutputForReci
 			return nil, nil, nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 		if verifyActions {
-			if err := ts.VerifyTransfer(transferAction, transferMeta.Outputs); err != nil {
+			if err := ts.VerifyTransfer(ctx, transferAction, transferMeta.Outputs); err != nil {
 				return nil, nil, nil, errors.WithMessagef(err, "failed verifying transfer action")
 			}
 		}
@@ -965,7 +965,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions, noOutputForReci
 }
 
 // IsValid checks that the request is valid.
-func (r *Request) IsValid() error {
+func (r *Request) IsValid(ctx context.Context) error {
 	// check request fields
 	if r.TokenService == nil {
 		return errors.New("invalid token service in request")
@@ -978,7 +978,7 @@ func (r *Request) IsValid() error {
 	}
 
 	// check inputs, outputs, and verify actions
-	if _, _, _, err := r.inputsAndOutputs(false, true, false); err != nil {
+	if _, _, _, err := r.inputsAndOutputs(ctx, false, true, false); err != nil {
 		return errors.WithMessagef(err, "failed verifying inputs and outputs")
 	}
 
@@ -1107,13 +1107,13 @@ func (r *Request) SetTokenService(service *ManagementService) {
 }
 
 // BindTo binds transfers' senders and receivers, that are senders, that are not me to the passed identity
-func (r *Request) BindTo(binder Binder, identity Identity) error {
+func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) error {
 	for i := range r.Actions.Transfers {
 		// senders
 		for _, input := range r.Metadata.Transfers[i].Inputs {
 			for _, sender := range input.Senders {
 				senderIdentity := sender.Identity
-				if w := r.TokenService.WalletManager().Wallet(senderIdentity); w != nil {
+				if w := r.TokenService.WalletManager().Wallet(ctx, senderIdentity); w != nil {
 					// this is me, skip
 					continue
 				}
@@ -1126,7 +1126,7 @@ func (r *Request) BindTo(binder Binder, identity Identity) error {
 
 		// extra signers
 		for _, eid := range r.Metadata.Transfers[i].ExtraSigners {
-			if w := r.TokenService.WalletManager().Wallet(eid); w != nil {
+			if w := r.TokenService.WalletManager().Wallet(ctx, eid); w != nil {
 				// this is me, skip
 				continue
 			}
@@ -1140,7 +1140,7 @@ func (r *Request) BindTo(binder Binder, identity Identity) error {
 		for _, output := range r.Metadata.Transfers[i].Outputs {
 			for _, receiver := range output.Receivers {
 				receiverIdentity := receiver.Identity
-				if w := r.TokenService.WalletManager().Wallet(receiverIdentity); w != nil {
+				if w := r.TokenService.WalletManager().Wallet(ctx, receiverIdentity); w != nil {
 					// this is me, skip
 					continue
 				}
@@ -1186,7 +1186,7 @@ func (r *Request) Transfers() []*Transfer {
 // the checks of the token request itself via IsValid.
 func (r *Request) AuditCheck(ctx context.Context) error {
 	r.TokenService.logger.Debugf("audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID())
-	if err := r.IsValid(); err != nil {
+	if err := r.IsValid(ctx); err != nil {
 		return err
 	}
 	return r.TokenService.tms.AuditorService().AuditorCheck(
@@ -1199,15 +1199,15 @@ func (r *Request) AuditCheck(ctx context.Context) error {
 
 // AuditRecord return the audit record of the request.
 // The audit record contains: The anchor, the audit inputs and outputs
-func (r *Request) AuditRecord() (*AuditRecord, error) {
-	inputs, outputs, attr, err := r.inputsAndOutputs(true, false, false)
+func (r *Request) AuditRecord(ctx context.Context) (*AuditRecord, error) {
+	inputs, outputs, attr, err := r.inputsAndOutputs(ctx, true, false, false)
 	if err != nil {
 		return nil, err
 	}
 
 	// load the tokens corresponding to the input token ids
 	ids := inputs.IDs()
-	toks, err := r.TokenService.Vault().NewQueryEngine().ListAuditTokens(ids...)
+	toks, err := r.TokenService.Vault().NewQueryEngine().ListAuditTokens(ctx, ids...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed retrieving inputs for auditing")
 	}
@@ -1234,7 +1234,7 @@ func (r *Request) AuditRecord() (*AuditRecord, error) {
 		in.Quantity = q
 
 		// retrieve the owner's audit info
-		ownerAuditInfo, err := r.TokenService.tms.WalletService().GetAuditInfo(toks[i].Owner)
+		ownerAuditInfo, err := r.TokenService.tms.WalletService().GetAuditInfo(ctx, toks[i].Owner)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting audit info for owner [%s]", toks[i].Owner)
 		}
@@ -1307,8 +1307,8 @@ func (r *Request) PublicParamsHash() PPHash {
 
 func (r *Request) String() string { return r.Anchor }
 
-func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity, token.Type, error) {
-	inputTokens, err := r.TokenService.Vault().NewQueryEngine().GetTokens(inputs...)
+func (r *Request) parseInputIDs(ctx context.Context, inputs []*token.ID) ([]*token.ID, token.Quantity, token.Type, error) {
+	inputTokens, err := r.TokenService.Vault().NewQueryEngine().GetTokens(ctx, inputs...)
 	if err != nil {
 		return nil, nil, "", errors.WithMessagef(err, "failed querying tokens ids")
 	}
@@ -1336,7 +1336,7 @@ func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 	return inputs, sum, typ, nil
 }
 
-func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType token.Type, values []uint64, owners []Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
+func (r *Request) prepareTransfer(ctx context.Context, redeem bool, wallet *OwnerWallet, tokenType token.Type, values []uint64, owners []Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
 	for _, owner := range owners {
 		if redeem {
 			if !owner.IsNone() {
@@ -1356,7 +1356,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType to
 
 	// if inputs have been passed, parse and certify them, if needed
 	if len(transferOpts.TokenIDs) != 0 {
-		tokenIDs, inputSum, tokenType, err = r.parseInputIDs(transferOpts.TokenIDs)
+		tokenIDs, inputSum, tokenType, err = r.parseInputIDs(ctx, transferOpts.TokenIDs)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed parsing passed input tokens")
 		}
@@ -1403,7 +1403,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType to
 		var restIdentity []byte
 		if transferOpts.RestRecipientIdentity != nil {
 			// register it and us it
-			if err := wallet.RegisterRecipient(transferOpts.RestRecipientIdentity); err != nil {
+			if err := wallet.RegisterRecipient(ctx, transferOpts.RestRecipientIdentity); err != nil {
 				return nil, nil, errors.WithMessagef(err, "failed to register recipient identity [%s] for the rest, wallet [%s]", transferOpts.RestRecipientIdentity.Identity, wallet.ID())
 			}
 			restIdentity = transferOpts.RestRecipientIdentity.Identity
@@ -1430,7 +1430,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType to
 		if err != nil {
 			return nil, nil, errors.WithMessagef(err, "cannot get certification client")
 		}
-		if err := cc.RequestCertification(tokenIDs...); err != nil {
+		if err := cc.RequestCertification(ctx, tokenIDs...); err != nil {
 			return nil, nil, errors.WithMessagef(err, "failed certifiying inputs")
 		}
 	}

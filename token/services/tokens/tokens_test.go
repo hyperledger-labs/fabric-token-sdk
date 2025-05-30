@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package tokens
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -17,16 +18,16 @@ import (
 
 type qsMock struct{}
 
-func (qs qsMock) IsMine(id *token2.ID) (bool, error) {
+func (qs qsMock) IsMine(ctx context.Context, id *token2.ID) (bool, error) {
 	return true, nil
 }
 
 type authMock struct{}
 
-func (a authMock) Issued(issuer driver.Identity, tok *token2.Token) bool {
+func (a authMock) Issued(ctx context.Context, issuer driver.Identity, tok *token2.Token) bool {
 	return false
 }
-func (a authMock) IsMine(tok *token2.Token) (string, []string, bool) {
+func (a authMock) IsMine(ctx context.Context, tok *token2.Token) (string, []string, bool) {
 	return "", []string{string(tok.Owner)}, true
 }
 func (a authMock) AmIAnAuditor() bool {
@@ -44,6 +45,7 @@ func (md mdMock) SpentTokenID() []*token2.ID {
 }
 
 func TestParse(t *testing.T) {
+	ctx := context.Background()
 	tokens := &Service{
 		TMSProvider: nil,
 		Storage:     &DBStorage{},
@@ -76,7 +78,7 @@ func TestParse(t *testing.T) {
 	is := token.NewInputStream(qsMock{}, []*token.Input{input1}, 64)
 	os := token.NewOutputStream([]*token.Output{output1}, 64)
 
-	spend, store, err := tokens.parse(&authMock{}, "tx1", md, is, os, false, 64, false)
+	spend, store, err := tokens.parse(ctx, &authMock{}, "tx1", md, is, os, false, 64, false)
 	assert.NoError(t, err)
 
 	assert.Len(t, spend, 1)
@@ -96,7 +98,7 @@ func TestParse(t *testing.T) {
 	// no owner, then a redeemed token
 	output1.Token.Owner = []byte{}
 	os = token.NewOutputStream([]*token.Output{output1}, 64)
-	spend, store, err = tokens.parse(&authMock{}, "tx1", md, is, os, false, 64, false)
+	spend, store, err = tokens.parse(ctx, &authMock{}, "tx1", md, is, os, false, 64, false)
 	assert.NoError(t, err)
 	assert.Len(t, spend, 1)
 	assert.Len(t, store, 0)
@@ -149,7 +151,7 @@ func TestParse(t *testing.T) {
 	is = token.NewInputStream(qsMock{}, []*token.Input{input1, input2}, 64)
 	os = token.NewOutputStream([]*token.Output{output1, output2}, 64)
 
-	spend, store, err = tokens.parse(&authMock{}, "tx2", md, is, os, false, 64, false)
+	spend, store, err = tokens.parse(ctx, &authMock{}, "tx2", md, is, os, false, 64, false)
 	assert.NoError(t, err)
 	assert.Len(t, spend, 2)
 	assert.Equal(t, "in1", spend[0].TxId)

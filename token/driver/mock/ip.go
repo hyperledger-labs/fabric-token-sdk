@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
@@ -166,7 +167,7 @@ type IdentityProvider struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *IdentityProvider) AreMe(arg1 ...identity.Identity) []string {
+func (fake *IdentityProvider) AreMe(ctx context.Context, arg1 ...identity.Identity) []string {
 	fake.areMeMutex.Lock()
 	ret, specificReturn := fake.areMeReturnsOnCall[len(fake.areMeArgsForCall)]
 	fake.areMeArgsForCall = append(fake.areMeArgsForCall, struct {
@@ -227,7 +228,7 @@ func (fake *IdentityProvider) AreMeReturnsOnCall(i int, result1 []string) {
 	}{result1}
 }
 
-func (fake *IdentityProvider) Bind(arg1 identity.Identity, arg2 identity.Identity, arg3 bool) error {
+func (fake *IdentityProvider) Bind(ctx context.Context, arg1 identity.Identity, arg2 identity.Identity, arg3 bool) error {
 	fake.bindMutex.Lock()
 	ret, specificReturn := fake.bindReturnsOnCall[len(fake.bindArgsForCall)]
 	fake.bindArgsForCall = append(fake.bindArgsForCall, struct {
@@ -290,7 +291,7 @@ func (fake *IdentityProvider) BindReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *IdentityProvider) GetAuditInfo(arg1 identity.Identity) ([]byte, error) {
+func (fake *IdentityProvider) GetAuditInfo(ctx context.Context, arg1 identity.Identity) ([]byte, error) {
 	fake.getAuditInfoMutex.Lock()
 	ret, specificReturn := fake.getAuditInfoReturnsOnCall[len(fake.getAuditInfoArgsForCall)]
 	fake.getAuditInfoArgsForCall = append(fake.getAuditInfoArgsForCall, struct {
@@ -631,7 +632,7 @@ func (fake *IdentityProvider) GetSignerReturnsOnCall(i int, result1 driver.Signe
 	}{result1, result2}
 }
 
-func (fake *IdentityProvider) IsMe(arg1 identity.Identity) bool {
+func (fake *IdentityProvider) IsMe(ctx context.Context, arg1 identity.Identity) bool {
 	fake.isMeMutex.Lock()
 	ret, specificReturn := fake.isMeReturnsOnCall[len(fake.isMeArgsForCall)]
 	fake.isMeArgsForCall = append(fake.isMeArgsForCall, struct {

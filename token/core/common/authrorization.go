@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -19,12 +21,12 @@ type Authorization interface {
 	// IsMine returns true if the passed token is owned by an owner wallet.
 	// It returns the ID of the owner wallet and any additional owner identifier, if supported.
 	// It is possible that the wallet ID is empty and the additional owner identifier list is not.
-	IsMine(tok *token2.Token) (string, []string, bool)
+	IsMine(ctx context.Context, tok *token2.Token) (string, []string, bool)
 	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 	// defined in the public parameters of the passed TMS.
 	AmIAnAuditor() bool
 	// Issued returns true if the passed issuer issued the passed token
-	Issued(issuer token.Identity, tok *token2.Token) bool
+	Issued(ctx context.Context, issuer token.Identity, tok *token2.Token) bool
 }
 
 // WalletBasedAuthorization is a wallet-based authorization implementation
@@ -39,7 +41,7 @@ func NewTMSAuthorization(logger logging.Logger, publicParameters driver.PublicPa
 	amIAnAuditor := false
 	var errs []error
 	for _, identity := range publicParameters.Auditors() {
-		_, err := walletService.AuditorWallet(identity)
+		_, err := walletService.AuditorWallet(context.Background(), identity)
 		if err == nil {
 			amIAnAuditor = true
 			break
@@ -52,8 +54,8 @@ func NewTMSAuthorization(logger logging.Logger, publicParameters driver.PublicPa
 
 // IsMine returns true if the passed token is owned by an owner wallet.
 // It returns the ID of the owner wallet and no additional owner identifiers.
-func (w *WalletBasedAuthorization) IsMine(tok *token2.Token) (string, []string, bool) {
-	wallet, err := w.WalletService.OwnerWallet(tok.Owner)
+func (w *WalletBasedAuthorization) IsMine(ctx context.Context, tok *token2.Token) (string, []string, bool) {
+	wallet, err := w.WalletService.OwnerWallet(ctx, tok.Owner)
 	if err != nil {
 		return "", nil, false
 	}
@@ -66,8 +68,8 @@ func (w *WalletBasedAuthorization) AmIAnAuditor() bool {
 	return w.amIAnAuditor
 }
 
-func (w *WalletBasedAuthorization) Issued(issuer token.Identity, tok *token2.Token) bool {
-	_, err := w.WalletService.IssuerWallet(issuer)
+func (w *WalletBasedAuthorization) Issued(ctx context.Context, issuer token.Identity, tok *token2.Token) bool {
+	_, err := w.WalletService.IssuerWallet(ctx, issuer)
 	return err == nil
 }
 
@@ -82,9 +84,9 @@ func NewAuthorizationMultiplexer(ownerships ...Authorization) *AuthorizationMult
 }
 
 // IsMine returns true it there exists an authorization checker that returns true
-func (o *AuthorizationMultiplexer) IsMine(tok *token2.Token) (string, []string, bool) {
+func (o *AuthorizationMultiplexer) IsMine(ctx context.Context, tok *token2.Token) (string, []string, bool) {
 	for _, authorization := range o.authorizations {
-		walletID, ids, mine := authorization.IsMine(tok)
+		walletID, ids, mine := authorization.IsMine(ctx, tok)
 		if mine {
 			return walletID, ids, true
 		}
@@ -103,9 +105,9 @@ func (o *AuthorizationMultiplexer) AmIAnAuditor() bool {
 	return false
 }
 
-func (o *AuthorizationMultiplexer) Issued(issuer token.Identity, tok *token2.Token) bool {
+func (o *AuthorizationMultiplexer) Issued(ctx context.Context, issuer token.Identity, tok *token2.Token) bool {
 	for _, authorization := range o.authorizations {
-		yes := authorization.Issued(issuer, tok)
+		yes := authorization.Issued(ctx, issuer, tok)
 		if yes {
 			return true
 		}

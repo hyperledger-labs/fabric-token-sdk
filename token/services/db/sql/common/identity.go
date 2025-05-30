@@ -8,6 +8,7 @@ package common
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"sync"
@@ -93,7 +94,7 @@ func (db *IdentityStore) CreateSchema() error {
 	return common.InitSchema(db.writeDB, []string{db.GetSchema()}...)
 }
 
-func (db *IdentityStore) AddConfiguration(wp driver.IdentityConfiguration) error {
+func (db *IdentityStore) AddConfiguration(ctx context.Context, wp driver.IdentityConfiguration) error {
 	query, args := q.InsertInto(db.table.IdentityConfigurations).
 		Fields("id", "type", "url", "conf", "raw").
 		Row(wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw).
@@ -104,7 +105,7 @@ func (db *IdentityStore) AddConfiguration(wp driver.IdentityConfiguration) error
 	return err
 }
 
-func (db *IdentityStore) IteratorConfigurations(configurationType string) (driver3.IdentityConfigurationIterator, error) {
+func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurationType string) (driver3.IdentityConfigurationIterator, error) {
 	query, args := q.Select().
 		FieldsByName("id", "url", "conf", "raw").
 		From(q.Table(db.table.IdentityConfigurations)).
@@ -118,7 +119,7 @@ func (db *IdentityStore) IteratorConfigurations(configurationType string) (drive
 	return &IdentityConfigurationIterator{rows: rows, configurationType: configurationType}, nil
 }
 
-func (db *IdentityStore) ConfigurationExists(id, typ, url string) (bool, error) {
+func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url string) (bool, error) {
 	query, args := q.Select().
 		FieldsByName("id").
 		From(q.Table(db.table.IdentityConfigurations)).
@@ -132,7 +133,7 @@ func (db *IdentityStore) ConfigurationExists(id, typ, url string) (bool, error) 
 	return len(result) != 0, nil
 }
 
-func (db *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
+func (db *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
 	// logger.Infof("store identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
 	h := token.Identity(id).String()
 	query, args := q.InsertInto(db.table.IdentityInfo).
@@ -144,7 +145,7 @@ func (db *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, toke
 	_, err := db.writeDB.Exec(query, args...)
 	if err != nil {
 		// does the record already exists?
-		auditInfo, err2 := db.GetAuditInfo(id)
+		auditInfo, err2 := db.GetAuditInfo(ctx, id)
 		if err2 != nil {
 			return err
 		}
@@ -159,7 +160,7 @@ func (db *IdentityStore) StoreIdentityData(id []byte, identityAudit []byte, toke
 	return err
 }
 
-func (db *IdentityStore) GetAuditInfo(id []byte) ([]byte, error) {
+func (db *IdentityStore) GetAuditInfo(ctx context.Context, id []byte) ([]byte, error) {
 	h := token.Identity(id).String()
 
 	value, _, err := db.auditInfoCache.GetOrLoad(h, func() ([]byte, error) {
@@ -174,7 +175,7 @@ func (db *IdentityStore) GetAuditInfo(id []byte) ([]byte, error) {
 	return value, err
 }
 
-func (db *IdentityStore) GetTokenInfo(id []byte) ([]byte, []byte, error) {
+func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, []byte, error) {
 	h := token.Identity(id).String()
 	// logger.Infof("get identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
 	query, args := q.Select().
@@ -197,7 +198,7 @@ func (db *IdentityStore) GetTokenInfo(id []byte) ([]byte, []byte, error) {
 	return tokenMetadata, tokenMetadataAuditInfo, nil
 }
 
-func (db *IdentityStore) StoreSignerInfo(id, info []byte) error {
+func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) error {
 	h := token.Identity(id).String()
 
 	query, args := q.InsertInto(db.table.Signers).
@@ -210,7 +211,7 @@ func (db *IdentityStore) StoreSignerInfo(id, info []byte) error {
 	}
 	_, err := db.writeDB.Exec(query, args...)
 	if err != nil {
-		if exists, err2 := db.SignerInfoExists(id); err2 == nil && exists {
+		if exists, err2 := db.SignerInfoExists(ctx, id); err2 == nil && exists {
 			logger.Debugf("signer info [%s] exists, no error to return", h)
 		} else {
 			return err
@@ -223,7 +224,7 @@ func (db *IdentityStore) StoreSignerInfo(id, info []byte) error {
 	return nil
 }
 
-func (db *IdentityStore) GetExistingSignerInfo(ids ...tdriver.Identity) ([]string, error) {
+func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriver.Identity) ([]string, error) {
 	idHashes := make([]string, len(ids))
 	for i, id := range ids {
 		idHashes[i] = id.UniqueID()
@@ -286,15 +287,15 @@ func (db *IdentityStore) GetExistingSignerInfo(ids ...tdriver.Identity) ([]strin
 	return append(result, found.ToSlice()...), nil
 }
 
-func (db *IdentityStore) SignerInfoExists(id []byte) (bool, error) {
-	existing, err := db.GetExistingSignerInfo(id)
+func (db *IdentityStore) SignerInfoExists(ctx context.Context, id []byte) (bool, error) {
+	existing, err := db.GetExistingSignerInfo(ctx, id)
 	if err != nil {
 		return false, err
 	}
 	return len(existing) > 0, nil
 }
 
-func (db *IdentityStore) GetSignerInfo(identity []byte) ([]byte, error) {
+func (db *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]byte, error) {
 	query, args := q.Select().
 		FieldsByName("info").
 		From(q.Table(db.table.Signers)).

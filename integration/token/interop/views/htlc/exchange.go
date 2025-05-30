@@ -83,6 +83,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 		assert.NotNil(wallet, "wallet not found")
 
 		preImage, err = tx.Lock(
+			context.Context(),
 			wallet,
 			me1,
 			v.Type1,
@@ -208,6 +209,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		assert.NotNil(wallet, "wallet not found")
 
 		_, err = tx.Lock(
+			context.Context(),
 			wallet,
 			me2,
 			terms.Type2,

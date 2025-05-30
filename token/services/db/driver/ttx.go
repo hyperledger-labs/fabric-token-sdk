@@ -32,20 +32,20 @@ type AtomicWrite interface {
 	Rollback()
 
 	// AddTokenRequest binds the passed transaction id to the passed token request
-	AddTokenRequest(txID string, tr []byte, applicationMetadata, publicMetadata map[string][]byte, ppHash driver.PPHash) error
+	AddTokenRequest(ctx context.Context, txID string, tr []byte, applicationMetadata, publicMetadata map[string][]byte, ppHash driver.PPHash) error
 
 	// AddMovement adds a movement record to the database transaction.
 	// Each token transaction can be seen as a list of movements.
 	// This operation _requires_ a TokenRequest with the same tx_id to exist
-	AddMovement(record *MovementRecord) error
+	AddMovement(ctx context.Context, record *MovementRecord) error
 
 	// AddTransaction adds a transaction record to the database transaction.
 	// This operation _requires_ a TokenRequest with the same tx_id to exist
-	AddTransaction(record *TransactionRecord) error
+	AddTransaction(ctx context.Context, record *TransactionRecord) error
 
 	// AddValidationRecord adds a new validation records for the given params
 	// This operation _requires_ a TokenRequest with the same tx_id to exist
-	AddValidationRecord(txID string, meta map[string][]byte) error
+	AddValidationRecord(ctx context.Context, txID string, meta map[string][]byte) error
 }
 
 type TransactionStore interface {
@@ -61,32 +61,32 @@ type TransactionStore interface {
 
 	// GetStatus returns the status of a given transaction.
 	// It returns an error if the transaction is not found
-	GetStatus(txID string) (TxStatus, string, error)
+	GetStatus(ctx context.Context, txID string) (TxStatus, string, error)
 
 	// QueryTransactions returns a list of transactions that match the given criteria
 
-	QueryTransactions(params QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*TransactionRecord], error)
+	QueryTransactions(ctx context.Context, params QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*TransactionRecord], error)
 
 	// QueryMovements returns a list of movement records
-	QueryMovements(params QueryMovementsParams) ([]*MovementRecord, error)
+	QueryMovements(ctx context.Context, params QueryMovementsParams) ([]*MovementRecord, error)
 
 	// QueryValidations returns a list of validation  records
-	QueryValidations(params QueryValidationRecordsParams) (ValidationRecordsIterator, error)
+	QueryValidations(ctx context.Context, params QueryValidationRecordsParams) (ValidationRecordsIterator, error)
 
 	// QueryTokenRequests returns an iterator over the token requests matching the passed params
-	QueryTokenRequests(params QueryTokenRequestsParams) (TokenRequestIterator, error)
+	QueryTokenRequests(ctx context.Context, params QueryTokenRequestsParams) (TokenRequestIterator, error)
 
 	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
 	// It returns nil without error if the key is not found.
-	GetTokenRequest(txID string) ([]byte, error)
+	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
 }
 
 type TransactionEndorsementAckStore interface {
 	// AddTransactionEndorsementAck records the signature of a given endorser for a given transaction
-	AddTransactionEndorsementAck(txID string, endorser token.Identity, sigma []byte) error
+	AddTransactionEndorsementAck(ctx context.Context, txID string, endorser token.Identity, sigma []byte) error
 
 	// GetTransactionEndorsementAcks returns the endorsement signatures for the given transaction id
-	GetTransactionEndorsementAcks(txID string) (map[string][]byte, error)
+	GetTransactionEndorsementAcks(ctx context.Context, txID string) (map[string][]byte, error)
 }
 
 var (

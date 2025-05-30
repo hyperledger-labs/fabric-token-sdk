@@ -72,7 +72,7 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 	claimWallet := htlc.GetWallet(context, r.Wallet, token.WithTMSID(r.TMSID))
 	assert.NotNil(claimWallet, "wallet [%s] not found", r.Wallet)
 
-	matched, err := htlc.Wallet(context, claimWallet).ListByPreImage(preImage)
+	matched, err := htlc.Wallet(context, claimWallet).ListByPreImage(context.Context(), preImage)
 	assert.NoError(err, "htlc script has expired")
 	assert.True(matched.Count() == 1, "expected only one htlc script to match [%s], got [%d]", view.Identity(preImage), matched.Count())
 

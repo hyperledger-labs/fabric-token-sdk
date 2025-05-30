@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package fabric
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -60,14 +62,14 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 	logger.Debugf("process namespace and function [%s:%s]", ns, fn)
 	switch fn {
 	case "init":
-		return r.init(tx, rws, ns)
+		return r.init(context.Background(), tx, rws, ns)
 	default:
 		return nil
 	}
 }
 
 // init when invoked extracts the public params from rwset and updates the local version
-func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
+func (r *RWSetProcessor) init(ctx context.Context, tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
 	tsmProvider := r.GetTMSProvider()
 	setUpKey, err := r.KeyTranslator.CreateSetupKey()
 	if err != nil {
@@ -93,7 +95,7 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 			if err != nil {
 				return err
 			}
-			if err := tokens.StorePublicParams(val); err != nil {
+			if err := tokens.StorePublicParams(ctx, val); err != nil {
 				return errors.Wrapf(err, "failed storing public params")
 			}
 			break

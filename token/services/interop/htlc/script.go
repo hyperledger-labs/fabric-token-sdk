@@ -8,6 +8,7 @@ package htlc
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"encoding/json"
 	"time"
@@ -109,7 +110,7 @@ func (s *ScriptAuth) AmIAnAuditor() bool {
 
 // IsMine returns true if either the sender or the recipient is in one of the owner wallets.
 // It returns an empty wallet id.
-func (s *ScriptAuth) IsMine(tok *token3.Token) (string, []string, bool) {
+func (s *ScriptAuth) IsMine(ctx context.Context, tok *token3.Token) (string, []string, bool) {
 	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
 	if err != nil {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
@@ -132,23 +133,23 @@ func (s *ScriptAuth) IsMine(tok *token3.Token) (string, []string, bool) {
 	var ids []string
 	// I'm either the sender
 	logger.Debugf("Is Mine [%s,%s,%s] as a sender?", view.Identity(tok.Owner), tok.Type, tok.Quantity)
-	if wallet, err := s.WalletService.OwnerWallet(script.Sender); err == nil {
+	if wallet, err := s.WalletService.OwnerWallet(ctx, script.Sender); err == nil {
 		logger.Debugf("Is Mine [%s,%s,%s] as a sender? Yes", view.Identity(tok.Owner), tok.Type, tok.Quantity)
-		ids = append(ids, senderWallet(wallet))
+		ids = append(ids, senderWallet(ctx, wallet))
 	}
 
 	// or the recipient
 	logger.Debugf("Is Mine [%s,%s,%s] as a recipient?", view.Identity(tok.Owner), tok.Type, tok.Quantity)
-	if wallet, err := s.WalletService.OwnerWallet(script.Recipient); err == nil {
+	if wallet, err := s.WalletService.OwnerWallet(ctx, script.Recipient); err == nil {
 		logger.Debugf("Is Mine [%s,%s,%s] as a recipient? Yes", view.Identity(tok.Owner), tok.Type, tok.Quantity)
-		ids = append(ids, recipientWallet(wallet))
+		ids = append(ids, recipientWallet(ctx, wallet))
 	}
 
 	logger.Debugf("Is Mine [%s,%s,%s]? %b", len(ids) != 0, view.Identity(tok.Owner), tok.Type, tok.Quantity)
 	return "", ids, len(ids) != 0
 }
 
-func (s *ScriptAuth) Issued(issuer driver.Identity, tok *token3.Token) bool {
+func (s *ScriptAuth) Issued(ctx context.Context, issuer driver.Identity, tok *token3.Token) bool {
 	return false
 }
 
@@ -164,10 +165,10 @@ type ownerWallet interface {
 	ID() string
 }
 
-func senderWallet(w ownerWallet) string {
+func senderWallet(ctx context.Context, w ownerWallet) string {
 	return "htlc.sender" + w.ID()
 }
 
-func recipientWallet(w ownerWallet) string {
+func recipientWallet(ctx context.Context, w ownerWallet) string {
 	return "htlc.recipient" + w.ID()
 }

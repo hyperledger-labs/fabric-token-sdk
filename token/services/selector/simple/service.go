@@ -64,16 +64,16 @@ type queryService struct {
 	locker Locker
 }
 
-func (q *queryService) UnspentTokensIterator() (*token.UnspentTokensIterator, error) {
-	return q.qe.UnspentTokensIterator()
+func (q *queryService) UnspentTokensIterator(ctx context.Context) (*token.UnspentTokensIterator, error) {
+	return q.qe.UnspentTokensIterator(ctx)
 }
 
 func (q *queryService) UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type) (driver.UnspentTokensIterator, error) {
 	return q.qe.UnspentTokensIteratorBy(ctx, id, tokenType)
 }
 
-func (q *queryService) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) {
-	return q.qe.GetTokens(inputs...)
+func (q *queryService) GetTokens(ctx context.Context, inputs ...*token2.ID) ([]*token2.Token, error) {
+	return q.qe.GetTokens(ctx, inputs...)
 }
 
 type loader struct {

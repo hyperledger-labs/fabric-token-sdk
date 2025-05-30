@@ -41,7 +41,7 @@ func (d *TransferHouseView) Call(context view.Context) (interface{}, error) {
 
 	// Prepare House Transfer
 	house := &House{}
-	assert.NoError(nfttx.MyWallet(context).QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
+	assert.NoError(nfttx.MyWallet(context).QueryByKey(context.Context(), house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
 
 	buyer, err := nfttx.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(d.Recipient))
 	assert.NoError(err, "failed getting buyer identity")

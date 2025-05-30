@@ -37,7 +37,7 @@ type NetworkProvider interface {
 }
 
 type CheckService interface {
-	Check(context context.Context) ([]string, error)
+	Check(ctx context.Context) ([]string, error)
 }
 
 // Service is the interface for the owner service
@@ -52,9 +52,9 @@ type Service struct {
 }
 
 // Append adds the passed transaction to the database
-func (a *Service) Append(tx *Transaction) error {
+func (a *Service) Append(ctx context.Context, tx *Transaction) error {
 	// append request to the db
-	if err := a.ttxStoreService.AppendTransactionRecord(tx.Request()); err != nil {
+	if err := a.ttxStoreService.AppendTransactionRecord(context.Background(), tx.Request()); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 
@@ -79,8 +79,8 @@ func (a *Service) SetStatus(ctx context.Context, txID string, status driver.TxSt
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (a *Service) GetStatus(txID string) (TxStatus, string, error) {
-	st, sm, err := a.ttxStoreService.GetStatus(txID)
+func (a *Service) GetStatus(ctx context.Context, txID string) (TxStatus, string, error) {
+	st, sm, err := a.ttxStoreService.GetStatus(ctx, txID)
 	if err != nil {
 		return Unknown, "", err
 	}
@@ -88,18 +88,18 @@ func (a *Service) GetStatus(txID string) (TxStatus, string, error) {
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
-func (a *Service) GetTokenRequest(txID string) ([]byte, error) {
-	return a.ttxStoreService.GetTokenRequest(txID)
+func (a *Service) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
+	return a.ttxStoreService.GetTokenRequest(ctx, txID)
 }
 
-func (a *Service) AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error {
-	return a.ttxStoreService.AddTransactionEndorsementAck(txID, id, sigma)
+func (a *Service) AppendTransactionEndorseAck(ctx context.Context, txID string, id view.Identity, sigma []byte) error {
+	return a.ttxStoreService.AddTransactionEndorsementAck(ctx, txID, id, sigma)
 }
 
-func (a *Service) GetTransactionEndorsementAcks(id string) (map[string][]byte, error) {
-	return a.ttxStoreService.GetTransactionEndorsementAcks(id)
+func (a *Service) GetTransactionEndorsementAcks(ctx context.Context, id string) (map[string][]byte, error) {
+	return a.ttxStoreService.GetTransactionEndorsementAcks(ctx, id)
 }
 
-func (a *Service) Check(context context.Context) ([]string, error) {
-	return a.checkService.Check(context)
+func (a *Service) Check(ctx context.Context) ([]string, error) {
+	return a.checkService.Check(ctx)
 }

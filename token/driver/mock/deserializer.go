@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -104,7 +105,7 @@ type Deserializer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Deserializer) GetAuditInfo(arg1 driver.Identity, arg2 driver.AuditInfoProvider) ([]byte, error) {
+func (fake *Deserializer) GetAuditInfo(ctx context.Context, arg1 driver.Identity, arg2 driver.AuditInfoProvider) ([]byte, error) {
 	fake.getAuditInfoMutex.Lock()
 	ret, specificReturn := fake.getAuditInfoReturnsOnCall[len(fake.getAuditInfoArgsForCall)]
 	fake.getAuditInfoArgsForCall = append(fake.getAuditInfoArgsForCall, struct {

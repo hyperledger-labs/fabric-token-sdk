@@ -64,7 +64,7 @@ type TokenLoader interface {
 }
 
 type TokenDeserializer interface {
-	DeserializeToken(outputFormat token2.Format, outputRaw []byte, metadataRaw []byte) (*token.Token, *token.Metadata, *token.UpgradeWitness, error)
+	DeserializeToken(ctx context.Context, outputFormat token2.Format, outputRaw []byte, metadataRaw []byte) (*token.Token, *token.Metadata, *token.UpgradeWitness, error)
 }
 
 type TransferService struct {
@@ -131,14 +131,14 @@ func (s *TransferService) Transfer(
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
-	prepareInputs, err := s.prepareInputs(loadedTokens)
+	prepareInputs, err := s.prepareInputs(ctx, loadedTokens)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to prepare inputs")
 	}
 
 	var isRedeem bool
 	// get sender
-	pp := s.PublicParametersManager.PublicParams()
+	pp := s.PublicParametersManager.PublicParams(ctx)
 	sender, err := transfer.NewSender(nil, prepareInputs.Tokens(), tokenIDs, prepareInputs.Metadata(), pp)
 	if err != nil {
 		return nil, nil, err
@@ -188,7 +188,7 @@ func (s *TransferService) Transfer(
 	tokens := prepareInputs.Tokens()
 	senderAuditInfos := make([][]byte, 0, len(tokens))
 	for i, t := range tokens {
-		auditInfo, err := s.IdentityDeserializer.GetAuditInfo(t.Owner, ws)
+		auditInfo, err := s.IdentityDeserializer.GetAuditInfo(ctx, t.Owner, ws)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner))
 		}
@@ -219,7 +219,7 @@ func (s *TransferService) Transfer(
 			receiversAuditInfo = append(receiversAuditInfo, []byte{})
 			outputReceivers = make([]*driver.AuditableIdentity, 0, 1)
 		} else {
-			outputAudiInfo, err = s.IdentityDeserializer.GetAuditInfo(output.Owner, ws)
+			outputAudiInfo, err = s.IdentityDeserializer.GetAuditInfo(ctx, output.Owner, ws)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner))
 			}
@@ -229,7 +229,7 @@ func (s *TransferService) Transfer(
 			}
 			receivers = append(receivers, recipients...)
 			for _, receiver := range receivers {
-				receiverAudiInfo, err := s.IdentityDeserializer.GetAuditInfo(receiver, ws)
+				receiverAudiInfo, err := s.IdentityDeserializer.GetAuditInfo(ctx, receiver, ws)
 				if err != nil {
 					return nil, nil, errors.Wrapf(err, "failed getting audit info for receiver identity [%s]", receiver)
 				}
@@ -279,7 +279,7 @@ func (s *TransferService) Transfer(
 }
 
 // VerifyTransfer checks the outputs in the TransferActionMetadata against the passed metadata
-func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputMetadata []*driver.TransferOutputMetadata) error {
+func (s *TransferService) VerifyTransfer(ctx context.Context, action driver.TransferAction, outputMetadata []*driver.TransferOutputMetadata) error {
 	if action == nil {
 		return errors.New("failed to verify transfer: nil transfer action")
 	}
@@ -289,7 +289,7 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputMet
 	}
 
 	// get commitments from outputs
-	pp := s.PublicParametersManager.PublicParams()
+	pp := s.PublicParametersManager.PublicParams(ctx)
 	com := make([]*math.G1, len(tr.Outputs))
 	for i := 0; i < len(tr.Outputs); i++ {
 		com[i] = tr.Outputs[i].Data
@@ -326,10 +326,10 @@ func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.Transfer
 	return transferAction, nil
 }
 
-func (s *TransferService) prepareInputs(loadedTokens []LoadedToken) (PreparedTransferInputs, error) {
+func (s *TransferService) prepareInputs(ctx context.Context, loadedTokens []LoadedToken) (PreparedTransferInputs, error) {
 	preparedInputs := make([]PreparedTransferInput, len(loadedTokens))
 	for i, loadedToken := range loadedTokens {
-		tok, tokenMetadata, upgradeWitness, err := s.TokenDeserializer.DeserializeToken(loadedToken.TokenFormat, loadedToken.Token, loadedToken.Metadata)
+		tok, tokenMetadata, upgradeWitness, err := s.TokenDeserializer.DeserializeToken(ctx, loadedToken.TokenFormat, loadedToken.Token, loadedToken.Metadata)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing token [%s]", string(loadedToken.Token))
 		}

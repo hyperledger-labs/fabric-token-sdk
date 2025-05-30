@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -59,7 +60,7 @@ func TestGetOwnerAuditInfo_Success(t *testing.T) {
 	rawIdentity := []byte("valid_raw_identity")
 	provider := &mockAuditInfoProvider{}
 
-	auditInfo, err := deserializer.GetAuditInfo(id, Multisig, rawIdentity, provider)
+	auditInfo, err := deserializer.GetAuditInfo(context.Background(), id, Multisig, rawIdentity, provider)
 	require.NoError(t, err)
 	assert.NotNil(t, auditInfo)
 }
@@ -72,7 +73,7 @@ func TestGetAuditInfo_InvalidType(t *testing.T) {
 	rawIdentity := []byte("valid_raw_identity")
 	provider := &mockAuditInfoProvider{}
 
-	auditInfo, err := deserializer.GetAuditInfo(id, identity.Type("InvalidType"), rawIdentity, provider)
+	auditInfo, err := deserializer.GetAuditInfo(context.Background(), id, identity.Type("InvalidType"), rawIdentity, provider)
 	require.Error(t, err)
 	assert.Nil(t, auditInfo)
 }
@@ -131,7 +132,7 @@ func (m *mockAuditInfoMatcher) GetAuditInfoMatcher(owner token.Identity, auditIn
 
 type mockAuditInfoProvider struct{}
 
-func (m *mockAuditInfoProvider) GetAuditInfo(id token.Identity) ([]byte, error) {
+func (m *mockAuditInfoProvider) GetAuditInfo(ctx context.Context, id token.Identity) ([]byte, error) {
 	if string(id) == "valid_multisig_identity" {
 		return []byte("valid_audit_info"), nil
 	}

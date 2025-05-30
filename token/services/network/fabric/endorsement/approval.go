@@ -248,6 +248,7 @@ func (r *RequestApprovalResponderView) validate(
 	}
 	logger.Debugf("Append validation record for TX [%s]", tx.ID())
 	if err := db.AppendValidationRecord(
+		context.Context(),
 		tx.ID(),
 		requestRaw,
 		meta,

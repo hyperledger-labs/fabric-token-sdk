@@ -21,8 +21,8 @@ import (
 type TestTokenDB interface {
 	driver.TokenStore
 
-	StoreToken(tr driver.TokenRecord, owners []string) error
-	GetAllTokenInfos(ids []*token.ID) ([][]byte, error)
+	StoreToken(ctx context.Context, tr driver.TokenRecord, owners []string) error
+	GetAllTokenInfos(ctx context.Context, ids []*token.ID) ([][]byte, error)
 }
 
 const (

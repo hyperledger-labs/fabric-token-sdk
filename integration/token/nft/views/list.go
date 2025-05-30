@@ -26,7 +26,7 @@ type GetHouseView struct {
 func (p *GetHouseView) Call(context view.Context) (interface{}, error) {
 	house := &House{}
 	wallet := nfttx.MyWallet(context)
-	assert.NoError(wallet.QueryByKey(house, "LinearID", p.HouseID), "failed loading house with id %s", p.HouseID)
+	assert.NoError(wallet.QueryByKey(context.Context(), house, "LinearID", p.HouseID), "failed loading house with id %s", p.HouseID)
 
 	return house, nil
 }

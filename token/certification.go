@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -41,11 +43,11 @@ type CertificationClient struct {
 }
 
 // IsCertified returns true if the passed token id has been already certified, otherwise false
-func (c *CertificationClient) IsCertified(id *token2.ID) bool {
-	return c.cc.IsCertified(id)
+func (c *CertificationClient) IsCertified(ctx context.Context, id *token2.ID) bool {
+	return c.cc.IsCertified(ctx, id)
 }
 
 // RequestCertification requests the certification of the passed token ids
-func (c *CertificationClient) RequestCertification(ids ...*token2.ID) error {
-	return c.cc.RequestCertification(ids...)
+func (c *CertificationClient) RequestCertification(ctx context.Context, ids ...*token2.ID) error {
+	return c.cc.RequestCertification(ctx, ids...)
 }

@@ -112,15 +112,15 @@ const (
 type CertificationStore interface {
 	// ExistsCertification returns true if a certification for the passed token exists,
 	// false otherwise
-	ExistsCertification(id *token.ID) bool
+	ExistsCertification(ctx context.Context, id *token.ID) bool
 
 	// StoreCertifications stores the passed certifications
-	StoreCertifications(certifications map[*token.ID][]byte) error
+	StoreCertifications(ctx context.Context, certifications map[*token.ID][]byte) error
 
 	// GetCertifications returns the certifications of the passed tokens.
 	// For each token, the callback function is invoked.
 	// If a token doesn't have a certification, the function returns an error
-	GetCertifications(ids []*token.ID) ([][]byte, error)
+	GetCertifications(ctx context.Context, ids []*token.ID) ([][]byte, error)
 	// Close closes the databases
 	Close() error
 }
@@ -147,11 +147,11 @@ type TokenStoreTransaction interface {
 type TokenStore interface {
 	CertificationStore
 	// DeleteTokens marks the passsed tokens as deleted
-	DeleteTokens(deletedBy string, toDelete ...*token.ID) error
+	DeleteTokens(ctx context.Context, deletedBy string, toDelete ...*token.ID) error
 	// IsMine return true if the passed token was stored before
-	IsMine(txID string, index uint64) (bool, error)
+	IsMine(ctx context.Context, txID string, index uint64) (bool, error)
 	// UnspentTokensIterator returns an iterator over all owned tokens
-	UnspentTokensIterator() (driver.UnspentTokensIterator, error)
+	UnspentTokensIterator(ctx context.Context) (driver.UnspentTokensIterator, error)
 	// UnspentLedgerTokensIteratorBy returns an iterator over all unspent ledger tokens
 	UnspentLedgerTokensIteratorBy(ctx context.Context) (driver.LedgerTokensIterator, error)
 	// UnspentTokensIteratorBy returns an iterator over all tokens owned by the passed wallet identifier and of a given type
@@ -161,41 +161,41 @@ type TokenStore interface {
 	// UnsupportedTokensIteratorBy returns the minimum information for upgrade about the tokens that are not supported
 	UnsupportedTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (driver.UnsupportedTokensIterator, error)
 	// ListUnspentTokensBy returns the list of all tokens owned by the passed identifier of a given type
-	ListUnspentTokensBy(walletID string, typ token.Type) (*token.UnspentTokens, error)
+	ListUnspentTokensBy(ctx context.Context, walletID string, typ token.Type) (*token.UnspentTokens, error)
 	// ListUnspentTokens returns the list of all owned tokens
-	ListUnspentTokens() (*token.UnspentTokens, error)
+	ListUnspentTokens(ctx context.Context) (*token.UnspentTokens, error)
 	// ListAuditTokens returns the audited tokens for the passed ids
-	ListAuditTokens(ids ...*token.ID) ([]*token.Token, error)
+	ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]*token.Token, error)
 	// ListHistoryIssuedTokens returns the list of all issued tokens
-	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
+	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
 	// GetTokenOutputs returns the value of the tokens as they appear on the ledger for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
-	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
+	GetTokenOutputs(ctx context.Context, ids []*token.ID, callback driver.QueryCallbackFunc) error
 	// GetTokenMetadata returns the metadata of the tokens for the passed ids.
-	GetTokenMetadata(ids []*token.ID) ([][]byte, error)
+	GetTokenMetadata(ctx context.Context, ids []*token.ID) ([][]byte, error)
 	// GetTokenOutputsAndMeta retrieves both the token output, metadata, and type for the passed ids.
 	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error)
 	// GetTokens returns the owned tokens and their identifier keys for the passed ids.
-	GetTokens(inputs ...*token.ID) ([]*token.Token, error)
+	GetTokens(ctx context.Context, inputs ...*token.ID) ([]*token.Token, error)
 	// WhoDeletedTokens for each id, the function return if it was deleted and by who as per the Delete function
-	WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
+	WhoDeletedTokens(ctx context.Context, inputs ...*token.ID) ([]string, []bool, error)
 	// TransactionExists returns true if a token with that transaction id exists in the db
 	TransactionExists(ctx context.Context, id string) (bool, error)
 	// StorePublicParams stores the public parameters.
 	// If they already exist, the function return with no error. No changes are applied.
-	StorePublicParams(raw []byte) error
+	StorePublicParams(ctx context.Context, raw []byte) error
 	// PublicParams returns the stored public parameters.
 	// If not public parameters are available, it returns nil with no error
-	PublicParams() ([]byte, error)
+	PublicParams(ctx context.Context) ([]byte, error)
 	// PublicParamsByHash returns the public parameters whose hash matches the passed one.
 	// If not public parameters are available for that hash, it returns an error
-	PublicParamsByHash(rawHash driver.PPHash) ([]byte, error)
+	PublicParamsByHash(ctx context.Context, rawHash driver.PPHash) ([]byte, error)
 	// NewTokenDBTransaction returns a new Transaction to commit atomically multiple operations
 	NewTokenDBTransaction() (TokenStoreTransaction, error)
 	// QueryTokenDetails provides detailed information about tokens
-	QueryTokenDetails(params QueryTokenDetailsParams) ([]TokenDetails, error)
+	QueryTokenDetails(ctx context.Context, params QueryTokenDetailsParams) ([]TokenDetails, error)
 	// Balance returns the sun of the amounts of the tokens with type and EID equal to those passed as arguments.
-	Balance(ownerEID string, typ token.Type) (uint64, error)
+	Balance(ctx context.Context, ownerEID string, typ token.Type) (uint64, error)
 	// SetSupportedTokenFormats sets the supported token formats
 	SetSupportedTokenFormats(formats []token.Format) error
 }
@@ -216,13 +216,13 @@ type TokenNotifierDriver interface {
 type TokenLockStore interface {
 	common.DBObject
 	// Lock locks a specific token for the consumer TX
-	Lock(tokenID *token.ID, consumerTxID transaction.ID) error
+	Lock(ctx context.Context, tokenID *token.ID, consumerTxID transaction.ID) error
 	// UnlockByTxID unlocks all tokens locked by the consumer TX
-	UnlockByTxID(consumerTxID transaction.ID) error
+	UnlockByTxID(ctx context.Context, consumerTxID transaction.ID) error
 	// Cleanup removes the locks such that either:
 	// 1. The transaction that locked that token is valid or invalid;
 	// 2. The lock is too old.
-	Cleanup(leaseExpiry time.Duration) error
+	Cleanup(ctx context.Context, leaseExpiry time.Duration) error
 	// Close closes the database
 	Close() error
 }

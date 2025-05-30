@@ -28,7 +28,7 @@ type RegisterIssuerIdentityView struct {
 func (r *RegisterIssuerIdentityView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
-	err := tms.WalletManager().RegisterIssuerIdentity(r.ID, r.Path)
+	err := tms.WalletManager().RegisterIssuerIdentity(context.Context(), r.ID, r.Path)
 	assert.NoError(err, "failed to register issuer wallet [%s:%s]", r.ID, r.TMSID)
 	return nil, nil
 }
@@ -56,7 +56,7 @@ type RegisterOwnerIdentityView struct {
 func (r *RegisterOwnerIdentityView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
-	err := tms.WalletManager().RegisterOwnerIdentityConfiguration(r.IdentityConfiguration)
+	err := tms.WalletManager().RegisterOwnerIdentityConfiguration(context.Context(), r.IdentityConfiguration)
 	assert.NoError(err, "failed to register owner wallet [%s:%s]", r.ID, r.TMSID)
 	return nil, nil
 }
@@ -85,7 +85,7 @@ type RegisterRecipientDataView struct {
 func (r *RegisterRecipientDataView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
-	err := tms.WalletManager().OwnerWallet(r.WalletID).RegisterRecipient(&r.RecipientData)
+	err := tms.WalletManager().OwnerWallet(context.Context(), r.WalletID).RegisterRecipient(context.Context(), &r.RecipientData)
 	assert.NoError(err, "failed to register recipient data [%s:%s]", r.WalletID, r.TMSID)
 	return nil, nil
 }

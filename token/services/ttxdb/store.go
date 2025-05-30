@@ -190,18 +190,18 @@ type Pagination = driver4.Pagination
 type PageTransactionsIterator = driver4.PageIterator[*TransactionRecord]
 
 // Transactions returns an iterators of transaction records filtered by the given params.
-func (d *StoreService) Transactions(params QueryTransactionsParams, pagination Pagination) (*PageTransactionsIterator, error) {
-	return d.db.QueryTransactions(params, pagination)
+func (d *StoreService) Transactions(ctx context.Context, params QueryTransactionsParams, pagination Pagination) (*PageTransactionsIterator, error) {
+	return d.db.QueryTransactions(ctx, params, pagination)
 }
 
 // TokenRequests returns an iterator over the token requests matching the passed params
-func (d *StoreService) TokenRequests(params QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
-	return d.db.QueryTokenRequests(params)
+func (d *StoreService) TokenRequests(ctx context.Context, params QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
+	return d.db.QueryTokenRequests(ctx, params)
 }
 
 // ValidationRecords returns an iterators of validation records filtered by the given params.
-func (d *StoreService) ValidationRecords(params QueryValidationRecordsParams) (*ValidationRecordsIterator, error) {
-	it, err := d.db.QueryValidations(params)
+func (d *StoreService) ValidationRecords(ctx context.Context, params QueryValidationRecordsParams) (*ValidationRecordsIterator, error) {
+	it, err := d.db.QueryValidations(ctx, params)
 	if err != nil {
 		return nil, errors.Errorf("failed to query validation records: %s", err)
 	}
@@ -209,10 +209,10 @@ func (d *StoreService) ValidationRecords(params QueryValidationRecordsParams) (*
 }
 
 // AppendTransactionRecord appends the transaction records corresponding to the passed token request.
-func (d *StoreService) AppendTransactionRecord(req *token.Request) error {
+func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.Request) error {
 	logger.Debugf("appending new transaction record... [%s]", req.Anchor)
 
-	ins, outs, attrs, err := req.InputsAndOutputs()
+	ins, outs, attrs, err := req.InputsAndOutputs(ctx)
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting inputs and outputs for request [%s]", req.Anchor)
 	}
@@ -239,6 +239,7 @@ func (d *StoreService) AppendTransactionRecord(req *token.Request) error {
 	}
 	d.cache.Add(record.Anchor, raw)
 	if err := w.AddTokenRequest(
+		ctx,
 		record.Anchor,
 		raw,
 		req.AllApplicationMetadata(),
@@ -249,7 +250,7 @@ func (d *StoreService) AppendTransactionRecord(req *token.Request) error {
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
 	for _, tx := range txs {
-		if err := w.AddTransaction(&tx); err != nil {
+		if err := w.AddTransaction(ctx, &tx); err != nil {
 			w.Rollback()
 			return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 		}
@@ -281,9 +282,9 @@ func (d *StoreService) SetStatus(ctx context.Context, txID string, status driver
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (d *StoreService) GetStatus(txID string) (TxStatus, string, error) {
+func (d *StoreService) GetStatus(ctx context.Context, txID string) (TxStatus, string, error) {
 	logger.Debugf("get status [%s]...", txID)
-	status, message, err := d.db.GetStatus(txID)
+	status, message, err := d.db.GetStatus(ctx, txID)
 	if err != nil {
 		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
@@ -292,26 +293,26 @@ func (d *StoreService) GetStatus(txID string) (TxStatus, string, error) {
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
-func (d *StoreService) GetTokenRequest(txID string) ([]byte, error) {
+func (d *StoreService) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
 	res, ok := d.cache.Get(txID)
 	if ok {
 		return res, nil
 	}
-	return d.db.GetTokenRequest(txID)
+	return d.db.GetTokenRequest(ctx, txID)
 }
 
 // AddTransactionEndorsementAck records the signature of a given endorser for a given transaction
-func (d *StoreService) AddTransactionEndorsementAck(txID string, id token.Identity, sigma []byte) error {
-	return d.db.AddTransactionEndorsementAck(txID, id, sigma)
+func (d *StoreService) AddTransactionEndorsementAck(ctx context.Context, txID string, id token.Identity, sigma []byte) error {
+	return d.db.AddTransactionEndorsementAck(ctx, txID, id, sigma)
 }
 
 // GetTransactionEndorsementAcks returns the endorsement signatures for the given transaction id
-func (d *StoreService) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
-	return d.db.GetTransactionEndorsementAcks(txID)
+func (d *StoreService) GetTransactionEndorsementAcks(ctx context.Context, txID string) (map[string][]byte, error) {
+	return d.db.GetTransactionEndorsementAcks(ctx, txID)
 }
 
 // AppendValidationRecord appends the given validation metadata related to the given transaction id
-func (d *StoreService) AppendValidationRecord(txID string, tokenRequest []byte, meta map[string][]byte, ppHash driver2.PPHash) error {
+func (d *StoreService) AppendValidationRecord(ctx context.Context, txID string, tokenRequest []byte, meta map[string][]byte, ppHash driver2.PPHash) error {
 	logger.Debugf("appending new validation record... [%s]", txID)
 
 	w, err := d.db.BeginAtomicWrite()
@@ -320,11 +321,11 @@ func (d *StoreService) AppendValidationRecord(txID string, tokenRequest []byte, 
 	}
 	// we store the token request, but don't have or care about the application metadata
 	d.cache.Add(txID, tokenRequest)
-	if err := w.AddTokenRequest(txID, tokenRequest, nil, nil, ppHash); err != nil {
+	if err := w.AddTokenRequest(ctx, txID, tokenRequest, nil, nil, ppHash); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", txID)
 	}
-	if err := w.AddValidationRecord(txID, meta); err != nil {
+	if err := w.AddValidationRecord(ctx, txID, meta); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
 	}

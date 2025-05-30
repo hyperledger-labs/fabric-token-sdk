@@ -116,7 +116,7 @@ func (v *PublicParamsRequestResponderView) Call(context view.Context) (interface
 	return nil, nil
 }
 
-func ReadPublicParameters(context token.ServiceProvider, network, namespace string) ([]byte, error) {
+func ReadPublicParameters(context view.Context, network, namespace string) ([]byte, error) {
 	for i := 0; i < 3; i++ {
 		pp, err := readPublicParameters(context, network, namespace)
 		if err != nil {
@@ -129,8 +129,8 @@ func ReadPublicParameters(context token.ServiceProvider, network, namespace stri
 	return nil, errors.Errorf("failed to read public parameters after 3 retries")
 }
 
-func readPublicParameters(context token.ServiceProvider, network, namespace string) ([]byte, error) {
-	ons, err := orion.GetOrionNetworkService(context, network)
+func readPublicParameters(context view.Context, network, namespace string) ([]byte, error) {
+	ons, err := orion.GetOrionNetworkService(token.ServiceProvider(context), network)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get orion network service for network [%s]", network)
 	}

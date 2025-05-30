@@ -53,22 +53,22 @@ type WalletManager struct {
 
 // RegisterOwnerIdentity registers an owner long-term identity. The identity will be loaded from the passed url.
 // Depending on the support, the url can be a path in the file system or something else.
-func (wm *WalletManager) RegisterOwnerIdentity(id string, url string) error {
-	return wm.walletService.RegisterOwnerIdentity(driver.IdentityConfiguration{
+func (wm *WalletManager) RegisterOwnerIdentity(ctx context.Context, id string, url string) error {
+	return wm.walletService.RegisterOwnerIdentity(ctx, driver.IdentityConfiguration{
 		ID:  id,
 		URL: url,
 	})
 }
 
 // RegisterOwnerIdentityConfiguration registers an owner long-term identity via a identity configuration
-func (wm *WalletManager) RegisterOwnerIdentityConfiguration(conf IdentityConfiguration) error {
-	return wm.walletService.RegisterOwnerIdentity(conf)
+func (wm *WalletManager) RegisterOwnerIdentityConfiguration(ctx context.Context, conf IdentityConfiguration) error {
+	return wm.walletService.RegisterOwnerIdentity(ctx, conf)
 }
 
 // RegisterIssuerIdentity registers an issuer long-term identity. The identity will be loaded from the passed url.
 // Depending on the support, the url can be a path in the file system or something else.
-func (wm *WalletManager) RegisterIssuerIdentity(id string, url string) error {
-	return wm.walletService.RegisterIssuerIdentity(driver.IdentityConfiguration{
+func (wm *WalletManager) RegisterIssuerIdentity(ctx context.Context, id string, url string) error {
+	return wm.walletService.RegisterIssuerIdentity(ctx, driver.IdentityConfiguration{
 		ID:  id,
 		URL: url,
 	})
@@ -81,8 +81,8 @@ func (wm *WalletManager) RegisterRecipientIdentity(data *RecipientData) error {
 
 // Wallet returns the wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
-func (wm *WalletManager) Wallet(identity Identity) *Wallet {
-	w := wm.walletService.Wallet(identity)
+func (wm *WalletManager) Wallet(ctx context.Context, identity Identity) *Wallet {
+	w := wm.walletService.Wallet(ctx, identity)
 	if w == nil {
 		return nil
 	}
@@ -90,8 +90,8 @@ func (wm *WalletManager) Wallet(identity Identity) *Wallet {
 }
 
 // OwnerWalletIDs returns the list of owner wallet identifiers
-func (wm *WalletManager) OwnerWalletIDs() ([]string, error) {
-	ids, err := wm.walletService.OwnerWalletIDs()
+func (wm *WalletManager) OwnerWalletIDs(ctx context.Context) ([]string, error) {
+	ids, err := wm.walletService.OwnerWalletIDs(ctx)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get the list of owner wallet identifiers")
 	}
@@ -101,8 +101,8 @@ func (wm *WalletManager) OwnerWalletIDs() ([]string, error) {
 // OwnerWallet returns the owner wallet bound to the passed identifier, if any is available.
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
-func (wm *WalletManager) OwnerWallet(id WalletLookupID) *OwnerWallet {
-	w, err := wm.walletService.OwnerWallet(id)
+func (wm *WalletManager) OwnerWallet(ctx context.Context, id WalletLookupID) *OwnerWallet {
+	w, err := wm.walletService.OwnerWallet(ctx, id)
 	if err != nil {
 		wm.managementService.logger.Debugf("failed to get owner wallet for id [%s]: [%s]", id, err)
 		return nil
@@ -113,8 +113,8 @@ func (wm *WalletManager) OwnerWallet(id WalletLookupID) *OwnerWallet {
 // IssuerWallet returns the issuer wallet bound to the passed identifier, if any is available.
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
-func (wm *WalletManager) IssuerWallet(id WalletLookupID) *IssuerWallet {
-	w, err := wm.walletService.IssuerWallet(id)
+func (wm *WalletManager) IssuerWallet(ctx context.Context, id WalletLookupID) *IssuerWallet {
+	w, err := wm.walletService.IssuerWallet(ctx, id)
 	if err != nil {
 		wm.managementService.logger.Debugf("failed to get issuer wallet for id [%s]: [%s]", id, err)
 		return nil
@@ -125,8 +125,8 @@ func (wm *WalletManager) IssuerWallet(id WalletLookupID) *IssuerWallet {
 // AuditorWallet returns the auditor wallet bound to the passed identifier, if any is available.
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
-func (wm *WalletManager) AuditorWallet(id WalletLookupID) *AuditorWallet {
-	w, err := wm.walletService.AuditorWallet(id)
+func (wm *WalletManager) AuditorWallet(ctx context.Context, id WalletLookupID) *AuditorWallet {
+	w, err := wm.walletService.AuditorWallet(ctx, id)
 	if err != nil {
 		wm.managementService.logger.Debugf("failed to get auditor wallet for id [%s]: [%s]", id, err)
 		return nil
@@ -137,8 +137,8 @@ func (wm *WalletManager) AuditorWallet(id WalletLookupID) *AuditorWallet {
 // CertifierWallet returns the certifier wallet bound to the passed identifier, if any is available.
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
-func (wm *WalletManager) CertifierWallet(id WalletLookupID) *CertifierWallet {
-	w, err := wm.walletService.CertifierWallet(id)
+func (wm *WalletManager) CertifierWallet(ctx context.Context, id WalletLookupID) *CertifierWallet {
+	w, err := wm.walletService.CertifierWallet(ctx, id)
 	if err != nil {
 		wm.managementService.logger.Debugf("failed to get certifier wallet for id [%s]: [%s]", id, err)
 		return nil
@@ -147,8 +147,8 @@ func (wm *WalletManager) CertifierWallet(id WalletLookupID) *CertifierWallet {
 }
 
 // GetEnrollmentID returns the enrollment ID of passed identity
-func (wm *WalletManager) GetEnrollmentID(identity Identity) (string, error) {
-	auditInfo, err := wm.walletService.GetAuditInfo(identity)
+func (wm *WalletManager) GetEnrollmentID(ctx context.Context, identity Identity) (string, error) {
+	auditInfo, err := wm.walletService.GetAuditInfo(ctx, identity)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
@@ -156,8 +156,8 @@ func (wm *WalletManager) GetEnrollmentID(identity Identity) (string, error) {
 }
 
 // GetRevocationHandle returns the revocation handle of the passed identity
-func (wm *WalletManager) GetRevocationHandle(identity Identity) (string, error) {
-	auditInfo, err := wm.walletService.GetAuditInfo(identity)
+func (wm *WalletManager) GetRevocationHandle(ctx context.Context, identity Identity) (string, error) {
+	auditInfo, err := wm.walletService.GetAuditInfo(ctx, identity)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
@@ -249,8 +249,8 @@ func (o *OwnerWallet) GetRecipientData() (*RecipientData, error) {
 }
 
 // GetAuditInfo returns auditing information for the passed identity
-func (o *OwnerWallet) GetAuditInfo(id Identity) ([]byte, error) {
-	return o.w.GetAuditInfo(id)
+func (o *OwnerWallet) GetAuditInfo(ctx context.Context, id Identity) ([]byte, error) {
+	return o.w.GetAuditInfo(ctx, id)
 }
 
 // GetTokenMetadata returns the public information related to the token to be assigned to passed recipient identity.
@@ -298,12 +298,12 @@ func (o *OwnerWallet) ListUnspentTokensIterator(opts ...ListTokensOption) (*Unsp
 }
 
 // Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-func (o *OwnerWallet) Balance(opts ...ListTokensOption) (uint64, error) {
+func (o *OwnerWallet) Balance(ctx context.Context, opts ...ListTokensOption) (uint64, error) {
 	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
 		return 0, err
 	}
-	sum, err := o.w.Balance(compiledOpts)
+	sum, err := o.w.Balance(ctx, compiledOpts)
 	if err != nil {
 		return 0, err
 	}
@@ -316,8 +316,8 @@ func (o *OwnerWallet) EnrollmentID() string {
 
 // RegisterRecipient register the passed recipient data. The data is passed as pointer to allow the underlying token driver
 // to modify them if needed.
-func (o *OwnerWallet) RegisterRecipient(data *RecipientData) error {
-	return o.w.RegisterRecipient(data)
+func (o *OwnerWallet) RegisterRecipient(ctx context.Context, data *RecipientData) error {
+	return o.w.RegisterRecipient(ctx, data)
 }
 
 // Remote returns true if this wallet is verify only, meaning that the corresponding secret key is external to this wallet
@@ -344,12 +344,12 @@ func (i *IssuerWallet) GetSigner(identity Identity) (Signer, error) {
 
 // ListIssuedTokens returns the list of tokens issued by identities in this wallet and filter by the passed options.
 // Options: WithType
-func (i *IssuerWallet) ListIssuedTokens(opts ...ListTokensOption) (*token.IssuedTokens, error) {
+func (i *IssuerWallet) ListIssuedTokens(ctx context.Context, opts ...ListTokensOption) (*token.IssuedTokens, error) {
 	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
 	}
-	return i.w.HistoryTokens(compiledOpts)
+	return i.w.HistoryTokens(ctx, compiledOpts)
 }
 
 func CompileListTokensOption(opts ...ListTokensOption) (*driver.ListTokensOptions, error) {

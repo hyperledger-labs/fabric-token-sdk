@@ -49,7 +49,7 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", options.Transaction.TMSID())
 	}
 	if !options.NoCachingRequest {
-		if err := t.CacheRequest(options.Transaction.TMSID(), options.Transaction.TokenRequest); err != nil {
+		if err := t.CacheRequest(context.Context(), options.Transaction.TMSID(), options.Transaction.TokenRequest); err != nil {
 			logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", options.Transaction.TokenRequest.Anchor, err)
 		}
 	}

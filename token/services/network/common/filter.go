@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
+
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
@@ -52,14 +54,14 @@ type AcceptTxInDBsFilter struct {
 }
 
 func (t *AcceptTxInDBsFilter) Accept(txID string, env []byte) (bool, error) {
-	status, _, err := t.ttxDB.GetStatus(txID)
+	status, _, err := t.ttxDB.GetStatus(context.Background(), txID)
 	if err != nil {
 		return false, err
 	}
 	if status != ttxdb.Unknown {
 		return true, nil
 	}
-	status, _, err = t.auditDB.GetStatus(txID)
+	status, _, err = t.auditDB.GetStatus(context.Background(), txID)
 	if err != nil {
 		return false, err
 	}

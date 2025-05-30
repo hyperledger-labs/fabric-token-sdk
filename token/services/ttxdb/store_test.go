@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttxdb_test
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"sync"
@@ -40,17 +41,18 @@ func TestDB(t *testing.T) {
 }
 
 func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.StoreService) {
+	ctx := context.Background()
 	wg := sync.WaitGroup{}
 	n := 100
 	wg.Add(n)
 	for i := 0; i < n; i++ {
 		go func(i int) {
-			assert.NoError(t, db1.AddTransactionEndorsementAck("1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
-			acks, err := db1.GetTransactionEndorsementAcks("1")
+			assert.NoError(t, db1.AddTransactionEndorsementAck(ctx, "1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
+			acks, err := db1.GetTransactionEndorsementAcks(ctx, "1")
 			assert.NoError(t, err)
 			assert.True(t, len(acks) != 0)
-			assert.NoError(t, db2.AddTransactionEndorsementAck("2", []byte(fmt.Sprintf("bob_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
-			acks, err = db2.GetTransactionEndorsementAcks("2")
+			assert.NoError(t, db2.AddTransactionEndorsementAck(ctx, "2", []byte(fmt.Sprintf("bob_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
+			acks, err = db2.GetTransactionEndorsementAcks(ctx, "2")
 			assert.NoError(t, err)
 			assert.True(t, len(acks) != 0)
 
@@ -59,14 +61,14 @@ func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.StoreService) {
 	}
 	wg.Wait()
 
-	acks, err := db1.GetTransactionEndorsementAcks("1")
+	acks, err := db1.GetTransactionEndorsementAcks(ctx, "1")
 	assert.NoError(t, err)
 	assert.Len(t, acks, n)
 	for i := 0; i < n; i++ {
 		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("alice_%d", i)).String()])
 	}
 
-	acks, err = db2.GetTransactionEndorsementAcks("2")
+	acks, err = db2.GetTransactionEndorsementAcks(ctx, "2")
 	assert.NoError(t, err)
 	assert.Len(t, acks, n)
 	for i := 0; i < n; i++ {
@@ -76,7 +78,7 @@ func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.StoreService) {
 
 type qsMock struct{}
 
-func (qs qsMock) IsMine(id *token2.ID) (bool, error) {
+func (qs qsMock) IsMine(ctx context.Context, id *token2.ID) (bool, error) {
 	return true, nil
 }
 

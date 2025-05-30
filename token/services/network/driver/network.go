@@ -47,7 +47,7 @@ type Network interface {
 	Connect(ns string) ([]token2.ServiceOption, error)
 
 	// Broadcast sends the passed blob to the network
-	Broadcast(context context.Context, blob interface{}) error
+	Broadcast(ctx context.Context, blob interface{}) error
 
 	// NewEnvelope returns a new instance of an envelope
 	NewEnvelope() Envelope
@@ -63,10 +63,10 @@ type Network interface {
 	FetchPublicParameters(namespace string) ([]byte, error)
 
 	// QueryTokens retrieves the token content for the passed token ids
-	QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error)
+	QueryTokens(ctx context.Context, namespace string, IDs []*token.ID) ([][]byte, error)
 
 	// AreTokensSpent retrieves the spent flag for the passed ids
-	AreTokensSpent(context context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error)
+	AreTokensSpent(ctx context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error)
 
 	// LocalMembership returns the local membership
 	LocalMembership() LocalMembership

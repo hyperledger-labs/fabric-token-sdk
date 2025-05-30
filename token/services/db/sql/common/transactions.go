@@ -76,7 +76,7 @@ func (db *TransactionStore) CreateSchema() error {
 	return common.InitSchema(db.writeDB, db.GetSchema())
 }
 
-func (db *TransactionStore) GetTokenRequest(txID string) ([]byte, error) {
+func (db *TransactionStore) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
 	query, args := q.Select().
 		FieldsByName("request").
 		From(q.Table(db.table.Requests)).
@@ -93,7 +93,7 @@ func orderBy(f common3.FieldName, direction driver.SearchDirection) _select.Orde
 	return q.Desc(f)
 }
 
-func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
+func (db *TransactionStore) QueryMovements(ctx context.Context, params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
 	movementsTable, requestsTable := q.Table(db.table.Movements), q.Table(db.table.Requests)
 	query, args := q.Select().
 		Fields(
@@ -126,7 +126,7 @@ func (db *TransactionStore) QueryMovements(params driver.QueryMovementsParams) (
 	return iterators.ReadAllPointers(it)
 }
 
-func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsParams, pagination driver3.Pagination) (*driver3.PageIterator[*driver.TransactionRecord], error) {
+func (db *TransactionStore) QueryTransactions(ctx context.Context, params driver.QueryTransactionsParams, pagination driver3.Pagination) (*driver3.PageIterator[*driver.TransactionRecord], error) {
 	transactionsTable, requestsTable := q.Table(db.table.Transactions), q.Table(db.table.Requests)
 	query, args := q.Select().
 		Fields(
@@ -169,7 +169,7 @@ func (db *TransactionStore) QueryTransactions(params driver.QueryTransactionsPar
 	}, nil
 }
 
-func (db *TransactionStore) GetStatus(txID string) (driver.TxStatus, string, error) {
+func (db *TransactionStore) GetStatus(ctx context.Context, txID string) (driver.TxStatus, string, error) {
 	var status driver.TxStatus
 	var statusMessage string
 	query, args := q.Select().
@@ -190,7 +190,7 @@ func (db *TransactionStore) GetStatus(txID string) (driver.TxStatus, string, err
 	return status, statusMessage, nil
 }
 
-func (db *TransactionStore) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
+func (db *TransactionStore) QueryValidations(ctx context.Context, params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
 	validationsTable, requestsTable := q.Table(db.table.Validations), q.Table(db.table.Requests)
 	query, args := q.Select().
 		Fields(
@@ -223,7 +223,7 @@ func (db *TransactionStore) QueryValidations(params driver.QueryValidationRecord
 }
 
 // QueryTokenRequests returns an iterator over the token requests matching the passed params
-func (db *TransactionStore) QueryTokenRequests(params driver.QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
+func (db *TransactionStore) QueryTokenRequests(ctx context.Context, params driver.QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
 	query, args := q.Select().
 		FieldsByName("tx_id", "request", "status").
 		From(q.Table(db.table.Requests)).
@@ -239,7 +239,7 @@ func (db *TransactionStore) QueryTokenRequests(params driver.QueryTokenRequestsP
 	return common.NewIterator(rows, func(r *driver.TokenRequestRecord) error { return rows.Scan(&r.TxID, &r.TokenRequest, &r.Status) }), nil
 }
 
-func (db *TransactionStore) AddTransactionEndorsementAck(txID string, endorser token.Identity, sigma []byte) (err error) {
+func (db *TransactionStore) AddTransactionEndorsementAck(ctx context.Context, txID string, endorser token.Identity, sigma []byte) (err error) {
 	logger.Debugf("adding transaction endorse ack record [%s]", txID)
 
 	now := time.Now().UTC()
@@ -259,7 +259,7 @@ func (db *TransactionStore) AddTransactionEndorsementAck(txID string, endorser t
 	return
 }
 
-func (db *TransactionStore) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
+func (db *TransactionStore) GetTransactionEndorsementAcks(ctx context.Context, txID string) (map[string][]byte, error) {
 	query, args := q.Select().
 		FieldsByName("endorser", "sigma").
 		From(q.Table(db.table.TransactionEndorseAck)).
@@ -429,7 +429,7 @@ func (w *AtomicWrite) Rollback() {
 	w.txn = nil
 }
 
-func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
+func (w *AtomicWrite) AddTransaction(ctx context.Context, r *driver.TransactionRecord) error {
 	logger.Debugf("adding transaction record [%s:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
@@ -454,7 +454,7 @@ func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 	return ttxDBError(err)
 }
 
-func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadata, publicMetadata map[string][]byte, ppHash driver2.PPHash) error {
+func (w *AtomicWrite) AddTokenRequest(ctx context.Context, txID string, tr []byte, applicationMetadata, publicMetadata map[string][]byte, ppHash driver2.PPHash) error {
 	logger.Debugf("adding token request [%s]", txID)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
@@ -484,7 +484,7 @@ func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte, applicationMetadat
 	return ttxDBError(err)
 }
 
-func (w *AtomicWrite) AddMovement(r *driver.MovementRecord) error {
+func (w *AtomicWrite) AddMovement(ctx context.Context, r *driver.MovementRecord) error {
 	logger.Debugf("adding movement record [%s:%s:%s:%d:%s]", r.TxID, r.EnrollmentID, r.TokenType, r.Amount.Int64(), r.Status)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
@@ -510,7 +510,7 @@ func (w *AtomicWrite) AddMovement(r *driver.MovementRecord) error {
 	return ttxDBError(err)
 }
 
-func (w *AtomicWrite) AddValidationRecord(txID string, meta map[string][]byte) error {
+func (w *AtomicWrite) AddValidationRecord(ctx context.Context, txID string, meta map[string][]byte) error {
 	logger.Debugf("adding validation record [%s]", txID)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")

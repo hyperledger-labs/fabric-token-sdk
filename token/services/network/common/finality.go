@@ -24,7 +24,7 @@ import (
 )
 
 type transactionDB interface {
-	GetTokenRequest(txID string) ([]byte, error)
+	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
 	SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error
 }
 
@@ -78,7 +78,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 		if tr == nil {
 			// load it
 			span.AddEvent("get_token_request")
-			tokenRequestRaw, err := t.ttxDB.GetTokenRequest(txID)
+			tokenRequestRaw, err := t.ttxDB.GetTokenRequest(ctx, txID)
 			if err != nil {
 				t.logger.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
 				return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)

@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -24,7 +26,7 @@ type VerifierDeserializer interface {
 type AuditMatcherProvider interface {
 	MatcherDeserializer
 	MatchIdentity(id driver.Identity, ai []byte) error
-	GetAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([]byte, error)
+	GetAuditInfo(ctx context.Context, id driver.Identity, p driver.AuditInfoProvider) ([]byte, error)
 }
 
 // RecipientExtractor extracts the recipients from an identity
@@ -84,6 +86,6 @@ func (d *Deserializer) MatchIdentity(id driver.Identity, ai []byte) error {
 	return d.auditMatcherProvider.MatchIdentity(id, ai)
 }
 
-func (d *Deserializer) GetAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([]byte, error) {
-	return d.auditMatcherProvider.GetAuditInfo(id, p)
+func (d *Deserializer) GetAuditInfo(ctx context.Context, id driver.Identity, p driver.AuditInfoProvider) ([]byte, error) {
+	return d.auditMatcherProvider.GetAuditInfo(ctx, id, p)
 }

@@ -35,7 +35,7 @@ type tokenFetcher struct {
 	channel     string
 }
 
-func (f *tokenFetcher) QueryTokens(context context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
+func (f *tokenFetcher) QueryTokens(ctx context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
 	idsRaw, err := json.Marshal(IDs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling ids")
@@ -91,7 +91,7 @@ type spentTokenFetcher struct {
 	keyTranslator translator.KeyTranslator
 }
 
-func (f *spentTokenFetcher) QuerySpentTokens(context context.Context, namespace string, IDs []*token.ID, meta []string) ([]bool, error) {
+func (f *spentTokenFetcher) QuerySpentTokens(ctx context.Context, namespace string, IDs []*token.ID, meta []string) ([]bool, error) {
 	sIDs := make([]string, len(IDs))
 	var err error
 	for i, id := range IDs {

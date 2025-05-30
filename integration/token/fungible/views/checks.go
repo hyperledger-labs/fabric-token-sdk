@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
+	"context"
 	"encoding/json"
 
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
@@ -22,8 +23,8 @@ import (
 )
 
 type TokenTransactionDB interface {
-	GetTokenRequest(txID string) ([]byte, error)
-	Transactions(params driver.QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*driver.TransactionRecord], error)
+	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
+	Transactions(ctx context.Context, params driver.QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*driver.TransactionRecord], error)
 }
 
 type CheckTTXDB struct {
@@ -52,7 +53,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(m.TMSID))
 	assert.NotNil(tms, "failed to get default tms")
 	if m.Auditor {
-		auditorWallet := tms.WalletManager().AuditorWallet(m.AuditorWalletID)
+		auditorWallet := tms.WalletManager().AuditorWallet(context.Context(), m.AuditorWalletID)
 		assert.NotNil(auditorWallet, "cannot find auditor wallet [%s]", m.AuditorWalletID)
 		db, err := ttx.NewAuditor(context, auditorWallet)
 		assert.NoError(err, "failed to get auditor instance")
@@ -110,7 +111,7 @@ type ListVaultUnspentTokensView struct {
 func (l *ListVaultUnspentTokensView) Call(context view.Context) (interface{}, error) {
 	net := token.GetManagementService(context, token.WithTMSID(l.TMSID))
 	assert.NotNil(net, "cannot find tms [%s]", l.TMSID)
-	return net.Vault().NewQueryEngine().ListUnspentTokens()
+	return net.Vault().NewQueryEngine().ListUnspentTokens(context.Context())
 }
 
 type ListVaultUnspentTokensViewFactory struct{}
@@ -138,7 +139,7 @@ func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, erro
 	qe := tms.Vault().NewQueryEngine()
 	var IDs []*token2.ID
 	count := 0
-	assert.NoError(qe.GetTokenOutputs(c.IDs, func(id *token2.ID, tokenRaw []byte) error {
+	assert.NoError(qe.GetTokenOutputs(context.Context(), c.IDs, func(id *token2.ID, tokenRaw []byte) error {
 		if len(tokenRaw) == 0 {
 			return errors.Errorf("token id [%s] is nil", id)
 		}

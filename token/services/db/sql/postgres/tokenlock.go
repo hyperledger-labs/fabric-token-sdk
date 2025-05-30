@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -38,8 +39,8 @@ func NewTokenLockStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenL
 	return &TokenLockStore{TokenLockStore: tldb, ci: ci}, nil
 }
 
-func (db *TokenLockStore) Cleanup(leaseExpiry time.Duration) error {
-	if err := db.logStaleLocks(leaseExpiry); err != nil {
+func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration) error {
+	if err := db.logStaleLocks(ctx, leaseExpiry); err != nil {
 		db.Logger.Warnf("Could not log stale locks: %v", err)
 	}
 	tokenLocks, tokenRequests := q.Table(db.Table.TokenLocks), q.Table(db.Table.Requests)
@@ -62,7 +63,7 @@ func (db *TokenLockStore) Cleanup(leaseExpiry time.Duration) error {
 	return err
 }
 
-func (db *TokenLockStore) logStaleLocks(leaseExpiry time.Duration) error {
+func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Duration) error {
 	if !db.Logger.IsEnabledFor(zapcore.InfoLevel) {
 		return nil
 	}

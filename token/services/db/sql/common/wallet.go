@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -50,7 +51,7 @@ func (db *WalletStore) CreateSchema() error {
 	return common.InitSchema(db.writeDB, []string{db.GetSchema()}...)
 }
 
-func (db *WalletStore) GetWalletID(identity token.Identity, roleID int) (driver.WalletID, error) {
+func (db *WalletStore) GetWalletID(ctx context.Context, identity token.Identity, roleID int) (driver.WalletID, error) {
 	idHash := identity.UniqueID()
 	query, args := q.Select().
 		FieldsByName("wallet_id").
@@ -66,7 +67,7 @@ func (db *WalletStore) GetWalletID(identity token.Identity, roleID int) (driver.
 	return result, nil
 }
 
-func (db *WalletStore) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
+func (db *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.WalletID, error) {
 	query, args := q.SelectDistinct().
 		FieldsByName("wallet_id").
 		From(q.Table(db.table.Wallets)).
@@ -82,8 +83,9 @@ func (db *WalletStore) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
 	return iterators.ReadAllValues(it)
 }
 
-func (db *WalletStore) StoreIdentity(identity token.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
-	if db.IdentityExists(identity, wID, roleID) {
+func (db *WalletStore) StoreIdentity(ctx context.Context, identity token.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
+	// TODO AF Use upsert
+	if db.IdentityExists(ctx, identity, wID, roleID) {
 		return nil
 	}
 
@@ -101,7 +103,7 @@ func (db *WalletStore) StoreIdentity(identity token.Identity, eID string, wID dr
 	return nil
 }
 
-func (db *WalletStore) LoadMeta(identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
+func (db *WalletStore) LoadMeta(ctx context.Context, identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.UniqueID()
 	query, args := q.Select().
 		FieldsByName("meta").
@@ -116,7 +118,7 @@ func (db *WalletStore) LoadMeta(identity token.Identity, wID driver.WalletID, ro
 	return result, nil
 }
 
-func (db *WalletStore) IdentityExists(identity token.Identity, wID driver.WalletID, roleID int) bool {
+func (db *WalletStore) IdentityExists(ctx context.Context, identity token.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.UniqueID()
 	query, args := q.Select().
 		FieldsByName("wallet_id").

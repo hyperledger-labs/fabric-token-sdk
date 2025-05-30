@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"testing"
@@ -26,7 +27,7 @@ type MockQueryService struct {
 	mock.Mock
 }
 
-func (m *MockQueryService) IsMine(id *token.ID) (bool, error) {
+func (m *MockQueryService) IsMine(ctx context.Context, id *token.ID) (bool, error) {
 	args := m.Called(id)
 	return args.Bool(0), args.Error(1)
 }
@@ -57,11 +58,12 @@ func TestOutputStream_Filter(t *testing.T) {
 }
 
 func TestInputStream_IsAnyMine(t *testing.T) {
+	ctx := context.Background()
 	qs := new(MockQueryService)
 	is := NewInputStream(qs, []*Input{}, 0)
 
 	t.Run("NoInputs", func(t *testing.T) {
-		anyMine, err := is.IsAnyMine()
+		anyMine, err := is.IsAnyMine(ctx)
 		assert.NoError(t, err)
 		assert.False(t, anyMine)
 	})
@@ -74,7 +76,7 @@ func TestInputStream_IsAnyMine(t *testing.T) {
 		qs.On("IsMine", input1.Id).Return(false, nil).Once()
 		qs.On("IsMine", input2.Id).Return(false, nil).Once()
 
-		anyMine, err := is.IsAnyMine()
+		anyMine, err := is.IsAnyMine(ctx)
 		assert.NoError(t, err)
 		assert.False(t, anyMine)
 
@@ -89,7 +91,7 @@ func TestInputStream_IsAnyMine(t *testing.T) {
 		qs.On("IsMine", input1.Id).Return(false, nil).Once()
 		qs.On("IsMine", input2.Id).Return(true, nil).Once()
 
-		anyMine, err := is.IsAnyMine()
+		anyMine, err := is.IsAnyMine(ctx)
 		assert.NoError(t, err)
 		assert.True(t, anyMine)
 
@@ -102,7 +104,7 @@ func TestInputStream_IsAnyMine(t *testing.T) {
 
 		qs.On("IsMine", input.Id).Return(false, errors.New("some error")).Once()
 
-		anyMine, err := is.IsAnyMine()
+		anyMine, err := is.IsAnyMine(ctx)
 		assert.Error(t, err)
 		assert.False(t, anyMine)
 

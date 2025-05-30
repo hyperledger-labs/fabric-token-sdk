@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package deserializer
 
 import (
+	"context"
 	errors2 "errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -22,7 +23,7 @@ var logger = logging.MustGetLogger()
 type TypedVerifierDeserializer interface {
 	DeserializeVerifier(typ identity.Type, raw []byte) (driver.Verifier, error)
 	Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error)
-	GetAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error)
+	GetAuditInfo(ctx context.Context, id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error)
 	GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
@@ -146,7 +147,7 @@ func (v *TypedVerifierDeserializerMultiplex) MatchIdentity(id driver.Identity, a
 	return nil
 }
 
-func (v *TypedVerifierDeserializerMultiplex) GetAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([]byte, error) {
+func (v *TypedVerifierDeserializerMultiplex) GetAuditInfo(ctx context.Context, id driver.Identity, p driver.AuditInfoProvider) ([]byte, error) {
 	si, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
@@ -157,7 +158,7 @@ func (v *TypedVerifierDeserializerMultiplex) GetAuditInfo(id driver.Identity, p 
 	}
 	var errs []error
 	for _, deserializer := range dess {
-		info, err := deserializer.GetAuditInfo(id, si.Type, si.Identity, p)
+		info, err := deserializer.GetAuditInfo(ctx, id, si.Type, si.Identity, p)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -184,8 +185,8 @@ func (t *TypedIdentityVerifierDeserializer) Recipients(id driver.Identity, typ i
 	return []driver.Identity{id}, nil
 }
 
-func (t *TypedIdentityVerifierDeserializer) GetAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
-	auditInfo, err := p.GetAuditInfo(id)
+func (t *TypedIdentityVerifierDeserializer) GetAuditInfo(ctx context.Context, id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
+	auditInfo, err := p.GetAuditInfo(ctx, id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", id)
 	}

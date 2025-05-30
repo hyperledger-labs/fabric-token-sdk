@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -67,7 +69,7 @@ func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.
 	return []driver.Identity{script.Recipient}, nil
 }
 
-func (t *TypedIdentityDeserializer) GetAuditInfo(id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
+func (t *TypedIdentityDeserializer) GetAuditInfo(ctx context.Context, id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
 	if typ != htlc.ScriptType {
 		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, htlc.ScriptType)
 	}
@@ -79,11 +81,11 @@ func (t *TypedIdentityDeserializer) GetAuditInfo(id driver.Identity, typ identit
 	}
 
 	auditInfo := &ScriptInfo{}
-	auditInfo.Sender, err = p.GetAuditInfo(script.Sender)
+	auditInfo.Sender, err = p.GetAuditInfo(ctx, script.Sender)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for htlc script [%s]", id.String())
 	}
-	auditInfo.Recipient, err = p.GetAuditInfo(script.Recipient)
+	auditInfo.Recipient, err = p.GetAuditInfo(ctx, script.Recipient)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for script [%s]", id.String())
 	}

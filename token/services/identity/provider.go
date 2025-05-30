@@ -32,18 +32,18 @@ type enrollmentIDUnmarshaler interface {
 }
 
 type sigService interface {
-	IsMe(identity driver.Identity) bool
-	AreMe(identities ...driver.Identity) []string
+	IsMe(ctx context.Context, identity driver.Identity) bool
+	AreMe(ctx context.Context, identities ...driver.Identity) []string
 	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
 	RegisterVerifier(identity driver.Identity, v driver.Verifier) error
 	GetSigner(identity driver.Identity) (driver.Signer, error)
-	GetSignerInfo(identity driver.Identity) ([]byte, error)
+	GetSignerInfo(ctx context.Context, identity driver.Identity) ([]byte, error)
 	GetVerifier(identity driver.Identity) (driver.Verifier, error)
 }
 
 type storage interface {
-	GetAuditInfo(id []byte) ([]byte, error)
-	StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
+	GetAuditInfo(ctx context.Context, id []byte) ([]byte, error)
+	StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 }
 
 // Provider implements the driver.IdentityProvider interface.
@@ -83,15 +83,15 @@ func (p *Provider) RegisterVerifier(identity driver.Identity, v driver.Verifier)
 }
 
 func (p *Provider) RegisterAuditInfo(identity driver.Identity, info []byte) error {
-	return p.Storage.StoreIdentityData(identity, info, nil, nil)
+	return p.Storage.StoreIdentityData(context.Background(), identity, info, nil, nil)
 }
 
-func (p *Provider) GetAuditInfo(identity driver.Identity) ([]byte, error) {
-	return p.Storage.GetAuditInfo(identity)
+func (p *Provider) GetAuditInfo(ctx context.Context, identity driver.Identity) ([]byte, error) {
+	return p.Storage.GetAuditInfo(ctx, identity)
 }
 
 func (p *Provider) RegisterRecipientData(data *driver.RecipientData) error {
-	return p.Storage.StoreIdentityData(data.Identity, data.AuditInfo, data.TokenMetadata, data.TokenMetadataAuditInfo)
+	return p.Storage.StoreIdentityData(context.Background(), data.Identity, data.AuditInfo, data.TokenMetadata, data.TokenMetadataAuditInfo)
 }
 
 func (p *Provider) RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
@@ -103,7 +103,7 @@ func (p *Provider) RegisterSigner(identity driver.Identity, signer driver.Signer
 	return p.SigService.RegisterSigner(identity, signer, verifier, signerInfo)
 }
 
-func (p *Provider) AreMe(identities ...driver.Identity) []string {
+func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []string {
 	p.Logger.Debugf("identity [%s] is me?", identities)
 
 	result := make([]string, 0)
@@ -129,15 +129,15 @@ func (p *Provider) AreMe(identities ...driver.Identity) []string {
 
 	defer p.isMeCacheLock.Unlock()
 
-	found := p.SigService.AreMe(notFound...)
+	found := p.SigService.AreMe(ctx, notFound...)
 	for _, id := range notFound {
 		p.isMeCache[id.UniqueID()] = slices.Contains(found, id.UniqueID())
 	}
 	return append(result, found...)
 }
 
-func (p *Provider) IsMe(identity driver.Identity) bool {
-	return len(p.AreMe(identity)) > 0
+func (p *Provider) IsMe(ctx context.Context, identity driver.Identity) bool {
+	return len(p.AreMe(ctx, identity)) > 0
 }
 
 func (p *Provider) RegisterRecipientIdentity(id driver.Identity) error {
@@ -176,7 +176,7 @@ func (p *Provider) GetRevocationHandler(identity driver.Identity, auditInfo []by
 	return p.enrollmentIDUnmarshaler.GetRevocationHandler(identity, auditInfo)
 }
 
-func (p *Provider) Bind(longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error {
+func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error {
 	if copyAll {
 		p.Logger.Debugf("Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
 		setSV := true
@@ -196,14 +196,14 @@ func (p *Provider) Bind(longTerm driver.Identity, ephemeral driver.Identity, cop
 		}
 
 		setAI := true
-		auditInfo, err := p.GetAuditInfo(longTerm)
+		auditInfo, err := p.GetAuditInfo(ctx, longTerm)
 		if err != nil {
 			p.Logger.Debugf("failed getting audit info for [%s][%s]", longTerm, err)
 			setAI = false
 		}
 
 		if setSV {
-			signerInfo, err := p.SigService.GetSignerInfo(longTerm)
+			signerInfo, err := p.SigService.GetSignerInfo(context.Background(), longTerm)
 			if err != nil {
 				return err
 			}

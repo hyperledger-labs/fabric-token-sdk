@@ -22,7 +22,7 @@ import (
 )
 
 type Vault interface {
-	DeleteTokens(toDelete ...*token2.ID) error
+	DeleteTokens(ctx context.Context, toDelete ...*token2.ID) error
 }
 
 type QueryEngine interface {
@@ -31,7 +31,7 @@ type QueryEngine interface {
 }
 
 type TokenVault interface {
-	DeleteTokens(toDelete ...*token2.ID) error
+	DeleteTokens(ctx context.Context, toDelete ...*token2.ID) error
 }
 
 // OwnerWallet is a combination of a wallet and a query service
@@ -43,23 +43,23 @@ type OwnerWallet struct {
 }
 
 // ListTokensAsEscrow returns a list of tokens which are co-owned by OwnerWallet
-func (w *OwnerWallet) ListTokensAsEscrow(opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
+func (w *OwnerWallet) ListTokensAsEscrow(ctx context.Context, opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filterIterator(compiledOpts.TokenType)
+	return w.filterIterator(ctx, compiledOpts.TokenType)
 }
 
 // ListTokens returns a list of tokens that matches the passed options and whose recipient belongs to this wallet
-func (w *OwnerWallet) ListTokens(opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
+func (w *OwnerWallet) ListTokens(ctx context.Context, opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	it, err := w.filterIterator(compiledOpts.TokenType)
+	it, err := w.filterIterator(ctx, compiledOpts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -71,15 +71,15 @@ func (w *OwnerWallet) ListTokens(opts ...token.ListTokensOption) (*token2.Unspen
 }
 
 // ListTokensIterator returns an iterator of tokens that matches the passed options and whose recipient belongs to this wallet
-func (w *OwnerWallet) ListTokensIterator(opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
+func (w *OwnerWallet) ListTokensIterator(ctx context.Context, opts ...token.ListTokensOption) (iterators.Iterator[*token2.UnspentToken], error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
-	return w.filterIterator(compiledOpts.TokenType)
+	return w.filterIterator(ctx, compiledOpts.TokenType)
 }
 
-func (w *OwnerWallet) filterIterator(tokenType token2.Type) (iterators.Iterator[*token2.UnspentToken], error) {
+func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type) (iterators.Iterator[*token2.UnspentToken], error) {
 	walletID := escrowWallet(w.wallet)
 	it, err := w.queryEngine.UnspentTokensIteratorBy(context.TODO(), walletID, tokenType)
 	if err != nil {
@@ -89,18 +89,18 @@ func (w *OwnerWallet) filterIterator(tokenType token2.Type) (iterators.Iterator[
 }
 
 // GetWallet returns the wallet whose id is the passed id
-func GetWallet(sp token.ServiceProvider, id string, opts ...token.ServiceOption) *token.OwnerWallet {
-	return ttx.GetWallet(sp, id, opts...)
+func GetWallet(context view.Context, id string, opts ...token.ServiceOption) *token.OwnerWallet {
+	return ttx.GetWallet(context, id, opts...)
 }
 
 // Wallet returns an OwnerWallet which contains a wallet and a query service
-func Wallet(sp token.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
+func Wallet(context view.Context, wallet *token.OwnerWallet) *OwnerWallet {
 	if wallet == nil {
 		return nil
 	}
 
 	tms := wallet.TMS()
-	tokens, err := tokens.GetService(sp, tms.ID())
+	tokens, err := tokens.GetService(context, tms.ID())
 	if err != nil {
 		return nil
 	}

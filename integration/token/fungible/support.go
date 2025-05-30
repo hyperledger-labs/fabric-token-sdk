@@ -1184,7 +1184,7 @@ func RegisterIssuerIdentity(network *integration.Infrastructure, id *token3.Node
 	network.Ctx.SetViewClient(walletPath, network.Client(id.ReplicaName()))
 }
 
-func RegisterOwnerIdentity(network *integration.Infrastructure, id *token3.NodeReference, identityConfiguration token2.IdentityConfiguration) {
+func RegisterOwnerIdentity(ctx context.Context, network *integration.Infrastructure, id *token3.NodeReference, identityConfiguration token2.IdentityConfiguration) {
 	for _, replicaName := range id.AllNames() { // TODO: AF
 		_, err := network.Client(replicaName).CallView("RegisterOwnerIdentity", common.JSONMarshall(&views.RegisterOwnerIdentity{
 			IdentityConfiguration: identityConfiguration,

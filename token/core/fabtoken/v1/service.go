@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package v1
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/validator"
@@ -17,7 +19,7 @@ import (
 )
 
 type TokenLoader interface {
-	GetTokens(ids []*token.ID) ([]*token.Token, error)
+	GetTokens(ctx context.Context, ids []*token.ID) ([]*token.Token, error)
 }
 
 type Service struct {
@@ -64,5 +66,5 @@ func NewService(
 }
 
 func (s *Service) Validator() (driver.Validator, error) {
-	return validator.NewValidator(s.Logger, s.PublicParametersManager.PublicParams(), s.Deserializer()), nil
+	return validator.NewValidator(s.Logger, s.PublicParametersManager.PublicParams(context.Background()), s.Deserializer()), nil
 }

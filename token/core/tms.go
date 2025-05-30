@@ -8,6 +8,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"runtime/debug"
 	"sync"
@@ -21,7 +22,7 @@ import (
 type CallbackFunc func(tms driver.TokenManagerService, network, channel, namespace string) error
 
 type PublicParametersStorage interface {
-	PublicParams(networkID string, channel string, namespace string) ([]byte, error)
+	PublicParams(ctx context.Context, networkID string, channel string, namespace string) ([]byte, error)
 }
 
 type ConfigProvider interface {
@@ -229,7 +230,7 @@ func (m *TMSProvider) ppFromOpts(opts *driver.ServiceOptions) ([]byte, error) {
 }
 
 func (m *TMSProvider) ppFromStorage(opts *driver.ServiceOptions) ([]byte, error) {
-	ppRaw, err := m.publicParametersStorage.PublicParams(opts.Network, opts.Channel, opts.Namespace)
+	ppRaw, err := m.publicParametersStorage.PublicParams(context.Background(), opts.Network, opts.Channel, opts.Namespace)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to load public params from the publicParametersStorage")
 	}
