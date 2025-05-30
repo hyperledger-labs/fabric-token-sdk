@@ -18,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type TokensUpgrade struct {
@@ -41,8 +40,6 @@ type TokensUpgradeInitiatorView struct {
 }
 
 func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	// First, the initiator selects the tokens to upgrade, namely those that are unsupported.
 	tms := token.GetManagementService(context, token.WithTMSID(i.TMSID))
 	assert.NotNil(tms, "failed getting token management service for [%s]", i.TMSID)
@@ -66,7 +63,6 @@ func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, er
 		// First register it locally
 		assert.NoError(w.RegisterRecipient(context.Context(), i.RecipientData), "failed to register remote recipient")
 		// Then request upgrade
-		span.AddEvent("request_upgrade_for_recipient")
 		id, session, err = ttx.RequestTokensUpgradeForRecipient(
 			context,
 			view.Identity(i.Issuer),
@@ -77,7 +73,6 @@ func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, er
 			token.WithTMSID(tms.ID()),
 		)
 	} else {
-		span.AddEvent("request_upgrade")
 		id, session, err = ttx.RequestTokensUpgrade(
 			context,
 			view.Identity(i.Issuer),
@@ -96,8 +91,6 @@ func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, er
 	// This is a trick to the reuse the same API independently of the role a party plays.
 	return context.RunView(nil, view.AsResponder(session), view.WithViewCall(
 		func(context view.Context) (interface{}, error) {
-			span := trace.SpanFromContext(context.Context())
-
 			// At some point, the recipient receives the token transaction that in the meantime has been assembled
 			tx, err := ttx.ReceiveTransaction(context)
 			assert.NoError(err, "failed to receive tokens")
@@ -116,12 +109,10 @@ func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, er
 			// If everything is fine, the recipient accepts and sends back her signature.
 			// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
 			// This depends on the driver implementation.
-			span.AddEvent("accept_upgrade")
 			_, err = context.RunView(ttx.NewAcceptView(tx))
 			assert.NoError(err, "failed to accept new tokens")
 
 			// Before completing, the recipient waits for finality of the transaction
-			span.AddEvent("ask_for_finality")
 			_, err = context.RunView(ttx.NewFinalityView(tx, ttx.WithTimeout(1*time.Minute)))
 			assert.NoError(err, "new tokens were not committed")
 

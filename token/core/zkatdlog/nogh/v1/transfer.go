@@ -113,11 +113,7 @@ func (s *TransferService) Transfer(
 	outputTokens []*token2.Token,
 	opts *driver.TransferOptions,
 ) (driver.TransferAction, *driver.TransferMetadata, error) {
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent("start_transfer")
-	defer span.AddEvent("end_transfer")
-
-	s.Logger.Debugf("Prepare Transfer Action [%s,%v]", txID, tokenIDs)
+	s.Logger.DebugfContext(ctx, "Prepare Transfer Action [%s,%v]", txID, tokenIDs)
 	if common.IsAnyNil(tokenIDs...) {
 		return nil, nil, errors.New("failed to prepare transfer action: nil token id")
 	}
@@ -126,7 +122,6 @@ func (s *TransferService) Transfer(
 	}
 
 	// load tokens with the passed token identifiers
-	span.AddEvent("load_tokens")
 	loadedTokens, err := s.TokenLoader.LoadTokens(ctx, tokenIDs)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
@@ -146,7 +141,7 @@ func (s *TransferService) Transfer(
 	values := make([]uint64, 0, len(outputTokens))
 	owners := make([][]byte, 0, len(outputTokens))
 	// get values and owners of outputs
-	span.AddEvent("prepare_output_tokens")
+	s.Logger.DebugfContext(ctx, "Prepare %d output tokens", len(outputTokens))
 	for i, output := range outputTokens {
 		q, err := token2.ToQuantity(output.Quantity, pp.Precision())
 		if err != nil {
@@ -162,9 +157,9 @@ func (s *TransferService) Transfer(
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
 	start := time.Now()
-	span.AddEvent("start_generate_zk_transfer")
+	s.Logger.DebugfContext(ctx, "Generate zk transfer")
 	transfer, outputsMetadata, err := sender.GenerateZKTransfer(ctx, values, owners)
-	span.AddEvent("end_generate_zk_transfer")
+	s.Logger.DebugfContext(ctx, "Done generating zk transfer")
 	duration := time.Since(start)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", txID)
@@ -193,7 +188,7 @@ func (s *TransferService) Transfer(
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner))
 		}
 		if len(auditInfo) == 0 {
-			s.Logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", tokenIDs[i], driver.Identity(t.Owner))
+			s.Logger.ErrorfContext(ctx, "empty audit info for the owner [%s] of the i^th token [%s]", tokenIDs[i], driver.Identity(t.Owner))
 		}
 		transferInputsMetadata = append(transferInputsMetadata, &driver.TransferInputMetadata{
 			TokenID: tokenIDs[i],
@@ -256,7 +251,7 @@ func (s *TransferService) Transfer(
 		})
 	}
 
-	s.Logger.Debugf("Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(tokenIDs), len(senderAuditInfos), transfer.NumOutputs())
+	s.Logger.DebugfContext(ctx, "Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(tokenIDs), len(senderAuditInfos), transfer.NumOutputs())
 
 	transferMetadata := &driver.TransferMetadata{
 		Inputs:       transferInputsMetadata,

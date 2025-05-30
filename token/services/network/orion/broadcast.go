@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -43,8 +42,6 @@ func NewBroadcastView(dbManager *DBManager, network string, blob interface{}) *B
 }
 
 func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	sm, err := r.DBManager.GetSessionManager(r.Network)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting session manager for network [%s]", r.Network)
@@ -72,12 +69,12 @@ func (r *BroadcastView) Call(context view.Context) (interface{}, error) {
 		Network: r.Network,
 		Blob:    blob,
 	}
-	span.AddEvent("send_broadcast_request")
+	logger.DebugfContext(context.Context(), "Send broadcast request")
 	if err := session.SendWithContext(context.Context(), request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
 	response := &BroadcastResponse{}
-	span.AddEvent("receive_broadcast_response")
+	logger.DebugfContext(context.Context(), "Receive broadcast response")
 	if err := session.ReceiveWithTimeout(response, 30*time.Second); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
@@ -94,12 +91,10 @@ type BroadcastResponderView struct {
 }
 
 func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	// receive request
 	session := session2.JSON(context)
 	request := &BroadcastRequest{}
-	span.AddEvent("receive_request")
+	logger.DebugfContext(context.Context(), "Receive broadcast request")
 	if err := session.Receive(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive request")
 	}
@@ -117,15 +112,14 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 
 	var txID string
 	broadcastErr := runner.RunWithErrors(func() (bool, error) {
-		span.AddEvent("try_broadcast")
+		logger.DebugfContext(context.Context(), "Try broadcast")
 		var err error
 		_, txID, err = r.broadcast(context, sm, request)
 		if err == nil {
 			return true, nil
 		}
 
-		span.RecordError(err)
-		logger.Errorf("failed to broadcast to [%s], txID [%s] with err [%s], retry", sm.CustodianID, txID, err)
+		logger.ErrorfContext(context.Context(), "failed to broadcast to [%s], txID [%s] with err [%s], retry", sm.CustodianID, txID, err)
 		if strings.Contains(err.Error(), "is not valid") {
 			return true, err
 		}
@@ -134,8 +128,7 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 		}
 
 		// was the transaction committed, by any chance?
-		logger.Errorf("check transaction [%s] status on [%s], retry", txID, sm.CustodianID)
-		span.AddEvent("fetch_tx_status")
+		logger.ErrorfContext(context.Context(), "check transaction [%s] status on [%s], retry", txID, sm.CustodianID)
 
 		status, err := txStatusFetcher.FetchCode(request.Network, txID)
 		if err != nil {
@@ -148,7 +141,7 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 		if status == network.Invalid {
 			return true, errors.New("invalid transaction status")
 		}
-		logger.Debugf("transaction [%s] status [%d], retry, wait a bit and resubmit", txID, status)
+		logger.DebugfContext(context.Context(), "transaction [%s] status [%d], retry, wait a bit and resubmit", txID, status)
 		return false, nil
 	})
 

@@ -56,10 +56,7 @@ func NewAuditorService(
 
 // AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
 func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.TokenRequest, metadata *driver.TokenRequestMetadata, txID string) error {
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent("start_auditor_check")
-	defer span.AddEvent("end_auditor_check")
-	s.Logger.Debugf("[%s] check token request validity, number of transfer actions [%d]...", txID, len(metadata.Transfers))
+	s.Logger.DebugfContext(ctx, "[%s] check token request validity, number of transfer actions [%d]...", txID, len(metadata.Transfers))
 
 	actionDes := &validator.ActionDeserializer{
 		PublicParams: s.PublicParametersManager.PublicParams(ctx),
@@ -75,17 +72,16 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 		tokenIDs = append(tokenIDs, transfer.TokenIDs()...)
 	}
 
-	span.AddEvent("load_token_outputs")
 	// tokenMap, err := s.TokenCommitmentLoader.GetTokenOutputs(ctx, tokenIDs)
 	// if err != nil {
 	// 	return errors.Wrapf(err, "failed getting token outputs to perform auditor check")
 	// }
-	s.Logger.Debugf("loaded [%d] corresponding inputs for TX [%s]", len(tokenIDs), txID)
+	s.Logger.DebugfContext(ctx, "loaded [%d] corresponding inputs for TX [%s]", len(tokenIDs), txID)
 
 	inputTokens := make([][]*token.Token, len(metadata.Transfers))
 	for i, transfer := range transfers {
 		if err := transfer.Validate(); err != nil {
-			span.AddEvent("failed_to_validate_transfer")
+			s.Logger.ErrorfContext(ctx, "failed to validate transfer: %v", err)
 			return errors.Wrapf(err, "failed to validate transfer")
 		}
 		inputTokens[i] = make([]*token.Token, len(transfer.Inputs))
@@ -94,11 +90,9 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 		}
 	}
 
-	span.AddEvent("load_public_params")
 	pp := s.PublicParametersManager.PublicParams(ctx)
-	span.AddEvent("create_new_auditor")
 	auditor := audit.NewAuditor(s.Logger, s.tracer, s.Deserializer, pp.PedersenGenerators, nil, math.Curves[pp.Curve])
-	span.AddEvent("start_auditor_check")
+	s.Logger.DebugfContext(ctx, "Start auditor check")
 	err = auditor.Check(
 		ctx,
 		request,

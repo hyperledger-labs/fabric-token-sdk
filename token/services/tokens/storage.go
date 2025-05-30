@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -91,13 +90,11 @@ func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID to
 }
 
 func (t *transaction) DeleteToken(ctx context.Context, tokenID token2.ID, deletedBy string) error {
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent("get_token")
 	tok, owners, err := t.tx.GetToken(ctx, tokenID, true)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token [%s]", tokenID)
 	}
-	span.AddEvent("delete_token")
+
 	err = t.tx.Delete(ctx, tokenID, deletedBy)
 	if err != nil {
 		if tok == nil {
@@ -110,7 +107,7 @@ func (t *transaction) DeleteToken(ctx context.Context, tokenID token2.ID, delete
 		logger.Debugf("nothing further to delete for [%s]", tokenID)
 		return nil
 	}
-	span.AddEvent("notify_owners")
+	logger.DebugfContext(ctx, "Notify owners")
 	for _, owner := range owners {
 		logger.Debugf("post new delete-token event [%s:%s]", tokenID, owner)
 		t.Notify(DeleteToken, t.tmsID, owner, tok.Type, tokenID.TxId, tokenID.Index)
@@ -128,13 +125,11 @@ func (t *transaction) DeleteTokens(ctx context.Context, deletedBy string, ids []
 }
 
 func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error {
-	span := trace.SpanFromContext(ctx)
 	q, err := token2.ToQuantity(tta.tok.Quantity, tta.precision)
 	if err != nil {
 		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tta.tok.Quantity, tta.precision)
 	}
 
-	span.AddEvent("store_token")
 	err = t.tx.StoreToken(ctx, tokendb.TokenRecord{
 		TxID:           tta.txID,
 		Index:          tta.index,
@@ -157,7 +152,7 @@ func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error 
 		return errors.Wrapf(err, "cannot store token in db")
 	}
 
-	span.AddEvent("notify_owners")
+	logger.DebugfContext(ctx, "Notify owners")
 	for _, id := range tta.owners {
 		if len(id) == 0 {
 			continue

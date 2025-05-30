@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	"fmt"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -17,7 +16,6 @@ import (
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type RecipientData = token.RecipientData
@@ -179,8 +177,6 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 }
 
 func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Context, recipient *Recipient, multiSig bool) (token.Identity, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	logger.Debugf("request recipient [%s] is not registered", recipient.Identity)
 	session, err := session2.NewFromInitiator(context, recipient.Identity)
 	if err != nil {
@@ -198,29 +194,29 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 		RecipientData: recipient.RecipientData,
 		MultiSig:      multiSig,
 	}
-	span.AddEvent(fmt.Sprintf("Send identity request to %s", string(wID)))
+	logger.DebugfContext(context.Context(), "Send identity request to %s", wID)
 	err = session.Send(recipientRequest)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient request")
 	}
 
-	span.AddEvent("Receive identity response")
+	logger.DebugfContext(context.Context(), "Receive identity response")
 	recipientData := &RecipientData{}
 	err = session.ReceiveWithTimeout(recipientData, 10*time.Second)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
 	}
 	wm := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager()
-	span.AddEvent("Register recipient identity")
+	logger.DebugfContext(context.Context(), "Register recipient identity")
 	if err := wm.RegisterRecipientIdentity(recipientData); err != nil {
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}
 
 	// Update the Endpoint Resolver
-	logger.Debugf("update endpoint resolver for [%s], bind to [%s]", recipientData.Identity, recipient.Identity)
-	span.AddEvent("Bind identity")
+	logger.DebugfContext(context.Context(), "update endpoint resolver for [%s], bind to [%s]", recipientData.Identity, recipient.Identity)
+
 	if err := view2.GetEndpointService(context).Bind(context.Context(), recipient.Identity, recipientData.Identity); err != nil {
-		span.RecordError(err)
+		logger.ErrorfContext(context.Context(), "failed binding [%s] to [%s]: %w", recipientData.Identity, recipient.Identity, err)
 		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", recipientData.Identity, recipient.Identity)
 	}
 	return recipientData.Identity, nil
@@ -301,8 +297,6 @@ func RespondRequestRecipientIdentityUsingWallet(context view.Context, wallet str
 }
 
 func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	session := session2.JSON(context)
 	recipientRequest := &RecipientRequest{}
 	if err := session.Receive(recipientRequest); err != nil {
@@ -335,7 +329,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		}
 		// TODO: check the other values too
 	} else {
-		span.AddEvent("generate_identity")
+		logger.DebugfContext(context.Context(), "generate_identity")
 		// otherwise generate one fresh
 		var err error
 		recipientData, err = w.GetRecipientData()
@@ -346,7 +340,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	}
 
 	// Step 3: send the public key back to the invoker
-	span.AddEvent(fmt.Sprintf("Send recipient identity response to %s", string(session.Info().Caller)))
+	logger.DebugfContext(context.Context(), "Send recipient identity response to %s", string(session.Info().Caller))
 	err := session.Send(recipientData)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
@@ -354,8 +348,8 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 
 	// Update the Endpoint Resolver
 	resolver := view2.GetEndpointService(context)
-	logger.Debugf("bind me [%s] to [%s]", context.Me(), recipientData)
-	span.AddEvent("Bind identity")
+	logger.DebugfContext(context.Context(), "bind me [%s] to [%s]", context.Me(), recipientData)
+
 	err = resolver.Bind(context.Context(), context.Me(), recipientIdentity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to bind me to recipient identity")
@@ -375,21 +369,20 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 	recipientRequest *RecipientRequest,
 	recipientIdentity token.Identity,
 ) error {
-	span := trace.SpanFromContext(context.Context())
 	if !recipientRequest.MultiSig {
-		span.AddEvent("Skip multisig")
+		logger.DebugfContext(context.Context(), "Skip multisig")
 		return nil
 	}
 
 	jsonSession := session2.NewFromSession(context, session)
 
-	span.AddEvent("Receive multisig")
+	logger.DebugfContext(context.Context(), "Receive multisig")
 	multisigRecipientData := &MultisigRecipientData{}
 	err := jsonSession.Receive(multisigRecipientData)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal multisig recipient data")
 	}
-	span.AddEvent("Received multisig")
+	logger.DebugfContext(context.Context(), "Received multisig")
 
 	// unmarshal the envelope
 

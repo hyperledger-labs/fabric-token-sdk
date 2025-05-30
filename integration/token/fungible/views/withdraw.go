@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type Withdrawal struct {
@@ -41,8 +40,6 @@ type WithdrawalInitiatorView struct {
 }
 
 func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	// First the initiator send a withdrawal request to the issuer.
 	// If the initiator has already some recipient data, it uses that directly
 	var id view.Identity
@@ -55,10 +52,8 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 		assert.NotNil(w, "cannot find wallet [%s:%s]", i.TMSID, i.Wallet)
 		assert.NoError(w.RegisterRecipient(context.Context(), i.RecipientData), "failed to register remote recipient")
 		// Then request withdrawal
-		span.AddEvent("request_withdrawal_for_recipient")
 		id, session, err = ttx.RequestWithdrawalForRecipient(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, i.NotAnonymous, i.RecipientData, token.WithTMSID(i.TMSID))
 	} else {
-		span.AddEvent("request_withdrawal")
 		id, session, err = ttx.RequestWithdrawal(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, i.NotAnonymous, token.WithTMSID(i.TMSID))
 	}
 	// Request withdrawal
@@ -69,8 +64,6 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 	// This is a trick to the reuse the same API independently of the role a party plays.
 	return context.RunView(nil, view.AsResponder(session), view.WithViewCall(
 		func(context view.Context) (interface{}, error) {
-			span := trace.SpanFromContext(context.Context())
-
 			// At some point, the recipient receives the token transaction that in the meantime has been assembled
 			tx, err := ttx.ReceiveTransaction(context)
 			assert.NoError(err, "failed to receive tokens")
@@ -88,12 +81,10 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 			// If everything is fine, the recipient accepts and sends back her signature.
 			// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
 			// This depends on the driver implementation.
-			span.AddEvent("accept_withdrawal")
 			_, err = context.RunView(ttx.NewAcceptView(tx))
 			assert.NoError(err, "failed to accept new tokens")
 
 			// Before completing, the recipient waits for finality of the transaction
-			span.AddEvent("ask_for_finality")
 			_, err = context.RunView(ttx.NewFinalityView(tx, ttx.WithTimeout(1*time.Minute)))
 			assert.NoError(err, "new tokens were not committed")
 

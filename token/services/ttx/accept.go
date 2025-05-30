@@ -8,7 +8,6 @@ package ttx
 
 import (
 	"encoding/base64"
-	"fmt"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -19,8 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap/zapcore"
 )
 
 type AcceptView struct {
@@ -37,28 +34,25 @@ func NewAcceptView(tx *Transaction, opts ...EndorsementsOpt) *AcceptView {
 }
 
 func (s *AcceptView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-	span.AddEvent("Respond to signature requests")
 	if err := s.respondToSignatureRequests(context); err != nil {
 		return nil, err
 	}
 
 	// Store transaction in the token transaction database
-	span.AddEvent("Store transactions in Transaction table")
 	if err := StoreTransactionRecords(context, s.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
 	}
 
 	txRaw := s.tx.FromRaw
 	// Send back an acknowledgement
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(txRaw), view2.GetIdentityProvider(context).DefaultIdentity())
-	}
-	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
+	defaultIdentity := view2.GetIdentityProvider(context).DefaultIdentity()
+
+	logger.DebugfContext(context.Context(), "signing ack response [%s] with identity [%s]", hash.Hashable(txRaw), defaultIdentity)
+	signer, err := view2.GetSigService(context).GetSigner(defaultIdentity)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
 	}
-	span.AddEvent("Sign ack for distribution")
+	logger.DebugfContext(context.Context(), "Sign ack for distribution")
 	sigma, err := signer.Sign(txRaw)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to sign ack response")
@@ -67,8 +61,7 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	// Ack for distribution
 	// Send the signature back
 	session := context.Session()
-	logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
-	span.AddEvent("Send ack for distribution")
+	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
 	if err := session.Send(sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
@@ -78,9 +71,9 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
 	}
-	span.AddEvent("Cache token request")
+
 	if err := t.CacheRequest(context.Context(), s.tx.TMSID(), s.tx.TokenRequest); err != nil {
-		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
+		logger.WarnfContext(context.Context(), "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
 	}
 
 	labels := []string{
@@ -94,21 +87,20 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 }
 
 func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
-	span := trace.SpanFromContext(context.Context())
+
 	requestsToBeSigned, err := requestsToBeSigned(context.Context(), s.tx.TokenRequest)
 	if err != nil {
 		return errors.Wrapf(err, "failed collecting requests of signature")
 	}
-	logger.Debugf("respond to signature requests [%s][%d]", s.tx.ID(), len(requestsToBeSigned))
+	logger.DebugfContext(context.Context(), "respond to signature requests [%s][%d]", s.tx.ID(), len(requestsToBeSigned))
 
-	span.AddEvent(fmt.Sprintf("Sign %d requests", len(requestsToBeSigned)))
 	session := context.Session()
 	for i := 0; i < len(requestsToBeSigned); i++ {
-		span.AddEvent(fmt.Sprintf("Sign request no %d", i))
+		logger.DebugfContext(context.Context(), "Sign request no %d", i)
 		signatureRequest := &SignatureRequest{}
 
 		if i == 0 {
-			span.AddEvent("First request is fetched from KVS")
+			logger.DebugfContext(context.Context(), "First request is fetched from KVS")
 			k, err := kvs.CreateCompositeKey("signatureRequest", []string{s.tx.ID()})
 			if err != nil {
 				return errors.Wrap(err, "failed to generate key to store signature request")
@@ -127,15 +119,14 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 				return errors.Wrap(err, "failed unmarshalling signature request")
 			}
 		} else {
-			span.AddEvent("Fetch request from session")
-			logger.Debugf("Receiving signature request...")
+			logger.DebugfContext(context.Context(), "Receiving signature request...")
 			jsonSession := session2.JSON(context)
 			err := jsonSession.ReceiveWithTimeout(signatureRequest, time.Minute)
 			if err != nil {
 				return errors.Wrap(err, "failed reading signature request")
 			}
 		}
-		span.AddEvent("Fetched request from session")
+		logger.DebugfContext(context.Context(), "Fetched request from session")
 		tms := token.GetManagementService(context, token.WithTMS(s.tx.Network(), s.tx.Channel(), s.tx.Namespace()))
 		if tms == nil {
 			return errors.Errorf("failed getting TMS for [%s:%s:%s]", s.tx.Network(), s.tx.Channel(), s.tx.Namespace())
@@ -148,13 +139,13 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 		if err != nil {
 			return errors.Wrapf(err, "cannot find signer for [%s]", signatureRequest.Signer.UniqueID())
 		}
-		span.AddEvent("Sign message")
+		logger.DebugfContext(context.Context(), "Sign message")
 		sigma, err := signer.Sign(signatureRequest.MessageToSign())
 		if err != nil {
 			return errors.Wrapf(err, "failed signing request")
 		}
-		logger.Debugf("Send back signature...")
-		span.AddEvent("Send message back")
+		logger.DebugfContext(context.Context(), "Send back signature...")
+
 		err = session.Send(sigma)
 		if err != nil {
 			return errors.Wrapf(err, "failed sending signature back")
@@ -162,20 +153,18 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 	}
 
 	if len(requestsToBeSigned) > 0 {
-		logger.Debugf("wait the transaction to be sent back [%s]", s.tx.ID())
+		logger.DebugfContext(context.Context(), "wait the transaction to be sent back [%s]", s.tx.ID())
 		// expect again to receive a transaction
-		span.AddEvent("Wait to receive transaction")
 		tx, err := ReceiveTransaction(context)
 		if err != nil {
 			return errors.Wrapf(err, "expected to receive a transaction")
 		}
 		// TODO: check that the token requests match
 		s.tx = tx
-		logger.Debugf("wait the transaction to be sent back [%s], received", s.tx.ID())
+		logger.DebugfContext(context.Context(), "wait the transaction to be sent back [%s], received", s.tx.ID())
 	} else {
-		logger.Debugf("no need to wait the transaction to be sent back [%s]", s.tx.ID())
+		logger.DebugfContext(context.Context(), "no need to wait the transaction to be sent back [%s]", s.tx.ID())
 	}
 
-	span.AddEvent("All requests signed")
 	return nil
 }

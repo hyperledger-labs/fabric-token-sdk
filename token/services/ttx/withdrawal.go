@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type WithdrawalRequest struct {
@@ -67,8 +66,6 @@ func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, w
 }
 
 func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
 
 	tmsID, recipientData, err := r.getRecipientIdentity(context)
@@ -83,14 +80,14 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 		NotAnonymous:  r.NotAnonymous,
 	}
 
-	span.AddEvent("start_session")
+	logger.DebugfContext(context.Context(), "Start session")
 	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)
 	if err != nil {
 		logger.Errorf("failed to get session to [%s]: [%s]", r.Issuer, err)
 		return nil, errors.Wrapf(err, "failed to get session to [%s]", r.Issuer)
 	}
 
-	span.AddEvent("send_withdrawal_request")
+	logger.DebugfContext(context.Context(), "Send withdrawal request")
 	err = session.SendWithContext(context.Context(), wr)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
@@ -160,13 +157,11 @@ func ReceiveWithdrawalRequest(context view.Context) (*WithdrawalRequest, error) 
 }
 
 func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	session := session.JSON(context)
 	request := &WithdrawalRequest{}
 	assert.NoError(session.ReceiveWithTimeout(request, 1*time.Minute), "failed to receive the withdrawal request")
 
-	span.AddEvent("received_withdrawal_request")
+	logger.DebugfContext(context.Context(), "Received withdrawal request")
 	tms := token.GetManagementService(context, token.WithTMSID(request.TMSID))
 	assert.NotNil(tms, "tms not found for [%s]", request.TMSID)
 

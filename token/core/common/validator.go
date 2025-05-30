@@ -83,6 +83,7 @@ func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA
 }
 
 func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Context, getState driver.GetStateFnc, anchor string, raw []byte) ([]interface{}, driver.ValidationAttributes, error) {
+	logger.DebugfContext(ctx, "Verify token request from raw")
 	if len(raw) == 0 {
 		return nil, nil, errors.New("empty token request")
 	}

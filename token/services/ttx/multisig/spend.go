@@ -18,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // SpendRequest is the request to spend a token
@@ -51,16 +50,13 @@ func NewReceiveSpendRequestView() *ReceiveSpendRequestView {
 }
 
 func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-	span.AddEvent("start_receive_spendRequest_view")
-	defer span.AddEvent("end_receive_spendRequest_view")
 	tx := &SpendRequest{}
 	jsonSession := session.JSON(context)
 	err := jsonSession.ReceiveWithTimeout(tx, time.Minute*4)
 	if err != nil {
-		span.RecordError(err)
+		logger.ErrorfContext(context.Context(), "failed receiving request: %v", err)
 	}
-	span.AddEvent("receive_tx")
+
 	return tx, nil
 }
 
@@ -114,7 +110,6 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
-	span := trace.SpanFromContext(context.Context())
 
 	// send Transaction to each party and wait for their responses
 	request := &SpendRequest{Token: c.unspentToken}
@@ -124,8 +119,8 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 	}
 
 	answerChannel := make(chan *answer, len(c.parties))
-	span.AddEvent("request_spend")
-	logger.Debugf("notify [%d] parties about request [%v]", len(c.parties), request)
+	logger.DebugfContext(context.Context(), "Notify %d parties about request", len(c.parties))
+	logger.Debugf("Request [%v]", len(c.parties), request)
 	counter := 0
 	tms := token2.GetManagementService(context, token2.WithTMSID(c.options.TMSID()))
 	if tms == nil {
@@ -144,10 +139,10 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 	}
 
 	for i := 0; i < counter; i++ {
-		span.AddEvent("wait_for_answer")
+		logger.DebugfContext(context.Context(), "Wait for answer")
 		// TODO: put a timeout
 		a := <-answerChannel
-		span.AddEvent("received_answer")
+		logger.DebugfContext(context.Context(), "Received answer")
 		if a.err != nil {
 			return nil, errors.Wrapf(a.err, "got failure [%s] from [%s]", a.party.String(), a.err)
 		}

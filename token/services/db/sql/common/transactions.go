@@ -29,7 +29,6 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type transactionTables struct {
@@ -296,24 +295,30 @@ func (db *TransactionStore) Close() error {
 	return common2.Close(db.readDB, db.writeDB)
 }
 
-func (db *TransactionStore) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) (err error) {
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent("start_db_update")
-	defer span.AddEvent("end_db_update")
-	var query string
+func (db *TransactionStore) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
+	var err error
 	if len(message) != 0 {
-		query = fmt.Sprintf("UPDATE %s SET status = $1, status_message = $2 WHERE tx_id = $3;", db.table.Requests)
-		logger.Debug(query)
-		_, err = db.writeDB.Exec(query, status, message, txID)
+		query, args := q.Update(db.table.Requests).
+			Set("status", status).
+			Set("status_message", message).
+			Where(cond.Eq("tx_id", txID)).
+			Format(db.ci)
+
+		logger.Debug(query, args)
+		_, err = db.writeDB.ExecContext(ctx, query, args...)
 	} else {
-		query = fmt.Sprintf("UPDATE %s SET status = $1 WHERE tx_id = $2;", db.table.Requests)
-		logger.Debug(query)
-		_, err = db.writeDB.Exec(query, status, txID)
+		query, args := q.Update(db.table.Requests).
+			Set("status", status).
+			Where(cond.Eq("tx_id", txID)).
+			Format(db.ci)
+
+		logger.Debug(query, args)
+		_, err = db.writeDB.ExecContext(ctx, query, args...)
 	}
 	if err != nil {
 		return errors.Wrapf(err, "error updating tx [%s]", txID)
 	}
-	return
+	return nil
 }
 
 func (db *TransactionStore) GetSchema() string {

@@ -66,7 +66,6 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 }
 
 func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, timeout time.Duration) (interface{}, error) {
-	span := trace.SpanFromContext(ctx.Context())
 
 	logger.Debugf("Listen to finality of [%s]", txID)
 
@@ -86,12 +85,12 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 		return nil, err
 	}
 	counter := 0
-	span.AddEvent("get_ttxdb_status")
+
 	statusTTXDB, _, err := transactionDB.GetStatus(ctx.Context(), txID)
 	if err == nil && statusTTXDB != ttxdb.Unknown {
 		counter++
 	}
-	span.AddEvent("get_auditdb_status")
+
 	statusAuditDB, _, err := auditDB.GetStatus(ctx.Context(), txID)
 	if err == nil && statusAuditDB != ttxdb.Unknown {
 		counter++
@@ -100,21 +99,21 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 		return nil, errors.Errorf("transaction [%s] is unknown for [%s]", txID, tmsID)
 	}
 
-	span.AddEvent("listen_db_finality")
+	logger.DebugfContext(ctx.Context(), "Listen for DB finality")
 	iterations := int(timeout.Milliseconds() / f.pollingTimeout.Milliseconds())
 	if iterations == 0 {
 		iterations = 1
 	}
 	index := 0
 	if statusTTXDB != ttxdb.Unknown {
-		span.AddEvent("request_ttxdb_finality")
+		logger.DebugfContext(ctx.Context(), "Request TTXDB finality")
 		index, err = f.dbFinality(c, txID, transactionDB, index, iterations)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if statusAuditDB != ttxdb.Unknown {
-		span.AddEvent("request_auditdb_finality")
+		logger.DebugfContext(ctx.Context(), "Request AuditDB finality")
 		_, err = f.dbFinality(c, txID, auditDB, index, iterations)
 		if err != nil {
 			return nil, err
@@ -124,34 +123,33 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 }
 
 func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB finalityDB, startCounter, iterations int) (int, error) {
-	span := trace.SpanFromContext(c)
 	// notice that adding the listener can happen after the event we are looking for has already happened
 	// therefore we need to check more often before the timeout happens
 	dbChannel := make(chan common.StatusEvent, 200)
-	span.AddEvent("start_add_status_listener")
+	logger.DebugfContext(c, "Add status listener")
 	finalityDB.AddStatusListener(txID, dbChannel)
-	span.AddEvent("end_add_status_listener")
+	logger.DebugfContext(c, "Added status listener")
 	defer func() {
-		span.AddEvent("start_delete_status_listener")
+		logger.DebugfContext(c, "Remove status listener")
 		finalityDB.DeleteStatusListener(txID, dbChannel)
-		span.AddEvent("end_delete_status_listener")
+		logger.DebugfContext(c, "Removed status listener")
 	}()
 
-	span.AddEvent("get_status")
+	logger.DebugfContext(c, "Get status")
 	status, _, err := finalityDB.GetStatus(c, txID)
 	if err == nil {
 		if status == ttxdb.Confirmed {
 			return startCounter, nil
 		}
 		if status == ttxdb.Deleted {
-			span.RecordError(errors.New("deleted transaction"))
+			logger.ErrorfContext(c, "Deleted tx")
 			return startCounter, errors.Errorf("transaction [%s] is not valid", txID)
 		}
 	}
 
-	span.AddEvent("listen_db_channels")
+	logger.DebugfContext(c, "Listen DB channels")
 	for i := startCounter; i < iterations; i++ {
-		span.AddEvent("start_new_iteration")
+		logger.DebugfContext(c, "Start iteration [%d]", i)
 		timeout := time.NewTimer(f.pollingTimeout)
 
 		select {
@@ -159,14 +157,14 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 			timeout.Stop()
 			return i, errors.Errorf("failed to listen to transaction [%s], timeout due to context done received [%s]", txID, c.Err())
 		case event := <-dbChannel:
-			span.AddEvent("receive_db_event")
-			span.AddLink(trace.LinkFromContext(event.Ctx))
-			logger.Debugf("Got an answer to finality of [%s]: [%s]", txID, event)
+
+			trace.SpanFromContext(c).AddLink(trace.LinkFromContext(event.Ctx))
+			logger.DebugfContext(c, "Got an answer to finality of [%s]: [%s]", txID, event)
 			timeout.Stop()
 			if event.ValidationCode == ttxdb.Confirmed {
 				return i, nil
 			}
-			span.RecordError(errors.New("not confirmed transaction"))
+			logger.ErrorfContext(c, "transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
 			return i, errors.Errorf("transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
 		case <-timeout.C:
 			timeout.Stop()
@@ -182,13 +180,12 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 
 				return i, nil
 			case ttxdb.Deleted:
-				logger.Debugf("Listen to finality of [%s]. NOT VALID", txID)
-				span.RecordError(errors.New("deleted transactino"))
+				logger.ErrorfContext(c, "Listen to finality of [%s]. NOT VALID", txID)
 				return i, errors.Errorf("transaction [%s] is not valid", txID)
 			}
 		}
 	}
-	span.RecordError(errors.Errorf("timeout reached"))
-	logger.Debugf("Is [%s] final? Failed to listen to transaction for timeout", txID)
+
+	logger.ErrorfContext(c, "Is [%s] final? Failed to listen to transaction for timeout", txID)
 	return iterations, errors.Errorf("failed to listen to transaction [%s] for timeout", txID)
 }

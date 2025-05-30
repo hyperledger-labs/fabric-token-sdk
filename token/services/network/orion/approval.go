@@ -22,7 +22,6 @@ import (
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type TxStatusResponseCache interface {
@@ -70,8 +69,6 @@ func NewRequestApprovalView(
 }
 
 func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	sm, err := r.DBManager.GetSessionManager(r.Network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting session manager for network [%s]", r.Network)
@@ -87,22 +84,21 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		TxID:      r.TxID,
 		Request:   r.RequestRaw,
 	}
-	span.AddEvent("send_approval_request")
+	logger.DebugfContext(context.Context(), "Send approval request")
 	if err := session.SendWithContext(context.Context(), request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", sm.CustodianID)
 	}
 	response := &ApprovalResponse{}
-	span.AddEvent("receive_approval_response")
+	logger.DebugfContext(context.Context(), "Receive approval response")
 	if err := session.ReceiveWithTimeout(response, 30*time.Second); err != nil {
-		span.RecordError(err)
+		logger.ErrorfContext(context.Context(), "failed to receive response from custodian [%s]", sm.CustodianID)
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", sm.CustodianID)
 	}
-	span.AddEvent("read_tx_envelope")
+	logger.DebugfContext(context.Context(), "Read tx envelope")
 	env := sm.Orion.TransactionManager().NewEnvelope()
 	if err := env.FromBytes(response.Envelope); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal transaction")
 	}
-	span.AddEvent("return_tx_envelope")
 	return env, nil
 }
 
@@ -113,11 +109,9 @@ type RequestApprovalResponderView struct {
 }
 
 func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	// receive request
 	session := session2.JSON(context)
-	span.AddEvent("receive_approval_request")
+	logger.DebugfContext(context.Context(), "Receive approval request")
 	request := &ApprovalRequest{}
 	if err := session.Receive(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive request")
@@ -128,7 +122,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to process request")
 	}
-	span.AddEvent("send_approval_response")
+	logger.DebugfContext(context.Context(), "Send approval response")
 	if err := session.SendWithContext(context.Context(), &ApprovalResponse{Envelope: txRaw}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
@@ -136,8 +130,6 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 }
 
 func (r *RequestApprovalResponderView) process(context view.Context, request *ApprovalRequest) ([]byte, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	tms := token.GetManagementService(context, token.WithNetwork(request.Network), token.WithNamespace(request.Namespace))
 	if tms == nil {
 		return nil, errors.Errorf("failed to get token management service for network [%s:%s]", request.Network, request.Namespace)
@@ -158,7 +150,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 
 	var envelopeRaw []byte
 	validateErr := runner.RunWithErrors(func() (bool, error) {
-		span.AddEvent("try_validate")
+		logger.DebugfContext(context.Context(), "Try validate")
 		var retry bool
 		envelopeRaw, retry, err = r.validate(context, request, validator)
 		if err == nil {
@@ -171,8 +163,8 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 		}
 		logger.Errorf("failed to commit transaction [%s], retry", err)
 		// was the transaction committed, by any chance?
-		span.AddEvent("fetch_tx_status")
-		status, err := txStatusFetcher.process(context, &TxStatusRequest{
+		logger.DebugfContext(context.Context(), "Fetc tx status")
+		status, err := txStatusFetcher.process(&TxStatusRequest{
 			Network:   request.Network,
 			Namespace: request.Namespace,
 			TxID:      request.TxID,
@@ -199,8 +191,6 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 }
 
 func (r *RequestApprovalResponderView) validate(context view.Context, request *ApprovalRequest, validator *token.Validator) ([]byte, bool, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	sm, err := r.dbManager.GetSessionManager(request.Network)
 	if err != nil {
 		return nil, true, errors.Wrapf(err, "failed to get session manager for network [%s]", request.Network)
@@ -213,7 +203,6 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 	if err != nil {
 		return nil, true, errors.Wrapf(err, "failed to get query executor for orion network [%s]", request.Network)
 	}
-	span.AddEvent("validate_request")
 	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(
 		context.Context(),
 		&LedgerWrapper{qe: qe, keyTranslator: &translator.HashedKeyTranslator{KT: &keys.Translator{}}},
@@ -241,7 +230,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *A
 			return nil, false, errors.Wrapf(err, "failed to write action")
 		}
 	}
-	span.AddEvent("commit_token_request")
+	logger.DebugfContext(context.Context(), "Commit token request")
 	h, err := t.CommitTokenRequest(attributes[common.TokenRequestToSign], true)
 	if err != nil {
 		return nil, false, errors.Wrapf(err, "failed to commit token request")

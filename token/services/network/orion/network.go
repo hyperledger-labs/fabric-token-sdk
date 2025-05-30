@@ -273,21 +273,20 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 }
 
 func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status int, message string) (err error) {
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent("start_run_on_status")
-	defer span.AddEvent("end_run_on_status")
+	logger.DebugfContext(ctx, "Start run on status")
+	defer logger.DebugfContext(ctx, "Done run on status")
 
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Errorf("panic caught: %v", r)
 		}
 	}()
-	span.AddEvent("request_tx_status_view")
+	logger.DebugfContext(ctx, "Request tx status")
 	boxed, err := t.viewManager.InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID, t.dbManager), ctx)
 	if err != nil {
 		return errors.Wrapf(err, "failed retrieving token request [%s]", txID)
 	}
-	span.AddEvent("received_tx_status")
+	logger.DebugfContext(ctx, "Received tx status")
 	statusResponse, ok := boxed.(*TxStatusResponse)
 	if !ok {
 		return errors.Errorf("failed retrieving token request, expected TxStatusResponse [%s]", txID)

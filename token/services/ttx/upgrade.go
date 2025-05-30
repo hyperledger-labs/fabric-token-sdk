@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type UpgradeTokensAgreement struct {
@@ -81,11 +80,9 @@ func RequestTokensUpgradeForRecipient(context view.Context, issuer view.Identity
 }
 
 func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
 
-	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
+	logger.DebugfContext(context.Context(), "Respond request recipient identity using wallet [%s]", r.Wallet)
 
-	span.AddEvent("start_session")
 	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)
 	if err != nil {
 		logger.Errorf("failed to get session to [%s]: [%s]", r.Issuer, err)
@@ -94,7 +91,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 
 	// first agreement
 	agreement := &UpgradeTokensAgreement{}
-	span.AddEvent("send_upgrade_agreement")
+	logger.DebugfContext(context.Context(), "Send upgrade agreement")
 	err = session.SendWithContext(context.Context(), agreement)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
@@ -105,7 +102,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 	}
 
 	// prepare request
-	span.AddEvent("send_upgrade_request")
+	logger.DebugfContext(context.Context(), "Send upgrade request")
 
 	// - recipient identity
 	tmsID, recipientData, err := r.getRecipientData(context)
@@ -198,14 +195,12 @@ func ReceiveTokensUpgradeRequest(context view.Context) (*UpgradeTokensRequest, e
 }
 
 func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, error) {
-	span := trace.SpanFromContext(context.Context())
-
 	session := session.JSON(context)
 	agreement := &UpgradeTokensAgreement{}
 	if err := session.ReceiveWithTimeout(agreement, 1*time.Minute); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive upgrade request")
 	}
-	span.AddEvent("received_upgrade_request")
+	logger.DebugfContext(context.Context(), "Received upgrade request")
 	// sample agreement ID
 	tms := token.GetManagementService(context, token.WithTMSID(agreement.TMSID))
 	if tms == nil {
