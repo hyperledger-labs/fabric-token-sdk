@@ -17,7 +17,6 @@ import (
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -274,9 +273,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 				[]byte(rh),
 			},
 		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("new idemix identity generated with [%s:%s]", enrollmentID, hash.Hashable(auditInfo.Attributes[3]).String())
-		}
+		logger.Debugf("new idemix identity generated with [%s:%s]", enrollmentID, hash.Hashable(rh))
 		infoRaw, err = auditInfo.Bytes()
 		if err != nil {
 			return nil, nil, errors.WithMessage(err, "failed to serialize auditInfo")

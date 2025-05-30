@@ -290,21 +290,12 @@ func (c *CollectEndorsementsView) signLocal(party view.Identity, signer token.Si
 }
 
 func (c *CollectEndorsementsView) signExternal(party view.Identity, signer ExternalWalletSigner, signatureRequest *SignatureRequest) ([]byte, error) {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signing [%s][%s]", hash.Hashable(signatureRequest.Request).String(), c.tx.ID())
-		logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
-	}
+	logger.Debugf("signing [request=%s][tx_id=%s][nonce=%s]", hash.Hashable(signatureRequest.Request), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
 	sigma, err := signer.Sign(party, signatureRequest.MessageToSign())
 	if err != nil {
 		return nil, err
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signature generated (external, me) [%s,%s,%s]",
-			hash.Hashable(signatureRequest.MessageToSign()).String(),
-			hash.Hashable(sigma).String(),
-			party.UniqueID(),
-		)
-	}
+	logger.Debugf("signature generated (external, me) [%s,%s,%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party)
 	return sigma, nil
 }
 
@@ -331,27 +322,14 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("verify signature [%s][%s][%s] for txid [%s]",
-			hash.Hashable(signatureRequest.MessageToSign()).String(),
-			hash.Hashable(sigma).String(),
-			party,
-			c.tx.ID(),
-		)
-	}
+	logger.Debugf("verify signature [%s][%s][%s] for txid [%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party, c.tx.ID())
 
 	err = verifier.Verify(signatureRequest.MessageToSign(), sigma)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed verifying signature [%s] from [%s]", sigma, party)
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signature verified [%s,%s,%s]",
-			hash.Hashable(signatureRequest.MessageToSign()).String(),
-			hash.Hashable(sigma).String(),
-			party.UniqueID(),
-		)
-	}
+	logger.Debugf("signature verified [%s,%s,%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party)
 
 	return sigma, nil
 }
@@ -571,18 +549,14 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		// - extract the corresponding long term identity
 		// If the long term identity has not been added yet, add it to the list.
 		// If the party is me or an auditor, no need to extract the enrollment ID.
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("distribute env to [%s]?", party.UniqueID())
-		}
+		logger.Debugf("distribute env to [%s]?", party)
 
 		isMe := mine.Contains(party.UniqueID())
 		if !isMe {
 			// check if there is a wallet that contains that identity
 			isMe = c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), party) != nil
 		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("distribute env to [%s], it is me [%v].", party.UniqueID(), isMe)
-		}
+		logger.Debugf("distribute env to [%s], it is me [%v].", party, isMe)
 		var longTermIdentity view.Identity
 		var err error
 		// if it is me, no need to resolve, get directly the default identity
@@ -626,9 +600,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 	// check the auditors
 	for _, party := range auditors {
 		isMe := mine.Contains(party.UniqueID())
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
-		}
+		logger.Debugf("distribute env to auditor [%s], it is me [%v].", party, isMe)
 		var longTermIdentity view.Identity
 		var err error
 		// if it is me, no need to resolve, get directly the default identity
@@ -800,9 +772,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed signing request")
 		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("Send back signature [%s][%s]", signatureRequest.Signer, hash.Hashable(sigma))
-		}
+		logger.Debugf("Send back signature [%s][%s]", signatureRequest.Signer, hash.Hashable(sigma))
 		err = session.SendWithContext(context.Context(), sigma)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed sending signature back")
@@ -821,10 +791,9 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// Send back an acknowledgement
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(receivedTx.FromRaw), view2.GetIdentityProvider(context).DefaultIdentity())
-	}
-	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
+	defaultIdentity := view2.GetIdentityProvider(context).DefaultIdentity()
+	logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(receivedTx.FromRaw), defaultIdentity)
+	signer, err := view2.GetSigService(context).GetSigner(defaultIdentity)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
 	}
@@ -832,9 +801,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to sign ack response")
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
-	}
+	logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
 	if err := session.SendWithContext(context.Context(), sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}

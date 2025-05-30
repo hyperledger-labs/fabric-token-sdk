@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type ONS interface {
@@ -75,9 +74,7 @@ func (r *RWSetProcessor) tokenRequest(ctx context.Context, tx orion.ProcessTrans
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting token management service [%s:%s]", tx.Network(), ns)
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
-	}
+	logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	trRaw, err := r.GetTokenRequest(tms, ctx, txID)
 	if err != nil {
 		logger.Debugf("transaction [%s], failed getting token request [%s]", txID, err)

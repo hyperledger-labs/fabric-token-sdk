@@ -26,7 +26,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type cache[T any] interface {
@@ -206,9 +205,7 @@ func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) e
 		Row(h, id, info).
 		Format()
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("store signer info [%s]: [%s][%s]", query, h, hash.Hashable(info))
-	}
+	logger.Debug(query, h, hash.Hashable(info))
 	_, err := db.writeDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		if exists, err2 := db.SignerInfoExists(ctx, id); err2 == nil && exists {

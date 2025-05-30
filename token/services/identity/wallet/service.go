@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -108,9 +107,7 @@ func (s *Service) RegisterRecipientIdentity(data *driver.RecipientData) error {
 		return errors.Wrapf(err, "failed to register recipient identity")
 	}
 
-	if s.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
-	}
+	s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
 
 	// match identity and audit info
 	err := s.Deserializer.MatchIdentity(data.Identity, data.AuditInfo)

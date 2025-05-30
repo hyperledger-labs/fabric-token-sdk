@@ -7,18 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
-	"encoding/base64"
 	"time"
 
 	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 var runner = common.NewRetryRunner(3, 1*time.Second, true)
@@ -70,9 +69,7 @@ func (r *StatusFetcher) FetchStatus(network, namespace string, txID driver.TxID)
 		return nil, errors.Wrapf(err, "could not find status for [%s]", txID)
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("retrieved token request hash for [%s][%s]:[%s]", key, txID, base64.StdEncoding.EncodeToString(trRef))
-	}
+	logger.Debugf("retrieved token request hash for [%s][%s]:[%s]", key, txID, logging.Base64(trRef))
 	return &TxStatusResponse{
 		TokenRequestReference: trRef,
 		Status:                code,
