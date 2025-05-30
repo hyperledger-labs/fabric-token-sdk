@@ -146,15 +146,15 @@ func (n *Network) NewEnvelope() driver.Envelope {
 }
 
 func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
-	return n.n.Vault().StoreTransient(id, transient)
+	return n.n.Vault().StoreTransient(context.Background(), id, transient)
 }
 
 func (n *Network) TransientExists(id string) bool {
-	return n.n.MetadataService().Exists(id)
+	return n.n.MetadataService().Exists(context.Background(), id)
 }
 
 func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
-	tm, err := n.n.MetadataService().LoadTransient(id)
+	tm, err := n.n.MetadataService().LoadTransient(context.Background(), id)
 	if err != nil {
 		return nil, err
 	}

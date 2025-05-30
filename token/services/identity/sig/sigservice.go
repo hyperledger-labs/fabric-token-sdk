@@ -8,10 +8,10 @@ package sig
 
 import (
 	"context"
-	"reflect"
 	"runtime/debug"
 	"sync"
 
+	logging2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -66,15 +66,13 @@ func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer,
 	}
 
 	idHash := identity.UniqueID()
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("register signer and verifier [%s]:[%s][%s]", idHash, GetIdentifier(signer), GetIdentifier(verifier))
-	}
+	logger.Debugf("register signer and verifier [%s]:[%s][%s]", idHash, logging2.Identifier(signer), logging2.Identifier(verifier))
 	// First check with read lock
 	o.sync.RLock()
 	s, ok := o.signers[idHash]
 	o.sync.RUnlock()
 	if ok {
-		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, GetIdentifier(s), GetIdentifier(signer), string(s.DebugStack))
+		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, logging2.Identifier(s), logging2.Identifier(signer), string(s.DebugStack))
 		return nil
 	}
 
@@ -85,7 +83,7 @@ func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer,
 	s, ok = o.signers[idHash]
 	if ok {
 		o.sync.Unlock()
-		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, GetIdentifier(s), GetIdentifier(signer), string(s.DebugStack))
+		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, logging2.Identifier(s), logging2.Identifier(signer), string(s.DebugStack))
 		return nil
 	}
 
@@ -112,9 +110,7 @@ func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer,
 		}
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("register signer and verifier [%s]:[%s][%s], done", idHash, GetIdentifier(signer), GetIdentifier(verifier))
-	}
+	logger.Debugf("register signer and verifier [%s]:[%s][%s], done", idHash, logging2.Identifier(signer), logging2.Identifier(verifier))
 	return nil
 }
 
@@ -129,7 +125,7 @@ func (o *Service) RegisterVerifier(identity driver.Identity, verifier driver.Ver
 	v, ok := o.verifiers[idHash]
 	o.sync.RUnlock()
 	if ok {
-		logger.Warnf("another verifier bound to [%s]:[%s][%s] from [%s]", idHash, GetIdentifier(v), GetIdentifier(verifier), string(v.DebugStack))
+		logger.Warnf("another verifier bound to [%s]:[%s][%s] from [%s]", idHash, logging2.Identifier(v), logging2.Identifier(verifier), string(v.DebugStack))
 		return nil
 	}
 
@@ -140,7 +136,7 @@ func (o *Service) RegisterVerifier(identity driver.Identity, verifier driver.Ver
 	v, ok = o.verifiers[idHash]
 	if ok {
 		o.sync.Unlock()
-		logger.Warnf("another verifier bound to [%s]:[%s][%s] from [%s]", idHash, GetIdentifier(v), GetIdentifier(verifier), string(v.DebugStack))
+		logger.Warnf("another verifier bound to [%s]:[%s][%s] from [%s]", idHash, logging2.Identifier(v), logging2.Identifier(verifier), string(v.DebugStack))
 		return nil
 	}
 
@@ -151,9 +147,7 @@ func (o *Service) RegisterVerifier(identity driver.Identity, verifier driver.Ver
 	o.verifiers[idHash] = entry
 	o.sync.Unlock()
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("register verifier to [%s]:[%s]", idHash, GetIdentifier(verifier))
-	}
+	logger.Debugf("register verifier to [%s]:[%s]", idHash, logging2.Identifier(verifier))
 	return nil
 }
 
@@ -331,8 +325,8 @@ func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error)
 	entry = VerifierEntry{Verifier: verifier}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
-		logger.Debugf("add deserialized verifier for [%s]:[%s]", idHash, GetIdentifier(verifier))
 	}
+	logger.Debugf("add deserialized verifier for [%s]:[%s]", idHash, logging2.Identifier(verifier))
 	o.verifiers[idHash] = entry
 	return verifier, nil
 }
@@ -341,15 +335,4 @@ func (o *Service) deleteSigner(id string) {
 	o.sync.Lock()
 	defer o.sync.Unlock()
 	delete(o.signers, id)
-}
-
-func GetIdentifier(f any) string {
-	if f == nil {
-		return "<nil>"
-	}
-	t := reflect.TypeOf(f)
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	return t.PkgPath() + "/" + t.Name()
 }
