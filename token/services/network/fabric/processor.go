@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type GetTokensFunc = func() (*tokens.Service, error)
@@ -81,9 +80,7 @@ func (r *RWSetProcessor) init(ctx context.Context, tx fabric.ProcessTransaction,
 			return err
 		}
 		if key == setUpKey {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("Parsing write key [%s] with hash value [%s]", key, hash.Hashable(val))
-			}
+			logger.Debugf("Parsing write key [%s] with hash value [%s]", key, hash.Hashable(val))
 			if err := tsmProvider.Update(token.TMSID{
 				Network:   tx.Network(),
 				Channel:   tx.Channel(),

@@ -7,16 +7,15 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
-	"encoding/base64"
 	"fmt"
 	"time"
 
+	logging2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	orion2 "github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type LookupKeyRequest struct {
@@ -146,13 +145,7 @@ func LookupKey(context view.Context, request *LookupKeyRequest) ([]byte, error) 
 			}
 			logger.Debugf("get key [%s] from [%s:%s], result [%d]", request.Key, request.Network, request.Namespace, len(v))
 			if len(v) != 0 {
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("scanning for key [%s] with timeout [%s] found, [%s]",
-						request.Key,
-						timeout,
-						base64.StdEncoding.EncodeToString(v),
-					)
-				}
+				logger.Debugf("scanning for key [%s] with timeout [%s] found, [%s]", request.Key, timeout, logging2.Base64(v))
 				return v, nil
 			}
 		}

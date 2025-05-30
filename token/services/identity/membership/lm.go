@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	logging2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -22,7 +23,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v2"
 )
 
@@ -124,9 +124,7 @@ func (l *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
 		l.logger.Debugf("get local identity by label [%s]", label)
 		r := l.getLocalIdentity(label)
 		if r == nil {
-			if l.logger.IsEnabledFor(zapcore.DebugLevel) {
-				l.logger.Debugf("local identity not found for label [%s][%v]", collections.Keys(l.localIdentitiesByName), label)
-			}
+			l.logger.Debugf("local identity not found for label [%s][%v]", logging2.Keys(l.localIdentitiesByName), label)
 			continue
 		}
 		return r.Name, nil
@@ -145,9 +143,7 @@ func (l *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (idriv
 	l.localIdentitiesMutex.RLock()
 	defer l.localIdentitiesMutex.RUnlock()
 
-	if l.logger.IsEnabledFor(zapcore.DebugLevel) {
-		l.logger.Debugf("get identity info by label [%s][%s]", label, hash.Hashable(label))
-	}
+	l.logger.Debugf("get identity info by label [%s][%s]", label, hash.Hashable(label))
 	localIdentity := l.getLocalIdentity(label)
 	if localIdentity == nil {
 		return nil, errors2.Errorf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
@@ -464,14 +460,10 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 }
 
 func (l *LocalMembership) getLocalIdentity(label string) *LocalIdentity {
-	if l.logger.IsEnabledFor(zapcore.DebugLevel) {
-		l.logger.Debugf("get local identity by label [%s]", hash.Hashable(label))
-	}
+	l.logger.Debugf("get local identity by label [%s]", hash.Hashable(label))
 	identities, ok := l.localIdentitiesByName[label]
 	if ok {
-		if l.logger.IsEnabledFor(zapcore.DebugLevel) {
-			l.logger.Debugf("get local identity by name found with label [%s]", hash.Hashable(label))
-		}
+		l.logger.Debugf("get local identity by name found with label [%s]", hash.Hashable(label))
 		return identities[0].Identity
 	}
 	identity, ok := l.localIdentitiesByIdentity[label]
@@ -479,9 +471,7 @@ func (l *LocalMembership) getLocalIdentity(label string) *LocalIdentity {
 		return identity
 	}
 
-	if l.logger.IsEnabledFor(zapcore.DebugLevel) {
-		l.logger.Debugf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
-	}
+	l.logger.Debugf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
 	return nil
 }
 

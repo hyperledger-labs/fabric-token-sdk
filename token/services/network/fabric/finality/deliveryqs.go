@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	events2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
-	"go.uber.org/zap"
 )
 
 const (
@@ -83,9 +82,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 
 	startingBlock := finality.MaxUint64(FirstBlock, lastBlock-NumberPastBlocks)
 	// startingBlock := uint64(0)
-	if logger.IsEnabledFor(zap.DebugLevel) {
-		logger.Debugf("start scanning blocks starting from [%d], looking for remaining keys [%v]", startingBlock, keySet.ToSlice())
-	}
+	logger.Debugf("start scanning blocks starting from [%d], looking for remaining keys [%s]", startingBlock, keySet)
 
 	// start delivery for the future
 	err := q.Delivery.ScanFromBlock(

@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type BroadcastRequest struct {
@@ -179,9 +178,7 @@ func (r *BroadcastResponderView) broadcast(context view.Context, sm *SessionMana
 	if err := env.FromBytes(request.Blob); err != nil {
 		return nil, "", errors.Wrap(err, "failed to unmarshal envelope")
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("commit envelope... [%s][%s]", env.TxID(), env)
-	}
+	logger.Debugf("commit envelope... [%s][%s]", env.TxID(), env)
 	if err := sm.Orion.TransactionManager().CommitEnvelope(oSession, env); err != nil {
 		return nil, env.TxID(), err
 	}

@@ -8,15 +8,14 @@ package htlc
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"go.uber.org/zap/zapcore"
 )
 
 // SelectFunction is the prototype of a function to select pairs (token,script)
@@ -41,16 +40,10 @@ func (f *PreImageSelector) Filter(tok *token.UnspentToken, script *Script) (bool
 	h := hash.Sum(nil)
 	h = []byte(script.HashInfo.HashEncoding.New().EncodeToString(h))
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("searching for script matching (pre-image, image) = (%s,%s)",
-			base64.StdEncoding.EncodeToString(f.preImage),
-			base64.StdEncoding.EncodeToString(h),
-		)
-	}
+	logger.Debugf("searching for script matching (pre-image, image) = (%s,%s)", logging.Base64(f.preImage), logging.Base64(h))
 
 	// does the preimage match?
-	logger.Debugf("token [%s,%s,%s,%s] does hashes match?", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity,
-		base64.StdEncoding.EncodeToString(h), base64.StdEncoding.EncodeToString(script.HashInfo.Hash))
+	logger.Debugf("token [%s,%s,%s,%s] does hashes match?", tok.Id, view.Identity(tok.Owner), tok.Type, tok.Quantity, logging.Base64(h), logging.Base64(script.HashInfo.Hash))
 
 	return bytes.Equal(h, script.HashInfo.Hash), nil
 }

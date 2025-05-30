@@ -8,17 +8,16 @@ package lookup
 
 import (
 	"context"
-	"encoding/base64"
 	"slices"
 	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap/zapcore"
 )
 
 type ChannelListenerManagerConfig struct {
@@ -174,12 +173,8 @@ func (s *Scanner) Scan() {
 		return
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("scanning for key [%s] found [%s]",
-			s.key,
-			base64.StdEncoding.EncodeToString(keyValue),
-		)
-	}
+	logger.Debugf("scanning for key [%s] found [%s]", s.key, logging.Base64(keyValue))
+
 	s.listener.OnStatus(s.context, s.key, keyValue)
 }
 
