@@ -26,7 +26,7 @@ import (
 type base struct{}
 
 func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := core2.NewPublicParamsFromBytes(params, core2.PublicParameters)
+	pp, err := core2.NewPublicParamsFromBytes(params, core2.FabtokenIdentifier)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}

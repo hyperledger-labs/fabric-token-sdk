@@ -20,18 +20,17 @@ type Config interface {
 	UnmarshalKey(key string, rawVal interface{}) error
 }
 
-type TokenDriverName string
 type NamedFactory[T any] struct {
-	Name   TokenDriverName
+	Name   TokenDriverNameType
 	Driver T
 }
 
 type factoryDirectory[T driver.PPReader] struct {
-	factories map[TokenDriverName]T
+	factories map[TokenDriverNameType]T
 }
 
 func newFactoryDirectory[T driver.PPReader](fs ...NamedFactory[T]) *factoryDirectory[T] {
-	factories := make(map[TokenDriverName]T, len(fs))
+	factories := make(map[TokenDriverNameType]T, len(fs))
 	for _, f := range fs {
 		factories[f.Name] = f.Driver
 	}
@@ -47,7 +46,7 @@ func (s *factoryDirectory[T]) PublicParametersFromBytes(params []byte) (driver.P
 		return nil, errors.Wrapf(err, "failed unmarshalling public params")
 	}
 
-	if f, ok := s.factories[TokenDriverName(pp.Identifier)]; ok {
+	if f, ok := s.factories[TokenDriverNameType(pp.Identifier)]; ok {
 		return f.PublicParametersFromBytes(params)
 	}
 	return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", pp.Identifier)
@@ -73,17 +72,17 @@ func NewPPManagerFactoryService(instantiators ...NamedFactory[driver.PPMFactory]
 // NewPublicParametersManager returns a new instance of driver.PublicParamsManager for the passed parameters.
 // If no driver is registered for the public params' identifier, it returns an error
 func (s *PPManagerFactoryService) NewPublicParametersManager(pp driver.PublicParameters) (driver.PublicParamsManager, error) {
-	if instantiator, ok := s.factories[TokenDriverName(pp.Identifier())]; ok {
+	if instantiator, ok := s.factories[TokenDriverNameFromPP(pp)]; ok {
 		return instantiator.NewPublicParametersManager(pp)
 	}
-	return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", pp.Identifier())
+	return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", TokenDriverNameFromPP(pp))
 }
 
 func (s *PPManagerFactoryService) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	if instantiator, ok := s.factories[TokenDriverName(pp.Identifier())]; ok {
+	if instantiator, ok := s.factories[TokenDriverNameFromPP(pp)]; ok {
 		return instantiator.DefaultValidator(pp)
 	}
-	return nil, errors.Errorf("cannot load default validator, driver [%s] not found", pp.Identifier())
+	return nil, errors.Errorf("cannot load default validator, driver [%s] not found", TokenDriverNameFromPP(pp))
 }
 
 type WalletServiceFactoryService struct {
@@ -99,10 +98,10 @@ func (s *WalletServiceFactoryService) NewWalletService(tmsConfig driver.Configur
 	if err != nil {
 		return nil, err
 	}
-	if factory, ok := s.factories[TokenDriverName(pp.Identifier())]; ok {
+	if factory, ok := s.factories[TokenDriverNameFromPP(pp)]; ok {
 		return factory.NewWalletService(tmsConfig, pp)
 	}
-	return nil, errors.Errorf("no validator found for token driver [%s]", pp.Identifier())
+	return nil, errors.Errorf("no validator found for token driver [%s]", TokenDriverNameFromPP(pp))
 }
 
 type TokenDriverService struct {
@@ -118,17 +117,17 @@ func (s *TokenDriverService) NewTokenService(tmsID driver.TMSID, publicParams []
 	if err != nil {
 		return nil, err
 	}
-	if driver, ok := s.factories[TokenDriverName(pp.Identifier())]; ok {
+	if driver, ok := s.factories[TokenDriverNameFromPP(pp)]; ok {
 		return driver.NewTokenService(tmsID, publicParams)
 	}
-	return nil, errors.Errorf("no token driver named '%s' found", TokenDriverName(pp.Identifier()))
+	return nil, errors.Errorf("no token driver named '%s' found", TokenDriverNameFromPP(pp))
 }
 
 func (s *TokenDriverService) NewDefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	if driver, ok := s.factories[TokenDriverName(pp.Identifier())]; ok {
+	if driver, ok := s.factories[TokenDriverNameFromPP(pp)]; ok {
 		return driver.NewDefaultValidator(pp)
 	}
-	return nil, errors.Errorf("no validator found for token driver [%s]", pp.Identifier())
+	return nil, errors.Errorf("no validator found for token driver [%s]", TokenDriverNameFromPP(pp))
 }
 
 var managerType = &TokenDriverService{}

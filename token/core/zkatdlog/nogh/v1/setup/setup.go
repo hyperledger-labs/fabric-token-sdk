@@ -14,6 +14,7 @@ import (
 	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	pp3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math"
@@ -28,8 +29,8 @@ import (
 )
 
 const (
-	DLogPublicParameters = "zkatdlog"
-	ProtocolV1           = 1
+	DLogIdentifier = "zkatdlog"
+	ProtocolV1     = 1
 )
 
 var (
@@ -190,7 +191,7 @@ func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
 }
 
 func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return setup(bitLength, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
+	return setup(bitLength, idemixIssuerPK, DLogIdentifier, idemixCurveID)
 }
 
 func setup(bitLength uint64, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
@@ -314,7 +315,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 		return nil, err
 	}
 	return pp3.Marshal(&pp2.PublicParameters{
-		Identifier: p.Label,
+		Identifier: string(core.TokenDriverName(p.Label, p.Ver)),
 		Raw:        raw,
 	})
 }
@@ -324,8 +325,13 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
-	if container.Identifier != p.Label {
-		return errors.Errorf("invalid identifier, expecting [%s], got [%s]", p.Label, container.Identifier)
+	expectedID := string(core.TokenDriverName(DLogIdentifier, ProtocolV1))
+	if container.Identifier != expectedID {
+		return errors.Errorf(
+			"invalid identifier, expecting [%s], got [%s]",
+			expectedID,
+			container.Identifier,
+		)
 	}
 
 	publicParams := &pp.PublicParameters{}

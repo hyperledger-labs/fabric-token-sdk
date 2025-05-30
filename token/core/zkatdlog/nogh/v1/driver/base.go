@@ -29,7 +29,7 @@ import (
 type base struct{}
 
 func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := v1.NewPublicParamsFromBytes(params, v1.DLogPublicParameters)
+	pp, err := v1.NewPublicParamsFromBytes(params, v1.DLogIdentifier)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
 	}

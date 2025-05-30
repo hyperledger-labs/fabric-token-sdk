@@ -53,7 +53,7 @@ func NewDriver(
 	vaultProvider *vault.Provider,
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
-		Name: core2.PublicParameters,
+		Name: core.TokenDriverName(core2.FabtokenIdentifier, 1),
 		Driver: &Driver{
 			base:             &base{},
 			metricsProvider:  metricsProvider,
@@ -96,7 +96,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 
 	publicParamsManager, err := common.NewPublicParamsManager[*core2.PublicParams](
 		&PublicParamsDeserializer{},
-		core2.PublicParameters,
+		core2.FabtokenIdentifier,
 		publicParams,
 	)
 	if err != nil {

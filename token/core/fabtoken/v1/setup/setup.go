@@ -8,6 +8,7 @@ package setup
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	encoding "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
 	fabpp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp"
@@ -18,8 +19,9 @@ import (
 )
 
 const (
-	// PublicParameters is the key to be used to look up fabtoken parameters
-	PublicParameters = "fabtoken"
+	// FabtokenIdentifier is identifier of the fabtoken driver
+	FabtokenIdentifier = "fabtoken"
+	// ProtocolV1 is the v1 version
 	ProtocolV1       = uint64(1)
 	DefaultPrecision = uint64(64)
 )
@@ -50,7 +52,7 @@ func Setup(precision uint64) (*PublicParams, error) {
 		return nil, errors.New("invalid precision, should be greater than 0")
 	}
 	return &PublicParams{
-		Label:             PublicParameters,
+		Label:             FabtokenIdentifier,
 		Ver:               ProtocolV1,
 		QuantityPrecision: precision,
 		MaxToken:          uint64(1<<precision) - 1,
@@ -156,7 +158,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to serialize public parameters")
 	}
 	return encoding.Marshal(&pp.PublicParameters{
-		Identifier: p.Label,
+		Identifier: string(core.TokenDriverName(p.Label, p.Ver)),
 		Raw:        raw,
 	})
 }
@@ -167,8 +169,13 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
-	if container.Identifier != p.Label {
-		return errors.Errorf("invalid identifier, expecting 'fabtoken', got [%s]", container.Identifier)
+	expectedID := string(core.TokenDriverName(FabtokenIdentifier, ProtocolV1))
+	if container.Identifier != expectedID {
+		return errors.Errorf(
+			"invalid identifier, expecting [%s]], got [%s]",
+			expectedID,
+			container.Identifier,
+		)
 	}
 	return p.FromBytes(container.Raw)
 }
