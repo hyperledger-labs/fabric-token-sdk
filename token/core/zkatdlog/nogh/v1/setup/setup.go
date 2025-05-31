@@ -157,11 +157,10 @@ func (i *IdemixIssuerPublicKey) FromProtos(s *pp.IdemixIssuerPublicKey) error {
 }
 
 type PublicParams struct {
-	// Label is the label associated with the PublicParams.
-	// It can be used by the driver for versioning purpose.
-	Label string
-	// Ver is the version of these public params
-	Ver uint64
+	// DriverName is the name of token driver this public params refer to.
+	DriverName driver.TokenDriverName
+	// DriverVersion is the version of token driver this public params refer to.
+	DriverVersion driver.TokenDriverVersion
 	// Curve is the pairing-friendly elliptic curve used for everything but Idemix.
 	Curve mathlib.CurveID
 	// PedersenGenerators contains the public parameters for the Pedersen commitment scheme.
@@ -181,9 +180,9 @@ type PublicParams struct {
 	QuantityPrecision uint64
 }
 
-func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
+func NewPublicParamsFromBytes(raw []byte, driverName driver.TokenDriverName) (*PublicParams, error) {
 	pp := &PublicParams{}
-	pp.Label = label
+	pp.DriverName = driverName
 	if err := pp.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed parsing public parameters")
 	}
@@ -202,9 +201,9 @@ func setup(bitLength uint64, idemixIssuerPK []byte, label string, idemixCurveID 
 		return nil, errors.New("invalid bit length, should be greater than 0")
 	}
 	pp := &PublicParams{
-		Label: label,
-		Curve: mathlib.BN254,
-		Ver:   ProtocolV1,
+		DriverName:    driver.TokenDriverName(label),
+		Curve:         mathlib.BN254,
+		DriverVersion: ProtocolV1,
 		IdemixIssuerPublicKeys: []*IdemixIssuerPublicKey{
 			{
 				PublicKey: idemixIssuerPK,
@@ -225,16 +224,16 @@ func setup(bitLength uint64, idemixIssuerPK []byte, label string, idemixCurveID 
 	return pp, nil
 }
 
-func (p *PublicParams) Identifier() string {
-	return p.Label
+func (p *PublicParams) TokenDriverName() driver.TokenDriverName {
+	return p.DriverName
 }
 
-func (p *PublicParams) Version() uint64 {
-	return p.Ver
+func (p *PublicParams) TokenDriverVersion() driver.TokenDriverVersion {
+	return p.DriverVersion
 }
 
 func (p *PublicParams) CertificationDriver() string {
-	return p.Label
+	return string(p.DriverName)
 }
 
 func (p *PublicParams) TokenDataHiding() bool {
@@ -297,8 +296,8 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 	}
 
 	publicParams := &pp.PublicParameters{
-		Identifier: p.Label,
-		Version:    p.Ver,
+		TokenDriverName:    string(p.DriverName),
+		TokenDriverVersion: uint64(p.DriverVersion),
 		CurveId: &math2.CurveID{
 			Id: uint64(p.Curve),
 		},
@@ -315,7 +314,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 		return nil, err
 	}
 	return pp3.Marshal(&pp2.PublicParameters{
-		Identifier: string(core.TokenDriverName(p.Label, p.Ver)),
+		Identifier: string(core.DriverIdentifier(p.DriverName, p.DriverVersion)),
 		Raw:        raw,
 	})
 }
@@ -325,7 +324,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
-	expectedID := string(core.TokenDriverName(DLogIdentifier, ProtocolV1))
+	expectedID := string(core.DriverIdentifier(DLogIdentifier, ProtocolV1))
 	if container.Identifier != expectedID {
 		return errors.Errorf(
 			"invalid identifier, expecting [%s], got [%s]",
@@ -339,8 +338,8 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 		return errors.Wrapf(err, "failed unmarshalling public parameters")
 	}
 
-	p.Label = publicParams.Identifier
-	p.Ver = publicParams.Version
+	p.DriverName = driver.TokenDriverName(publicParams.TokenDriverName)
+	p.DriverVersion = driver.TokenDriverVersion(publicParams.TokenDriverVersion)
 	if publicParams.CurveId == nil {
 		return errors.Errorf("invalid curve id, expecting curve id, got nil")
 	}
@@ -468,8 +467,8 @@ func (p *PublicParams) String() string {
 }
 
 func (p *PublicParams) Validate() error {
-	if p.Ver != ProtocolV1 {
-		return errors.Errorf("invalid version [%d], expected [%d]", p.Ver, ProtocolV1)
+	if p.DriverVersion != ProtocolV1 {
+		return errors.Errorf("invalid version [%d], expected [%d]", p.DriverVersion, ProtocolV1)
 	}
 	if int(p.Curve) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(p.Curve), len(mathlib.Curves)-1)

@@ -19,7 +19,7 @@ type PPMFactory struct{ *base }
 
 func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {
 	return core.NamedFactory[driver.PPMFactory]{
-		Name:   core.TokenDriverName(v1.FabtokenIdentifier, 1),
+		Name:   core.DriverIdentifier(v1.FabTokenDriverName, 1),
 		Driver: &PPMFactory{},
 	}
 }

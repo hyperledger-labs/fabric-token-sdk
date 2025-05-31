@@ -26,7 +26,7 @@ import (
 type base struct{}
 
 func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := core2.NewPublicParamsFromBytes(params, core2.FabtokenIdentifier)
+	pp, err := core2.NewPublicParamsFromBytes(params, core2.FabTokenDriverName)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
@@ -34,7 +34,7 @@ func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 }
 
 func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", pp.Identifier())
+	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", string(core.DriverIdentifierFromPP(pp)))
 	deserializer := NewDeserializer()
 	return validator.NewValidator(logger, pp.(*core2.PublicParams), deserializer), nil
 }

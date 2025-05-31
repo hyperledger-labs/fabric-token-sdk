@@ -98,9 +98,9 @@ func TestPublicParameters_Identifier(t *testing.T) {
 	}
 
 	mockPP := pp.PublicParameters.(*mock.PublicParameters)
-	mockPP.IdentifierReturns("my_identifier")
+	mockPP.TokenDriverNameReturns("my_identifier")
 
-	identifier := pp.Identifier()
+	identifier := pp.TokenDriverName()
 
 	assert.Equal(t, "my_identifier", identifier)
 }

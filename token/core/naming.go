@@ -12,17 +12,17 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-// TokenDriverNameType is the token driver name type
-type TokenDriverNameType string
+// TokenDriverIdentifier is the token driver identifier
+type TokenDriverIdentifier string
 
-// TokenDriverNameFromPP returns the token driver name for the passed public parameters.
-// The token driver name has the form <pp identifier>.v<pp version>.
-func TokenDriverNameFromPP(pp driver.PublicParameters) TokenDriverNameType {
-	return TokenDriverName(pp.Identifier(), pp.Version())
+// DriverIdentifierFromPP returns the token driver identifier for the passed public parameters.
+// The token driver identifier has the form <token driver nam>.v<token driver version>.
+func DriverIdentifierFromPP(pp driver.PublicParameters) TokenDriverIdentifier {
+	return DriverIdentifier(pp.TokenDriverName(), pp.TokenDriverVersion())
 }
 
-// TokenDriverName returns the token driver name for the passed identifier and version.
-// The token driver name has the form <id>.v<ver>.
-func TokenDriverName(id string, ver uint64) TokenDriverNameType {
-	return TokenDriverNameType(fmt.Sprintf("%s.v%d", id, ver))
+// DriverIdentifier returns the token driver identifier for the passed name and version.
+// The token driver name has the form <name>.v<ver>.
+func DriverIdentifier(name driver.TokenDriverName, ver driver.TokenDriverVersion) TokenDriverIdentifier {
+	return TokenDriverIdentifier(fmt.Sprintf("%s.v%d", name, ver))
 }

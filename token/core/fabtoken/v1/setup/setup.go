@@ -19,20 +19,19 @@ import (
 )
 
 const (
-	// FabtokenIdentifier is identifier of the fabtoken driver
-	FabtokenIdentifier = "fabtoken"
+	// FabTokenDriverName is name of the fabtoken driver
+	FabTokenDriverName = driver.TokenDriverName("fabtoken")
 	// ProtocolV1 is the v1 version
-	ProtocolV1       = uint64(1)
+	ProtocolV1       = driver.TokenDriverVersion(1)
 	DefaultPrecision = uint64(64)
 )
 
 // PublicParams is the public parameters for fabtoken
 type PublicParams struct {
-	// Label is the label associated with the PublicParams.
-	// It can be used by the driver for versioning purpose.
-	Label string
-	// Ver is the version of these public params
-	Ver uint64
+	// DriverName is the name of the token driver this public params refer to.
+	DriverName driver.TokenDriverName
+	// DriverVersion is the version of the token driver this public params refer to.
+	DriverVersion driver.TokenDriverVersion
 	// The precision of token quantities
 	QuantityPrecision uint64
 	// MaxToken is the maximum quantity a token can hold
@@ -52,8 +51,8 @@ func Setup(precision uint64) (*PublicParams, error) {
 		return nil, errors.New("invalid precision, should be greater than 0")
 	}
 	return &PublicParams{
-		Label:             FabtokenIdentifier,
-		Ver:               ProtocolV1,
+		DriverName:        FabTokenDriverName,
+		DriverVersion:     ProtocolV1,
 		QuantityPrecision: precision,
 		MaxToken:          uint64(1<<precision) - 1,
 	}, nil
@@ -61,23 +60,22 @@ func Setup(precision uint64) (*PublicParams, error) {
 
 // NewPublicParamsFromBytes deserializes the raw bytes into public parameters
 // The resulting public parameters are labeled with the passed label
-func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
-	pp := &PublicParams{}
-	pp.Label = label
-	if err := pp.Deserialize(raw); err != nil {
+func NewPublicParamsFromBytes(raw []byte, driverName driver.TokenDriverName) (*PublicParams, error) {
+	params := &PublicParams{}
+	params.DriverName = driverName
+	if err := params.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
-	return pp, nil
+	return params, nil
 }
 
-// Identifier returns the label associated with the PublicParams
-// todo shall we used Identifier instead of Label?
-func (p *PublicParams) Identifier() string {
-	return p.Label
+// TokenDriverName return the token driver name this public params refer to
+func (p *PublicParams) TokenDriverName() driver.TokenDriverName {
+	return p.DriverName
 }
 
-func (p *PublicParams) Version() uint64 {
-	return p.Ver
+func (p *PublicParams) TokenDriverVersion() driver.TokenDriverVersion {
+	return p.DriverVersion
 }
 
 // TokenDataHiding indicates if the PublicParams corresponds to a driver that hides token data
@@ -89,7 +87,7 @@ func (p *PublicParams) TokenDataHiding() bool {
 // CertificationDriver returns the label of the PublicParams
 // From the label, one can deduce what certification process will be used if any.
 func (p *PublicParams) CertificationDriver() string {
-	return p.Label
+	return string(p.DriverName)
 }
 
 // GraphHiding indicates if the PublicParams corresponds to a driver that hides the transaction graph
@@ -114,9 +112,9 @@ func (p *PublicParams) Bytes() ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed to serialize issuer")
 	}
 
-	pp := &fabpp.PublicParameters{
-		Identifier: p.Label,
-		Version:    p.Ver,
+	params := &fabpp.PublicParameters{
+		TokenDriverName:    string(p.DriverName),
+		TokenDriverVersion: uint64(p.DriverVersion),
 		Auditor: &fabpp.Identity{
 			Raw: p.Auditor,
 		},
@@ -124,7 +122,7 @@ func (p *PublicParams) Bytes() ([]byte, error) {
 		MaxToken:          p.MaxToken,
 		QuantityPrecision: p.QuantityPrecision,
 	}
-	return proto.Marshal(pp)
+	return proto.Marshal(params)
 }
 
 func (p *PublicParams) FromBytes(data []byte) error {
@@ -132,7 +130,7 @@ func (p *PublicParams) FromBytes(data []byte) error {
 	if err := proto.Unmarshal(data, publicParams); err != nil {
 		return errors.Wrapf(err, "failed to unmarshal public parameters")
 	}
-	p.Ver = publicParams.Version
+	p.DriverVersion = driver.TokenDriverVersion(publicParams.TokenDriverVersion)
 	p.QuantityPrecision = publicParams.QuantityPrecision
 	p.MaxToken = publicParams.MaxToken
 	issuers, err := protos.FromProtosSliceFunc2(publicParams.Issuers, func(id *fabpp.Identity) (driver.Identity, error) {
@@ -158,7 +156,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to serialize public parameters")
 	}
 	return encoding.Marshal(&pp.PublicParameters{
-		Identifier: string(core.TokenDriverName(p.Label, p.Ver)),
+		Identifier: string(core.DriverIdentifier(p.DriverName, p.DriverVersion)),
 		Raw:        raw,
 	})
 }
@@ -169,7 +167,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
-	expectedID := string(core.TokenDriverName(FabtokenIdentifier, ProtocolV1))
+	expectedID := string(core.DriverIdentifier(FabTokenDriverName, ProtocolV1))
 	if container.Identifier != expectedID {
 		return errors.Errorf(
 			"invalid identifier, expecting [%s]], got [%s]",

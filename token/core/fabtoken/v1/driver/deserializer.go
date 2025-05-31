@@ -9,6 +9,7 @@ package driver
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
@@ -33,8 +34,8 @@ func NewDeserializer() *Deserializer {
 
 type PublicParamsDeserializer struct{}
 
-func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, label string) (*v1.PublicParams, error) {
-	return v1.NewPublicParamsFromBytes(raw, label)
+func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, name driver.TokenDriverName) (*v1.PublicParams, error) {
+	return v1.NewPublicParamsFromBytes(raw, name)
 }
 
 // EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token

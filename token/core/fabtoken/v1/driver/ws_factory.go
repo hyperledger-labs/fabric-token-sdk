@@ -22,7 +22,7 @@ type WalletServiceFactory struct {
 
 func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.NamedFactory[driver.WalletServiceFactory] {
 	return core.NamedFactory[driver.WalletServiceFactory]{
-		Name:   core.TokenDriverName(setup2.FabtokenIdentifier, 1),
+		Name:   core.DriverIdentifier(setup2.FabTokenDriverName, 1),
 		Driver: &WalletServiceFactory{storageProvider: storageProvider},
 	}
 }

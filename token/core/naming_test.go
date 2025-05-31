@@ -15,14 +15,14 @@ import (
 )
 
 func TestTokenDriverName(t *testing.T) {
-	id := TokenDriverName("test", 0)
+	id := DriverIdentifier("test", 0)
 	assert.Equal(t, fmt.Sprintf("%s.v%d", "test", 0), string(id))
 }
 
 func TestTokenDriverNameFromPP(t *testing.T) {
 	pp := &mock.PublicParameters{}
-	pp.IdentifierReturns("test")
-	pp.VersionReturns(1)
-	id := TokenDriverNameFromPP(pp)
+	pp.TokenDriverNameReturns("test")
+	pp.TokenDriverVersionReturns(1)
+	id := DriverIdentifierFromPP(pp)
 	assert.Equal(t, fmt.Sprintf("%s.v%d", "test", 1), string(id))
 }

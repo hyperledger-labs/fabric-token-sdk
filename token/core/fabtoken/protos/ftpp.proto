@@ -16,8 +16,8 @@ message Identity {
 
 // PublicParameters describes typed public parameters
 message PublicParameters {
-  string identifier = 1; // the identifier of the public parameters
-  uint64 version = 2; // the version of these public params
+  string token_driver_name = 1; // the name of the token driver
+  uint64 token_driver_version = 2; // the version of token driver
   Identity auditor = 7; // is the public key of the auditor.
   repeated Identity issuers = 8; // is a list of public keys of the entities that can issue tokens.
   uint64 max_token = 9; // is the maximum quantity a token can hold
