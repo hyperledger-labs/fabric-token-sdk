@@ -29,6 +29,7 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -1438,11 +1439,11 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	}
 	var pp PP
 	switch genericPP.Identifier {
-	case dlognoghv1.DLogPublicParameters:
-		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogPublicParameters)
+	case string(core.DriverIdentifier(dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)):
+		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogIdentifier)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	case fabtokenv1.PublicParameters:
-		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
+	case string(core.DriverIdentifier(fabtokenv1.FabTokenDriverName, fabtokenv1.ProtocolV1)):
+		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.FabTokenDriverName)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	default:
 		gomega.Expect(false).To(gomega.BeTrue(), "unknown pp identifier [%s]", genericPP.Identifier)
@@ -1490,11 +1491,11 @@ func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issue
 	}
 	var pp PP
 	switch genericPP.Identifier {
-	case dlognoghv1.DLogPublicParameters:
-		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogPublicParameters)
+	case string(core.DriverIdentifier(dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)):
+		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogIdentifier)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	case fabtokenv1.PublicParameters:
-		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.PublicParameters)
+	case string(core.DriverIdentifier(fabtokenv1.FabTokenDriverName, fabtokenv1.ProtocolV1)):
+		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.FabTokenDriverName)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	default:
 		gomega.Expect(false).To(gomega.BeTrue(), "unknown pp identitfier [%s]", genericPP.Identifier)

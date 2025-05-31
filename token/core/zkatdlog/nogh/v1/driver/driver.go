@@ -54,7 +54,7 @@ func NewDriver(
 	vaultProvider *vault.Provider,
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
-		Name: setup.DLogPublicParameters,
+		Name: core.DriverIdentifier(setup.DLogIdentifier, 1),
 		Driver: &Driver{
 			base:             &base{},
 			metricsProvider:  metricsProvider,
@@ -98,7 +98,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 
 	ppm, err := common.NewPublicParamsManager[*setup.PublicParams](
 		&PublicParamsDeserializer{},
-		setup.DLogPublicParameters,
+		setup.DLogIdentifier,
 		publicParams,
 	)
 	if err != nil {
@@ -106,7 +106,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	}
 
 	pp := ppm.PublicParams(context.Background())
-	logger.Infof("new token driver for tms id [%s] with label and version [%s:%s]: [%s]", tmsID, pp.Identifier(), pp.Version(), pp)
+	logger.Infof("new token driver for tms id [%s] with label and version [%s:%s]: [%s]", tmsID, pp.TokenDriverName(), pp.TokenDriverVersion(), pp)
 
 	qe := vault.QueryEngine()
 	ws, err := d.newWalletService(

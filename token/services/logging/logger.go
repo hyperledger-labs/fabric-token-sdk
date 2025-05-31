@@ -34,8 +34,8 @@ func DeriveDriverLogger(logger Logger, prefix string, networkID string, channel 
 	return logger.Named(loggerName(prefix, networkID, channel, namespace))
 }
 
-func DriverLoggerFromPP(prefix string, ppIdentifier string) Logger {
-	return logging.MustGetLogger(loggerName(prefix, ppIdentifier))
+func DriverLoggerFromPP(prefix string, id string) Logger {
+	return logging.MustGetLogger(loggerName(prefix, id))
 }
 
 func isEmptyString(s string) bool { return len(s) == 0 }
