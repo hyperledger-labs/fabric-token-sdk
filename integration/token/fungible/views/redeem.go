@@ -24,6 +24,8 @@ type Redeem struct {
 	Auditor string
 	// Issuer is the name of the issuer that must be contacted to approve the operation
 	Issuer string
+	// IssuerSigningKey is the signing PK of the issuers that is to sign the Redeem action
+	IssuerSigningKey view.Identity
 	// Wallet is the identifier of the wallet that owns the tokens to redeem
 	Wallet string
 	// TokenIDs contains a list of token ids to redeem. If empty, tokens are selected on the spot.
@@ -71,6 +73,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	opts := []token2.TransferOption{token2.WithTokenIDs(t.TokenIDs...)}
 	if t.Issuer != "" {
 		opts = append(opts, ttx.WithFSCIssuerIdentity(view2.GetIdentityProvider(context).Identity(t.Issuer)))
+		opts = append(opts, ttx.WithIssuerSigningKey(t.IssuerSigningKey))
 	}
 	err = tx.Redeem(
 		senderWallet,
