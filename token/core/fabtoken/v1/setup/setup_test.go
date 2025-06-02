@@ -34,7 +34,7 @@ func TestNewPublicParamsFromBytes_Valid(t *testing.T) {
 	assert.NoError(t, err)
 	pp2, err := NewPublicParamsFromBytes(raw, "fabtoken")
 	assert.NoError(t, err)
-	assert.Equal(t, "fabtoken", pp2.DriverName)
+	assert.Equal(t, driver.TokenDriverName("fabtoken"), pp2.DriverName)
 	assert.Equal(t, ProtocolV1, pp2.DriverVersion)
 	assert.Equal(t, uint64(32), pp2.QuantityPrecision)
 	assert.Equal(t, uint64(4294967295), pp2.MaxToken)
