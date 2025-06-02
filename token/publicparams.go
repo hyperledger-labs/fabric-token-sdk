@@ -48,8 +48,8 @@ func (c *PublicParameters) Serialize() ([]byte, error) {
 }
 
 // Identifier returns the identifier of the public parameters
-func (c *PublicParameters) Identifier() string {
-	return c.PublicParameters.Identifier()
+func (c *PublicParameters) TokenDriverName() driver.TokenDriverName {
+	return c.PublicParameters.TokenDriverName()
 }
 
 // Auditors returns the list of auditors' identities

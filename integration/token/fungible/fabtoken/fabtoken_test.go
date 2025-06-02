@@ -44,7 +44,8 @@ func UpdatePublicParams(network *integration.Infrastructure, selector *token2.Re
 	auditorId := fungible.GetAuditorIdentity(tms, "newAuditor")
 	issuerId := fungible.GetIssuerIdentity(tms, "newIssuer")
 	publicParam := fabtokenv1.PublicParams{
-		Label:             "fabtoken",
+		DriverName:        "fabtoken",
+		DriverVersion:     1,
 		QuantityPrecision: uint64(64),
 		Auditor:           auditorId,
 		IssuerIDs:         []driver.Identity{issuerId},

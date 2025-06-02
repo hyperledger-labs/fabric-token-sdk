@@ -9,6 +9,7 @@ package token
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"
 )
@@ -98,11 +99,11 @@ func TestPublicParameters_Identifier(t *testing.T) {
 	}
 
 	mockPP := pp.PublicParameters.(*mock.PublicParameters)
-	mockPP.IdentifierReturns("my_identifier")
+	mockPP.TokenDriverNameReturns("my_identifier")
 
-	identifier := pp.Identifier()
+	identifier := pp.TokenDriverName()
 
-	assert.Equal(t, "my_identifier", identifier)
+	assert.Equal(t, driver.TokenDriverName("my_identifier"), identifier)
 }
 
 func TestPublicParameters_Auditors(t *testing.T) {

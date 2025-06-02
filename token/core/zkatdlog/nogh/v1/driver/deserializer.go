@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
@@ -65,8 +66,8 @@ func (d *TokenDeserializer) DeserializeToken(raw []byte) (*token.Token, error) {
 
 type PublicParamsDeserializer struct{}
 
-func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, label string) (*v1.PublicParams, error) {
-	return v1.NewPublicParamsFromBytes(raw, label)
+func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, name driver.TokenDriverName) (*v1.PublicParams, error) {
+	return v1.NewPublicParamsFromBytes(raw, name)
 }
 
 // EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token

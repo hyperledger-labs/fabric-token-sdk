@@ -6,9 +6,15 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-// PPHash is used to model the hash of the raw public parameters.
-// This should avoid confusion between the bytes of the public params themselves and its hash.
-type PPHash []byte
+type (
+	// PPHash is used to model the hash of the raw public parameters.
+	// This should avoid confusion between the bytes of the public params themselves and its hash.
+	PPHash []byte
+	// TokenDriverName is the name of a token driver
+	TokenDriverName string
+	// TokenDriverVersion is the version of a token driver
+	TokenDriverVersion uint64
+)
 
 type PPReader interface {
 	// PublicParametersFromBytes unmarshals the bytes to a PublicParameters instance.
@@ -34,10 +40,10 @@ type PublicParamsFetcher interface {
 
 // PublicParameters is the interface that must be implemented by the driver public parameters.
 type PublicParameters interface {
-	// Identifier returns the unique identifier of this public parameters.
-	Identifier() string
-	// Version identifies the version of this public parameters.
-	Version() uint64
+	// TokenDriverName returns the name of the token driver
+	TokenDriverName() TokenDriverName
+	// TokenDriverVersion return the version of the token driver
+	TokenDriverVersion() TokenDriverVersion
 	// TokenDataHiding returns true if the token data is hidden
 	TokenDataHiding() bool
 	// GraphHiding returns true if the token graph is hidden
