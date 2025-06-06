@@ -250,7 +250,7 @@ func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.R
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
 	for _, tx := range txs {
-		if err := w.AddTransaction(ctx, &tx); err != nil {
+		if err := w.AddTransaction(ctx, tx); err != nil {
 			w.Rollback()
 			return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 		}

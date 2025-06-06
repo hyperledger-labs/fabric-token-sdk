@@ -178,17 +178,14 @@ func (d *StoreService) Append(ctx context.Context, req tokenRequest) error {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
-	for _, mv := range mov {
-		if err := w.AddMovement(ctx, &mv); err != nil {
-			w.Rollback()
-			return errors.WithMessagef(err, "append sent movements for txid [%s] failed", record.Anchor)
-		}
+	if err := w.AddMovement(ctx, mov...); err != nil {
+		w.Rollback()
+		return errors.WithMessagef(err, "append sent movements for txid [%s] failed", record.Anchor)
 	}
-	for _, tx := range txs {
-		if err := w.AddTransaction(ctx, &tx); err != nil {
-			w.Rollback()
-			return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
-		}
+
+	if err := w.AddTransaction(ctx, txs...); err != nil {
+		w.Rollback()
+		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 	}
 	if err := w.Commit(); err != nil {
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
