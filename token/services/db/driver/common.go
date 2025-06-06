@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -93,6 +94,10 @@ type MovementRecord struct {
 	Timestamp time.Time
 	// Status is the status of the transaction
 	Status TxStatus
+}
+
+func (r *MovementRecord) String() string {
+	return fmt.Sprintf("[%s:%s:%s:%d:%d]", r.TxID, r.EnrollmentID, r.TokenType, r.Amount.Int64(), r.Status)
 }
 
 // TransactionRecord is a more finer-grained version of a movement record.
