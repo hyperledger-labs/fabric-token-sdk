@@ -112,6 +112,26 @@ func TestQueryTransactions(t *testing.T) {
 	Expect(*actualRecord).To(Equal(record))
 }
 
+func TestGetStatus(t *testing.T) {
+	RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	Expect(err).ToNot(HaveOccurred())
+
+	input := string("1234")
+	output := []driver2.Value{3, []byte("some_message")}
+
+	mockDB.
+		ExpectQuery("SELECT status, status_message FROM REQUESTS WHERE tx_id = \\$1").
+		WithArgs(input).
+		WillReturnRows(mockDB.NewRows([]string{"status", "status_message"}).AddRow(output...))
+
+	_, info, err := mockTransactionsStore(db).GetStatus(context.Background(), input)
+
+	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
+	Expect(err).ToNot(HaveOccurred())
+	Expect(info).To(Equal(output))
+}
+
 func mockTransactionsStore(db *sql.DB) *common.TransactionStore {
 	return common.NewTransactionStore(db, db, common.TransactionTables{
 		Movements:             "MOVEMENTS",
