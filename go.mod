@@ -40,6 +40,8 @@ require (
 	modernc.org/sqlite v1.33.1
 )
 
+replace github.com/hyperledger-labs/fabric-smart-client => ../fabric-smart-client
+
 require (
 	cel.dev/expr v0.20.0 // indirect
 	cloud.google.com/go v0.116.0 // indirect
