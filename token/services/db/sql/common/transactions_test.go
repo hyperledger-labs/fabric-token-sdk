@@ -12,6 +12,7 @@ import (
 	driver2 "database/sql/driver"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/pagination"
@@ -89,11 +90,11 @@ func TestQueryTransactions(t *testing.T) {
 		SenderEID:    "alice",
 		RecipientEID: "bob",
 		TokenType:    token.Type("USD"),
-		Amount:       big.NewInt(-100),
+		Amount:       big.NewInt(100),
 		Status:       driver.TxStatus(3),
 	}
 	output := []driver2.Value{
-		record.TxID, record.ActionType, record.SenderEID, record.RecipientEID, record.TokenType, int(record.Amount.Int64()), record.Status, 0, 0, 0,
+		record.TxID, record.ActionType, record.SenderEID, record.RecipientEID, record.TokenType, int(record.Amount.Int64()), record.Status, 0, 0, time.Time{},
 	}
 	mockDB.
 		ExpectQuery("SELECT TRANSACTIONS.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, " +
