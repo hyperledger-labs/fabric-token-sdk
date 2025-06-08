@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type transactionTables struct {
+type TransactionTables struct {
 	Movements             string
 	Transactions          string
 	Requests              string
@@ -42,12 +42,12 @@ type transactionTables struct {
 type TransactionStore struct {
 	readDB  *sql.DB
 	writeDB *sql.DB
-	table   transactionTables
+	table   TransactionTables
 	ci      common3.CondInterpreter
 	pi      common3.PagInterpreter
 }
 
-func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci common3.CondInterpreter, pi common3.PagInterpreter) *TransactionStore {
+func NewTransactionStore(readDB, writeDB *sql.DB, tables TransactionTables, ci common3.CondInterpreter, pi common3.PagInterpreter) *TransactionStore {
 	return &TransactionStore{
 		readDB:  readDB,
 		writeDB: writeDB,
@@ -62,7 +62,7 @@ func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci com
 }
 
 func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
-	return newTransactionStore(readDB, writeDB, transactionTables{
+	return NewTransactionStore(readDB, writeDB, TransactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
@@ -412,7 +412,7 @@ func (db *TransactionStore) BeginAtomicWrite() (driver.AtomicWrite, error) {
 
 type AtomicWrite struct {
 	txn   *sql.Tx
-	table *transactionTables
+	table *TransactionTables
 }
 
 func (w *AtomicWrite) Commit() error {
