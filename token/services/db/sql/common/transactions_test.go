@@ -118,18 +118,19 @@ func TestGetStatus(t *testing.T) {
 	Expect(err).ToNot(HaveOccurred())
 
 	input := string("1234")
-	output := []driver2.Value{3, []byte("some_message")}
+	output := []driver2.Value{3, string("some_message")}
 
 	mockDB.
 		ExpectQuery("SELECT status, status_message FROM REQUESTS WHERE tx_id = \\$1").
 		WithArgs(input).
 		WillReturnRows(mockDB.NewRows([]string{"status", "status_message"}).AddRow(output...))
 
-	_, info, err := mockTransactionsStore(db).GetStatus(context.Background(), input)
+	status, statusMessage, err := mockTransactionsStore(db).GetStatus(context.Background(), input)
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	Expect(info).To(Equal(output))
+	Expect(status).To(Equal(output[0]))
+	Expect(statusMessage).To(Equal(output[1]))
 }
 
 func mockTransactionsStore(db *sql.DB) *common.TransactionStore {
