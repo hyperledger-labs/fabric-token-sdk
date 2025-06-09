@@ -170,6 +170,36 @@ func TestQueryValidations(t *testing.T) {
 	Expect(*actualRecord).To(Equal(record))
 }
 
+func TestQueryTokenRequests(t *testing.T) {
+	RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	Expect(err).ToNot(HaveOccurred())
+
+	record := driver.TokenRequestRecord{
+		TxID:         "1234",
+		TokenRequest: []byte("some request"),
+		Status:       driver.TxStatus(3),
+	}
+	output := []driver2.Value{
+		record.TxID, record.TokenRequest, record.Status,
+	}
+	mockDB.
+		ExpectQuery("SELECT tx_id, request, status FROM REQUESTS WHERE \\(status\\) IN \\(\\(\\$1\\), \\(\\$2\\)\\)").
+		WithArgs(3, 4).
+		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "status"}).AddRow(output...))
+
+	records, err := mockTransactionsStore(db).QueryTokenRequests(context.Background(),
+		driver.QueryTokenRequestsParams{
+			Statuses: []driver.TxStatus{3, 4},
+		},
+	)
+
+	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
+	Expect(err).ToNot(HaveOccurred())
+	actualRecord, err := records.Next()
+	Expect(*actualRecord).To(Equal(record))
+}
+
 func mockTransactionsStore(db *sql.DB) *common.TransactionStore {
 	return common.NewTransactionStore(db, db, common.TransactionTables{
 		Movements:             "MOVEMENTS",
