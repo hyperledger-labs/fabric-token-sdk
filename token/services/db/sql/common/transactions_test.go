@@ -119,7 +119,7 @@ func TestQueryTransactions(t *testing.T) {
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	actualRecord, err := info.Items.Next()
+	actualRecord, _ := info.Items.Next()
 	Expect(*actualRecord).To(Equal(record))
 }
 
@@ -177,7 +177,7 @@ func TestQueryValidations(t *testing.T) {
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	actualRecord, err := records.Next()
+	actualRecord, _ := records.Next()
 	Expect(*actualRecord).To(Equal(record))
 }
 
@@ -207,7 +207,7 @@ func TestQueryTokenRequests(t *testing.T) {
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	actualRecord, err := records.Next()
+	actualRecord, _ := records.Next()
 	Expect(*actualRecord).To(Equal(record))
 }
 
