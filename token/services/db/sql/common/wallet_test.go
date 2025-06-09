@@ -63,3 +63,24 @@ func TestGetWalletIDs(t *testing.T) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(actualWalletIDs[0]).To(Equal(output))
 }
+
+func TestLoadMeta(t *testing.T) {
+	RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	Expect(err).ToNot(HaveOccurred())
+
+	tokenID := token.Identity([]byte("1234"))
+	roleID := 5
+	walletID := driver.WalletID("my wallet")
+	output := []byte("some meta data")
+	mockDB.
+		ExpectQuery("SELECT meta FROM WALLETS WHERE \\(identity_hash = \\$1\\) AND \\(wallet_id = \\$2\\) AND \\(role_id = \\$3\\)").
+		WithArgs(tokenID.UniqueID(), walletID, roleID).
+		WillReturnRows(mockDB.NewRows([]string{"meta"}).AddRow(output))
+
+	actual, err := mockTransactionsStore(db).LoadMeta(context.Background(), tokenID, walletID, roleID)
+
+	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
+	Expect(err).ToNot(HaveOccurred())
+	Expect(actual).To(Equal(output))
+}
