@@ -17,23 +17,34 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
 )
 
+func mockTransactionsStore(db *sql.DB) *common.TransactionStore {
+	return common.NewTransactionStore(db, db, common.TransactionTables{
+		Movements:             "MOVEMENTS",
+		Transactions:          "TRANSACTIONS",
+		Requests:              "REQUESTS",
+		Validations:           "VALIDATIONS",
+		TransactionEndorseAck: "TRANSACTION_ENDORSE_ACK",
+	}, sqlite.NewConditionInterpreter(), sqlite.NewPaginationInterpreter())
+}
+
 func TestGetTokenRequest(t *testing.T) {
 	RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	Expect(err).ToNot(HaveOccurred())
 
-	input := string("an_id")
+	input := string("1234")
 	output := []byte("some_result")
 	mockDB.
 		ExpectQuery("SELECT request FROM REQUESTS WHERE tx_id = \\$1").
 		WithArgs(input).
-		WillReturnRows(mockDB.NewRows([]string{"tx_id"}).AddRow(output))
+		WillReturnRows(mockDB.NewRows([]string{"request"}).AddRow(output))
 
 	info, err := mockTransactionsStore(db).GetTokenRequest(context.Background(), input)
 
@@ -200,12 +211,29 @@ func TestQueryTokenRequests(t *testing.T) {
 	Expect(*actualRecord).To(Equal(record))
 }
 
-func mockTransactionsStore(db *sql.DB) *common.TransactionStore {
-	return common.NewTransactionStore(db, db, common.TransactionTables{
-		Movements:             "MOVEMENTS",
-		Transactions:          "TRANSACTIONS",
-		Requests:              "REQUESTS",
-		Validations:           "VALIDATIONS",
-		TransactionEndorseAck: "TRANSACTION_ENDORSE_ACK",
-	}, sqlite.NewConditionInterpreter(), sqlite.NewPaginationInterpreter())
+func TestGetTransactionEndorsementAcks(t *testing.T) {
+	RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	Expect(err).ToNot(HaveOccurred())
+
+	record := struct {
+		endorser string
+		sigma    []byte
+	}{
+		endorser: "auditor",
+		sigma:    []byte("5678"),
+	}
+	inputID := string("1234")
+	output := []driver2.Value{record.endorser, record.sigma}
+
+	mockDB.
+		ExpectQuery("SELECT endorser, sigma FROM TRANSACTION_ENDORSE_ACK WHERE tx_id = \\$1").
+		WithArgs(inputID).
+		WillReturnRows(mockDB.NewRows([]string{"endorser", "sigma"}).AddRow(output...))
+
+	acks, err := mockTransactionsStore(db).GetTransactionEndorsementAcks(context.Background(), inputID)
+
+	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
+	Expect(err).ToNot(HaveOccurred())
+	Expect(acks[token2.Identity(record.endorser).String()]).To(Equal(record.sigma))
 }
