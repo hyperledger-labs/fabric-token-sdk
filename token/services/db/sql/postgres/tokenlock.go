@@ -40,7 +40,8 @@ func NewTokenLockStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenL
 }
 
 func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration) error {
-	if err := db.logStaleLocks(ctx, leaseExpiry); err != nil {
+	_, err := db.LogStaleLocks(ctx, leaseExpiry)
+	if err != nil {
 		db.Logger.Warnf("Could not log stale locks: %v", err)
 	}
 	tokenLocks, tokenRequests := q.Table(db.Table.TokenLocks), q.Table(db.Table.Requests)
@@ -56,16 +57,16 @@ func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration
 		Build()
 
 	db.Logger.Debug(query)
-	_, err := db.WriteDB.ExecContext(ctx, query, args...)
+	_, err = db.WriteDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		db.Logger.Errorf("query failed: %s", query)
 	}
 	return err
 }
 
-func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Duration) error {
+func (db *TokenLockStore) LogStaleLocks(ctx context.Context, leaseExpiry time.Duration) ([]LockEntry, error) {
 	if !db.Logger.IsEnabledFor(zapcore.InfoLevel) {
-		return nil
+		return nil, nil
 	}
 	tokenLocks, tokenRequests := q.Table(db.Table.TokenLocks), q.Table(db.Table.Requests)
 
@@ -80,23 +81,23 @@ func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Du
 
 	rows, err := db.ReadDB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	it := common4.NewIterator(rows, func(entry *lockEntry) error {
+	it := common4.NewIterator(rows, func(entry *LockEntry) error {
 		entry.LeaseExpiry = leaseExpiry
 		return rows.Scan(&entry.ConsumerTxID, &entry.TokenID.TxId, &entry.TokenID.Index, &entry.Status, &entry.CreatedAt, &entry.Now)
 	})
 	lockEntries, err := iterators.ReadAllValues(it)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	db.Logger.Infof("Found following entries ready for deletion: [%v]", lockEntries)
-	return nil
+	return lockEntries, nil
 }
 
-type lockEntry struct {
+type LockEntry struct {
 	ConsumerTxID string
 	TokenID      token.ID
 	Status       *driver.TxStatus
@@ -105,11 +106,11 @@ type lockEntry struct {
 	LeaseExpiry  time.Duration
 }
 
-func (e lockEntry) Expired() bool {
+func (e LockEntry) Expired() bool {
 	return e.CreatedAt.Add(e.LeaseExpiry).Before(e.Now)
 }
 
-func (e lockEntry) String() string {
+func (e LockEntry) String() string {
 	if expired := e.Expired(); e.Status == nil && expired {
 		return fmt.Sprintf("Expired lock created at [%v] for token [%s] consumed by [%s]", e.CreatedAt, e.TokenID, e.ConsumerTxID)
 	} else if e.Status != nil && *e.Status == driver.Deleted && !expired {
