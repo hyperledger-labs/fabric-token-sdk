@@ -133,6 +133,43 @@ func TestGetStatus(t *testing.T) {
 	Expect(statusMessage).To(Equal(output[1]))
 }
 
+func TestQueryValidations(t *testing.T) {
+	RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	Expect(err).ToNot(HaveOccurred())
+
+	time1 := time.Date(2025, time.June, 8, 10, 0, 0, 0, time.UTC)
+	time2 := time.Date(2025, time.June, 9, 10, 0, 0, 0, time.UTC)
+	record := driver.ValidationRecord{
+		TxID:         "1234",
+		TokenRequest: []byte("some request"),
+		Timestamp:    time1,
+		Status:       driver.TxStatus(3),
+	}
+	output := []driver2.Value{
+		record.TxID, record.TokenRequest, 0, record.Status, record.Timestamp,
+	}
+	mockDB.
+		ExpectQuery("SELECT VALIDATIONS.tx_id, REQUESTS.request, metadata, REQUESTS.status, VALIDATIONS.stored_at "+
+			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id "+
+			"WHERE \\(\\(stored_at >= \\$1\\) AND \\(stored_at <= \\$2\\)\\) AND \\(\\(status\\) IN \\(\\(\\$3\\), \\(\\$4\\)\\)\\)").
+		WithArgs(time1, time2, 3, 4).
+		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "metadata", "status", "stored_at"}).AddRow(output...))
+
+	records, err := mockTransactionsStore(db).QueryValidations(context.Background(),
+		driver.QueryValidationRecordsParams{
+			From:     &time1,
+			To:       &time2,
+			Statuses: []driver.TxStatus{3, 4},
+		},
+	)
+
+	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
+	Expect(err).ToNot(HaveOccurred())
+	actualRecord, err := records.Next()
+	Expect(*actualRecord).To(Equal(record))
+}
+
 func mockTransactionsStore(db *sql.DB) *common.TransactionStore {
 	return common.NewTransactionStore(db, db, common.TransactionTables{
 		Movements:             "MOVEMENTS",
