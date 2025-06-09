@@ -44,3 +44,22 @@ func TestGetWalletID(t *testing.T) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(actualWalletID).To(Equal(output))
 }
+
+func TestGetWalletIDs(t *testing.T) {
+	RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	Expect(err).ToNot(HaveOccurred())
+
+	roleID := 5
+	output := driver.WalletID("my wallet")
+	mockDB.
+		ExpectQuery("SELECT DISTINCT wallet_id FROM WALLETS WHERE role_id = \\$1").
+		WithArgs(roleID).
+		WillReturnRows(mockDB.NewRows([]string{"wallet_id"}).AddRow(output))
+
+	actualWalletIDs, err := mockTransactionsStore(db).GetWalletIDs(context.Background(), roleID)
+
+	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
+	Expect(err).ToNot(HaveOccurred())
+	Expect(actualWalletIDs[0]).To(Equal(output))
+}
