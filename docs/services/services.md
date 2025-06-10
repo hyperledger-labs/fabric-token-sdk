@@ -10,7 +10,7 @@ But that's not all! The SDK also empowers you to create custom services tailored
 It offers flexible deployment options for isolated or shared backend systems.
 - [`Token Selector`](selector.md): Fabric Token SDK's token selectors allow developers to choose specific tokens (by type, amount, owner) from the vault for transactions. 
 They prevent double-spending by locking tokens until the transaction is completed, rejected, times out, or explicitly unlocked
-- [`Network`](network.md): Network Service in Fabric Token SDK hides complexities of the ledger (Fabric or Orion) for developers. 
+- [`Network`](network.md): Network Service in Fabric Token SDK hides complexities of the ledger (Fabric) for developers. 
 It uses a driver-based design allowing for future support of additional platforms.
 - [`Interoperability`](interop.md): Fabric Token SDK allows spending tokens based on conditions defined in scripts. 
 You encode the script within the token's owner field, and the backend interprets it during spending. 

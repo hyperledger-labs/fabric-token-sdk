@@ -95,7 +95,7 @@ Developing applications that leverage tokens on Hyperledger Fabric can be comple
 
 **Introducing the Fabric Token SDK: Streamlining Tokenized Development (and Beyond)**
 
-The Fabric Token SDK has evolved beyond its initial focus on Hyperledger Fabric. It now empowers developers with the following capabilities across various platforms, including permissioned blockchains like Fabric and even centralized systems like Orion:
+The Fabric Token SDK has evolved beyond its initial focus on Hyperledger Fabric. It now empowers developers with the following capabilities across various platforms, including permissioned blockchains like Fabric:
 
 * **Tokenization Made Easy:** Create tokens representing any type of asset, be it physical or digital.
 * **Privacy by Design:** Select the appropriate privacy level for your specific use case, without modifying your application logic.

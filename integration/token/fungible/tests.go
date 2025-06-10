@@ -275,7 +275,7 @@ var BobAcceptedTransactions = []TransactionRecord{
 
 type OnRestartFunc = func(*integration.Infrastructure, string)
 
-func TestAll(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, aries bool, orion bool, sel *token3.ReplicaSelector) {
+func TestAll(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, aries bool, sel *token3.ReplicaSelector) {
 	auditor := sel.Get(auditorId)
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
@@ -291,9 +291,6 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 
 	SetKVSEntry(network, issuer, "auditor", auditor.Id())
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
-	if orion {
-		FetchAndUpdatePublicParams(network, custodian)
-	}
 
 	t0 := time.Now()
 	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
@@ -362,11 +359,9 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	RegisterIssuerIdentity(network, issuer, "newIssuerWallet", newIssuerWalletPath)
 	// Update public parameters
 	networkName := "default"
-	if orion {
-		networkName = "orion"
-	}
+
 	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, networkName)
-	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, networkName), orion, alice, bob, charlie, manager, issuer, auditor, custodian)
+	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, networkName), alice, bob, charlie, manager, issuer, auditor, custodian)
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
 	// Issuer tokens with this new wallet

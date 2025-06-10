@@ -74,29 +74,19 @@ const (
 
 	FabTokenFungible
 
-	OrionZKATDLogBasics
-	OrionFabTokenBasics
-
 	ZKATDLogDVP
 	FabTokenDVP
 
 	ZKATDLogNFT
 	FabTokenNFT
 
-	OrionZKATDLogNFT
-	OrionFabTokenNFT
-
 	FabTokenInteropHTLC
-	FabTokenInteropHTLCOrion
 	FabTokenInteropHTLCTwoFabricNetworks
 	FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks
-	FabTokenInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
 
 	ZKATDLogInteropHTLC
 	ZKATDLogInteropHTLCTwoFabricNetworks
 	ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks
-	ZKATDLogInteropHTLCOrion
-	ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
 
 	FabtokenEscrow
 	ZKATDLogEscrow

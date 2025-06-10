@@ -1,8 +1,8 @@
 # Network Service
 
-The [`token/services/network`](./../../token/services/network) service acts as a bridge, hiding the intricate details of the underlying ledger technology (like Fabric or Orion) from developers.
+The [`token/services/network`](./../../token/services/network) service acts as a bridge, hiding the intricate details of the underlying ledger technology (like Fabric) from developers.
 This service leverages a driver-based design, allowing developers to create new drivers for additional ledger platforms.
-Currently, Fabric and Orion are supported out of the box.
+Currently, Fabric is supported out of the box.
 
 ### Fabric Driver
 
@@ -45,14 +45,3 @@ In more details:
 5. Finally, the RW Set, after processing, is committed to the vault.
 
 Only at this point, the tokens created by the transaction become available via the `Token Vault Service` we have discussed above.
-
-### Orion Driver
-
-The Orion driver is similar to the Fabric driver because also Orion manages RW Sets.
-Though, in Orion there is no concept of chaincode or stored routines.
-To solve this problem, the Orion driver assumes the existence of a `Custodian` (another FSC node) that sits in front of Orion
-and handles the `approval` and `commit` steps.
-
-Here is the pictorial representation of the lifecycle of a token transaction for Orion:
-
-![orion_ttx_lifecycle.png](./../imgs/orion_ttx_lifecycle.png)

@@ -14,8 +14,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fodlog"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/odlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	. "github.com/onsi/ginkgo/v2"
@@ -32,13 +30,6 @@ var _ = Describe("DLog end to end", func() {
 			It("Performed htlc-related basic operations", Label("T1"), func() { interop.TestHTLCSingleNetwork(ts.II, selector) })
 		})
 
-		Describe("HTLC Single Orion Network", t.Label, func() {
-			ts, selector := newTestSuiteSingleOrion(t.CommType, t.ReplicationFactor, "alice", "bob")
-			AfterEach(ts.TearDown)
-			BeforeEach(ts.Setup)
-			It("Performed htlc-related basic operations", Label("T2"), func() { interop.TestHTLCSingleNetwork(ts.II, selector) })
-		})
-
 		Describe("HTLC Two Fabric Networks", t.Label, func() {
 			ts, selector := newTestSuiteTwoFabric(t.CommType, t.ReplicationFactor, "alice", "bob")
 			AfterEach(ts.TearDown)
@@ -53,13 +44,6 @@ var _ = Describe("DLog end to end", func() {
 			BeforeEach(ts.Setup)
 			It("Performed an htlc based atomic swap", Label("T5"), func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
 		})
-
-		Describe("HTLC No Cross Claim with Orion and Fabric Networks", t.Label, func() {
-			ts, selector := newTestSuiteNoCrossClaimOrion(t.CommType, t.ReplicationFactor, "alice", "bob")
-			AfterEach(ts.TearDown)
-			BeforeEach(ts.Setup)
-			It("Performed an htlc based atomic swap", Label("T6"), func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II, selector) })
-		})
 	}
 })
 
@@ -71,17 +55,6 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
 		SDKs:            []api2.SDK{&fdlog.SDK{}},
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
-	}))
-	return ts, selector
-}
-
-func newTestSuiteSingleOrion(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
-	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(integration2.ZKATDLogInteropHTLCOrion.StartPortForNode, interop.HTLCSingleOrionNetworkTopology(common.Opts{
-		CommType:        commType,
-		ReplicationOpts: opts,
-		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
-		SDKs:            []api2.SDK{&odlog.SDK{}},
 	}))
 	return ts, selector
 }
@@ -107,19 +80,6 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		SDKs:            []api2.SDK{&fdlog.SDK{}},
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 		FinalityType: config.Committer,
-	}))
-	return ts, selector
-}
-
-func newTestSuiteNoCrossClaimOrion(commType fsc.P2PCommunicationType, factor int, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
-	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(integration2.ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimWithOrionTopology(common.Opts{
-		CommType:        commType,
-		ReplicationOpts: opts,
-		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
-		SDKs:            []api2.SDK{&fodlog.SDK{}},
-		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:view-sdk=debug:info",
-		FinalityType: config.Committer, // we need committer here because we exercise
 	}))
 	return ts, selector
 }
