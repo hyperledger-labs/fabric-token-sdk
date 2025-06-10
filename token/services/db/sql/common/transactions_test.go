@@ -25,13 +25,14 @@ import (
 )
 
 func mockTransactionsStore(db *sql.DB) *common.TransactionStore {
-	return common.NewTransactionStore(db, db, common.TransactionTables{
+	store, _ := common.NewOwnerTransactionStore(db, db, common.TableNames{
 		Movements:             "MOVEMENTS",
 		Transactions:          "TRANSACTIONS",
 		Requests:              "REQUESTS",
 		Validations:           "VALIDATIONS",
 		TransactionEndorseAck: "TRANSACTION_ENDORSE_ACK",
 	}, sqlite.NewConditionInterpreter(), sqlite.NewPaginationInterpreter())
+	return store
 }
 
 func TestGetTokenRequest(t *testing.T) {
