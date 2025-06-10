@@ -89,7 +89,7 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 	eids = append(eids, record.Inputs.EnrollmentIDs()...)
 	eids = append(eids, record.Outputs.EnrollmentIDs()...)
 	logger.Debugf("audit transaction [%s], acquire locks", tx.ID())
-	if err := a.auditDB.AcquireLocks(request.Anchor, eids...); err != nil {
+	if err := a.auditDB.AcquireLocks(string(request.Anchor), eids...); err != nil {
 		return nil, nil, err
 	}
 	logger.Debugf("audit transaction [%s], acquire locks done", tx.ID())
@@ -127,7 +127,7 @@ func (a *Service) Append(ctx context.Context, tx Transaction) error {
 
 // Release releases the lock acquired of the passed transaction.
 func (a *Service) Release(tx Transaction) {
-	a.auditDB.ReleaseLocks(tx.Request().Anchor)
+	a.auditDB.ReleaseLocks(string(tx.Request().Anchor))
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status

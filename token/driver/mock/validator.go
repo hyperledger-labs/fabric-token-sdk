@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type Validator struct {
@@ -23,22 +22,22 @@ type Validator struct {
 		result1 []interface{}
 		result2 error
 	}
-	VerifyTokenRequestFromRawStub        func(context.Context, func(id token.ID) ([]byte, error), string, []byte) ([]interface{}, map[string][]byte, error)
+	VerifyTokenRequestFromRawStub        func(context.Context, driver.GetStateFnc, driver.TokenRequestAnchor, []byte) ([]interface{}, driver.ValidationAttributes, error)
 	verifyTokenRequestFromRawMutex       sync.RWMutex
 	verifyTokenRequestFromRawArgsForCall []struct {
 		arg1 context.Context
-		arg2 func(id token.ID) ([]byte, error)
-		arg3 string
+		arg2 driver.GetStateFnc
+		arg3 driver.TokenRequestAnchor
 		arg4 []byte
 	}
 	verifyTokenRequestFromRawReturns struct {
 		result1 []interface{}
-		result2 map[string][]byte
+		result2 driver.ValidationAttributes
 		result3 error
 	}
 	verifyTokenRequestFromRawReturnsOnCall map[int]struct {
 		result1 []interface{}
-		result2 map[string][]byte
+		result2 driver.ValidationAttributes
 		result3 error
 	}
 	invocations      map[string][][]interface{}
@@ -114,7 +113,7 @@ func (fake *Validator) UnmarshalActionsReturnsOnCall(i int, result1 []interface{
 	}{result1, result2}
 }
 
-func (fake *Validator) VerifyTokenRequestFromRaw(arg1 context.Context, arg2 func(id token.ID) ([]byte, error), arg3 string, arg4 []byte) ([]interface{}, map[string][]byte, error) {
+func (fake *Validator) VerifyTokenRequestFromRaw(arg1 context.Context, arg2 driver.GetStateFnc, arg3 driver.TokenRequestAnchor, arg4 []byte) ([]interface{}, driver.ValidationAttributes, error) {
 	var arg4Copy []byte
 	if arg4 != nil {
 		arg4Copy = make([]byte, len(arg4))
@@ -124,8 +123,8 @@ func (fake *Validator) VerifyTokenRequestFromRaw(arg1 context.Context, arg2 func
 	ret, specificReturn := fake.verifyTokenRequestFromRawReturnsOnCall[len(fake.verifyTokenRequestFromRawArgsForCall)]
 	fake.verifyTokenRequestFromRawArgsForCall = append(fake.verifyTokenRequestFromRawArgsForCall, struct {
 		arg1 context.Context
-		arg2 func(id token.ID) ([]byte, error)
-		arg3 string
+		arg2 driver.GetStateFnc
+		arg3 driver.TokenRequestAnchor
 		arg4 []byte
 	}{arg1, arg2, arg3, arg4Copy})
 	stub := fake.VerifyTokenRequestFromRawStub
@@ -147,44 +146,44 @@ func (fake *Validator) VerifyTokenRequestFromRawCallCount() int {
 	return len(fake.verifyTokenRequestFromRawArgsForCall)
 }
 
-func (fake *Validator) VerifyTokenRequestFromRawCalls(stub func(context.Context, func(id token.ID) ([]byte, error), string, []byte) ([]interface{}, map[string][]byte, error)) {
+func (fake *Validator) VerifyTokenRequestFromRawCalls(stub func(context.Context, driver.GetStateFnc, driver.TokenRequestAnchor, []byte) ([]interface{}, driver.ValidationAttributes, error)) {
 	fake.verifyTokenRequestFromRawMutex.Lock()
 	defer fake.verifyTokenRequestFromRawMutex.Unlock()
 	fake.VerifyTokenRequestFromRawStub = stub
 }
 
-func (fake *Validator) VerifyTokenRequestFromRawArgsForCall(i int) (context.Context, func(id token.ID) ([]byte, error), string, []byte) {
+func (fake *Validator) VerifyTokenRequestFromRawArgsForCall(i int) (context.Context, driver.GetStateFnc, driver.TokenRequestAnchor, []byte) {
 	fake.verifyTokenRequestFromRawMutex.RLock()
 	defer fake.verifyTokenRequestFromRawMutex.RUnlock()
 	argsForCall := fake.verifyTokenRequestFromRawArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
-func (fake *Validator) VerifyTokenRequestFromRawReturns(result1 []interface{}, result2 map[string][]byte, result3 error) {
+func (fake *Validator) VerifyTokenRequestFromRawReturns(result1 []interface{}, result2 driver.ValidationAttributes, result3 error) {
 	fake.verifyTokenRequestFromRawMutex.Lock()
 	defer fake.verifyTokenRequestFromRawMutex.Unlock()
 	fake.VerifyTokenRequestFromRawStub = nil
 	fake.verifyTokenRequestFromRawReturns = struct {
 		result1 []interface{}
-		result2 map[string][]byte
+		result2 driver.ValidationAttributes
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *Validator) VerifyTokenRequestFromRawReturnsOnCall(i int, result1 []interface{}, result2 map[string][]byte, result3 error) {
+func (fake *Validator) VerifyTokenRequestFromRawReturnsOnCall(i int, result1 []interface{}, result2 driver.ValidationAttributes, result3 error) {
 	fake.verifyTokenRequestFromRawMutex.Lock()
 	defer fake.verifyTokenRequestFromRawMutex.Unlock()
 	fake.VerifyTokenRequestFromRawStub = nil
 	if fake.verifyTokenRequestFromRawReturnsOnCall == nil {
 		fake.verifyTokenRequestFromRawReturnsOnCall = make(map[int]struct {
 			result1 []interface{}
-			result2 map[string][]byte
+			result2 driver.ValidationAttributes
 			result3 error
 		})
 	}
 	fake.verifyTokenRequestFromRawReturnsOnCall[i] = struct {
 		result1 []interface{}
-		result2 map[string][]byte
+		result2 driver.ValidationAttributes
 		result3 error
 	}{result1, result2, result3}
 }

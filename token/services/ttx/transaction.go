@@ -111,7 +111,7 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 		txID = network.TxID{Creator: signer}
 	}
 	id := networkService.ComputeTxID(&txID)
-	tr, err := tms.NewRequest(id)
+	tr, err := tms.NewRequest(token.RequestAnchor(id))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed init token request")
 	}
@@ -160,7 +160,7 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	tx.TMS = tms
 	tx.NetworkProvider = networkProvider
 	tx.TokenRequest.SetTokenService(tms)
-	if tx.ID() != tx.TokenRequest.ID() {
+	if tx.ID() != string(tx.TokenRequest.ID()) {
 		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", tx.ID(), tx.TokenRequest.ID())
 	}
 	context.OnError(tx.Release)

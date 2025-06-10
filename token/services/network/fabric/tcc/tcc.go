@@ -53,7 +53,7 @@ func (a *SetupAction) GetSetupParameters() ([]byte, error) {
 //go:generate counterfeiter -o mock/validator.go -fake-name Validator . Validator
 
 type Validator interface {
-	UnmarshallAndVerifyWithMetadata(ctx context.Context, ledger token.Ledger, anchor string, raw []byte) ([]interface{}, map[string][]byte, error)
+	UnmarshallAndVerifyWithMetadata(ctx context.Context, ledger token.Ledger, anchor token.RequestAnchor, raw []byte) ([]interface{}, map[string][]byte, error)
 }
 
 //go:generate counterfeiter -o mock/public_parameters_manager.go -fake-name PublicParametersManager . PublicParametersManager
@@ -227,7 +227,7 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(
 		context.Background(),
 		&ledger{stub: stub, keyTranslator: &keys.Translator{}},
-		stub.GetTxID(),
+		token.RequestAnchor(stub.GetTxID()),
 		raw,
 	)
 	if err != nil {

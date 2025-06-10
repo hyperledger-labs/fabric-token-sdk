@@ -33,6 +33,8 @@ type (
 	TokensUpgradeChallenge = driver.TokensUpgradeChallenge
 	// TokensUpgradeProof is the proof generated with the respect to a given challenge to prove the validity of the tokens to be upgrade
 	TokensUpgradeProof = driver.TokensUpgradeProof
+	// RequestAnchor models the anchor of a token request
+	RequestAnchor = driver.TokenRequestAnchor
 )
 
 // RecipientData contains information about the identity of a token owner
@@ -137,7 +139,7 @@ func WithRestRecipientIdentity(recipientData *RecipientData) TransferOption {
 // It contains the token request's anchor, inputs (with Type and Quantity), and outputs
 type AuditRecord struct {
 	// Anchor is used to bind the Actions to a given Transaction
-	Anchor string
+	Anchor RequestAnchor
 	// Inputs represent the input tokens of the transaction
 	Inputs *InputStream
 	// Outputs represent the output tokens of the transaction
@@ -178,7 +180,7 @@ type Transfer struct {
 // Operations are represented in a backend agnostic way but driver specific.
 type Request struct {
 	// Anchor is used to bind the Actions to a given Transaction
-	Anchor string
+	Anchor driver.TokenRequestAnchor
 	// Actions contains the token operations.
 	Actions *driver.TokenRequest
 	// Metadata contains the actions' metadata used to unscramble the content of the actions, if the
@@ -189,7 +191,7 @@ type Request struct {
 }
 
 // NewRequest creates a new empty request for the given token service and anchor
-func NewRequest(tokenService *ManagementService, anchor string) *Request {
+func NewRequest(tokenService *ManagementService, anchor RequestAnchor) *Request {
 	return &Request{
 		Anchor:       anchor,
 		Actions:      &driver.TokenRequest{},
@@ -200,7 +202,7 @@ func NewRequest(tokenService *ManagementService, anchor string) *Request {
 
 // NewRequestFromBytes creates a new request from the given anchor, and whose actions and metadata
 // are unmarshalled from the given bytes
-func NewRequestFromBytes(tokenService *ManagementService, anchor string, actions []byte, trmRaw []byte) (*Request, error) {
+func NewRequestFromBytes(tokenService *ManagementService, anchor RequestAnchor, actions []byte, trmRaw []byte) (*Request, error) {
 	tr := &driver.TokenRequest{}
 	if err := tr.FromBytes(actions); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling token request [%d]", len(actions))
@@ -229,7 +231,7 @@ func NewFullRequestFromBytes(tokenService *ManagementService, tr []byte) (*Reque
 }
 
 // ID returns the anchor of the request
-func (r *Request) ID() string {
+func (r *Request) ID() RequestAnchor {
 	return r.Anchor
 }
 
@@ -1021,7 +1023,7 @@ func (r *Request) Bytes() ([]byte, error) {
 	}
 	requestWithMetadata := &request.TokenRequestWithMetadata{
 		Version:  driver.ProtocolV1,
-		Anchor:   r.Anchor,
+		Anchor:   string(r.Anchor),
 		Request:  requestProto,
 		Metadata: metadataProto,
 	}
@@ -1039,7 +1041,7 @@ func (r *Request) FromBytes(raw []byte) error {
 		return errors.Errorf("invalid token request with metadata version, expected [%d], got [%d]", driver.ProtocolV1, requestWithMetadata.Version)
 	}
 
-	r.Anchor = requestWithMetadata.Anchor
+	r.Anchor = RequestAnchor(requestWithMetadata.Anchor)
 	if requestWithMetadata.Request != nil {
 		if err := r.Actions.FromProtos(requestWithMetadata.Request); err != nil {
 			return errors.Wrapf(err, "failed unmarshalling actions")
@@ -1303,7 +1305,7 @@ func (r *Request) PublicParamsHash() PPHash {
 	return r.TokenService.PublicParametersManager().PublicParamsHash()
 }
 
-func (r *Request) String() string { return r.Anchor }
+func (r *Request) String() string { return string(r.Anchor) }
 
 func (r *Request) parseInputIDs(ctx context.Context, inputs []*token.ID) ([]*token.ID, token.Quantity, token.Type, error) {
 	inputTokens, err := r.TokenService.Vault().NewQueryEngine().GetTokens(ctx, inputs...)
@@ -1379,8 +1381,8 @@ func (r *Request) prepareTransfer(ctx context.Context, redeem bool, wallet *Owne
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed to get selector manager")
 			}
-			selector, err = sm.NewSelector(r.Anchor)
-			defer utils.IgnoreErrorWithOneArg(sm.Close, r.Anchor)
+			selector, err = sm.NewSelector(string(r.Anchor))
+			defer utils.IgnoreErrorWithOneArg(sm.Close, string(r.Anchor))
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting default selector")
 			}

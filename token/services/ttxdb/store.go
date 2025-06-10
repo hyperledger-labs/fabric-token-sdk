@@ -237,10 +237,11 @@ func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.R
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
-	d.cache.Add(record.Anchor, raw)
+	anchor := string(record.Anchor)
+	d.cache.Add(anchor, raw)
 	if err := w.AddTokenRequest(
 		ctx,
-		record.Anchor,
+		anchor,
 		raw,
 		req.AllApplicationMetadata(),
 		record.Attributes,
@@ -387,7 +388,7 @@ func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []T
 				}
 
 				txs = append(txs, driver.TransactionRecord{
-					TxID:         record.Anchor,
+					TxID:         string(record.Anchor),
 					SenderEID:    inEID,
 					RecipientEID: outEID,
 					TokenType:    tokenType,
@@ -427,7 +428,7 @@ func Movements(record *token.AuditRecord, created time.Time) (mv []MovementRecor
 
 			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
 			mv = append(mv, driver.MovementRecord{
-				TxID:         record.Anchor,
+				TxID:         string(record.Anchor),
 				EnrollmentID: eID,
 				Amount:       diff,
 				TokenType:    tokenType,

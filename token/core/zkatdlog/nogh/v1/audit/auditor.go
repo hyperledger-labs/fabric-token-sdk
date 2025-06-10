@@ -137,7 +137,7 @@ func (a *Auditor) Check(
 	tokenRequest *driver.TokenRequest,
 	tokenRequestMetadata *driver.TokenRequestMetadata,
 	inputTokens [][]*token.Token,
-	txID string,
+	txID driver.TokenRequestAnchor,
 ) error {
 	// TODO: inputTokens should be checked against the actions
 	// De-obfuscate issue requests
@@ -174,7 +174,7 @@ func (a *Auditor) Check(
 }
 
 // CheckTransferRequests verifies that the commitments in transfer inputs and outputs match the information provided in the clear.
-func (a *Auditor) CheckTransferRequests(inputs [][]*InspectableToken, outputsFromTransfer [][]*InspectableToken, txID string) error {
+func (a *Auditor) CheckTransferRequests(inputs [][]*InspectableToken, outputsFromTransfer [][]*InspectableToken, txID driver.TokenRequestAnchor) error {
 
 	for k, transferred := range outputsFromTransfer {
 		err := a.InspectOutputs(transferred)
@@ -194,7 +194,7 @@ func (a *Auditor) CheckTransferRequests(inputs [][]*InspectableToken, outputsFro
 }
 
 // CheckIssueRequests verifies that the commitments in issue outputs match the information provided in the clear.
-func (a *Auditor) CheckIssueRequests(outputsFromIssue [][]*InspectableToken, txID string) error {
+func (a *Auditor) CheckIssueRequests(outputsFromIssue [][]*InspectableToken, txID driver.TokenRequestAnchor) error {
 	// Inspect
 	for k, issued := range outputsFromIssue {
 		err := a.InspectOutputs(issued)

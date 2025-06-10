@@ -170,7 +170,7 @@ func (d *StoreService) Append(ctx context.Context, req tokenRequest) error {
 	}
 	if err := w.AddTokenRequest(
 		ctx,
-		record.Anchor,
+		string(record.Anchor),
 		raw,
 		req.AllApplicationMetadata(),
 		record.Attributes,

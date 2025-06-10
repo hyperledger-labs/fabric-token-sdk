@@ -45,9 +45,9 @@ func NewTransferService(
 
 // Transfer returns a TransferAction as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.OwnerWallet, tokenIDs []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenRequestAnchor, wallet driver.OwnerWallet, ids []*token.ID, outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	// select inputs
-	inputTokens, err := s.TokenLoader.GetTokens(ctx, tokenIDs)
+	inputTokens, err := s.TokenLoader.GetTokens(ctx, ids)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
@@ -62,7 +62,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	// prepare outputs
 	var isRedeem bool
 	var outs []*actions.Output
-	for _, output := range Outputs {
+	for _, output := range outputs {
 		outs = append(outs, &actions.Output{
 			Owner:    output.Owner,
 			Type:     output.Type,
@@ -85,7 +85,7 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner).String())
 		}
 		transferInputsMetadata = append(transferInputsMetadata, &driver.TransferInputMetadata{
-			TokenID: tokenIDs[i],
+			TokenID: ids[i],
 			Senders: []*driver.AuditableIdentity{
 				{
 					Identity:  t.Owner,
@@ -147,8 +147,8 @@ func (s *TransferService) Transfer(ctx context.Context, _ string, _ driver.Owner
 	}
 
 	// return
-	actionInputs := make([]*actions.TransferActionInput, len(tokenIDs))
-	for i, id := range tokenIDs {
+	actionInputs := make([]*actions.TransferActionInput, len(ids))
+	for i, id := range ids {
 		actionInputs[i] = &actions.TransferActionInput{
 			ID:    id,
 			Input: inputs[i],

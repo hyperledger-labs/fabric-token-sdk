@@ -105,24 +105,17 @@ func NewTransferService(
 
 // Transfer returns a TransferActionMetadata as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *TransferService) Transfer(
-	ctx context.Context,
-	txID string,
-	_ driver.OwnerWallet,
-	tokenIDs []*token2.ID,
-	outputTokens []*token2.Token,
-	opts *driver.TransferOptions,
-) (driver.TransferAction, *driver.TransferMetadata, error) {
-	s.Logger.DebugfContext(ctx, "Prepare Transfer Action [%s,%v]", txID, tokenIDs)
-	if common.IsAnyNil(tokenIDs...) {
+func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenRequestAnchor, wallet driver.OwnerWallet, ids []*token2.ID, outputs []*token2.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+	s.Logger.DebugfContext(ctx, "Prepare Transfer Action [%s,%v]", anchor, ids)
+	if common.IsAnyNil(ids...) {
 		return nil, nil, errors.New("failed to prepare transfer action: nil token id")
 	}
-	if common.IsAnyNil(outputTokens...) {
+	if common.IsAnyNil(outputs...) {
 		return nil, nil, errors.New("failed to prepare transfer action: nil output token")
 	}
 
 	// load tokens with the passed token identifiers
-	loadedTokens, err := s.TokenLoader.LoadTokens(ctx, tokenIDs)
+	loadedTokens, err := s.TokenLoader.LoadTokens(ctx, ids)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
@@ -134,15 +127,15 @@ func (s *TransferService) Transfer(
 	var isRedeem bool
 	// get sender
 	pp := s.PublicParametersManager.PublicParams(ctx)
-	sender, err := transfer.NewSender(nil, prepareInputs.Tokens(), tokenIDs, prepareInputs.Metadata(), pp)
+	sender, err := transfer.NewSender(nil, prepareInputs.Tokens(), ids, prepareInputs.Metadata(), pp)
 	if err != nil {
 		return nil, nil, err
 	}
-	values := make([]uint64, 0, len(outputTokens))
-	owners := make([][]byte, 0, len(outputTokens))
+	values := make([]uint64, 0, len(outputs))
+	owners := make([][]byte, 0, len(outputs))
 	// get values and owners of outputs
-	s.Logger.DebugfContext(ctx, "Prepare %d output tokens", len(outputTokens))
-	for i, output := range outputTokens {
+	s.Logger.DebugfContext(ctx, "Prepare %d output tokens", len(outputs))
+	for i, output := range outputs {
 		q, err := token2.ToQuantity(output.Quantity, pp.Precision())
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed to get value for %dth output", i)
@@ -162,7 +155,7 @@ func (s *TransferService) Transfer(
 	s.Logger.DebugfContext(ctx, "Done generating zk transfer")
 	duration := time.Since(start)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", txID)
+		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", anchor)
 	}
 	s.Metrics.zkTransferDuration.Observe(float64(duration.Milliseconds()))
 
@@ -188,10 +181,10 @@ func (s *TransferService) Transfer(
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner))
 		}
 		if len(auditInfo) == 0 {
-			s.Logger.ErrorfContext(ctx, "empty audit info for the owner [%s] of the i^th token [%s]", tokenIDs[i], driver.Identity(t.Owner))
+			s.Logger.ErrorfContext(ctx, "empty audit info for the owner [%s] of the i^th token [%s]", ids[i], driver.Identity(t.Owner))
 		}
 		transferInputsMetadata = append(transferInputsMetadata, &driver.TransferInputMetadata{
-			TokenID: tokenIDs[i],
+			TokenID: ids[i],
 			Senders: []*driver.AuditableIdentity{
 				{
 					Identity:  t.Owner,
@@ -202,7 +195,7 @@ func (s *TransferService) Transfer(
 	}
 
 	var transferOutputsMetadata []*driver.TransferOutputMetadata
-	for i, output := range outputTokens {
+	for i, output := range outputs {
 		var outputAudiInfo []byte
 		var receivers []driver.Identity
 		var receiversAuditInfo [][]byte
@@ -251,7 +244,7 @@ func (s *TransferService) Transfer(
 		})
 	}
 
-	s.Logger.DebugfContext(ctx, "Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(tokenIDs), len(senderAuditInfos), transfer.NumOutputs())
+	s.Logger.DebugfContext(ctx, "Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", anchor, len(ids), len(senderAuditInfos), transfer.NumOutputs())
 
 	transferMetadata := &driver.TransferMetadata{
 		Inputs:       transferInputsMetadata,
