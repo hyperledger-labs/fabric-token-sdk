@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -88,7 +89,7 @@ func TestQueryMovements(t *testing.T) {
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	Expect(*info[0]).To(Equal(record))
+	Expect(info).To(ConsistOf(&record))
 }
 
 func TestQueryTransactions(t *testing.T) {
@@ -150,12 +151,12 @@ func TestQueryValidations(t *testing.T) {
 	db, mockDB, err := sqlmock.New()
 	Expect(err).ToNot(HaveOccurred())
 
-	time1 := time.Date(2025, time.June, 8, 10, 0, 0, 0, time.UTC)
-	time2 := time.Date(2025, time.June, 9, 10, 0, 0, 0, time.UTC)
+	time_from := time.Date(2025, time.June, 8, 10, 0, 0, 0, time.UTC)
+	time_to := time.Date(2025, time.June, 9, 10, 0, 0, 0, time.UTC)
 	record := driver.ValidationRecord{
 		TxID:         "1234",
 		TokenRequest: []byte("some request"),
-		Timestamp:    time1,
+		Timestamp:    time_from,
 		Status:       driver.TxStatus(3),
 	}
 	output := []driver2.Value{
@@ -165,13 +166,13 @@ func TestQueryValidations(t *testing.T) {
 		ExpectQuery("SELECT VALIDATIONS.tx_id, REQUESTS.request, metadata, REQUESTS.status, VALIDATIONS.stored_at "+
 			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id "+
 			"WHERE \\(\\(stored_at >= \\$1\\) AND \\(stored_at <= \\$2\\)\\) AND \\(\\(status\\) IN \\(\\(\\$3\\), \\(\\$4\\)\\)\\)").
-		WithArgs(time1, time2, 3, 4).
+		WithArgs(time_from, time_to, 3, 4).
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "metadata", "status", "stored_at"}).AddRow(output...))
 
 	records, err := mockTransactionsStore(db).QueryValidations(context.Background(),
 		driver.QueryValidationRecordsParams{
-			From:     &time1,
-			To:       &time2,
+			From:     &time_from,
+			To:       &time_to,
 			Statuses: []driver.TxStatus{3, 4},
 		},
 	)
@@ -208,8 +209,8 @@ func TestQueryTokenRequests(t *testing.T) {
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	actualRecord, _ := records.Next()
-	Expect(*actualRecord).To(Equal(record))
+	records_list, _ := iterators.ReadAllPointers[driver.TokenRequestRecord](records)
+	Expect(records_list).To(ConsistOf(&record))
 }
 
 func TestGetTransactionEndorsementAcks(t *testing.T) {
@@ -236,5 +237,6 @@ func TestGetTransactionEndorsementAcks(t *testing.T) {
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	Expect(acks[token2.Identity(record.endorser).String()]).To(Equal(record.sigma))
+	Expect(acks).To(HaveLen(1))
+	Expect(acks).To(HaveKeyWithValue(token2.Identity(record.endorser).UniqueID(), record.sigma))
 }
