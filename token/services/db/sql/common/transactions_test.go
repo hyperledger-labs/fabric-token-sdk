@@ -65,7 +65,7 @@ func TestQueryMovements(t *testing.T) {
 		EnrollmentID: "5678",
 		TokenType:    token.Type("USD"),
 		Amount:       big.NewInt(-100),
-		Status:       driver.TxStatus(3),
+		Status:       driver.Deleted,
 	}
 	output := []driver2.Value{
 		record.TxID, record.EnrollmentID, record.TokenType, int(record.Amount.Int64()), record.Status,
@@ -85,7 +85,8 @@ func TestQueryMovements(t *testing.T) {
 			TokenTypes:        []token.Type{record.TokenType},
 			TxStatuses:        []driver.TxStatus{record.Status},
 			MovementDirection: driver.Sent,
-			NumRecords:        1})
+			NumRecords:        1,
+		})
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
@@ -104,10 +105,10 @@ func TestQueryTransactions(t *testing.T) {
 		RecipientEID: "bob",
 		TokenType:    token.Type("USD"),
 		Amount:       big.NewInt(100),
-		Status:       driver.TxStatus(3),
+		Status:       driver.Deleted,
 	}
 	output := []driver2.Value{
-		record.TxID, record.ActionType, record.SenderEID, record.RecipientEID, record.TokenType, int(record.Amount.Int64()), record.Status, 0, 0, time.Time{},
+		record.TxID, record.ActionType, record.SenderEID, record.RecipientEID, record.TokenType, int(record.Amount.Int64()), record.Status, nil, nil, time.Time{},
 	}
 	mockDB.
 		ExpectQuery("SELECT TRANSACTIONS.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, " +
@@ -121,8 +122,9 @@ func TestQueryTransactions(t *testing.T) {
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	actualRecord, _ := info.Items.Next()
-	Expect(*actualRecord).To(Equal(record))
+	records, err := iterators.ReadAllValues(info.Items)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(records).To(ConsistOf(record))
 }
 
 func TestGetStatus(t *testing.T) {
@@ -130,8 +132,8 @@ func TestGetStatus(t *testing.T) {
 	db, mockDB, err := sqlmock.New()
 	Expect(err).ToNot(HaveOccurred())
 
-	input := string("1234")
-	output := []driver2.Value{3, string("some_message")}
+	input := "1234"
+	output := []driver2.Value{3, "some_message"}
 
 	mockDB.
 		ExpectQuery("SELECT status, status_message FROM REQUESTS WHERE tx_id = \\$1").
@@ -151,36 +153,37 @@ func TestQueryValidations(t *testing.T) {
 	db, mockDB, err := sqlmock.New()
 	Expect(err).ToNot(HaveOccurred())
 
-	time_from := time.Date(2025, time.June, 8, 10, 0, 0, 0, time.UTC)
-	time_to := time.Date(2025, time.June, 9, 10, 0, 0, 0, time.UTC)
+	timeFrom := time.Date(2025, time.June, 8, 10, 0, 0, 0, time.UTC)
+	timeTo := time.Date(2025, time.June, 9, 10, 0, 0, 0, time.UTC)
 	record := driver.ValidationRecord{
 		TxID:         "1234",
 		TokenRequest: []byte("some request"),
-		Timestamp:    time_from,
-		Status:       driver.TxStatus(3),
+		Timestamp:    timeFrom,
+		Status:       driver.Deleted,
 	}
 	output := []driver2.Value{
-		record.TxID, record.TokenRequest, 0, record.Status, record.Timestamp,
+		record.TxID, record.TokenRequest, nil, record.Status, record.Timestamp,
 	}
 	mockDB.
 		ExpectQuery("SELECT VALIDATIONS.tx_id, REQUESTS.request, metadata, REQUESTS.status, VALIDATIONS.stored_at "+
 			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id "+
 			"WHERE \\(\\(stored_at >= \\$1\\) AND \\(stored_at <= \\$2\\)\\) AND \\(\\(status\\) IN \\(\\(\\$3\\), \\(\\$4\\)\\)\\)").
-		WithArgs(time_from, time_to, 3, 4).
+		WithArgs(timeFrom, timeTo, driver.Deleted, driver.Unknown).
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "metadata", "status", "stored_at"}).AddRow(output...))
 
-	records, err := mockTransactionsStore(db).QueryValidations(context.Background(),
+	it, err := mockTransactionsStore(db).QueryValidations(context.Background(),
 		driver.QueryValidationRecordsParams{
-			From:     &time_from,
-			To:       &time_to,
-			Statuses: []driver.TxStatus{3, 4},
+			From:     &timeFrom,
+			To:       &timeTo,
+			Statuses: []driver.TxStatus{driver.Deleted, driver.Unknown},
 		},
 	)
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	actualRecord, _ := records.Next()
-	Expect(*actualRecord).To(Equal(record))
+	records, err := iterators.ReadAllValues(it)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(records).To(ConsistOf(record))
 }
 
 func TestQueryTokenRequests(t *testing.T) {
@@ -191,26 +194,27 @@ func TestQueryTokenRequests(t *testing.T) {
 	record := driver.TokenRequestRecord{
 		TxID:         "1234",
 		TokenRequest: []byte("some request"),
-		Status:       driver.TxStatus(3),
+		Status:       driver.Deleted,
 	}
 	output := []driver2.Value{
 		record.TxID, record.TokenRequest, record.Status,
 	}
 	mockDB.
 		ExpectQuery("SELECT tx_id, request, status FROM REQUESTS WHERE \\(status\\) IN \\(\\(\\$1\\), \\(\\$2\\)\\)").
-		WithArgs(3, 4).
+		WithArgs(driver.Deleted, driver.Unknown).
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "status"}).AddRow(output...))
 
-	records, err := mockTransactionsStore(db).QueryTokenRequests(context.Background(),
+	it, err := mockTransactionsStore(db).QueryTokenRequests(context.Background(),
 		driver.QueryTokenRequestsParams{
-			Statuses: []driver.TxStatus{3, 4},
+			Statuses: []driver.TxStatus{driver.Deleted, driver.Unknown},
 		},
 	)
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	records_list, _ := iterators.ReadAllPointers[driver.TokenRequestRecord](records)
-	Expect(records_list).To(ConsistOf(&record))
+	records, err := iterators.ReadAllValues[driver.TokenRequestRecord](it)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(records).To(ConsistOf(record))
 }
 
 func TestGetTransactionEndorsementAcks(t *testing.T) {
@@ -225,7 +229,7 @@ func TestGetTransactionEndorsementAcks(t *testing.T) {
 		endorser: "auditor",
 		sigma:    []byte("5678"),
 	}
-	inputID := string("1234")
+	inputID := "1234"
 	output := []driver2.Value{record.endorser, record.sigma}
 
 	mockDB.
