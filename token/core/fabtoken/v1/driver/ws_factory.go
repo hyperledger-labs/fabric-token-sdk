@@ -8,7 +8,7 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
+	setup2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -22,7 +22,7 @@ type WalletServiceFactory struct {
 
 func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.NamedFactory[driver.WalletServiceFactory] {
 	return core.NamedFactory[driver.WalletServiceFactory]{
-		Name:   v1.PublicParameters,
+		Name:   core.DriverIdentifier(setup2.FabTokenDriverName, 1),
 		Driver: &WalletServiceFactory{storageProvider: storageProvider},
 	}
 }
