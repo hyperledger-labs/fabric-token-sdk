@@ -952,16 +952,12 @@ func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte
 	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
 }
 
-func UpdatePublicParamsAndWait(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS, orion bool, nodes ...*token3.NodeReference) {
+func UpdatePublicParamsAndWait(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS, nodes ...*token3.NodeReference) {
 	p := network.Ctx.PlatformsByName["token"]
 	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
 	for _, node := range nodes {
-		if orion {
-			FetchAndUpdatePublicParams(network, node)
-		} else {
-			if node.Id() == "custodian" {
-				continue
-			}
+		if node.Id() == "custodian" {
+			continue
 		}
 		gomega.Eventually(GetPublicParams).WithArguments(network, node).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(gomega.Equal(publicParams))
 	}
@@ -971,13 +967,6 @@ func GetPublicParams(network *integration.Infrastructure, id *token3.NodeReferen
 	pp, err := network.Client(id.ReplicaName()).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParams{}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	return pp.([]byte)
-}
-
-func FetchAndUpdatePublicParams(network *integration.Infrastructure, id *token3.NodeReference) {
-	for _, name := range id.AllNames() {
-		_, err := network.Client(name).CallView("FetchAndUpdatePublicParams", common.JSONMarshall(&views.UpdatePublicParams{}))
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	}
 }
 
 func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReference, wallet string, walletType int) bool {

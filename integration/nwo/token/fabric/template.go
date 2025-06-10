@@ -10,9 +10,8 @@ const (
 	Extension = `
 token:
   # TMS stands for Token Management Service. A TMS is uniquely identified by a network, channel, and 
-  # namespace identifiers. The network identifier should refer to a configure network (Fabric, Orion, and so on).
+  # namespace identifiers. The network identifier should refer to a configure network (Fabric, and so on).
   # The meaning of channel and namespace are network dependant. For Fabric, the meaning is clear.
-  # For Orion, channel is empty and namespace is the DB name to use.
   tms:
     {{ TMSID }}:
       # Network identifier this TMS refers to

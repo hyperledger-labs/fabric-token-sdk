@@ -97,14 +97,6 @@ integration-tests-fabtoken-fabric-t5:
 integration-tests-fabtoken-fabric:
 	cd ./integration/token/fungible/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --tags pkcs11 --label-filter="$(TEST_FILTER)" .
 
-.PHONY: integration-tests-dlog-orion
-integration-tests-dlog-orion:
-	cd ./integration/token/fungible/odlog; ginkgo $(GINKGO_TEST_OPTS) .
-
-.PHONY: integration-tests-fabtoken-orion
-integration-tests-fabtoken-orion:
-	cd ./integration/token/fungible/ofabtoken; ginkgo $(GINKGO_TEST_OPTS) .
-
 .PHONY: integration-tests-update-t1
 integration-tests-update-t1:
 	make integration-tests-update TEST_FILTER="T1"

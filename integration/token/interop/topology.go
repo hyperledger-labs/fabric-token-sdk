@@ -11,10 +11,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
@@ -61,47 +60,6 @@ func HTLCSingleFabricNetworkTopology(opts common.Opts) []api.Topology {
 	}
 
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
-}
-
-func HTLCSingleOrionNetworkTopology(opts common.Opts) []api.Topology {
-	// Orion
-	orionTopology := orion.NewTopology()
-
-	// FSC
-	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging(opts.FSCLogSpec, "")
-	fscTopology.P2PCommunicationType = opts.CommType
-
-	addIssuer(fscTopology).
-		AddOptions(fabric.WithOrganization("Org1"), orion.WithRole("issuer")).
-		AddOptions(opts.ReplicationOpts.For("issuer")...)
-	auditor := addAuditor(fscTopology).
-		AddOptions(fabric.WithOrganization("Org1"), orion.WithRole("auditor")).
-		AddOptions(opts.ReplicationOpts.For("auditor")...)
-	addAlice(fscTopology).
-		AddOptions(fabric.WithOrganization("Org2"), orion.WithRole("alice")).
-		AddOptions(opts.ReplicationOpts.For("alice")...)
-	addBob(fscTopology).
-		AddOptions(fabric.WithOrganization("Org2"), orion.WithRole("bob")).
-		AddOptions(opts.ReplicationOpts.For("bob")...)
-	custodian := addCustodian(fscTopology).
-		AddOptions(opts.ReplicationOpts.For("custodian")...)
-
-	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", opts.DefaultTMSOpts.TokenSDKDriver)
-	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
-	fabric2.SetOrgs(tms, "Org1")
-	tms.AddAuditor(auditor)
-	tms.AddIssuerByID("issuer")
-	orion2.SetCustodian(tms, custodian.Name)
-
-	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
-
-	for _, sdk := range opts.SDKs {
-		fscTopology.AddSDK(sdk)
-	}
-
-	return []api.Topology{orionTopology, tokenTopology, fscTopology}
 }
 
 func HTLCTwoFabricNetworksTopology(opts common.Opts) []api.Topology {
@@ -241,85 +199,6 @@ func HTLCNoCrossClaimTopology(opts common.Opts) []api.Topology {
 	return []api.Topology{f1Topology, f2Topology, tokenTopology, fscTopology}
 }
 
-func HTLCNoCrossClaimWithOrionTopology(opts common.Opts) []api.Topology {
-	// Define two Fabric topologies
-	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
-	f1Topology.EnableIdemix()
-	f1Topology.AddOrganizationsByName("Org1", "Org2")
-	f1Topology.SetNamespaceApproverOrgs("Org1")
-
-	// Orion
-	orionTopology := orion.NewTopology()
-	orionTopology.SetName("beta")
-
-	// FSC
-	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging(opts.FSCLogSpec, "")
-	fscTopology.P2PCommunicationType = opts.CommType
-
-	addIssuer(fscTopology).
-		AddOptions(
-			fabric.WithNetworkOrganization("alpha", "Org1"),
-			fabric.WithNetworkOrganization("beta", "Org3"),
-			orion.WithRole("issuer"),
-		).
-		AddOptions(opts.ReplicationOpts.For("issuer")...)
-	auditor := addAuditor(fscTopology).
-		AddOptions(
-			fabric.WithNetworkOrganization("alpha", "Org1"),
-			fabric.WithNetworkOrganization("beta", "Org3"),
-			orion.WithRole("auditor"),
-		).
-		AddOptions(opts.ReplicationOpts.For("auditor")...)
-	addAlice(fscTopology).
-		AddOptions(
-			fabric.WithNetworkOrganization("alpha", "Org2"),
-			token.WithOwnerIdentity("alice.id2"),
-		).
-		AddOptions(opts.ReplicationOpts.For("alice")...).
-		RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{}).
-		RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{}).
-		RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
-	// TODO Anonymous identity
-	addBob(fscTopology).
-		AddOptions(
-			orion.WithRole("bob"),
-			token.WithOwnerIdentity("bob.id2"),
-		).
-		AddOptions(opts.ReplicationOpts.For("bob")...).
-		RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{}).
-		RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{}).
-		RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{})
-	custodian := addCustodian(fscTopology).
-		AddOptions(opts.ReplicationOpts.For("custodian")...)
-
-	tokenTopology := token.NewTopology()
-	if len(opts.FinalityType) != 0 {
-		tokenTopology.FinalityType = opts.FinalityType
-	}
-
-	// TMS for the Fabric Network
-	tmsFabric := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, opts.DefaultTMSOpts.TokenSDKDriver)
-	common.SetDefaultParams(tmsFabric, opts.DefaultTMSOpts)
-	fabric2.SetOrgs(tmsFabric, "Org1")
-	tmsFabric.AddAuditor(auditor)
-	tmsFabric.AddIssuerByID("issuer")
-
-	// TMS for the Orion Network
-	tmsOrion := tokenTopology.AddTMS(fscTopology.ListNodes("custodian", "auditor", "issuer", "bob"), orionTopology, "", opts.DefaultTMSOpts.TokenSDKDriver)
-	common.SetDefaultParams(tmsOrion, opts.DefaultTMSOpts)
-	tmsOrion.AddAuditor(auditor)
-	tmsOrion.AddIssuerByID("issuer")
-	orion2.SetCustodian(tmsOrion, custodian.Name)
-
-	orionTopology.AddDB(tmsOrion.Namespace, "custodian", "issuer", "auditor", "bob")
-
-	for _, sdk := range opts.SDKs {
-		fscTopology.AddSDK(sdk)
-	}
-	return []api.Topology{f1Topology, orionTopology, tokenTopology, fscTopology}
-}
-
 func addIssuer(fscTopology *fsc.Topology) *node.Node {
 	return fscTopology.AddNodeByName("issuer").
 		AddOptions(
@@ -387,10 +266,4 @@ func addBob(fscTopology *fsc.Topology) *node.Node {
 		RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{}).
 		RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{}).
 		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
-}
-
-func addCustodian(fscTopology *fsc.Topology) *node.Node {
-	custodian := fscTopology.AddNodeByName("custodian").AddOptions(orion.WithRole("custodian"))
-	fscTopology.SetBootstrapNode(custodian)
-	return custodian
 }

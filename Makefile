@@ -2,7 +2,6 @@
 FABRIC_VERSION ?= 2.5.0
 FABRIC_CA_VERSION ?= 1.5.7
 FABRIC_TWO_DIGIT_VERSION = $(shell echo $(FABRIC_VERSION) | cut -d '.' -f 1,2)
-ORION_VERSION=v0.2.10
 
 # need to install fabric binaries outside of fts tree for now (due to chaincode packaging issues)
 FABRIC_BINARY_BASE=$(PWD)/../fabric
@@ -49,7 +48,7 @@ install-softhsm:
 	./ci/scripts/install_softhsm.sh
 
 .PHONY: docker-images
-docker-images: fabric-docker-images orion-server-images monitoring-docker-images testing-docker-images
+docker-images: fabric-docker-images monitoring-docker-images testing-docker-images
 
 .PHONY: testing-docker-images
 testing-docker-images:
@@ -73,12 +72,6 @@ monitoring-docker-images:
 	docker pull jaegertracing/all-in-one:latest
 	docker pull otel/opentelemetry-collector:latest
 
-.PHONY: orion-server-images
-orion-server-images:
-	docker pull orionbcdb/orion-server:$(ORION_VERSION)
-	docker image tag orionbcdb/orion-server:$(ORION_VERSION) orionbcdb/orion-server:latest
-
-
 .PHONY: integration-tests-nft-dlog
 integration-tests-nft-dlog:
 	cd ./integration/token/nft/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
@@ -86,14 +79,6 @@ integration-tests-nft-dlog:
 .PHONY: integration-tests-nft-fabtoken
 integration-tests-nft-fabtoken:
 	cd ./integration/token/nft/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
-
-.PHONY: integration-tests-nft-dlog-orion
-integration-tests-nft-dlog-orion:
-	cd ./integration/token/nft/odlog; ginkgo $(GINKGO_TEST_OPTS) .
-
-.PHONY: integration-tests-nft-fabtoken-orion
-integration-tests-nft-fabtoken-orion:
-	cd ./integration/token/nft/ofabtoken; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-dvp-fabtoken
 integration-tests-dvp-fabtoken:

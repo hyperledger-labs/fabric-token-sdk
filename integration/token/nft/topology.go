@@ -10,32 +10,23 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft/views"
 )
 
 func Topology(opts common.Opts) []api.Topology {
-	var backendNetwork api.Topology
-	backendChannel := ""
-	switch opts.Backend {
-	case "fabric":
-		fabricTopology := fabric.NewDefaultTopology()
-		fabricTopology.EnableIdemix()
-		fabricTopology.AddOrganizationsByName("Org1", "Org2")
-		fabricTopology.SetNamespaceApproverOrgs("Org1")
-		backendNetwork = fabricTopology
-		backendChannel = fabricTopology.Channels[0].Name
-	case "orion":
-		orionTopology := orion.NewTopology()
-		backendNetwork = orionTopology
-	default:
+	if opts.Backend != "fabric" {
 		panic("unknown backend: " + opts.Backend)
 	}
+
+	fabricTopology := fabric.NewDefaultTopology()
+	fabricTopology.EnableIdemix()
+	fabricTopology.AddOrganizationsByName("Org1", "Org2")
+	fabricTopology.SetNamespaceApproverOrgs("Org1")
+	backendChannel := fabricTopology.Channels[0].Name
 
 	// FSC
 	fscTopology := fsc.NewTopology()
@@ -46,7 +37,6 @@ func Topology(opts common.Opts) []api.Topology {
 		AddOptions(
 			fabric.WithOrganization("Org1"),
 			fabric.WithAnonymousIdentity(),
-			orion.WithRole("issuer"),
 			token.WithDefaultIssuerIdentity(false),
 		).
 		AddOptions(opts.ReplicationOpts.For("issuer")...).
@@ -57,7 +47,6 @@ func Topology(opts common.Opts) []api.Topology {
 		AddOptions(
 			fabric.WithOrganization("Org1"),
 			fabric.WithAnonymousIdentity(),
-			orion.WithRole("auditor"),
 			token.WithAuditorIdentity(false),
 		).
 		AddOptions(opts.ReplicationOpts.For("auditor")...).
@@ -67,7 +56,6 @@ func Topology(opts common.Opts) []api.Topology {
 	fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		orion.WithRole("alice"),
 		token.WithOwnerIdentity("alice.id1"),
 	).
 		AddOptions(opts.ReplicationOpts.For("alice")...).
@@ -81,7 +69,6 @@ func Topology(opts common.Opts) []api.Topology {
 		AddOptions(
 			fabric.WithOrganization("Org2"),
 			fabric.WithAnonymousIdentity(),
-			orion.WithRole("bob"),
 			token.WithDefaultOwnerIdentity(),
 			token.WithOwnerIdentity("bob.id1"),
 		).
@@ -93,22 +80,9 @@ func Topology(opts common.Opts) []api.Topology {
 		RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.DefaultTMSOpts.TokenSDKDriver)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, backendChannel, opts.DefaultTMSOpts.TokenSDKDriver)
 	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	fabric2.SetOrgs(tms, "Org1")
-	if opts.Backend == "orion" {
-		// we need to define the custodian
-		custodian := fscTopology.AddNodeByName("custodian").
-			AddOptions(orion.WithRole("custodian")).
-			AddOptions(opts.ReplicationOpts.For("custodian")...)
-		orion2.SetCustodian(tms, custodian.Name)
-		tms.AddNode(custodian)
-
-		// Enable orion sdk on each FSC node
-		orionTopology := backendNetwork.(*orion.Topology)
-		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
-		fscTopology.SetBootstrapNode(custodian)
-	}
 
 	tms.AddAuditor(auditor)
 	tms.AddIssuerByID("issuer")
@@ -117,5 +91,5 @@ func Topology(opts common.Opts) []api.Topology {
 		fscTopology.AddSDK(sdk)
 	}
 
-	return []api.Topology{backendNetwork, tokenTopology, fscTopology}
+	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }

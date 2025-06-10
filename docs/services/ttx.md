@@ -4,7 +4,7 @@ The Token SDK simplifies token transaction assembly with a dedicated service in 
 This service handles the entire transaction lifecycle, from building the transaction to managing its various stages.
 
 Even better, this service is ledger-agnostic.
-Whether you're using Fabric, Orion, or another platform, you can use the same service to assemble token transactions.
+Whether you're using Fabric, or another platform, you can use the same service to assemble token transactions.
 This flexibility is thanks to the `token/services/network` service, which acts as an abstraction layer, hiding the complexities of the underlying ledger technology.
 We'll delve deeper into this service later.
 

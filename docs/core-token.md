@@ -77,7 +77,7 @@ token:
       listenerTimeout: 10s
   tms:
     mytms: # unique name of this token management system
-      network: default # the name of the network this TMS refers to (Fabric, Orion, etc)
+      network: default # the name of the network this TMS refers to (Fabric, etc)
       channel: testchannel # the name of the network's channel this TMS refers to, if applicable
       namespace: tns # the name of the channel's namespace this TMS refers to, if applicable
 
