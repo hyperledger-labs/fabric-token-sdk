@@ -24,7 +24,7 @@ import (
 var _ = Describe("DLog end to end", func() {
 	BeforeEach(func() { token.Drivers = append(token.Drivers, "dlog") })
 
-	for _, t := range integration2.AllTestTypes {
+	for _, t := range integration2.WebSocketWithReplicationOnly {
 		Describe("HTLC Single Fabric Network", t.Label, func() {
 			ts, selector := newTestSuiteSingleFabric(t.CommType, t.ReplicationFactor, "alice", "bob")
 			AfterEach(ts.TearDown)

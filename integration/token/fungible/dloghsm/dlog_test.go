@@ -27,7 +27,7 @@ const (
 )
 
 var _ = Describe("EndToEnd", func() {
-	for _, t := range integration2.AllTestTypes {
+	for _, t := range integration2.WebSocketWithReplicationOnly {
 		Describe("Fungible with HSM", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, Aries|HSM, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)

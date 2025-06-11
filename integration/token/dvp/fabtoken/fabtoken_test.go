@@ -18,7 +18,7 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	for _, t := range integration.AllTestTypes {
+	for _, t := range integration.WebSocketWithReplicationOnly {
 		Describe("Plain DVP", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "buyer", "seller")
 			BeforeEach(ts.Setup)

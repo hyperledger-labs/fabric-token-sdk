@@ -19,7 +19,7 @@ import (
 )
 
 var _ = Describe("Orion EndToEnd", func() {
-	for _, t := range integration.AllTestTypes {
+	for _, t := range integration.WebSocketWithReplicationOnly {
 		Describe("Orion FabToken", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)

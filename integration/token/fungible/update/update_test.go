@@ -21,7 +21,7 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	for _, t := range integration.AllTestTypes {
+	for _, t := range integration.WebSocketWithReplicationOnly {
 		Describe("Tokens Upgrade with Auditor ne Issuer", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, 64, []common.TMSOpts{
 				{

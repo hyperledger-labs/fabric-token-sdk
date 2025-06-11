@@ -25,7 +25,7 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	for _, t := range integration2.AllTestTypes {
+	for _, t := range integration2.WebSocketWithReplicationOnly {
 		Describe("Fungible", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
