@@ -61,7 +61,7 @@ func TestGetWalletIDs(t *testing.T) {
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	Expect(actualWalletIDs[0]).To(Equal(output))
+	Expect(actualWalletIDs).To(ConsistOf(output))
 }
 
 func TestLoadMeta(t *testing.T) {
@@ -102,5 +102,5 @@ func TestIdentityExists(t *testing.T) {
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	Expect(exists).To(Equal(true))
+	Expect(exists).To(BeTrue())
 }
