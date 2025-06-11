@@ -345,7 +345,7 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 	r.Actions.Transfers = append(r.Actions.Transfers, raw)
 	r.Metadata.Transfers = append(r.Metadata.Transfers, transferMetadata)
 
-	return &TransferAction{transfer}, nil
+	return &TransferAction{TransferAction: transfer}, nil
 }
 
 // Redeem appends a redeem action to the request. The action will be prepared using the provided owner wallet.
