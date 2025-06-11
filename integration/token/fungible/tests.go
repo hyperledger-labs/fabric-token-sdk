@@ -468,7 +468,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 
 	// The following RedeemCash doesn't specify the issuer's network id so
 	// it must be preceded by binding this network id with the issuer's signing id
-	// so the endorsement process could automatically idntify the issuer
+	// so the endorsement process could automatically identify the issuer
 	// that needs to sign the Redeem.
 	BindIssuerNetworkAndSigningIdentities(network, issuer, GetIssuerIdentity(GetTMSByNetworkName(network, networkName), issuer.Id()), bob)
 	RedeemCash(network, networkName, bob, "", "USD", 10, auditor, nil)

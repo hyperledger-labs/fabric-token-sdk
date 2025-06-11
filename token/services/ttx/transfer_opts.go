@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	IssuerFSCIdentityKey = "IssuerFSCIdentityKey"
-	IssuerSigningKey     = "IssuerSigningKey"
+	IssuerFSCIdentityKey        = "IssuerFSCIdentityKey"
+	IssuerPublicParamsPublicKey = "IssuerPublicParamsPublicKey"
 )
 
 // WithFSCIssuerIdentity takes an issuer's node Identity
@@ -48,21 +48,21 @@ func GetFSCIssuerIdentityFromOpts(attributes map[interface{}]interface{}) (view.
 	return id, nil
 }
 
-func WithIssuerSigningKey(issuerSigningKey view.Identity) token.TransferOption {
+func WithIssuerPublicParamsPublicKey(issuerSigningKey view.Identity) token.TransferOption {
 	return func(options *token.TransferOptions) error {
 		if options.Attributes == nil {
 			options.Attributes = make(map[interface{}]interface{})
 		}
-		options.Attributes[IssuerSigningKey] = issuerSigningKey
+		options.Attributes[IssuerPublicParamsPublicKey] = issuerSigningKey
 		return nil
 	}
 }
 
-func GetIssuerSigningKeyFromOpts(attributes map[interface{}]interface{}) (view.Identity, error) {
+func GetIssuerPublicParamsPublicKeyFromOpts(attributes map[interface{}]interface{}) (view.Identity, error) {
 	if attributes == nil {
 		return nil, nil
 	}
-	idBoxed, ok := attributes[IssuerSigningKey]
+	idBoxed, ok := attributes[IssuerPublicParamsPublicKey]
 	if !ok {
 		return nil, nil
 	}
