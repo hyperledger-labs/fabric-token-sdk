@@ -10,6 +10,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	crypto "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/pkg/errors"
 )
@@ -92,6 +93,31 @@ func (p *TypeAndSumProof) Deserialize(bytes []byte) error {
 	return nil
 }
 
+func (p *TypeAndSumProof) Validate(curveID math.CurveID) error {
+	if err := math2.CheckElement(p.CommitmentToType, curveID); err != nil {
+		return errors.Wrapf(err, "CommitmentToType is invalid")
+	}
+	if err := math2.CheckZrElements(p.InputBlindingFactors, curveID, uint64(len(p.InputBlindingFactors))); err != nil {
+		return errors.Wrapf(err, "InputBlindingFactors are invalid")
+	}
+	if err := math2.CheckZrElements(p.InputValues, curveID, uint64(len(p.InputValues))); err != nil {
+		return errors.Wrapf(err, "InputValues are invalid")
+	}
+	if err := math2.CheckBaseElement(p.Type, curveID); err != nil {
+		return errors.Wrapf(err, "Type is invalid")
+	}
+	if err := math2.CheckBaseElement(p.TypeBlindingFactor, curveID); err != nil {
+		return errors.Wrapf(err, "TypeBlindingFactor is invalid")
+	}
+	if err := math2.CheckBaseElement(p.EqualityOfSum, curveID); err != nil {
+		return errors.Wrapf(err, "EqualityOfSum is invalid")
+	}
+	if err := math2.CheckBaseElement(p.Challenge, curveID); err != nil {
+		return errors.Wrapf(err, "Challenge is invalid")
+	}
+	return nil
+}
+
 // TypeAndSumWitness contains the secret information used to produce TypeAndSumProof
 type TypeAndSumWitness struct {
 	// inValues carries the values of the inputs
@@ -127,6 +153,22 @@ func NewTypeAndSumWitness(bf *math.Zr, in, out []*token.Metadata, c *math.Curve)
 	return &TypeAndSumWitness{inValues: inValues, outValues: outValues, Type: c.HashToZr([]byte(in[0].Type)), inBlindingFactors: inBF, outBlindingFactors: outBF, typeBlindingFactor: bf}
 }
 
+// TypeAndSumProofRandomness is the randomness used in the generation of TypeAndSumProof
+type TypeAndSumProofRandomness struct {
+	inValues []*math.Zr
+	inBF     []*math.Zr
+	ttype    *math.Zr
+	typeBF   *math.Zr
+	sumBF    *math.Zr
+}
+
+// TypeAndSumProofCommitments are commitments to the randomness used in TypeAndSumProof
+type TypeAndSumProofCommitments struct {
+	Inputs           []*math.G1
+	Sum              *math.G1
+	CommitmentToType *math.G1
+}
+
 // TypeAndSumProver produces a TypeAndSumProof proof
 type TypeAndSumProver struct {
 	// PedParams corresponds to the generators used to compute Pedersen commitments
@@ -148,41 +190,6 @@ type TypeAndSumProver struct {
 // NewTypeAndSumProver returns a NewTypeAndSumProver as a function of the passed arguments
 func NewTypeAndSumProver(witness *TypeAndSumWitness, pp []*math.G1, inputs []*math.G1, outputs []*math.G1, comType *math.G1, c *math.Curve) *TypeAndSumProver {
 	return &TypeAndSumProver{witness: witness, CommitmentToType: comType, Inputs: inputs, Outputs: outputs, Curve: c, PedParams: pp}
-}
-
-// NewTypeAndSumVerifier returns a TypeAndSumVerifier as a function of the passed arguments
-func NewTypeAndSumVerifier(pp []*math.G1, inputs []*math.G1, outputs []*math.G1, c *math.Curve) *TypeAndSumVerifier {
-	return &TypeAndSumVerifier{Inputs: inputs, Outputs: outputs, PedParams: pp, Curve: c}
-}
-
-// TypeAndSumVerifier checks the validity of TypeAndSumProof
-type TypeAndSumVerifier struct {
-	// PedParams corresponds to the generators used to compute Pedersen commitments
-	// (g_1, g_2, h)
-	PedParams []*math.G1
-	// Curve is the elliptic curve in which Pedersen commitments are computed
-	Curve *math.Curve
-	// Inputs are Pedersen commitments to (Type, Value) of the inputs to be spent
-	Inputs []*math.G1
-	// Outputs are Pedersen commitments to (Type, Value) of the outputs to be created
-	// after the transfer
-	Outputs []*math.G1
-}
-
-// TypeAndSumProofRandomness is the randomness used in the generation of TypeAndSumProof
-type TypeAndSumProofRandomness struct {
-	inValues []*math.Zr
-	inBF     []*math.Zr
-	ttype    *math.Zr
-	typeBF   *math.Zr
-	sumBF    *math.Zr
-}
-
-// TypeAndSumProofCommitments are commitments to the randomness used in TypeAndSumProof
-type TypeAndSumProofCommitments struct {
-	Inputs           []*math.G1
-	Sum              *math.G1
-	CommitmentToType *math.G1
 }
 
 // Prove returns a serialized TypeAndSumProof proof
@@ -224,56 +231,6 @@ func (p *TypeAndSumProver) Prove() (*TypeAndSumProof, error) {
 	}
 
 	return stp, nil
-}
-
-// Verify returns an error when TypeAndSumProof is not a valid
-func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
-	if stp.TypeBlindingFactor == nil || stp.Type == nil || stp.CommitmentToType == nil || stp.EqualityOfSum == nil {
-		return errors.New("invalid sum and type proof")
-	}
-
-	inputs := make([]*math.G1, len(v.Inputs))
-	outputs := make([]*math.G1, len(v.Outputs))
-	sum := v.Curve.NewG1()
-
-	inComs := make([]*math.G1, len(inputs))
-
-	for i := 0; i < len(v.Inputs); i++ {
-		if stp.InputValues[i] == nil {
-			return errors.New("invalid sum and type proof")
-		}
-		inputs[i] = v.Inputs[i].Copy()
-		inputs[i].Sub(stp.CommitmentToType)
-		sum.Add(inputs[i])
-
-		inComs[i] = v.PedParams[1].Mul(stp.InputValues[i])
-		inComs[i].Add(v.PedParams[2].Mul(stp.InputBlindingFactors[i]))
-		inComs[i].Sub(inputs[i].Mul(stp.Challenge))
-	}
-
-	for i := 0; i < len(v.Outputs); i++ {
-		outputs[i] = v.Outputs[i].Copy()
-		outputs[i].Sub(stp.CommitmentToType)
-		sum.Sub(outputs[i])
-	}
-
-	sumCom := v.PedParams[2].Mul(stp.EqualityOfSum)
-	sumCom.Sub(sum.Mul(stp.Challenge))
-
-	typeCom := v.PedParams[0].Mul(stp.Type)
-	typeCom.Add(v.PedParams[2].Mul(stp.TypeBlindingFactor))
-	typeCom.Sub(stp.CommitmentToType.Mul(stp.Challenge))
-
-	raw, err := crypto.GetG1Array(inComs, []*math.G1{typeCom, sumCom}, inputs, outputs, []*math.G1{stp.CommitmentToType, sum}).Bytes()
-	if err != nil {
-		return errors.Wrap(err, "cannot verify sum and type proof")
-	}
-	// compute challenge
-	chal := v.Curve.HashToZr(raw)
-	if !chal.Equals(stp.Challenge) {
-		return errors.New("invalid sum and type proof")
-	}
-	return nil
 }
 
 // computeProof compute the proof as a function of the passed randomness and challenge
@@ -353,4 +310,73 @@ func (p *TypeAndSumProver) computeCommitments() (*TypeAndSumProofCommitments, *T
 	commitments.Sum = p.PedParams[2].Mul(randomness.sumBF)
 
 	return commitments, randomness, nil
+}
+
+// TypeAndSumVerifier checks the validity of TypeAndSumProof
+type TypeAndSumVerifier struct {
+	// PedParams corresponds to the generators used to compute Pedersen commitments
+	// (g_1, g_2, h)
+	PedParams []*math.G1
+	// Curve is the elliptic curve in which Pedersen commitments are computed
+	Curve *math.Curve
+	// Inputs are Pedersen commitments to (Type, Value) of the inputs to be spent
+	Inputs []*math.G1
+	// Outputs are Pedersen commitments to (Type, Value) of the outputs to be created
+	// after the transfer
+	Outputs []*math.G1
+}
+
+// NewTypeAndSumVerifier returns a TypeAndSumVerifier as a function of the passed arguments
+func NewTypeAndSumVerifier(pp []*math.G1, inputs []*math.G1, outputs []*math.G1, c *math.Curve) *TypeAndSumVerifier {
+	return &TypeAndSumVerifier{Inputs: inputs, Outputs: outputs, PedParams: pp, Curve: c}
+}
+
+// Verify returns an error when TypeAndSumProof is not a valid
+func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
+	if stp.TypeBlindingFactor == nil || stp.Type == nil || stp.CommitmentToType == nil || stp.EqualityOfSum == nil {
+		return errors.New("invalid sum and type proof")
+	}
+
+	inputs := make([]*math.G1, len(v.Inputs))
+	outputs := make([]*math.G1, len(v.Outputs))
+	sum := v.Curve.NewG1()
+
+	inComs := make([]*math.G1, len(inputs))
+
+	for i := 0; i < len(v.Inputs); i++ {
+		if stp.InputValues[i] == nil {
+			return errors.New("invalid sum and type proof")
+		}
+		inputs[i] = v.Inputs[i].Copy()
+		inputs[i].Sub(stp.CommitmentToType)
+		sum.Add(inputs[i])
+
+		inComs[i] = v.PedParams[1].Mul(stp.InputValues[i])
+		inComs[i].Add(v.PedParams[2].Mul(stp.InputBlindingFactors[i]))
+		inComs[i].Sub(inputs[i].Mul(stp.Challenge))
+	}
+
+	for i := 0; i < len(v.Outputs); i++ {
+		outputs[i] = v.Outputs[i].Copy()
+		outputs[i].Sub(stp.CommitmentToType)
+		sum.Sub(outputs[i])
+	}
+
+	sumCom := v.PedParams[2].Mul(stp.EqualityOfSum)
+	sumCom.Sub(sum.Mul(stp.Challenge))
+
+	typeCom := v.PedParams[0].Mul(stp.Type)
+	typeCom.Add(v.PedParams[2].Mul(stp.TypeBlindingFactor))
+	typeCom.Sub(stp.CommitmentToType.Mul(stp.Challenge))
+
+	raw, err := crypto.GetG1Array(inComs, []*math.G1{typeCom, sumCom}, inputs, outputs, []*math.G1{stp.CommitmentToType, sum}).Bytes()
+	if err != nil {
+		return errors.Wrap(err, "cannot verify sum and type proof")
+	}
+	// compute challenge
+	chal := v.Curve.HashToZr(raw)
+	if !chal.Equals(stp.Challenge) {
+		return errors.New("invalid sum and type proof")
+	}
+	return nil
 }

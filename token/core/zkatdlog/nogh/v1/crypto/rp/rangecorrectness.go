@@ -39,6 +39,19 @@ func (r *RangeCorrectness) Deserialize(raw []byte) error {
 	return nil
 }
 
+func (r *RangeCorrectness) Validate(curve math.CurveID) error {
+	for i, proof := range r.Proofs {
+		if proof == nil {
+			return errors.Errorf("invalid range proof: nil proof at index %d", i)
+		}
+		err := proof.Validate(curve)
+		if err != nil {
+			return errors.Wrapf(err, "invalid range proof at index %d", i)
+		}
+	}
+	return nil
+}
+
 type RangeCorrectnessProver struct {
 	Commitments        []*math.G1
 	Values             []uint64
