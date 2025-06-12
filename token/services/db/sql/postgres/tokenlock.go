@@ -40,7 +40,7 @@ func NewTokenLockStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenL
 }
 
 func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration) error {
-	_, err := db.LogStaleLocks(ctx, leaseExpiry)
+	_, err := db.logStaleLocks(ctx, leaseExpiry)
 	if err != nil {
 		db.Logger.Warnf("Could not log stale locks: %v", err)
 	}
@@ -64,7 +64,7 @@ func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration
 	return err
 }
 
-func (db *TokenLockStore) LogStaleLocks(ctx context.Context, leaseExpiry time.Duration) ([]LockEntry, error) {
+func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Duration) ([]LockEntry, error) {
 	if !db.Logger.IsEnabledFor(zapcore.InfoLevel) {
 		return nil, nil
 	}
