@@ -23,11 +23,11 @@ type TransferService struct {
 		result1 driver.TransferAction
 		result2 error
 	}
-	TransferStub        func(context.Context, string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error)
+	TransferStub        func(context.Context, driver.TokenRequestAnchor, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error)
 	transferMutex       sync.RWMutex
 	transferArgsForCall []struct {
 		arg1 context.Context
-		arg2 string
+		arg2 driver.TokenRequestAnchor
 		arg3 driver.OwnerWallet
 		arg4 []*token.ID
 		arg5 []*token.Token
@@ -43,11 +43,12 @@ type TransferService struct {
 		result2 *driver.TransferMetadata
 		result3 error
 	}
-	VerifyTransferStub        func(driver.TransferAction, []*driver.TransferOutputMetadata) error
+	VerifyTransferStub        func(context.Context, driver.TransferAction, []*driver.TransferOutputMetadata) error
 	verifyTransferMutex       sync.RWMutex
 	verifyTransferArgsForCall []struct {
-		arg1 driver.TransferAction
-		arg2 []*driver.TransferOutputMetadata
+		arg1 context.Context
+		arg2 driver.TransferAction
+		arg3 []*driver.TransferOutputMetadata
 	}
 	verifyTransferReturns struct {
 		result1 error
@@ -128,7 +129,7 @@ func (fake *TransferService) DeserializeTransferActionReturnsOnCall(i int, resul
 	}{result1, result2}
 }
 
-func (fake *TransferService) Transfer(arg1 context.Context, arg2 string, arg3 driver.OwnerWallet, arg4 []*token.ID, arg5 []*token.Token, arg6 *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (fake *TransferService) Transfer(arg1 context.Context, arg2 driver.TokenRequestAnchor, arg3 driver.OwnerWallet, arg4 []*token.ID, arg5 []*token.Token, arg6 *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	var arg4Copy []*token.ID
 	if arg4 != nil {
 		arg4Copy = make([]*token.ID, len(arg4))
@@ -143,7 +144,7 @@ func (fake *TransferService) Transfer(arg1 context.Context, arg2 string, arg3 dr
 	ret, specificReturn := fake.transferReturnsOnCall[len(fake.transferArgsForCall)]
 	fake.transferArgsForCall = append(fake.transferArgsForCall, struct {
 		arg1 context.Context
-		arg2 string
+		arg2 driver.TokenRequestAnchor
 		arg3 driver.OwnerWallet
 		arg4 []*token.ID
 		arg5 []*token.Token
@@ -168,13 +169,13 @@ func (fake *TransferService) TransferCallCount() int {
 	return len(fake.transferArgsForCall)
 }
 
-func (fake *TransferService) TransferCalls(stub func(context.Context, string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error)) {
+func (fake *TransferService) TransferCalls(stub func(context.Context, driver.TokenRequestAnchor, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error)) {
 	fake.transferMutex.Lock()
 	defer fake.transferMutex.Unlock()
 	fake.TransferStub = stub
 }
 
-func (fake *TransferService) TransferArgsForCall(i int) (context.Context, string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) {
+func (fake *TransferService) TransferArgsForCall(i int) (context.Context, driver.TokenRequestAnchor, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) {
 	fake.transferMutex.RLock()
 	defer fake.transferMutex.RUnlock()
 	argsForCall := fake.transferArgsForCall[i]
@@ -210,24 +211,25 @@ func (fake *TransferService) TransferReturnsOnCall(i int, result1 driver.Transfe
 	}{result1, result2, result3}
 }
 
-func (fake *TransferService) VerifyTransfer(ctx context.Context, arg1 driver.TransferAction, arg2 []*driver.TransferOutputMetadata) error {
-	var arg2Copy []*driver.TransferOutputMetadata
-	if arg2 != nil {
-		arg2Copy = make([]*driver.TransferOutputMetadata, len(arg2))
-		copy(arg2Copy, arg2)
+func (fake *TransferService) VerifyTransfer(arg1 context.Context, arg2 driver.TransferAction, arg3 []*driver.TransferOutputMetadata) error {
+	var arg3Copy []*driver.TransferOutputMetadata
+	if arg3 != nil {
+		arg3Copy = make([]*driver.TransferOutputMetadata, len(arg3))
+		copy(arg3Copy, arg3)
 	}
 	fake.verifyTransferMutex.Lock()
 	ret, specificReturn := fake.verifyTransferReturnsOnCall[len(fake.verifyTransferArgsForCall)]
 	fake.verifyTransferArgsForCall = append(fake.verifyTransferArgsForCall, struct {
-		arg1 driver.TransferAction
-		arg2 []*driver.TransferOutputMetadata
-	}{arg1, arg2Copy})
+		arg1 context.Context
+		arg2 driver.TransferAction
+		arg3 []*driver.TransferOutputMetadata
+	}{arg1, arg2, arg3Copy})
 	stub := fake.VerifyTransferStub
 	fakeReturns := fake.verifyTransferReturns
-	fake.recordInvocation("VerifyTransfer", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("VerifyTransfer", []interface{}{arg1, arg2, arg3Copy})
 	fake.verifyTransferMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -241,17 +243,17 @@ func (fake *TransferService) VerifyTransferCallCount() int {
 	return len(fake.verifyTransferArgsForCall)
 }
 
-func (fake *TransferService) VerifyTransferCalls(stub func(driver.TransferAction, []*driver.TransferOutputMetadata) error) {
+func (fake *TransferService) VerifyTransferCalls(stub func(context.Context, driver.TransferAction, []*driver.TransferOutputMetadata) error) {
 	fake.verifyTransferMutex.Lock()
 	defer fake.verifyTransferMutex.Unlock()
 	fake.VerifyTransferStub = stub
 }
 
-func (fake *TransferService) VerifyTransferArgsForCall(i int) (driver.TransferAction, []*driver.TransferOutputMetadata) {
+func (fake *TransferService) VerifyTransferArgsForCall(i int) (context.Context, driver.TransferAction, []*driver.TransferOutputMetadata) {
 	fake.verifyTransferMutex.RLock()
 	defer fake.verifyTransferMutex.RUnlock()
 	argsForCall := fake.verifyTransferArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *TransferService) VerifyTransferReturns(result1 error) {

@@ -50,5 +50,5 @@ type Validator interface {
 	// VerifyTokenRequestFromRaw verifies the passed marshalled token request against the passed ledger and anchor.
 	// The function returns additionally a map that contains information about the token request. The content of this map
 	// is driver-dependant
-	VerifyTokenRequestFromRaw(ctx context.Context, getState GetStateFnc, anchor string, raw []byte) ([]interface{}, ValidationAttributes, error)
+	VerifyTokenRequestFromRaw(ctx context.Context, getState GetStateFnc, anchor TokenRequestAnchor, raw []byte) ([]interface{}, ValidationAttributes, error)
 }

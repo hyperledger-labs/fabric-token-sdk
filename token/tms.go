@@ -64,13 +64,13 @@ func (t *ManagementService) Namespace() string {
 }
 
 // NewRequest returns a new Token Request whose anchor is the passed id
-func (t *ManagementService) NewRequest(id string) (*Request, error) {
+func (t *ManagementService) NewRequest(id RequestAnchor) (*Request, error) {
 	return NewRequest(t, id), nil
 }
 
 // NewRequestFromBytes returns a new Token Request for the passed anchor, and whose actions and metadata are
 // unmarshalled from the passed bytes
-func (t *ManagementService) NewRequestFromBytes(anchor string, actions []byte, meta []byte) (*Request, error) {
+func (t *ManagementService) NewRequestFromBytes(anchor RequestAnchor, actions []byte, meta []byte) (*Request, error) {
 	return NewRequestFromBytes(t, anchor, actions, meta)
 }
 

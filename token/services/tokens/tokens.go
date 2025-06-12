@@ -60,7 +60,7 @@ type Service struct {
 	RequestsCache Cache
 }
 
-func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID string, request *token.Request) (err error) {
+func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.RequestAnchor, request *token.Request) (err error) {
 	if request == nil {
 		logger.DebugfContext(ctx, "transaction [%s], no request found, skip it", txID)
 		return nil
@@ -70,7 +70,7 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID string, re
 		return nil
 	}
 
-	exists, err := t.Storage.TransactionExists(ctx, txID)
+	exists, err := t.Storage.TransactionExists(ctx, string(txID))
 	if err != nil {
 		logger.ErrorfContext(ctx, "transaction [%s], failed to check existence in db [%s]", txID, err)
 		return errors.WithMessagef(err, "transaction [%s], failed to check existence in db", txID)
@@ -108,7 +108,7 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID string, re
 		}
 	}
 
-	err = ts.DeleteTokens(ctx, txID, toSpend)
+	err = ts.DeleteTokens(ctx, string(txID), toSpend)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 	}
@@ -121,7 +121,7 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID string, re
 	return nil
 }
 
-func (t *Service) AppendRaw(ctx context.Context, tmsID token.TMSID, txID string, requestRaw []byte) (err error) {
+func (t *Service) AppendRaw(ctx context.Context, tmsID token.TMSID, txID token.RequestAnchor, requestRaw []byte) (err error) {
 	logger.Debugf("get tms for [%s]", txID)
 	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
 	if err != nil {
@@ -143,7 +143,7 @@ func (t *Service) CacheRequest(ctx context.Context, tmsID token.TMSID, request *
 	}
 	logger.DebugfContext(ctx, "cache request [%s]", request.ID())
 	// append to cache
-	t.RequestsCache.Add(request.Anchor, &CacheEntry{
+	t.RequestsCache.Add(string(request.Anchor), &CacheEntry{
 		Request:  request,
 		ToSpend:  toSpend,
 		ToAppend: toAppend,
@@ -167,7 +167,7 @@ func (t *Service) AppendTransaction(ctx context.Context, tx Transaction) (err er
 		Network:   tx.Network(),
 		Channel:   tx.Channel(),
 		Namespace: tx.Namespace(),
-	}, tx.ID(), tx.Request())
+	}, token.RequestAnchor(tx.ID()), tx.Request())
 }
 
 // StorePublicParams stores the passed public parameters in the token db
@@ -317,43 +317,43 @@ func (t *Service) deleteTokens(ctx context.Context, network *network.Network, tm
 	return toDelete, nil
 }
 
-func (t *Service) getActions(ctx context.Context, tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
+func (t *Service) getActions(ctx context.Context, tmsID token.TMSID, anchor token.RequestAnchor, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
 	// check the cache first
-	entry, ok := t.RequestsCache.Get(txID)
+	entry, ok := t.RequestsCache.Get(string(anchor))
 	if ok {
 		return entry.ToSpend, entry.ToAppend, nil
 	}
 	// extract
-	return t.extractActions(ctx, tmsID, txID, request)
+	return t.extractActions(ctx, tmsID, anchor, request)
 }
 
-func (t *Service) extractActions(ctx context.Context, tmsID token.TMSID, txID string, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
+func (t *Service) extractActions(ctx context.Context, tmsID token.TMSID, anchor token.RequestAnchor, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
 	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
 	}
 
-	logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
+	logger.Debugf("transaction [%s on (%s)] is known, extract tokens", anchor, tms.ID())
 	pp := tms.PublicParametersManager().PublicParameters()
 	graphHiding := pp.GraphHiding()
 	precision := pp.Precision()
 	auth := tms.Authorization()
 	auditorFlag := auth.AmIAnAuditor()
 	if auditorFlag {
-		logger.Debugf("transaction [%s], I must be the auditor", txID)
+		logger.Debugf("transaction [%s], I must be the auditor", anchor)
 	}
 	md, err := request.GetMetadata()
 	if err != nil {
-		logger.Debugf("transaction [%s], failed to get metadata [%s]", txID, err)
-		return nil, nil, errors.WithMessagef(err, "transaction [%s], failed to get request metadata", txID)
+		logger.Debugf("transaction [%s], failed to get metadata [%s]", anchor, err)
+		return nil, nil, errors.WithMessagef(err, "transaction [%s], failed to get request metadata", anchor)
 	}
 
 	is, os, err := request.InputsAndOutputsNoRecipients(ctx)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get request's outputs")
 	}
-	toSpend, toAppend, err := t.parse(ctx, auth, txID, md, is, os, auditorFlag, precision, graphHiding)
-	logger.Debugf("transaction [%s] parsed [%d] inputs and [%d] outputs", txID, len(toSpend), len(toAppend))
+	toSpend, toAppend, err := t.parse(ctx, auth, anchor, md, is, os, auditorFlag, precision, graphHiding)
+	logger.Debugf("transaction [%s] parsed [%d] inputs and [%d] outputs", anchor, len(toSpend), len(toAppend))
 	return toSpend, toAppend, err
 }
 
@@ -361,7 +361,7 @@ func (t *Service) extractActions(ctx context.Context, tmsID token.TMSID, txID st
 func (t *Service) parse(
 	ctx context.Context,
 	auth driver.Authorization,
-	txID string,
+	requestAnchor token.RequestAnchor,
 	md MetaData,
 	is *token.InputStream,
 	os *token.OutputStream,
@@ -371,19 +371,19 @@ func (t *Service) parse(
 ) (toSpend []*token2.ID, toAppend []TokenToAppend, err error) {
 	if graphHiding {
 		ids := md.SpentTokenID()
-		logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
+		logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", requestAnchor, ids)
 		toSpend = append(toSpend, ids...)
 	}
 
-	logger.Debugf("parse [%d] inputs and [%d] outputs from [%s]", is.Count(), os.Count(), txID)
+	logger.Debugf("parse [%d] inputs and [%d] outputs from [%s]", is.Count(), os.Count(), requestAnchor)
 
 	// parse the inputs
 	for _, input := range is.Inputs() {
 		if input.Id == nil {
-			logger.Debugf("transaction [%s] found an input that is not mine, skip it", txID)
+			logger.Debugf("transaction [%s] found an input that is not mine, skip it", requestAnchor)
 			continue
 		}
-		logger.Debugf("transaction [%s] delete input [%s]", txID, input.Id)
+		logger.Debugf("transaction [%s] delete input [%s]", requestAnchor, input.Id)
 		toSpend = append(toSpend, input.Id)
 	}
 
@@ -392,7 +392,7 @@ func (t *Service) parse(
 
 		// if this is a redeem, then skip
 		if len(output.Token.Owner) == 0 {
-			logger.Debugf("output [%s:%d] is a redeem", txID, output.Index)
+			logger.Debugf("output [%s:%d] is a redeem", requestAnchor, output.Index)
 			continue
 		}
 
@@ -401,27 +401,27 @@ func (t *Service) parse(
 		ownerWalletID, ids, mine := auth.IsMine(ctx, &output.Token)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			if mine {
-				logger.Debugf("transaction [%s], found a token and it is mine with [%s][%v]", txID, ownerWalletID, ids)
+				logger.Debugf("transaction [%s], found a token and it is mine with [%s][%v]", requestAnchor, ownerWalletID, ids)
 			} else {
-				logger.Debugf("transaction [%s], found a token and it is NOT mine", txID)
+				logger.Debugf("transaction [%s], found a token and it is NOT mine", requestAnchor)
 			}
 			if issuerFlag {
-				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
+				logger.Debugf("transaction [%s], found a token and I have issued it", requestAnchor)
 			}
-			logger.Debugf("store token [%s:%d][%s]", txID, output.Index, hash.Hashable(output.LedgerOutput))
+			logger.Debugf("store token [%s:%d][%s]", requestAnchor, output.Index, hash.Hashable(output.LedgerOutput))
 		}
 		if !mine && !auditorFlag && !issuerFlag {
-			logger.Debugf("transaction [%s], discarding token, not mine, not an auditor, not an issuer", txID)
+			logger.Debugf("transaction [%s], discarding token, not mine, not an auditor, not an issuer", requestAnchor)
 			continue
 		}
 
 		ownerType, ownerIdentity, err := auth.OwnerType(output.Token.Owner)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to extract owner type for token [%s:%d]", txID, output.Index)
+			return nil, nil, errors.Wrapf(err, "failed to extract owner type for token [%s:%d]", requestAnchor, output.Index)
 		}
 
 		tta := TokenToAppend{
-			txID:                  txID,
+			txID:                  string(requestAnchor),
 			index:                 output.Index,
 			tok:                   &output.Token,
 			tokenOnLedger:         output.LedgerOutput,
@@ -442,7 +442,7 @@ func (t *Service) parse(
 		toAppend = append(toAppend, tta)
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("done parsing write key [%s]", output.ID(txID))
+			logger.Debugf("done parsing write key [%s]", output.ID(requestAnchor))
 		}
 	}
 	return

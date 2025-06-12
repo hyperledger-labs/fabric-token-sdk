@@ -22,6 +22,11 @@ const (
 	ProtocolV1 = 1
 )
 
+type (
+	// TokenRequestAnchor models the anchor of a token request
+	TokenRequestAnchor string
+)
+
 type AuditorSignature struct {
 	Identity  Identity
 	Signature []byte

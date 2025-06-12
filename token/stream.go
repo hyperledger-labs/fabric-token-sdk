@@ -49,8 +49,8 @@ type Output struct {
 	Issuer driver.Identity
 }
 
-func (o Output) ID(txID string) *token.ID {
-	return &token.ID{TxId: txID, Index: o.Index}
+func (o Output) ID(anchor RequestAnchor) *token.ID {
+	return &token.ID{TxId: string(anchor), Index: o.Index}
 }
 
 // OutputStream models a stream over a set of outputs (Output).

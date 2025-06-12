@@ -91,7 +91,7 @@ func TestTransactionRecords(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.TransactionRecord{
 		{
-			TxID:         input.Anchor,
+			TxID:         string(input.Anchor),
 			ActionType:   driver.Transfer,
 			SenderEID:    "alice",
 			RecipientEID: "bob",
@@ -111,7 +111,7 @@ func TestTransactionRecords(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.TransactionRecord{
 		{
-			TxID:         input.Anchor,
+			TxID:         string(input.Anchor),
 			ActionType:   driver.Transfer,
 			SenderEID:    "alice",
 			RecipientEID: "bob",
@@ -121,7 +121,7 @@ func TestTransactionRecords(t *testing.T) {
 			Status:       driver.Pending,
 		},
 		{
-			TxID:         input.Anchor,
+			TxID:         string(input.Anchor),
 			ActionType:   driver.Transfer,
 			SenderEID:    "alice",
 			RecipientEID: "alice",
@@ -139,7 +139,7 @@ func TestTransactionRecords(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.TransactionRecord{
 		{
-			TxID:         input.Anchor,
+			TxID:         string(input.Anchor),
 			ActionType:   driver.Issue,
 			SenderEID:    "",
 			RecipientEID: "bob",
@@ -156,7 +156,7 @@ func TestTransactionRecords(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.TransactionRecord{
 		{
-			TxID:         input.Anchor,
+			TxID:         string(input.Anchor),
 			ActionType:   driver.Redeem,
 			SenderEID:    "alice",
 			RecipientEID: "",
@@ -177,7 +177,7 @@ func TestMovementRecords(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{
-			TxID:         input.Anchor,
+			TxID:         string(input.Anchor),
 			EnrollmentID: "alice",
 			TokenType:    "TOK",
 			Amount:       big.NewInt(-10),
@@ -185,7 +185,7 @@ func TestMovementRecords(t *testing.T) {
 			Status:       driver.Pending,
 		},
 		{
-			TxID:         input.Anchor,
+			TxID:         string(input.Anchor),
 			EnrollmentID: "bob",
 			TokenType:    "TOK",
 			Amount:       big.NewInt(10),
@@ -199,7 +199,7 @@ func TestMovementRecords(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{
-			TxID:         input.Anchor,
+			TxID:         string(input.Anchor),
 			EnrollmentID: "alice",
 			TokenType:    "TOK",
 			Amount:       big.NewInt(-10),
@@ -207,7 +207,7 @@ func TestMovementRecords(t *testing.T) {
 			Status:       driver.Pending,
 		},
 		{
-			TxID:         input.Anchor,
+			TxID:         string(input.Anchor),
 			EnrollmentID: "bob",
 			TokenType:    "TOK",
 			Amount:       big.NewInt(10),
@@ -223,7 +223,7 @@ func TestMovementRecords(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{
-			TxID:         input.Anchor,
+			TxID:         string(input.Anchor),
 			EnrollmentID: "bob",
 			TokenType:    "TOK",
 			Amount:       big.NewInt(10),
@@ -238,7 +238,7 @@ func TestMovementRecords(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{
-			TxID:         input.Anchor,
+			TxID:         string(input.Anchor),
 			EnrollmentID: "alice",
 			TokenType:    "TOK",
 			Amount:       big.NewInt(-10),

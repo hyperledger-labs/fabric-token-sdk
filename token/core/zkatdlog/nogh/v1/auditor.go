@@ -55,8 +55,8 @@ func NewAuditorService(
 }
 
 // AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
-func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.TokenRequest, metadata *driver.TokenRequestMetadata, txID string) error {
-	s.Logger.DebugfContext(ctx, "[%s] check token request validity, number of transfer actions [%d]...", txID, len(metadata.Transfers))
+func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.TokenRequest, metadata *driver.TokenRequestMetadata, anchor driver.TokenRequestAnchor) error {
+	s.Logger.DebugfContext(ctx, "[%s] check token request validity, number of transfer actions [%d]...", anchor, len(metadata.Transfers))
 
 	actionDes := &validator.ActionDeserializer{
 		PublicParams: s.PublicParametersManager.PublicParams(ctx),
@@ -68,7 +68,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 
 	tokenIDs := make([]*token2.ID, 0)
 	for i, transfer := range metadata.Transfers {
-		s.Logger.Debugf("[%s] transfer action [%d] contains [%d] inputs", txID, i, len(transfer.Inputs))
+		s.Logger.Debugf("[%s] transfer action [%d] contains [%d] inputs", anchor, i, len(transfer.Inputs))
 		tokenIDs = append(tokenIDs, transfer.TokenIDs()...)
 	}
 
@@ -76,7 +76,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	// if err != nil {
 	// 	return errors.Wrapf(err, "failed getting token outputs to perform auditor check")
 	// }
-	s.Logger.DebugfContext(ctx, "loaded [%d] corresponding inputs for TX [%s]", len(tokenIDs), txID)
+	s.Logger.DebugfContext(ctx, "loaded [%d] corresponding inputs for TX [%s]", len(tokenIDs), anchor)
 
 	inputTokens := make([][]*token.Token, len(metadata.Transfers))
 	for i, transfer := range transfers {
@@ -98,7 +98,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 		request,
 		metadata,
 		inputTokens,
-		txID,
+		anchor,
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to perform auditor check")

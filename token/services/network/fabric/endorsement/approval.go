@@ -238,7 +238,12 @@ func (r *RequestApprovalResponderView) validate(
 		return nil, nil, errors.WithMessagef(err, "failed to get validator [%s:%s]", tms.Network(), tms.Channel())
 	}
 	logger.Debugf("Unmarshal and verify with metadata for TX [%s]", tx.ID())
-	actions, meta, err := validator.UnmarshallAndVerifyWithMetadata(context.Context(), token2.NewLedgerFromGetter(getState), anchor, requestRaw)
+	actions, meta, err := validator.UnmarshallAndVerifyWithMetadata(
+		context.Context(),
+		token2.NewLedgerFromGetter(getState),
+		token2.RequestAnchor(anchor),
+		requestRaw,
+	)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to verify token request for [%s]", tx.ID())
 	}

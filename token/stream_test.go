@@ -40,7 +40,7 @@ func TestOutput_ID(t *testing.T) {
 	}
 	expectedID := &token.ID{TxId: txID, Index: index}
 
-	assert.Equal(t, expectedID, output.ID(txID))
+	assert.Equal(t, expectedID, output.ID(RequestAnchor(txID)))
 }
 
 func TestOutputStream_Filter(t *testing.T) {

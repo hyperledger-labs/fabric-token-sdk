@@ -29,7 +29,7 @@ func AssertTokens(sp token.ServiceProvider, tx *ttx.Transaction, outputs *token.
 	db, err := tokendb.GetByTMSId(sp, tx.TokenService().ID())
 	assert.NoError(err, "failed to get token db for [%s]", tx.TokenService().ID())
 	for _, output := range outputs.Outputs() {
-		tokenID := output.ID(tx.ID())
+		tokenID := output.ID(token.RequestAnchor(tx.ID()))
 		if output.Owner.Equal(id) || tx.TokenService().SigService().IsMe(ctx, output.Owner) {
 			// check it exists
 			toks, err := db.GetTokens(ctx, tokenID)
