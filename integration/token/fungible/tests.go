@@ -27,6 +27,7 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/dlogstress/support"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	token4 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -359,6 +360,12 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	RegisterIssuerIdentity(network, issuer, "newIssuerWallet", newIssuerWalletPath)
 	// Update public parameters
 	networkName := "default"
+	tms := GetTMSByNetworkName(network, networkName)
+	defaultTMSID := &token4.TMSID{
+		Network:   tms.Network,
+		Channel:   tms.Channel,
+		Namespace: tms.Namespace,
+	}
 
 	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, networkName)
 	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, networkName), alice, bob, charlie, manager, issuer, auditor, custodian)
@@ -415,7 +422,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	gomega.Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(111))).To(gomega.BeEquivalentTo(0), "got [%d], expected 111", ut.Sum(64).ToBigInt())
 	gomega.Expect(ut.ByType("USD").Count()).To(gomega.BeEquivalentTo(ut.Count()))
 
-	RedeemCash(network, networkName, bob, "", "USD", 11, auditor, issuer)
+	RedeemCashForTMSID(network, bob, "", "USD", 11, auditor, issuer, defaultTMSID)
 	t10 := time.Now()
 	CheckAcceptedTransactions(network, bob, "", BobAcceptedTransactions[:6], nil, nil, nil)
 	CheckAcceptedTransactions(network, bob, "", BobAcceptedTransactions[5:6], nil, nil, nil, ttxdb.Redeem)
@@ -471,7 +478,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// so the endorsement process could automatically identify the issuer
 	// that needs to sign the Redeem.
 	BindIssuerNetworkAndSigningIdentities(network, issuer, GetIssuerIdentity(GetTMSByNetworkName(network, networkName), issuer.Id()), bob)
-	RedeemCash(network, networkName, bob, "", "USD", 10, auditor, nil)
+	RedeemCashForTMSID(network, bob, "", "USD", 10, auditor, nil, defaultTMSID)
 	CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
 	CheckSpending(network, bob, "", "USD", auditor, 21)
 
@@ -979,7 +986,7 @@ func TestMixed(network *integration.Infrastructure, onRestart OnRestartFunc, sel
 	TransferCashForTMSID(network, alice, "", "USD", 20, bob, auditor1, dlogId)
 	TransferCashForTMSID(network, alice, "", "USD", 30, bob, auditor2, fabTokenId)
 
-	RedeemCashForTMSID(network, DLogNamespace, bob, "", "USD", 11, auditor1, issuer1, dlogId)
+	RedeemCashForTMSID(network, bob, "", "USD", 11, auditor1, issuer1, dlogId)
 	CheckSpendingForTMSID(network, bob, "", "USD", auditor1, 11, dlogId)
 
 	CheckBalanceAndHoldingForTMSID(network, alice, "", "USD", 90, auditor1, dlogId)

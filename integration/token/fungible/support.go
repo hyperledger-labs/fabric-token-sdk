@@ -830,16 +830,12 @@ func TransferCashWithSelector(network *integration.Infrastructure, sender *token
 	}
 }
 
-func RedeemCash(network *integration.Infrastructure, networkName string, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference) {
-	RedeemCashForTMSID(network, networkName, id, wallet, typ, amount, auditor, issuer, nil)
-}
-
-func RedeemCashForTMSID(network *integration.Infrastructure, networkName string, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference, tmsID *token2.TMSID) {
+func RedeemCashForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference, tmsID *token2.TMSID) {
 	issuerName := ""
 	var issuerPublicParamsPublicKey view.Identity = nil
-	if issuer != nil {
+	if issuer != nil && tmsID != nil {
 		issuerName = issuer.Id()
-		tms := GetTMSByNetworkName(network, networkName)
+		tms := GetTMSByTMSID(network, *tmsID)
 		issuerPublicParamsPublicKey = GetIssuerIdentity(tms, issuer.Id())
 	}
 
@@ -947,6 +943,17 @@ func GetTMSByNetworkName(network *integration.Infrastructure, networkName string
 		}
 	}
 	panic(fmt.Sprintf("TMS not found for network [%s]", networkName))
+}
+
+func GetTMSByTMSID(network *integration.Infrastructure, tmsID token2.TMSID) *topology.TMS {
+	tp := tplatform.GetPlatform(network.Ctx, "token")
+	gomega.Expect(tp).NotTo(gomega.BeNil())
+	for _, tms := range tp.GetTopology().TMSs {
+		if tms.Network == tmsID.Network && tms.Channel == tmsID.Channel && tms.Namespace == tmsID.Namespace {
+			return tms
+		}
+	}
+	panic(fmt.Sprintf("TMS not found for id [%s]", tmsID))
 }
 
 func GetTMSByAlias(network *integration.Infrastructure, alias topology.TMSAlias) *topology.TMS {
