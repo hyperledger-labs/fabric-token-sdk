@@ -58,7 +58,7 @@ func TestLogStaleLocks(t *testing.T) {
 	db, mockDB, err := sqlmock.New()
 	Expect(err).ToNot(HaveOccurred())
 
-	input := driver.TxStatus(3)
+	input := driver.Deleted
 
 	record := postgres.LockEntry{
 		ConsumerTxID: "1234",
@@ -77,10 +77,14 @@ func TestLogStaleLocks(t *testing.T) {
 		WithArgs(input).
 		WillReturnRows(mockDB.NewRows([]string{"consumer_tx_id", "tx_id", "idx", "status", "created_at", "now"}).AddRow(output...))
 
-	records, err := mockTokenLockStore(db).LogStaleLocks(context.Background(), time.Second)
-	record.LeaseExpiry = records[0].LeaseExpiry
+	mockDB.ExpectExec("DELETE FROM TOKEN_LOCKS USING REQUESTS WHERE " +
+		"\\(TOKEN_LOCKS.consumer_tx_id = REQUESTS.tx_id\\) AND " +
+		"\\(\\(\\(\\(REQUESTS.status = \\$1\\)\\)\\) OR \\(TOKEN_LOCKS.created_at < NOW\\(\\) - INTERVAL '1 seconds'\\)\\)").
+		WithArgs(input).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err = mockTokenLockStore(db).Cleanup(context.Background(), time.Second)
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
-	Expect(records[0]).To(Equal(record))
 }
