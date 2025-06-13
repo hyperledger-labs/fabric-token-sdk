@@ -159,6 +159,20 @@ func (m *Service) Configurations() ([]Configuration, error) {
 	return tms, nil
 }
 
+func (m *Service) AddConfiguration(id string, raw []byte) error {
+	tmsID := driver.TMSID{}
+	cache, err := m.configurations()
+	if err != nil {
+		return errors.Wrapf(err, "cannot load token-sdk configurations")
+	}
+	configProvider, err := NewProvider(raw)
+	if err != nil {
+		return errors.Wrapf(err, "cannot load token-sdk configurations")
+	}
+	cache[id] = &configuration{cp: configProvider, keyID: id, tmsID: tmsID}
+	return nil
+}
+
 func (m *Service) configurations() (map[string]Configuration, error) {
 	return m.tmsCache.Get()
 }
@@ -168,7 +182,7 @@ type loader struct {
 }
 
 func (m *loader) load() (map[string]Configuration, error) {
-	//load
+	// load
 	var boxedConfig map[interface{}]interface{}
 	if err := m.cp.UnmarshalKey("token.tms", &boxedConfig); err != nil {
 		return nil, errors.WithMessagef(err, "cannot load token-sdk configurations")
