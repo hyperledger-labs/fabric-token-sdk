@@ -434,27 +434,29 @@ func (w *AtomicWrite) Rollback() {
 	w.txn = nil
 }
 
-func (w *AtomicWrite) AddTransaction(ctx context.Context, r *driver.TransactionRecord) error {
-	logger.Debugf("adding transaction record [%s:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
+func (w *AtomicWrite) AddTransaction(ctx context.Context, rs ...driver.TransactionRecord) error {
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
 	}
-	if !r.Amount.IsInt64() {
-		return errors.New("the database driver does not support larger values than int64")
-	}
-	amount := r.Amount.Int64()
-	actionType := int(r.ActionType)
-	id, err := uuid.GenerateUUID()
-	if err != nil {
-		return errors.Wrapf(err, "error generating uuid")
+	rows := make([]common3.Tuple, len(rs))
+	for i, r := range rs {
+		logger.Debugf("adding transaction record [%s:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
+		if !r.Amount.IsInt64() {
+			return errors.New("the database driver does not support larger values than int64")
+		}
+		id, err := uuid.GenerateUUID()
+		if err != nil {
+			return errors.Wrapf(err, "error generating uuid")
+		}
+		rows[i] = common3.Tuple{id, r.TxID, int(r.ActionType), r.SenderEID, r.RecipientEID, r.TokenType, r.Amount.Int64(), r.Timestamp.UTC()}
 	}
 
 	query, args := q.InsertInto(w.table.Transactions).
 		Fields("id", "tx_id", "action_type", "sender_eid", "recipient_eid", "token_type", "amount", "stored_at").
-		Row(id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Timestamp.UTC()).
+		Rows(rows).
 		Format()
 	logger.Debug(query, args)
-	_, err = w.txn.ExecContext(ctx, query, args...)
+	_, err := w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }
@@ -489,28 +491,32 @@ func (w *AtomicWrite) AddTokenRequest(ctx context.Context, txID string, tr []byt
 	return ttxDBError(err)
 }
 
-func (w *AtomicWrite) AddMovement(ctx context.Context, r *driver.MovementRecord) error {
-	logger.Debugf("adding movement record [%s:%s:%s:%d:%s]", r.TxID, r.EnrollmentID, r.TokenType, r.Amount.Int64(), r.Status)
+func (w *AtomicWrite) AddMovement(ctx context.Context, rs ...driver.MovementRecord) error {
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
 	}
-	if !r.Amount.IsInt64() {
-		return errors.New("the database driver does not support larger values than int64")
-	}
-	amount := r.Amount.Int64()
 
-	id, err := uuid.GenerateUUID()
-	if err != nil {
-		return errors.Wrapf(err, "error generating uuid")
-	}
 	now := time.Now().UTC()
+	rows := make([]common3.Tuple, len(rs))
+	for i, r := range rs {
+		logger.Debugf("adding movement record [%s]", r)
+
+		if !r.Amount.IsInt64() {
+			return errors.New("the database driver does not support larger values than int64")
+		}
+		id, err := uuid.GenerateUUID()
+		if err != nil {
+			return errors.Wrapf(err, "error generating uuid")
+		}
+		rows[i] = common3.Tuple{id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.Int64(), now}
+	}
 
 	query, args := q.InsertInto(w.table.Movements).
 		Fields("id", "tx_id", "enrollment_id", "token_type", "amount", "stored_at").
-		Row(id, r.TxID, r.EnrollmentID, r.TokenType, amount, now).
+		Rows(rows).
 		Format()
 	logger.Debug(query, args)
-	_, err = w.txn.ExecContext(ctx, query, args...)
+	_, err := w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }
