@@ -113,6 +113,14 @@ var _ = Describe("EndToEnd", func() {
 			AfterEach(ts.TearDown)
 			It("succeeded", Label("T12"), func() { fungible.TestMultiSig(ts.II, selector) })
 		})
+
+		Describe("Redeem to yourself", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("Test redeem", Label("T13"), func() { fungible.TestRedeem(ts.II, selector, "default") })
+		})
+
 	}
 
 	for _, tokenSelector := range integration2.TokenSelectors {

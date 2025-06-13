@@ -1469,7 +1469,12 @@ func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector
 	auditor := sel.Get("auditor")
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
-
+	tms := GetTMSByNetworkName(network, networkName)
+	defaultTMSID := &token4.TMSID{
+		Network:   tms.Network,
+		Channel:   tms.Channel,
+		Namespace: tms.Namespace,
+	}
 	RegisterAuditor(network, auditor)
 
 	// give some time to the nodes to get the public parameters - Q - may now be needed. waiting in UpdatePublicParamsAndWait.
@@ -1478,17 +1483,14 @@ func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector
 	SetKVSEntry(network, issuer, "auditor", auditor.Id())
 	CheckPublicParams(network, issuer, auditor, alice)
 
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
-	Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
 
-	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
-	CheckBalance(network, alice, "", "USD", 110)
-	CheckHolding(network, alice, "", "USD", 110, auditor)
+	IssueCash(network, "", "USD", 110, issuer, auditor, true, issuer)
+	CheckBalance(network, issuer, "", "USD", 110)
+	CheckHolding(network, issuer, "", "USD", 110, auditor)
 
-	RedeemCash(network, alice, "", "USD", 10, auditor, issuer)
-	CheckBalance(network, alice, "", "USD", 100)
-	CheckHolding(network, alice, "", "USD", 100, auditor)
-
-	TransferCash(network, alice, "", "USD", 10, issuer, auditor)
-	CheckBalance(network, alice, "", "USD", 90)
+	RedeemCashForTMSID(network, issuer, "", "USD", 10, auditor, issuer, defaultTMSID)
+	CheckBalance(network, issuer, "", "USD", 100)
+	CheckHolding(network, issuer, "", "USD", 100, auditor)
 }

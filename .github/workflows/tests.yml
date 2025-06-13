@@ -92,6 +92,7 @@ jobs:
           dlog-fabric-t10,
           dlog-fabric-t11,
           dlog-fabric-t12,
+          dlog-fabric-t13,
           fabtoken-dlog-fabric,
           dloghsm-fabric-t1,
           dloghsm-fabric-t2,
