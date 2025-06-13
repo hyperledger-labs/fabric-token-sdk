@@ -1464,3 +1464,33 @@ func TestMultiSig(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckCoOwnedBalance(network, charlie, "", "USD", 0)
 	CheckCoOwnedBalance(network, manager, "", "USD", 0)
 }
+
+func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector, networkName string) {
+	auditor := sel.Get("auditor")
+	issuer := sel.Get("issuer")
+	alice := sel.Get("alice")
+	tms := GetTMSByNetworkName(network, networkName)
+	defaultTMSID := &token4.TMSID{
+		Network:   tms.Network,
+		Channel:   tms.Channel,
+		Namespace: tms.Namespace,
+	}
+	RegisterAuditor(network, auditor)
+
+	// give some time to the nodes to get the public parameters - Q - may now be needed. waiting in UpdatePublicParamsAndWait.
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditor.Id())
+	CheckPublicParams(network, issuer, auditor, alice)
+
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(true))
+	gomega.Eventually(DoesWalletExist).WithArguments(network, issuer, "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Equal(false))
+
+	IssueCash(network, "", "USD", 110, issuer, auditor, true, issuer)
+	CheckBalance(network, issuer, "", "USD", 110)
+	CheckHolding(network, issuer, "", "USD", 110, auditor)
+
+	RedeemCashForTMSID(network, issuer, "", "USD", 10, auditor, issuer, defaultTMSID)
+	CheckBalance(network, issuer, "", "USD", 100)
+	CheckHolding(network, issuer, "", "USD", 100, auditor)
+}
