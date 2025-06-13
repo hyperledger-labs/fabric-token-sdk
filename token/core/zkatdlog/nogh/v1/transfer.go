@@ -253,12 +253,10 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 	}
 
 	if isRedeem {
-		issuers := s.PublicParametersManager.PublicParameters().Issuers()
-		if len(issuers) == 0 {
-			return nil, nil, errors.New("no issuers found")
+		issuer, err := common.SelectIssuerForRedeem(pp.Issuers(), opts)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to select issuer for redeem")
 		}
-		issuer := issuers[0]
-
 		transfer.Issuer = issuer
 		transferMetadata.Issuer = issuer
 	}
