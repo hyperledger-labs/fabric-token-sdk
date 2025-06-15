@@ -244,3 +244,43 @@ func TestGetTransactionEndorsementAcks(t *testing.T) {
 	Expect(acks).To(HaveLen(1))
 	Expect(acks).To(HaveKeyWithValue(token2.Identity(record.endorser).UniqueID(), record.sigma))
 }
+
+func TestAddTransactionEndorsementAck(t *testing.T) {
+	RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	Expect(err).ToNot(HaveOccurred())
+
+	uuid := sqlmock.AnyArg()
+	txID := "1234"
+	eID := token2.Identity([]byte("5678"))
+	sigma := []byte("signature")
+	now := sqlmock.AnyArg()
+
+	mockDB.ExpectExec("INSERT INTO TRANSACTION_ENDORSE_ACK \\(id, tx_id, endorser, sigma, stored_at\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5\\)").
+		WithArgs(uuid, txID, eID, sigma, now).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = mockTransactionsStore(db).AddTransactionEndorsementAck(context.Background(), txID, eID, sigma)
+
+	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func TestSetStatus(t *testing.T) {
+	RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	Expect(err).ToNot(HaveOccurred())
+
+	txID := "1234"
+	status := driver.Confirmed
+	message := "message"
+
+	mockDB.ExpectExec("UPDATE REQUESTS SET status = \\$1, status_message = \\$2 WHERE tx_id = \\$3").
+		WithArgs(status, message, txID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = mockTransactionsStore(db).SetStatus(context.Background(), txID, status, message)
+
+	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
+	Expect(err).ToNot(HaveOccurred())
+}
