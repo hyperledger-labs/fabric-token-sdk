@@ -178,7 +178,7 @@ func (s *Service) CertifierWallet(ctx context.Context, id driver.WalletLookupID)
 	return w.(driver.CertifierWallet), nil
 }
 
-// SpentIDs returns the spend ids for the passed token ids
+// SpendIDs returns the spend ids for the passed token ids
 func (s *Service) SpendIDs(ids ...*token.ID) ([]string, error) {
 	return nil, nil
 }
