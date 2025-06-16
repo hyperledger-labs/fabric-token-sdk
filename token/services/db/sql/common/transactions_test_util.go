@@ -273,3 +273,120 @@ func TestSetStatus(t *testing.T, store storeConstructor) {
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 }
+
+type AnyUUID struct{}
+
+func (a AnyUUID) Match(v driver2.Value) bool {
+	_, ok := v.(string)
+	return ok
+}
+
+func TestAWAddTransaction(t *testing.T, store storeConstructor) {
+	gomega.RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+	input := &driver.TransactionRecord{
+		TxID:         "txid",
+		ActionType:   driver.Transfer,
+		SenderEID:    "sender",
+		RecipientEID: "recipient",
+		TokenType:    "USD",
+		Amount:       big.NewInt(10),
+		Timestamp:    time.Now(),
+	}
+
+	mockDB.ExpectBegin()
+	mockDB.
+		ExpectExec("INSERT INTO TRANSACTIONS \\(id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, stored_at\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6, \\$7, \\$8\\)").
+		WithArgs(AnyUUID{}, input.TxID, 1, input.SenderEID, input.RecipientEID, input.TokenType, input.Amount.Int64(), input.Timestamp.UTC()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mockDB.ExpectCommit()
+
+	aw, err := store(db).BeginAtomicWrite()
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	gomega.Expect(aw.AddTransaction(context.Background(), input)).To(gomega.Succeed())
+	gomega.Expect(aw.Commit()).To(gomega.Succeed())
+
+	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
+}
+
+func TestAWAddTokenRequest(t *testing.T, store storeConstructor) {
+	gomega.RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+	txID := "txid"
+	tr := []byte("1234")
+	ppHash := []byte("5678")
+	status := driver.Pending
+	status_message := ""
+
+	mockDB.ExpectBegin()
+	mockDB.
+		ExpectExec("INSERT INTO REQUESTS \\(tx_id, request, status, status_message, application_metadata, public_metadata, pp_hash\\) "+
+			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6, \\$7\\)").
+		WithArgs(txID, tr, status, status_message, "{}", "{}", ppHash).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mockDB.ExpectCommit()
+
+	aw, err := store(db).BeginAtomicWrite()
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	gomega.Expect(aw.AddTokenRequest(context.Background(), txID, tr, nil, nil, ppHash)).To(gomega.Succeed())
+	gomega.Expect(aw.Commit()).To(gomega.Succeed())
+
+	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
+}
+
+func TestAWAddMovement(t *testing.T, store storeConstructor) {
+	gomega.RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+	input := &driver.MovementRecord{
+		TxID:         "txid",
+		EnrollmentID: "EID",
+		TokenType:    "USD",
+		Amount:       big.NewInt(10),
+		Status:       driver.Pending,
+	}
+	now := sqlmock.AnyArg()
+
+	mockDB.ExpectBegin()
+	mockDB.
+		ExpectExec("INSERT INTO MOVEMENTS \\(id, tx_id, enrollment_id, token_type, amount, stored_at\\) "+
+			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6\\)").
+		WithArgs(AnyUUID{}, input.TxID, input.EnrollmentID, input.TokenType, input.Amount.Int64(), now).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mockDB.ExpectCommit()
+
+	aw, err := store(db).BeginAtomicWrite()
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	gomega.Expect(aw.AddMovement(context.Background(), input)).To(gomega.Succeed())
+	gomega.Expect(aw.Commit()).To(gomega.Succeed())
+
+	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
+}
+
+func TestAWAddValidationRecord(t *testing.T, store storeConstructor) {
+	gomega.RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+	txID := "txid"
+	now := sqlmock.AnyArg()
+
+	mockDB.ExpectBegin()
+	mockDB.
+		ExpectExec("INSERT INTO VALIDATIONS \\(tx_id, metadata, stored_at\\) VALUES \\(\\$1, \\$2, \\$3\\)").
+		WithArgs(txID, "null", now).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mockDB.ExpectCommit()
+
+	aw, err := store(db).BeginAtomicWrite()
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	gomega.Expect(aw.AddValidationRecord(context.Background(), txID, nil)).To(gomega.Succeed())
+	gomega.Expect(aw.Commit()).To(gomega.Succeed())
+
+	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
+}

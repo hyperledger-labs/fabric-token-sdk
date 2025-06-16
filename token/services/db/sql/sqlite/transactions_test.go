@@ -60,3 +60,19 @@ func TestAddTransactionEndorsementAck(t *testing.T) {
 func TestSetStatus(t *testing.T) {
 	common.TestSetStatus(t, mockTransactionsStore)
 }
+
+func TestAWAddTransaction(t *testing.T) {
+	common.TestAWAddTransaction(t, mockTransactionsStore)
+}
+
+func TestAWAddTokenRequest(t *testing.T) {
+	common.TestAWAddTokenRequest(t, mockTransactionsStore)
+}
+
+func TestAWAddMovement(t *testing.T) {
+	common.TestAWAddMovement(t, mockTransactionsStore)
+}
+
+func TestAWAddValidationRecord(t *testing.T) {
+	common.TestAWAddValidationRecord(t, mockTransactionsStore)
+}
