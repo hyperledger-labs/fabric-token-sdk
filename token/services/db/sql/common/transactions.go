@@ -284,9 +284,6 @@ func (db *TransactionStore) GetTransactionEndorsementAcks(ctx context.Context, t
 			return nil, errors.Wrapf(err, "error querying db")
 		}
 		acks[token.Identity(endorser).String()] = sigma
-		fmt.Println("id1=", token.Identity(endorser).String())
-		fmt.Println("id2=", token.Identity("auditor").String())
-		fmt.Printf("akcs1=%s\n", acks[token.Identity(endorser).String()])
 	}
 	if err = rows.Err(); err != nil {
 		return nil, err
