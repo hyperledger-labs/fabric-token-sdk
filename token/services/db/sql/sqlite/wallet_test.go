@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
-func mockWalletStore(db *sql.DB) *common.WalletStore {
+func mockWalletStore(db *sql.DB) *WalletStore {
 	store, _ := common.NewWalletStore(db, db, common.TableNames{
 		Wallets: "WALLETS",
 	}, sqlite.NewConditionInterpreter())
