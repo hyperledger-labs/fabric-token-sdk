@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 )
 
 func mockTokenLockStore(db *sql.DB) *common.TokenLockStore {
@@ -32,20 +32,20 @@ func mockTokenLockStore(db *sql.DB) *common.TokenLockStore {
 }
 
 func TestIsStale(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 
 	query, args := q.DeleteFrom("TokenLocks").
 		Where(IsStale("TokenLocks", "Requests", 5*time.Second)).
 		Format(sqlite.NewConditionInterpreter())
 
-	gomega.Expect(query).To(gomega.Equal("DELETE FROM TokenLocks WHERE tx_id IN (" +
+	Expect(query).To(Equal("DELETE FROM TokenLocks WHERE tx_id IN (" +
 		"SELECT tl.tx_id " +
 		"FROM TokenLocks AS tl " +
 		"LEFT JOIN Requests AS tr " +
 		"ON tl.tx_id = tr.tx_id " +
 		"WHERE (tr.status = $1) OR (tl.created_at < datetime('now', '-5 seconds'))" +
 		")"))
-	gomega.Expect(args).To(gomega.ConsistOf(driver.Deleted))
+	Expect(args).To(ConsistOf(driver.Deleted))
 }
 
 func TestLock(t *testing.T) {
