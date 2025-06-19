@@ -16,9 +16,9 @@ import (
 	"github.com/onsi/gomega"
 )
 
-type storeConstructor func(*sql.DB) *WalletStore
+type walletStoreConstructor func(*sql.DB) *WalletStore
 
-func TestGetWalletID(t *testing.T, store storeConstructor) {
+func TestGetWalletID(t *testing.T, store walletStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -38,7 +38,7 @@ func TestGetWalletID(t *testing.T, store storeConstructor) {
 	gomega.Expect(actualWalletID).To(gomega.Equal(output))
 }
 
-func TestGetWalletIDs(t *testing.T, store storeConstructor) {
+func TestGetWalletIDs(t *testing.T, store walletStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -57,7 +57,7 @@ func TestGetWalletIDs(t *testing.T, store storeConstructor) {
 	gomega.Expect(actualWalletIDs).To(gomega.ConsistOf(output))
 }
 
-func TestLoadMeta(t *testing.T, store storeConstructor) {
+func TestLoadMeta(t *testing.T, store walletStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -78,7 +78,7 @@ func TestLoadMeta(t *testing.T, store storeConstructor) {
 	gomega.Expect(actual).To(gomega.Equal(output))
 }
 
-func TestIdentityExists(t *testing.T, store storeConstructor) {
+func TestIdentityExists(t *testing.T, store walletStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -98,7 +98,7 @@ func TestIdentityExists(t *testing.T, store storeConstructor) {
 	gomega.Expect(exists).To(gomega.BeTrue())
 }
 
-func TestStoreIdentity(t *testing.T, store storeConstructor) {
+func TestStoreIdentity(t *testing.T, store walletStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
