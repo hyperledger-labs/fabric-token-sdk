@@ -69,26 +69,7 @@ func NewGenericDriver(
 	configService driver2.ConfigService,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
-	return NewDriver(
-		fnsProvider,
-		tokensManager,
-		configProvider,
-		viewManager,
-		viewRegistry,
-		filterProvider,
-		tmsProvider,
-		tracerProvider,
-		identityProvider,
-		NewChaincodePublicParamsFetcher(viewManager),
-		NewTokenExecutorProvider(fnsProvider),
-		NewSpentTokenExecutorProvider(fnsProvider, keyTranslator),
-		keyTranslator,
-		finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)),
-		lookup.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)),
-		endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator),
-		NewSetupListenerProvider(tmsProvider, tokensManager),
-		config2.GenericDriver,
-	)
+	return NewDriver(fnsProvider, tokensManager, configProvider, viewManager, viewRegistry, filterProvider, tmsProvider, tracerProvider, identityProvider, NewChaincodePublicParamsFetcher(viewManager), NewTokenExecutorProvider(fnsProvider), NewSpentTokenExecutorProvider(fnsProvider, keyTranslator), keyTranslator, finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)), lookup.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)), endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator), NewSetupListenerProvider(tmsProvider, tokensManager), config2.GenericDriver)
 }
 
 func NewDriver(
