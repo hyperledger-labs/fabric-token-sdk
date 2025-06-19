@@ -9,14 +9,14 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
 func mockWalletStore(db *sql.DB) *WalletStore {
 	store, _ := common.NewWalletStore(db, db, common.TableNames{
 		Wallets: "WALLETS",
-	}, sqlite.NewConditionInterpreter())
+	}, postgres.NewConditionInterpreter())
 	return store
 }
 
