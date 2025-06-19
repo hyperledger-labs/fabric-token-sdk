@@ -62,7 +62,7 @@ func TestQueryMovements(t *testing.T, store storeConstructor) {
 	mockDB.
 		ExpectQuery("SELECT MOVEMENTS.tx_id, enrollment_id, token_type, amount, REQUESTS.status "+
 			"FROM MOVEMENTS LEFT JOIN REQUESTS ON MOVEMENTS.tx_id = REQUESTS.tx_id "+
-			"WHERE \\(enrollment_id = \\$1\\) AND \\(token_type = \\$2\\) AND \\(status = \\$3\\) AND \\(amount < \\$4\\) "+
+			"WHERE \\(\\(\\(enrollment_id = \\$1\\)\\)\\) AND \\(\\(\\(token_type = \\$2\\)\\)\\) AND \\(\\(\\(status = \\$3\\)\\)\\) AND \\(amount < \\$4\\) "+
 			"ORDER BY stored_at DESC "+
 			"LIMIT \\$5").
 		WithArgs(record.EnrollmentID, record.TokenType, record.Status, 0, 1).
@@ -156,7 +156,7 @@ func TestQueryValidations(t *testing.T, store storeConstructor) {
 	mockDB.
 		ExpectQuery("SELECT VALIDATIONS.tx_id, REQUESTS.request, metadata, REQUESTS.status, VALIDATIONS.stored_at "+
 			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id "+
-			"WHERE \\(\\(stored_at >= \\$1\\) AND \\(stored_at <= \\$2\\)\\) AND \\(\\(status\\) IN \\(\\(\\$3\\), \\(\\$4\\)\\)\\)").
+			"WHERE \\(\\(stored_at >= \\$1\\) AND \\(stored_at <= \\$2\\)\\) AND \\(\\(\\(status = \\$3\\)\\) OR \\(\\(status = \\$4\\)\\)\\)").
 		WithArgs(timeFrom, timeTo, driver.Deleted, driver.Unknown).
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "metadata", "status", "stored_at"}).AddRow(output...))
 
@@ -189,7 +189,7 @@ func TestQueryTokenRequests(t *testing.T, store storeConstructor) {
 		record.TxID, record.TokenRequest, record.Status,
 	}
 	mockDB.
-		ExpectQuery("SELECT tx_id, request, status FROM REQUESTS WHERE \\(status\\) IN \\(\\(\\$1\\), \\(\\$2\\)\\)").
+		ExpectQuery("SELECT tx_id, request, status FROM REQUESTS WHERE \\(\\(status = \\$1\\)\\) OR \\(\\(status = \\$2\\)\\)").
 		WithArgs(driver.Deleted, driver.Unknown).
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "status"}).AddRow(output...))
 
