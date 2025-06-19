@@ -37,36 +37,6 @@ token:
               - {{ . }}{{ end }}
       {{ end }}
  
-{{- if and (ne TokenPersistence "") (ne TokenPersistence "default") }}
-      tokendb:
-        persistence: {{ TokenPersistence }}
-{{- else }}
-      # tokendb.persistence omitted
-{{- end }}
-{{- if and (ne IdentityPersistence "") (ne IdentityPersistence "default") }}
-      identitydb:
-        persistence: {{ IdentityPersistence }}
-{{- else }}
-      # identitydb.persistence omitted
-{{- end }}
-{{- if and (ne TokenLockPersistence "") (ne TokenLockPersistence "default") }}
-      tokenlockdb:
-        persistence: {{ TokenLockPersistence }}
-{{- else }}
-      # tokenlockdb.persistence omitted
-{{- end }}
-{{- if and (ne AuditTxPersistence "") (ne AuditTxPersistence "default") }}
-      auditdb:
-        persistence: {{ AuditTxPersistence }}
-{{- else }}
-      # auditdb.persistence omitted
-{{- end }}
-{{- if and (ne OwnerTxPersistence "") (ne OwnerTxPersistence "default") }}
-      ttxdb:
-        persistence: {{ OwnerTxPersistence }}
-{{- else }}
-      # ttxdb.persistence omitted
-{{- end }}
       {{ if Wallets }}
       # Wallets associated with this TMS
       wallets:
