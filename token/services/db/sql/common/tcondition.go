@@ -106,6 +106,7 @@ func HasTransactionParams(params driver.QueryTransactionsParams, table common.Ta
 		cond.In("action_type", params.ActionTypes...),
 		// Specific transaction status if requested, defaults to all but Deleted
 		cond.In("status", params.Statuses...),
+		cond.In("token_type", params.TokenTypes...),
 	}
 
 	if params.ExcludeToSelf {

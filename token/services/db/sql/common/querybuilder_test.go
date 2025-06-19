@@ -108,6 +108,14 @@ func TestTransactionSql(t *testing.T) {
 			expectedSql:  "((tbl.tx_id) IN (($1), ($2), ($3))) AND ((sender_eid = $4) OR (recipient_eid = $5))",
 			expectedArgs: []common2.Param{"transactionID1", "transactionID2", "transactionID3", "alice", "bob"},
 		},
+		{
+			name: "With Token Types",
+			params: driver.QueryTransactionsParams{
+				TokenTypes: []token.Type{"Pineapple"},
+			},
+			expectedSql:  "(token_type = $1)",
+			expectedArgs: []common2.Param{"Pineapple"},
+		},
 	}
 
 	for _, tc := range testCases {

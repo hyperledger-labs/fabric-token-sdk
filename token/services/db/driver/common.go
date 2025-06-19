@@ -228,6 +228,9 @@ type QueryTransactionsParams struct {
 	// Statuses is the list of transaction status to accept
 	// If empty, any status is accepted
 	Statuses []TxStatus
+	// TokenTypes is the list of token types to accept
+	// If empty, any token type is accepted
+	TokenTypes []token2.Type
 }
 
 // QueryValidationRecordsParams defines the parameters for querying validation records.
