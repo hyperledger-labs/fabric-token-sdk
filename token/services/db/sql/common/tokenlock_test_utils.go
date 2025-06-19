@@ -16,9 +16,9 @@ import (
 	"github.com/onsi/gomega"
 )
 
-type storeConstructor func(*sql.DB) *TokenLockStore
+type tokenLockStoreConstructor func(*sql.DB) *TokenLockStore
 
-func TestLock(t *testing.T, store storeConstructor) {
+func TestLock(t *testing.T, store tokenLockStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -38,7 +38,7 @@ func TestLock(t *testing.T, store storeConstructor) {
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 }
 
-func TestUnlockByTxID(t *testing.T, store storeConstructor) {
+func TestUnlockByTxID(t *testing.T, store tokenLockStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
