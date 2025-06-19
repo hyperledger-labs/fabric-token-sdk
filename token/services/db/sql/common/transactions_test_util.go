@@ -23,9 +23,9 @@ import (
 	"github.com/onsi/gomega"
 )
 
-type storeConstructor func(*sql.DB) *TransactionStore
+type transactionsStoreConstructor func(*sql.DB) *TransactionStore
 
-func TestGetTokenRequest(t *testing.T, store storeConstructor) {
+func TestGetTokenRequest(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -44,7 +44,7 @@ func TestGetTokenRequest(t *testing.T, store storeConstructor) {
 	gomega.Expect(info).To(gomega.Equal(output))
 }
 
-func TestQueryMovements(t *testing.T, store storeConstructor) {
+func TestQueryMovements(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -82,7 +82,7 @@ func TestQueryMovements(t *testing.T, store storeConstructor) {
 	gomega.Expect(info).To(gomega.ConsistOf(&record))
 }
 
-func TestQueryTransactions(t *testing.T, store storeConstructor) {
+func TestQueryTransactions(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -116,7 +116,7 @@ func TestQueryTransactions(t *testing.T, store storeConstructor) {
 	gomega.Expect(records).To(gomega.ConsistOf(record))
 }
 
-func TestGetStatus(t *testing.T, store storeConstructor) {
+func TestGetStatus(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -137,7 +137,7 @@ func TestGetStatus(t *testing.T, store storeConstructor) {
 	gomega.Expect(statusMessage).To(gomega.Equal(output[1]))
 }
 
-func TestQueryValidations(t *testing.T, store storeConstructor) {
+func TestQueryValidations(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -175,7 +175,7 @@ func TestQueryValidations(t *testing.T, store storeConstructor) {
 	gomega.Expect(records).To(gomega.ConsistOf(record))
 }
 
-func TestQueryTokenRequests(t *testing.T, store storeConstructor) {
+func TestQueryTokenRequests(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -206,7 +206,7 @@ func TestQueryTokenRequests(t *testing.T, store storeConstructor) {
 	gomega.Expect(records).To(gomega.ConsistOf(record))
 }
 
-func TestGetTransactionEndorsementAcks(t *testing.T, store storeConstructor) {
+func TestGetTransactionEndorsementAcks(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -234,7 +234,7 @@ func TestGetTransactionEndorsementAcks(t *testing.T, store storeConstructor) {
 	gomega.Expect(acks).To(gomega.HaveKeyWithValue(token2.Identity(record.endorser).UniqueID(), record.sigma))
 }
 
-func TestAddTransactionEndorsementAck(t *testing.T, store storeConstructor) {
+func TestAddTransactionEndorsementAck(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -255,7 +255,7 @@ func TestAddTransactionEndorsementAck(t *testing.T, store storeConstructor) {
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 }
 
-func TestSetStatus(t *testing.T, store storeConstructor) {
+func TestSetStatus(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -281,7 +281,7 @@ func (a AnyUUID) Match(v driver2.Value) bool {
 	return ok
 }
 
-func TestAWAddTransaction(t *testing.T, store storeConstructor) {
+func TestAWAddTransaction(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -311,7 +311,7 @@ func TestAWAddTransaction(t *testing.T, store storeConstructor) {
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 }
 
-func TestAWAddTokenRequest(t *testing.T, store storeConstructor) {
+func TestAWAddTokenRequest(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -338,7 +338,7 @@ func TestAWAddTokenRequest(t *testing.T, store storeConstructor) {
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 }
 
-func TestAWAddMovement(t *testing.T, store storeConstructor) {
+func TestAWAddMovement(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -368,7 +368,7 @@ func TestAWAddMovement(t *testing.T, store storeConstructor) {
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 }
 
-func TestAWAddValidationRecord(t *testing.T, store storeConstructor) {
+func TestAWAddValidationRecord(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
