@@ -45,22 +45,21 @@ func mockTokenLockStore(db *sql.DB) *common.TokenLockStore {
 	return store.TokenLockStore
 }
 
-func TestLogStaleLocks(t *testing.T) {
+func TestCleanup(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 	input := driver.Deleted
 
-	record := LockEntry{
-		ConsumerTxID: "1234",
-		TokenID:      token.ID{TxId: "5678", Index: 5},
-		Status:       &input,
-		CreatedAt:    time.Date(2025, time.June, 8, 10, 0, 0, 0, time.UTC),
-	}
+	consumerTxID := "1234"
+	tokenID := token.ID{TxId: "5678", Index: 5}
+	status := &input
+	createdAt := time.Date(2025, time.June, 8, 10, 0, 0, 0, time.UTC)
+
 	var timeNow time.Time
 	output := []driver2.Value{
-		record.ConsumerTxID, record.TokenID.TxId, record.TokenID.Index, *record.Status, record.CreatedAt, timeNow,
+		consumerTxID, tokenID.TxId, tokenID.Index, *status, createdAt, timeNow,
 	}
 	mockDB.
 		ExpectQuery("SELECT TOKEN_LOCKS.consumer_tx_id, TOKEN_LOCKS.tx_id, TOKEN_LOCKS.idx, REQUESTS.status, TOKEN_LOCKS.created_at, NOW\\(\\) AS now " +
