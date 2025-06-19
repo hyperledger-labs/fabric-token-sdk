@@ -40,7 +40,7 @@ func NewTokenLockStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenL
 }
 
 func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration) error {
-	if _, err := db.logStaleLocks(ctx, leaseExpiry); err != nil {
+	if err := db.logStaleLocks(ctx, leaseExpiry); err != nil {
 		db.Logger.Warnf("Could not log stale locks: %v", err)
 	}
 	tokenLocks, tokenRequests := q.Table(db.Table.TokenLocks), q.Table(db.Table.Requests)
@@ -63,9 +63,9 @@ func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration
 	return err
 }
 
-func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Duration) ([]lockEntry, error) {
+func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Duration) error {
 	if !db.Logger.IsEnabledFor(zapcore.InfoLevel) {
-		return nil, nil
+		return nil
 	}
 	tokenLocks, tokenRequests := q.Table(db.Table.TokenLocks), q.Table(db.Table.Requests)
 
@@ -80,7 +80,7 @@ func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Du
 
 	rows, err := db.ReadDB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	it := common4.NewIterator(rows, func(entry *lockEntry) error {
@@ -89,11 +89,11 @@ func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Du
 	})
 	lockEntries, err := iterators.ReadAllValues(it)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	db.Logger.Infof("Found following entries ready for deletion: [%v]", lockEntries)
-	return lockEntries, nil
+	return nil
 }
 
 type lockEntry struct {
