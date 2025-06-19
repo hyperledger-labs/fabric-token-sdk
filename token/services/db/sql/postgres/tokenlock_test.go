@@ -18,7 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 )
 
 func mockTokenLockStorePostgress(db *sql.DB) *TokenLockStore {
@@ -46,9 +46,9 @@ func mockTokenLockStore(db *sql.DB) *common.TokenLockStore {
 }
 
 func TestCleanup(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	Expect(err).ToNot(HaveOccurred())
 
 	input := driver.Deleted
 
@@ -76,8 +76,8 @@ func TestCleanup(t *testing.T) {
 
 	err = mockTokenLockStorePostgress(db).Cleanup(context.Background(), time.Second)
 
-	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
+	Expect(err).ToNot(HaveOccurred())
 }
 
 func TestLock(t *testing.T) {
