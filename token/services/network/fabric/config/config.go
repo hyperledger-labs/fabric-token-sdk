@@ -14,7 +14,6 @@ import (
 )
 
 type ListenerManagerConfig interface {
-	// Type returns the listener strategy, default is Delivery.
 	Type() ManagerType
 	CommitterMaxRetries() int
 	CommitterRetryWaitDuration() time.Duration
