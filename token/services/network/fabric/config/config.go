@@ -14,6 +14,7 @@ import (
 )
 
 type ListenerManagerConfig interface {
+	// Type returns the listener strategy, default is Delivery.
 	Type() ManagerType
 	CommitterMaxRetries() int
 	CommitterRetryWaitDuration() time.Duration
@@ -27,8 +28,10 @@ type ListenerManagerConfig interface {
 type ManagerType string
 
 const (
+	// Committer is the listener strategy based on the commit pipeline of the FSC node.
 	Committer ManagerType = "committer"
-	Delivery  ManagerType = "delivery"
+	// Delivery is the listener strategy that is based directly on the delivery service
+	Delivery ManagerType = "delivery"
 )
 
 func NewListenerManagerConfig(configService driver.ConfigService) *serviceListenerManagerConfig {
@@ -43,7 +46,7 @@ func (c *serviceListenerManagerConfig) Type() ManagerType {
 	if v := ManagerType(c.c.GetString("token.finality.type")); len(v) > 0 {
 		return v
 	}
-	return Committer
+	return Delivery
 }
 
 func (c *serviceListenerManagerConfig) CommitterMaxRetries() int {
