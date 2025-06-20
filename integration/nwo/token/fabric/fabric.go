@@ -17,7 +17,6 @@ import (
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
@@ -125,21 +124,14 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	gomega.Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(uniqueName), 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(uniqueName))
 	gomega.Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(uniqueName), 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(uniqueName))
 
-	persistenceNames := fsc.GetPersistenceNames(node.Options, common2.AllPrefixes...)
-
 	t, err := template.New("peer").Funcs(template.FuncMap{
-		"TMSID":                func() string { return tms.TmsID() },
-		"TMS":                  func() *topology2.TMS { return tms },
-		"Wallets":              func() *topology2.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
-		"TokenPersistence":     func() driver.PersistenceName { return persistenceNames[common2.TokenKey] },
-		"IdentityPersistence":  func() driver.PersistenceName { return persistenceNames[common2.IdentityKey] },
-		"TokenLockPersistence": func() driver.PersistenceName { return persistenceNames[common2.TokenLockKey] },
-		"AuditTxPersistence":   func() driver.PersistenceName { return persistenceNames[common2.AuditTransactionKey] },
-		"OwnerTxPersistence":   func() driver.PersistenceName { return persistenceNames[common2.OwnerTransactionKey] },
-		"Endorsement":          func() bool { return IsFSCEndorsementEnabled(tms) },
-		"Endorsers":            func() []string { return Endorsers(tms) },
-		"EndorserID":           func() string { return "" },
-		"Endorser":             func() bool { return topology2.ToOptions(node.Options).Endorser() },
+		"TMSID":       func() string { return tms.TmsID() },
+		"TMS":         func() *topology2.TMS { return tms },
+		"Wallets":     func() *topology2.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
+		"Endorsement": func() bool { return IsFSCEndorsementEnabled(tms) },
+		"Endorsers":   func() []string { return Endorsers(tms) },
+		"EndorserID":  func() string { return "" },
+		"Endorser":    func() bool { return topology2.ToOptions(node.Options).Endorser() },
 	}).Parse(Extension)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
