@@ -5,6 +5,7 @@ go 1.23.8
 toolchain go1.24.1
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/IBM/idemix v0.0.2-0.20240816143710-3dce4618d760
 	github.com/IBM/idemix/bccsp/types v0.0.0-20240816143710-3dce4618d760
 	github.com/IBM/mathlib v0.0.3-0.20241219051532-81539b287cf5
