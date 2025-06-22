@@ -25,12 +25,17 @@ func mockTransactionsStore(db *sql.DB) *common.TransactionStore {
 	return store
 }
 
+var queryConstructorTraits = common.QueryConstructorTraits{
+	SupportsIN:          true,
+	MultipleParenthesis: false,
+}
+
 func TestGetTokenRequest(t *testing.T) {
 	common.TestGetTokenRequest(t, mockTransactionsStore)
 }
 
 func TestQueryMovements(t *testing.T) {
-	common.TestQueryMovements(t, mockTransactionsStore)
+	common.TestQueryMovements(t, mockTransactionsStore, queryConstructorTraits)
 }
 
 func TestQueryTransactions(t *testing.T) {
@@ -42,11 +47,11 @@ func TestGetStatus(t *testing.T) {
 }
 
 func TestQueryValidations(t *testing.T) {
-	common.TestQueryValidations(t, mockTransactionsStore)
+	common.TestQueryValidations(t, mockTransactionsStore, queryConstructorTraits)
 }
 
 func TestQueryTokenRequests(t *testing.T) {
-	common.TestQueryTokenRequests(t, mockTransactionsStore)
+	common.TestQueryTokenRequests(t, mockTransactionsStore, queryConstructorTraits)
 }
 
 func TestGetTransactionEndorsementAcks(t *testing.T) {
