@@ -9,7 +9,7 @@ package mocks
 import (
 	"hash"
 
-	"github.com/hyperledger/fabric/bccsp"
+	"github.com/hyperledger/fabric-lib-go/bccsp"
 	"github.com/stretchr/testify/mock"
 )
 

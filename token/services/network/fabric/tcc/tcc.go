@@ -21,8 +21,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/hyperledger/fabric-chaincode-go/shim"
-	pb "github.com/hyperledger/fabric-protos-go/peer"
+	"github.com/hyperledger/fabric-chaincode-go/v2/shim"
+	pb "github.com/hyperledger/fabric-protos-go-apiv2/peer"
 	"github.com/pkg/errors"
 )
 
@@ -71,7 +71,7 @@ type TokenChaincode struct {
 	TokenServicesFactory func([]byte) (PublicParameters, Validator, error)
 }
 
-func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
+func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) *pb.Response {
 	logger.Debugf("init token chaincode...")
 
 	ppRaw, err := cc.Params(Params)
@@ -87,7 +87,7 @@ func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Success(nil)
 }
 
-func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Response) {
+func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res *pb.Response) {
 	txID := stub.GetTxID()
 	defer func() {
 		if r := recover(); r != nil {
@@ -217,7 +217,7 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 	return base64.StdEncoding.EncodeToString(paramsAsBytes)
 }
 
-func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
 	validator, err := cc.GetValidator(Params)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -254,7 +254,7 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	return shim.Success(nil)
 }
 
-func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) pb.Response {
+func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) *pb.Response {
 	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
 	raw, err := w.ReadSetupParameters()
 	if err != nil {
@@ -269,7 +269,7 @@ func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) pb
 	return shim.Success(raw)
 }
 
-func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
 	var ids []*token2.ID
 	if err := json.Unmarshal(idsRaw, &ids); err != nil {
 		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)
@@ -296,7 +296,7 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 	return shim.Success(raw)
 }
 
-func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
 	_, err := cc.GetValidator(Params)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -324,7 +324,7 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 	return shim.Success(raw)
 }
 
-func (cc *TokenChaincode) QueryStates(idsRaw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+func (cc *TokenChaincode) QueryStates(idsRaw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
 	var keys []string
 	if err := json.Unmarshal(idsRaw, &keys); err != nil {
 		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)
