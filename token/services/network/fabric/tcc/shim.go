@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package tcc
 
 import (
-	"github.com/hyperledger/fabric-chaincode-go/shim"
+	"github.com/hyperledger/fabric-chaincode-go/v2/shim"
 )
 
 //go:generate counterfeiter -o mock/chaincode_stub_interface.go -fake-name ChaincodeStubInterface . ChaincodeStubInterface
