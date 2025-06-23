@@ -13,7 +13,7 @@ import (
 	"encoding/pem"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger/fabric/bccsp"
+	"github.com/hyperledger/fabric-lib-go/bccsp"
 )
 
 type ecdsaPrivateKey struct {
