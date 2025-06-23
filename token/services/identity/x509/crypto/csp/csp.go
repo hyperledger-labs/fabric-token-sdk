@@ -13,8 +13,8 @@ import (
 	errors2 "errors"
 	"reflect"
 
-	"github.com/hyperledger/fabric/bccsp"
-	"github.com/hyperledger/fabric/bccsp/sw"
+	"github.com/hyperledger/fabric-lib-go/bccsp"
+	"github.com/hyperledger/fabric-lib-go/bccsp/sw"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 )
