@@ -8,7 +8,7 @@ package dlog
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -34,7 +34,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 		CommType:       commType,
 		DefaultTMSOpts: common.TMSOpts{TokenSDKDriver: "dlog"},
 		FSCLogSpec:     "",
-		SDKs:           []api2.SDK{&fdlog.SDK{}},
+		SDKs:           []nodepkg.SDK{&fdlog.SDK{}},
 		Replication:    opts,
 	}))
 	return ts, selector

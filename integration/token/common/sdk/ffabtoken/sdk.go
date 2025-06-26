@@ -9,7 +9,7 @@ package ffabtoken
 import (
 	"errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
+	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
@@ -20,7 +20,7 @@ type SDK struct {
 	*tokensdk.SDK
 }
 
-func NewSDK(registry node.Registry) *SDK {
+func NewSDK(registry digutils.Registry) *SDK {
 	return &SDK{SDK: tokensdk.NewSDK(registry)}
 }
 

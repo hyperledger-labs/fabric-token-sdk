@@ -9,7 +9,7 @@ package common
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
@@ -36,7 +36,7 @@ type Opts struct {
 	FSCLogSpec          string
 	NoAuditor           bool
 	HSM                 bool
-	SDKs                []api.SDK
+	SDKs                []nodepkg.SDK
 	WebEnabled          bool
 	Monitoring          bool
 	TokenSelector       string

@@ -9,7 +9,7 @@ package token
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -88,7 +88,7 @@ func (t *Topology) AddTMS(fscNodes []*node.Node, backend BackedTopology, channel
 	return tms
 }
 
-func (t *Topology) SetSDK(fscTopology *fsc.Topology, sdk api.SDK) {
+func (t *Topology) SetSDK(fscTopology *fsc.Topology, sdk nodepkg.SDK) {
 	for _, node := range fscTopology.Nodes {
 		node.AddSDK(sdk)
 	}

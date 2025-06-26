@@ -11,7 +11,6 @@ import (
 	errors2 "errors"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
@@ -75,7 +74,7 @@ func (p *SDK) TokenEnabled() bool {
 	return p.ConfigService().GetBool("token.enabled")
 }
 
-func NewSDK(registry node.Registry) *SDK {
+func NewSDK(registry digutils.Registry) *SDK {
 	return NewFrom(fabricsdk.NewSDK(registry))
 }
 
