@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -73,7 +73,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, fabtokenPrecision int, extr
 	ts := token2.NewTestSuite(StartPortDlog, topology.Topology(common.Opts{
 		Backend:         "fabric",
 		CommType:        commType,
-		SDKs:            []api.SDK{&fall.SDK{}},
+		SDKs:            []nodepkg.SDK{&fall.SDK{}},
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken", PublicParamsGenArgs: []string{strconv.Itoa(fabtokenPrecision)}},
 		ExtraTMSs:       extraTMSs,

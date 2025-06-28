@@ -8,7 +8,7 @@ package dlog
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
@@ -31,7 +31,7 @@ var _ = Describe("Stress EndToEnd", func() {
 	}
 })
 
-var sdks = map[string]api.SDK{
+var sdks = map[string]nodepkg.SDK{
 	"fabric": &fdlog.SDK{},
 }
 
@@ -45,7 +45,7 @@ func newTestSuite(backend string) (*token.TestSuite, *token.ReplicaSelector) {
 			ReplicationOpts: opts,
 			CommType:        fsc.LibP2P,
 			// FSCLogSpec:      "token-sdk=debug:info",
-			SDKs:       []api.SDK{sdks[backend]},
+			SDKs:       []nodepkg.SDK{sdks[backend]},
 			Monitoring: true,
 		},
 	))

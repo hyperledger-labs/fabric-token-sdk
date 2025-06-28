@@ -10,7 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
@@ -25,7 +25,7 @@ type Opts struct {
 	CommType       fsc.P2PCommunicationType
 	DefaultTMSOpts common.TMSOpts
 	FSCLogSpec     string
-	SDKs           []api2.SDK
+	SDKs           []nodepkg.SDK
 	Replication    token2.ReplicationOpts
 }
 

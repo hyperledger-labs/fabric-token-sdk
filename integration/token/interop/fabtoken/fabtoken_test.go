@@ -8,7 +8,7 @@ package fabtoken_test
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
@@ -52,7 +52,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 		CommType:        commType,
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
-		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
+		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 		FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 	}))
 	return ts, selector
@@ -64,7 +64,7 @@ func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names 
 		CommType:        commType,
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
-		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
+		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 	}))
 	return ts, selector
 }
@@ -75,7 +75,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		CommType:        commType,
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
-		SDKs:            []api2.SDK{&ffabtoken.SDK{}},
+		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 		FinalityType:    "committer",
 	}))
 	return ts, selector

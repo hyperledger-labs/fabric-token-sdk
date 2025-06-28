@@ -8,7 +8,7 @@ package dloghsm
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -55,7 +55,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names
 			AuditorAsIssuer: mask&AuditorAsIssuer > 0,
 			HSM:             mask&HSM > 0,
 			WebEnabled:      mask&WebEnabled > 0,
-			SDKs:            []api.SDK{&fdlog.SDK{}},
+			SDKs:            []nodepkg.SDK{&fdlog.SDK{}},
 			// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 			ReplicationOpts: opts,
 		},
