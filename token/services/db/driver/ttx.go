@@ -37,11 +37,11 @@ type AtomicWrite interface {
 	// AddMovement adds a movement record to the database transaction.
 	// Each token transaction can be seen as a list of movements.
 	// This operation _requires_ a TokenRequest with the same tx_id to exist
-	AddMovement(ctx context.Context, record *MovementRecord) error
+	AddMovement(ctx context.Context, records ...MovementRecord) error
 
 	// AddTransaction adds a transaction record to the database transaction.
 	// This operation _requires_ a TokenRequest with the same tx_id to exist
-	AddTransaction(ctx context.Context, record *TransactionRecord) error
+	AddTransaction(ctx context.Context, records ...TransactionRecord) error
 
 	// AddValidationRecord adds a new validation records for the given params
 	// This operation _requires_ a TokenRequest with the same tx_id to exist
