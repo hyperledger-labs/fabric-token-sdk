@@ -78,7 +78,7 @@ func Update(args *UpdateArgs) error {
 		return errors.Wrapf(err, "failed to read input file at [%s]", args.InputFile)
 	}
 
-	pp, err := v1.NewPublicParamsFromBytes(oldraw, "zkatdlog")
+	pp, err := v1.NewPublicParamsFromBytes(oldraw, v1.DLogIdentifier, v1.ProtocolV1)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal pp from [%s]", args.InputFile)
 	}
