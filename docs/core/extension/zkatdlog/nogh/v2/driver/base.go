@@ -8,8 +8,8 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	v2 "github.com/hyperledger-labs/fabric-token-sdk/docs/core/extension/zkatdlog/nogh/v2/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -29,7 +29,7 @@ import (
 type base struct{}
 
 func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := v1.NewPublicParamsFromBytes(params, v1.DLogIdentifier, v1.ProtocolV1)
+	pp, err := v2.NewPublicParamsFromBytes(params, v2.DLogIdentifier, v2.ProtocolV2)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
 	}
@@ -37,12 +37,12 @@ func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 }
 
 func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	deserializer, err := NewDeserializer(pp.(*v1.PublicParams))
+	deserializer, err := NewDeserializer(pp.(*v2.PublicParams))
 	if err != nil {
 		return nil, errors.Errorf("failed to create token service deserializer: %v", err)
 	}
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.zkatdlog", string(pp.TokenDriverName()))
-	return validator.New(logger, pp.(*v1.PublicParams), deserializer), nil
+	return validator.New(logger, pp.(*v2.PublicParams), deserializer), nil
 }
 
 func (d *base) newWalletService(
@@ -56,7 +56,7 @@ func (d *base) newWalletService(
 	publicParams driver.PublicParameters,
 	ignoreRemote bool,
 ) (*wallet.Service, error) {
-	pp := publicParams.(*v1.PublicParams)
+	pp := publicParams.(*v2.PublicParams)
 	roles := wallet.NewRoles()
 	deserializerManager := sig.NewMultiplexDeserializer()
 	tmsID := tmsConfig.ID()

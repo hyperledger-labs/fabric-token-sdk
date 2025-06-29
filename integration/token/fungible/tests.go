@@ -1388,7 +1388,7 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	CheckBalanceAndHolding(network, bob, "", "EUR", 110, auditor)
 
 	// rotate issuer public key, bob should be able to spend his token
-	pp, err := dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogIdentifier)
+	pp, err := dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	gomega.Expect(pp.Validate()).NotTo(gomega.HaveOccurred())
 
@@ -1396,7 +1396,7 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	ppBytesBis, err := os.ReadFile(tokenPlatform.PublicParametersFile(tmsBis))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	gomega.Expect(ppBytesBis).NotTo(gomega.BeNil())
-	ppBis, err := dlognoghv1.NewPublicParamsFromBytes(ppBytesBis, dlognoghv1.DLogIdentifier)
+	ppBis, err := dlognoghv1.NewPublicParamsFromBytes(ppBytesBis, dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	gomega.Expect(ppBis.Validate()).NotTo(gomega.HaveOccurred())
 

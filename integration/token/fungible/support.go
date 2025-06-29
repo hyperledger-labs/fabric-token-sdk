@@ -1449,7 +1449,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	var pp PP
 	switch genericPP.Identifier {
 	case string(core.DriverIdentifier(dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)):
-		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogIdentifier)
+		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	case string(core.DriverIdentifier(fabtokenv1.FabTokenDriverName, fabtokenv1.ProtocolV1)):
 		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.FabTokenDriverName)
@@ -1501,7 +1501,7 @@ func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issue
 	var pp PP
 	switch genericPP.Identifier {
 	case string(core.DriverIdentifier(dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)):
-		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogIdentifier)
+		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	case string(core.DriverIdentifier(fabtokenv1.FabTokenDriverName, fabtokenv1.ProtocolV1)):
 		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.FabTokenDriverName)
