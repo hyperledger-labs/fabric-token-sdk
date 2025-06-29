@@ -9,14 +9,17 @@ package driver
 import (
 	"context"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view/grpc/server"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
+	v2 "github.com/hyperledger-labs/fabric-token-sdk/docs/core/extension/zkatdlog/nogh/v2/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
-	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -29,7 +32,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Driver contains the non-static logic of the driver (including services)
 type Driver struct {
 	*base
 	metricsProvider  metrics.Provider
@@ -37,7 +39,7 @@ type Driver struct {
 	configService    *config.Service
 	storageProvider  identity.StorageProvider
 	identityProvider view2.IdentityProvider
-	endpointService  *endpoint.Service
+	endpointService  *view.EndpointService
 	networkProvider  *network.Provider
 	vaultProvider    *vault.Provider
 }
@@ -48,12 +50,12 @@ func NewDriver(
 	configService *config.Service,
 	storageProvider identity.StorageProvider,
 	identityProvider view2.IdentityProvider,
-	endpointService *endpoint.Service,
+	endpointService *view.EndpointService,
 	networkProvider *network.Provider,
 	vaultProvider *vault.Provider,
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
-		Name: core.DriverIdentifier(v1setup.FabTokenDriverName, 1),
+		Name: core.DriverIdentifier(v2.DLogIdentifier, v2.ProtocolV2),
 		Driver: &Driver{
 			base:             &base{},
 			metricsProvider:  metricsProvider,
@@ -69,14 +71,13 @@ func NewDriver(
 }
 
 func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (driver.TokenManagerService, error) {
-	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
 	logger.Debugf("creating new token service with public parameters [%s]", hash.Hashable(publicParams))
 
 	if len(publicParams) == 0 {
 		return nil, errors.Errorf("empty public parameters")
 	}
-
 	// get network
 	n, err := d.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
@@ -89,25 +90,26 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		return nil, errors.Errorf("failed getting vault [%s]", err)
 	}
 
+	networkLocalMembership := n.LocalMembership()
+
 	tmsConfig, err := d.configService.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	}
 
-	publicParamsManager, err := common.NewPublicParamsManager[*v1setup.PublicParams](
+	ppm, err := common.NewPublicParamsManager[*setup.PublicParams](
 		&PublicParamsDeserializer{},
-		v1setup.FabTokenDriverName,
-		v1setup.ProtocolV1,
+		v2.DLogIdentifier,
+		v2.ProtocolV2,
 		publicParams,
 	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
 
-	pp := publicParamsManager.PublicParams(context.Background())
+	pp := ppm.PublicParams(context.Background())
 	logger.Infof("new token driver for tms id [%s] with label and version [%s:%s]: [%s]", tmsID, pp.TokenDriverName(), pp.TokenDriverVersion(), pp)
 
-	networkLocalMembership := n.LocalMembership()
 	qe := vault.QueryEngine()
 	ws, err := d.newWalletService(
 		tmsConfig,
@@ -117,7 +119,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		logger,
 		d.identityProvider.DefaultIdentity(),
 		networkLocalMembership.DefaultIdentity(),
-		publicParamsManager.PublicParams(context.Background()),
+		ppm.PublicParams(context.Background()),
 		false,
 	)
 	if err != nil {
@@ -127,36 +129,60 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	ip := ws.IdentityProvider
 
 	authorization := common.NewAuthorizationMultiplexer(
-		common.NewTMSAuthorization(logger, publicParamsManager.PublicParams(context.Background()), ws),
+		common.NewTMSAuthorization(logger, ppm.PublicParams(context.Background()), ws),
 		htlc.NewScriptAuth(ws),
 		multisig.NewEscrowAuth(ws),
 	)
-	tokensService, err := v1.NewTokensService(publicParamsManager.PublicParams(context.Background()), deserializer)
+
+	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
+	driverMetrics := v1.NewMetrics(metricsProvider)
+	tokensService, err := token3.NewTokensService(logger, ppm, deserializer)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
-	service, err := v1.NewService(
+	tokensUpgradeService, err := upgrade.NewService(logger, ppm.PublicParams(context.Background()).QuantityPrecision, deserializer, ip)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to initiliaze token upgrade service for [%s:%s]", tmsID.Network, tmsID.Namespace)
+	}
+	service, err := v1.NewTokenService(
 		logger,
 		ws,
-		publicParamsManager,
+		ppm,
 		ip,
 		deserializer,
 		tmsConfig,
-		v1.NewIssueService(publicParamsManager, ws, deserializer),
-		v1.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
-		v1.NewAuditorService(),
+		v1.NewIssueService(logger, ppm, ws, deserializer, driverMetrics, tokensService, tokensUpgradeService),
+		v1.NewTransferService(
+			logger,
+			ppm,
+			ws,
+			common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
+			deserializer,
+			driverMetrics,
+			d.tracerProvider,
+			tokensService,
+		),
+		v1.NewAuditorService(
+			logger,
+			ppm,
+			common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
+			deserializer,
+			driverMetrics,
+			d.tracerProvider,
+		),
 		tokensService,
-		&v1.TokensUpgradeService{},
+		tokensUpgradeService,
 		authorization,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}
-	return service, nil
+
+	return service, err
 }
 
 func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Validator, error) {
-	pp, ok := params.(*v1setup.PublicParams)
+	pp, ok := params.(*setup.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}

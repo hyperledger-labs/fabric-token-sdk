@@ -34,7 +34,7 @@ func NewDeserializer() *Deserializer {
 
 type PublicParamsDeserializer struct{}
 
-func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, name driver.TokenDriverName) (*v1.PublicParams, error) {
+func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, name driver.TokenDriverName, version driver.TokenDriverVersion) (*v1.PublicParams, error) {
 	return v1.NewPublicParamsFromBytes(raw, name)
 }
 
