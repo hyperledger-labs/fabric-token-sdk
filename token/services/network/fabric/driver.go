@@ -41,7 +41,7 @@ type Driver struct {
 	viewManager                     *view.Manager
 	filterProvider                  *common.AcceptTxInDBFilterProvider
 	tmsProvider                     *token.ManagementServiceProvider
-	identityProvider                endorsement.IdentityProvider
+	identityProvider                view.IdentityProvider
 	tracerProvider                  trace.TracerProvider
 	defaultPublicParamsFetcher      NetworkPublicParamsFetcher
 	tokenQueryExecutorProvider      driver.TokenQueryExecutorProvider
@@ -63,7 +63,7 @@ func NewGenericDriver(
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
-	identityProvider endorsement.IdentityProvider,
+	identityProvider view.IdentityProvider,
 	configService cdriver.ConfigService,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
@@ -96,7 +96,7 @@ func NewDriver(
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
-	identityProvider endorsement.IdentityProvider,
+	identityProvider view.IdentityProvider,
 	defaultPublicParamsFetcher NetworkPublicParamsFetcher,
 	tokenQueryExecutorProvider driver.TokenQueryExecutorProvider,
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
