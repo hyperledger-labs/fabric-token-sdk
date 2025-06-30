@@ -155,10 +155,12 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 		}
 	}
 	transfer := &actions.TransferAction{
-		Inputs:   actionInputs,
-		Outputs:  outs,
-		Metadata: meta.TransferActionMetadata(opts.Attributes),
-		Issuer:   nil,
+		Inputs:  actionInputs,
+		Outputs: outs,
+		Issuer:  nil,
+	}
+	if opts != nil {
+		transfer.Metadata = meta.TransferActionMetadata(opts.Attributes)
 	}
 	transferMetadata := &driver.TransferMetadata{
 		Inputs:       transferInputsMetadata,

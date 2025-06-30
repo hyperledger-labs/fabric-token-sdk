@@ -22,6 +22,7 @@ import (
 
 const (
 	TransferMetadataPrefix = meta.TransferMetadataPrefix
+	IssueMetadataPrefix    = meta.IssueMetadataPrefix
 )
 
 type Binder interface {
@@ -106,6 +107,11 @@ func WithTokenSelector(selector Selector) TransferOption {
 // WithTransferMetadata sets transfer action metadata
 func WithTransferMetadata(key string, value []byte) TransferOption {
 	return WithTransferAttribute(TransferMetadataPrefix+key, value)
+}
+
+// WithIssueMetadata sets issue action metadata
+func WithIssueMetadata(key string, value []byte) TransferOption {
+	return WithTransferAttribute(IssueMetadataPrefix+key, value)
 }
 
 // WithTokenIDs sets the tokens ids to transfer
