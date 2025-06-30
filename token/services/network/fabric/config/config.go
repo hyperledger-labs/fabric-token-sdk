@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 )
 
 type ListenerManagerConfig interface {

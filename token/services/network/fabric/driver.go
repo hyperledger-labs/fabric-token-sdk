@@ -9,11 +9,10 @@ package fabric
 import (
 	"slices"
 
-	driver4 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	config2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/config"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -32,7 +31,7 @@ import (
 // NetworkPublicParamsFetcher models a public parameters fetcher per network.
 type NetworkPublicParamsFetcher interface {
 	// Fetch fetches the public parameters for the given network, channel, and namespace
-	Fetch(network driver4.Network, channel driver4.Channel, namespace driver4.Namespace) ([]byte, error)
+	Fetch(network cdriver.Network, channel cdriver.Channel, namespace cdriver.Namespace) ([]byte, error)
 }
 
 type Driver struct {
@@ -40,10 +39,9 @@ type Driver struct {
 	tokensManager                   *tokens.ServiceManager
 	configService                   *config.Service
 	viewManager                     *view.Manager
-	viewRegistry                    driver2.Registry
 	filterProvider                  *common.AcceptTxInDBFilterProvider
 	tmsProvider                     *token.ManagementServiceProvider
-	identityProvider                driver2.IdentityProvider
+	identityProvider                endorsement.IdentityProvider
 	tracerProvider                  trace.TracerProvider
 	defaultPublicParamsFetcher      NetworkPublicParamsFetcher
 	tokenQueryExecutorProvider      driver.TokenQueryExecutorProvider
@@ -61,15 +59,33 @@ func NewGenericDriver(
 	tokensManager *tokens.ServiceManager,
 	configProvider *config.Service,
 	viewManager *view.Manager,
-	viewRegistry driver2.Registry,
+	viewRegistry *view.Registry,
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
-	identityProvider driver2.IdentityProvider,
-	configService driver2.ConfigService,
+	identityProvider endorsement.IdentityProvider,
+	configService cdriver.ConfigService,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
-	return NewDriver(fnsProvider, tokensManager, configProvider, viewManager, viewRegistry, filterProvider, tmsProvider, tracerProvider, identityProvider, NewChaincodePublicParamsFetcher(viewManager), NewTokenExecutorProvider(fnsProvider), NewSpentTokenExecutorProvider(fnsProvider, keyTranslator), keyTranslator, finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)), lookup.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)), endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator), NewSetupListenerProvider(tmsProvider, tokensManager), config2.GenericDriver)
+	return NewDriver(
+		fnsProvider,
+		tokensManager,
+		configProvider,
+		viewManager,
+		filterProvider,
+		tmsProvider,
+		tracerProvider,
+		identityProvider,
+		NewChaincodePublicParamsFetcher(viewManager),
+		NewTokenExecutorProvider(fnsProvider),
+		NewSpentTokenExecutorProvider(fnsProvider, keyTranslator),
+		keyTranslator,
+		finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)),
+		lookup.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)),
+		endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator),
+		NewSetupListenerProvider(tmsProvider, tokensManager),
+		config2.GenericDriver,
+	)
 }
 
 func NewDriver(
@@ -77,11 +93,10 @@ func NewDriver(
 	tokensManager *tokens.ServiceManager,
 	configService *config.Service,
 	viewManager *view.Manager,
-	viewRegistry driver2.Registry,
 	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
-	identityProvider driver2.IdentityProvider,
+	identityProvider endorsement.IdentityProvider,
 	defaultPublicParamsFetcher NetworkPublicParamsFetcher,
 	tokenQueryExecutorProvider driver.TokenQueryExecutorProvider,
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
@@ -97,7 +112,6 @@ func NewDriver(
 		tokensManager:                   tokensManager,
 		configService:                   configService,
 		viewManager:                     viewManager,
-		viewRegistry:                    viewRegistry,
 		filterProvider:                  filterProvider,
 		tmsProvider:                     tmsProvider,
 		identityProvider:                identityProvider,

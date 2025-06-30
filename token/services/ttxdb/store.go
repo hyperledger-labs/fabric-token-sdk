@@ -12,8 +12,7 @@ import (
 	"reflect"
 	"time"
 
-	driver4 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -33,7 +32,7 @@ var (
 	logger      = logging.MustGetLogger()
 )
 
-func NewStoreServiceManager(cp driver3.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
+func NewStoreServiceManager(cp cdriver.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
 	return db.NewStoreServiceManager(config.NewService(cp), "ttxdb.persistence", drivers.NewOwnerTransaction, newStoreService)
 }
 
@@ -184,10 +183,10 @@ type QueryTokenRequestsParams = driver.QueryTokenRequestsParams
 type QueryValidationRecordsParams = driver.QueryValidationRecordsParams
 
 // Pagination defines the pagination for querying movements
-type Pagination = driver4.Pagination
+type Pagination = cdriver.Pagination
 
 // Pagination iterator defines the pagination iterator for movements query results
-type PageTransactionsIterator = driver4.PageIterator[*TransactionRecord]
+type PageTransactionsIterator = cdriver.PageIterator[*TransactionRecord]
 
 // Transactions returns an iterators of transaction records filtered by the given params.
 func (d *StoreService) Transactions(ctx context.Context, params QueryTransactionsParams, pagination Pagination) (*PageTransactionsIterator, error) {

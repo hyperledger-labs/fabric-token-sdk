@@ -11,9 +11,8 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -49,7 +48,7 @@ type CertificationClient struct {
 	queryEngine          QueryEngine
 	certificationStorage CertificationStorage
 	viewManager          ViewManager
-	certifiers           []view2.Identity
+	certifiers           []view.Identity
 	eventOperationMap    map[string]Op
 	// waitTime is used in case of a failure. It tells how much time to wait before retrying.
 	waitTime    time.Duration
@@ -66,7 +65,7 @@ func NewCertificationClient(
 	qe QueryEngine,
 	cm CertificationStorage,
 	fm ViewManager,
-	certifiers []view2.Identity,
+	certifiers []view.Identity,
 	notifier events.Subscriber,
 	maxAttempts int,
 	waitTime time.Duration,

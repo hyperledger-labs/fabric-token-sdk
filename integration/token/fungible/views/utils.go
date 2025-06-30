@@ -11,16 +11,15 @@ import (
 	"encoding/json"
 	"strings"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // AssertTokens checks that the tokens are or are not in the tokendb
@@ -64,7 +63,7 @@ func TxOpts(tmsId *token.TMSID, opts ...ttx.TxOption) []ttx.TxOption {
 	return txOpts
 }
 
-func GetKVS(sp view2.ServiceProvider) *kvs.KVS {
+func GetKVS(sp services.Provider) *kvs.KVS {
 	kvss, err := sp.GetService(&kvs.KVS{})
 	if err != nil {
 		panic(err)

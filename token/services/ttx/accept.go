@@ -10,9 +10,10 @@ import (
 	"encoding/base64"
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/sig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -45,10 +46,18 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 
 	txRaw := s.tx.FromRaw
 	// Send back an acknowledgement
-	defaultIdentity := view2.GetIdentityProvider(context).DefaultIdentity()
+	idProvider, err := id.GetProvider(context)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identity provider")
+	}
+	defaultIdentity := idProvider.DefaultIdentity()
 
 	logger.DebugfContext(context.Context(), "signing ack response [%s] with identity [%s]", hash.Hashable(txRaw), defaultIdentity)
-	signer, err := view2.GetSigService(context).GetSigner(defaultIdentity)
+	sigService, err := sig.GetService(context)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get sig service")
+	}
+	signer, err := sigService.GetSigner(defaultIdentity)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
 	}

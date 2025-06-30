@@ -14,7 +14,7 @@ import (
 	"encoding/json"
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -90,7 +90,7 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption)
 	}
 	return &Transaction{
 		Transaction: tx,
-		Binder:      view2.GetEndpointService(sp),
+		Binder:      endpoint.GetService(sp),
 	}, nil
 }
 
@@ -102,7 +102,7 @@ func NewAnonymousTransaction(sp view.Context, opts ...ttx.TxOption) (*Transactio
 	}
 	return &Transaction{
 		Transaction: tx,
-		Binder:      view2.GetEndpointService(sp),
+		Binder:      endpoint.GetService(sp),
 	}, nil
 }
 
@@ -114,7 +114,7 @@ func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []by
 	}
 	return &Transaction{
 		Transaction: tx,
-		Binder:      view2.GetEndpointService(ctx),
+		Binder:      endpoint.GetService(ctx),
 	}, nil
 }
 

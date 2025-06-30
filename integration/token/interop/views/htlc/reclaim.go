@@ -9,8 +9,8 @@ package htlc
 import (
 	"encoding/json"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
@@ -39,9 +39,11 @@ func (r *ReclaimAllView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "cannot retrieve list of expired tokens")
 	assert.True(expired.Count() > 0, "no htlc script has expired")
 
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	tx, err := htlc.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		ttx.WithAuditor(idProvider.Identity("auditor")),
 		ttx.WithTMSID(r.TMSID),
 	)
 	assert.NoError(err, "failed to create an htlc transaction")
@@ -97,9 +99,11 @@ func (r *ReclaimByHashView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "cannot retrieve list of expired tokens")
 	assert.NotNil(expired, "no htlc script with hash [%v] has expired", r.Hash)
 
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed to get identity provider")
 	tx, err := htlc.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		ttx.WithAuditor(idProvider.Identity("auditor")),
 		ttx.WithTMSID(r.TMSID),
 	)
 	assert.NoError(err, "failed to create an htlc transaction")

@@ -13,7 +13,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -72,7 +71,7 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 }
 
 type ViewManager interface {
-	InitiateView(view view2.View, ctx context.Context) (interface{}, error)
+	InitiateView(view view.View, ctx context.Context) (interface{}, error)
 }
 
 type ViewRegistry interface {

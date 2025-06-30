@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
@@ -76,9 +76,11 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 	assert.NoError(err, "htlc script has expired")
 	assert.True(matched.Count() == 1, "expected only one htlc script to match [%s], got [%d]", view.Identity(preImage), matched.Count())
 
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	tx, err = htlc.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		ttx.WithAuditor(idProvider.Identity("auditor")),
 		ttx.WithTMSID(r.TMSID),
 	)
 	assert.NoError(err, "failed to create an htlc transaction")

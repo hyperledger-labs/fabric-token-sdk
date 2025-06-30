@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	view4 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -105,8 +105,10 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// At this point, the sender is ready to prepare the token transaction.
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	var tx *ttx.Transaction
-	txOpts := TxOpts(t.TMSID, ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))
+	txOpts := TxOpts(t.TMSID, ttx.WithAuditor(idProvider.Identity(t.Auditor)))
 	logger.DebugfContext(context.Context(), "Create transfer")
 	if !t.NotAnonymous {
 		// create an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
@@ -229,9 +231,11 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	// At this point, the sender is ready to prepare the token transaction.
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)),
+		ttx.WithAuditor(idProvider.Identity(t.Auditor)),
 	)
 	assert.NoError(err, "failed creating transaction")
 
@@ -392,9 +396,11 @@ func (t *PrepareTransferView) Call(context view.Context) (interface{}, error) {
 	// At this point, the sender is ready to prepare the token transaction.
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)),
+		ttx.WithAuditor(idProvider.Identity(t.Auditor)),
 	)
 	assert.NoError(err, "failed creating transaction")
 
@@ -565,8 +571,10 @@ func (t *MaliciousTransferView) Call(context view.Context) (txID interface{}, er
 	// At this point, the sender is ready to prepare the token transaction.
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	var tx *ttx.Transaction
-	txOpts := TxOpts(t.TMSID, ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))
+	txOpts := TxOpts(t.TMSID, ttx.WithAuditor(idProvider.Identity(t.Auditor)))
 	if !t.NotAnonymous {
 		// create an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 		tx, err = ttx.NewAnonymousTransaction(context, txOpts...)

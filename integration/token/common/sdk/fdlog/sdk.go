@@ -9,7 +9,7 @@ package fdlog
 import (
 	"errors"
 
-	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
@@ -20,7 +20,7 @@ type SDK struct {
 	*tokensdk.SDK
 }
 
-func NewSDK(registry digutils.Registry) *SDK {
+func NewSDK(registry services.Registry) *SDK {
 	return &SDK{SDK: tokensdk.NewSDK(registry)}
 }
 

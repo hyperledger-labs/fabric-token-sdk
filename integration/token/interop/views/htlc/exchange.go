@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"time"
 
-	view3 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -71,10 +71,12 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 
 	// Initiator's Leg
 	var preImage []byte
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	_, err = view2.RunCall(context, func(context view.Context) (interface{}, error) {
 		tx, err := htlc.NewAnonymousTransaction(
 			context,
-			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
+			ttx.WithAuditor(idProvider.Identity("auditor")),
 			ttx.WithTMSID(v.TMSID1),
 		)
 		assert.NoError(err, "failed to create an htlc transaction")
@@ -197,10 +199,12 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 	}
 
 	// Initiate Responder's Leg
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	_, err = view2.AsInitiatorCall(context, v, func(context view.Context) (interface{}, error) {
 		tx, err := htlc.NewAnonymousTransaction(
 			context,
-			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
+			ttx.WithAuditor(idProvider.Identity("auditor")),
 			ttx.WithTMSID(terms.TMSID2),
 		)
 		assert.NoError(err, "failed to create an htlc transaction")

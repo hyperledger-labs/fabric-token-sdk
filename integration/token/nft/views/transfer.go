@@ -9,8 +9,8 @@ package views
 import (
 	"encoding/json"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
 )
@@ -31,10 +31,12 @@ type TransferHouseView struct {
 
 func (d *TransferHouseView) Call(context view.Context) (interface{}, error) {
 	// Prepare a new token transaction.
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	tx, err := nfttx.NewAnonymousTransaction(
 		context,
 		nfttx.WithAuditor(
-			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+			idProvider.Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
 	assert.NoError(err, "failed to create a new token transaction")
@@ -43,7 +45,7 @@ func (d *TransferHouseView) Call(context view.Context) (interface{}, error) {
 	house := &House{}
 	assert.NoError(nfttx.MyWallet(context).QueryByKey(context.Context(), house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
 
-	buyer, err := nfttx.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(d.Recipient))
+	buyer, err := nfttx.RequestRecipientIdentity(context, idProvider.Identity(d.Recipient))
 	assert.NoError(err, "failed getting buyer identity")
 
 	wallet := nfttx.MyWallet(context)

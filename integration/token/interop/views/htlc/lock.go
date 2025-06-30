@@ -11,8 +11,8 @@ import (
 	"encoding/json"
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
@@ -76,9 +76,11 @@ func (hv *LockView) Call(context view.Context) (res interface{}, err error) {
 
 	// At this point, the sender is ready to prepare the htlc transaction
 	// and specify the auditor that must be contacted to approve the operation.
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	tx, err = htlc.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		ttx.WithAuditor(idProvider.Identity("auditor")),
 		ttx.WithTMSID(hv.TMSID),
 	)
 	assert.NoError(err, "failed creating an htlc transaction")

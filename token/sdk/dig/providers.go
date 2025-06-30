@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sdk
 
 import (
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"

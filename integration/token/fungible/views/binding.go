@@ -8,8 +8,8 @@ package views
 import (
 	"encoding/json"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 )
@@ -24,7 +24,7 @@ type SetBindingView struct {
 }
 
 func (s *SetBindingView) Call(context view.Context) (interface{}, error) {
-	es := view2.GetEndpointService(context)
+	es := endpoint.GetService(context)
 	if err := es.Bind(context.Context(), s.FSCNodeIdentity, s.Alias); err != nil {
 		return nil, errors.Wrap(err, `failed to bind fsc node identity`)
 	}
