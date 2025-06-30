@@ -71,6 +71,11 @@ func WithIssueAttribute(attr, value interface{}) IssueOption {
 	}
 }
 
+// WithIssueMetadata sets issue action metadata
+func WithIssueMetadata(key string, value []byte) IssueOption {
+	return WithIssueAttribute(IssueMetadataPrefix+key, value)
+}
+
 // TransferOptions models the options that can be passed to the transfer command
 type TransferOptions struct {
 	// Attributes is a container of generic options that might be driver specific
@@ -107,11 +112,6 @@ func WithTokenSelector(selector Selector) TransferOption {
 // WithTransferMetadata sets transfer action metadata
 func WithTransferMetadata(key string, value []byte) TransferOption {
 	return WithTransferAttribute(TransferMetadataPrefix+key, value)
-}
-
-// WithIssueMetadata sets issue action metadata
-func WithIssueMetadata(key string, value []byte) TransferOption {
-	return WithTransferAttribute(IssueMetadataPrefix+key, value)
 }
 
 // WithTokenIDs sets the tokens ids to transfer
