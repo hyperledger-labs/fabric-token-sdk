@@ -9,7 +9,7 @@ package config
 import (
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -9,8 +9,8 @@ package house
 import (
 	"encoding/json"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/uniqueness"
@@ -43,9 +43,11 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	// At this point, the issuer is ready to prepare the token transaction.
 	// The issuer creates an anonymous transaction (this means that the result Fabric transaction will be signed using idemix),
 	// and specify the auditor that must be contacted to approve the operation
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting identity provider")
 	tx, err := nfttx.NewAnonymousTransaction(
 		context,
-		nfttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		nfttx.WithAuditor(idProvider.Identity("auditor")),
 	)
 	assert.NoError(err, "failed creating issue transaction")
 

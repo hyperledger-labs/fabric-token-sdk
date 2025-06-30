@@ -15,9 +15,11 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/sig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
@@ -355,7 +357,11 @@ func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Ide
 
 	if !c.tx.Opts.Auditor.IsNone() {
 		logger.DebugfContext(context.Context(), "ask auditing to [%s]", c.tx.Opts.Auditor)
-		local := view2.GetSigService(context).IsMe(context.Context(), c.tx.Opts.Auditor)
+		sigService, err := sig.GetService(context)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting sig service for [%s]", c.tx.Opts.Auditor)
+		}
+		local := sigService.IsMe(context.Context(), c.tx.Opts.Auditor)
 		sessionBoxed, err := context.RunView(newAuditingViewInitiator(c.tx, local, c.Opts.SkipAuditorSignatureVerification))
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.Auditor.String())
@@ -481,7 +487,11 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 		hash.Hashable(txRaw).String())
 
 	logger.DebugfContext(context.Context(), "Verify signature")
-	verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
+	sigService, err := sig.GetService(context)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting sig service for [%s]", c.tx.Opts.Auditor)
+	}
+	verifier, err := sigService.GetVerifier(entry.LongTerm)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for identity [%s]", entry.ID)
 	}
@@ -521,7 +531,11 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 	distributionList = allIds
 	allIds = append(allIds, auditors...)
 
-	mine := collections.NewSet(view2.GetSigService(context).AreMe(context.Context(), allIds...)...)
+	sigService, err := sig.GetService(context)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting sig service for [%s]", c.tx.Opts.Auditor)
+	}
+	mine := collections.NewSet(sigService.AreMe(context.Context(), allIds...)...)
 	remainingIds := make([]view.Identity, 0, len(allIds)-mine.Length())
 	for _, id := range allIds {
 		if !mine.Contains(id.UniqueID()) {
@@ -551,9 +565,13 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		var err error
 		// if it is me, no need to resolve, get directly the default identity
 		if isMe {
-			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
+			idProvider, err := id.GetProvider(context)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed getting identity provider")
+			}
+			longTermIdentity = idProvider.DefaultIdentity()
 		} else {
-			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(context.Context(), party)
+			longTermIdentity, _, _, err = endpoint.GetService(context).Resolve(context.Context(), party)
 			if err != nil {
 				return nil, errors.Wrapf(err, "cannot resolve long term identity for [%s]", party.UniqueID())
 			}
@@ -595,9 +613,13 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		var err error
 		// if it is me, no need to resolve, get directly the default identity
 		if isMe {
-			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
+			idProvider, err := id.GetProvider(context)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed getting identity provider")
+			}
+			longTermIdentity = idProvider.DefaultIdentity()
 		} else {
-			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(context.Context(), party)
+			longTermIdentity, _, _, err = endpoint.GetService(context).Resolve(context.Context(), party)
 			if err != nil {
 				return nil, errors.Wrapf(err, "cannot resolve long term auitor identity for [%s]", party.UniqueID())
 			}
@@ -781,9 +803,17 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// Send back an acknowledgement
-	defaultIdentity := view2.GetIdentityProvider(context).DefaultIdentity()
+	idProvider, err := id.GetProvider(context)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting identity provider")
+	}
+	defaultIdentity := idProvider.DefaultIdentity()
 	logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(receivedTx.FromRaw), defaultIdentity)
-	signer, err := view2.GetSigService(context).GetSigner(defaultIdentity)
+	sigService, err := sig.GetService(context)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting sig service")
+	}
+	signer, err := sigService.GetSigner(defaultIdentity)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
 	}

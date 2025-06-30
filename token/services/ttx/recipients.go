@@ -9,7 +9,7 @@ package ttx
 import (
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
@@ -215,7 +215,7 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	// Update the Endpoint Resolver
 	logger.DebugfContext(context.Context(), "update endpoint resolver for [%s], bind to [%s]", recipientData.Identity, recipient.Identity)
 
-	if err := view2.GetEndpointService(context).Bind(context.Context(), recipient.Identity, recipientData.Identity); err != nil {
+	if err := endpoint.GetService(context).Bind(context.Context(), recipient.Identity, recipientData.Identity); err != nil {
 		logger.ErrorfContext(context.Context(), "failed binding [%s] to [%s]: %w", recipientData.Identity, recipient.Identity, err)
 		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", recipientData.Identity, recipient.Identity)
 	}
@@ -347,7 +347,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	}
 
 	// Update the Endpoint Resolver
-	resolver := view2.GetEndpointService(context)
+	resolver := endpoint.GetService(context)
 	logger.DebugfContext(context.Context(), "bind me [%s] to [%s]", context.Me(), recipientData)
 
 	err = resolver.Bind(context.Context(), context.Me(), recipientIdentity)
@@ -437,7 +437,7 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 	}
 
 	// Update the Endpoint Resolver
-	resolver := view2.GetEndpointService(context)
+	resolver := endpoint.GetService(context)
 	for i, node := range multisigRecipientData.Nodes {
 		err = resolver.Bind(context.Context(), node, multisigRecipientData.Recipients[i])
 		if err != nil {
@@ -525,7 +525,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 
 		// Update the Endpoint Resolver
 		logger.Debugf("bind [%s] to other [%s]", remoteRecipientData.Identity, f.Other)
-		resolver := view2.GetEndpointService(context)
+		resolver := endpoint.GetService(context)
 		err = resolver.Bind(context.Context(), f.Other, remoteRecipientData.Identity)
 		if err != nil {
 			return nil, err
@@ -590,7 +590,7 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	}
 
 	// Update the Endpoint Resolver
-	resolver := view2.GetEndpointService(context)
+	resolver := endpoint.GetService(context)
 	err = resolver.Bind(context.Context(), context.Me(), recipientData.Identity)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
