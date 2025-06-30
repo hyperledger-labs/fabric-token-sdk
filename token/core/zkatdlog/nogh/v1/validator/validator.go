@@ -56,7 +56,9 @@ func New(
 	logger logging.Logger,
 	pp *v1.PublicParams,
 	deserializer driver.Deserializer,
-	extraValidators ...ValidateTransferFunc,
+	extraTransferValidators []ValidateTransferFunc,
+	extraIssuerValidators []ValidateIssueFunc,
+	extraAuditorValidators []ValidateAuditingFunc,
 ) *Validator {
 	transferValidators := []ValidateTransferFunc{
 		TransferActionValidate,
@@ -65,15 +67,17 @@ func New(
 		TransferZKProofValidate,
 		TransferHTLCValidate,
 	}
-	transferValidators = append(transferValidators, extraValidators...)
+	transferValidators = append(transferValidators, extraTransferValidators...)
 
 	issueValidators := []ValidateIssueFunc{
 		IssueValidate,
 	}
+	issueValidators = append(issueValidators, extraIssuerValidators...)
 
 	auditingValidators := []ValidateAuditingFunc{
 		common.AuditingSignaturesValidate[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer],
 	}
+	auditingValidators = append(auditingValidators, extraAuditorValidators...)
 
 	return common.NewValidator[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer](
 		logger,

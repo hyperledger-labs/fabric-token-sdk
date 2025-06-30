@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -144,6 +145,18 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token upgrade service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
+	validator, err := validator.New(
+		logger,
+		ppm.PublicParams(context.Background()),
+		deserializer,
+		nil,
+		nil,
+		nil,
+	), nil
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to instantiate validator")
+	}
+
 	service, err := v1.NewTokenService(
 		logger,
 		ws,
@@ -173,6 +186,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		tokensService,
 		tokensUpgradeService,
 		authorization,
+		validator,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")

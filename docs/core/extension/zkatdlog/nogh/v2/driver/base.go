@@ -42,7 +42,14 @@ func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 		return nil, errors.Errorf("failed to create token service deserializer: %v", err)
 	}
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.zkatdlog", string(pp.TokenDriverName()))
-	return validator.New(logger, pp.(*v2.PublicParams), deserializer), nil
+	return validator.New(
+		logger,
+		pp.(*v2.PublicParams),
+		deserializer,
+		nil,
+		nil,
+		nil,
+	), nil
 }
 
 func (d *base) newWalletService(

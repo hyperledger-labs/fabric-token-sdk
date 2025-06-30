@@ -97,7 +97,14 @@ var _ = Describe("validator", func() {
 		// initialize enginw with pp
 		deserializer, err := zkatdlog.NewDeserializer(pp)
 		Expect(err).NotTo(HaveOccurred())
-		engine = enginedlog.New(logging.MustGetLogger(), pp, deserializer)
+		engine = enginedlog.New(
+			logging.MustGetLogger(),
+			pp,
+			deserializer,
+			nil,
+			nil,
+			nil,
+		)
 
 		// non-anonymous issue
 		_, ir, _ = prepareNonAnonymousIssueRequest(pp, auditor)
