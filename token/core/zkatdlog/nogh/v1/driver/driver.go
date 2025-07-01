@@ -120,7 +120,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		logger,
 		d.identityProvider.DefaultIdentity(),
 		networkLocalMembership.DefaultIdentity(),
-		ppm.PublicParams(context.Background()),
+		pp,
 		false,
 		metricsProvider,
 	)
@@ -131,17 +131,17 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	ip := ws.IdentityProvider
 
 	authorization := common.NewAuthorizationMultiplexer(
-		common.NewTMSAuthorization(logger, ppm.PublicParams(context.Background()), ws),
+		common.NewTMSAuthorization(logger, pp, ws),
 		htlc.NewScriptAuth(ws),
 		multisig.NewEscrowAuth(ws),
 	)
 
 	driverMetrics := v1.NewMetrics(metricsProvider)
-	tokensService, err := v1token.NewTokensService(logger, ppm.PublicParams(), deserializer)
+	tokensService, err := v1token.NewTokensService(logger, pp, deserializer)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
-	tokensUpgradeService, err := upgrade.NewService(logger, ppm.PublicParams(context.Background()).QuantityPrecision, deserializer, ip)
+	tokensUpgradeService, err := upgrade.NewService(logger, pp.QuantityPrecision, deserializer, ip)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token upgrade service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
