@@ -7,9 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"

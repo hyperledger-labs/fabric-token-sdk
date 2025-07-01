@@ -8,8 +8,6 @@ package ttx
 
 import (
 	"encoding/base64"
-	"fmt"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"

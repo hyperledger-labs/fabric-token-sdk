@@ -321,7 +321,7 @@ func TestAWAddTransaction(t *testing.T, store transactionsStoreConstructor) {
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
-	input := &driver.TransactionRecord{
+	input := driver.TransactionRecord{
 		TxID:         "txid",
 		ActionType:   driver.Transfer,
 		SenderEID:    "sender",
@@ -378,7 +378,7 @@ func TestAWAddMovement(t *testing.T, store transactionsStoreConstructor) {
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
-	input := &driver.MovementRecord{
+	input := driver.MovementRecord{
 		TxID:         "txid",
 		EnrollmentID: "EID",
 		TokenType:    "USD",
