@@ -11,6 +11,7 @@ import (
 	"time"
 
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
@@ -174,6 +175,11 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	}
 
 	s.Logger.Debugf("issue with [%d] inputs", len(issueAction.Inputs))
+
+	// add issuer action's metadata
+	if opts != nil {
+		issueAction.Metadata = meta.IssueActionMetadata(opts.Attributes)
+	}
 
 	meta := &driver.IssueMetadata{
 		Issuer: driver.AuditableIdentity{

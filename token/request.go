@@ -22,6 +22,7 @@ import (
 
 const (
 	TransferMetadataPrefix = meta.TransferMetadataPrefix
+	IssueMetadataPrefix    = meta.IssueMetadataPrefix
 )
 
 type Binder interface {
@@ -68,6 +69,11 @@ func WithIssueAttribute(attr, value interface{}) IssueOption {
 		o.Attributes[attr] = value
 		return nil
 	}
+}
+
+// WithIssueMetadata sets issue action metadata
+func WithIssueMetadata(key string, value []byte) IssueOption {
+	return WithIssueAttribute(IssueMetadataPrefix+key, value)
 }
 
 // TransferOptions models the options that can be passed to the transfer command

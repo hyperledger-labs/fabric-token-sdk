@@ -9,6 +9,7 @@ package v1
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -85,7 +86,14 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, errors.Wrapf(err, "failed to get audit info for issuer identity")
 	}
 
-	action := &v1.IssueAction{Issuer: issuerIdentity, Outputs: outs}
+	action := &v1.IssueAction{
+		Issuer:  issuerIdentity,
+		Outputs: outs,
+	}
+	// add issuer action's metadata
+	if opts != nil {
+		action.Metadata = meta.IssueActionMetadata(opts.Attributes)
+	}
 
 	meta := &driver.IssueMetadata{
 		Issuer: driver.AuditableIdentity{
