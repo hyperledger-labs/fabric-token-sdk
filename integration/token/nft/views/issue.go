@@ -9,8 +9,8 @@ package views
 import (
 	"encoding/json"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/uniqueness"
@@ -37,7 +37,9 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
-	recipient, err := nfttx.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(p.Recipient))
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
+	recipient, err := nfttx.RequestRecipientIdentity(context, idProvider.Identity(p.Recipient))
 	assert.NoError(err, "failed getting recipient identity")
 
 	// At this point, the issuer is ready to prepare the token transaction.
@@ -46,7 +48,7 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	tx, err := nfttx.NewAnonymousTransaction(
 		context,
 		nfttx.WithAuditor(
-			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+			idProvider.Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
 	assert.NoError(err, "failed creating issue transaction")

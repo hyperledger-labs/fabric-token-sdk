@@ -9,8 +9,8 @@ package views
 import (
 	"encoding/json"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/house"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
@@ -36,9 +36,11 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	// It will contain two legs:
 	// 1. The first leg will be used to transfer the house to the buyer.
 	// 2. The second leg will be used to transfer the cash to the seller.
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting identity provider")
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		ttx.WithAuditor(idProvider.Identity("auditor")),
 	)
 	assert.NoError(err, "failed to create a new token transaction")
 

@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"math/big"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -48,9 +48,11 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	// At this point, Alice is ready to prepare the token transaction.
 	// Alice creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)),
+		ttx.WithAuditor(idProvider.Identity(t.Auditor)),
 	)
 	assert.NoError(err, "failed creating transaction")
 

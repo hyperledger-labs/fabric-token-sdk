@@ -13,9 +13,8 @@ import (
 	"sync"
 	"time"
 
-	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
@@ -41,7 +40,7 @@ var (
 	logger      = logging.MustGetLogger()
 )
 
-func NewStoreServiceManager(cp driver2.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
+func NewStoreServiceManager(cp cdriver.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
 	return db.NewStoreServiceManager(config.NewService(cp), "auditdb.persistence", drivers.NewAuditTransaction, newStoreService)
 }
 
@@ -107,10 +106,10 @@ type QueryTransactionsParams = driver.QueryTransactionsParams
 type QueryTokenRequestsParams = driver.QueryTokenRequestsParams
 
 // Pagination defines the pagination for querying movements
-type Pagination = driver3.Pagination
+type Pagination = cdriver.Pagination
 
 // Pagination iterator defines the pagination iterator for movements query results
-type PageTransactionsIterator = driver3.PageIterator[*TransactionRecord]
+type PageTransactionsIterator = cdriver.PageIterator[*TransactionRecord]
 
 // Wallet models a wallet
 type Wallet interface {

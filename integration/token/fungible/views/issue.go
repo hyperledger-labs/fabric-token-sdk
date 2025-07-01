@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"strings"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -85,10 +85,12 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// The issuer creates a new token transaction and specifies the auditor that must be contacted to approve the operation.
 	var tx *ttx.Transaction
 	var auditorID view.Identity
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	if len(p.Auditor) == 0 {
-		auditorID = view2.GetIdentityProvider(context).DefaultIdentity()
+		auditorID = idProvider.DefaultIdentity()
 	} else {
-		auditorID = view2.GetIdentityProvider(context).Identity(p.Auditor)
+		auditorID = idProvider.Identity(p.Auditor)
 	}
 	opts := TxOpts(p.TMSID, ttx.WithAuditor(auditorID))
 	if p.Anonymous {

@@ -9,8 +9,8 @@ package ttx
 import (
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
@@ -173,7 +173,7 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 	// Update the Endpoint Resolver
 	caller := context.Session().Info().Caller
 	logger.Debugf("update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
-	if err := view2.GetEndpointService(context).Bind(context.Context(), caller, request.RecipientData.Identity); err != nil {
+	if err := endpoint.GetService(context).Bind(context.Context(), caller, request.RecipientData.Identity); err != nil {
 		logger.Debugf("failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 	}

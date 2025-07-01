@@ -11,12 +11,13 @@ import (
 	errors2 "errors"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/committer"
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -74,7 +75,7 @@ func (p *SDK) TokenEnabled() bool {
 	return p.ConfigService().GetBool("token.enabled")
 }
 
-func NewSDK(registry digutils.Registry) *SDK {
+func NewSDK(registry services.Registry) *SDK {
 	return NewFrom(fabricsdk.NewSDK(registry))
 }
 

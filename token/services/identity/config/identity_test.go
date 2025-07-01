@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"testing"
 
-	config3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
+	config3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"

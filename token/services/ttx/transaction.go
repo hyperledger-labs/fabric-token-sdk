@@ -9,7 +9,7 @@ package ttx
 import (
 	"context"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -42,7 +42,7 @@ type Transaction struct {
 	Opts             *TxOptions
 	Context          context.Context
 	FromRaw          []byte
-	EndpointResolver *view2.EndpointService
+	EndpointResolver *endpoint.Service
 }
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
@@ -132,7 +132,7 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 		NetworkProvider:  networkProvider,
 		Opts:             txOpts,
 		Context:          context.Context(),
-		EndpointResolver: view2.GetEndpointService(context),
+		EndpointResolver: endpoint.GetService(context),
 	}
 	context.OnError(tx.Release)
 	return tx, nil

@@ -9,8 +9,8 @@ package views
 import (
 	"encoding/json"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -49,10 +49,12 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 
 	// At this point, the issuer is ready to prepare the token transaction.
 	// The issuer creates a transaction and specify the auditor that must be contacted to approve the operation.
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
 		ttx.WithAuditor(
-			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+			idProvider.Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 		ttx.WithTMSID(p.TMSID),
 	)

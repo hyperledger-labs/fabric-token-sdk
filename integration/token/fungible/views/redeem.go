@@ -9,8 +9,8 @@ package views
 import (
 	"encoding/json"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -46,9 +46,11 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	// The sender directly prepare the token transaction.
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		TxOpts(t.TMSID, ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))...,
+		TxOpts(t.TMSID, ttx.WithAuditor(idProvider.Identity(t.Auditor)))...,
 	)
 	assert.NoError(err, "failed creating transaction")
 
@@ -65,14 +67,14 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	// selector.Select(wallet, amount, tokenType)
 	// It is also possible to pass a custom token selector to the Redeem function by using the relative opt:
 	// token2.WithTokenSelector(selector).
-	// Notice also the use of `ttx.WithFSCIssuerIdentity(view2.GetIdentityProvider(context).Identity(t.Issuer))`.
+	// Notice also the use of `ttx.WithFSCIssuerIdentity(idProvider.Identity(t.Issuer))`.
 	// Recall that a redeem operation must be approved by an issuer.
 	// Therefore, we need a way to contact the issuer to obtain its signature.
 	// If the application doesn't have a way to resolve the Issuer's network node already,
 	// the developer can specify the issuer network node identity directly as in this example.
 	opts := []token2.TransferOption{token2.WithTokenIDs(t.TokenIDs...)}
 	if t.Issuer != "" {
-		opts = append(opts, ttx.WithFSCIssuerIdentity(view2.GetIdentityProvider(context).Identity(t.Issuer)))
+		opts = append(opts, ttx.WithFSCIssuerIdentity(idProvider.Identity(t.Issuer)))
 		opts = append(opts, ttx.WithIssuerPublicParamsPublicKey(t.IssuerPublicParamsPublicKey))
 	}
 	err = tx.Redeem(

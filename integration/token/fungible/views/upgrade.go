@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -159,7 +159,9 @@ func (p *TokensUpgradeResponderView) Call(context view.Context) (interface{}, er
 		} else {
 			auditorID = p.Auditor
 		}
-		auditor := view2.GetIdentityProvider(context).Identity(auditorID)
+		idProvider, err := id.GetProvider(context)
+		assert.NoError(err, "failed getting id provider")
+		auditor := idProvider.Identity(auditorID)
 		if !upgradeRequest.NotAnonymous {
 			// The issuer creates an anonymous transaction (for Fabric, this means that the resulting transaction will be signed using idemix),
 			tx, err = ttx.NewAnonymousTransaction(context, ttx.WithAuditor(auditor), ttx.WithTMSID(upgradeRequest.TMSID))

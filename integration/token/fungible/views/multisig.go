@@ -9,8 +9,8 @@ package views
 import (
 	"encoding/json"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -58,9 +58,11 @@ func (lv *MultiSigLockView) Call(context view.Context) (txID interface{}, err er
 	// If NotAnonymous == false, then the sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
 	var tx *ttx.Transaction
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	txOpts := []ttx.TxOption{
 		ttx.WithTMSIDPointer(lv.TMSID),
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(lv.Auditor)),
+		ttx.WithAuditor(idProvider.Identity(lv.Auditor)),
 		ttx.WithAnonymousTransaction(!lv.NotAnonymous),
 	}
 	tx, err = ttx.NewTransaction(context, nil, txOpts...)
@@ -138,9 +140,11 @@ func (r *MultiSigSpendView) Call(context view.Context) (res interface{}, err err
 	assert.NoError(err, "failed to request spend")
 
 	// generate the transaction
+	idProvider, err := id.GetProvider(context)
+	assert.NoError(err, "failed getting id provider")
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		TxOpts(r.TMSID, ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(r.Auditor)))...,
+		TxOpts(r.TMSID, ttx.WithAuditor(idProvider.Identity(r.Auditor)))...,
 	)
 	assert.NoError(err, "failed to create an multisig transaction")
 	assert.NoError(multisig.Wrap(tx).Spend(spendWallet, matched.At(0), recipient), "failed adding a spend for [%s]", matched.At(0).Id)

@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -131,7 +131,9 @@ func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error
 		} else {
 			auditorID = p.Auditor
 		}
-		auditor := view2.GetIdentityProvider(context).Identity(auditorID)
+		idProvider, err := id.GetProvider(context)
+		assert.NoError(err, "failed getting id provider")
+		auditor := idProvider.Identity(auditorID)
 		if !issueRequest.NotAnonymous {
 			// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 			tx, err = ttx.NewAnonymousTransaction(context, ttx.WithAuditor(auditor), ttx.WithTMSID(issueRequest.TMSID))
