@@ -180,9 +180,14 @@ type PublicParams struct {
 	QuantityPrecision uint64
 }
 
-func NewPublicParamsFromBytes(raw []byte, driverName driver.TokenDriverName) (*PublicParams, error) {
+func NewPublicParamsFromBytes(
+	raw []byte,
+	driverName driver.TokenDriverName,
+	driverVersion driver.TokenDriverVersion,
+) (*PublicParams, error) {
 	pp := &PublicParams{}
 	pp.DriverName = driverName
+	pp.DriverVersion = driverVersion
 	if err := pp.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed parsing public parameters")
 	}
@@ -190,10 +195,10 @@ func NewPublicParamsFromBytes(raw []byte, driverName driver.TokenDriverName) (*P
 }
 
 func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return setup(bitLength, idemixIssuerPK, DLogIdentifier, idemixCurveID)
+	return NewWith(DLogIdentifier, ProtocolV1, bitLength, idemixIssuerPK, idemixCurveID)
 }
 
-func setup(bitLength uint64, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriverVersion, bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
 	if bitLength > 64 {
 		return nil, errors.Errorf("invalid bit length [%d], should be smaller than 64", bitLength)
 	}
@@ -201,9 +206,9 @@ func setup(bitLength uint64, idemixIssuerPK []byte, label string, idemixCurveID 
 		return nil, errors.New("invalid bit length, should be greater than 0")
 	}
 	pp := &PublicParams{
-		DriverName:    driver.TokenDriverName(label),
+		DriverName:    driverName,
+		DriverVersion: driverVersion,
 		Curve:         mathlib.BN254,
-		DriverVersion: ProtocolV1,
 		IdemixIssuerPublicKeys: []*IdemixIssuerPublicKey{
 			{
 				PublicKey: idemixIssuerPK,
@@ -324,7 +329,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
-	expectedID := string(core.DriverIdentifier(DLogIdentifier, ProtocolV1))
+	expectedID := string(core.DriverIdentifier(p.DriverName, p.DriverVersion))
 	if container.Identifier != expectedID {
 		return errors.Errorf(
 			"invalid identifier, expecting [%s], got [%s]",

@@ -219,7 +219,7 @@ func validateOutputEquivalent(gt *WithT, tempOutput, auditorsMSPdir, issuersMSPd
 	ppRaw, err := os.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
 
-	pp, err := v1.NewPublicParamsFromBytes(ppRaw, v1.DLogIdentifier)
+	pp, err := v1.NewPublicParamsFromBytes(ppRaw, v1.DLogIdentifier, v1.ProtocolV1)
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(pp.Validate()).NotTo(HaveOccurred())
 

@@ -15,28 +15,31 @@ import (
 )
 
 type PublicParamsDeserializer[T driver.PublicParameters] interface {
-	DeserializePublicParams(raw []byte, name driver.TokenDriverName) (T, error)
+	DeserializePublicParams(raw []byte, name driver.TokenDriverName, version driver.TokenDriverVersion) (T, error)
 }
 
 type PublicParamsManager[T driver.PublicParameters] struct {
 	publicParameters T
 	// label of the public params
-	DriverName driver.TokenDriverName
-	ppHash     driver.PPHash
+	DriverName    driver.TokenDriverName
+	DriverVersion driver.TokenDriverVersion
+	ppHash        driver.PPHash
 }
 
 func NewPublicParamsManager[T driver.PublicParameters](
 	PublicParamsDeserializer PublicParamsDeserializer[T],
 	driverName driver.TokenDriverName,
+	driverVersion driver.TokenDriverVersion,
 	ppRaw []byte,
 ) (*PublicParamsManager[T], error) {
 	ppm := &PublicParamsManager[T]{
-		DriverName: driverName,
+		DriverName:    driverName,
+		DriverVersion: driverVersion,
 	}
 	if len(ppRaw) == 0 {
 		return nil, errors.Errorf("empty public parameters")
 	}
-	pp, err := PublicParamsDeserializer.DeserializePublicParams(ppRaw, driverName)
+	pp, err := PublicParamsDeserializer.DeserializePublicParams(ppRaw, driverName, driverVersion)
 	if err != nil {
 		return nil, err
 	}
