@@ -11,14 +11,14 @@ import (
 
 	msp "github.com/IBM/idemix"
 	bccsp "github.com/IBM/idemix/bccsp/types"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
-	m "github.com/hyperledger/fabric-protos-go/msp"
 )
 
 const (
 	eidIdx = 2
 	rhIdx  = 3
 	skIdx  = 0
+
+	DefaultSchema = ""
 )
 
 // attributeNames are the attribute names for the `w3c` schema
@@ -61,6 +61,10 @@ var attributeNames = []string{
 type DefaultManager struct {
 }
 
+func NewDefaultManager() *DefaultManager {
+	return &DefaultManager{}
+}
+
 func (*DefaultManager) NymSignerOpts(schema string) (*bccsp.IdemixNymSignerOpts, error) {
 	switch schema {
 	case "":
@@ -96,13 +100,13 @@ func (*DefaultManager) PublicKeyImportOpts(schema string) (*bccsp.IdemixIssuerPu
 	return nil, fmt.Errorf("unsupported schema '%s' for PublicKeyImportOpts", schema)
 }
 
-func (*DefaultManager) SignerOpts(schema string, ou *m.OrganizationUnit, role *m.MSPRole) (*bccsp.IdemixSignerOpts, error) {
+func (*DefaultManager) SignerOpts(schema string) (*bccsp.IdemixSignerOpts, error) {
 	switch schema {
 	case "":
 		return &bccsp.IdemixSignerOpts{
 			Attributes: []bccsp.IdemixAttribute{
-				{Type: bccsp.IdemixBytesAttribute, Value: []byte(ou.OrganizationalUnitIdentifier)},
-				{Type: bccsp.IdemixIntAttribute, Value: msp2.GetIdemixRoleFromMSPRole(role)},
+				{Type: bccsp.IdemixHiddenAttribute},
+				{Type: bccsp.IdemixHiddenAttribute},
 				{Type: bccsp.IdemixHiddenAttribute},
 				{Type: bccsp.IdemixHiddenAttribute},
 			},
@@ -110,22 +114,15 @@ func (*DefaultManager) SignerOpts(schema string, ou *m.OrganizationUnit, role *m
 			EidIndex: eidIdx,
 		}, nil
 	case "w3c-v0.0.1":
-		role_str := fmt.Sprintf(
-			"_:c14n0 \u003ccbdccard:3_role\u003e \"%d\"^^\u003chttp://www.w3.org/2001/XMLSchema#integer\u003e .",
-			msp2.GetIdemixRoleFromMSPRole(role),
-		)
-
-		idemixAttrs := []bccsp.IdemixAttribute{}
+		var idemixAttrs []bccsp.IdemixAttribute
 		for i := range attributeNames {
 			if i == 25 {
 				idemixAttrs = append(idemixAttrs, bccsp.IdemixAttribute{
-					Type:  bccsp.IdemixBytesAttribute,
-					Value: []byte(role_str),
+					Type: bccsp.IdemixHiddenAttribute,
 				})
 			} else if i == 24 {
 				idemixAttrs = append(idemixAttrs, bccsp.IdemixAttribute{
-					Type:  bccsp.IdemixBytesAttribute,
-					Value: []byte(ou.OrganizationalUnitIdentifier),
+					Type: bccsp.IdemixHiddenAttribute,
 				})
 			} else {
 				idemixAttrs = append(idemixAttrs, bccsp.IdemixAttribute{

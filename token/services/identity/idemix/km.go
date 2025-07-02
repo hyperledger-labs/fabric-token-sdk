@@ -10,13 +10,12 @@ import (
 	"fmt"
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
-	im "github.com/IBM/idemix/idemixmsp"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
 	"github.com/pkg/errors"
 )
 
@@ -26,7 +25,8 @@ const (
 )
 
 type (
-	SKI = []byte
+	SKI    = []byte
+	Schema = string
 )
 
 // SchemaManager handles the various credential schemas. A credential schema
@@ -36,7 +36,7 @@ type SchemaManager interface {
 	// PublicKeyImportOpts returns the options that `schema` uses to import its public keys
 	PublicKeyImportOpts(schema string) (*bccsp.IdemixIssuerPublicKeyImportOpts, error)
 	// SignerOpts returns the options for the passed arguments
-	SignerOpts(schema string, ou *m.OrganizationUnit, role *m.MSPRole) (*bccsp.IdemixSignerOpts, error)
+	SignerOpts(schema string) (*bccsp.IdemixSignerOpts, error)
 	// NymSignerOpts returns the options that `schema` uses to verify a nym signature
 	NymSignerOpts(schema string) (*bccsp.IdemixNymSignerOpts, error)
 	// EidNymAuditOpts returns the options that `sid` must use to audit an EIDNym
@@ -67,10 +67,25 @@ func NewKeyManager(
 	signerService SignerService,
 	sigType bccsp.SignatureType,
 	csp bccsp.BCCSP,
-	sm SchemaManager,
-	schema string,
 ) (*KeyManager, error) {
+	return NewKeyManagerWithSchema(
+		conf,
+		signerService,
+		sigType,
+		csp,
+		schema.NewDefaultManager(),
+		schema.DefaultSchema,
+	)
+}
 
+func NewKeyManagerWithSchema(
+	conf *crypto2.Config,
+	signerService SignerService,
+	sigType bccsp.SignatureType,
+	csp bccsp.BCCSP,
+	sm SchemaManager,
+	schemaName string,
+) (*KeyManager, error) {
 	if conf == nil {
 		return nil, errors.New("no idemix config provided")
 	}
@@ -81,9 +96,9 @@ func NewKeyManager(
 	logger.Debugf("setting up Idemix key manager instance %s", conf.Name)
 
 	// get the opts from the schema manager
-	opts, err := sm.PublicKeyImportOpts(schema)
+	opts, err := sm.PublicKeyImportOpts(schemaName)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not obtain PublicKeyImportOpts for schema '%s'", schema)
+		return nil, errors.Wrapf(err, "could not obtain PublicKeyImportOpts for schema '%s'", schemaName)
 	}
 	// Import Issuer Public Key
 	issuerPublicKey, err := csp.KeyImport(
@@ -139,6 +154,7 @@ func NewKeyManager(
 	if userKey != nil {
 		userKeySKI = userKey.SKI()
 		conf.Signer.Ski = userKeySKI
+
 		// Verify credential
 		valid, err := csp.Verify(
 			userKey,
@@ -187,7 +203,7 @@ func NewKeyManager(
 			Epoch:           0,
 			VerType:         verType,
 			SchemaManager:   sm,
-			Schema:          schema,
+			Schema:          schemaName,
 		},
 		userKeySKI:    userKeySKI,
 		conf:          conf,
@@ -195,7 +211,7 @@ func NewKeyManager(
 		sigType:       sigType,
 		verType:       verType,
 		SchemaManager: sm,
-		Schema:        schema,
+		Schema:        schemaName,
 	}, nil
 }
 
@@ -238,7 +254,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	// Create the cryptographic evidence that this identity is valid
-	sigOpts, err := p.SchemaManager.SignerOpts(p.Schema, ou, role)
+	sigOpts, err := p.SchemaManager.SignerOpts(p.Schema)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could obtain signer sigOpts for schema %s", p.Schema)
 	}
@@ -361,7 +377,7 @@ func (p *KeyManager) Anonymous() bool {
 }
 
 func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentity, error) {
-	id, err := p.Deserialize(raw, true)
+	id, err := p.Deserialize(raw)
 	if err != nil {
 		return nil, err
 	}

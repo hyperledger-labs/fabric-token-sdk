@@ -8,7 +8,6 @@ package crypto
 
 import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
-	im "github.com/IBM/idemix/idemixmsp"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/pkg/errors"
 )
@@ -78,7 +77,7 @@ func (d *Deserializer) DeserializeAgainstNymEID(identity []byte, nymEID []byte) 
 		}
 	}
 
-	id, err := NewIdentity(idemix, NymPublicKey, serialized.Proof, c.VerType, d.SchemaManager, d.Schema)
+	id, err := NewIdentity(idemix, NymPublicKey, serialized.Proof, d.VerType, d.SchemaManager, d.Schema)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot deserialize")
 	}

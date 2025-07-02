@@ -10,13 +10,13 @@ import (
 	"context"
 	"fmt"
 
-	msp "github.com/IBM/idemix"
 	csp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
 	"github.com/pkg/errors"
 )
 
@@ -25,7 +25,10 @@ type Deserializer struct {
 }
 
 // NewDeserializer returns a new deserializer for the idemix ExpectEidNymRhNym verification strategy
-func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
+func NewDeserializer(
+	ipk []byte,
+	curveID math.CurveID,
+) (*Deserializer, error) {
 	if len(ipk) == 0 {
 		return nil, errors.New("invalid ipk")
 	}
@@ -33,14 +36,27 @@ func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
 	}
-	return NewDeserializer(sm, schema, ipk, csp.ExpectEidNymRhNym, nil, cryptoProvider)
+	return NewDeserializerWithProvider(
+		schema.NewDefaultManager(),
+		schema.DefaultSchema,
+		ipk, csp.ExpectEidNymRhNym, nil, cryptoProvider)
 }
 
-// NewDeserializer returns a new deserializer for the passed arguments.
-// The returned deserializer checks the validly of the deserialized identities.
-func NewDeserializer(
+// NewDeserializerWithProvider returns a new serialized for the passed arguments
+func NewDeserializerWithProvider(
 	sm SchemaManager,
-	schema string,
+	schema Schema,
+	ipk []byte,
+	verType csp.VerificationType,
+	nymEID []byte,
+	cryptoProvider csp.BCCSP,
+) (*Deserializer, error) {
+	return NewDeserializerWithBCCSP(sm, schema, ipk, verType, nymEID, cryptoProvider)
+}
+
+func NewDeserializerWithBCCSP(
+	sm SchemaManager,
+	schema Schema,
 	ipk []byte,
 	verType csp.VerificationType,
 	nymEID []byte,
@@ -92,10 +108,6 @@ func (d *Deserializer) DeserializeVerifier(raw driver.Identity) (driver.Verifier
 		SchemaManager: d.SchemaManager,
 		Schema:        d.Schema,
 	}, nil
-}
-
-func (d *Deserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
-	return d.Deserializer.DeserializeAuditInfo(raw)
 }
 
 func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {

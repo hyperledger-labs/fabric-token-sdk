@@ -8,11 +8,22 @@ package crypto
 
 import (
 	csp "github.com/IBM/idemix/bccsp/types"
-	im "github.com/IBM/idemix/idemixmsp"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/pkg/errors"
 )
+
+type Schema = string
+
+// SchemaManager handles the various credential schemas. A credential schema
+// contains information about the number of attributes, which attributes
+// must be disclosed when creating proofs, the format of the attributes etc.
+type SchemaManager interface {
+	// EidNymAuditOpts returns the options that `sid` must use to audit an EIDNym
+	EidNymAuditOpts(schema string, attrs [][]byte) (*csp.EidNymAuditOpts, error)
+	// RhNymAuditOpts returns the options that `sid` must use to audit an RhNym
+	RhNymAuditOpts(schema string, attrs [][]byte) (*csp.RhNymAuditOpts, error)
+}
 
 type AuditInfo struct {
 	EidNymAuditData *csp.AttrNymAuditData
