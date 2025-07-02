@@ -9,7 +9,7 @@ package csp
 import (
 	"encoding/hex"
 
-	"github.com/hyperledger/fabric/bccsp"
+	"github.com/hyperledger/fabric-lib-go/bccsp"
 	"github.com/pkg/errors"
 )
 
