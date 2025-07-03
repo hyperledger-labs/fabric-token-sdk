@@ -119,11 +119,6 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 }
 
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node, uniqueName string) string {
-	gomega.Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(uniqueName), 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(uniqueName))
-	gomega.Expect(os.MkdirAll(p.TokensDBSQLDataSourceDir(uniqueName), 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", p.TokensDBSQLDataSourceDir(uniqueName))
-	gomega.Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(uniqueName), 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(uniqueName))
-	gomega.Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(uniqueName), 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(uniqueName))
-
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"TMSID":       func() string { return tms.TmsID() },
 		"TMS":         func() *topology2.TMS { return tms },
