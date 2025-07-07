@@ -13,7 +13,7 @@ import (
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit/mock"
@@ -265,17 +265,17 @@ func (f *fakeProv) TranslatePath(path string) string {
 }
 
 func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
-	registry := registry2.New()
+	sp := view.NewServiceProvider()
 	configService := &fakeProv{typ: "memory"}
-	Expect(registry.RegisterService(configService)).NotTo(HaveOccurred())
+	Expect(sp.RegisterService(configService)).NotTo(HaveOccurred())
 
 	backend, err := kvs2.NewInMemory()
 	Expect(err).NotTo(HaveOccurred())
-	err = registry.RegisterService(backend)
+	err = sp.RegisterService(backend)
 	Expect(err).NotTo(HaveOccurred())
 
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(backend, token2.TMSID{Network: "pineapple"}))
-	err = registry.RegisterService(sigService)
+	err = sp.RegisterService(sigService)
 	Expect(err).NotTo(HaveOccurred())
 	config, err := crypto.NewConfig(dir)
 	Expect(err).NotTo(HaveOccurred())
