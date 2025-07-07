@@ -9,7 +9,7 @@ package driver
 import (
 	"context"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
 	v2 "github.com/hyperledger-labs/fabric-token-sdk/docs/core/extension/zkatdlog/nogh/v2/setup"
@@ -40,7 +40,7 @@ type Driver struct {
 	configService    *config.Service
 	storageProvider  identity.StorageProvider
 	identityProvider view2.IdentityProvider
-	endpointService  *view.EndpointService
+	endpointService  *endpoint.Service
 	networkProvider  *network.Provider
 	vaultProvider    *vault.Provider
 }
@@ -51,7 +51,7 @@ func NewDriver(
 	configService *config.Service,
 	storageProvider identity.StorageProvider,
 	identityProvider view2.IdentityProvider,
-	endpointService *view.EndpointService,
+	endpointService *endpoint.Service,
 	networkProvider *network.Provider,
 	vaultProvider *vault.Provider,
 ) core.NamedFactory[driver.Driver] {
