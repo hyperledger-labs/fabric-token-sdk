@@ -17,22 +17,54 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type jSession struct {
+// Session local alias for view.Sessions
+type Session = view.Session
+
+type JSession struct {
 	s       Session
 	context context.Context
 }
 
-func newJSONSession(s Session, context context.Context) *jSession {
+// New returns a JSON-based session wrapping the passed session.
+func New(context context.Context, s Session) *JSession {
 	span := trace.SpanFromContext(context)
 	span.AddEvent(fmt.Sprintf("Open json session to [%s:%s]", string(s.Info().Caller), s.Info().CallerViewID))
-	return &jSession{s: s, context: context}
+	return &JSession{s: s, context: context}
 }
 
-func (j *jSession) Receive(state interface{}) error {
+// NewJSON opens a new JSON-based session to the passed party using the passed caller.
+func NewJSON(context view.Context, caller view.View, party view.Identity) (*JSession, error) {
+	s, err := context.GetSession(caller, party)
+	if err != nil {
+		return nil, err
+	}
+	return NewFromSession(context, s), nil
+}
+
+// NewFromInitiator opens a new JSON-based session to the passed party
+func NewFromInitiator(context view.Context, party view.Identity) (*JSession, error) {
+	s, err := context.GetSession(context.Initiator(), party)
+	if err != nil {
+		return nil, err
+	}
+	return NewFromSession(context, s), nil
+}
+
+// NewFromSession returns a new JSON-based session wrapping the passed session
+func NewFromSession(context view.Context, s Session) *JSession {
+	return New(context.Context(), s)
+}
+
+// FromContext return a new JSON-based sessions wrapping the context's session
+func FromContext(context view.Context) *JSession {
+	return New(context.Context(), context.Session())
+}
+
+func (j *JSession) Receive(state interface{}) error {
 	return j.ReceiveWithTimeout(state, 0)
 }
 
-func (j *jSession) ReceiveWithTimeout(state interface{}, d time.Duration) error {
+func (j *JSession) ReceiveWithTimeout(state interface{}, d time.Duration) error {
 	raw, err := j.ReceiveRawWithTimeout(d)
 	if err != nil {
 		return err
@@ -40,11 +72,11 @@ func (j *jSession) ReceiveWithTimeout(state interface{}, d time.Duration) error 
 	return json.Unmarshal(raw, state)
 }
 
-func (j *jSession) ReceiveRaw() ([]byte, error) {
+func (j *JSession) ReceiveRaw() ([]byte, error) {
 	return j.ReceiveRawWithTimeout(0)
 }
 
-func (j *jSession) ReceiveRawWithTimeout(d time.Duration) ([]byte, error) {
+func (j *JSession) ReceiveRawWithTimeout(d time.Duration) ([]byte, error) {
 	span := trace.SpanFromContext(j.context)
 
 	current := j.context
@@ -60,6 +92,9 @@ func (j *jSession) ReceiveRawWithTimeout(d time.Duration) ([]byte, error) {
 	select {
 	case msg := <-ch:
 		span.AddEvent("Received message")
+		if msg == nil {
+			return nil, errors.New("received nil message")
+		}
 		if msg.Status == view.ERROR {
 			return nil, errors.Errorf("received error from remote [%s]", string(msg.Payload))
 		}
@@ -73,11 +108,11 @@ func (j *jSession) ReceiveRawWithTimeout(d time.Duration) ([]byte, error) {
 	return raw, nil
 }
 
-func (j *jSession) Send(state interface{}) error {
+func (j *JSession) Send(state interface{}) error {
 	return j.SendWithContext(j.context, state)
 }
 
-func (j *jSession) SendWithContext(ctx context.Context, state interface{}) error {
+func (j *JSession) SendWithContext(ctx context.Context, state interface{}) error {
 	v, err := json.Marshal(state)
 	if err != nil {
 		return err
@@ -85,24 +120,24 @@ func (j *jSession) SendWithContext(ctx context.Context, state interface{}) error
 	return j.s.SendWithContext(ctx, v)
 }
 
-func (j *jSession) SendRaw(ctx context.Context, raw []byte) error {
+func (j *JSession) SendRaw(ctx context.Context, raw []byte) error {
 	return j.s.SendWithContext(ctx, raw)
 }
 
-func (j *jSession) SendError(err string) error {
+func (j *JSession) SendError(err string) error {
 	return j.SendErrorWithContext(j.context, err)
 }
 
-func (j *jSession) SendErrorWithContext(ctx context.Context, err string) error {
+func (j *JSession) SendErrorWithContext(ctx context.Context, err string) error {
 	span := trace.SpanFromContext(ctx)
 	span.RecordError(errors.New(err))
 	return j.s.SendErrorWithContext(ctx, []byte(err))
 }
 
-func (j *jSession) Session() Session {
+func (j *JSession) Session() Session {
 	return j.s
 }
 
-func (j *jSession) Info() view.SessionInfo {
+func (j *JSession) Info() view.SessionInfo {
 	return j.s.Info()
 }
