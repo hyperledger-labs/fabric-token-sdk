@@ -10,8 +10,8 @@ import (
 	"context"
 	"testing"
 
-	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs/mock"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common/mock"
+	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"

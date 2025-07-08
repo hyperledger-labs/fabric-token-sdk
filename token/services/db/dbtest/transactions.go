@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/pagination"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -43,17 +43,17 @@ var tokenTransactionDBCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.TokenTransactionStore)
 }{
-	//{"FailsIfRequestDoesNotExist", TFailsIfRequestDoesNotExist},
-	//{"Status", TStatus},
-	//{"StoresTimestamp", TStoresTimestamp},
-	//{"Movements", TMovements},
-	//{"Transaction", TTransaction},
-	//{"TokenRequest", TTokenRequest},
-	//{"AllowsSameTxID", TAllowsSameTxID},
-	//{"Rollback", TRollback},
+	// {"FailsIfRequestDoesNotExist", TFailsIfRequestDoesNotExist},
+	// {"Status", TStatus},
+	// {"StoresTimestamp", TStoresTimestamp},
+	// {"Movements", TMovements},
+	// {"Transaction", TTransaction},
+	// {"TokenRequest", TTokenRequest},
+	// {"AllowsSameTxID", TAllowsSameTxID},
+	// {"Rollback", TRollback},
 	{"TransactionQueries", TTransactionQueries},
-	//{"ValidationRecordQueries", TValidationRecordQueries},
-	//{"TEndorserAcks", TEndorserAcks},
+	// {"ValidationRecordQueries", TValidationRecordQueries},
+	// {"TEndorserAcks", TEndorserAcks},
 }
 
 func TFailsIfRequestDoesNotExist(t *testing.T, db driver.TokenTransactionStore) {

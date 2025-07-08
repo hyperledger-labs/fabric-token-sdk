@@ -11,8 +11,8 @@ import (
 
 	"github.com/IBM/idemix/bccsp/keystore"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
-	memory "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	memory "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 )
 
 func NewInMemory() (KVS, error) {

@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"

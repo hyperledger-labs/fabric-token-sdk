@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	vault "github.com/hashicorp/vault/api"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs/hashicorp"
 	"github.com/stretchr/testify/assert"
 )

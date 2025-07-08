@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	assert2 "github.com/stretchr/testify/assert"

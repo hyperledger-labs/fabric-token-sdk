@@ -10,11 +10,11 @@ import (
 	"context"
 	"time"
 
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query"
-	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/cond"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
+	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
+	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 )
 
