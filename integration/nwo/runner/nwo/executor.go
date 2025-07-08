@@ -43,7 +43,7 @@ func NewSuiteExecutor(nw *integration.Infrastructure, auditor, issuer model.User
 	err = errors.Join(
 		s.C.Provide(func() *integration.Infrastructure { return nw }),
 		s.C.Provide(func() (trace.TracerProvider, error) {
-			return tracing.NewTracerProviderFromConfig(tracing.Config{
+			return tracing.NewProviderFromConfig(tracing.Config{
 				Provider: tracing.Otpl,
 				Otpl:     tracing.OtplConfig{Address: fmt.Sprintf(":%d", optl.JaegerCollectorPort)},
 			})

@@ -15,8 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/web"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/operations"
-	web2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/web"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
+	web2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/web/server"
 	runner2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
@@ -55,7 +55,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 		}),
 		s.C.Provide(web.NewOperationsLogger),
 		s.C.Provide(func(logger logging.Logger) *web2.Server {
-			return web2.NewServer(web2.Options{ListenAddress: config.Monitoring.MetricsEndpoint, Logger: logger})
+			return web2.NewServer(web2.Options{ListenAddress: config.Monitoring.MetricsEndpoint})
 		}),
 		s.C.Provide(digutils.Identity[*web2.Server](), dig.As(new(operations.Server))),
 		s.C.Provide(operations.NewOperationSystem),
@@ -63,7 +63,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 			return operations.NewMetricsProvider(o.Metrics, l, true)
 		}),
 		s.C.Provide(func(mp metrics.Provider) (trace.TracerProvider, error) {
-			tp, err := tracing.NewTracerProviderFromConfig(tracing.Config{
+			tp, err := tracing.NewProviderFromConfig(tracing.Config{
 				Provider: config.Monitoring.TracerExporterType,
 				Otpl:     tracing.OtplConfig{Address: config.Monitoring.TracerCollectorEndpoint},
 				File:     tracing.FileConfig{Path: config.Monitoring.TracerCollectorFile},
@@ -72,7 +72,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 			if err != nil {
 				return nil, err
 			}
-			return tracing.NewTracerProviderWithBackingProvider(tp, mp), nil
+			return tracing.NewProviderWithBackingProvider(tp, mp), nil
 		}),
 	)
 	if err != nil {
