@@ -12,7 +12,6 @@ import (
 	"time"
 
 	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/web"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/operations"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
@@ -53,7 +52,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 		s.C.Provide(func() *operations.Options {
 			return &operations.Options{Metrics: operations.MetricsOptions{Provider: config.Monitoring.MetricsProviderType}}
 		}),
-		s.C.Provide(web.NewOperationsLogger),
+		s.C.Provide(operations.NewOperationsLogger),
 		s.C.Provide(func(logger logging.Logger) *web2.Server {
 			return web2.NewServer(web2.Options{ListenAddress: config.Monitoring.MetricsEndpoint})
 		}),
