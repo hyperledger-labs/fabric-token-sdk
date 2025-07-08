@@ -12,12 +12,11 @@ import (
 	"time"
 
 	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/web"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/operations"
 	web2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/web"
-	tracing2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	runner2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
@@ -73,7 +72,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 			if err != nil {
 				return nil, err
 			}
-			return tracing2.NewTracerProviderWithBackingProvider(tp, mp), nil
+			return tracing.NewTracerProviderWithBackingProvider(tp, mp), nil
 		}),
 	)
 	if err != nil {

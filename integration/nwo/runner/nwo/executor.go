@@ -13,7 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring/optl"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	runner2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
