@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package hashicorp_test
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -15,7 +16,7 @@ import (
 	"testing"
 
 	vault "github.com/hashicorp/vault/api"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs/hashicorp"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,7 +43,8 @@ func TestVaultKVS(t *testing.T) {
 }
 
 func testRound(t *testing.T, client *vault.Client) {
-	// Test with slah at the end of the vault path
+	// Test with slash at the end of the vault path
+	ctx := context.Background()
 	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk/")
 	assert.NoError(t, err)
 
@@ -51,26 +53,26 @@ func testRound(t *testing.T, client *vault.Client) {
 	k2, err := kvs.CreateCompositeKey("k", []string{"2"})
 	assert.NoError(t, err)
 
-	err = kvstore.Put(k1, &stuff{"santa", 1})
+	err = kvstore.Put(ctx, k1, &stuff{"santa", 1})
 	assert.NoError(t, err)
 
 	val := &stuff{}
-	err = kvstore.Get(k1, val)
+	err = kvstore.Get(ctx, k1, val)
 	assert.NoError(t, err)
 	assert.Equal(t, &stuff{"santa", 1}, val)
 
-	err = kvstore.Put(k2, &stuff{"claws", 2})
+	err = kvstore.Put(ctx, k2, &stuff{"claws", 2})
 	assert.NoError(t, err)
 
 	val = &stuff{}
-	err = kvstore.Get(k2, val)
+	err = kvstore.Get(ctx, k2, val)
 	assert.NoError(t, err)
 	assert.Equal(t, &stuff{"claws", 2}, val)
 
-	results := kvstore.GetExisting(k1, k2)
+	results := kvstore.GetExisting(ctx, k1, k2)
 	assert.True(t, len(results) == 2)
 
-	it, err := kvstore.GetByPartialCompositeID("k", []string{})
+	it, err := kvstore.GetByPartialCompositeID(ctx, "k", []string{})
 	assert.NoError(t, err)
 	defer it.Close()
 
@@ -90,14 +92,14 @@ func testRound(t *testing.T, client *vault.Client) {
 	}
 
 	assert.NoError(t, kvstore.Delete(k2))
-	assert.False(t, kvstore.Exists(k2))
+	assert.False(t, kvstore.Exists(ctx, k2))
 
-	results = kvstore.GetExisting(k1, k2)
+	results = kvstore.GetExisting(ctx, k1, k2)
 	assert.True(t, len(results) == 1)
 	assert.True(t, results[0] == k1)
 
 	val = &stuff{}
-	err = kvstore.Get(k2, val)
+	err = kvstore.Get(ctx, k2, val)
 	assert.NoError(t, err)
 
 	for ctr := 0; it.HasNext(); ctr++ {
@@ -117,7 +119,7 @@ func testRound(t *testing.T, client *vault.Client) {
 	_, err = it.Next(val)
 	assert.Error(t, err)
 
-	it, err = kvstore.GetByPartialCompositeID("k", []string{})
+	it, err = kvstore.GetByPartialCompositeID(ctx, "k", []string{})
 	assert.NoError(t, err)
 	defer it.Close()
 	for ctr := 0; it.HasNext(); ctr++ {
@@ -142,25 +144,25 @@ func testRound(t *testing.T, client *vault.Client) {
 	hash := sha256.Sum256([]byte(data)) // Replace with hash.Hashable if applicable
 	k := hex.EncodeToString(hash[:])    // Convert to clean hex string
 
-	assert.NoError(t, kvstore.Put(k, val))
-	assert.True(t, kvstore.Exists(k))
+	assert.NoError(t, kvstore.Put(ctx, k, val))
+	assert.True(t, kvstore.Exists(ctx, k))
 	val2 := &stuff{}
-	assert.NoError(t, kvstore.Get(k, val2))
+	assert.NoError(t, kvstore.Get(ctx, k, val2))
 	assert.Equal(t, val, val2)
 
-	results = kvstore.GetExisting(k)
+	results = kvstore.GetExisting(ctx, k)
 	assert.True(t, len(results) == 1)
 
-	it, err = kvstore.GetByPartialCompositeID(k, []string{})
+	it, err = kvstore.GetByPartialCompositeID(ctx, k, []string{})
 	assert.NoError(t, err)
 	assert.True(t, it == nil)
 	assert.NoError(t, kvstore.Delete(k))
-	assert.False(t, kvstore.Exists(k))
+	assert.False(t, kvstore.Exists(ctx, k))
 
 	k1, err = kvs.CreateCompositeKey(k, []string{"1"})
 	assert.NoError(t, err)
-	assert.NoError(t, kvstore.Put(k1, val))
-	it, err = kvstore.GetByPartialCompositeID(k, []string{})
+	assert.NoError(t, kvstore.Put(ctx, k1, val))
+	it, err = kvstore.GetByPartialCompositeID(ctx, k, []string{})
 	assert.NoError(t, err)
 	defer it.Close()
 	for ctr := 0; it.HasNext(); ctr++ {
@@ -175,42 +177,43 @@ func testRound(t *testing.T, client *vault.Client) {
 		}
 	}
 	assert.NoError(t, kvstore.Delete(k1))
-	assert.False(t, kvstore.Exists(k1))
+	assert.False(t, kvstore.Exists(ctx, k1))
 	assert.True(t, kvstore.Delete(k1) == nil)
 
-	it, err = kvstore.GetByPartialCompositeID(k, []string{})
+	it, err = kvstore.GetByPartialCompositeID(ctx, k, []string{})
 	assert.NoError(t, err)
 	assert.True(t, it == nil)
 
-	_, err = kvstore.GetByPartialCompositeID("k", []string{})
+	_, err = kvstore.GetByPartialCompositeID(ctx, "k", []string{})
 	assert.NoError(t, err)
 
 	k3, err := kvs.CreateCompositeKey("k", []string{"3"})
 	assert.NoError(t, err)
 
-	err = kvstore.Put(k3, nil)
+	err = kvstore.Put(ctx, k3, nil)
 	assert.NoError(t, err)
 
-	err = kvstore.Get(k3, nil)
+	err = kvstore.Get(ctx, k3, nil)
 	assert.Error(t, err)
 
 	assert.NoError(t, kvstore.Delete(k3))
 	assert.NoError(t, kvstore.Delete(k3))
 
-	err = kvstore.Get(k3, nil)
+	err = kvstore.Get(ctx, k3, nil)
 	assert.NoError(t, err)
 	assert.True(t, it == nil)
 
 	k4, _ := kvs.CreateCompositeKey("k", []string{"4"})
 	assert.NoError(t, kvstore.Delete(k4))
 
-	results = kvstore.GetExisting()
+	results = kvstore.GetExisting(ctx)
 	assert.True(t, len(results) == 0)
 }
 
 func testParallelWrites(t *testing.T, client *vault.Client) {
 	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk")
 	assert.NoError(t, err)
+	ctx := context.Background()
 
 	// different composite key keys
 	wg := sync.WaitGroup{}
@@ -220,7 +223,7 @@ func testParallelWrites(t *testing.T, client *vault.Client) {
 		go func(i int) {
 			k1, err := kvs.CreateCompositeKey("parallel_key_1_", []string{fmt.Sprintf("%d", i)})
 			assert.NoError(t, err)
-			err = kvstore.Put(k1, &stuff{"santa", i})
+			err = kvstore.Put(ctx, k1, &stuff{"santa", i})
 			assert.NoError(t, err)
 			defer wg.Done()
 		}(i)
@@ -234,7 +237,7 @@ func testParallelWrites(t *testing.T, client *vault.Client) {
 	assert.NoError(t, err)
 	for i := 0; i < n; i++ {
 		go func(i int) {
-			err := kvstore.Put(k1, &stuff{"santa", 1})
+			err := kvstore.Put(ctx, k1, &stuff{"santa", 1})
 			assert.NoError(t, err)
 			defer wg.Done()
 		}(i)
@@ -250,7 +253,7 @@ func testParallelWrites(t *testing.T, client *vault.Client) {
 			data := "Hello World " + strconv.Itoa(i)
 			hash := sha256.Sum256([]byte(data)) // Replace with hash.Hashable if applicable
 			k2 := hex.EncodeToString(hash[:])   // Convert to clean hex string
-			err := kvstore.Put(k2, &stuff{"hello", 1})
+			err := kvstore.Put(ctx, k2, &stuff{"hello", 1})
 			assert.NoError(t, err)
 			defer wg.Done()
 		}(i)
@@ -261,6 +264,7 @@ func testParallelWrites(t *testing.T, client *vault.Client) {
 func testParallelWritesReadDelete(t *testing.T, client *vault.Client) {
 	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk")
 	assert.NoError(t, err)
+	ctx := context.Background()
 
 	// different composite key keys
 	wg := sync.WaitGroup{}
@@ -272,11 +276,11 @@ func testParallelWritesReadDelete(t *testing.T, client *vault.Client) {
 			k, err := kvs.CreateCompositeKey("parallel_key_2_", []string{fmt.Sprintf("%d", i)})
 			assert.NoError(t, err)
 
-			err = kvstore.Put(k, &stuff{"santa", i})
+			err = kvstore.Put(ctx, k, &stuff{"santa", i})
 			assert.NoError(t, err)
 
 			val := &stuff{}
-			err = kvstore.Get(k, val)
+			err = kvstore.Get(ctx, k, val)
 			assert.NoError(t, err)
 			assert.Equal(t, &stuff{"santa", i}, val)
 
@@ -289,6 +293,7 @@ func testParallelWritesReadDelete(t *testing.T, client *vault.Client) {
 
 func testClient(t *testing.T, wg *sync.WaitGroup, prefix string, num int, client *vault.Client) {
 	defer wg.Done()
+	ctx := context.Background()
 
 	// Test without slah at the end of the vault path
 	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk")
@@ -298,11 +303,11 @@ func testClient(t *testing.T, wg *sync.WaitGroup, prefix string, num int, client
 		k, err := kvs.CreateCompositeKey(prefix, []string{fmt.Sprintf("%d", i)})
 		assert.NoError(t, err)
 
-		err = kvstore.Put(k, &stuff{"santa", i})
+		err = kvstore.Put(ctx, k, &stuff{"santa", i})
 		assert.NoError(t, err)
 
 		val := &stuff{}
-		err = kvstore.Get(k, val)
+		err = kvstore.Get(ctx, k, val)
 		assert.NoError(t, err)
 		assert.Equal(t, &stuff{"santa", i}, val)
 
@@ -322,7 +327,9 @@ func testParallelConnections(t *testing.T, client *vault.Client) {
 }
 
 func testWithVaultDown(t *testing.T, client *vault.Client) {
-	// Test with slah at the end of the vault path
+	// Test with slash at the end of the vault path
+	ctx := context.Background()
+
 	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk/")
 	assert.NoError(t, err)
 
@@ -331,21 +338,21 @@ func testWithVaultDown(t *testing.T, client *vault.Client) {
 	k2, err := kvs.CreateCompositeKey("k", []string{"2"})
 	assert.NoError(t, err)
 
-	err = kvstore.Put(k1, &stuff{"santa", 1})
+	err = kvstore.Put(ctx, k1, &stuff{"santa", 1})
 	assert.Error(t, err)
 
 	val := &stuff{}
-	err = kvstore.Get(k1, val)
+	err = kvstore.Get(ctx, k1, val)
 	assert.Error(t, err)
 
-	assert.False(t, kvstore.Exists(k2))
+	assert.False(t, kvstore.Exists(ctx, k2))
 
-	results := kvstore.GetExisting(k1, k2)
+	results := kvstore.GetExisting(ctx, k1, k2)
 	assert.True(t, len(results) == 0)
 
 	assert.Error(t, kvstore.Delete(k1))
 
-	it, err := kvstore.GetByPartialCompositeID("k", []string{})
+	it, err := kvstore.GetByPartialCompositeID(ctx, "k", []string{})
 	assert.Error(t, err)
 	assert.True(t, it == nil)
 }

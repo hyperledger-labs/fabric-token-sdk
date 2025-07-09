@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package hashicorp
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"strings"
@@ -14,7 +15,7 @@ import (
 	vault "github.com/hashicorp/vault/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/pkg/errors"
 )
 
@@ -64,11 +65,11 @@ func (v *KVS) deNormalizeID(id string) string {
 	return normilzedId
 }
 
-func (v *KVS) GetExisting(ids ...string) []string {
+func (v *KVS) GetExisting(ctx context.Context, ids ...string) []string {
 	results := make([]string, 0)
 
 	for _, id := range ids {
-		if v.Exists(id) {
+		if v.Exists(ctx, id) {
 			results = append(results, id)
 		}
 	}
@@ -76,7 +77,7 @@ func (v *KVS) GetExisting(ids ...string) []string {
 	return results
 }
 
-func (v *KVS) Exists(id string) bool {
+func (v *KVS) Exists(_ context.Context, id string) bool {
 	id = v.NormalizeID(id)
 
 	secret, err := v.client.Logical().Read(id)
@@ -111,7 +112,7 @@ func (v *KVS) Delete(id string) error {
 	return nil
 }
 
-func (v *KVS) Put(id string, state interface{}) error {
+func (v *KVS) Put(_ context.Context, id string, state interface{}) error {
 	id = v.NormalizeID(id)
 	raw, err := json.Marshal(state)
 	if err != nil {
@@ -128,7 +129,7 @@ func (v *KVS) Put(id string, state interface{}) error {
 	return errors.Wrapf(err, "failed to put state with id [%s]", id)
 }
 
-func (v *KVS) Get(id string, state interface{}) error {
+func (v *KVS) Get(_ context.Context, id string, state interface{}) error {
 	id = v.NormalizeID(id)
 	secret, err := v.client.Logical().Read(id)
 	if err != nil {
@@ -167,7 +168,7 @@ func (v *KVS) Get(id string, state interface{}) error {
 	return nil
 }
 
-func (v *KVS) GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error) {
+func (v *KVS) GetByPartialCompositeID(_ context.Context, prefix string, attrs []string) (kvs.Iterator, error) {
 	compositeKey, err := kvs.CreateCompositeKey(prefix, attrs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed building composite key for prefix [%s]", prefix)
@@ -234,6 +235,6 @@ func (i *vaultIterator) Next(state interface{}) (string, error) {
 	if i.next == nil {
 		return "", errors.Errorf("no more elements in the iterator")
 	}
-	err := i.client.Get(*i.next, state)
+	err := i.client.Get(nil, *i.next, state)
 	return *i.next, err
 }

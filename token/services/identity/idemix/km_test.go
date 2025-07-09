@@ -16,9 +16,9 @@ import (
 	idemix2 "github.com/IBM/idemix"
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
+	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
@@ -124,7 +124,7 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 
 func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
 	// prepare
-	registry := registry2.New()
+	registry := view.NewServiceProvider()
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvs))
@@ -235,7 +235,7 @@ func TestIdentityStandard(t *testing.T) {
 }
 
 func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
-	registry := registry2.New()
+	registry := view.NewServiceProvider()
 
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
@@ -319,7 +319,7 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 }
 
 func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
-	registry := registry2.New()
+	registry := view.NewServiceProvider()
 
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
@@ -375,7 +375,7 @@ func TestKeyManager_DeserializeSigner(t *testing.T) {
 
 func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
 	// prepare
-	registry := registry2.New()
+	registry := view.NewServiceProvider()
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvs))
@@ -438,7 +438,7 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 }
 
 func TestIdentityFromFabricCA(t *testing.T) {
-	registry := registry2.New()
+	registry := view.NewServiceProvider()
 
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
@@ -519,7 +519,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 }
 
 func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
-	registry := registry2.New()
+	registry := view.NewServiceProvider()
 
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)

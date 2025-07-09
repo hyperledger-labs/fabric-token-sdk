@@ -9,9 +9,9 @@ package common_test
 import (
 	"testing"
 
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query/cond"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
+	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 	"github.com/stretchr/testify/assert"
 )
 

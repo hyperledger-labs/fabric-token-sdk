@@ -11,7 +11,7 @@ import (
 	"encoding/base64"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/sig"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"

@@ -8,7 +8,7 @@ package driver
 
 import (
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 )
 
 type NamedDriver = driver2.NamedDriver[Driver]

@@ -17,11 +17,11 @@ import (
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/tracing"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/client/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/client/web"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/grpc"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
+	grpcclient "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view/grpc/client"
+	webclient "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/web/client"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	runner2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
@@ -126,13 +126,13 @@ func newGrpcClient(configProvider driver.ConfigService, host string) (api2.ViewC
 		ConnectionTimeout: 10 * time.Second,
 	}
 
-	signer, err := view.NewX509SigningIdentity(
+	signer, err := grpcclient.NewX509SigningIdentity(
 		configProvider.GetPath("fsc.identity.cert.file"),
 		configProvider.GetPath("fsc.identity.key.file"))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create signing identity")
 	}
-	return view.NewClient(&view.Config{ConnectionConfig: cc}, signer, &hasher{}, noop.NewTracerProvider())
+	return grpcclient.NewClient(&grpcclient.Config{ConnectionConfig: cc}, signer, &hasher{}, noop.NewTracerProvider())
 }
 
 type hasher struct{}
@@ -152,7 +152,7 @@ func newWebClient(configProvider driver.ConfigService, host string) (api2.ViewCl
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse address")
 	}
-	return web.NewClient(&web.Config{
+	return webclient.NewClient(&webclient.Config{
 		Host:        fmt.Sprintf("%s:%s", host, port),
 		CACertPath:  configProvider.GetStringSlice("fsc.web.tls.clientRootCAs.files")[0],
 		TLSCertPath: configProvider.GetPath("fsc.web.tls.cert.file"),

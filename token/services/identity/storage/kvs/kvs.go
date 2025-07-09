@@ -9,7 +9,7 @@ package kvs
 import (
 	"context"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 )
 
 type KVS interface {

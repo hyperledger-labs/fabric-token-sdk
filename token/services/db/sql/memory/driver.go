@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package memory
 
 import (
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
-	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
+	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqlite2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 )

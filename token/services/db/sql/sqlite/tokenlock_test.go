@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/query"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql/sqlite"
+	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
+	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
 	. "github.com/onsi/gomega"
