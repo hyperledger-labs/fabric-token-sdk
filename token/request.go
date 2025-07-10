@@ -21,9 +21,12 @@ import (
 )
 
 const (
+	// TransferMetadataPrefix is the prefix for the metadata of a transfer action
 	TransferMetadataPrefix = meta.TransferMetadataPrefix
-	IssueMetadataPrefix    = meta.IssueMetadataPrefix
-	PublicMetadataPrefix   = "pub."
+	// IssueMetadataPrefix is the prefix for the metadata of an issue action
+	IssueMetadataPrefix = meta.IssueMetadataPrefix
+	// PublicMetadataPrefix is the prefix for the metadata that will be published on the ledger without further validation
+	PublicMetadataPrefix = meta.PublicMetadataPrefix
 )
 
 type Binder interface {
@@ -116,11 +119,18 @@ func WithTransferMetadata(key string, value []byte) TransferOption {
 
 }
 
-// WithPublicMetadata adds any data to the public ledger that may be relevant to the application.
+// WithPublicTransferMetadata adds any data to the public ledger that may be relevant to the application.
 // It is also made available to the participants as part of the TransactionRecord.
 // The transaction fails if the key already exists on the ledger. The value is not validated.
-func WithPublicMetadata(key string, value []byte) TransferOption {
+func WithPublicTransferMetadata(key string, value []byte) TransferOption {
 	return WithTransferMetadata(PublicMetadataPrefix+key, value)
+}
+
+// WithPublicIssueMetadata adds any data to the public ledger that may be relevant to the application.
+// It is also made available to the participants as part of the TransactionRecord.
+// The transaction fails if the key already exists on the ledger. The value is not validated.
+func WithPublicIssueMetadata(key string, value []byte) IssueOption {
+	return WithIssueMetadata(PublicMetadataPrefix+key, value)
 }
 
 // WithTokenIDs sets the tokens ids to transfer
