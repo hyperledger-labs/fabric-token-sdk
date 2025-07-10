@@ -11,12 +11,11 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view/grpc/server"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
-	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
+	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -36,7 +35,7 @@ type Driver struct {
 	tracerProvider   trace.TracerProvider
 	configService    *config.Service
 	storageProvider  identity.StorageProvider
-	identityProvider view2.IdentityProvider
+	identityProvider endpoint.IdentityService
 	endpointService  *endpoint.Service
 	networkProvider  *network.Provider
 	vaultProvider    *vault.Provider
@@ -47,13 +46,13 @@ func NewDriver(
 	tracerProvider trace.TracerProvider,
 	configService *config.Service,
 	storageProvider identity.StorageProvider,
-	identityProvider view2.IdentityProvider,
+	identityProvider endpoint.IdentityService,
 	endpointService *endpoint.Service,
 	networkProvider *network.Provider,
 	vaultProvider *vault.Provider,
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
-		Name: core.DriverIdentifier(core2.FabTokenDriverName, 1),
+		Name: core.DriverIdentifier(v1setup.FabTokenDriverName, 1),
 		Driver: &Driver{
 			base:             &base{},
 			metricsProvider:  metricsProvider,
@@ -94,9 +93,10 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		return nil, errors.WithMessagef(err, "failed to get config for token service for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	}
 
-	publicParamsManager, err := common.NewPublicParamsManager[*core2.PublicParams](
+	publicParamsManager, err := common.NewPublicParamsManager[*v1setup.PublicParams](
 		&PublicParamsDeserializer{},
-		core2.FabTokenDriverName,
+		v1setup.FabTokenDriverName,
+		v1setup.ProtocolV1,
 		publicParams,
 	)
 	if err != nil {
@@ -155,7 +155,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 }
 
 func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Validator, error) {
-	pp, ok := params.(*core2.PublicParams)
+	pp, ok := params.(*v1setup.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}

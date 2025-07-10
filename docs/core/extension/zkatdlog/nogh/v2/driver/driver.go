@@ -11,14 +11,14 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
-	"github.com/hyperledger-labs/fabric-token-sdk/docs/core/extension/zkatdlog/nogh/v2/setup"
+	v2 "github.com/hyperledger-labs/fabric-token-sdk/docs/core/extension/zkatdlog/nogh/v2/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
-	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
-	v1token "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
@@ -55,7 +55,7 @@ func NewDriver(
 	vaultProvider *vault.Provider,
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
-		Name: core.DriverIdentifier(v1setup.DLogIdentifier, v1setup.ProtocolV1),
+		Name: core.DriverIdentifier(v2.DLogIdentifier, v2.ProtocolV2),
 		Driver: &Driver{
 			base:             &base{},
 			metricsProvider:  metricsProvider,
@@ -99,8 +99,8 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 
 	ppm, err := common.NewPublicParamsManager[*setup.PublicParams](
 		&PublicParamsDeserializer{},
-		v1setup.DLogIdentifier,
-		v1setup.ProtocolV1,
+		v2.DLogIdentifier,
+		v2.ProtocolV2,
 		publicParams,
 	)
 	if err != nil {
@@ -136,7 +136,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	driverMetrics := v1.NewMetrics(metricsProvider)
-	tokensService, err := v1token.NewTokensService(logger, ppm, deserializer)
+	tokensService, err := token3.NewTokensService(logger, ppm, deserializer)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
@@ -155,6 +155,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to instantiate validator")
 	}
+
 	service, err := v1.NewTokenService(
 		logger,
 		ws,
@@ -176,7 +177,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		v1.NewAuditorService(
 			logger,
 			ppm,
-			common.NewLedgerTokenLoader[*v1token.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
+			common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
 			deserializer,
 			driverMetrics,
 			d.tracerProvider,
