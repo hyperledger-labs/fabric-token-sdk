@@ -155,7 +155,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	for i, action := range t.TransferAction {
 		opts := []token2.TransferOption{token2.WithTokenIDs(t.TokenIDs...)}
 		for k, v := range action.PublicMetadata {
-			opts = append(opts, token2.WithPublicMetadata(k, v))
+			opts = append(opts, token2.WithPublicTransferMetadata(k, v))
 		}
 
 		err = tx.Transfer(

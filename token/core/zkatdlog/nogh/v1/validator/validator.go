@@ -66,12 +66,13 @@ func New(
 		TransferUpgradeWitnessValidate,
 		TransferZKProofValidate,
 		TransferHTLCValidate,
-		TransferApplicationDataValidate,
+		common.TransferApplicationDataValidate[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer],
 	}
 	transferValidators = append(transferValidators, extraTransferValidators...)
 
 	issueValidators := []ValidateIssueFunc{
 		IssueValidate,
+		common.IssueApplicationDataValidate[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer],
 	}
 	issueValidators = append(issueValidators, extraIssuerValidators...)
 

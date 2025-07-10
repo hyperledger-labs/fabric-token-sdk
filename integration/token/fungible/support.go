@@ -662,7 +662,7 @@ func TransferCashMultiActions(network *integration.Infrastructure, sender *token
 
 		gomega.Expect(len(txs)).To(gomega.BeEquivalentTo(1), "1 tx")
 		gomega.Expect(len(txs[0].PublicMetadata)).To(gomega.BeEquivalentTo(1), "1 public metadata")
-		gomega.Expect(txs[0].PublicMetadata["pub."+uniqueKey+"_1"]).To(gomega.BeEquivalentTo([]byte("val_1")), fmt.Sprintf("public metadata = %v", txs[0].PublicMetadata))
+		gomega.Expect(txs[0].PublicMetadata[token2.PublicMetadataPrefix+uniqueKey+"_1"]).To(gomega.BeEquivalentTo([]byte("val_1")), fmt.Sprintf("public metadata = %v", txs[0].PublicMetadata))
 
 		return txID
 	}
