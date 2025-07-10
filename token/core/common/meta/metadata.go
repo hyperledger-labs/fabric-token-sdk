@@ -15,6 +15,8 @@ const (
 	TransferMetadataPrefix = "TransferMetadataPrefix"
 	// IssueMetadataPrefix is the prefix for the metadata of an issue action
 	IssueMetadataPrefix = "IssueMetadataPrefix"
+	// PublicMetadataPrefix is the prefix for the metadata that will be published on the ledger without further validation
+	PublicMetadataPrefix = "pub."
 )
 
 // TransferActionMetadata extracts the transfer metadata from the passed attributes and
