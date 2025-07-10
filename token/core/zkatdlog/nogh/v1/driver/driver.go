@@ -11,7 +11,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view/grpc/server"
 	"github.com/hyperledger-labs/fabric-token-sdk/docs/core/extension/zkatdlog/nogh/v2/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
@@ -19,7 +18,7 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
-	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
+	v1token "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
@@ -39,7 +38,7 @@ type Driver struct {
 	tracerProvider   trace.TracerProvider
 	configService    *config.Service
 	storageProvider  identity.StorageProvider
-	identityProvider view2.IdentityProvider
+	identityProvider endpoint.IdentityService
 	endpointService  *endpoint.Service
 	networkProvider  *network.Provider
 	vaultProvider    *vault.Provider
@@ -50,7 +49,7 @@ func NewDriver(
 	tracerProvider trace.TracerProvider,
 	configService *config.Service,
 	storageProvider identity.StorageProvider,
-	identityProvider view2.IdentityProvider,
+	identityProvider endpoint.IdentityService,
 	endpointService *endpoint.Service,
 	networkProvider *network.Provider,
 	vaultProvider *vault.Provider,
@@ -137,7 +136,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	driverMetrics := v1.NewMetrics(metricsProvider)
-	tokensService, err := token3.NewTokensService(logger, ppm, deserializer)
+	tokensService, err := v1token.NewTokensService(logger, ppm, deserializer)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
@@ -177,7 +176,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		v1.NewAuditorService(
 			logger,
 			ppm,
-			common.NewLedgerTokenLoader[*token3.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
+			common.NewLedgerTokenLoader[*v1token.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
 			deserializer,
 			driverMetrics,
 			d.tracerProvider,

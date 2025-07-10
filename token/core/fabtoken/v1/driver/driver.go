@@ -11,7 +11,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view/grpc/server"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
@@ -36,7 +35,7 @@ type Driver struct {
 	tracerProvider   trace.TracerProvider
 	configService    *config.Service
 	storageProvider  identity.StorageProvider
-	identityProvider view2.IdentityProvider
+	identityProvider endpoint.IdentityService
 	endpointService  *endpoint.Service
 	networkProvider  *network.Provider
 	vaultProvider    *vault.Provider
@@ -47,7 +46,7 @@ func NewDriver(
 	tracerProvider trace.TracerProvider,
 	configService *config.Service,
 	storageProvider identity.StorageProvider,
-	identityProvider view2.IdentityProvider,
+	identityProvider endpoint.IdentityService,
 	endpointService *endpoint.Service,
 	networkProvider *network.Provider,
 	vaultProvider *vault.Provider,
