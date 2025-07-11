@@ -22,7 +22,7 @@ import (
 var logger = logging.MustGetLogger()
 
 var (
-	cacheLevelOpts = metrics.CounterOpts{
+	cacheLevelOpts = metrics.GaugeOpts{
 		Namespace:    "idemix_cache",
 		Name:         "idemix_cache",
 		Help:         "Level of the idemix cache",
@@ -39,20 +39,20 @@ type identityCacheEntry struct {
 }
 
 type IdentityCache struct {
-	once      sync.Once
-	backed    IdentityCacheBackendFunc
-	auditInfo []byte
-	cache     chan identityCacheEntry
-	counter   metrics.Counter
+	once            sync.Once
+	backed          IdentityCacheBackendFunc
+	auditInfo       []byte
+	cache           chan identityCacheEntry
+	cacheLevelGauge metrics.Gauge
 }
 
 func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byte, metricsProvider metrics.Provider) *IdentityCache {
 	logger.Debugf("new identity cache with size [%d]", size)
 	ci := &IdentityCache{
-		backed:    backed,
-		cache:     make(chan identityCacheEntry, size),
-		auditInfo: auditInfo,
-		counter:   metricsProvider.NewCounter(cacheLevelOpts),
+		backed:          backed,
+		cache:           make(chan identityCacheEntry, size),
+		auditInfo:       auditInfo,
+		cacheLevelGauge: metricsProvider.NewGauge(cacheLevelOpts),
 	}
 
 	return ci
@@ -93,7 +93,7 @@ func (c *IdentityCache) fetchIdentityFromCache(ctx context.Context) (driver.Iden
 	span.AddEvent("fetch_identity")
 	select {
 	case entry := <-c.cache:
-		c.counter.Add(-1)
+		c.cacheLevelGauge.Add(-1)
 		span.AddEvent("got_identity_from_cache")
 		identity = entry.Identity
 		audit = entry.Audit
@@ -139,7 +139,7 @@ func (c *IdentityCache) provisionIdentities() {
 			continue
 		}
 		logger.Debugf("generated new idemix identity [%d]", count)
-		c.counter.Add(1)
+		c.cacheLevelGauge.Add(1)
 		c.cache <- identityCacheEntry{Identity: id, Audit: audit}
 	}
 }
