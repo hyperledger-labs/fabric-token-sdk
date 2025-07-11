@@ -23,8 +23,8 @@ var logger = logging.MustGetLogger()
 
 var (
 	cacheLevelOpts = metrics.GaugeOpts{
-		Namespace:    "idemix_cache",
-		Name:         "idemix_cache",
+		Namespace:    "idemix",
+		Name:         "cache_level",
 		Help:         "Level of the idemix cache",
 		LabelNames:   []string{"network", "channel", "namespace"},
 		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",

@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/yaml.v2"
 )
 
@@ -507,28 +508,35 @@ type TypedIdentityInfo struct {
 }
 
 func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
+	span := trace.SpanFromContext(ctx)
+
 	// get the identity
+	span.AddEvent("get_identity")
 	id, ai, err := i.GetIdentity(ctx, auditInfo)
 	if err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID)
 	}
 	// register the audit info
+	span.AddEvent("register_audit_info")
 	if err := i.IdentityProvider.RegisterAuditInfo(ctx, id, ai); err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 	}
 	// bind the identity to the default FSC node identity
 	if i.BinderService != nil {
+		span.AddEvent("bind_to_root_identity")
 		if err := i.BinderService.Bind(ctx, i.RootIdentity, id, false); err != nil {
 			return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
 		}
 	}
 	// wrap the backend identity, and bind it
 	if len(i.IdentityType) != 0 {
+		span.AddEvent("wrap_and_bind")
 		typedIdentity, err := identity.WrapWithType(i.IdentityType, id)
 		if err != nil {
 			return nil, nil, errors2.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
 		}
 		if i.BinderService != nil {
+			span.AddEvent("bind_wrapped")
 			if err := i.BinderService.Bind(ctx, id, typedIdentity, true); err != nil {
 				return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
 			}
@@ -537,11 +545,13 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 			}
 		} else {
 			// register at the list the audit info
+			span.AddEvent("register_audit_info_wrapped")
 			if err := i.IdentityProvider.RegisterAuditInfo(ctx, typedIdentity, ai); err != nil {
 				return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 			}
 		}
 		id = typedIdentity
 	}
+	span.AddEvent("get_identity_done")
 	return id, ai, nil
 }
