@@ -65,9 +65,9 @@ func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 			return tokens, quantity, err
 		}
 		backoffDuration := time.Duration(rand.Int63n(int64(m.backoffInterval)))
-		m.logger.Debugf("Token selection aborted, so that other procs can retry. Release tokens and backoff for %v before retrying to select. In the meantime maybe some other process releases token locks or adds tokens.", backoffDuration)
+		m.logger.DebugfContext(ctx, "Token selection aborted, so that other procs can retry. Release tokens and backoff for %v before retrying to select. In the meantime maybe some other process releases token locks or adds tokens.", backoffDuration)
 		time.Sleep(backoffDuration)
-		m.logger.Debugf("Now it is our turn to retry...")
+		m.logger.DebugfContext(ctx, "Now it is our turn to retry...")
 	}
 	return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "aborted too many times and no other process unlocked or added tokens")
 }
@@ -128,7 +128,7 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 				return nil, nil, token.SelectorSufficientButLockedFunds
 			}
 
-			s.logger.Debugf("Fetch all non-deleted tokens from the DB and refresh the token cache.")
+			s.logger.DebugfContext(ctx, "Fetch all non-deleted tokens from the DB and refresh the token cache.")
 			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
 				err2 := s.locker.UnlockAll(ctx)
 				return nil, nil, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s] - unlock: %v", immediateRetries, owner.ID(), tokenType, err2)
@@ -137,15 +137,15 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 			immediateRetries++
 			tokensLockedByOthersExist = false
 		} else if locked := s.locker.TryLock(ctx, &t.Id); !locked {
-			s.logger.Debugf("Tried to lock token [%v], but it was already locked by another process", t)
+			s.logger.DebugfContext(ctx, "Tried to lock token [%v], but it was already locked by another process", t)
 			tokensLockedByOthersExist = true
 		} else {
-			s.logger.Debugf("Got the lock on token [%v]", t)
+			s.logger.DebugfContext(ctx, "Got the lock on token [%v]", t)
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "invalid token [%s] found", t.Id)
 			}
-			s.logger.Debugf("Found token [%s] to add: [%s:%s].", t.Id, q.Decimal(), t.Type)
+			s.logger.DebugfContext(ctx, "Found token [%s] to add: [%s:%s].", t.Id, q.Decimal(), t.Type)
 			immediateRetries = 0
 			sum.Add(q)
 			selected.Add(&t.Id)
@@ -185,7 +185,7 @@ type locker struct {
 func (l *locker) TryLock(ctx context.Context, tokenID *token2.ID) bool {
 	err := l.Lock(ctx, tokenID, l.txID)
 	if err != nil {
-		logger.Debugf("failed to lock [%v] for [%s]: [%s]", tokenID, l.txID, err)
+		logger.DebugfContext(ctx, "failed to lock [%v] for [%s]: [%s]", tokenID, l.txID, err)
 	}
 	return err == nil
 }

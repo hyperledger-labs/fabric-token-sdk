@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -28,6 +27,8 @@ var (
 		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
 	}
 )
+
+var logger = logging.MustGetLogger()
 
 type IdentityCacheBackendFunc func(ctx context.Context) (*driver.RecipientData, error)
 
@@ -58,12 +59,11 @@ func NewIdentityCache(Logger logging.Logger, backed IdentityCacheBackendFunc, si
 
 func (c *IdentityCache) RecipientData(ctx context.Context) (*driver.RecipientData, error) {
 	c.once.Do(func() {
-		c.Logger.Info("provision wallet recipient data with cache size [%d]", cap(c.cache))
+		c.Logger.Infof("provision wallet recipient data with cache size [%d]", cap(c.cache))
 		if cap(c.cache) > 0 {
 			go c.provisionIdentities()
 		}
 	})
-	span := trace.SpanFromContext(ctx)
 
 	var start time.Time
 	if c.Logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -74,17 +74,17 @@ func (c *IdentityCache) RecipientData(ctx context.Context) (*driver.RecipientDat
 
 	var identity *driver.RecipientData
 	var err error
-	span.AddEvent("fetch_recipient_data")
+	logger.DebugfContext(ctx, "fetching wallet recipient data")
 	select {
 	case entry := <-c.cache:
 		c.cacheLevelGauge.Add(-1)
-		span.AddEvent("got_recipient_data_from_cache")
+		logger.DebugfContext(ctx, "fetched wallet recipient data from cache")
 		identity = entry
 		if c.Logger.IsEnabledFor(zapcore.DebugLevel) {
 			c.Logger.Debugf("fetching wallet identity from cache [%s] took [%v]", identity, time.Since(start))
 		}
 	case <-timeout.C:
-		span.AddEvent("generate_recipient_data_on_the_spot")
+		logger.DebugfContext(ctx, "generating wallet recipient data on the spot")
 		identity, err = c.backed(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed fetching wallet identity")
@@ -95,7 +95,7 @@ func (c *IdentityCache) RecipientData(ctx context.Context) (*driver.RecipientDat
 	case <-ctx.Done():
 		return nil, errors.New("context is done")
 	}
-	span.AddEvent("got_recipient_data")
+	logger.DebugfContext(ctx, "fetching wallet recipient data done")
 
 	return identity, nil
 }

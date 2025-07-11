@@ -151,7 +151,7 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	if err := unmarshal(networkProvider, tx.Payload, raw); err != nil {
 		return nil, err
 	}
-	logger.Debugf("unmarshalling tx, id [%s]", tx.TxID)
+	logger.DebugfContext(context.Context(), "unmarshalling tx, id [%s]", tx.TxID)
 	tms := token.GetManagementService(context,
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
@@ -172,7 +172,7 @@ func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, e
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to parse options")
 	}
-	logger.Debugf("receive a new transaction...")
+	logger.DebugfContext(context.Context(), "receive a new transaction...")
 
 	txBoxed, err := context.RunView(NewReceiveTransactionView(), view.WithSameContext())
 	if err != nil {
@@ -183,7 +183,7 @@ func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, e
 	if !ok {
 		return nil, errors.Errorf("received transaction of wrong type [%T]", cctx)
 	}
-	logger.Debugf("received transaction with id [%s]", cctx.ID())
+	logger.DebugfContext(context.Context(), "received transaction with id [%s]", cctx.ID())
 	if !opt.NoTransactionVerification {
 		// Check that the transaction is valid
 		if err := cctx.IsValid(context.Context()); err != nil {
