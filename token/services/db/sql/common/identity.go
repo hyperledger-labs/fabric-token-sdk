@@ -129,7 +129,7 @@ func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url s
 	if err != nil {
 		return false, errors.Wrapf(err, "failed getting configuration for [%s:%s:%s]", id, typ, url)
 	}
-	logger.Debugf("found configuration for [%s:%s:%s]", id, typ, url)
+	logger.DebugfContext(ctx, "found configuration for [%s:%s:%s]", id, typ, url)
 	return len(result) != 0, nil
 }
 
@@ -215,7 +215,7 @@ func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) e
 	_, err := db.writeDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		if exists, err2 := db.SignerInfoExists(ctx, id); err2 == nil && exists {
-			logger.Debugf("signer info [%s] exists, no error to return", h)
+			logger.DebugfContext(ctx, "signer info [%s] exists, no error to return", h)
 		} else {
 			return err
 		}

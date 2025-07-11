@@ -226,7 +226,7 @@ func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.R
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal token request [%s]", req.Anchor)
 	}
-	txs, err := TransactionRecords(record, time.Now().UTC())
+	txs, err := TransactionRecords(ctx, record, time.Now().UTC())
 	if err != nil {
 		return errors.WithMessage(err, "failed parsing transactions from audit record")
 	}
@@ -337,7 +337,7 @@ func (d *StoreService) AppendValidationRecord(ctx context.Context, txID string, 
 }
 
 // TransactionRecords is a pure function that converts an AuditRecord for storage in the database.
-func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []TransactionRecord, err error) {
+func TransactionRecords(ctx context.Context, record *token.AuditRecord, timestamp time.Time) (txs []TransactionRecord, err error) {
 	inputs := record.Inputs
 	outputs := record.Outputs
 
@@ -351,7 +351,7 @@ func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []T
 			return t.ActionIndex == actionIndex
 		})
 		if ins.Count() == 0 && ous.Count() == 0 {
-			logger.Debugf("no actions left for tx [%s][%d]", record.Anchor, actionIndex)
+			logger.DebugfContext(ctx, "no actions left for tx [%s][%d]", record.Anchor, actionIndex)
 			break
 		}
 
@@ -401,19 +401,19 @@ func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []T
 
 		actionIndex++
 	}
-	logger.Debugf("parsed transactions for tx [%s]", record.Anchor)
+	logger.DebugfContext(ctx, "parsed transactions for tx [%s]", record.Anchor)
 
 	return
 }
 
 // Movements converts an AuditRecord to MovementRecords for storage in the database.
 // A positive movement Amount means incoming tokens, and negative means outgoing tokens from the enrollment ID.
-func Movements(record *token.AuditRecord, created time.Time) (mv []MovementRecord, err error) {
+func Movements(ctx context.Context, record *token.AuditRecord, created time.Time) (mv []MovementRecord, err error) {
 	inputs := record.Inputs
 	outputs := record.Outputs
 	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
 	eIDs := joinIOEIDs(record)
-	logger.Debugf("eIDs [%v]", eIDs)
+	logger.DebugfContext(ctx, "eIDs [%v]", eIDs)
 	tokenTypes := outputs.TokenTypes()
 
 	for _, eID := range eIDs {
@@ -425,7 +425,7 @@ func Movements(record *token.AuditRecord, created time.Time) (mv []MovementRecor
 				continue
 			}
 
-			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
+			logger.DebugfContext(ctx, "adding movement [%s:%d]", eID, diff.Int64())
 			mv = append(mv, driver.MovementRecord{
 				TxID:         string(record.Anchor),
 				EnrollmentID: eID,
@@ -436,7 +436,7 @@ func Movements(record *token.AuditRecord, created time.Time) (mv []MovementRecor
 			})
 		}
 	}
-	logger.Debugf("finished to parse sent movements for tx [%s]", record.Anchor)
+	logger.DebugfContext(ctx, "finished to parse sent movements for tx [%s]", record.Anchor)
 
 	return
 }
