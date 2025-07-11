@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"go.opentelemetry.io/otel/trace"
@@ -19,6 +20,16 @@ import (
 )
 
 var logger = logging.MustGetLogger()
+
+var (
+	cacheLevelOpts = metrics.CounterOpts{
+		Namespace:    "idemix_cache",
+		Name:         "idemix_cache",
+		Help:         "Level of the idemix cache",
+		LabelNames:   []string{"network", "channel", "namespace"},
+		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
+	}
+)
 
 type IdentityCacheBackendFunc func(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error)
 
@@ -32,14 +43,16 @@ type IdentityCache struct {
 	backed    IdentityCacheBackendFunc
 	auditInfo []byte
 	cache     chan identityCacheEntry
+	counter   metrics.Counter
 }
 
-func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byte) *IdentityCache {
+func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byte, metricsProvider metrics.Provider) *IdentityCache {
 	logger.Debugf("new identity cache with size [%d]", size)
 	ci := &IdentityCache{
 		backed:    backed,
 		cache:     make(chan identityCacheEntry, size),
 		auditInfo: auditInfo,
+		counter:   metricsProvider.NewCounter(cacheLevelOpts),
 	}
 
 	return ci
@@ -80,6 +93,7 @@ func (c *IdentityCache) fetchIdentityFromCache(ctx context.Context) (driver.Iden
 	span.AddEvent("fetch_identity")
 	select {
 	case entry := <-c.cache:
+		c.counter.Add(-1)
 		span.AddEvent("got_identity_from_cache")
 		identity = entry.Identity
 		audit = entry.Audit
@@ -125,6 +139,7 @@ func (c *IdentityCache) provisionIdentities() {
 			continue
 		}
 		logger.Debugf("generated new idemix identity [%d]", count)
+		c.counter.Add(1)
 		c.cache <- identityCacheEntry{Identity: id, Audit: audit}
 	}
 }

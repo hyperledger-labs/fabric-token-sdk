@@ -10,6 +10,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +18,7 @@ import (
 func TestIdentityCache(t *testing.T) {
 	c := NewIdentityCache(func(context.Context, []byte) (driver.Identity, []byte, error) {
 		return []byte("hello world"), []byte("audit"), nil
-	}, 100, nil)
+	}, 100, nil, &disabled.Provider{})
 	id, audit, err := c.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Identity([]byte("hello world")), id)

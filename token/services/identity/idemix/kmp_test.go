@@ -12,6 +12,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
@@ -59,6 +60,7 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 		&mockConfig{},
 		0,
 		false,
+		&disabled.Provider{},
 	)
 	assert.NotNil(t, kmp)
 	idConfig := &token.IdentityConfiguration{

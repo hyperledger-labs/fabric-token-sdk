@@ -13,6 +13,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/cache"
@@ -31,13 +32,32 @@ type KeyManagerProvider struct {
 	signerService   SignerService
 	config          driver2.Config
 	cacheSize       int
+	metricsProvider metrics.Provider
 
 	// ignoreVerifyOnlyWallet when set to true, for each wallet the service will force the load of the secrets
 	ignoreVerifyOnlyWallet bool
 }
 
-func NewKeyManagerProvider(issuerPublicKey []byte, curveID math.CurveID, keyStore bccsp.KeyStore, signerService SignerService, config driver2.Config, cacheSize int, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
-	return &KeyManagerProvider{issuerPublicKey: issuerPublicKey, curveID: curveID, keyStore: keyStore, signerService: signerService, config: config, cacheSize: cacheSize, ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet}
+func NewKeyManagerProvider(
+	issuerPublicKey []byte,
+	curveID math.CurveID,
+	keyStore bccsp.KeyStore,
+	signerService SignerService,
+	config driver2.Config,
+	cacheSize int,
+	ignoreVerifyOnlyWallet bool,
+	metricsProvider metrics.Provider,
+) *KeyManagerProvider {
+	return &KeyManagerProvider{
+		issuerPublicKey:        issuerPublicKey,
+		curveID:                curveID,
+		keyStore:               keyStore,
+		signerService:          signerService,
+		config:                 config,
+		cacheSize:              cacheSize,
+		ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet,
+		metricsProvider:        metricsProvider,
+	}
 }
 
 func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
@@ -81,6 +101,7 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 			keyManager.Identity,
 			cacheSize,
 			nil,
+			l.metricsProvider,
 		).Identity
 	}
 
