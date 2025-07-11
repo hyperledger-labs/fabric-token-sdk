@@ -39,10 +39,12 @@ type identityCacheEntry struct {
 }
 
 type IdentityCache struct {
-	once            sync.Once
-	backed          IdentityCacheBackendFunc
-	auditInfo       []byte
+	once      sync.Once
+	backed    IdentityCacheBackendFunc
+	auditInfo []byte
+
 	cache           chan identityCacheEntry
+	cacheTimeout    time.Duration
 	cacheLevelGauge metrics.Gauge
 }
 
@@ -52,6 +54,7 @@ func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byt
 		backed:          backed,
 		cache:           make(chan identityCacheEntry, size),
 		auditInfo:       auditInfo,
+		cacheTimeout:    5 * time.Millisecond,
 		cacheLevelGauge: metricsProvider.NewGauge(cacheLevelOpts),
 	}
 
@@ -86,7 +89,7 @@ func (c *IdentityCache) fetchIdentityFromCache(ctx context.Context) (driver.Iden
 		start = time.Now()
 	}
 
-	timeout := time.NewTimer(time.Second)
+	timeout := time.NewTimer(c.cacheTimeout)
 	defer timeout.Stop()
 
 	span := trace.SpanFromContext(ctx)
