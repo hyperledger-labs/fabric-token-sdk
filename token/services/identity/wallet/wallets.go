@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -294,6 +295,7 @@ func NewAnonymousOwnerWallet(
 	id string,
 	identityInfo identity.Info,
 	cacheSize int,
+	metricsProvider metrics.Provider,
 ) (*AnonymousOwnerWallet, error) {
 	w := &AnonymousOwnerWallet{
 		LongTermOwnerWallet: &LongTermOwnerWallet{
@@ -306,7 +308,7 @@ func NewAnonymousOwnerWallet(
 		WalletRegistry: walletRegistry,
 		Deserializer:   Deserializer,
 	}
-	w.IdentityCache = NewIdentityCache(logger, w.getRecipientIdentity, cacheSize)
+	w.IdentityCache = NewIdentityCache(logger, w.getRecipientIdentity, cacheSize, metricsProvider)
 	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), cacheSize)
 	return w, nil
 }

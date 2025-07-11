@@ -147,7 +147,7 @@ func (d *base) newWalletService(
 		logger,
 		identityProvider,
 		deserializer,
-		wallet.NewFactory(logger, identityProvider, qe, identityConfig, deserializer),
+		wallet.NewFactory(logger, identityProvider, qe, identityConfig, deserializer, metricsProvider),
 		roles.ToWalletRegistries(logger, walletDB),
 	), nil
 }

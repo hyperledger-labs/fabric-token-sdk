@@ -9,6 +9,7 @@ package wallet
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -31,8 +32,9 @@ type Factory struct {
 	Logger               logging.Logger
 	IdentityProvider     driver.IdentityProvider
 	TokenVault           TokenVault
-	walletsConfiguration WalletsConfiguration
+	WalletsConfiguration WalletsConfiguration
 	Deserializer         driver.Deserializer
+	MetricsProvider      metrics.Provider
 }
 
 func NewFactory(
@@ -41,13 +43,15 @@ func NewFactory(
 	tokenVault TokenVault,
 	walletsConfiguration WalletsConfiguration,
 	deserializer driver.Deserializer,
+	metricsProvider metrics.Provider,
 ) *Factory {
 	return &Factory{
 		Logger:               logger,
 		IdentityProvider:     identityProvider,
 		TokenVault:           tokenVault,
-		walletsConfiguration: walletsConfiguration,
+		WalletsConfiguration: walletsConfiguration,
 		Deserializer:         deserializer,
+		MetricsProvider:      metricsProvider,
 	}
 }
 
@@ -63,7 +67,8 @@ func (w *Factory) NewWallet(ctx context.Context, id string, role identity.RoleTy
 				wr,
 				id,
 				info,
-				w.walletsConfiguration.CacheSizeForOwnerID(id),
+				w.WalletsConfiguration.CacheSizeForOwnerID(id),
+				w.MetricsProvider,
 			)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to create new owner wallet [%s]", id)
