@@ -205,6 +205,7 @@ func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, [
 func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) error {
 	h := token.Identity(id).String()
 
+	logger.DebugfContext(ctx, "store signer info for [%s]", h)
 	query, args := q.InsertInto(db.table.Signers).
 		Fields("identity_hash", "identity", "info").
 		Row(h, id, info).
@@ -223,6 +224,8 @@ func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) e
 	db.signerCacheLock.Lock()
 	defer db.signerCacheLock.Unlock()
 	db.signerInfoCache.Add(h, true)
+
+	logger.DebugfContext(ctx, "store signer info done", h)
 	return nil
 }
 

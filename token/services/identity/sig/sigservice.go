@@ -96,6 +96,7 @@ func (o *Service) RegisterSigner(ctx context.Context, identity driver.Identity, 
 
 	// store, if a failure happens then remove the entry
 	if o.storage != nil {
+		logger.DebugfContext(ctx, "checks done, store signer info")
 		if err := o.storage.StoreSignerInfo(ctx, identity, signerInfo); err != nil {
 			o.deleteSigner(idHash)
 			return errors.Wrap(err, "failed to store entry in storage for the passed signer")
@@ -104,6 +105,7 @@ func (o *Service) RegisterSigner(ctx context.Context, identity driver.Identity, 
 
 	if verifier != nil {
 		// store verifier
+		logger.DebugfContext(ctx, "checks done, store verifier")
 		if err := o.RegisterVerifier(ctx, identity, verifier); err != nil {
 			o.deleteSigner(idHash)
 			return err
