@@ -11,8 +11,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/csp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/pkcs11"
-	"github.com/hyperledger/fabric/bccsp"
-	"github.com/hyperledger/fabric/bccsp/sw"
+	"github.com/hyperledger/fabric-lib-go/bccsp"
+	"github.com/hyperledger/fabric-lib-go/bccsp/sw"
 	"github.com/pkg/errors"
 )
 
