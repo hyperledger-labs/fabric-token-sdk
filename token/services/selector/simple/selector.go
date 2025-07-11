@@ -43,11 +43,11 @@ type selector struct {
 }
 
 // Select selects tokens to be spent based on ownership, quantity, and type
-func (s *selector) Select(ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
+func (s *selector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	if ownerFilter == nil || len(ownerFilter.ID()) == 0 {
 		return nil, nil, errors.Errorf("no owner filter specified")
 	}
-	return s.selectByID(ownerFilter, q, tokenType)
+	return s.selectByID(ctx, ownerFilter, q, tokenType)
 }
 
 func (s *selector) Close() error { return nil }
@@ -57,7 +57,7 @@ func (s *selector) concurrencyCheck(ctx context.Context, ids []*token2.ID) error
 	return err
 }
 
-func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
+func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	var toBeSpent []*token2.ID
 	var sum token2.Quantity
 	var potentialSumWithLocked token2.Quantity
@@ -79,7 +79,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			unspentTokens.Close()
 		}
 		logger.Debugf("start token selection, iteration [%d/%d]", i, s.numRetry)
-		unspentTokens, err = s.queryService.UnspentTokensIteratorBy(context.TODO(), id, tokenType)
+		unspentTokens, err = s.queryService.UnspentTokensIteratorBy(ctx, id, tokenType)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "token selection failed")
 		}
@@ -111,7 +111,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			}
 
 			// lock the token
-			if _, err := s.locker.Lock(context.Background(), &t.Id, s.txID, reclaim); err != nil {
+			if _, err := s.locker.Lock(ctx, &t.Id, s.txID, reclaim); err != nil {
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 
 				logger.Debugf("token [%s,%v] cannot be locked [%s]", q, tokenType, err)
@@ -131,7 +131,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 
 		concurrencyIssue := false
 		if target.Cmp(sum) <= 0 {
-			err := s.concurrencyCheck(context.Background(), toBeSpent)
+			err := s.concurrencyCheck(ctx, toBeSpent)
 			if err == nil {
 				return toBeSpent, sum, nil
 			}

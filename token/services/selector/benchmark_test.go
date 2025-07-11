@@ -37,8 +37,8 @@ type extendedSelector struct {
 	Lock     Locker
 }
 
-func (s *extendedSelector) Select(ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
-	return s.Selector.Select(ownerFilter, q, tokenType)
+func (s *extendedSelector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
+	return s.Selector.Select(ctx, ownerFilter, q, tokenType)
 }
 func (s *extendedSelector) Close() error { return s.Selector.Close() }
 
@@ -62,7 +62,7 @@ func BenchmarkSelectorSingle(b *testing.B) {
 		b.ResetTimer()
 		b.Run(s.name, func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
-				ids, _, err := s.selector.Select(s.filter, testutils.SelectQuantity, testutils.TokenType)
+				ids, _, err := s.selector.Select(context.Background(), s.filter, testutils.SelectQuantity, testutils.TokenType)
 				if err != nil {
 					b.Error("unexpected error", err)
 				}
@@ -100,7 +100,7 @@ func BenchmarkSelectorParallel(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					// select
-					ids, _, err := s.selector.Select(s.filter, testutils.SelectQuantity, testutils.TokenType)
+					ids, _, err := s.selector.Select(context.Background(), s.filter, testutils.SelectQuantity, testutils.TokenType)
 					if err != nil {
 						b.Error("unexpected error", err)
 					}

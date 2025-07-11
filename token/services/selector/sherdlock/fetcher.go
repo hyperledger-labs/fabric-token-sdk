@@ -181,7 +181,7 @@ func (f *cachedFetcher) update() {
 		return
 	}
 	logger.Debugf("Renew token cache")
-	it, err := f.tokenDB.SpendableTokensIteratorBy(context.TODO(), "", "")
+	it, err := f.tokenDB.SpendableTokensIteratorBy(context.Background(), "", "")
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
 		return

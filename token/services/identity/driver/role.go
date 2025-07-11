@@ -47,7 +47,7 @@ type IdentityInfo interface {
 	Remote() bool
 	// Get returns the identity and it is audit info.
 	// Get might return a different identity at each call depending on the implementation.
-	Get() (Identity, []byte, error)
+	Get(ctx context.Context) (Identity, []byte, error)
 	// Anonymous is true if this identity supports anonymity
 	Anonymous() bool
 }

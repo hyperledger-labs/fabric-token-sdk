@@ -130,7 +130,7 @@ func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*tok
 		logger.Errorf("failed to get wallet [%s]", r.Wallet)
 		return nil, nil, errors.Errorf("wallet [%s:%s] not found", r.Wallet, r.TMSID)
 	}
-	recipientData, err := w.GetRecipientData()
+	recipientData, err := w.GetRecipientData(context.Context())
 	if err != nil {
 		logger.Errorf("failed to get recipient data: [%s]", err)
 		return nil, nil, errors.Wrapf(err, "failed to get recipient data")
@@ -165,7 +165,7 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 	tms := token.GetManagementService(context, token.WithTMSID(request.TMSID))
 	assert.NotNil(tms, "tms not found for [%s]", request.TMSID)
 
-	if err := tms.WalletManager().RegisterRecipientIdentity(&request.RecipientData); err != nil {
+	if err := tms.WalletManager().RegisterRecipientIdentity(context.Context(), &request.RecipientData); err != nil {
 		logger.Errorf("failed to register recipient identity: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}

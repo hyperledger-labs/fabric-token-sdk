@@ -108,7 +108,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	if err != nil {
 		return nil, nil, err
 	}
-	signer, err := w.GetSigner(issuerIdentity)
+	signer, err := w.GetSigner(ctx, issuerIdentity)
 	if err != nil {
 		return nil, nil, err
 	}

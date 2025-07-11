@@ -60,7 +60,7 @@ func NewService(deserializer idriver.Deserializer, storage Storage) *Service {
 	}
 }
 
-func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
+func (o *Service) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
 	if signer == nil {
 		return errors.New("invalid signer, expected a valid instance")
 	}
@@ -96,7 +96,7 @@ func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer,
 
 	// store, if a failure happens then remove the entry
 	if o.storage != nil {
-		if err := o.storage.StoreSignerInfo(context.Background(), identity, signerInfo); err != nil {
+		if err := o.storage.StoreSignerInfo(ctx, identity, signerInfo); err != nil {
 			o.deleteSigner(idHash)
 			return errors.Wrap(err, "failed to store entry in storage for the passed signer")
 		}
@@ -104,7 +104,7 @@ func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer,
 
 	if verifier != nil {
 		// store verifier
-		if err := o.RegisterVerifier(identity, verifier); err != nil {
+		if err := o.RegisterVerifier(ctx, identity, verifier); err != nil {
 			o.deleteSigner(idHash)
 			return err
 		}
@@ -114,7 +114,7 @@ func (o *Service) RegisterSigner(identity driver.Identity, signer driver.Signer,
 	return nil
 }
 
-func (o *Service) RegisterVerifier(identity driver.Identity, verifier driver.Verifier) error {
+func (o *Service) RegisterVerifier(ctx context.Context, identity driver.Identity, verifier driver.Verifier) error {
 	if verifier == nil {
 		return errors.New("invalid verifier, expected a valid instance")
 	}
@@ -216,7 +216,7 @@ func (o *Service) IsMe(ctx context.Context, identity driver.Identity) bool {
 	return false
 }
 
-func (o *Service) GetSigner(identity driver.Identity) (driver.Signer, error) {
+func (o *Service) GetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
 	idHash := identity.UniqueID()
 	logger.Debugf("get signer for [%s]", idHash)
 	// check the cache
@@ -230,10 +230,10 @@ func (o *Service) GetSigner(identity driver.Identity) (driver.Signer, error) {
 	o.sync.Lock()
 	defer o.sync.Unlock()
 
-	return o.getSigner(identity, idHash)
+	return o.getSigner(ctx, identity, idHash)
 }
 
-func (o *Service) getSigner(identity driver.Identity, idHash string) (driver.Signer, error) {
+func (o *Service) getSigner(ctx context.Context, identity driver.Identity, idHash string) (driver.Signer, error) {
 	// check again the cache
 	entry, ok := o.signers[idHash]
 	if ok {
@@ -243,7 +243,7 @@ func (o *Service) getSigner(identity driver.Identity, idHash string) (driver.Sig
 
 	logger.Debugf("signer for [%s] not found, try to deserialize", idHash)
 	// ask the deserializer
-	signer, err := o.deserializeSigner(identity)
+	signer, err := o.deserializeSigner(ctx, identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing identity for signer [%s]", identity)
 	}
@@ -253,14 +253,14 @@ func (o *Service) getSigner(identity driver.Identity, idHash string) (driver.Sig
 	}
 	o.signers[idHash] = entry
 	if o.storage != nil {
-		if err := o.storage.StoreSignerInfo(context.Background(), identity, nil); err != nil {
+		if err := o.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
 			return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
 		}
 	}
 	return entry.Signer, nil
 }
 
-func (o *Service) deserializeSigner(identity driver.Identity) (driver.Signer, error) {
+func (o *Service) deserializeSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
 	if o.deserializer == nil {
 		return nil, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
 	}
@@ -280,7 +280,7 @@ func (o *Service) deserializeSigner(identity driver.Identity) (driver.Signer, er
 	}
 
 	// yes, check ro.Identity
-	signer, err = o.getSigner(ro.Identity, ro.Identity.UniqueID())
+	signer, err = o.getSigner(ctx, ro.Identity, ro.Identity.UniqueID())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting signer for identity [%s]", ro.Identity)
 	}

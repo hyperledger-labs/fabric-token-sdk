@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
@@ -149,7 +150,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NotNil(t, keyManager)
 
 	// get an identity and check it
-	id, audit, err := keyManager.Identity(nil)
+	id, audit, err := keyManager.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
@@ -158,7 +159,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.True(t, strings.HasPrefix(info, "Idemix: [alice]"))
 
 	// get another identity and compare the info
-	id2, audit2, err := keyManager.Identity(audit)
+	id2, audit2, err := keyManager.Identity(context.Background(), audit)
 	assert.NoError(t, err)
 	assert.NotNil(t, id2)
 	assert.NotNil(t, audit2)
@@ -205,7 +206,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, err)
 
 	// get the signer from the sigService as well
-	signer2, err := sigService.GetSigner(id)
+	signer2, err := sigService.GetSigner(context.Background(), id)
 	assert.NoError(t, err)
 	assert.NotNil(t, signer2)
 
@@ -254,7 +255,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err := p.Identity(nil)
+	id, audit, err := p.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -276,7 +277,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(nil)
+	id, audit, err = p.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -298,7 +299,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(nil)
+	id, audit, err = p.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -347,11 +348,11 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	assert.NoError(t, err)
 	assert.NotNil(t, p2)
 
-	id, audit, err := p.Identity(nil)
+	id, audit, err := p.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
-	id2, audit2, err := p2.Identity(nil)
+	id2, audit2, err := p2.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id2)
 	assert.NotNil(t, audit2)
@@ -402,10 +403,10 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 
 	// keyManager and keyManager2 use the same key store
 
-	id, _, err := keyManager.Identity(nil)
+	id, _, err := keyManager.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 
-	id2, _, err := keyManager2.Identity(nil)
+	id2, _, err := keyManager2.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 
 	// This must work
@@ -459,7 +460,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err := p.Identity(nil)
+	id, audit, err := p.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -481,7 +482,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(nil)
+	id, audit, err = p.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -503,7 +504,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(nil)
+	id, audit, err = p.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -542,7 +543,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 
 	// get an identity with its own audit info from the provider
 	// id is in its serialized form
-	id, audit, err := p.Identity(nil)
+	id, audit, err := p.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
@@ -571,7 +572,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(nil)
+	id, audit, err = p.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)

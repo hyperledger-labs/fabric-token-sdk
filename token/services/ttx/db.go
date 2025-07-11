@@ -54,7 +54,7 @@ type Service struct {
 // Append adds the passed transaction to the database
 func (a *Service) Append(ctx context.Context, tx *Transaction) error {
 	// append request to the db
-	if err := a.ttxStoreService.AppendTransactionRecord(context.Background(), tx.Request()); err != nil {
+	if err := a.ttxStoreService.AppendTransactionRecord(ctx, tx.Request()); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 

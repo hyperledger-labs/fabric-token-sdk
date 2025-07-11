@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package cache
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -14,15 +15,15 @@ import (
 )
 
 func TestIdentityCache(t *testing.T) {
-	c := NewIdentityCache(func([]byte) (driver.Identity, []byte, error) {
+	c := NewIdentityCache(func(context.Context, []byte) (driver.Identity, []byte, error) {
 		return []byte("hello world"), []byte("audit"), nil
 	}, 100, nil)
-	id, audit, err := c.Identity(nil)
+	id, audit, err := c.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Identity([]byte("hello world")), id)
 	assert.Equal(t, []byte("audit"), audit)
 
-	id, audit, err = c.Identity(nil)
+	id, audit, err = c.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Identity([]byte("hello world")), id)
 	assert.Equal(t, []byte("audit"), audit)

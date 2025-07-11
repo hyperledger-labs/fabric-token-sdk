@@ -306,7 +306,7 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting auditor identity for node [%s]", context.Me())
 	}
-	signer, err := a.w.GetSigner(aid)
+	signer, err := a.w.GetSigner(context.Context(), aid)
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting signing identity for auditor identity [%s]", aid)
 	}

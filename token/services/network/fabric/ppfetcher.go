@@ -28,7 +28,7 @@ func (f *chaincodePublicParamsFetcher) Fetch(network driver2.Network, channel dr
 			namespace,
 			QueryPublicParamsFunction,
 		).WithNetwork(network).WithChannel(channel),
-		context.TODO(),
+		context.Background(),
 	)
 	if err != nil {
 		return nil, err

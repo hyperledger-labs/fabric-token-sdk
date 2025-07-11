@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -44,7 +45,7 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, 
 	assert.NotNil(t, keyManager)
 
 	// get an identity
-	id, auditInfoRaw, err := keyManager.Identity(nil)
+	id, auditInfoRaw, err := keyManager.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 
 	// instantiate a deserializer and check that it fils

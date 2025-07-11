@@ -59,9 +59,9 @@ type stubbornSelector struct {
 	maxRetriesAfterBackoff int
 }
 
-func (m *stubbornSelector) Select(owner token.OwnerFilter, q string, currency token2.Type) ([]*token2.ID, token2.Quantity, error) {
+func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	for retriesAfterBackoff := 0; retriesAfterBackoff <= m.maxRetriesAfterBackoff; retriesAfterBackoff++ {
-		if tokens, quantity, err := m.selector.Select(owner, q, currency); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
+		if tokens, quantity, err := m.selector.Select(ctx, ownerFilter, q, tokenType); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
 			return tokens, quantity, err
 		}
 		backoffDuration := time.Duration(rand.Int63n(int64(m.backoffInterval)))
@@ -90,8 +90,7 @@ func NewSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker
 	}
 }
 
-func (s *selector) Select(owner token.OwnerFilter, q string, currency token2.Type) ([]*token2.ID, token2.Quantity, error) {
-	ctx := context.Background()
+func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	if s.isClosed() {
 		return nil, nil, errors.Errorf("selector is already closed")
 	}
@@ -103,14 +102,14 @@ func (s *selector) Select(owner token.OwnerFilter, q string, currency token2.Typ
 	for {
 		if t, err := s.cache.Next(); err != nil {
 			err2 := s.locker.UnlockAll(ctx)
-			return nil, nil, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), currency, err2)
+			return nil, nil, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), tokenType, err2)
 		} else if t == nil {
 			if !tokensLockedByOthersExist {
 				return nil, nil, errors.Wrapf(
 					token.SelectorInsufficientFunds,
 					"insufficient funds, only [%s] tokens of type [%s] are available, but [%s] were requested and no other process has any tokens locked",
 					sum.Decimal(),
-					currency,
+					tokenType,
 					quantity.Decimal(),
 				)
 			}
@@ -130,9 +129,9 @@ func (s *selector) Select(owner token.OwnerFilter, q string, currency token2.Typ
 			}
 
 			s.logger.Debugf("Fetch all non-deleted tokens from the DB and refresh the token cache.")
-			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), currency); err != nil {
+			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
 				err2 := s.locker.UnlockAll(ctx)
-				return nil, nil, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s] - unlock: %v", immediateRetries, owner.ID(), currency, err2)
+				return nil, nil, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s] - unlock: %v", immediateRetries, owner.ID(), tokenType, err2)
 			}
 
 			immediateRetries++

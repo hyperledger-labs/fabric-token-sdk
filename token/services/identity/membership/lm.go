@@ -40,7 +40,7 @@ type KeyManager interface {
 	IsRemote() bool
 	Anonymous() bool
 	IdentityType() identity.Type
-	Identity([]byte) (driver.Identity, []byte, error)
+	Identity(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error)
 }
 
 type LocalIdentityWithPriority struct {
@@ -148,8 +148,8 @@ func (l *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (idriv
 	if localIdentity == nil {
 		return nil, errors2.Errorf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
 	}
-	return NewIdentityInfo(localIdentity, func() (driver.Identity, []byte, error) {
-		return localIdentity.GetIdentity(auditInfo)
+	return NewIdentityInfo(localIdentity, func(ctx context.Context) (driver.Identity, []byte, error) {
+		return localIdentity.GetIdentity(ctx, auditInfo)
 	}), nil
 }
 
@@ -395,11 +395,11 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 	} else {
 		var auditInfo []byte
 		var err error
-		identity, auditInfo, err = typedIdentityInfo.Get(nil)
+		identity, auditInfo, err = typedIdentityInfo.Get(context.Background(), nil)
 		if err != nil {
 			return errors2.WithMessagef(err, "failed to get identity")
 		}
-		getIdentity = func([]byte) (driver.Identity, []byte, error) {
+		getIdentity = func(context.Context, []byte) (driver.Identity, []byte, error) {
 			return identity, auditInfo, nil
 		}
 	}
@@ -497,7 +497,7 @@ func (l *LocalMembership) storedIdentityConfigurations(ctx context.Context) ([]i
 }
 
 type TypedIdentityInfo struct {
-	GetIdentity  func([]byte) (driver.Identity, []byte, error)
+	GetIdentity  func(context.Context, []byte) (driver.Identity, []byte, error)
 	IdentityType identity.Type
 
 	EnrollmentID     string
@@ -506,15 +506,14 @@ type TypedIdentityInfo struct {
 	BinderService    idriver.BinderService
 }
 
-func (i *TypedIdentityInfo) Get(auditInfo []byte) (driver.Identity, []byte, error) {
-	ctx := context.Background()
+func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
 	// get the identity
-	id, ai, err := i.GetIdentity(auditInfo)
+	id, ai, err := i.GetIdentity(ctx, auditInfo)
 	if err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID)
 	}
 	// register the audit info
-	if err := i.IdentityProvider.RegisterAuditInfo(id, ai); err != nil {
+	if err := i.IdentityProvider.RegisterAuditInfo(ctx, id, ai); err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 	}
 	// bind the identity to the default FSC node identity
@@ -538,7 +537,7 @@ func (i *TypedIdentityInfo) Get(auditInfo []byte) (driver.Identity, []byte, erro
 			}
 		} else {
 			// register at the list the audit info
-			if err := i.IdentityProvider.RegisterAuditInfo(typedIdentity, ai); err != nil {
+			if err := i.IdentityProvider.RegisterAuditInfo(ctx, typedIdentity, ai); err != nil {
 				return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 			}
 		}

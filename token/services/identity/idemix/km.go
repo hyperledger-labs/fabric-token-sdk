@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/IBM/idemix"
@@ -29,7 +30,7 @@ type (
 )
 
 type SignerService interface {
-	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
+	RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
 }
 
 type KeyManager struct {
@@ -169,7 +170,7 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 	}, nil
 }
 
-func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error) {
+func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
 	// Load the user key
 	userKey, err := p.Csp.GetKey(p.userKeySKI)
 	if err != nil {
@@ -251,7 +252,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	if p.SignerService != nil {
-		if err := p.SignerService.RegisterSigner(raw, sID, sID, nil); err != nil {
+		if err := p.SignerService.RegisterSigner(ctx, raw, sID, sID, nil); err != nil {
 			return nil, nil, errors.WithMessage(err, "failed to register signer")
 		}
 	}

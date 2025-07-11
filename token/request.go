@@ -1124,7 +1124,7 @@ func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) 
 					continue
 				}
 				r.TokenService.logger.Debugf("bind sender [%s] to [%s]", senderIdentity, identity)
-				if err := binder.Bind(context.TODO(), identity, senderIdentity); err != nil {
+				if err := binder.Bind(ctx, identity, senderIdentity); err != nil {
 					return errors.Wrap(err, "failed binding sender identities")
 				}
 			}
@@ -1137,7 +1137,7 @@ func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) 
 				continue
 			}
 			r.TokenService.logger.Debugf("bind extra signer [%s] to [%s]", eid, identity)
-			if err := binder.Bind(context.TODO(), identity, eid); err != nil {
+			if err := binder.Bind(ctx, identity, eid); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
 		}
@@ -1152,7 +1152,7 @@ func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) 
 				}
 
 				r.TokenService.logger.Debugf("bind receiver as sender [%s] to [%s]", receiverIdentity, identity)
-				if err := binder.Bind(context.TODO(), identity, receiverIdentity); err != nil {
+				if err := binder.Bind(ctx, identity, receiverIdentity); err != nil {
 					return errors.Wrap(err, "failed binding receiver identities")
 				}
 			}
@@ -1393,7 +1393,7 @@ func (r *Request) prepareTransfer(ctx context.Context, redeem bool, wallet *Owne
 				return nil, nil, errors.Wrapf(err, "failed getting default selector")
 			}
 		}
-		tokenIDs, inputSum, err = selector.Select(wallet, outputSum.Decimal(), tokenType)
+		tokenIDs, inputSum, err = selector.Select(ctx, wallet, outputSum.Decimal(), tokenType)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed selecting tokens")
 		}
@@ -1414,7 +1414,7 @@ func (r *Request) prepareTransfer(ctx context.Context, redeem bool, wallet *Owne
 			}
 			restIdentity = transferOpts.RestRecipientIdentity.Identity
 		} else {
-			restIdentity, err = wallet.GetRecipientIdentity()
+			restIdentity, err = wallet.GetRecipientIdentity(ctx)
 			if err != nil {
 				return nil, nil, errors.WithMessagef(err, "failed getting recipient identity for the rest, wallet [%s]", wallet.ID())
 			}

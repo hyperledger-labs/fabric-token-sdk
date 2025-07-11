@@ -229,7 +229,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 		}
 
 		// Case: there is a signer locally bound to the party, use it to generate the signature
-		if signer, err := c.tx.TokenService().SigService().GetSigner(signerIdentity); err == nil {
+		if signer, err := c.tx.TokenService().SigService().GetSigner(context.Context(), signerIdentity); err == nil {
 			logger.DebugfContext(context.Context(), "found signer for party [%s], request local signature", signerIdentity)
 			sigma, err := c.signLocal(signerIdentity, signer, signatureRequest)
 			if err != nil {
@@ -776,7 +776,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		if !sigService.IsMe(context.Context(), signatureRequest.Signer) {
 			return nil, errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
 		}
-		signer, err := sigService.GetSigner(signatureRequest.Signer)
+		signer, err := sigService.GetSigner(context.Context(), signatureRequest.Signer)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot find signer for [%s]", signatureRequest.Signer.UniqueID())
 		}

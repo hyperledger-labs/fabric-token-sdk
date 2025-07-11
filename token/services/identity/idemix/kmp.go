@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
+
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
@@ -69,9 +71,9 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 		return nil, err
 	}
 
-	var getIdentityFunc func([]byte) (driver.Identity, []byte, error)
+	var getIdentityFunc func(context.Context, []byte) (driver.Identity, []byte, error)
 	if keyManager.IsRemote() {
-		getIdentityFunc = func([]byte) (driver.Identity, []byte, error) {
+		getIdentityFunc = func(context.Context, []byte) (driver.Identity, []byte, error) {
 			return nil, nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms")
 		}
 	} else {
@@ -108,9 +110,9 @@ func (l *KeyManagerProvider) cacheSizeForID(id string) (int, error) {
 
 type WrappedKeyManager struct {
 	membership.KeyManager
-	getIdentityFunc func([]byte) (driver.Identity, []byte, error)
+	getIdentityFunc func(context.Context, []byte) (driver.Identity, []byte, error)
 }
 
-func (k *WrappedKeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error) {
-	return k.getIdentityFunc(auditInfo)
+func (k *WrappedKeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
+	return k.getIdentityFunc(ctx, auditInfo)
 }

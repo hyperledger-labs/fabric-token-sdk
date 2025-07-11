@@ -8,17 +8,19 @@ package cache
 
 import (
 	"bytes"
+	"context"
 	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 )
 
 var logger = logging.MustGetLogger()
 
-type IdentityCacheBackendFunc func(auditInfo []byte) (driver.Identity, []byte, error)
+type IdentityCacheBackendFunc func(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error)
 
 type identityCacheEntry struct {
 	Identity driver.Identity
@@ -43,10 +45,10 @@ func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byt
 	return ci
 }
 
-func (c *IdentityCache) Identity(auditInfo []byte) (driver.Identity, []byte, error) {
+func (c *IdentityCache) Identity(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
 	// Is the auditInfo equal to that used to fill the cache? If yes, use the cache
 	if !bytes.Equal(auditInfo, c.auditInfo) {
-		return c.fetchIdentityFromBackend(auditInfo)
+		return c.fetchIdentityFromBackend(ctx, auditInfo)
 	}
 
 	c.once.Do(func() {
@@ -58,10 +60,10 @@ func (c *IdentityCache) Identity(auditInfo []byte) (driver.Identity, []byte, err
 
 	logger.Debugf("fetching identity from cache...")
 
-	return c.fetchIdentityFromCache()
+	return c.fetchIdentityFromCache(ctx)
 }
 
-func (c *IdentityCache) fetchIdentityFromCache() (driver.Identity, []byte, error) {
+func (c *IdentityCache) fetchIdentityFromCache(ctx context.Context) (driver.Identity, []byte, error) {
 	var identity driver.Identity
 	var audit []byte
 
@@ -74,8 +76,11 @@ func (c *IdentityCache) fetchIdentityFromCache() (driver.Identity, []byte, error
 	timeout := time.NewTimer(time.Second)
 	defer timeout.Stop()
 
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("fetch_identity")
 	select {
 	case entry := <-c.cache:
+		span.AddEvent("got_identity_from_cache")
 		identity = entry.Identity
 		audit = entry.Audit
 
@@ -83,7 +88,8 @@ func (c *IdentityCache) fetchIdentityFromCache() (driver.Identity, []byte, error
 			logger.Debugf("fetching identity from cache [%s][%d] took [%v]", identity, len(audit), time.Since(start))
 		}
 	case <-timeout.C:
-		id, a, err := c.backed(c.auditInfo)
+		span.AddEvent("generate_identity_on_the_spot")
+		id, a, err := c.backed(ctx, c.auditInfo)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -94,12 +100,13 @@ func (c *IdentityCache) fetchIdentityFromCache() (driver.Identity, []byte, error
 			logger.Debugf("fetching identity from backend after a timeout [%s][%d] took [%v]", identity, len(audit), time.Since(start))
 		}
 	}
+	span.AddEvent("got_identity")
 	return identity, audit, nil
 }
 
-func (c *IdentityCache) fetchIdentityFromBackend(auditInfo []byte) (driver.Identity, []byte, error) {
+func (c *IdentityCache) fetchIdentityFromBackend(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
 	logger.Debugf("fetching identity from backend")
-	id, audit, err := c.backed(auditInfo)
+	id, audit, err := c.backed(ctx, auditInfo)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -110,8 +117,9 @@ func (c *IdentityCache) fetchIdentityFromBackend(auditInfo []byte) (driver.Ident
 
 func (c *IdentityCache) provisionIdentities() {
 	count := 0
+	ctx := context.Background()
 	for {
-		id, audit, err := c.backed(c.auditInfo)
+		id, audit, err := c.backed(ctx, c.auditInfo)
 		if err != nil {
 			logger.Errorf("failed to provision identity [%s]", err)
 			continue

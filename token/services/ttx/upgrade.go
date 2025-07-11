@@ -169,7 +169,7 @@ func (r *UpgradeTokensInitiatorView) getRecipientData(context view.Context) (*to
 		logger.Errorf("failed to get wallet [%s]", r.Wallet)
 		return nil, nil, errors.Errorf("wallet [%s:%s] not found", r.Wallet, r.TMSID)
 	}
-	recipientData, err := w.GetRecipientData()
+	recipientData, err := w.GetRecipientData(context.Context())
 	if err != nil {
 		logger.Errorf("failed to get recipient data: [%s]", err)
 		return nil, nil, errors.Wrapf(err, "failed to get recipient data")
@@ -233,7 +233,7 @@ func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, er
 	}
 
 	// register recipient data
-	if err := tms.WalletManager().RegisterRecipientIdentity(&request.RecipientData); err != nil {
+	if err := tms.WalletManager().RegisterRecipientIdentity(context.Context(), &request.RecipientData); err != nil {
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}
 

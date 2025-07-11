@@ -34,7 +34,7 @@ func (s *WalletStore) StoreIdentity(ctx context.Context, identity driver2.Identi
 		if err != nil {
 			return errors.Wrapf(err, "failed to create key")
 		}
-		if err := s.kvs.Put(context.Background(), k, meta); err != nil {
+		if err := s.kvs.Put(ctx, k, meta); err != nil {
 			return errors.WithMessagef(err, "failed to store identity's metadata [%s]", identity)
 		}
 	}
@@ -42,7 +42,7 @@ func (s *WalletStore) StoreIdentity(ctx context.Context, identity driver2.Identi
 	if err != nil {
 		return errors.Wrapf(err, "failed to create key")
 	}
-	if err := s.kvs.Put(context.Background(), k, wID); err != nil {
+	if err := s.kvs.Put(ctx, k, wID); err != nil {
 		return errors.WithMessagef(err, "failed to store identity's wallet reference[%s]", identity)
 	}
 
@@ -50,7 +50,7 @@ func (s *WalletStore) StoreIdentity(ctx context.Context, identity driver2.Identi
 	if err != nil {
 		return errors.Wrapf(err, "failed to create key")
 	}
-	if err := s.kvs.Put(context.Background(), k, wID); err != nil {
+	if err := s.kvs.Put(ctx, k, wID); err != nil {
 		return errors.WithMessagef(err, "failed to store identity's wallet reference[%s]", identity)
 	}
 	return nil
@@ -62,7 +62,7 @@ func (s *WalletStore) IdentityExists(ctx context.Context, identity driver2.Ident
 	if err != nil {
 		return false
 	}
-	return s.kvs.Exists(context.Background(), k)
+	return s.kvs.Exists(ctx, k)
 }
 
 func (s *WalletStore) GetWalletID(ctx context.Context, identity driver2.Identity, roleID int) (driver.WalletID, error) {
@@ -72,14 +72,14 @@ func (s *WalletStore) GetWalletID(ctx context.Context, identity driver2.Identity
 		return "", errors.Wrapf(err, "failed to create key")
 	}
 	var wID driver.WalletID
-	if err := s.kvs.Get(context.Background(), k, &wID); err != nil {
+	if err := s.kvs.Get(ctx, k, &wID); err != nil {
 		return "", err
 	}
 	return wID, nil
 }
 
 func (s *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.WalletID, error) {
-	it, err := s.kvs.GetByPartialCompositeID(context.Background(), "walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID)})
+	it, err := s.kvs.GetByPartialCompositeID(ctx, "walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID)})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallets iterator")
 	}
@@ -103,7 +103,7 @@ func (s *WalletStore) LoadMeta(ctx context.Context, identity driver2.Identity, w
 		return nil, errors.Wrapf(err, "failed to create key")
 	}
 	var meta []byte
-	if err := s.kvs.Get(context.Background(), k, &meta); err != nil {
+	if err := s.kvs.Get(ctx, k, &meta); err != nil {
 		return nil, err
 	}
 	return meta, nil

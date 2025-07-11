@@ -81,7 +81,7 @@ func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim b
 		if reclaim {
 			// Second chance
 			logger.Debugf("[%s] already locked by [%s], try to reclaim...", id, e)
-			reclaimed, status := d.reclaim(context.Background(), id, e.TxID)
+			reclaimed, status := d.reclaim(ctx, id, e.TxID)
 			if !reclaimed {
 				logger.Debugf("[%s] already locked by [%s], reclaim failed, tx status [%s]", id, e, ttxdb.TxStatusMessage[status])
 				if logger.IsEnabledFor(zapcore.DebugLevel) {

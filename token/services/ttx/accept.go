@@ -144,7 +144,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 		if !tms.SigService().IsMe(context.Context(), signatureRequest.Signer) {
 			return errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
 		}
-		signer, err := s.tx.TokenService().SigService().GetSigner(signatureRequest.Signer)
+		signer, err := s.tx.TokenService().SigService().GetSigner(context.Context(), signatureRequest.Signer)
 		if err != nil {
 			return errors.Wrapf(err, "cannot find signer for [%s]", signatureRequest.Signer.UniqueID())
 		}

@@ -6,9 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"github.com/pkg/errors"
+	"context"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -40,7 +41,7 @@ type Selector interface {
 	// Quantity is a string in decimal format
 	// Notice that, the quantity selected might exceed the quantity requested due to the amounts
 	// stored in each token.
-	Select(ownerFilter OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error)
+	Select(ctx context.Context, ownerFilter OwnerFilter, q string, tokenType token.Type) ([]*token.ID, token.Quantity, error)
 	// Close closes the selector and releases its memory/cpu resources
 	Close() error
 }
