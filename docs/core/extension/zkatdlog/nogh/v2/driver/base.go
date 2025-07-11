@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	v2 "github.com/hyperledger-labs/fabric-token-sdk/docs/core/extension/zkatdlog/nogh/v2/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -62,6 +63,7 @@ func (d *base) newWalletService(
 	networkDefaultIdentity view.Identity,
 	publicParams driver.PublicParameters,
 	ignoreRemote bool,
+	metricsProvider metrics.Provider,
 ) (*wallet.Service, error) {
 	pp := publicParams.(*v2.PublicParams)
 	roles := wallet.NewRoles()
@@ -96,7 +98,16 @@ func (d *base) newWalletService(
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
 		}
-		kmp := idemix.NewKeyManagerProvider(key.PublicKey, key.Curve, keyStore, sigService, identityConfig, identityConfig.DefaultCacheSize(), ignoreRemote)
+		kmp := idemix.NewKeyManagerProvider(
+			key.PublicKey,
+			key.Curve,
+			keyStore,
+			sigService,
+			identityConfig,
+			identityConfig.DefaultCacheSize(),
+			ignoreRemote,
+			metricsProvider,
+		)
 		kmps = append(kmps, kmp)
 	}
 	keyStore := x509.NewKeyStore(baseKeyStore)

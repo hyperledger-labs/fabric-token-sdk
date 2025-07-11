@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	v2 "github.com/hyperledger-labs/fabric-token-sdk/docs/core/extension/zkatdlog/nogh/v2/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -37,5 +38,16 @@ func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, 
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	return d.newWalletService(tmsConfig, nil, d.storageProvider, nil, logger, nil, nil, pp, true)
+	return d.newWalletService(
+		tmsConfig,
+		nil,
+		d.storageProvider,
+		nil,
+		logger,
+		nil,
+		nil,
+		pp,
+		true,
+		&disabled.Provider{},
+	)
 }
