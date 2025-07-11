@@ -225,7 +225,7 @@ func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) e
 	defer db.signerCacheLock.Unlock()
 	db.signerInfoCache.Add(h, true)
 
-	logger.DebugfContext(ctx, "store signer info done", h)
+	logger.DebugfContext(ctx, "store signer info done")
 	return nil
 }
 
