@@ -21,6 +21,7 @@ import (
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
 	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -133,7 +134,7 @@ func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url s
 }
 
 func (db *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
-	// logger.Infof("store identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
+	logger.DebugfContext(ctx, "store identity data for [%s]", view.Identity(id))
 	h := token.Identity(id).String()
 	query, args := q.InsertInto(db.table.IdentityInfo).
 		Fields("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
@@ -144,6 +145,7 @@ func (db *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, ident
 	_, err := db.writeDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		// does the record already exists?
+		logger.DebugfContext(ctx, "store identity data failed, check if audit info exists")
 		auditInfo, err2 := db.GetAuditInfo(ctx, id)
 		if err2 != nil {
 			return err
@@ -151,10 +153,13 @@ func (db *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, ident
 		if !bytes.Equal(auditInfo, identityAudit) {
 			return errors.Wrapf(err, "different audit info stored for [%s], [%s]!=[%s]", h, hash.Hashable(auditInfo), hash.Hashable(identityAudit))
 		}
+		logger.DebugfContext(ctx, "audit info exists")
 		return nil
 	}
 
+	logger.DebugfContext(ctx, "audit info cache update")
 	db.auditInfoCache.Add(h, identityAudit)
+	logger.DebugfContext(ctx, "audit info cache update done")
 
 	return err
 }
