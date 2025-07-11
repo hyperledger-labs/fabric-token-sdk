@@ -70,6 +70,7 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.Requ
 		return nil
 	}
 
+	logger.DebugfContext(ctx, "check transaction exists")
 	exists, err := t.Storage.TransactionExists(ctx, string(txID))
 	if err != nil {
 		logger.ErrorfContext(ctx, "transaction [%s], failed to check existence in db [%s]", txID, err)
@@ -101,6 +102,7 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.Requ
 		}
 	}()
 
+	logger.DebugfContext(ctx, "append tokens")
 	for _, tta := range toAppend {
 		err = ts.AppendToken(ctx, tta)
 		if err != nil {
@@ -108,11 +110,13 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.Requ
 		}
 	}
 
+	logger.DebugfContext(ctx, "delete spend tokens")
 	err = ts.DeleteTokens(ctx, string(txID), toSpend)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 	}
 
+	logger.DebugfContext(ctx, "ready to commit")
 	if err = ts.Commit(); err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to commit tokens to database", txID)
 	}
@@ -319,8 +323,10 @@ func (t *Service) deleteTokens(ctx context.Context, network *network.Network, tm
 
 func (t *Service) getActions(ctx context.Context, tmsID token.TMSID, anchor token.RequestAnchor, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
 	// check the cache first
+	logger.DebugfContext(ctx, "check request cache for [%s]", anchor)
 	entry, ok := t.RequestsCache.Get(string(anchor))
 	if ok {
+		logger.DebugfContext(ctx, "cache hit, return it")
 		return entry.ToSpend, entry.ToAppend, nil
 	}
 	// extract
