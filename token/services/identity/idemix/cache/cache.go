@@ -73,7 +73,7 @@ func (c *IdentityCache) Identity(ctx context.Context, auditInfo []byte) (driver.
 		}
 	})
 
-	logger.Debugf("fetching identity from cache...")
+	logger.DebugfContext(ctx, "fetching identity from cache...")
 
 	return c.fetchIdentityFromCache(ctx)
 }

@@ -104,7 +104,7 @@ func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity,
 }
 
 func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []string {
-	p.Logger.Debugf("identity [%s] is me?", identities)
+	p.Logger.DebugfContext(ctx, "identity [%s] is me?", identities)
 
 	result := make([]string, 0)
 	notFound := make([]driver.Identity, 0)
@@ -178,19 +178,19 @@ func (p *Provider) GetRevocationHandler(identity driver.Identity, auditInfo []by
 
 func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error {
 	if copyAll {
-		p.Logger.Debugf("Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
+		p.Logger.DebugfContext(ctx, "Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
 		setSV := true
 		signer, err := p.GetSigner(ctx, longTerm)
 		if err != nil {
 			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-				p.Logger.Debugf("failed getting signer for [%s][%s][%s]", longTerm, err, debug.Stack())
+				p.Logger.DebugfContext(ctx, "failed getting signer for [%s][%s][%s]", longTerm, err, debug.Stack())
 			}
 			setSV = false
 		}
 		verifier, err := p.SigService.GetVerifier(longTerm)
 		if err != nil {
 			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-				p.Logger.Debugf("failed getting verifier for identity [%s][%s][%s]", longTerm, err, debug.Stack())
+				p.Logger.DebugfContext(ctx, "failed getting verifier for identity [%s][%s][%s]", longTerm, err, debug.Stack())
 			}
 			verifier = nil
 		}
@@ -198,7 +198,7 @@ func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral
 		setAI := true
 		auditInfo, err := p.GetAuditInfo(ctx, longTerm)
 		if err != nil {
-			p.Logger.Debugf("failed getting audit info for [%s][%s]", longTerm, err)
+			p.Logger.DebugfContext(ctx, "failed getting audit info for [%s][%s]", longTerm, err)
 			setAI = false
 		}
 

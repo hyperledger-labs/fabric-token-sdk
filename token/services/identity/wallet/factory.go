@@ -73,7 +73,7 @@ func (w *Factory) NewWallet(ctx context.Context, id string, role identity.RoleTy
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to create new owner wallet [%s]", id)
 			}
-			w.Logger.Debugf("created owner wallet [%s] for identity [%s:%s:%v]", id, info.ID(), info.EnrollmentID(), info.Remote())
+			w.Logger.DebugfContext(ctx, "created owner wallet [%s] for identity [%s:%s:%v]", id, info.ID(), info.EnrollmentID(), info.Remote())
 			return newWallet, nil
 		}
 
@@ -92,10 +92,10 @@ func (w *Factory) NewWallet(ctx context.Context, id string, role identity.RoleTy
 		if err := wr.BindIdentity(ctx, idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
-		w.Logger.Debugf("created issuer wallet [%s]", id)
+		w.Logger.DebugfContext(ctx, "created issuer wallet [%s]", id)
 		return newWallet, nil
 	case identity.AuditorRole:
-		w.Logger.Debugf("no wallet found, create it [%s]", id)
+		w.Logger.DebugfContext(ctx, "no wallet found, create it [%s]", id)
 		idInfoIdentity, _, err := info.Get(ctx)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get auditor wallet identity for [%s]", id)
@@ -104,7 +104,7 @@ func (w *Factory) NewWallet(ctx context.Context, id string, role identity.RoleTy
 		if err := wr.BindIdentity(ctx, idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
-		w.Logger.Debugf("created auditor wallet [%s]", id)
+		w.Logger.DebugfContext(ctx, "created auditor wallet [%s]", id)
 		return newWallet, nil
 	case identity.CertifierRole:
 		return nil, errors.Errorf("certifiers are not supported by this driver")

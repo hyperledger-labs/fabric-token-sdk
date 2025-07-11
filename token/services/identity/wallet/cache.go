@@ -80,18 +80,14 @@ func (c *IdentityCache) RecipientData(ctx context.Context) (*driver.RecipientDat
 		c.cacheLevelGauge.Add(-1)
 		logger.DebugfContext(ctx, "fetched wallet recipient data from cache")
 		identity = entry
-		if c.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			c.Logger.Debugf("fetching wallet identity from cache [%s] took [%v]", identity, time.Since(start))
-		}
+		c.Logger.DebugfContext(ctx, "fetching wallet identity from cache [%s] took [%v]", identity, time.Since(start))
 	case <-timeout.C:
 		logger.DebugfContext(ctx, "generating wallet recipient data on the spot")
 		identity, err = c.backed(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed fetching wallet identity")
 		}
-		if c.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			c.Logger.Debugf("fetching wallet identity from backend after a timeout [%s] took [%v]", identity, time.Since(start))
-		}
+		c.Logger.DebugfContext(ctx, "fetching wallet identity from backend after a timeout [%s] took [%v]", identity, time.Since(start))
 	case <-ctx.Done():
 		return nil, errors.New("context is done")
 	}

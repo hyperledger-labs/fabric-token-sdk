@@ -66,7 +66,7 @@ func (o *Service) RegisterSigner(ctx context.Context, identity driver.Identity, 
 	}
 
 	idHash := identity.UniqueID()
-	logger.Debugf("register signer and verifier [%s]:[%s][%s]", idHash, logging2.Identifier(signer), logging2.Identifier(verifier))
+	logger.DebugfContext(ctx, "register signer and verifier [%s]:[%s][%s]", idHash, logging2.Identifier(signer), logging2.Identifier(verifier))
 	// First check with read lock
 	o.sync.RLock()
 	s, ok := o.signers[idHash]
@@ -110,7 +110,7 @@ func (o *Service) RegisterSigner(ctx context.Context, identity driver.Identity, 
 		}
 	}
 
-	logger.Debugf("register signer and verifier [%s]:[%s][%s], done", idHash, logging2.Identifier(signer), logging2.Identifier(verifier))
+	logger.DebugfContext(ctx, "register signer and verifier [%s]:[%s][%s], done", idHash, logging2.Identifier(signer), logging2.Identifier(verifier))
 	return nil
 }
 
@@ -147,12 +147,12 @@ func (o *Service) RegisterVerifier(ctx context.Context, identity driver.Identity
 	o.verifiers[idHash] = entry
 	o.sync.Unlock()
 
-	logger.Debugf("register verifier to [%s]:[%s]", idHash, logging2.Identifier(verifier))
+	logger.DebugfContext(ctx, "register verifier to [%s]:[%s]", idHash, logging2.Identifier(verifier))
 	return nil
 }
 
 func (o *Service) AreMe(ctx context.Context, identities ...driver.Identity) []string {
-	logger.Debugf("is me [%s]?", identities)
+	logger.DebugfContext(ctx, "is me [%s]?", identities)
 	idHashes := make([]string, len(identities))
 	for i, id := range identities {
 		idHashes[i] = id.UniqueID()
@@ -165,7 +165,7 @@ func (o *Service) AreMe(ctx context.Context, identities ...driver.Identity) []st
 	o.sync.RLock()
 	for _, id := range identities {
 		if _, ok := o.signers[id.UniqueID()]; ok {
-			logger.Debugf("is me [%s]? yes, from cache", id)
+			logger.DebugfContext(ctx, "is me [%s]? yes, from cache", id)
 			result.Add(id.UniqueID())
 		} else {
 			notFound = append(notFound, id)
@@ -188,7 +188,7 @@ func (o *Service) AreMe(ctx context.Context, identities ...driver.Identity) []st
 }
 
 func (o *Service) IsMe(ctx context.Context, identity driver.Identity) bool {
-	logger.Debugf("is me [%s]?", identity)
+	logger.DebugfContext(ctx, "is me [%s]?", identity)
 	idHash := identity.UniqueID()
 
 	// check local cache
@@ -196,19 +196,19 @@ func (o *Service) IsMe(ctx context.Context, identity driver.Identity) bool {
 	_, ok := o.signers[idHash]
 	o.sync.RUnlock()
 	if ok {
-		logger.Debugf("is me [%s]? yes, from cache", identity)
+		logger.DebugfContext(ctx, "is me [%s]? yes, from cache", identity)
 		return true
 	}
 
 	// check storage
 	if o.storage != nil {
-		logger.Debugf("is me [%s]? ask the storage", identity)
+		logger.DebugfContext(ctx, "is me [%s]? ask the storage", identity)
 		exists, err := o.storage.SignerInfoExists(ctx, identity)
 		if err != nil {
 			logger.Errorf("failed checking if a signer exists [%s]", err)
 		}
 		if exists {
-			logger.Debugf("is me [%s]? yes, from storage", identity)
+			logger.DebugfContext(ctx, "is me [%s]? yes, from storage", identity)
 			return true
 		}
 	}
@@ -218,13 +218,13 @@ func (o *Service) IsMe(ctx context.Context, identity driver.Identity) bool {
 
 func (o *Service) GetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
 	idHash := identity.UniqueID()
-	logger.Debugf("get signer for [%s]", idHash)
+	logger.DebugfContext(ctx, "get signer for [%s]", idHash)
 	// check the cache
 	o.sync.RLock()
 	entry, ok := o.signers[idHash]
 	o.sync.RUnlock()
 	if ok {
-		logger.Debugf("signer for [%s] found", idHash)
+		logger.DebugfContext(ctx, "signer for [%s] found", idHash)
 		return entry.Signer, nil
 	}
 	o.sync.Lock()
@@ -237,11 +237,11 @@ func (o *Service) getSigner(ctx context.Context, identity driver.Identity, idHas
 	// check again the cache
 	entry, ok := o.signers[idHash]
 	if ok {
-		logger.Debugf("signer for [%s] found", idHash)
+		logger.DebugfContext(ctx, "signer for [%s] found", idHash)
 		return entry.Signer, nil
 	}
 
-	logger.Debugf("signer for [%s] not found, try to deserialize", idHash)
+	logger.DebugfContext(ctx, "signer for [%s] not found, try to deserialize", idHash)
 	// ask the deserializer
 	signer, err := o.deserializeSigner(ctx, identity)
 	if err != nil {

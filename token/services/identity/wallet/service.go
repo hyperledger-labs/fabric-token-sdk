@@ -107,7 +107,7 @@ func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *driver.Re
 		return errors.Wrapf(err, "failed to register recipient identity")
 	}
 
-	s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
+	s.Logger.DebugfContext(ctx, "register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
 
 	// match identity and audit info
 	err := s.Deserializer.MatchIdentity(data.Identity, data.AuditInfo)
