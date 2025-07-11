@@ -9,7 +9,6 @@ package ttx
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -66,7 +65,7 @@ func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, w
 }
 
 func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) {
-	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
+	logger.DebugfContext(context.Context(), "Respond request recipient identity using wallet [%s]", r.Wallet)
 
 	tmsID, recipientData, err := r.getRecipientIdentity(context)
 	if err != nil {
@@ -159,11 +158,15 @@ func ReceiveWithdrawalRequest(context view.Context) (*WithdrawalRequest, error) 
 func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, error) {
 	session := session.JSON(context)
 	request := &WithdrawalRequest{}
-	assert.NoError(session.ReceiveWithTimeout(request, 1*time.Minute), "failed to receive the withdrawal request")
+	if err := session.ReceiveWithTimeout(request, 1*time.Minute); err != nil {
+		return nil, errors.Wrapf(err, "failed to receive withdrawal request")
+	}
 
 	logger.DebugfContext(context.Context(), "Received withdrawal request")
 	tms := token.GetManagementService(context, token.WithTMSID(request.TMSID))
-	assert.NotNil(tms, "tms not found for [%s]", request.TMSID)
+	if tms == nil {
+		return nil, errors.Errorf("tms not found for [%s]", request.TMSID)
+	}
 
 	if err := tms.WalletManager().RegisterRecipientIdentity(context.Context(), &request.RecipientData); err != nil {
 		logger.Errorf("failed to register recipient identity: [%s]", err)
@@ -172,9 +175,9 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 
 	// Update the Endpoint Resolver
 	caller := context.Session().Info().Caller
-	logger.Debugf("update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
+	logger.DebugfContext(context.Context(), "update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
 	if err := endpoint.GetService(context).Bind(context.Context(), caller, request.RecipientData.Identity); err != nil {
-		logger.Debugf("failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
+		logger.DebugfContext(context.Context(), "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 	}
 

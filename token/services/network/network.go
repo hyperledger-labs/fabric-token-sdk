@@ -46,7 +46,7 @@ type TxID struct {
 	Creator []byte
 }
 
-func (t *TxID) String() string {
+func (t TxID) String() string {
 	return fmt.Sprintf("[%s:%s]", base64.StdEncoding.EncodeToString(t.Nonce), base64.StdEncoding.EncodeToString(t.Creator))
 }
 

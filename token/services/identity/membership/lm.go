@@ -15,7 +15,6 @@ import (
 	"sync"
 
 	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	logging2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -23,13 +22,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/yaml.v2"
 )
 
 const (
 	MaxPriority = -1 // smaller numbers, higher priority
 )
+
+var logger = logging.MustGetLogger()
 
 type KeyManagerProvider interface {
 	Get(identityConfig *driver.IdentityConfiguration) (KeyManager, error)
@@ -122,10 +122,14 @@ func (l *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
 	defer l.localIdentitiesMutex.RUnlock()
 
 	for _, label := range []string{string(id), id.String()} {
-		l.logger.Debugf("get local identity by label [%s]", label)
+		l.logger.Debugf("get local identity by label [%s]", hash.Hashable(label))
 		r := l.getLocalIdentity(label)
 		if r == nil {
-			l.logger.Debugf("local identity not found for label [%s][%v]", logging2.Keys(l.localIdentitiesByName), label)
+			l.logger.Debugf(
+				"local identity not found for label [%s] [%v]",
+				logging.Keys(l.localIdentitiesByName),
+				logging.Printable(label),
+			)
 			continue
 		}
 		return r.Name, nil
@@ -508,35 +512,34 @@ type TypedIdentityInfo struct {
 }
 
 func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
-	span := trace.SpanFromContext(ctx)
-
 	// get the identity
-	span.AddEvent("get_identity")
+	logger.DebugfContext(ctx, "fetch identity")
+
 	id, ai, err := i.GetIdentity(ctx, auditInfo)
 	if err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID)
 	}
 	// register the audit info
-	span.AddEvent("register_audit_info")
+	logger.DebugfContext(ctx, "register audit info")
 	if err := i.IdentityProvider.RegisterAuditInfo(ctx, id, ai); err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 	}
 	// bind the identity to the default FSC node identity
 	if i.BinderService != nil {
-		span.AddEvent("bind_to_root_identity")
+		logger.DebugfContext(ctx, "bind to root identity")
 		if err := i.BinderService.Bind(ctx, i.RootIdentity, id, false); err != nil {
 			return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
 		}
 	}
 	// wrap the backend identity, and bind it
 	if len(i.IdentityType) != 0 {
-		span.AddEvent("wrap_and_bind")
+		logger.DebugfContext(ctx, "wrap and bind as [%s]", i.IdentityType)
 		typedIdentity, err := identity.WrapWithType(i.IdentityType, id)
 		if err != nil {
 			return nil, nil, errors2.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
 		}
 		if i.BinderService != nil {
-			span.AddEvent("bind_wrapped")
+			logger.DebugfContext(ctx, "bind wrapped")
 			if err := i.BinderService.Bind(ctx, id, typedIdentity, true); err != nil {
 				return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
 			}
@@ -545,13 +548,13 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 			}
 		} else {
 			// register at the list the audit info
-			span.AddEvent("register_audit_info_wrapped")
+			logger.DebugfContext(ctx, "register audit infor for wrapped identity")
 			if err := i.IdentityProvider.RegisterAuditInfo(ctx, typedIdentity, ai); err != nil {
 				return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 			}
 		}
 		id = typedIdentity
 	}
-	span.AddEvent("get_identity_done")
+	logger.DebugfContext(ctx, "fetch identity done")
 	return id, ai, nil
 }

@@ -117,15 +117,15 @@ func newMixedFetcher(tokenDB TokenDB, m *Metrics) *mixedFetcher {
 }
 
 func (f *mixedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
-	logger.Debugf("call unspent tokens iterator")
+	logger.DebugfContext(ctx, "call unspent tokens iterator")
 	it, err := f.eagerFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
-	logger.Debugf("fetched eager iterator")
+	logger.DebugfContext(ctx, "fetched eager iterator")
 	if err == nil && it.(enhancedIterator[*token2.UnspentTokenInWallet]).HasNext() {
-		logger.Debugf("eager iterator had tokens. Returning iterator")
+		logger.DebugfContext(ctx, "eager iterator had tokens. Returning iterator")
 		f.m.UnspentTokensInvocations.With(fetcherTypeLabel, eager).Add(1)
 		return it, nil
 	}
-	logger.Debugf("eager iterator had no tokens. Returning lazy iterator")
+	logger.DebugfContext(ctx, "eager iterator had no tokens. Returning lazy iterator")
 
 	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
 	return f.lazyFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
@@ -141,7 +141,7 @@ func NewLazyFetcher(tokenDB TokenDB) *lazyFetcher {
 }
 
 func (f *lazyFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
-	logger.Debugf("Query the DB for new tokens")
+	logger.DebugfContext(ctx, "Query the DB for new tokens")
 	it, err := f.tokenDB.SpendableTokensIteratorBy(ctx, walletID, currency)
 	if err != nil {
 		return nil, err
@@ -207,13 +207,13 @@ func (f *cachedFetcher) update() {
 func (f *cachedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
 	defer atomic.AddUint32(&f.queriesResponded, 1)
 	if f.isCacheOverused() {
-		logger.Debugf("Overused data. Soft refresh (in the background)...")
+		logger.DebugfContext(ctx, "Overused data. Soft refresh (in the background)...")
 		go f.update()
 	}
 	f.mu.RLock()
 	if f.isCacheStale() {
 		f.mu.RUnlock()
-		logger.Debugf("Stale data. Hard refresh (now)...")
+		logger.DebugfContext(ctx, "Stale data. Hard refresh (now)...")
 		f.update()
 		f.mu.RLock()
 	}
@@ -223,7 +223,7 @@ func (f *cachedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID st
 	if ok {
 		return it.NewPermutation(), nil
 	}
-	logger.Debugf("No tokens found in cache for [%s]. Only [%s] available. Returning empty iterator.", tokenKey(walletID, currency), collections.Keys(f.cache))
+	logger.DebugfContext(ctx, "No tokens found in cache for [%s]. Only [%s] available. Returning empty iterator.", tokenKey(walletID, currency), collections.Keys(f.cache))
 	return collections.NewEmptyIterator[*token2.UnspentTokenInWallet](), nil
 }
 

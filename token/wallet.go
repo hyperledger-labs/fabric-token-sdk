@@ -103,7 +103,7 @@ func (wm *WalletManager) OwnerWalletIDs(ctx context.Context) ([]string, error) {
 func (wm *WalletManager) OwnerWallet(ctx context.Context, id WalletLookupID) *OwnerWallet {
 	w, err := wm.walletService.OwnerWallet(ctx, id)
 	if err != nil {
-		wm.managementService.logger.Debugf("failed to get owner wallet for id [%s]: [%s]", id, err)
+		wm.managementService.logger.DebugfContext(ctx, "failed to get owner wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -115,7 +115,7 @@ func (wm *WalletManager) OwnerWallet(ctx context.Context, id WalletLookupID) *Ow
 func (wm *WalletManager) IssuerWallet(ctx context.Context, id WalletLookupID) *IssuerWallet {
 	w, err := wm.walletService.IssuerWallet(ctx, id)
 	if err != nil {
-		wm.managementService.logger.Debugf("failed to get issuer wallet for id [%s]: [%s]", id, err)
+		wm.managementService.logger.DebugfContext(ctx, "failed to get issuer wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -127,7 +127,7 @@ func (wm *WalletManager) IssuerWallet(ctx context.Context, id WalletLookupID) *I
 func (wm *WalletManager) AuditorWallet(ctx context.Context, id WalletLookupID) *AuditorWallet {
 	w, err := wm.walletService.AuditorWallet(ctx, id)
 	if err != nil {
-		wm.managementService.logger.Debugf("failed to get auditor wallet for id [%s]: [%s]", id, err)
+		wm.managementService.logger.DebugfContext(ctx, "failed to get auditor wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &AuditorWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -139,7 +139,7 @@ func (wm *WalletManager) AuditorWallet(ctx context.Context, id WalletLookupID) *
 func (wm *WalletManager) CertifierWallet(ctx context.Context, id WalletLookupID) *CertifierWallet {
 	w, err := wm.walletService.CertifierWallet(ctx, id)
 	if err != nil {
-		wm.managementService.logger.Debugf("failed to get certifier wallet for id [%s]: [%s]", id, err)
+		wm.managementService.logger.DebugfContext(ctx, "failed to get certifier wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}

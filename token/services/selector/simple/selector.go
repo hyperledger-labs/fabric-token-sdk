@@ -78,12 +78,12 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 		if unspentTokens != nil {
 			unspentTokens.Close()
 		}
-		logger.Debugf("start token selection, iteration [%d/%d]", i, s.numRetry)
+		logger.DebugfContext(ctx, "start token selection, iteration [%d/%d]", i, s.numRetry)
 		unspentTokens, err = s.queryService.UnspentTokensIteratorBy(ctx, id, tokenType)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "token selection failed")
 		}
-		logger.Debugf("select token for a quantity of [%s] of type [%s]", q, tokenType)
+		logger.DebugfContext(ctx, "select token for a quantity of [%s] of type [%s]", q, tokenType)
 
 		// First select only certified
 		sum = token2.NewZeroQuantity(s.precision)
@@ -114,12 +114,12 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			if _, err := s.locker.Lock(ctx, &t.Id, s.txID, reclaim); err != nil {
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 
-				logger.Debugf("token [%s,%v] cannot be locked [%s]", q, tokenType, err)
+				logger.DebugfContext(ctx, "token [%s,%v] cannot be locked [%s]", q, tokenType, err)
 				continue
 			}
 
 			// Append token
-			logger.Debugf("adding quantity [%s]", q.Decimal())
+			logger.DebugfContext(ctx, "adding quantity [%s]", q.Decimal())
 			toBeSpent = append(toBeSpent, &t.Id)
 			sum = sum.Add(q)
 			potentialSumWithLocked = potentialSumWithLocked.Add(q)
@@ -145,14 +145,14 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 
 		if target.Cmp(potentialSumWithLocked) <= 0 && potentialSumWithLocked.Cmp(sum) != 0 {
 			// funds are potentially enough but they are locked
-			logger.Debugf("token selection: sufficient funds but partially locked")
+			logger.DebugfContext(ctx, "token selection: sufficient funds but partially locked")
 		}
 
 		i++
 		if i >= s.numRetry {
 			// it is time to fail but how?
 			if concurrencyIssue {
-				logger.Debugf("concurrency issue, some of the tokens might not exist anymore")
+				logger.DebugfContext(ctx, "concurrency issue, some of the tokens might not exist anymore")
 				return nil, nil, errors.WithMessagef(
 					token.SelectorSufficientFundsButConcurrencyIssue,
 					"token selection failed: sufficient funds but concurrency issue, potential [%s] tokens of type [%s] were available", potentialSumWithLocked, tokenType,
@@ -161,7 +161,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 
 			if target.Cmp(potentialSumWithLocked) <= 0 && potentialSumWithLocked.Cmp(sum) != 0 {
 				// funds are potentially enough but they are locked
-				logger.Debugf("token selection: it is time to fail but how, sufficient funds but locked")
+				logger.DebugfContext(ctx, "token selection: it is time to fail but how, sufficient funds but locked")
 				return nil, nil, errors.WithMessagef(
 					token.SelectorSufficientButLockedFunds,
 					"token selection failed: sufficient but partially locked funds, potential [%s] tokens of type [%s] are available", potentialSumWithLocked.Decimal(), tokenType,
@@ -169,14 +169,14 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			}
 
 			// funds are insufficient
-			logger.Debugf("token selection: it is time to fail but how, insufficient funds")
+			logger.DebugfContext(ctx, "token selection: it is time to fail but how, insufficient funds")
 			return nil, nil, errors.WithMessagef(
 				token.SelectorInsufficientFunds,
 				"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available", sum.Decimal(), tokenType,
 			)
 		}
 
-		logger.Debugf("token selection: let's wait [%v] before retry...", s.timeout)
+		logger.DebugfContext(ctx, "token selection: let's wait [%v] before retry...", s.timeout)
 		time.Sleep(s.timeout)
 	}
 }

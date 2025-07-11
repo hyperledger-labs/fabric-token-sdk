@@ -133,6 +133,10 @@ type UnspentToken struct {
 	Quantity string
 }
 
+func (ut UnspentToken) String() string {
+	return ut.Id.String()
+}
+
 // UnspentTokens is used to hold the output of ListRequest
 type UnspentTokens struct {
 	// Tokens is an array of UnspentToken

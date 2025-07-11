@@ -13,7 +13,6 @@ import (
 
 	vault2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/core/generic/vault"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	logging2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/committer"
@@ -56,7 +55,7 @@ func (e *listenerEntry) Namespace() driver2.Namespace {
 }
 
 func (e *listenerEntry) OnStatus(ctx context.Context, info KeyInfo) {
-	logger.Debugf("notify info [%v] to namespace [%s]", info, e.namespace)
+	logger.DebugfContext(ctx, "notify info [%v] to namespace [%s]", info, e.namespace)
 	if len(e.namespace) == 0 || len(info.Namespace) == 0 || e.namespace == info.Namespace {
 		e.listener.OnStatus(ctx, info.Key, info.Value)
 	}
@@ -172,7 +171,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 		return nil, errors.Wrapf(err, "failed unmarshaling tx [%d:%d]", blockNum, txNum)
 	}
 	if common.HeaderType(chdr.Type) != common.HeaderType_ENDORSER_TRANSACTION {
-		logger.Debugf("Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
+		logger.DebugfContext(ctx, "Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
 		return nil, nil
 	}
 	rwSet, err := rwset.NewEndorserTransactionReader(m.network).Read(payl, chdr)
@@ -207,7 +206,7 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string)
 	txInfos := make(map[driver2.Namespace]KeyInfo, len(rwSet.Writes))
 	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.Writes))
 	for ns, writes := range rwSet.Writes {
-		logger.Debugf("TX [%s:%s] has [%d] writes: %v", txID, ns, len(writes), logging2.Keys(writes))
+		logger.Debugf("TX [%s:%s] has [%d] writes: %v", txID, ns, len(writes), logging.Keys(writes))
 		for key, value := range writes {
 			if slices.ContainsFunc(m.prefixes, func(prefix string) bool { return strings.HasPrefix(key, prefix) }) {
 				logger.Debugf("TX [%s:%s] does have key [%s].", txID, ns, key)

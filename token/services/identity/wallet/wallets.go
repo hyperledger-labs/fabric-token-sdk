@@ -107,7 +107,7 @@ func (w *IssuerWallet) GetSigner(ctx context.Context, identity driver.Identity) 
 }
 
 func (w *IssuerWallet) HistoryTokens(ctx context.Context, opts *driver.ListTokensOptions) (*token.IssuedTokens, error) {
-	w.Logger.Debugf("issuer wallet [%s]: history tokens, type [%d]", w.ID(), opts.TokenType)
+	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: history tokens, type [%d]", w.ID(), opts.TokenType)
 	source, err := w.TokenVault.ListHistoryIssuedTokens(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
@@ -116,19 +116,19 @@ func (w *IssuerWallet) HistoryTokens(ctx context.Context, opts *driver.ListToken
 	unspentTokens := &token.IssuedTokens{}
 	for _, t := range source.Tokens {
 		if len(opts.TokenType) != 0 && t.Type != opts.TokenType {
-			w.Logger.Debugf("issuer wallet [%s]: discarding token of type [%s]!=[%s]", w.ID(), t.Type, opts.TokenType)
+			w.Logger.DebugfContext(ctx, "issuer wallet [%s]: discarding token of type [%s]!=[%s]", w.ID(), t.Type, opts.TokenType)
 			continue
 		}
 
 		if !w.Contains(t.Issuer) {
-			w.Logger.Debugf("issuer wallet [%s]: discarding token, issuer does not belong to wallet", w.ID())
+			w.Logger.DebugfContext(ctx, "issuer wallet [%s]: discarding token, issuer does not belong to wallet", w.ID())
 			continue
 		}
 
-		w.Logger.Debugf("issuer wallet [%s]: adding token of type [%s], quantity [%s]", w.ID(), t.Type, t.Quantity)
+		w.Logger.DebugfContext(ctx, "issuer wallet [%s]: adding token of type [%s], quantity [%s]", w.ID(), t.Type, t.Quantity)
 		unspentTokens.Tokens = append(unspentTokens.Tokens, t)
 	}
-	w.Logger.Debugf("issuer wallet [%s]: history tokens done, found [%d] issued tokens", w.ID(), len(unspentTokens.Tokens))
+	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: history tokens done, found [%d] issued tokens", w.ID(), len(unspentTokens.Tokens))
 
 	return unspentTokens, nil
 }
@@ -283,7 +283,7 @@ type AnonymousOwnerWallet struct {
 	Logger         logging.Logger
 	Deserializer   driver.Deserializer
 	WalletRegistry Registry
-	IdentityCache  *IdentityCache
+	IdentityCache  *RecipientDataCache
 }
 
 func NewAnonymousOwnerWallet(
@@ -308,7 +308,7 @@ func NewAnonymousOwnerWallet(
 		WalletRegistry: walletRegistry,
 		Deserializer:   Deserializer,
 	}
-	w.IdentityCache = NewIdentityCache(logger, w.getRecipientIdentity, cacheSize, metricsProvider)
+	w.IdentityCache = NewRecipientDataCache(logger, w.getRecipientIdentity, cacheSize, NewMetrics(metricsProvider))
 	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), cacheSize)
 	return w, nil
 }
@@ -338,7 +338,7 @@ func (w *AnonymousOwnerWallet) RegisterRecipient(ctx context.Context, data *driv
 	if data == nil {
 		return errors.WithStack(ErrNilRecipientData)
 	}
-	w.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
+	w.Logger.DebugfContext(ctx, "register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
 
 	// recognize identity and register it
 	// match identity and audit info

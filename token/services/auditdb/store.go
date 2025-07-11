@@ -27,10 +27,12 @@ import (
 )
 
 type tokenRequest interface {
+	ID() token.RequestAnchor
 	AuditRecord(ctx context.Context) (*token.AuditRecord, error)
 	Bytes() ([]byte, error)
 	AllApplicationMetadata() map[string][]byte
 	PublicParamsHash() token.PPHash
+	String() string
 }
 
 type StoreServiceManager db.StoreServiceManager[*StoreService]
@@ -140,29 +142,29 @@ func newStoreService(p driver.AuditTransactionStore) (*StoreService, error) {
 
 // Append appends send and receive movements, and transaction records corresponding to the passed token request
 func (d *StoreService) Append(ctx context.Context, req tokenRequest) error {
-	logger.Debugf("appending new record... [%s]", req)
+	logger.DebugfContext(ctx, "appending new record... [%s]", req)
 
 	record, err := req.AuditRecord(ctx)
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting audit records for request [%s]", req)
 	}
 
-	logger.Debugf("parsing new audit record... [%d] in, [%d] out", record.Inputs.Count(), record.Outputs.Count())
+	logger.DebugfContext(ctx, "parsing new audit record... [%d] in, [%d] out", record.Inputs.Count(), record.Outputs.Count())
 	now := time.Now().UTC()
 	raw, err := req.Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal token request [%s]", req)
 	}
-	mov, err := ttxdb.Movements(record, now)
+	mov, err := ttxdb.Movements(ctx, record, now)
 	if err != nil {
 		return errors.WithMessage(err, "failed parsing movements from audit record")
 	}
-	txs, err := ttxdb.TransactionRecords(record, now)
+	txs, err := ttxdb.TransactionRecords(ctx, record, now)
 	if err != nil {
 		return errors.WithMessage(err, "failed parsing transactions from audit record")
 	}
 
-	logger.Debugf("storing new records... [%d,%d,%d]", len(raw), len(mov), len(txs))
+	logger.DebugfContext(ctx, "storing new records... [%d,%d,%d]", len(raw), len(mov), len(txs))
 	w, err := d.db.BeginAtomicWrite()
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
@@ -191,7 +193,7 @@ func (d *StoreService) Append(ctx context.Context, req tokenRequest) error {
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
-	logger.Debugf("appending new records completed without errors")
+	logger.DebugfContext(ctx, "appending new records completed without errors")
 	return nil
 }
 
@@ -221,7 +223,7 @@ func (d *StoreService) NewHoldingsFilter() *HoldingsFilter {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (d *StoreService) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
-	logger.Debugf("set status [%s][%s]...", txID, status)
+	logger.DebugfContext(ctx, "set status [%s][%s]...", txID, status)
 	if err := d.db.SetStatus(ctx, txID, status, message); err != nil {
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TxStatusMessage[status])
 	}
@@ -232,19 +234,19 @@ func (d *StoreService) SetStatus(ctx context.Context, txID string, status driver
 		TxID:           txID,
 		ValidationCode: status,
 	})
-	logger.Debugf("set status [%s][%s]...done without errors", txID, driver.TxStatusMessage[status])
+	logger.DebugfContext(ctx, "set status [%s][%s]...done without errors", txID, driver.TxStatusMessage[status])
 	return nil
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
 func (d *StoreService) GetStatus(ctx context.Context, txID string) (TxStatus, string, error) {
-	logger.Debugf("get status [%s]...", txID)
+	logger.DebugfContext(ctx, "get status [%s]...", txID)
 	status, message, err := d.db.GetStatus(ctx, txID)
 	if err != nil {
 		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
-	logger.Debugf("Got status [%s][%s]", txID, status)
+	logger.DebugfContext(ctx, "Got status [%s][%s]", txID, status)
 	return status, message, nil
 }
 

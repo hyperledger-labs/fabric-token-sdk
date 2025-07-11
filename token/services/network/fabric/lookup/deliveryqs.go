@@ -65,7 +65,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 			return
 		}
 
-		logger.Debugf("querying chaincode [%s] for the states of ids [%v]", ns, keys)
+		logger.DebugfContext(ctx, "querying chaincode [%s] for the states of ids [%v]", ns, keys)
 		chaincode := q.Channel.Chaincode(ns)
 		res, err := chaincode.Query(QueryStates, arg).Query()
 		if err != nil {
@@ -107,7 +107,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 
 	startingBlock := finality.MaxUint64(FirstBlock, lastBlock-NumberPastBlocks)
 	// startingBlock := uint64(0)
-	logger.Debugf("start scanning blocks starting from [%d], looking for remaining keys [%s]", startingBlock, keySet)
+	logger.DebugfContext(ctx, "start scanning blocks starting from [%d], looking for remaining keys [%s]", startingBlock, keySet)
 
 	// start delivery for the future
 	v := q.Channel.Vault()
@@ -123,24 +123,24 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 			var txInfos []KeyInfo
 			for namespace, keys := range keysByNS {
 				if !slices.Contains(rws.Namespaces(), namespace) {
-					logger.Debugf("scanning [%s] does not contain namespace [%s]", tx.TxID(), namespace)
+					logger.DebugfContext(ctx, "scanning [%s] does not contain namespace [%s]", tx.TxID(), namespace)
 					continue
 				}
 
 				for i := 0; i < rws.NumWrites(namespace); i++ {
 					k, v, err := rws.GetWriteAt(namespace, i)
 					if err != nil {
-						logger.Debugf("scanning [%s]: failed to get key [%s]", tx.TxID(), err)
+						logger.DebugfContext(ctx, "scanning [%s]: failed to get key [%s]", tx.TxID(), err)
 						return false, err
 					}
 					if slices.Contains(keys, k) {
-						logger.Debugf("scanning [%s]: found key [%s]", tx.TxID(), k)
+						logger.DebugfContext(ctx, "scanning [%s]: found key [%s]", tx.TxID(), k)
 						txInfos = append(txInfos, KeyInfo{
 							Namespace: namespace,
 							Key:       k,
 							Value:     v,
 						})
-						logger.Debugf("removing [%s] from searching list, remaining keys [%d]", k, keySet.Length())
+						logger.DebugfContext(ctx, "removing [%s] from searching list, remaining keys [%d]", k, keySet.Length())
 						keySet.Remove(k)
 					}
 				}
@@ -156,6 +156,6 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 		logger.Errorf("failed scanning blocks [%s], started from [%d]", err, startingBlock)
 		return
 	}
-	logger.Debugf("finished scanning blocks starting from [%d]", startingBlock)
+	logger.DebugfContext(ctx, "finished scanning blocks starting from [%d]", startingBlock)
 
 }

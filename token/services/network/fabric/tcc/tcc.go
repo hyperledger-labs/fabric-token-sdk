@@ -91,7 +91,7 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 	txID := stub.GetTxID()
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Errorf("[%s] invoke triggered panic: %s\n%s\n", txID, r, debug.Stack())
+			logger.Errorf("[%s] invoke triggered panic: %s\n%s\n", txID, r, string(debug.Stack()))
 			res = shim.Error(fmt.Sprintf("failed responding [%s]", r))
 		} else {
 			if res.Status == 200 {

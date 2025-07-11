@@ -98,18 +98,18 @@ func (t *transaction) DeleteToken(ctx context.Context, tokenID token2.ID, delete
 	err = t.tx.Delete(ctx, tokenID, deletedBy)
 	if err != nil {
 		if tok == nil {
-			logger.Debugf("nothing further to delete for [%s]", tokenID)
+			logger.DebugfContext(ctx, "nothing further to delete for [%s]", tokenID)
 			return nil
 		}
 		return errors.WithMessagef(err, "failed to delete token [%s]", tokenID)
 	}
 	if tok == nil {
-		logger.Debugf("nothing further to delete for [%s]", tokenID)
+		logger.DebugfContext(ctx, "nothing further to delete for [%s]", tokenID)
 		return nil
 	}
 	logger.DebugfContext(ctx, "Notify owners")
 	for _, owner := range owners {
-		logger.Debugf("post new delete-token event [%s:%s]", tokenID, owner)
+		logger.DebugfContext(ctx, "post new delete-token event [%s:%s]", tokenID, owner)
 		t.Notify(DeleteToken, t.tmsID, owner, tok.Type, tokenID.TxId, tokenID.Index)
 	}
 	return nil

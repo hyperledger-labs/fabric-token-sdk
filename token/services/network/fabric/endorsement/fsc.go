@@ -109,7 +109,7 @@ func (e *FSCService) Endorse(context view.Context, requestRaw []byte, signer vie
 	default:
 		endorsers = e.Endorsers
 	}
-	logger.Debugf("request approval via fts endrosers with policy [%s]: [%d]...", e.PolicyType, len(endorsers))
+	logger.DebugfContext(context.Context(), "request approval via fts endrosers with policy [%s]: [%d]...", e.PolicyType, len(endorsers))
 
 	envBoxed, err := e.ViewManager.InitiateView(&RequestApprovalView{
 		TMSID:      e.TmsID,
