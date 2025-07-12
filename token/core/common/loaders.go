@@ -85,10 +85,10 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*
 			return nil
 		})
 		if err == nil {
-			s.Logger.Debugf("retrieve [%d] token outputs for [%v]", len(tokens), ids)
+			s.Logger.DebugfContext(ctx, "retrieve [%d] token outputs for [%v]", len(tokens), ids)
 			return tokens, nil
 		}
-		s.Logger.Debugf("failed to retrieve tokens for [%v], any pending transaction? [%s]", ids, err)
+		s.Logger.DebugfContext(ctx, "failed to retrieve tokens for [%v], any pending transaction? [%s]", ids, err)
 
 		// check if there is any token id whose corresponding transaction is pending
 		// if there is, then wait a bit and retry to load the outputs
@@ -98,7 +98,7 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*
 			break
 		}
 		if anyError == nil && !anyPending {
-			s.Logger.Debugf("failed to retrieve tokens: no transaction is pending")
+			s.Logger.DebugfContext(ctx, "failed to retrieve tokens: no transaction is pending")
 			break
 		}
 
@@ -106,7 +106,7 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*
 			time.Sleep(s.RetryDelay)
 		}
 	}
-	s.Logger.Debugf("failed to retrieve tokens [%s]", err)
+	s.Logger.DebugfContext(ctx, "failed to retrieve tokens [%s]", err)
 
 	return nil, errors.Wrapf(err, "failed to get token outputs")
 }

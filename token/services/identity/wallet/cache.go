@@ -11,53 +11,42 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-var (
-	cacheLevelOpts = metrics.GaugeOpts{
-		Namespace:    "wallet",
-		Name:         "recipient_data_cache_level",
-		Help:         "Level of the wallet recipient data cache",
-		LabelNames:   []string{"network", "channel", "namespace"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
-	}
-)
-
 var logger = logging.MustGetLogger()
 
-type IdentityCacheBackendFunc func(ctx context.Context) (*driver.RecipientData, error)
+type RecipientDataBackendFunc func(ctx context.Context) (*driver.RecipientData, error)
 
-type IdentityCache struct {
+type RecipientDataCache struct {
 	Logger logging.Logger
 
 	once   sync.Once
-	backed IdentityCacheBackendFunc
+	backed RecipientDataBackendFunc
 
-	cache           chan *driver.RecipientData
-	cacheTimeout    time.Duration
-	cacheLevelGauge metrics.Gauge
+	cache        chan *driver.RecipientData
+	cacheTimeout time.Duration
+	metrics      *Metrics
 }
 
-func NewIdentityCache(Logger logging.Logger, backed IdentityCacheBackendFunc, size int, metricsProvider metrics.Provider) *IdentityCache {
+func NewRecipientDataCache(Logger logging.Logger, backed RecipientDataBackendFunc, size int, metrics *Metrics) *RecipientDataCache {
 	if size < 0 {
 		size = 0
 	}
-	ci := &IdentityCache{
-		Logger:          Logger,
-		backed:          backed,
-		cache:           make(chan *driver.RecipientData, size),
-		cacheTimeout:    time.Millisecond * 5,
-		cacheLevelGauge: metricsProvider.NewGauge(cacheLevelOpts),
+	ci := &RecipientDataCache{
+		Logger:       Logger,
+		backed:       backed,
+		cache:        make(chan *driver.RecipientData, size),
+		cacheTimeout: time.Millisecond * 5,
+		metrics:      metrics,
 	}
 	return ci
 }
 
-func (c *IdentityCache) RecipientData(ctx context.Context) (*driver.RecipientData, error) {
+func (c *RecipientDataCache) RecipientData(ctx context.Context) (*driver.RecipientData, error) {
 	c.once.Do(func() {
 		c.Logger.Infof("provision wallet recipient data with cache size [%d]", cap(c.cache))
 		if cap(c.cache) > 0 {
@@ -77,7 +66,7 @@ func (c *IdentityCache) RecipientData(ctx context.Context) (*driver.RecipientDat
 	logger.DebugfContext(ctx, "fetching wallet recipient data")
 	select {
 	case entry := <-c.cache:
-		c.cacheLevelGauge.Add(-1)
+		c.metrics.CacheLevelGauge.Add(-1)
 		logger.DebugfContext(ctx, "fetched wallet recipient data from cache")
 		identity = entry
 		c.Logger.DebugfContext(ctx, "fetching wallet identity from cache [%s] took [%v]", identity, time.Since(start))
@@ -96,14 +85,14 @@ func (c *IdentityCache) RecipientData(ctx context.Context) (*driver.RecipientDat
 	return identity, nil
 }
 
-func (c *IdentityCache) provisionIdentities() {
+func (c *RecipientDataCache) provisionIdentities() {
 	ctx := context.Background()
 	for {
 		id, err := c.backed(ctx)
 		if err != nil {
 			continue
 		}
-		c.cacheLevelGauge.Add(1)
+		c.metrics.CacheLevelGauge.Add(1)
 		c.cache <- id
 	}
 }

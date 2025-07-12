@@ -113,39 +113,39 @@ func (s *ScriptAuth) AmIAnAuditor() bool {
 func (s *ScriptAuth) IsMine(ctx context.Context, tok *token3.Token) (string, []string, bool) {
 	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
 	if err != nil {
-		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
 		return "", nil, false
 	}
 	if owner.Type != ScriptType {
-		logger.Debugf("Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, owner.Type, ScriptType)
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, owner.Type, ScriptType)
 		return "", nil, false
 	}
 	script := &Script{}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
-		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
 		return "", nil, false
 	}
 	if script.Sender.IsNone() || script.Recipient.IsNone() {
-		logger.Debugf("Is Mine [%s,%s,%s]? No, invalid content [%v]", view.Identity(tok.Owner), tok.Type, tok.Quantity, script)
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, invalid content [%v]", view.Identity(tok.Owner), tok.Type, tok.Quantity, script)
 		return "", nil, false
 	}
 
 	var ids []string
 	// I'm either the sender
-	logger.Debugf("Is Mine [%s,%s,%s] as a sender?", view.Identity(tok.Owner), tok.Type, tok.Quantity)
+	logger.DebugfContext(ctx, "Is Mine [%s,%s,%s] as a sender?", view.Identity(tok.Owner), tok.Type, tok.Quantity)
 	if wallet, err := s.WalletService.OwnerWallet(ctx, script.Sender); err == nil {
-		logger.Debugf("Is Mine [%s,%s,%s] as a sender? Yes", view.Identity(tok.Owner), tok.Type, tok.Quantity)
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s] as a sender? Yes", view.Identity(tok.Owner), tok.Type, tok.Quantity)
 		ids = append(ids, senderWallet(ctx, wallet))
 	}
 
 	// or the recipient
-	logger.Debugf("Is Mine [%s,%s,%s] as a recipient?", view.Identity(tok.Owner), tok.Type, tok.Quantity)
+	logger.DebugfContext(ctx, "Is Mine [%s,%s,%s] as a recipient?", view.Identity(tok.Owner), tok.Type, tok.Quantity)
 	if wallet, err := s.WalletService.OwnerWallet(ctx, script.Recipient); err == nil {
-		logger.Debugf("Is Mine [%s,%s,%s] as a recipient? Yes", view.Identity(tok.Owner), tok.Type, tok.Quantity)
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s] as a recipient? Yes", view.Identity(tok.Owner), tok.Type, tok.Quantity)
 		ids = append(ids, recipientWallet(ctx, wallet))
 	}
 
-	logger.Debugf("Is Mine [%s,%s,%s]? %b", len(ids) != 0, view.Identity(tok.Owner), tok.Type, tok.Quantity)
+	logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? %b", len(ids) != 0, view.Identity(tok.Owner), tok.Type, tok.Quantity)
 	return "", ids, len(ids) != 0
 }
 

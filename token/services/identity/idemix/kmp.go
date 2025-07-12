@@ -101,7 +101,7 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 			keyManager.Identity,
 			cacheSize,
 			nil,
-			l.metricsProvider,
+			cache.NewMetrics(l.metricsProvider),
 		).Identity
 	}
 

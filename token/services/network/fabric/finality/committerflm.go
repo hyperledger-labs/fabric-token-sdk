@@ -116,11 +116,11 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	defer func() {
 		if e := recover(); e != nil {
 			span.RecordError(fmt.Errorf("recovered from panic: %v", e))
-			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
+			logger.DebugfContext(ctx, "failed finality update for tx [%s]: [%s]", txID, e)
 			if err := t.flm.AddFinalityListener(txID, t.namespace, t.root); err != nil {
 				panic(err)
 			}
-			logger.Debugf("added finality listener for tx [%s]...done", txID)
+			logger.DebugfContext(ctx, "added finality listener for tx [%s]...done", txID)
 		}
 	}()
 

@@ -283,7 +283,7 @@ type AnonymousOwnerWallet struct {
 	Logger         logging.Logger
 	Deserializer   driver.Deserializer
 	WalletRegistry Registry
-	IdentityCache  *IdentityCache
+	IdentityCache  *RecipientDataCache
 }
 
 func NewAnonymousOwnerWallet(
@@ -308,7 +308,7 @@ func NewAnonymousOwnerWallet(
 		WalletRegistry: walletRegistry,
 		Deserializer:   Deserializer,
 	}
-	w.IdentityCache = NewIdentityCache(logger, w.getRecipientIdentity, cacheSize, metricsProvider)
+	w.IdentityCache = NewRecipientDataCache(logger, w.getRecipientIdentity, cacheSize, NewMetrics(metricsProvider))
 	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), cacheSize)
 	return w, nil
 }

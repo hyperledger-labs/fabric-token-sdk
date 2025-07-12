@@ -80,25 +80,25 @@ func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim b
 
 		if reclaim {
 			// Second chance
-			logger.Debugf("[%s] already locked by [%s], try to reclaim...", id, e)
+			logger.DebugfContext(ctx, "[%s] already locked by [%s], try to reclaim...", id, e)
 			reclaimed, status := d.reclaim(ctx, id, e.TxID)
 			if !reclaimed {
-				logger.Debugf("[%s] already locked by [%s], reclaim failed, tx status [%s]", id, e, ttxdb.TxStatusMessage[status])
+				logger.DebugfContext(ctx, "[%s] already locked by [%s], reclaim failed, tx status [%s]", id, e, ttxdb.TxStatusMessage[status])
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					return e.TxID, errors.Errorf("already locked by [%s]", e)
 				}
 				return e.TxID, AlreadyLockedError
 			}
-			logger.Debugf("[%s] already locked by [%s], reclaimed successful, tx status [%s]", id, e, ttxdb.TxStatusMessage[status])
+			logger.DebugfContext(ctx, "[%s] already locked by [%s], reclaimed successful, tx status [%s]", id, e, ttxdb.TxStatusMessage[status])
 		} else {
-			logger.Debugf("[%s] already locked by [%s], no reclaim", id, e)
+			logger.DebugfContext(ctx, "[%s] already locked by [%s], no reclaim", id, e)
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				return e.TxID, errors.Errorf("already locked by [%s]", e)
 			}
 			return e.TxID, AlreadyLockedError
 		}
 	}
-	logger.Debugf("locking [%s] for [%s]", id, txID)
+	logger.DebugfContext(ctx, "locking [%s] for [%s]", id, txID)
 	now := time.Now()
 	d.locked[k] = &lockEntry{TxID: txID, Created: now, LastAccess: now}
 	return "", nil
@@ -130,10 +130,10 @@ func (d *locker) UnlockByTxID(ctx context.Context, txID string) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	logger.Debugf("unlocking tokens hold by [%s]", txID)
+	logger.DebugfContext(ctx, "unlocking tokens hold by [%s]", txID)
 	for id, entry := range d.locked {
 		if entry.TxID == txID {
-			logger.Debugf("unlocking [%s] hold by [%s]", id, entry)
+			logger.DebugfContext(ctx, "unlocking [%s] hold by [%s]", id, entry)
 			delete(d.locked, id)
 		}
 	}
@@ -167,7 +167,7 @@ func (d *locker) Start() {
 
 func (d *locker) scan(ctx context.Context) {
 	for {
-		logger.Debugf("token collector: scan locked tokens")
+		logger.DebugfContext(ctx, "token collector: scan locked tokens")
 		var removeList []token2.ID
 		d.lock.RLock()
 		for id, entry := range d.locked {
@@ -182,33 +182,33 @@ func (d *locker) scan(ctx context.Context) {
 				// remove only if elapsed enough time from last access, to avoid concurrency issue
 				if time.Since(entry.LastAccess) > d.validTxEvictionTimeout {
 					removeList = append(removeList, id)
-					logger.Debugf("token [%s] locked by [%s] in status [%s], time elapsed, remove", id, entry, ttxdb.TxStatusMessage[status])
+					logger.DebugfContext(ctx, "token [%s] locked by [%s] in status [%s], time elapsed, remove", id, entry, ttxdb.TxStatusMessage[status])
 				}
 			case ttxdb.Deleted:
 				removeList = append(removeList, id)
-				logger.Debugf("token [%s] locked by [%s] in status [%s], remove", id, entry, ttxdb.TxStatusMessage[status])
+				logger.DebugfContext(ctx, "token [%s] locked by [%s] in status [%s], remove", id, entry, ttxdb.TxStatusMessage[status])
 			default:
-				logger.Debugf("token [%s] locked by [%s] in status [%s], skip", id, entry, ttxdb.TxStatusMessage[status])
+				logger.DebugfContext(ctx, "token [%s] locked by [%s] in status [%s], skip", id, entry, ttxdb.TxStatusMessage[status])
 			}
 		}
 		d.lock.RUnlock()
 
 		d.lock.Lock()
-		logger.Debugf("token collector: freeing [%d] items", len(removeList))
+		logger.DebugfContext(ctx, "token collector: freeing [%d] items", len(removeList))
 		for _, s := range removeList {
 			delete(d.locked, s)
 		}
 		d.lock.Unlock()
 
 		for {
-			logger.Debugf("token collector: sleep for some time...")
+			logger.DebugfContext(ctx, "token collector: sleep for some time...")
 			time.Sleep(d.sleepTimeout)
 			d.lock.RLock()
 			l := len(d.locked)
 			d.lock.RUnlock()
 			if l > 0 {
 				// time to do some token collection
-				logger.Debugf("token collector: time to do some token collection, [%d] locked", l)
+				logger.DebugfContext(ctx, "token collector: time to do some token collection, [%d] locked", l)
 				break
 			}
 		}

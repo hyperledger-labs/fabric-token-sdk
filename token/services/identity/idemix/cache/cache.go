@@ -12,23 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"go.uber.org/zap/zapcore"
 )
 
 var logger = logging.MustGetLogger()
-
-var (
-	cacheLevelOpts = metrics.GaugeOpts{
-		Namespace:    "idemix",
-		Name:         "cache_level",
-		Help:         "Level of the idemix cache",
-		LabelNames:   []string{"network", "channel", "namespace"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
-	}
-)
 
 type IdentityCacheBackendFunc func(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error)
 
@@ -42,19 +31,20 @@ type IdentityCache struct {
 	backed    IdentityCacheBackendFunc
 	auditInfo []byte
 
-	cache           chan identityCacheEntry
-	cacheTimeout    time.Duration
-	cacheLevelGauge metrics.Gauge
+	cache        chan identityCacheEntry
+	cacheTimeout time.Duration
+
+	metrics *Metrics
 }
 
-func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byte, metricsProvider metrics.Provider) *IdentityCache {
+func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byte, metrics *Metrics) *IdentityCache {
 	logger.Debugf("new identity cache with size [%d]", size)
 	ci := &IdentityCache{
-		backed:          backed,
-		cache:           make(chan identityCacheEntry, size),
-		auditInfo:       auditInfo,
-		cacheTimeout:    5 * time.Millisecond,
-		cacheLevelGauge: metricsProvider.NewGauge(cacheLevelOpts),
+		backed:       backed,
+		cache:        make(chan identityCacheEntry, size),
+		auditInfo:    auditInfo,
+		cacheTimeout: 5 * time.Millisecond,
+		metrics:      metrics,
 	}
 
 	return ci
@@ -94,7 +84,7 @@ func (c *IdentityCache) fetchIdentityFromCache(ctx context.Context) (driver.Iden
 	logger.DebugfContext(ctx, "fetch identity")
 	select {
 	case entry := <-c.cache:
-		c.cacheLevelGauge.Add(-1)
+		c.metrics.CacheLevelGauge.Add(-1)
 		logger.DebugfContext(ctx, "fetched identity from cache")
 		identity = entry.Identity
 		audit = entry.Audit
@@ -141,7 +131,7 @@ func (c *IdentityCache) provisionIdentities() {
 			continue
 		}
 		logger.DebugfContext(ctx, "generated new idemix identity [%d]", count)
-		c.cacheLevelGauge.Add(1)
+		c.metrics.CacheLevelGauge.Add(1)
 		c.cache <- identityCacheEntry{Identity: id, Audit: audit}
 	}
 }

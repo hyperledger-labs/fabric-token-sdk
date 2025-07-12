@@ -320,7 +320,7 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 		return nil, errors.Wrap(err, "failed preparing transfer")
 	}
 
-	r.TokenService.logger.Debugf("Prepare Transfer Action [id:%s,ins:%d,outs:%d]", r.Anchor, len(tokenIDs), len(outputTokens))
+	r.TokenService.logger.DebugfContext(ctx, "Prepare Transfer Action [id:%s,ins:%d,outs:%d]", r.Anchor, len(tokenIDs), len(outputTokens))
 
 	ts := r.TokenService.tms.TransferService()
 
@@ -369,7 +369,7 @@ func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Typ
 		return nil, errors.Wrap(err, "failed preparing transfer")
 	}
 
-	r.TokenService.logger.Debugf("Prepare Redeem Action [ins:%d,outs:%d]", len(tokenIDs), len(outputTokens))
+	r.TokenService.logger.DebugfContext(ctx, "Prepare Redeem Action [ins:%d,outs:%d]", len(tokenIDs), len(outputTokens))
 
 	ts := r.TokenService.tms.TransferService()
 
@@ -1123,7 +1123,7 @@ func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) 
 					// this is me, skip
 					continue
 				}
-				r.TokenService.logger.Debugf("bind sender [%s] to [%s]", senderIdentity, identity)
+				r.TokenService.logger.DebugfContext(ctx, "bind sender [%s] to [%s]", senderIdentity, identity)
 				if err := binder.Bind(ctx, identity, senderIdentity); err != nil {
 					return errors.Wrap(err, "failed binding sender identities")
 				}
@@ -1136,7 +1136,7 @@ func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) 
 				// this is me, skip
 				continue
 			}
-			r.TokenService.logger.Debugf("bind extra signer [%s] to [%s]", eid, identity)
+			r.TokenService.logger.DebugfContext(ctx, "bind extra signer [%s] to [%s]", eid, identity)
 			if err := binder.Bind(ctx, identity, eid); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
@@ -1151,7 +1151,7 @@ func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) 
 					continue
 				}
 
-				r.TokenService.logger.Debugf("bind receiver as sender [%s] to [%s]", receiverIdentity, identity)
+				r.TokenService.logger.DebugfContext(ctx, "bind receiver as sender [%s] to [%s]", receiverIdentity, identity)
 				if err := binder.Bind(ctx, identity, receiverIdentity); err != nil {
 					return errors.Wrap(err, "failed binding receiver identities")
 				}
@@ -1191,7 +1191,7 @@ func (r *Request) Transfers() []*Transfer {
 // AuditCheck performs the audit check of the request in addition to
 // the checks of the token request itself via IsValid.
 func (r *Request) AuditCheck(ctx context.Context) error {
-	r.TokenService.logger.Debugf("audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID())
+	r.TokenService.logger.DebugfContext(ctx, "audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID())
 	if err := r.IsValid(ctx); err != nil {
 		return err
 	}
@@ -1404,7 +1404,7 @@ func (r *Request) prepareTransfer(ctx context.Context, redeem bool, wallet *Owne
 	switch cmp {
 	case 1:
 		diff := inputSum.Sub(outputSum)
-		r.TokenService.logger.Debugf("reassign rest [%s] to sender", diff.Decimal())
+		r.TokenService.logger.DebugfContext(ctx, "reassign rest [%s] to sender", diff.Decimal())
 
 		var restIdentity []byte
 		if transferOpts.RestRecipientIdentity != nil {
@@ -1430,7 +1430,7 @@ func (r *Request) prepareTransfer(ctx context.Context, redeem bool, wallet *Owne
 	}
 
 	if r.TokenService.PublicParametersManager().PublicParameters().GraphHiding() {
-		r.TokenService.logger.Debugf("graph hiding enabled, request certification")
+		r.TokenService.logger.DebugfContext(ctx, "graph hiding enabled, request certification")
 		// Check token certification
 		cc, err := r.TokenService.CertificationClient()
 		if err != nil {

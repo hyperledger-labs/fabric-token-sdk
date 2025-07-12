@@ -38,27 +38,27 @@ func (s *EscrowAuth) AmIAnAuditor() bool {
 func (s *EscrowAuth) IsMine(ctx context.Context, tok *token3.Token) (string, []string, bool) {
 	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
 	if err != nil {
-		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
 		return "", nil, false
 	}
 	if owner.Type != multisig.Multisig {
-		logger.Debugf("Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, owner.Type, multisig.Multisig)
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, owner.Type, multisig.Multisig)
 		return "", nil, false
 	}
 	escrow := &multisig.MultiIdentity{}
 	if err := escrow.Deserialize(owner.Identity); err != nil {
-		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
 		return "", nil, false
 	}
 	var ids []string
 	for i := 0; i < len(escrow.Identities); i++ {
-		logger.Debugf("Is Mine [%s,%s,%s] as an escrow co-owner?", view.Identity(tok.Owner), tok.Type, tok.Quantity)
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s] as an escrow co-owner?", view.Identity(tok.Owner), tok.Type, tok.Quantity)
 		if wallet, err := s.WalletService.OwnerWallet(ctx, escrow.Identities[i]); err == nil {
-			logger.Debugf("Is Mine [%s,%s,%s] as an escrow co-owner? Yes", view.Identity(tok.Owner), tok.Type, tok.Quantity)
+			logger.DebugfContext(ctx, "Is Mine [%s,%s,%s] as an escrow co-owner? Yes", view.Identity(tok.Owner), tok.Type, tok.Quantity)
 			ids = append(ids, escrowWallet(wallet))
 		}
 	}
-	logger.Debugf("Is Mine [%s,%s,%s]? %b", len(ids) != 0, view.Identity(tok.Owner), tok.Type, tok.Quantity)
+	logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? %b", len(ids) != 0, view.Identity(tok.Owner), tok.Type, tok.Quantity)
 	return "", ids, len(ids) != 0
 }
 
