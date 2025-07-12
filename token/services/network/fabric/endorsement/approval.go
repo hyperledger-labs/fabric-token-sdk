@@ -72,7 +72,7 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		}
 	}
 
-	logger.Debugf("Request Endorsement on tx [%s] to [%v]...", tx.ID(), r.Endorsers)
+	logger.DebugfContext(context.Context(), "Request Endorsement on tx [%s] to [%v]...", tx.ID(), r.Endorsers)
 	_, err = context.RunView(endorser.NewParallelCollectEndorsementsOnProposalView(
 		tx,
 		r.Endorsers...,
@@ -80,14 +80,14 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to collect endorsements")
 	}
-	logger.Debugf("Request Endorsement on tx [%s] to [%v]...done", tx.ID(), r.Endorsers)
+	logger.DebugfContext(context.Context(), "Request Endorsement on tx [%s] to [%v]...done", tx.ID(), r.Endorsers)
 
 	rws, err := tx.RWSet()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get rws")
 	}
 	rws.Done()
-	logger.Debugf("[%s] found [%d] nss [%v]", tx.ID(), len(rws.Namespaces()), rws.Namespaces())
+	logger.DebugfContext(context.Context(), "[%s] found [%d] nss [%v]", tx.ID(), len(rws.Namespaces()), rws.Namespaces())
 
 	// Return envelope
 	return tx.Envelope()
@@ -113,19 +113,19 @@ func NewRequestApprovalResponderView(keyTranslator translator.KeyTranslator, get
 func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
 	// When the borrower runs the CollectEndorsementsView, at some point, the borrower sends the assembled transaction
 	// to the approver. Therefore, the approver waits to receive the transaction.
-	logger.Debugf("Waiting for transaction on context [%s]", context.ID())
+	logger.DebugfContext(context.Context(), "Waiting for transaction on context [%s]", context.ID())
 	tx, err := endorser.ReceiveTransaction(context)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to received transaction for approval")
 	}
-	logger.Debugf("Received transaction [%s] for endorsement on context [%s]", tx.ID(), context.ID())
-	defer logger.Debugf("Return endorsement result for TX [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Received transaction [%s] for endorsement on context [%s]", tx.ID(), context.ID())
+	defer logger.DebugfContext(context.Context(), "Return endorsement result for TX [%s]", tx.ID())
 	raw, err := tx.Bytes()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to marshal transaction [%s]", tx.ID())
 	}
 
-	logger.Debugf("Respond to request of approval for tx [%s][%s]", tx.ID(), hash.Hashable(raw))
+	logger.DebugfContext(context.Context(), "Respond to request of approval for tx [%s][%s]", tx.ID(), hash.Hashable(raw))
 
 	var tmsID token2.TMSID
 	if err := tx.GetTransientState("tmsID", &tmsID); err != nil {
@@ -140,7 +140,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 		requestAnchor = tx.ID()
 	}
 
-	logger.Debugf("evaluate token request on TMS [%s]", tmsID)
+	logger.DebugfContext(context.Context(), "evaluate token request on TMS [%s]", tmsID)
 	tms := token2.GetManagementService(context, token2.WithTMSID(tmsID))
 	if tms == nil {
 		return nil, errors.Errorf("cannot find TMS for [%s]", tmsID)
@@ -158,7 +158,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	}
 
 	// validate token request
-	logger.Debugf("Validate TX [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Validate TX [%s]", tx.ID())
 	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(id token.ID) ([]byte, error) {
 		key, err := r.keyTranslator.CreateOutputKey(id.TxId, id.Index)
 		if err != nil {
@@ -172,25 +172,25 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	}
 
 	// endorse
-	logger.Debugf("Endorse TX [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Endorse TX [%s]", tx.ID())
 	endorserID, err := r.endorserID(tms, fns)
 	if err != nil {
 		return nil, err
 	}
 
 	// write actions into the transaction
-	logger.Debugf("Translate TX [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Translate TX [%s]", tx.ID())
 	err = r.translate(tms, tx, validationMetadata, rws, actions...)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Debugf("Endorse proposal for TX [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Endorse proposal for TX [%s]", tx.ID())
 	endorsementResult, err := context.RunView(endorser.NewEndorsementOnProposalResponderView(tx, endorserID))
 	if err != nil {
 		logger.Errorf("failed to respond to endorsement [%s]", err)
 	}
-	logger.Debugf("Finished endorsement on TX [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Finished endorsement on TX [%s]", tx.ID())
 	return endorsementResult, err
 }
 
@@ -231,13 +231,13 @@ func (r *RequestApprovalResponderView) validate(
 	requestRaw []byte,
 	getState driver2.GetStateFnc,
 ) ([]any, map[string][]byte, error) {
-	defer logger.Debugf("Finished validation of TX [%s]", tx.ID())
-	logger.Debugf("Get validator for TX [%s]", tx.ID())
+	defer logger.DebugfContext(context.Context(), "Finished validation of TX [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Get validator for TX [%s]", tx.ID())
 	validator, err := tms.Validator()
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get validator [%s:%s]", tms.Network(), tms.Channel())
 	}
-	logger.Debugf("Unmarshal and verify with metadata for TX [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Unmarshal and verify with metadata for TX [%s]", tx.ID())
 	actions, meta, err := validator.UnmarshallAndVerifyWithMetadata(
 		context.Context(),
 		token2.NewLedgerFromGetter(getState),
@@ -251,7 +251,7 @@ func (r *RequestApprovalResponderView) validate(
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to retrieve db [%s]", tms.ID())
 	}
-	logger.Debugf("Append validation record for TX [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Append validation record for TX [%s]", tx.ID())
 	if err := db.AppendValidationRecord(
 		context.Context(),
 		tx.ID(),

@@ -295,7 +295,7 @@ func (s *TransferService) VerifyTransfer(ctx context.Context, action driver.Tran
 		if err != nil {
 			return errors.Wrap(err, "failed getting token in the clear")
 		}
-		s.Logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
+		s.Logger.DebugfContext(ctx, "transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
 	}
 
 	return transfer.NewVerifier(getTokenData(tr.InputTokens()), com, pp).Verify(tr.Proof)

@@ -209,7 +209,7 @@ func (d *StoreService) ValidationRecords(ctx context.Context, params QueryValida
 
 // AppendTransactionRecord appends the transaction records corresponding to the passed token request.
 func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.Request) error {
-	logger.Debugf("appending new transaction record... [%s]", req.Anchor)
+	logger.DebugfContext(ctx, "appending new transaction record... [%s]", req.Anchor)
 
 	ins, outs, attrs, err := req.InputsAndOutputs(ctx)
 	if err != nil {
@@ -226,12 +226,12 @@ func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.R
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal token request [%s]", req.Anchor)
 	}
-	txs, err := TransactionRecords(record, time.Now().UTC())
+	txs, err := TransactionRecords(ctx, record, time.Now().UTC())
 	if err != nil {
 		return errors.WithMessage(err, "failed parsing transactions from audit record")
 	}
 
-	logger.Debugf("storing new records... [%d,%d]", len(raw), len(txs))
+	logger.DebugfContext(ctx, "storing new records... [%d,%d]", len(raw), len(txs))
 	w, err := d.db.BeginAtomicWrite()
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
@@ -259,13 +259,13 @@ func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.R
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
-	logger.Debugf("appending transaction record new completed without errors")
+	logger.DebugfContext(ctx, "appending transaction record new completed without errors")
 	return nil
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (d *StoreService) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
-	logger.Debugf("set status [%s][%s]...", txID, status)
+	logger.DebugfContext(ctx, "set status [%s][%s]...", txID, status)
 	if err := d.db.SetStatus(ctx, txID, status, message); err != nil {
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TxStatusMessage[status])
 	}
@@ -276,19 +276,19 @@ func (d *StoreService) SetStatus(ctx context.Context, txID string, status driver
 		TxID:           txID,
 		ValidationCode: status,
 	})
-	logger.Debugf("set status [%s][%s] done", txID, driver.TxStatusMessage[status])
+	logger.DebugfContext(ctx, "set status [%s][%s] done", txID, driver.TxStatusMessage[status])
 	return nil
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
 func (d *StoreService) GetStatus(ctx context.Context, txID string) (TxStatus, string, error) {
-	logger.Debugf("get status [%s]...", txID)
+	logger.DebugfContext(ctx, "get status [%s]...", txID)
 	status, message, err := d.db.GetStatus(ctx, txID)
 	if err != nil {
 		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
-	logger.Debugf("got status [%s][%s]", txID, status)
+	logger.DebugfContext(ctx, "got status [%s][%s]", txID, status)
 	return status, message, nil
 }
 
@@ -313,7 +313,7 @@ func (d *StoreService) GetTransactionEndorsementAcks(ctx context.Context, txID s
 
 // AppendValidationRecord appends the given validation metadata related to the given transaction id
 func (d *StoreService) AppendValidationRecord(ctx context.Context, txID string, tokenRequest []byte, meta map[string][]byte, ppHash driver2.PPHash) error {
-	logger.Debugf("appending new validation record... [%s]", txID)
+	logger.DebugfContext(ctx, "appending new validation record... [%s]", txID)
 
 	w, err := d.db.BeginAtomicWrite()
 	if err != nil {
@@ -332,12 +332,12 @@ func (d *StoreService) AppendValidationRecord(ctx context.Context, txID string, 
 	if err := w.Commit(); err != nil {
 		return errors.WithMessagef(err, "append validation record commit for txid [%s] failed", txID)
 	}
-	logger.Debugf("appending validation record completed without errors")
+	logger.DebugfContext(ctx, "appending validation record completed without errors")
 	return nil
 }
 
 // TransactionRecords is a pure function that converts an AuditRecord for storage in the database.
-func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []TransactionRecord, err error) {
+func TransactionRecords(ctx context.Context, record *token.AuditRecord, timestamp time.Time) (txs []TransactionRecord, err error) {
 	inputs := record.Inputs
 	outputs := record.Outputs
 
@@ -351,7 +351,7 @@ func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []T
 			return t.ActionIndex == actionIndex
 		})
 		if ins.Count() == 0 && ous.Count() == 0 {
-			logger.Debugf("no actions left for tx [%s][%d]", record.Anchor, actionIndex)
+			logger.DebugfContext(ctx, "no actions left for tx [%s][%d]", record.Anchor, actionIndex)
 			break
 		}
 
@@ -401,19 +401,19 @@ func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []T
 
 		actionIndex++
 	}
-	logger.Debugf("parsed transactions for tx [%s]", record.Anchor)
+	logger.DebugfContext(ctx, "parsed transactions for tx [%s]", record.Anchor)
 
 	return
 }
 
 // Movements converts an AuditRecord to MovementRecords for storage in the database.
 // A positive movement Amount means incoming tokens, and negative means outgoing tokens from the enrollment ID.
-func Movements(record *token.AuditRecord, created time.Time) (mv []MovementRecord, err error) {
+func Movements(ctx context.Context, record *token.AuditRecord, created time.Time) (mv []MovementRecord, err error) {
 	inputs := record.Inputs
 	outputs := record.Outputs
 	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
 	eIDs := joinIOEIDs(record)
-	logger.Debugf("eIDs [%v]", eIDs)
+	logger.DebugfContext(ctx, "eIDs [%v]", eIDs)
 	tokenTypes := outputs.TokenTypes()
 
 	for _, eID := range eIDs {
@@ -425,7 +425,7 @@ func Movements(record *token.AuditRecord, created time.Time) (mv []MovementRecor
 				continue
 			}
 
-			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
+			logger.DebugfContext(ctx, "adding movement [%s:%d]", eID, diff.Int64())
 			mv = append(mv, driver.MovementRecord{
 				TxID:         string(record.Anchor),
 				EnrollmentID: eID,
@@ -436,7 +436,7 @@ func Movements(record *token.AuditRecord, created time.Time) (mv []MovementRecor
 			})
 		}
 	}
-	logger.Debugf("finished to parse sent movements for tx [%s]", record.Anchor)
+	logger.DebugfContext(ctx, "finished to parse sent movements for tx [%s]", record.Anchor)
 
 	return
 }

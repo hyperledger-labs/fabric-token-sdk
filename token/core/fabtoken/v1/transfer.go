@@ -54,7 +54,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 
 	var inputs []*actions.Output
 	for _, tok := range inputTokens {
-		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
+		s.Logger.DebugfContext(ctx, "Selected output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
 		t := actions.Output(*tok)
 		inputs = append(inputs, &t)
 	}

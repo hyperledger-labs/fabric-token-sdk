@@ -206,7 +206,7 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 			assert.NoError(t, err)
 			go func() {
 				defer utils.IgnoreErrorWithOneArg(replica.Close, txID)
-				tokens, sum, err := sel.Select(defaultTokenFilter, quantity.Hex(), defaultCurrency)
+				tokens, sum, err := sel.Select(context.Background(), defaultTokenFilter, quantity.Hex(), defaultCurrency)
 				if err != nil {
 					errCh <- err
 				} else {

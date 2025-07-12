@@ -42,7 +42,7 @@ func NewWalletRegistry(logger logging.Logger, role identity.Role, storage idrive
 }
 
 func (r *WalletRegistry) RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error {
-	r.Logger.Debugf("register identity [%s:%s]", config.ID, config.URL)
+	r.Logger.DebugfContext(ctx, "register identity [%s:%s]", config.ID, config.URL)
 	return r.Role.RegisterIdentity(ctx, config)
 }
 
@@ -50,7 +50,7 @@ func (r *WalletRegistry) RegisterIdentity(ctx context.Context, config driver.Ide
 // If a wallet is found, Lookup returns the wallet and its identifier.
 // If no wallet is found, Lookup returns the identity info and a potential wallet identifier for the passed id, if anything is found
 func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, idriver.IdentityInfo, string, error) {
-	r.Logger.Debugf("lookup wallet by [%T]", id)
+	r.Logger.DebugfContext(ctx, "lookup wallet by [%T]", id)
 	var walletIdentifiers []string
 
 	identity, walletID, err := r.Role.MapToIdentity(ctx, id)
@@ -60,11 +60,11 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 		// give it a second change
 		passedIdentity, ok := toViewIdentity(id)
 		if ok {
-			r.Logger.Debugf("lookup failed, check if there is a wallet for identity [%s]", passedIdentity)
+			r.Logger.DebugfContext(ctx, "lookup failed, check if there is a wallet for identity [%s]", passedIdentity)
 			// is this identity registered
 			wID, err := r.GetWalletID(ctx, passedIdentity)
 			if err == nil && len(wID) != 0 {
-				r.Logger.Debugf("lookup failed, there is a wallet for identity [%s]: [%s]", passedIdentity, wID)
+				r.Logger.DebugfContext(ctx, "lookup failed, there is a wallet for identity [%s]: [%s]", passedIdentity, wID)
 				// we got a hit
 				walletID = wID
 				identity = passedIdentity
@@ -75,7 +75,7 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 			return nil, nil, "", errors.WithMessagef(err, "failed to lookup wallet [%s]", id)
 		}
 	}
-	r.Logger.Debugf("looked-up identifier [%s:%s]", identity, logging.WalletID(walletID))
+	r.Logger.DebugfContext(ctx, "looked-up identifier [%s:%s]", identity, logging.WalletID(walletID))
 	wID := walletID
 	walletEntry, ok := r.Wallets[wID]
 	if ok {
@@ -86,29 +86,29 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 	// give it a second chance
 	passedIdentity, ok := toViewIdentity(id)
 	if ok {
-		r.Logger.Debugf("no wallet found, check if there is a wallet for identity [%s]", passedIdentity)
+		r.Logger.DebugfContext(ctx, "no wallet found, check if there is a wallet for identity [%s]", passedIdentity)
 		// is this identity registered
 		passedWalletID, err := r.GetWalletID(ctx, passedIdentity)
 		if err == nil && len(passedWalletID) != 0 {
-			r.Logger.Debugf("no wallet found, there is a wallet for identity [%s]: [%s]", passedIdentity, passedWalletID)
+			r.Logger.DebugfContext(ctx, "no wallet found, there is a wallet for identity [%s]: [%s]", passedIdentity, passedWalletID)
 			// we got a hit
 			walletEntry, ok = r.Wallets[passedWalletID]
 			if ok {
 				return walletEntry, nil, passedWalletID, nil
 			}
-			r.Logger.Debugf("no wallet found, there is a wallet for identity [%s]: [%s] but it has not been recreated yet", passedIdentity, passedWalletID)
+			r.Logger.DebugfContext(ctx, "no wallet found, there is a wallet for identity [%s]: [%s] but it has not been recreated yet", passedIdentity, passedWalletID)
 		}
 		walletIdentifiers = append(walletIdentifiers, passedWalletID)
 	}
 
-	r.Logger.Debugf("no wallet found for [%s] at [%s]", passedIdentity, logging.WalletID(wID))
+	r.Logger.DebugfContext(ctx, "no wallet found for [%s] at [%s]", passedIdentity, logging.WalletID(wID))
 	if len(identity) != 0 {
 		identityWID, err := r.GetWalletID(ctx, identity)
-		r.Logger.Debugf("wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
+		r.Logger.DebugfContext(ctx, "wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
 		if err == nil && len(identityWID) != 0 {
 			w, ok := r.Wallets[identityWID]
 			if ok {
-				r.Logger.Debugf("found wallet [%s:%s:%s:%s]", identity, walletID, w.ID(), identityWID)
+				r.Logger.DebugfContext(ctx, "found wallet [%s:%s:%s:%s]", identity, walletID, w.ID(), identityWID)
 				return w, nil, identityWID, nil
 			}
 		}
@@ -123,10 +123,10 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 		var idInfo idriver.IdentityInfo
 		idInfo, err = r.Role.GetIdentityInfo(id)
 		if err == nil {
-			r.Logger.Debugf("identity info found at [%s]", logging.WalletID(id))
+			r.Logger.DebugfContext(ctx, "identity info found at [%s]", logging.WalletID(id))
 			return nil, idInfo, id, nil
 		} else {
-			r.Logger.Debugf("identity info not found at [%s]", logging.WalletID(id))
+			r.Logger.DebugfContext(ctx, "identity info not found at [%s]", logging.WalletID(id))
 		}
 	}
 	return nil, nil, "", errors.Errorf("failed to get wallet info for [%s:%v]", toString(walletID), walletIdentifiers)
@@ -141,7 +141,7 @@ func (r *WalletRegistry) RegisterWallet(ctx context.Context, id string, w driver
 // BindIdentity binds the passed identity to the passed wallet identifier.
 // Additional metadata can be bound to the identity.
 func (r *WalletRegistry) BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID string, meta any) error {
-	r.Logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
+	r.Logger.DebugfContext(ctx, "put recipient identity [%s]->[%s]", identity, wID)
 	metaEncoded, err := json.Marshal(meta)
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal metadata")
@@ -182,7 +182,7 @@ func (r *WalletRegistry) WalletIDs(ctx context.Context) ([]string, error) {
 
 // GetIdentityMetadata loads metadata bound to the passed identity into the passed meta argument
 func (r *WalletRegistry) GetIdentityMetadata(ctx context.Context, identity driver.Identity, wID string, meta any) error {
-	r.Logger.Debugf("get recipient identity metadata [%s]->[%s]", identity, wID)
+	r.Logger.DebugfContext(ctx, "get recipient identity metadata [%s]->[%s]", identity, wID)
 	raw, err := r.Storage.LoadMeta(ctx, identity, wID, int(r.Role.ID()))
 	if err != nil {
 		return errors.WithMessagef(err, "failed to retrieve identity's metadata [%s]", identity)
@@ -196,7 +196,7 @@ func (r *WalletRegistry) GetWalletID(ctx context.Context, identity driver.Identi
 	if err != nil {
 		return "", nil
 	}
-	r.Logger.Debugf("wallet [%s] is bound to identity [%s]", wID, identity)
+	r.Logger.DebugfContext(ctx, "wallet [%s] is bound to identity [%s]", wID, identity)
 	return wID, nil
 }
 

@@ -191,7 +191,7 @@ func (w *OwnerWallet) DeleteClaimedSentTokens(context view.Context, opts ...toke
 }
 
 func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.UnspentToken) error {
-	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
+	logger.DebugfContext(context.Context(), "delete tokens from vault [%d][%v]", len(tokens), tokens)
 	if len(tokens) == 0 {
 		return nil
 	}
@@ -219,10 +219,10 @@ func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.Unspen
 	var toDelete []*token2.ID
 	for i, tok := range tokens {
 		if spent[i] {
-			logger.Debugf("token [%s] is spent", tok.Id)
+			logger.DebugfContext(context.Context(), "token [%s] is spent", tok.Id)
 			toDelete = append(toDelete, &tok.Id)
 		} else {
-			logger.Debugf("token [%s] is not spent", tok.Id)
+			logger.DebugfContext(context.Context(), "token [%s] is not spent", tok.Id)
 		}
 	}
 	if err := w.vault.DeleteTokens(context.Context(), toDelete...); err != nil {
@@ -251,7 +251,7 @@ func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type,
 	} else {
 		walletID = recipientWallet(ctx, w.wallet)
 	}
-	it, err := w.queryEngine.UnspentTokensIteratorBy(context.TODO(), walletID, tokenType)
+	it, err := w.queryEngine.UnspentTokensIteratorBy(ctx, walletID, tokenType)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get iterator over unspent tokens")
 	}

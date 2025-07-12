@@ -56,7 +56,7 @@ func (e *listenerEntry) Namespace() driver2.Namespace {
 }
 
 func (e *listenerEntry) OnStatus(ctx context.Context, info KeyInfo) {
-	logger.Debugf("notify info [%v] to namespace [%s]", info, e.namespace)
+	logger.DebugfContext(ctx, "notify info [%v] to namespace [%s]", info, e.namespace)
 	if len(e.namespace) == 0 || len(info.Namespace) == 0 || e.namespace == info.Namespace {
 		e.listener.OnStatus(ctx, info.Key, info.Value)
 	}
@@ -172,7 +172,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 		return nil, errors.Wrapf(err, "failed unmarshaling tx [%d:%d]", blockNum, txNum)
 	}
 	if common.HeaderType(chdr.Type) != common.HeaderType_ENDORSER_TRANSACTION {
-		logger.Debugf("Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
+		logger.DebugfContext(ctx, "Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
 		return nil, nil
 	}
 	rwSet, err := rwset.NewEndorserTransactionReader(m.network).Read(payl, chdr)

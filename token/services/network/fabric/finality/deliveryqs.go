@@ -46,10 +46,10 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 	// if the transaction is not found, start a delivery for it
 	startDelivery := false
 	for _, txID := range keySet.ToSlice() {
-		logger.Debugf("loading transaction [%s] from ledger...", txID)
+		logger.DebugfContext(ctx, "loading transaction [%s] from ledger...", txID)
 		pt, err := q.Ledger.GetTransactionByID(txID)
 		if err == nil {
-			logger.Debugf("transaction [%s] found on ledger", txID)
+			logger.DebugfContext(ctx, "transaction [%s] found on ledger", txID)
 			infos, err := q.Mapper.MapProcessedTx(pt)
 			if err != nil {
 				logger.Errorf("failed to map tx [%s]: [%s]", txID, err)
@@ -72,7 +72,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 		}
 
 		// error not recoverable, fail
-		logger.Debugf("scan for tx [%s] failed with err [%s]", txID, err)
+		logger.DebugfContext(ctx, "scan for tx [%s] failed with err [%s]", txID, err)
 		return
 	}
 
@@ -82,7 +82,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 
 	startingBlock := finality.MaxUint64(FirstBlock, lastBlock-NumberPastBlocks)
 	// startingBlock := uint64(0)
-	logger.Debugf("start scanning blocks starting from [%d], looking for remaining keys [%s]", startingBlock, keySet)
+	logger.DebugfContext(ctx, "start scanning blocks starting from [%d], looking for remaining keys [%s]", startingBlock, keySet)
 
 	// start delivery for the future
 	err := q.Delivery.ScanFromBlock(
@@ -92,7 +92,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 			if !keySet.Contains(tx.TxID()) {
 				return false, nil
 			}
-			logger.Debugf("received result for tx [%s, %v, %d]...", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
+			logger.DebugfContext(ctx, "received result for tx [%s, %v, %d]...", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
 			infos, err := q.Mapper.MapProcessedTx(tx)
 			if err != nil {
 				logger.Errorf("failed mapping tx [%s]: %v", tx.TxID(), err)
@@ -100,7 +100,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 			}
 			ch <- infos
 			keySet.Remove(tx.TxID())
-			logger.Debugf("removing [%s] from searching list, remaining keys [%d]", tx.TxID(), keySet.Length())
+			logger.DebugfContext(ctx, "removing [%s] from searching list, remaining keys [%d]", tx.TxID(), keySet.Length())
 			return keySet.Length() == 0, nil
 		},
 	)
@@ -108,5 +108,5 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 		logger.Errorf("failed scanning blocks [%s], started from [%d]", err, startingBlock)
 		return
 	}
-	logger.Debugf("finished scanning blocks starting from [%d]", startingBlock)
+	logger.DebugfContext(ctx, "finished scanning blocks starting from [%d]", startingBlock)
 }

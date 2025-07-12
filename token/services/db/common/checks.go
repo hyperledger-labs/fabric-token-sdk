@@ -241,7 +241,7 @@ func (a *DefaultCheckers) CheckTokenSpendability(ctx context.Context) ([]string,
 	sigService := tms.SigService()
 	supportedTokenFormats := ts.SupportedTokenFormats()
 	supportedTokenFormatsSet := collections.NewSet(supportedTokenFormats...)
-	logger.Debugf("checking token spendability for [%s], supported tokens [%s]", tms.ID(), supportedTokenFormatsSet.ToSlice())
+	logger.DebugfContext(ctx, "checking token spendability for [%s], supported tokens [%s]", tms.ID(), supportedTokenFormatsSet.ToSlice())
 	for {
 		tok, err := uit.Next()
 		if err != nil {
@@ -256,14 +256,14 @@ func (a *DefaultCheckers) CheckTokenSpendability(ctx context.Context) ([]string,
 			continue
 		}
 
-		logger.Debugf("deobfuscating token [%s][%s]...", tok.ID, tok.Format)
+		logger.DebugfContext(ctx, "deobfuscating token [%s][%s]...", tok.ID, tok.Format)
 		// extract the token's recipients and try to get a verifier for it
 		_, _, recipients, _, err := ts.Deobfuscate(tok.Token, tok.TokenMetadata)
 		if err != nil {
 			errorMessages = append(errorMessages, fmt.Sprintf("failed to deobfuscate token [%s][%s], [%s]", tok.ID, tok.Format, err))
 			continue
 		}
-		logger.Debugf("deobfuscated token [%s][%s][%v]...", tok.ID, tok.Format, recipients)
+		logger.DebugfContext(ctx, "deobfuscated token [%s][%s][%v]...", tok.ID, tok.Format, recipients)
 		if len(recipients) == 0 {
 			errorMessages = append(errorMessages, fmt.Sprintf("token recipient list is empty for [%s][%s]", tok.ID, tok.Format))
 			continue
@@ -276,7 +276,7 @@ func (a *DefaultCheckers) CheckTokenSpendability(ctx context.Context) ([]string,
 		}
 	}
 
-	logger.Debugf("finished checks with [%d] error messages", len(errorMessages))
+	logger.DebugfContext(ctx, "finished checks with [%d] error messages", len(errorMessages))
 
 	return errorMessages, nil
 }

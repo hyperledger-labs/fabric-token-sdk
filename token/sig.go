@@ -45,13 +45,13 @@ func (s *SignatureService) IssuerVerifier(id Identity) (Verifier, error) {
 }
 
 // GetSigner returns a signer bound to the given identity
-func (s *SignatureService) GetSigner(id Identity) (Signer, error) {
-	return s.identityProvider.GetSigner(id)
+func (s *SignatureService) GetSigner(ctx context.Context, id Identity) (Signer, error) {
+	return s.identityProvider.GetSigner(ctx, id)
 }
 
 // RegisterSigner registers the pair (signer, verifier) bound to the given identity
-func (s *SignatureService) RegisterSigner(identity Identity, signer Signer, verifier Verifier) error {
-	return s.identityProvider.RegisterSigner(identity, signer, verifier, nil)
+func (s *SignatureService) RegisterSigner(ctx context.Context, identity Identity, signer Signer, verifier Verifier) error {
+	return s.identityProvider.RegisterSigner(ctx, identity, signer, verifier, nil)
 }
 
 // AreMe returns the hashes of the passed identities that have a signer registered before

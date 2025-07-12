@@ -141,7 +141,7 @@ func (t *Transaction) Lock(ctx context.Context, wallet *token.OwnerWallet, sende
 	}
 
 	if sender == nil {
-		sender, err = wallet.GetRecipientIdentity()
+		sender, err = wallet.GetRecipientIdentity(ctx)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed getting sender identity")
 		}
@@ -216,7 +216,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 
 	// Register the signer for the reclaim
 	sigService := t.TokenService().SigService()
-	signer, err := sigService.GetSigner(script.Sender)
+	signer, err := sigService.GetSigner(t.Context, script.Sender)
 	if err != nil {
 		return err
 	}
@@ -226,6 +226,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	}
 	logger.Debugf("registering signer for reclaim...")
 	if err := sigService.RegisterSigner(
+		t.Context,
 		tok.Owner,
 		signer,
 		verifier,
@@ -281,7 +282,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 	// Register the signer for the claim
 	logger.Debugf("registering signer for claim...")
 	sigService := t.TokenService().SigService()
-	recipientSigner, err := sigService.GetSigner(script.Recipient)
+	recipientSigner, err := sigService.GetSigner(t.Context, script.Recipient)
 	if err != nil {
 		return err
 	}
@@ -290,6 +291,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return err
 	}
 	if err := sigService.RegisterSigner(
+		t.Context,
 		tok.Owner,
 		&ClaimSigner{
 			Recipient: recipientSigner,

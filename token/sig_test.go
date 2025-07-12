@@ -84,7 +84,7 @@ func TestSignatureService_GetSigner(t *testing.T) {
 	ip.GetSignerReturns(expectedSigner, nil)
 
 	id := []byte("identity")
-	signer, err := service.GetSigner(id)
+	signer, err := service.GetSigner(context.Background(), id)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedSigner, signer)
@@ -105,7 +105,7 @@ func TestSignatureService_RegisterSigner(t *testing.T) {
 
 	ip.RegisterSignerReturns(nil)
 
-	err := service.RegisterSigner(id, signer, verifier)
+	err := service.RegisterSigner(context.Background(), id, signer, verifier)
 
 	assert.NoError(t, err)
 }

@@ -26,7 +26,7 @@ func (d *Delivery) ScanBlock(background context.Context, callback fabric.BlockCa
 		if err == nil {
 			startingBlock = info.Height
 		} else {
-			d.Logger.Errorf("failed to get ledger info: %s", err)
+			d.Logger.ErrorfContext(background, "failed to get ledger info: %s", err)
 		}
 	}
 	return d.ScanBlockFrom(background, startingBlock, callback)

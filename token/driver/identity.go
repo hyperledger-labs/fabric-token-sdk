@@ -20,19 +20,19 @@ type Identity = view.Identity
 // IdentityProvider manages identity-related concepts like signature signers, verifiers, audit information, and so on.
 type IdentityProvider interface {
 	// RegisterRecipientData stores the passed recipient data
-	RegisterRecipientData(data *RecipientData) error
+	RegisterRecipientData(ctx context.Context, data *RecipientData) error
 
 	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
 	GetAuditInfo(ctx context.Context, identity Identity) ([]byte, error)
 
 	// GetSigner returns a Signer for passed identity.
-	GetSigner(identity Identity) (Signer, error)
+	GetSigner(ctx context.Context, identity Identity) (Signer, error)
 
 	// RegisterVerifier registers a Verifier for passed identity.
-	RegisterVerifier(identity Identity, v Verifier) error
+	RegisterVerifier(ctx context.Context, identity Identity, v Verifier) error
 
 	// RegisterSigner registers a Signer and a Verifier for passed identity.
-	RegisterSigner(identity Identity, signer Signer, verifier Verifier, signerInfo []byte) error
+	RegisterSigner(ctx context.Context, identity Identity, signer Signer, verifier Verifier, signerInfo []byte) error
 
 	// AreMe returns the hashes of the passed identities that have a signer registered before
 	AreMe(ctx context.Context, identities ...Identity) []string

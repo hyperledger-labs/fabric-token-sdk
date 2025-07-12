@@ -110,6 +110,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	pp := ppm.PublicParams(context.Background())
 	logger.Infof("new token driver for tms id [%s] with label and version [%s:%s]: [%s]", tmsID, pp.TokenDriverName(), pp.TokenDriverVersion(), pp)
 
+	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	qe := vault.QueryEngine()
 	ws, err := d.newWalletService(
 		tmsConfig,
@@ -121,6 +122,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		networkLocalMembership.DefaultIdentity(),
 		ppm.PublicParams(context.Background()),
 		false,
+		metricsProvider,
 	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze wallet service for [%s:%s]", tmsID.Network, tmsID.Namespace)
@@ -134,7 +136,6 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		multisig.NewEscrowAuth(ws),
 	)
 
-	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	driverMetrics := v1.NewMetrics(metricsProvider)
 	tokensService, err := token3.NewTokensService(logger, ppm, deserializer)
 	if err != nil {

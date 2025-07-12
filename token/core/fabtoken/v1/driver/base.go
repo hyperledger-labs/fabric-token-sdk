@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/validator"
@@ -103,7 +104,7 @@ func (d *base) newWalletService(
 		logger,
 		identityProvider,
 		deserializer,
-		wallet.NewFactory(logger, identityProvider, qe, identityConfig, deserializer),
+		wallet.NewFactory(logger, identityProvider, qe, identityConfig, deserializer, &disabled.Provider{}),
 		roles.ToWalletRegistries(logger, walletDB),
 	)
 

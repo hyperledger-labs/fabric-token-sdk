@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -62,7 +63,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
-			id, _, err := km.Identity(nil)
+			id, _, err := km.Identity(context.Background(), nil)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
@@ -87,7 +88,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
-			id, _, err := km.Identity(nil)
+			id, _, err := km.Identity(context.Background(), nil)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
@@ -166,7 +167,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
-			id, _, err := km.Identity(nil)
+			id, _, err := km.Identity(context.Background(), nil)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
@@ -191,7 +192,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
-			id, _, err := km.Identity(nil)
+			id, _, err := km.Identity(context.Background(), nil)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}

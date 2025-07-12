@@ -7,10 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
+
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/cache"
@@ -29,13 +32,32 @@ type KeyManagerProvider struct {
 	signerService   SignerService
 	config          driver2.Config
 	cacheSize       int
+	metricsProvider metrics.Provider
 
 	// ignoreVerifyOnlyWallet when set to true, for each wallet the service will force the load of the secrets
 	ignoreVerifyOnlyWallet bool
 }
 
-func NewKeyManagerProvider(issuerPublicKey []byte, curveID math.CurveID, keyStore bccsp.KeyStore, signerService SignerService, config driver2.Config, cacheSize int, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
-	return &KeyManagerProvider{issuerPublicKey: issuerPublicKey, curveID: curveID, keyStore: keyStore, signerService: signerService, config: config, cacheSize: cacheSize, ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet}
+func NewKeyManagerProvider(
+	issuerPublicKey []byte,
+	curveID math.CurveID,
+	keyStore bccsp.KeyStore,
+	signerService SignerService,
+	config driver2.Config,
+	cacheSize int,
+	ignoreVerifyOnlyWallet bool,
+	metricsProvider metrics.Provider,
+) *KeyManagerProvider {
+	return &KeyManagerProvider{
+		issuerPublicKey:        issuerPublicKey,
+		curveID:                curveID,
+		keyStore:               keyStore,
+		signerService:          signerService,
+		config:                 config,
+		cacheSize:              cacheSize,
+		ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet,
+		metricsProvider:        metricsProvider,
+	}
 }
 
 func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
@@ -69,9 +91,9 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 		return nil, err
 	}
 
-	var getIdentityFunc func([]byte) (driver.Identity, []byte, error)
+	var getIdentityFunc func(context.Context, []byte) (driver.Identity, []byte, error)
 	if keyManager.IsRemote() {
-		getIdentityFunc = func([]byte) (driver.Identity, []byte, error) {
+		getIdentityFunc = func(context.Context, []byte) (driver.Identity, []byte, error) {
 			return nil, nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms")
 		}
 	} else {
@@ -79,6 +101,7 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 			keyManager.Identity,
 			cacheSize,
 			nil,
+			cache.NewMetrics(l.metricsProvider),
 		).Identity
 	}
 
@@ -108,9 +131,9 @@ func (l *KeyManagerProvider) cacheSizeForID(id string) (int, error) {
 
 type WrappedKeyManager struct {
 	membership.KeyManager
-	getIdentityFunc func([]byte) (driver.Identity, []byte, error)
+	getIdentityFunc func(context.Context, []byte) (driver.Identity, []byte, error)
 }
 
-func (k *WrappedKeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error) {
-	return k.getIdentityFunc(auditInfo)
+func (k *WrappedKeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
+	return k.getIdentityFunc(ctx, auditInfo)
 }

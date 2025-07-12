@@ -45,12 +45,12 @@ func (e *listenerEntry) Namespace() driver2.Namespace {
 }
 
 func (e *listenerEntry) OnStatus(ctx context.Context, info TxInfo) {
-	logger.Debugf("notify listener for tx [%s] in namespace [%s]", info.TxId, info.Namespace)
+	logger.DebugfContext(ctx, "notify listener for tx [%s] in namespace [%s]", info.TxId, info.Namespace)
 	if len(e.namespace) == 0 || len(info.Namespace) == 0 || e.namespace == info.Namespace {
-		logger.Debugf("notify listener for tx [%s] in namespace [%s], selected", info.TxId, info.Namespace)
+		logger.DebugfContext(ctx, "notify listener for tx [%s] in namespace [%s], selected", info.TxId, info.Namespace)
 		e.listener.OnStatus(ctx, info.TxId, info.Status, info.Message, info.RequestHash)
 	} else {
-		logger.Debugf("notify listener for tx [%s] in namespace [%s], discarded", info.TxId, info.Namespace)
+		logger.DebugfContext(ctx, "notify listener for tx [%s] in namespace [%s], discarded", info.TxId, info.Namespace)
 	}
 }
 
@@ -153,7 +153,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 		return nil, errors.Wrapf(err, "failed unmarshaling tx [%d:%d]", blockNum, txNum)
 	}
 	if common.HeaderType(chdr.Type) != common.HeaderType_ENDORSER_TRANSACTION {
-		logger.Debugf("Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
+		logger.DebugfContext(ctx, "Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
 		return nil, nil
 	}
 	rwSet, err := rwset.NewEndorserTransactionReader(m.network).Read(payl, chdr)

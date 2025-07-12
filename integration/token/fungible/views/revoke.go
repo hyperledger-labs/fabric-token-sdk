@@ -61,7 +61,7 @@ func (r *GetRevocationHandle) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 	w := tms.WalletManager().OwnerWallet(context.Context(), r.Wallet)
 	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
-	id, err := w.GetRecipientIdentity()
+	id, err := w.GetRecipientIdentity(context.Context())
 	assert.NoError(err, "error getting recipient id")
 	rh, err := tms.WalletManager().GetRevocationHandle(context.Context(), id)
 	logger.Infof("RH for [%s] is [%s]", r.Wallet, hash.Hashable(rh).String())

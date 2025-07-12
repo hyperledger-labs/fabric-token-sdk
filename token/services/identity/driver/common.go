@@ -14,8 +14,8 @@ import (
 
 type SigService interface {
 	IsMe(context.Context, driver.Identity) bool
-	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
-	RegisterVerifier(identity driver.Identity, v driver.Verifier) error
+	RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
+	RegisterVerifier(ctx context.Context, identity driver.Identity, v driver.Verifier) error
 }
 
 type NetworkBinderService interface {
@@ -28,7 +28,7 @@ type BinderService interface {
 
 type IdentityProvider interface {
 	// RegisterAuditInfo binds the passed audit info to the passed identity
-	RegisterAuditInfo(identity driver.Identity, info []byte) error
+	RegisterAuditInfo(ctx context.Context, identity driver.Identity, info []byte) error
 
 	// GetAuditInfo returns the audit info associated to the passed identity, nil if not found
 	GetAuditInfo(ctx context.Context, identity driver.Identity) ([]byte, error)

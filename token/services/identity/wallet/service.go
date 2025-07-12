@@ -33,7 +33,7 @@ type Registry interface {
 }
 
 type walletFactory interface {
-	NewWallet(id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error)
+	NewWallet(ctx context.Context, id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error)
 }
 
 type RegistryEntry struct {
@@ -97,7 +97,7 @@ func (s *Service) GetEIDAndRH(identity driver.Identity, auditInfo []byte) (strin
 	return s.IdentityProvider.GetEIDAndRH(identity, auditInfo)
 }
 
-func (s *Service) RegisterRecipientIdentity(data *driver.RecipientData) error {
+func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *driver.RecipientData) error {
 	if data == nil {
 		return errors.WithStack(ErrNilRecipientData)
 	}
@@ -107,7 +107,7 @@ func (s *Service) RegisterRecipientIdentity(data *driver.RecipientData) error {
 		return errors.Wrapf(err, "failed to register recipient identity")
 	}
 
-	s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
+	s.Logger.DebugfContext(ctx, "register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
 
 	// match identity and audit info
 	err := s.Deserializer.MatchIdentity(data.Identity, data.AuditInfo)
@@ -120,10 +120,10 @@ func (s *Service) RegisterRecipientIdentity(data *driver.RecipientData) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for owner [%s]", data.Identity)
 	}
-	if err := s.IdentityProvider.RegisterVerifier(data.Identity, v); err != nil {
+	if err := s.IdentityProvider.RegisterVerifier(ctx, data.Identity, v); err != nil {
 		return errors.Wrapf(err, "failed registering verifier for owner [%s]", data.Identity)
 	}
-	if err := s.IdentityProvider.RegisterRecipientData(data); err != nil {
+	if err := s.IdentityProvider.RegisterRecipientData(ctx, data); err != nil {
 		return errors.Wrapf(err, "failed registering audit info for owner [%s]", data.Identity)
 	}
 
@@ -212,7 +212,7 @@ func (s *Service) walletByID(ctx context.Context, role identity.RoleType, id dri
 	}
 
 	// create the wallet
-	newWallet, err := s.WalletFactory.NewWallet(wID, role, registry, idInfo)
+	newWallet, err := s.WalletFactory.NewWallet(ctx, wID, role, registry, idInfo)
 	if err != nil {
 		return nil, err
 	}

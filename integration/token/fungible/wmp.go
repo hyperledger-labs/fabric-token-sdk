@@ -46,7 +46,7 @@ func (p *WalletManagerProvider) RecipientData(user string, wallet string) *token
 	ctx := context.Background()
 	ownerWallet := wm.OwnerWallet(ctx, wallet)
 	gomega.Expect(ownerWallet).ToNot(gomega.BeNil())
-	recipientIdentity, err := ownerWallet.GetRecipientIdentity()
+	recipientIdentity, err := ownerWallet.GetRecipientIdentity(ctx)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	auditInfo, err := ownerWallet.GetAuditInfo(ctx, recipientIdentity)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -68,7 +68,7 @@ func (p *WalletManagerProvider) GetSinger(user string, wallet string, party view
 	wm := p.load(user)
 	ownerWallet := wm.OwnerWallet(context.Background(), wallet)
 	gomega.Expect(ownerWallet).ToNot(gomega.BeNil())
-	return ownerWallet.GetSigner(party)
+	return ownerWallet.GetSigner(context.Background(), party)
 }
 
 // SignerProvider returns the SignerProvider for the given user and wallet

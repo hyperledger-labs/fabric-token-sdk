@@ -44,7 +44,7 @@ type Wallet interface {
 	ContainsToken(token *token.UnspentToken) bool
 
 	// GetSigner returns the Signer bound to the passed identity
-	GetSigner(identity Identity) (Signer, error)
+	GetSigner(ctx context.Context, identity Identity) (Signer, error)
 }
 
 // OwnerWallet models the wallet of a token recipient.
@@ -57,10 +57,10 @@ type OwnerWallet interface {
 	// - Identity audit info via GetAuditInfo;
 	// - TokenMetadata via GetTokenMetadata;
 	// - TokenIdentityMetadata via GetTokenMetadataAuditInfo.
-	GetRecipientIdentity() (Identity, error)
+	GetRecipientIdentity(ctx context.Context) (Identity, error)
 
 	// GetRecipientData returns a recipient data struct, it does not include the token metadata audit info
-	GetRecipientData() (*RecipientData, error)
+	GetRecipientData(ctx context.Context) (*RecipientData, error)
 
 	// GetAuditInfo returns auditing information for the passed identity
 	GetAuditInfo(ctx context.Context, id Identity) ([]byte, error)
@@ -156,7 +156,7 @@ type Authorization interface {
 // WalletService models the wallet service that handles issuer, owner, auditor, and certifier wallets
 type WalletService interface {
 	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
-	RegisterRecipientIdentity(data *RecipientData) error
+	RegisterRecipientIdentity(ctx context.Context, data *RecipientData) error
 
 	// GetAuditInfo retrieves the audit information for the passed identity
 	GetAuditInfo(ctx context.Context, id Identity) ([]byte, error)

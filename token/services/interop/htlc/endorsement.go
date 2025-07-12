@@ -53,7 +53,7 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 
 // ReceiveTransaction executes the receiveTransactionView and returns the received transaction
 func ReceiveTransaction(context view.Context) (*Transaction, error) {
-	logger.Debugf("receive a new transaction...")
+	logger.DebugfContext(context.Context(), "receive a new transaction...")
 
 	txBoxed, err := context.RunView(NewReceiveTransactionView(""))
 	if err != nil {
@@ -64,7 +64,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	if !ok {
 		return nil, errors.Errorf("received transaction of wrong type [%T]", cctx)
 	}
-	logger.Debugf("received transaction with id [%s]", cctx.ID())
+	logger.DebugfContext(context.Context(), "received transaction with id [%s]", cctx.ID())
 
 	return cctx, nil
 }

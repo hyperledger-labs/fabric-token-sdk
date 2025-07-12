@@ -63,7 +63,7 @@ func (db *WalletStore) GetWalletID(ctx context.Context, identity token.Identity,
 	if err != nil {
 		return "", errors.Wrapf(err, "failed getting wallet id for identity [%v]", idHash)
 	}
-	logger.Debugf("found wallet id for identity [%v]: %v", idHash, result)
+	logger.DebugfContext(ctx, "found wallet id for identity [%v]: %v", idHash, result)
 	return result, nil
 }
 
@@ -99,7 +99,7 @@ func (db *WalletStore) StoreIdentity(ctx context.Context, identity token.Identit
 	if err != nil {
 		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%s]", wID, identity)
 	}
-	logger.Debugf("stored wallet [%v] for identity [%s]", wID, identity)
+	logger.DebugfContext(ctx, "stored wallet [%v] for identity [%s]", wID, identity)
 	return nil
 }
 
@@ -114,7 +114,7 @@ func (db *WalletStore) LoadMeta(ctx context.Context, identity token.Identity, wI
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed loading meta for id [%v]", idHash)
 	}
-	logger.Debugf("loaded meta for id [%v, %v]: %v", identity, idHash, result)
+	logger.DebugfContext(ctx, "loaded meta for id [%v, %v]: %v", identity, idHash, result)
 	return result, nil
 }
 
@@ -129,7 +129,7 @@ func (db *WalletStore) IdentityExists(ctx context.Context, identity token.Identi
 	if err != nil {
 		logger.Errorf("failed looking up wallet-identity [%s-%s]: %w", wID, idHash, err)
 	}
-	logger.Debugf("found identity for wallet-identity [%v-%v]: %v", wID, idHash, result)
+	logger.DebugfContext(ctx, "found identity for wallet-identity [%v-%v]: %v", wID, idHash, result)
 
 	return result != ""
 }

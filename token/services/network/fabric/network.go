@@ -325,7 +325,7 @@ type lookupListener struct {
 }
 
 func (l *lookupListener) OnStatus(ctx context.Context, key string, value []byte) {
-	logger.Debugf("lookup transfer metadata key [%s], got value [%s][%v]", l.key, key, value)
+	logger.DebugfContext(ctx, "lookup transfer metadata key [%s], got value [%s][%v]", l.key, key, value)
 	if l.key == key {
 		l.value = value
 		l.wg.Done()
@@ -334,7 +334,7 @@ func (l *lookupListener) OnStatus(ctx context.Context, key string, value []byte)
 }
 
 func (l *lookupListener) OnError(ctx context.Context, key string, err error) {
-	logger.Debugf("lookup transfer metadata key [%s], got error [%s][%s]", l.key, key, err)
+	logger.DebugfContext(ctx, "lookup transfer metadata key [%s], got error [%s][%s]", l.key, key, err)
 	if l.key == key {
 		l.err = err
 		l.wg.Done()

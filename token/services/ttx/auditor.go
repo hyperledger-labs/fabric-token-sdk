@@ -248,7 +248,7 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
 		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditorID)
 		if err != nil {
-			logger.Debugf("failed to get auditor verifier for [%s]", auditorID)
+			logger.DebugfContext(context.Context(), "failed to get auditor verifier for [%s]", auditorID)
 			continue
 		}
 		logger.DebugfContext(context.Context(), "Verify auditor signature")
@@ -306,7 +306,7 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting auditor identity for node [%s]", context.Me())
 	}
-	signer, err := a.w.GetSigner(aid)
+	signer, err := a.w.GetSigner(context.Context(), aid)
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting signing identity for auditor identity [%s]", aid)
 	}
@@ -343,7 +343,7 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	logger.DebugfContext(context.Context(), "Waiting for envelope...transaction received[%s]", a.tx.ID())
 
 	// Processes
-	logger.Debugf("Processes envelope...")
+	logger.DebugfContext(context.Context(), "Processes envelope...")
 	if tx.Payload == nil {
 		return errors.Errorf("expected transaction payload not found")
 	}

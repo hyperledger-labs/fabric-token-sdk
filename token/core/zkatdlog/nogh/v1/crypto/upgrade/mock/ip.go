@@ -2,18 +2,19 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type IdentityProvider struct {
-	GetSignerStub        func(identity.Identity) (driver.Signer, error)
+	GetSignerStub        func(context.Context, driver.Identity) (driver.Signer, error)
 	getSignerMutex       sync.RWMutex
 	getSignerArgsForCall []struct {
-		arg1 identity.Identity
+		arg1 context.Context
+		arg2 driver.Identity
 	}
 	getSignerReturns struct {
 		result1 driver.Signer
@@ -27,18 +28,19 @@ type IdentityProvider struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *IdentityProvider) GetSigner(arg1 identity.Identity) (driver.Signer, error) {
+func (fake *IdentityProvider) GetSigner(arg1 context.Context, arg2 driver.Identity) (driver.Signer, error) {
 	fake.getSignerMutex.Lock()
 	ret, specificReturn := fake.getSignerReturnsOnCall[len(fake.getSignerArgsForCall)]
 	fake.getSignerArgsForCall = append(fake.getSignerArgsForCall, struct {
-		arg1 identity.Identity
-	}{arg1})
+		arg1 context.Context
+		arg2 driver.Identity
+	}{arg1, arg2})
 	stub := fake.GetSignerStub
 	fakeReturns := fake.getSignerReturns
-	fake.recordInvocation("GetSigner", []interface{}{arg1})
+	fake.recordInvocation("GetSigner", []interface{}{arg1, arg2})
 	fake.getSignerMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -52,17 +54,17 @@ func (fake *IdentityProvider) GetSignerCallCount() int {
 	return len(fake.getSignerArgsForCall)
 }
 
-func (fake *IdentityProvider) GetSignerCalls(stub func(identity.Identity) (driver.Signer, error)) {
+func (fake *IdentityProvider) GetSignerCalls(stub func(context.Context, driver.Identity) (driver.Signer, error)) {
 	fake.getSignerMutex.Lock()
 	defer fake.getSignerMutex.Unlock()
 	fake.GetSignerStub = stub
 }
 
-func (fake *IdentityProvider) GetSignerArgsForCall(i int) identity.Identity {
+func (fake *IdentityProvider) GetSignerArgsForCall(i int) (context.Context, driver.Identity) {
 	fake.getSignerMutex.RLock()
 	defer fake.getSignerMutex.RUnlock()
 	argsForCall := fake.getSignerArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *IdentityProvider) GetSignerReturns(result1 driver.Signer, result2 error) {

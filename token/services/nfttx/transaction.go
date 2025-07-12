@@ -52,7 +52,7 @@ func Wrap(tx *ttx.Transaction) *Transaction {
 }
 
 func ReceiveTransaction(context view.Context) (*Transaction, error) {
-	logger.Debugf("receive a new transaction...")
+	logger.DebugfContext(context.Context(), "receive a new transaction...")
 
 	txBoxed, err := context.RunView(ttx.NewReceiveTransactionView(), view.WithSameContext())
 	if err != nil {
@@ -63,7 +63,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	if !ok {
 		return nil, errors.Errorf("received transaction of wrong type [%T]", cctx)
 	}
-	logger.Debugf("received transaction with id [%s]", cctx.ID())
+	logger.DebugfContext(context.Context(), "received transaction with id [%s]", cctx.ID())
 	// Check that the transaction is valid
 	if err := cctx.IsValid(context.Context()); err != nil {
 		return nil, errors.WithMessagef(err, "invalid transaction %s", cctx.ID())

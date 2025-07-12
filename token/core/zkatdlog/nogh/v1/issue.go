@@ -95,7 +95,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		}
 		values = []uint64{totalValue}
 
-		s.Logger.Debugf("upgrade: extracted token type [%s] and value [%d] from the passed tokens", tokenType, totalValue)
+		s.Logger.DebugfContext(ctx, "upgrade: extracted token type [%s] and value [%d] from the passed tokens", tokenType, totalValue)
 
 		// fetch issuer identity
 		issuerIdentity, err = opts.Wallet.GetIssuerIdentity(tokenType)
@@ -108,7 +108,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	if err != nil {
 		return nil, nil, err
 	}
-	signer, err := w.GetSigner(issuerIdentity)
+	signer, err := w.GetSigner(ctx, issuerIdentity)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -174,7 +174,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, errors.Wrapf(err, "failed to get audit info for issuer identity")
 	}
 
-	s.Logger.Debugf("issue with [%d] inputs", len(issueAction.Inputs))
+	s.Logger.DebugfContext(ctx, "issue with [%d] inputs", len(issueAction.Inputs))
 
 	// add issuer action's metadata
 	if opts != nil {

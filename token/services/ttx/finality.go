@@ -67,7 +67,7 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 
 func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, timeout time.Duration) (interface{}, error) {
 
-	logger.Debugf("Listen to finality of [%s]", txID)
+	logger.DebugfContext(ctx.Context(), "Listen to finality of [%s]", txID)
 
 	c := ctx.Context()
 	if timeout != 0 {
@@ -122,70 +122,70 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 	return nil, nil
 }
 
-func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB finalityDB, startCounter, iterations int) (int, error) {
+func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB finalityDB, startCounter, iterations int) (int, error) {
 	// notice that adding the listener can happen after the event we are looking for has already happened
 	// therefore we need to check more often before the timeout happens
 	dbChannel := make(chan common.StatusEvent, 200)
-	logger.DebugfContext(c, "Add status listener")
+	logger.DebugfContext(ctx, "Add status listener")
 	finalityDB.AddStatusListener(txID, dbChannel)
-	logger.DebugfContext(c, "Added status listener")
+	logger.DebugfContext(ctx, "Added status listener")
 	defer func() {
-		logger.DebugfContext(c, "Remove status listener")
+		logger.DebugfContext(ctx, "Remove status listener")
 		finalityDB.DeleteStatusListener(txID, dbChannel)
-		logger.DebugfContext(c, "Removed status listener")
+		logger.DebugfContext(ctx, "Removed status listener")
 	}()
 
-	logger.DebugfContext(c, "Get status")
-	status, _, err := finalityDB.GetStatus(c, txID)
+	logger.DebugfContext(ctx, "Get status")
+	status, _, err := finalityDB.GetStatus(ctx, txID)
 	if err == nil {
 		if status == ttxdb.Confirmed {
 			return startCounter, nil
 		}
 		if status == ttxdb.Deleted {
-			logger.ErrorfContext(c, "Deleted tx")
+			logger.ErrorfContext(ctx, "Deleted tx")
 			return startCounter, errors.Errorf("transaction [%s] is not valid", txID)
 		}
 	}
 
-	logger.DebugfContext(c, "Listen DB channels")
+	logger.DebugfContext(ctx, "Listen DB channels")
 	for i := startCounter; i < iterations; i++ {
-		logger.DebugfContext(c, "Start iteration [%d]", i)
+		logger.DebugfContext(ctx, "Start iteration [%d]", i)
 		timeout := time.NewTimer(f.pollingTimeout)
 
 		select {
-		case <-c.Done():
+		case <-ctx.Done():
 			timeout.Stop()
-			return i, errors.Errorf("failed to listen to transaction [%s], timeout due to context done received [%s]", txID, c.Err())
+			return i, errors.Errorf("failed to listen to transaction [%s], timeout due to context done received [%s]", txID, ctx.Err())
 		case event := <-dbChannel:
 
-			trace.SpanFromContext(c).AddLink(trace.LinkFromContext(event.Ctx))
-			logger.DebugfContext(c, "Got an answer to finality of [%s]: [%s]", txID, event)
+			trace.SpanFromContext(ctx).AddLink(trace.LinkFromContext(event.Ctx))
+			logger.DebugfContext(ctx, "Got an answer to finality of [%s]: [%s]", txID, event)
 			timeout.Stop()
 			if event.ValidationCode == ttxdb.Confirmed {
 				return i, nil
 			}
-			logger.ErrorfContext(c, "transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
+			logger.ErrorfContext(ctx, "transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
 			return i, errors.Errorf("transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
 		case <-timeout.C:
 			timeout.Stop()
-			logger.Debugf("Got a timeout for finality of [%s], check the status", txID)
-			vd, _, err := finalityDB.GetStatus(c, txID)
+			logger.DebugfContext(ctx, "Got a timeout for finality of [%s], check the status", txID)
+			vd, _, err := finalityDB.GetStatus(ctx, txID)
 			if err != nil {
-				logger.Debugf("Is [%s] final? not available yet, wait [err:%s, vc:%d]", txID, err, vd)
+				logger.DebugfContext(ctx, "Is [%s] final? not available yet, wait [err:%s, vc:%d]", txID, err, vd)
 				break
 			}
 			switch vd {
 			case ttxdb.Confirmed:
-				logger.Debugf("Listen to finality of [%s]. VALID", txID)
+				logger.DebugfContext(ctx, "Listen to finality of [%s]. VALID", txID)
 
 				return i, nil
 			case ttxdb.Deleted:
-				logger.ErrorfContext(c, "Listen to finality of [%s]. NOT VALID", txID)
+				logger.ErrorfContext(ctx, "Listen to finality of [%s]. NOT VALID", txID)
 				return i, errors.Errorf("transaction [%s] is not valid", txID)
 			}
 		}
 	}
 
-	logger.ErrorfContext(c, "Is [%s] final? Failed to listen to transaction for timeout", txID)
+	logger.ErrorfContext(ctx, "Is [%s] final? Failed to listen to transaction for timeout", txID)
 	return iterations, errors.Errorf("failed to listen to transaction [%s] for timeout", txID)
 }

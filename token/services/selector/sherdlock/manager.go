@@ -88,7 +88,7 @@ func (m *manager) cleaner(ctx context.Context) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		logger.Debugf("release token locks older than [%s]", m.leaseExpiry)
+		logger.DebugfContext(ctx, "release token locks older than [%s]", m.leaseExpiry)
 		if err := m.locker.Cleanup(ctx, m.leaseExpiry); err != nil {
 			logger.Errorf("failed to release token locks: [%s]", err)
 		}

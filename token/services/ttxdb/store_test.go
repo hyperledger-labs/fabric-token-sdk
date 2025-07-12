@@ -84,10 +84,11 @@ func (qs qsMock) IsMine(ctx context.Context, id *token2.ID) (bool, error) {
 
 func TestTransactionRecords(t *testing.T) {
 	now := time.Now()
+	ctx := context.Background()
 
 	// Transfer
 	input := simpleTransfer()
-	recs, err := ttxdb.TransactionRecords(&input, now)
+	recs, err := ttxdb.TransactionRecords(ctx, &input, now)
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.TransactionRecord{
 		{
@@ -104,7 +105,7 @@ func TestTransactionRecords(t *testing.T) {
 
 	// Transfer with change
 	input = transferWithChange()
-	recs, err = ttxdb.TransactionRecords(&input, now)
+	recs, err = ttxdb.TransactionRecords(ctx, &input, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +136,7 @@ func TestTransactionRecords(t *testing.T) {
 	// Issue
 	input = simpleTransfer()
 	input.Inputs = token.NewInputStream(qsMock{}, []*token.Input{}, 64)
-	recs, err = ttxdb.TransactionRecords(&input, now)
+	recs, err = ttxdb.TransactionRecords(ctx, &input, now)
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.TransactionRecord{
 		{
@@ -152,7 +153,7 @@ func TestTransactionRecords(t *testing.T) {
 
 	// Redeem
 	input = redeem()
-	recs, err = ttxdb.TransactionRecords(&input, now)
+	recs, err = ttxdb.TransactionRecords(ctx, &input, now)
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.TransactionRecord{
 		{
@@ -170,10 +171,11 @@ func TestTransactionRecords(t *testing.T) {
 
 func TestMovementRecords(t *testing.T) {
 	now := time.Now()
+	ctx := context.Background()
 
 	// Transfer
 	input := simpleTransfer()
-	recs, err := ttxdb.Movements(&input, now)
+	recs, err := ttxdb.Movements(ctx, &input, now)
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{
@@ -195,7 +197,7 @@ func TestMovementRecords(t *testing.T) {
 	}, recs)
 
 	input = transferWithChange()
-	recs, err = ttxdb.Movements(&input, now)
+	recs, err = ttxdb.Movements(ctx, &input, now)
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{
@@ -219,7 +221,7 @@ func TestMovementRecords(t *testing.T) {
 	// Issue
 	input = simpleTransfer()
 	input.Inputs = token.NewInputStream(qsMock{}, []*token.Input{}, 64)
-	recs, err = ttxdb.Movements(&input, now)
+	recs, err = ttxdb.Movements(ctx, &input, now)
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{
@@ -234,7 +236,7 @@ func TestMovementRecords(t *testing.T) {
 
 	// Redeem
 	input = redeem()
-	recs, err = ttxdb.Movements(&input, now)
+	recs, err = ttxdb.Movements(ctx, &input, now)
 	assert.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{

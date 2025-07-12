@@ -7,13 +7,15 @@ SPDX-License-Identifier: Apache-2.0
 package membership
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 )
 
 // GetIdentityFunc is a function that returns an Identity and its associated audit info for the given options
-type GetIdentityFunc func(auditInfo []byte) (driver.Identity, []byte, error)
+type GetIdentityFunc func(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error)
 
 // LocalIdentity contains information about an identity
 type LocalIdentity struct {
@@ -29,7 +31,7 @@ func (i *LocalIdentity) String() string {
 	if i.Anonymous {
 		return fmt.Sprintf("{%s@%s-%v-%v-%v}", i.Name, i.EnrollmentID, i.Default, i.Anonymous, i.Remote)
 	}
-	id, _, err := i.GetIdentity(nil)
+	id, _, err := i.GetIdentity(context.Background(), nil)
 	if err != nil {
 		return err.Error()
 	}
@@ -39,10 +41,10 @@ func (i *LocalIdentity) String() string {
 // IdentityInfo implements the driver.IdentityInfo interface on top LocalIdentity
 type IdentityInfo struct {
 	localIdentity *LocalIdentity
-	getIdentity   func() (driver.Identity, []byte, error)
+	getIdentity   func(ctx context.Context) (driver.Identity, []byte, error)
 }
 
-func NewIdentityInfo(localIdentity *LocalIdentity, getIdentity func() (driver.Identity, []byte, error)) *IdentityInfo {
+func NewIdentityInfo(localIdentity *LocalIdentity, getIdentity func(ctx context.Context) (driver.Identity, []byte, error)) *IdentityInfo {
 	return &IdentityInfo{localIdentity: localIdentity, getIdentity: getIdentity}
 }
 
@@ -54,8 +56,8 @@ func (i *IdentityInfo) EnrollmentID() string {
 	return i.localIdentity.EnrollmentID
 }
 
-func (i *IdentityInfo) Get() (driver.Identity, []byte, error) {
-	return i.getIdentity()
+func (i *IdentityInfo) Get(ctx context.Context) (driver2.Identity, []byte, error) {
+	return i.getIdentity(ctx)
 }
 
 func (i *IdentityInfo) Remote() bool {
