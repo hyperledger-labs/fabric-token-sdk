@@ -166,9 +166,10 @@ func (db *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, ident
 
 func (db *IdentityStore) GetAuditInfo(ctx context.Context, id []byte) ([]byte, error) {
 	h := token.Identity(id).String()
+	logger.DebugfContext(ctx, "get audit info for [%s]", h)
 
 	value, _, err := db.auditInfoCache.GetOrLoad(h, func() ([]byte, error) {
-		// logger.Infof("get identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
+		logger.DebugfContext(ctx, "load from backend identity data for [%s]", view.Identity(id))
 		query, args := q.Select().
 			FieldsByName("identity_audit_info").
 			From(q.Table(db.table.IdentityInfo)).
@@ -181,7 +182,8 @@ func (db *IdentityStore) GetAuditInfo(ctx context.Context, id []byte) ([]byte, e
 
 func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, []byte, error) {
 	h := token.Identity(id).String()
-	// logger.Infof("get identity data for [%s] from [%s]", view.Identity(id), string(debug.Stack()))
+	logger.DebugfContext(ctx, "get identity data for [%s]", h)
+
 	query, args := q.Select().
 		FieldsByName("token_metadata", "token_metadata_audit_info").
 		From(q.Table(db.table.IdentityInfo)).

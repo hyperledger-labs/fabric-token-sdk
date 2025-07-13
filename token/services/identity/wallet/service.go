@@ -178,31 +178,40 @@ func (s *Service) CertifierWallet(ctx context.Context, id driver.WalletLookupID)
 	return w.(driver.CertifierWallet), nil
 }
 
-// SpentIDs returns the spend ids for the passed token ids
+// SpendIDs returns the spend ids for the passed token ids
 func (s *Service) SpendIDs(ids ...*token.ID) ([]string, error) {
 	return nil, nil
 }
 
 func (s *Service) walletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
+	logger.DebugfContext(ctx, "role [%s] lookup wallet by [%T]", role, id)
+	defer logger.DebugfContext(ctx, "role [%s] lookup wallet by [%T] done", role, id)
+
 	entry := s.Registries[role]
 	registry := entry.Registry
 	mutex := entry.Mutex
+
+	logger.DebugfContext(ctx, "is it in cache?", role, id)
 
 	mutex.RLock()
 	w, _, _, err := registry.Lookup(ctx, id)
 	if err != nil {
 		mutex.RUnlock()
+		logger.DebugfContext(ctx, "failed", role, id)
 		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%s]", id)
 	}
 	if w != nil {
 		mutex.RUnlock()
+		logger.DebugfContext(ctx, "yes", role, id)
 		return w, nil
 	}
 	mutex.RUnlock()
+	logger.DebugfContext(ctx, "no", role, id)
 
 	mutex.Lock()
 	defer mutex.Unlock()
 
+	logger.DebugfContext(ctx, "is it in cache before creating", role, id)
 	w, idInfo, wID, err := registry.Lookup(ctx, id)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%s]", id)
@@ -212,6 +221,7 @@ func (s *Service) walletByID(ctx context.Context, role identity.RoleType, id dri
 	}
 
 	// create the wallet
+	logger.DebugfContext(ctx, "create wallet", role, id)
 	newWallet, err := s.WalletFactory.NewWallet(ctx, wID, role, registry, idInfo)
 	if err != nil {
 		return nil, err

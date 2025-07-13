@@ -57,7 +57,7 @@ func (c *IdentityCache) Identity(ctx context.Context, auditInfo []byte) (driver.
 	}
 
 	c.once.Do(func() {
-		logger.Debugf("provision identities with cache size [%d]", cap(c.cache))
+		logger.DebugfContext(ctx, "provision identities with cache size [%d]", cap(c.cache))
 		if cap(c.cache) > 0 {
 			go c.provisionIdentities()
 		}

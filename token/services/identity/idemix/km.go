@@ -281,7 +281,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 				[]byte(rh),
 			},
 		}
-		logger.Debugf("new idemix identity generated with [%s:%s]", enrollmentID, hash.Hashable(rh))
+		logger.DebugfContext(ctx, "new idemix identity generated with [%s:%s]", enrollmentID, hash.Hashable(rh))
 		infoRaw, err = auditInfo.Bytes()
 		if err != nil {
 			return nil, nil, errors.WithMessage(err, "failed to serialize auditInfo")

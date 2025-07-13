@@ -115,18 +115,18 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 		walletIdentifiers = append(walletIdentifiers, identityWID)
 	}
 
-	for _, id := range walletIdentifiers {
-		if len(id) == 0 {
+	for _, walletIdentifier := range walletIdentifiers {
+		if len(walletIdentifier) == 0 {
 			continue
 		}
 		// give it a second chance
 		var idInfo idriver.IdentityInfo
-		idInfo, err = r.Role.GetIdentityInfo(id)
+		idInfo, err = r.Role.GetIdentityInfo(ctx, walletIdentifier)
 		if err == nil {
-			r.Logger.DebugfContext(ctx, "identity info found at [%s]", logging.WalletID(id))
-			return nil, idInfo, id, nil
+			r.Logger.DebugfContext(ctx, "identity info found at [%s]", logging.WalletID(walletIdentifier))
+			return nil, idInfo, walletIdentifier, nil
 		} else {
-			r.Logger.DebugfContext(ctx, "identity info not found at [%s]", logging.WalletID(id))
+			r.Logger.DebugfContext(ctx, "identity info not found at [%s]", logging.WalletID(walletIdentifier))
 		}
 	}
 	return nil, nil, "", errors.Errorf("failed to get wallet info for [%s:%v]", toString(walletID), walletIdentifiers)
@@ -134,6 +134,7 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 
 // RegisterWallet binds the passed wallet to the passed id
 func (r *WalletRegistry) RegisterWallet(ctx context.Context, id string, w driver.Wallet) error {
+	r.Logger.DebugfContext(ctx, "register wallet [%s]", id)
 	r.Wallets[id] = w
 	return nil
 }

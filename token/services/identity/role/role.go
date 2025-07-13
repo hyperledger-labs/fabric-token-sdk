@@ -52,8 +52,8 @@ func (r *Role) ID() identity.RoleType {
 }
 
 // GetIdentityInfo returns the identity information for the given identity identifier
-func (r *Role) GetIdentityInfo(id string) (idriver.IdentityInfo, error) {
-	r.logger.Debugf("[%s] getting info for [%s]", r.networkID, id)
+func (r *Role) GetIdentityInfo(ctx context.Context, id string) (idriver.IdentityInfo, error) {
+	r.logger.DebugfContext(ctx, "[%s] getting info for [%s]", r.networkID, id)
 
 	info, err := r.localMembership.GetIdentityInfo(id, nil)
 	if err != nil {
@@ -89,7 +89,7 @@ func (r *Role) mapStringToID(ctx context.Context, v string) (driver.Identity, st
 	defaultNetworkIdentity := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
-	r.logger.Debugf("[%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
+	r.logger.DebugfContext(ctx, "[%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
 		r.networkID,
 		v,
 		hash.Hashable(v),
@@ -99,6 +99,12 @@ func (r *Role) mapStringToID(ctx context.Context, v string) (driver.Identity, st
 
 	label := v
 	labelAsIdentity := driver.Identity(label)
+
+	// check immediately if there is an identifier with that label
+	if idIdentifier, err := r.localMembership.GetIdentifier(labelAsIdentity); err == nil {
+		return nil, idIdentifier, nil
+	}
+
 	switch {
 	case len(label) == 0:
 		r.logger.Debugf("passed empty label")
@@ -128,9 +134,6 @@ func (r *Role) mapStringToID(ctx context.Context, v string) (driver.Identity, st
 		return id, "", nil
 	}
 
-	if idIdentifier, err := r.localMembership.GetIdentifier(labelAsIdentity); err == nil {
-		return nil, idIdentifier, nil
-	}
 	r.logger.Debugf("cannot find match for string [%s]", v)
 	return nil, label, nil
 }
