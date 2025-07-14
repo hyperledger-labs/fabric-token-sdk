@@ -65,10 +65,10 @@ func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, w
 	return ir.RecipientData.Identity, result[1].(view.Session), nil
 }
 
-func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) {
-	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
+func (r *RequestWithdrawalView) Call(ctx view.Context) (interface{}, error) {
+	logger.DebugfContext(ctx.Context(), "Respond request recipient identity using wallet [%s]", r.Wallet)
 
-	tmsID, recipientData, err := r.getRecipientIdentity(context)
+	tmsID, recipientData, err := r.getRecipientIdentity(ctx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get recipient data")
 	}
@@ -80,15 +80,15 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 		NotAnonymous:  r.NotAnonymous,
 	}
 
-	logger.DebugfContext(context.Context(), "Start session")
-	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)
+	logger.DebugfContext(ctx.Context(), "Start session")
+	session, err := session.NewJSON(ctx, ctx.Initiator(), r.Issuer)
 	if err != nil {
 		logger.Errorf("failed to get session to [%s]: [%s]", r.Issuer, err)
 		return nil, errors.Wrapf(err, "failed to get session to [%s]", r.Issuer)
 	}
 
-	logger.DebugfContext(context.Context(), "Send withdrawal request")
-	err = session.SendWithContext(context.Context(), wr)
+	logger.DebugfContext(ctx.Context(), "Send withdrawal request")
+	err = session.SendWithContext(ctx.Context(), wr)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to send recipient data")
@@ -156,25 +156,25 @@ func ReceiveWithdrawalRequest(context view.Context) (*WithdrawalRequest, error) 
 	return ir, nil
 }
 
-func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, error) {
-	session := session.JSON(context)
+func (r *ReceiveWithdrawalRequestView) Call(ctx view.Context) (interface{}, error) {
+	session := session.JSON(ctx)
 	request := &WithdrawalRequest{}
 	assert.NoError(session.ReceiveWithTimeout(request, 1*time.Minute), "failed to receive the withdrawal request")
 
-	logger.DebugfContext(context.Context(), "Received withdrawal request")
-	tms := token.GetManagementService(context, token.WithTMSID(request.TMSID))
+	logger.DebugfContext(ctx.Context(), "Received withdrawal request")
+	tms := token.GetManagementService(ctx, token.WithTMSID(request.TMSID))
 	assert.NotNil(tms, "tms not found for [%s]", request.TMSID)
 
-	if err := tms.WalletManager().RegisterRecipientIdentity(context.Context(), &request.RecipientData); err != nil {
+	if err := tms.WalletManager().RegisterRecipientIdentity(ctx.Context(), &request.RecipientData); err != nil {
 		logger.Errorf("failed to register recipient identity: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}
 
 	// Update the Endpoint Resolver
-	caller := context.Session().Info().Caller
-	logger.Debugf("update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
-	if err := endpoint.GetService(context).Bind(context.Context(), caller, request.RecipientData.Identity); err != nil {
-		logger.Debugf("failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
+	caller := ctx.Session().Info().Caller
+	logger.DebugfContext(ctx.Context(), "update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
+	if err := endpoint.GetService(ctx).Bind(ctx.Context(), caller, request.RecipientData.Identity); err != nil {
+		logger.DebugfContext(ctx.Context(), "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 	}
 
