@@ -151,7 +151,7 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	if err := unmarshal(networkProvider, tx.Payload, raw); err != nil {
 		return nil, err
 	}
-	logger.Debugf("unmarshalling tx, id [%s]", tx.TxID)
+	logger.DebugfContext(context.Context(), "unmarshalling tx, id [%s]", tx.TxID)
 	tms := token.GetManagementService(context,
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
