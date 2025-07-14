@@ -147,7 +147,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 		return nil, errors.WithMessage(err, "failed cleaning up audit")
 	}
 
-	logger.Debugf("CollectEndorsementsView done.")
+	logger.DebugfContext(context.Context(), "CollectEndorsementsView done.")
 
 	labels := []string{
 		"network", c.tx.Network(),
@@ -205,7 +205,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			TxID:    txIDRaw,
 			Signer:  signerIdentity,
 		}
-		logger.Debugf("collecting signature [%d] on request from [%s]", i, signerIdentity)
+		logger.DebugfContext(context.Context(), "collecting signature [%d] on request from [%s]", i, signerIdentity)
 
 		// Case: the identity is a multi-sig identity
 		ok, multiSigners, err := multisig.Unwrap(signerIdentity)
@@ -231,7 +231,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 		// Case: there is a signer locally bound to the party, use it to generate the signature
 		if signer, err := c.tx.TokenService().SigService().GetSigner(context.Context(), signerIdentity); err == nil {
 			logger.DebugfContext(context.Context(), "found signer for party [%s], request local signature", signerIdentity)
-			sigma, err := c.signLocal(signerIdentity, signer, signatureRequest)
+			sigma, err := c.signLocal(context, signerIdentity, signer, signatureRequest)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed signing local for party [%s]", signerIdentity)
 			}
@@ -249,7 +249,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 				return nil, errors.Errorf("no external wallet signer found for [%s][%s]", w.ID(), signerIdentity)
 			}
 			externalWallets[w.ID()] = ews
-			sigma, err := c.signExternal(signerIdentity, ews, signatureRequest)
+			sigma, err := c.signExternal(context, signerIdentity, ews, signatureRequest)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed signing external for party [%s]", signerIdentity)
 			}
@@ -270,24 +270,24 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 	return sigmas, nil
 }
 
-func (c *CollectEndorsementsView) signLocal(party view.Identity, signer token.Signer, signatureRequest *SignatureRequest) ([]byte, error) {
-	logger.Debugf("signing [request_hash=%s][tx_id=%s][nonce=%s]", hash.Hashable(signatureRequest.Request), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
+func (c *CollectEndorsementsView) signLocal(context view.Context, party view.Identity, signer token.Signer, signatureRequest *SignatureRequest) ([]byte, error) {
+	logger.DebugfContext(context.Context(), "signing [request_hash=%s][tx_id=%s][nonce=%s]", hash.Hashable(signatureRequest.Request), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
 
 	sigma, err := signer.Sign(signatureRequest.MessageToSign())
 	if err != nil {
 		return nil, err
 	}
-	logger.Debugf("signature generated (local, me) [%s,%s,%s,%v]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party, logging.Identifier(signer))
+	logger.DebugfContext(context.Context(), "signature generated (local, me) [%s,%s,%s,%v]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party, logging.Identifier(signer))
 	return sigma, nil
 }
 
-func (c *CollectEndorsementsView) signExternal(party view.Identity, signer ExternalWalletSigner, signatureRequest *SignatureRequest) ([]byte, error) {
-	logger.Debugf("signing [request=%s][tx_id=%s][nonce=%s]", hash.Hashable(signatureRequest.Request), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
+func (c *CollectEndorsementsView) signExternal(context view.Context, party view.Identity, signer ExternalWalletSigner, signatureRequest *SignatureRequest) ([]byte, error) {
+	logger.DebugfContext(context.Context(), "signing [request=%s][tx_id=%s][nonce=%s]", hash.Hashable(signatureRequest.Request), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
 	sigma, err := signer.Sign(party, signatureRequest.MessageToSign())
 	if err != nil {
 		return nil, err
 	}
-	logger.Debugf("signature generated (external, me) [%s,%s,%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party)
+	logger.DebugfContext(context.Context(), "signature generated (external, me) [%s,%s,%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party)
 	return sigma, nil
 }
 
@@ -314,14 +314,14 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
 	}
-	logger.Debugf("verify signature [%s][%s][%s] for txid [%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party, c.tx.ID())
+	logger.DebugfContext(context.Context(), "verify signature [%s][%s][%s] for txid [%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party, c.tx.ID())
 
 	err = verifier.Verify(signatureRequest.MessageToSign(), sigma)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed verifying signature [%s] from [%s]", sigma, party)
 	}
 
-	logger.Debugf("signature verified [%s,%s,%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party)
+	logger.DebugfContext(context.Context(), "signature verified [%s,%s,%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party)
 
 	return sigma, nil
 }
@@ -332,7 +332,7 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 		return nil, errors.Wrapf(err, "failed marshalling request")
 	}
 
-	logger.Debugf("call chaincode for endorsement [nonce=%s]", logging.Base64(c.tx.TxID.Nonce))
+	logger.DebugfContext(context.Context(), "call chaincode for endorsement [nonce=%s]", logging.Base64(c.tx.TxID.Nonce))
 
 	env, err := network.GetInstance(context, c.tx.Network(), c.tx.Channel()).RequestApproval(
 		context,
@@ -437,13 +437,13 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 		var txRaw []byte
 		var err error
 		if entry.Auditor {
-			logger.Debugf("This is an auditor [%s], send the full set of metadata", entry.ID)
+			logger.DebugfContext(context.Context(), "This is an auditor [%s], send the full set of metadata", entry.ID)
 			txRaw, err = c.tx.Bytes()
 			if err != nil {
 				return errors.Wrap(err, "failed marshalling transaction content")
 			}
 		} else {
-			logger.Debugf("This is not an auditor [%s], send the filtered metadata", entry.ID)
+			logger.DebugfContext(context.Context(), "This is not an auditor [%s], send the filtered metadata", entry.ID)
 			txRaw, err = c.tx.Bytes(entry.EID)
 			if err != nil {
 				return errors.Wrap(err, "failed marshalling transaction content")
@@ -482,7 +482,7 @@ func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, ent
 	if err != nil {
 		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
 	}
-	logger.Debugf("received ack from [%s] [%s], checking signature on [%s]",
+	logger.DebugfContext(context.Context(), "received ack from [%s] [%s], checking signature on [%s]",
 		entry.LongTerm, hash.Hashable(sigma).String(),
 		hash.Hashable(txRaw).String())
 
@@ -543,7 +543,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		}
 	}
 	mine.Add(c.tx.TokenService().SigService().AreMe(context.Context(), remainingIds...)...)
-	logger.Debugf("%d/%d ids were mine", mine.Length(), len(allIds))
+	logger.DebugfContext(context.Context(), "%d/%d ids were mine", mine.Length(), len(allIds))
 
 	var distributionListCompressed []distributionListEntry
 	for _, party := range distributionList {
@@ -553,14 +553,14 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		// - extract the corresponding long term identity
 		// If the long term identity has not been added yet, add it to the list.
 		// If the party is me or an auditor, no need to extract the enrollment ID.
-		logger.Debugf("distribute env to [%s]?", party)
+		logger.DebugfContext(context.Context(), "distribute env to [%s]?", party)
 
 		isMe := mine.Contains(party.UniqueID())
 		if !isMe {
 			// check if there is a wallet that contains that identity
 			isMe = c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), party) != nil
 		}
-		logger.Debugf("distribute env to [%s], it is me [%v].", party, isMe)
+		logger.DebugfContext(context.Context(), "distribute env to [%s], it is me [%v].", party, isMe)
 		var longTermIdentity view.Identity
 		var err error
 		// if it is me, no need to resolve, get directly the default identity
@@ -576,7 +576,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 				return nil, errors.Wrapf(err, "cannot resolve long term identity for [%s]", party.UniqueID())
 			}
 		}
-		logger.Debugf("searching for long term identity [%s]", longTermIdentity)
+		logger.DebugfContext(context.Context(), "searching for long term identity [%s]", longTermIdentity)
 		found := false
 		for _, entry := range distributionListCompressed {
 			if longTermIdentity.Equal(entry.LongTerm) {
@@ -585,7 +585,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 			}
 		}
 		if !found {
-			logger.Debugf("adding [%s] to distribution list", party)
+			logger.DebugfContext(context.Context(), "adding [%s] to distribution list", party)
 			eID := ""
 			if !isMe {
 				eID, err = c.tx.TokenService().WalletManager().GetEnrollmentID(context.Context(), party)
@@ -601,14 +601,14 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 				Auditor:  false,
 			})
 		} else {
-			logger.Debugf("skip adding [%s] to distribution list, already added", party)
+			logger.DebugfContext(context.Context(), "skip adding [%s] to distribution list, already added", party)
 		}
 	}
 
 	// check the auditors
 	for _, party := range auditors {
 		isMe := mine.Contains(party.UniqueID())
-		logger.Debugf("distribute env to auditor [%s], it is me [%v].", party, isMe)
+		logger.DebugfContext(context.Context(), "distribute env to auditor [%s], it is me [%v].", party, isMe)
 		var longTermIdentity view.Identity
 		var err error
 		// if it is me, no need to resolve, get directly the default identity
@@ -632,7 +632,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		})
 	}
 
-	logger.Debugf("distributed tx to num parties [%d]", len(distributionListCompressed))
+	logger.DebugfContext(context.Context(), "distributed tx to num parties [%d]", len(distributionListCompressed))
 	return distributionListCompressed, nil
 }
 
@@ -643,7 +643,7 @@ func (c *CollectEndorsementsView) requestBytes() ([]byte, error) {
 func (c *CollectEndorsementsView) getSession(context view.Context, p view.Identity) (view.Session, error) {
 	s, ok := c.sessions[p.UniqueID()]
 	if ok {
-		logger.Debugf("getSession: found session for [%s]", p.UniqueID())
+		logger.DebugfContext(context.Context(), "getSession: found session for [%s]", p.UniqueID())
 		return s, nil
 	}
 	return context.GetSession(context.Initiator(), p)
@@ -731,13 +731,13 @@ func NewEndorseView(tx *Transaction) *EndorseView {
 // 4. It sends back an ack.
 func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	// Process signature requests
-	logger.Debugf("check expected number of requests to sign for txid [%s]", s.tx.ID())
+	logger.DebugfContext(context.Context(), "check expected number of requests to sign for txid [%s]", s.tx.ID())
 	requestsToBeSigned, err := requestsToBeSigned(context.Context(), s.tx.Request())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed collecting requests of signature")
 	}
 
-	logger.Debugf("expect [%d] requests to sign for txid [%s]", len(requestsToBeSigned), s.tx.ID())
+	logger.DebugfContext(context.Context(), "expect [%d] requests to sign for txid [%s]", len(requestsToBeSigned), s.tx.ID())
 
 	session := context.Session()
 	k, err := kvs.CreateCompositeKey("signatureRequest", []string{s.tx.ID()})
@@ -759,7 +759,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 				return nil, errors.Wrap(err, "failed to to store signature request")
 			}
 		} else {
-			logger.Debugf("Receiving signature request...")
+			logger.DebugfContext(context.Context(), "Receiving signature request...")
 			jsonSession := session2.JSON(context)
 			srRaw, err = jsonSession.ReceiveRawWithTimeout(time.Minute)
 			if err != nil {
@@ -784,7 +784,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed signing request")
 		}
-		logger.Debugf("Send back signature [%s][%s]", signatureRequest.Signer, hash.Hashable(sigma))
+		logger.DebugfContext(context.Context(), "Send back signature [%s][%s]", signatureRequest.Signer, hash.Hashable(sigma))
 		err = session.SendWithContext(context.Context(), sigma)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed sending signature back")
@@ -808,7 +808,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed getting identity provider")
 	}
 	defaultIdentity := idProvider.DefaultIdentity()
-	logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(receivedTx.FromRaw), defaultIdentity)
+	logger.DebugfContext(context.Context(), "signing ack response [%s] with identity [%s]", hash.Hashable(receivedTx.FromRaw), defaultIdentity)
 	sigService, err := sig.GetService(context)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting sig service")
@@ -821,7 +821,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to sign ack response")
 	}
-	logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
+	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
 	if err := session.SendWithContext(context.Context(), sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
@@ -839,7 +839,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 }
 
 func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, error) {
-	logger.Debugf("Receive transaction with envelope...")
+	logger.DebugfContext(context.Context(), "Receive transaction with envelope...")
 	// TODO: this might also happen multiple times because of the pseudonym. Avoid this by identity resolution at the sender
 	tx, err := ReceiveTransaction(context)
 	if err != nil {
@@ -847,7 +847,7 @@ func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, er
 	}
 
 	// TODO: compare with the existing transaction
-	logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Processes Fabric Envelope with ID [%s]", tx.ID())
 
 	// Set the envelope
 	request := s.tx.TokenRequest
