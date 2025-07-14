@@ -63,12 +63,12 @@ func (a *Service) Append(ctx context.Context, tx *Transaction) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
-	logger.Debugf("register tx status listener for tx [%s:%s] at network", tx.ID(), tx.Network())
+	logger.DebugfContext(ctx, "register tx status listener for tx [%s:%s] at network", tx.ID(), tx.Network())
 
 	if err := net.AddFinalityListener(tx.Namespace(), tx.ID(), common.NewFinalityListener(logger, a.tmsProvider, a.tmsID, a.ttxStoreService, a.tokensService, a.finalityTracer)); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
-	logger.Debugf("append done for request %s", tx.ID())
+	logger.DebugfContext(ctx, "append done for request %s", tx.ID())
 	return nil
 }
 
