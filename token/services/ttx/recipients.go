@@ -177,7 +177,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 }
 
 func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Context, recipient *Recipient, multiSig bool) (token.Identity, error) {
-	logger.Debugf("request recipient [%s] is not registered", recipient.Identity)
+	logger.DebugfContext(context.Context(), "request recipient [%s] is not registered", recipient.Identity)
 	session, err := session2.NewFromInitiator(context, recipient.Identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session with [%s]", recipient.Identity)
@@ -307,7 +307,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	if len(wallet) == 0 && len(recipientRequest.WalletID) != 0 {
 		wallet = string(recipientRequest.WalletID)
 	}
-	logger.Debugf("Respond request recipient identity using wallet [%s]", wallet)
+	logger.DebugfContext(context.Context(), "Respond request recipient identity using wallet [%s]", wallet)
 	tms := token.GetManagementService(context, token.WithTMSID(recipientRequest.TMSID))
 	if tms == nil {
 		return nil, errors.Errorf("failed getting token management service [%s]", recipientRequest.TMSID)
@@ -397,7 +397,7 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 	if err != nil {
 		return err
 	}
-	logger.Debugf("registering signer for reclaim...")
+	logger.DebugfContext(context.Context(), "registering signer for reclaim...")
 	if err := sigService.RegisterSigner(
 		context.Context(),
 		multisigRecipientData.RecipientData.Identity,
@@ -525,14 +525,14 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		}
 
 		// Update the Endpoint Resolver
-		logger.Debugf("bind [%s] to other [%s]", remoteRecipientData.Identity, f.Other)
+		logger.DebugfContext(context.Context(), "bind [%s] to other [%s]", remoteRecipientData.Identity, f.Other)
 		resolver := endpoint.GetService(context)
 		err = resolver.Bind(context.Context(), f.Other, remoteRecipientData.Identity)
 		if err != nil {
 			return nil, err
 		}
 
-		logger.Debugf("bind me [%s] to [%s]", localRecipientData.Identity, context.Me())
+		logger.DebugfContext(context.Context(), "bind me [%s] to [%s]", localRecipientData.Identity, context.Me())
 		err = resolver.Bind(context.Context(), context.Me(), localRecipientData.Identity)
 		if err != nil {
 			return nil, err

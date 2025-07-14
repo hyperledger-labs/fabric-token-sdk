@@ -67,7 +67,7 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 
 func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, timeout time.Duration) (interface{}, error) {
 
-	logger.Debugf("Listen to finality of [%s]", txID)
+	logger.DebugfContext(ctx.Context(), "Listen to finality of [%s]", txID)
 
 	c := ctx.Context()
 	if timeout != 0 {
@@ -168,15 +168,15 @@ func (f *finalityView) dbFinality(c context.Context, txID string, finalityDB fin
 			return i, errors.Errorf("transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
 		case <-timeout.C:
 			timeout.Stop()
-			logger.Debugf("Got a timeout for finality of [%s], check the status", txID)
+			logger.DebugfContext(c, "Got a timeout for finality of [%s], check the status", txID)
 			vd, _, err := finalityDB.GetStatus(c, txID)
 			if err != nil {
-				logger.Debugf("Is [%s] final? not available yet, wait [err:%s, vc:%d]", txID, err, vd)
+				logger.DebugfContext(c, "Is [%s] final? not available yet, wait [err:%s, vc:%d]", txID, err, vd)
 				break
 			}
 			switch vd {
 			case ttxdb.Confirmed:
-				logger.Debugf("Listen to finality of [%s]. VALID", txID)
+				logger.DebugfContext(c, "Listen to finality of [%s]. VALID", txID)
 
 				return i, nil
 			case ttxdb.Deleted:
