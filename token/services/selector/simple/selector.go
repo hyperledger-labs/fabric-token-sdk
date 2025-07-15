@@ -26,7 +26,7 @@ type Locker interface {
 	Lock(ctx context.Context, id *token2.ID, txID string, reclaim bool) (string, error)
 	// UnlockIDs unlocks the passed IDS. It returns the list of tokens that were not locked in the first place among
 	// those passed.
-	UnlockIDs(ids ...*token2.ID) []*token2.ID
+	UnlockIDs(ctx context.Context, ids ...*token2.ID) []*token2.ID
 	UnlockByTxID(ctx context.Context, txID string)
 	IsLocked(id *token2.ID) bool
 }
@@ -105,8 +105,8 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
-				s.locker.UnlockIDs(toBeSpent...)
-				s.locker.UnlockIDs(toBeCertified...)
+				s.locker.UnlockIDs(ctx, toBeSpent...)
+				s.locker.UnlockIDs(ctx, toBeCertified...)
 				return nil, nil, errors.Wrap(err, "failed to convert quantity")
 			}
 
@@ -140,8 +140,8 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 		}
 
 		// Unlock and check the conditions for a retry
-		s.locker.UnlockIDs(toBeSpent...)
-		s.locker.UnlockIDs(toBeCertified...)
+		s.locker.UnlockIDs(ctx, toBeSpent...)
+		s.locker.UnlockIDs(ctx, toBeCertified...)
 
 		if target.Cmp(potentialSumWithLocked) <= 0 && potentialSumWithLocked.Cmp(sum) != 0 {
 			// funds are potentially enough but they are locked

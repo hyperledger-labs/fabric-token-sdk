@@ -35,7 +35,7 @@ type lockEntry struct {
 	LastAccess time.Time
 }
 
-func (l *lockEntry) String() string {
+func (l lockEntry) String() string {
 	return fmt.Sprintf("[[%s] since [%s], last access [%s]]", l.TxID, l.Created, l.LastAccess)
 }
 
@@ -106,11 +106,11 @@ func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim b
 
 // UnlockIDs unlocks the passed IDS. It returns the list of tokens that were not locked in the first place among
 // those passed.
-func (d *locker) UnlockIDs(ids ...*token2.ID) []*token2.ID {
+func (d *locker) UnlockIDs(ctx context.Context, ids ...*token2.ID) []*token2.ID {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	logger.Debugf("unlocking tokens [%v]", ids)
+	logger.DebugfContext(ctx, "unlocking tokens [%v]", ids)
 	var notFound []*token2.ID
 	for _, id := range ids {
 		k := *id
@@ -120,7 +120,7 @@ func (d *locker) UnlockIDs(ids ...*token2.ID) []*token2.ID {
 			logger.Warnf("unlocking [%s] hold by no one, skipping [%s]", id, entry)
 			continue
 		}
-		logger.Debugf("unlocking [%s] hold by [%s]", id, entry)
+		logger.DebugfContext(ctx, "unlocking [%s] hold by [%s]", id, entry)
 		delete(d.locked, k)
 	}
 	return notFound

@@ -119,7 +119,7 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params driver.Qu
 			return err
 		}
 		r.Amount = big.NewInt(amount)
-		logger.Debugf("movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
+		logger.DebugfContext(ctx, "movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
 		return nil
 	})
 	return iterators.ReadAllPointers(it)

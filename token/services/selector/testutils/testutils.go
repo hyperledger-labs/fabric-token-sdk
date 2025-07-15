@@ -169,8 +169,8 @@ func (n *NoLock) Lock(ctx context.Context, id *token2.ID, txID string, reclaim b
 	return "", nil
 }
 
-func (n *NoLock) UnlockIDs(id ...*token2.ID) []*token2.ID {
-	return id
+func (n *NoLock) UnlockIDs(ctx context.Context, ids ...*token2.ID) []*token2.ID {
+	return ids
 }
 
 func (n *NoLock) UnlockByTxID(ctx context.Context, txID string) {
