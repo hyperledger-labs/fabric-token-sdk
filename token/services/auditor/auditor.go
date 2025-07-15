@@ -89,7 +89,7 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 	eids = append(eids, record.Inputs.EnrollmentIDs()...)
 	eids = append(eids, record.Outputs.EnrollmentIDs()...)
 	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks", tx.ID())
-	if err := a.auditDB.AcquireLocks(string(request.Anchor), eids...); err != nil {
+	if err := a.auditDB.AcquireLocks(ctx, string(request.Anchor), eids...); err != nil {
 		return nil, nil, err
 	}
 	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks done", tx.ID())
@@ -100,7 +100,7 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 // Append adds the passed transaction to the auditor database.
 // It also releases the locks acquired by Audit.
 func (a *Service) Append(ctx context.Context, tx Transaction) error {
-	defer a.Release(tx)
+	defer a.Release(ctx, tx)
 
 	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
 	if err != nil {
@@ -126,8 +126,8 @@ func (a *Service) Append(ctx context.Context, tx Transaction) error {
 }
 
 // Release releases the lock acquired of the passed transaction.
-func (a *Service) Release(tx Transaction) {
-	a.auditDB.ReleaseLocks(string(tx.Request().Anchor))
+func (a *Service) Release(ctx context.Context, tx Transaction) {
+	a.auditDB.ReleaseLocks(ctx, string(tx.Request().Anchor))
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status

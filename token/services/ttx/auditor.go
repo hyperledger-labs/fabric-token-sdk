@@ -65,8 +65,8 @@ func (a *TxAuditor) Audit(ctx context.Context, tx *Transaction) (*token.InputStr
 }
 
 // Release unlocks the passed enrollment IDs.
-func (a *TxAuditor) Release(tx *Transaction) {
-	a.auditor.Release(tx)
+func (a *TxAuditor) Release(ctx context.Context, tx *Transaction) {
+	a.auditor.Release(ctx, tx)
 }
 
 // Transactions returns an iterator of transaction records filtered by the given params.

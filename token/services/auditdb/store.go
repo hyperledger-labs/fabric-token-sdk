@@ -257,7 +257,7 @@ func (d *StoreService) GetTokenRequest(ctx context.Context, txID string) ([]byte
 
 // AcquireLocks acquires locks for the passed anchor and enrollment ids.
 // This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
-func (d *StoreService) AcquireLocks(anchor string, eIDs ...string) error {
+func (d *StoreService) AcquireLocks(ctx context.Context, anchor string, eIDs ...string) error {
 	// This implementation allows concurrent calls to AcquireLocks such that if two
 	// or more calls involve non-overlapping enrollment IDs, both calls will succeed.
 	// To achieve this, we first remove any duplicates from the list of enrollment IDs.
@@ -267,37 +267,36 @@ func (d *StoreService) AcquireLocks(anchor string, eIDs ...string) error {
 	// and another tries to lock (Bob, Alice).
 	// Without sorting, these two calls could deadlock. Sorting prevents this issue.
 	dedup := deduplicateAndSort(eIDs)
-	logger.Debugf("Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
+	logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
 	d.eIDsLocks.LoadOrStore(anchor, dedup)
 	for _, id := range dedup {
 		lock, _ := d.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
 		lock.(*sync.RWMutex).Lock()
-		logger.Debugf("Acquire locks for [%s:%v] enrollment id done", anchor, id)
+		logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment id done", anchor, id)
 	}
-	logger.Debugf("Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
+	logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
 	return nil
 }
 
 // ReleaseLocks releases the locks associated to the passed anchor
-func (d *StoreService) ReleaseLocks(anchor string) {
+func (d *StoreService) ReleaseLocks(ctx context.Context, anchor string) {
 	dedupBoxed, ok := d.eIDsLocks.LoadAndDelete(anchor)
 	if !ok {
-		logger.Debugf("nothing to release for [%s] ", anchor)
+		logger.DebugfContext(ctx, "nothing to release for [%s] ", anchor)
 		return
 	}
 	dedup := dedupBoxed.([]string)
-	logger.Debugf("Release locks for [%s:%v] enrollment ids", anchor, dedup)
+	logger.DebugfContext(ctx, "Release locks for [%s:%v] enrollment ids", anchor, dedup)
 	for _, id := range dedup {
 		lock, ok := d.eIDsLocks.Load(id)
 		if !ok {
 			logger.Warnf("unlock for enrollment id [%d:%s] not possible, lock never acquired", anchor, id)
 			continue
 		}
-		logger.Debugf("unlock lock for [%s:%v] enrollment id done", anchor, id)
+		logger.DebugfContext(ctx, "unlock lock for [%s:%v] enrollment id done", anchor, id)
 		lock.(*sync.RWMutex).Unlock()
 	}
-	logger.Debugf("Release locks for [%s:%v] enrollment ids...done", anchor, dedup)
-
+	logger.DebugfContext(ctx, "Release locks for [%s:%v] enrollment ids...done", anchor, dedup)
 }
 
 // deduplicateAndSort removes duplicate entries from a slice and sort it
