@@ -96,7 +96,7 @@ type MovementRecord struct {
 	Status TxStatus
 }
 
-func (r *MovementRecord) String() string {
+func (r MovementRecord) String() string {
 	return fmt.Sprintf("[%s:%s:%s:%d:%d]", r.TxID, r.EnrollmentID, r.TokenType, r.Amount.Int64(), r.Status)
 }
 
@@ -130,7 +130,7 @@ type TransactionRecord struct {
 	PublicMetadata map[string][]byte
 }
 
-func (t *TransactionRecord) String() string {
+func (t TransactionRecord) String() string {
 	var s strings.Builder
 	s.WriteString("{")
 	s.WriteString(t.TxID)

@@ -8,6 +8,7 @@ package upgrade
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"slices"
 
@@ -36,7 +37,7 @@ type Deserializer interface {
 //go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
 
 type IdentityProvider interface {
-	GetSigner(id driver.Identity) (driver.Signer, error)
+	GetSigner(ctx context.Context, id driver.Identity) (driver.Signer, error)
 }
 
 type Service struct {
@@ -113,7 +114,7 @@ func (s *Service) GenUpgradeProof(ch driver.TokensUpgradeChallenge, ledgerTokens
 	signatures := make([]Signature, len(tokens))
 	for i, token := range tokens {
 		// get a signer for each token
-		signer, err := s.IdentityProvider.GetSigner(token.Owner)
+		signer, err := s.IdentityProvider.GetSigner(context.Background(), token.Owner)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get identity signer")
 		}

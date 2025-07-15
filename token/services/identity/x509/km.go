@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -23,7 +24,7 @@ const (
 var logger = logging.MustGetLogger()
 
 type SignerService interface {
-	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
+	RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
 }
 
 type KeyManager struct {
@@ -93,7 +94,7 @@ func newSigningKeyManager(conf *crypto.Config, signerService SignerService, bccs
 	}
 	if signerService != nil {
 		logger.Debugf("register signer [%s]", driver.Identity(idRaw))
-		err = signerService.RegisterSigner(idRaw, sID, sID, nil)
+		err = signerService.RegisterSigner(context.Background(), idRaw, sID, sID, nil)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed registering x509 signer")
 		}
@@ -129,7 +130,7 @@ func (p *KeyManager) IsRemote() bool {
 	return p.sID == nil
 }
 
-func (p *KeyManager) Identity([]byte) (driver.Identity, []byte, error) {
+func (p *KeyManager) Identity(context.Context, []byte) (driver.Identity, []byte, error) {
 	revocationHandle, err := crypto.GetRevocationHandle(p.id)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting revocation handle")

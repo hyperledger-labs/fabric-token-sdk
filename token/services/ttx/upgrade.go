@@ -169,7 +169,7 @@ func (r *UpgradeTokensInitiatorView) getRecipientData(context view.Context) (*to
 		logger.Errorf("failed to get wallet [%s]", r.Wallet)
 		return nil, nil, errors.Errorf("wallet [%s:%s] not found", r.Wallet, r.TMSID)
 	}
-	recipientData, err := w.GetRecipientData()
+	recipientData, err := w.GetRecipientData(context.Context())
 	if err != nil {
 		logger.Errorf("failed to get recipient data: [%s]", err)
 		return nil, nil, errors.Wrapf(err, "failed to get recipient data")
@@ -233,15 +233,15 @@ func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, er
 	}
 
 	// register recipient data
-	if err := tms.WalletManager().RegisterRecipientIdentity(&request.RecipientData); err != nil {
+	if err := tms.WalletManager().RegisterRecipientIdentity(context.Context(), &request.RecipientData); err != nil {
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}
 
 	// Update the Endpoint Resolver
 	caller := context.Session().Info().Caller
-	logger.Debugf("update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
+	logger.DebugfContext(context.Context(), "update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
 	if err := endpoint.GetService(context).Bind(context.Context(), caller, request.RecipientData.Identity); err != nil {
-		logger.Debugf("failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
+		logger.DebugfContext(context.Context(), "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 	}
 

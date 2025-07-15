@@ -44,9 +44,9 @@ func newTestSuite(backend string) (*token.TestSuite, *token.ReplicaSelector) {
 			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog", Aries: true},
 			ReplicationOpts: opts,
 			CommType:        fsc.LibP2P,
-			// FSCLogSpec:      "token-sdk=debug:info",
-			SDKs:       []nodepkg.SDK{sdks[backend]},
-			Monitoring: true,
+			FSCLogSpec:      "token-sdk=debug:info",
+			SDKs:            []nodepkg.SDK{sdks[backend]},
+			Monitoring:      true,
 		},
 	))
 	return ts, selector

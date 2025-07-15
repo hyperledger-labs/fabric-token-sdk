@@ -266,11 +266,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 
 		for i := 0; i < 5; i++ {
 			// Select the request amount of tokens of the given type
-			ids, sum, err = selector.Select(
-				ttx.GetWallet(context, t.Wallet),
-				amount.Decimal(),
-				t.Type,
-			)
+			ids, sum, err = selector.Select(context.Context(), ttx.GetWallet(context, t.Wallet), amount.Decimal(), t.Type)
 			// If an error occurs and retry has been asked, then wait first a bit
 			if err != nil && t.Retry {
 				time.Sleep(10 * time.Second)
@@ -646,7 +642,7 @@ func (t *MaliciousTransferView) Call(context view.Context) (txID interface{}, er
 		tx2, err = ttx.NewTransaction(context, nil, txOpts...)
 	}
 	assert.NoError(err, "failed creating transaction")
-	self, err := senderWallet.GetRecipientIdentity()
+	self, err := senderWallet.GetRecipientIdentity(context.Context())
 	assert.NoError(err, "failed create recipient identity")
 	err = tx2.Transfer(
 		senderWallet,

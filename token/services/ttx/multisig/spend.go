@@ -26,7 +26,7 @@ type SpendRequest struct {
 }
 
 func ReceiveSpendRequest(context view.Context, opts ...ttx.TxOption) (*SpendRequest, error) {
-	logger.Debugf("receive a new spendRequest...")
+	logger.DebugfContext(context.Context(), "receive a new spendRequest...")
 	requestBoxed, err := context.RunView(NewReceiveSpendRequestView(), view.WithSameContext())
 	if err != nil {
 		return nil, err
@@ -42,6 +42,13 @@ func (r *SpendRequest) Bytes() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (r *SpendRequest) String() string {
+	if r.Token == nil {
+		return ""
+	}
+	return r.Token.String()
+}
+
 // ReceiveSpendRequestView receives a SpendRequest from the context's session.
 type ReceiveSpendRequestView struct{}
 
@@ -54,7 +61,7 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	jsonSession := session.JSON(context)
 	err := jsonSession.ReceiveWithTimeout(tx, time.Minute*4)
 	if err != nil {
-		logger.ErrorfContext(context.Context(), "failed receiving request: %v", err)
+		logger.ErrorfContext(context.Context(), "failed receiving request: %s", err)
 	}
 
 	return tx, nil
@@ -120,7 +127,7 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 
 	answerChannel := make(chan *answer, len(c.parties))
 	logger.DebugfContext(context.Context(), "Notify %d parties about request", len(c.parties))
-	logger.Debugf("Request [%v]", len(c.parties), request)
+	logger.DebugfContext(context.Context(), "Request [%v]", len(c.parties), request)
 	counter := 0
 	tms := token2.GetManagementService(context, token2.WithTMSID(c.options.TMSID()))
 	if tms == nil {
@@ -128,10 +135,10 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 	}
 	areMe := tms.SigService().AreMe(context.Context(), c.parties...)
 	for _, party := range c.parties {
-		logger.Debugf("notify party [%s] about request...", party)
+		logger.DebugfContext(context.Context(), "notify party [%s] about request...", party)
 		if slices.Contains(areMe, party.UniqueID()) {
 			// it is me, skip
-			logger.Debugf("notify party [%s] about request, it is me, skipping...", party)
+			logger.DebugfContext(context.Context(), "notify party [%s] about request, it is me, skipping...", party)
 			continue
 		}
 		go c.collectSpendRequestAnswers(context, party, requestRaw, answerChannel)
@@ -163,7 +170,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 	party view.Identity,
 	raw []byte,
 	answerChan chan *answer) {
-	defer logger.Debugf("received response for from [%v]", party)
+	defer logger.DebugfContext(context.Context(), "received response for from [%v]", party)
 
 	backendSession, err := context.GetSession(c, party, context.Initiator())
 	if err != nil {
@@ -176,7 +183,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 	s := session.NewFromSession(context, backendSession)
 
 	// Wait to receive a Transaction back
-	logger.Debugf("send request to [%v]", party)
+	logger.DebugfContext(context.Context(), "send request to [%v]", party)
 	err = s.SendRaw(context.Context(), raw)
 	if err != nil {
 		answerChan <- &answer{
@@ -193,7 +200,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 		}
 		return
 	}
-	logger.Debugf("received response from [%v]: [%v]", party, response.Err)
+	logger.DebugfContext(context.Context(), "received response from [%v]: [%v]", party, response.Err)
 
 	answerChan <- &answer{response: response, party: party}
 }
@@ -225,26 +232,26 @@ func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrap(err, "failed to send response")
 	}
 
-	logger.Debugf("endorse spend response sent")
+	logger.DebugfContext(context.Context(), "endorse spend response sent")
 	// At some point, the recipient receives the token transaction that in the meantime has been assembled
 	tx, err := ttx.ReceiveTransaction(context)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to receive transaction")
 	}
-	logger.Debugf("multisig tx received with id [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "multisig tx received with id [%s]", tx.ID())
 
 	// TODO: check tx matches request
 
 	// If everything is fine, the recipient accepts and sends back her signature.
 	// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
 	// This depends on the driver implementation.
-	logger.Debugf("endorse multisig tx received with id [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "endorse multisig tx received with id [%s]", tx.ID())
 	_, err = context.RunView(ttx.NewEndorseView(tx))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to accept transaction")
 	}
 
-	logger.Debugf("endorse multisig tx received with id [%s] done", tx.ID())
+	logger.DebugfContext(context.Context(), "endorse multisig tx received with id [%s] done", tx.ID())
 
 	return tx, nil
 }

@@ -120,7 +120,7 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 	return func() {
 		noWaitTimeout := 0 // to not wait for the container to exit gracefully
 		if err := cli.ContainerStop(ctx, resp.ID, container.StopOptions{Timeout: &noWaitTimeout}); err != nil {
-			logger.Errorf("failed to terminate hashicorp/vault [%s][%s]", err, debug.Stack())
+			logger.Errorf("failed to terminate hashicorp/vault [%s][%s]", err, string(debug.Stack()))
 		}
 		fmt.Println("Success")
 	}, vaultURL, token

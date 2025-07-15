@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/IBM/idemix"
@@ -29,7 +30,7 @@ type (
 )
 
 type SignerService interface {
-	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
+	RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
 }
 
 type KeyManager struct {
@@ -169,7 +170,8 @@ func NewKeyManager(conf *crypto2.Config, signerService SignerService, sigType bc
 	}, nil
 }
 
-func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error) {
+func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
+	logger.DebugfContext(ctx, "get user secret key")
 	// Load the user key
 	userKey, err := p.Csp.GetKey(p.userKeySKI)
 	if err != nil {
@@ -177,6 +179,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	// Derive nymPublicKey
+	logger.DebugfContext(ctx, "derive nym")
 	nymKey, err := p.Csp.KeyDeriv(
 		userKey,
 		&bccsp.IdemixNymKeyDerivationOpts{
@@ -197,6 +200,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	sigType := p.sigType
 	var signerMetadata *bccsp.IdemixSignerMetadata
 	if len(auditInfo) != 0 {
+		logger.DebugfContext(ctx, "deserialize passed audit info")
 		ai, err := p.DeserializeAuditInfo(auditInfo)
 		if err != nil {
 			return nil, nil, err
@@ -208,6 +212,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	// Create the cryptographic evidence that this identity is valid
+	logger.DebugfContext(ctx, "create crypto evidence for the identity")
 	sigOpts := &bccsp.IdemixSignerOpts{
 		Credential: p.conf.Signer.Cred,
 		Nym:        nymKey,
@@ -234,6 +239,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	// Set up default signer
+	logger.DebugfContext(ctx, "setup default signer")
 	id, err := crypto2.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to create identity")
@@ -251,11 +257,13 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	}
 
 	if p.SignerService != nil {
-		if err := p.SignerService.RegisterSigner(raw, sID, sID, nil); err != nil {
+		logger.DebugfContext(ctx, "register signer for identity")
+		if err := p.SignerService.RegisterSigner(ctx, raw, sID, sID, nil); err != nil {
 			return nil, nil, errors.WithMessage(err, "failed to register signer")
 		}
 	}
 
+	logger.DebugfContext(ctx, "prepare audit info")
 	var infoRaw []byte
 	switch sigType {
 	case bccsp.Standard:
@@ -273,7 +281,7 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 				[]byte(rh),
 			},
 		}
-		logger.Debugf("new idemix identity generated with [%s:%s]", enrollmentID, hash.Hashable(rh))
+		logger.DebugfContext(ctx, "new idemix identity generated with [%s:%s]", enrollmentID, hash.Hashable(rh))
 		infoRaw, err = auditInfo.Bytes()
 		if err != nil {
 			return nil, nil, errors.WithMessage(err, "failed to serialize auditInfo")
@@ -281,6 +289,8 @@ func (p *KeyManager) Identity(auditInfo []byte) (driver.Identity, []byte, error)
 	default:
 		return nil, nil, errors.Errorf("unsupported signature type [%d]", sigType)
 	}
+	logger.DebugfContext(ctx, "prepare audit info done")
+
 	return raw, infoRaw, nil
 }
 

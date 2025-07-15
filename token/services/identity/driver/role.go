@@ -47,7 +47,7 @@ type IdentityInfo interface {
 	Remote() bool
 	// Get returns the identity and it is audit info.
 	// Get might return a different identity at each call depending on the implementation.
-	Get() (Identity, []byte, error)
+	Get(ctx context.Context) (Identity, []byte, error)
 	// Anonymous is true if this identity supports anonymity
 	Anonymous() bool
 }
@@ -70,7 +70,7 @@ type Role interface {
 	// The index can be an identity or a label (string).
 	MapToIdentity(ctx context.Context, v WalletLookupID) (Identity, string, error)
 	// GetIdentityInfo returns the long-term identity info associated to the passed id
-	GetIdentityInfo(id string) (IdentityInfo, error)
+	GetIdentityInfo(ctx context.Context, id string) (IdentityInfo, error)
 	// RegisterIdentity registers the given identity
 	RegisterIdentity(ctx context.Context, config IdentityConfiguration) error
 	// IdentityIDs returns the identifiers contained in this role

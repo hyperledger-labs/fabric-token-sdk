@@ -41,7 +41,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	// extract inputs and outputs
 	inputs, outputs, err := auditor.Audit(context.Context(), tx)
 	assert.NoError(err, "failed retrieving inputs and outputs")
-	defer auditor.Release(tx)
+	defer auditor.Release(context.Context(), tx)
 
 	// For example, all payments of an amount less than or equal to payment limit is valid
 	eIDs := inputs.EnrollmentIDs()

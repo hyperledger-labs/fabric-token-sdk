@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
@@ -27,6 +26,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -88,7 +88,7 @@ func (db *TokenStore) StoreToken(ctx context.Context, tr driver.TokenRecord, own
 
 // DeleteTokens deletes multiple tokens at the same time (when spent, invalid or expired)
 func (db *TokenStore) DeleteTokens(ctx context.Context, deletedBy string, ids ...*token.ID) error {
-	logger.Debugf("delete tokens [%s][%v]", deletedBy, ids)
+	logger.DebugfContext(ctx, "delete tokens [%s][%v]", deletedBy, ids)
 	if len(ids) == 0 {
 		return nil
 	}
@@ -117,6 +117,7 @@ func (db *TokenStore) IsMine(ctx context.Context, txID string, index uint64) (bo
 
 	id, err := common.QueryUnique[string](db.readDB, query, args...)
 
+	logger.DebugfContext(ctx, "token [%s:%d] is mine [%s]", txID, index, id)
 	return id == txID, err
 }
 
@@ -191,7 +192,7 @@ func (db *TokenStore) UnsupportedTokensIteratorBy(ctx context.Context, walletID 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get unspendable token formats")
 	}
-	logger.Debugf("after filtering we have [%v]", includeFormats)
+	logger.DebugfContext(ctx, "after filtering we have [%v]", includeFormats)
 
 	// now, select the tokens with the list of ledger tokens
 	return db.queryLedgerTokens(ctx, driver.QueryTokenDetailsParams{
@@ -247,7 +248,7 @@ func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetails
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
 func (db *TokenStore) ListUnspentTokensBy(ctx context.Context, walletID string, typ token.Type) (*token.UnspentTokens, error) {
-	logger.Debugf("list unspent token by [%s,%s]", walletID, typ)
+	logger.DebugfContext(ctx, "list unspent token by [%s,%s]", walletID, typ)
 	it, err := db.UnspentTokensIteratorBy(context.TODO(), walletID, typ)
 	if err != nil {
 		return nil, err
@@ -261,7 +262,7 @@ func (db *TokenStore) ListUnspentTokensBy(ctx context.Context, walletID string, 
 
 // ListUnspentTokens returns the list of unspent tokens
 func (db *TokenStore) ListUnspentTokens(ctx context.Context) (*token.UnspentTokens, error) {
-	logger.Debugf("list unspent tokens...")
+	logger.DebugfContext(ctx, "list unspent tokens...")
 	it, err := db.UnspentTokensIterator(ctx)
 	if err != nil {
 		return nil, err
@@ -401,7 +402,7 @@ func (db *TokenStore) GetAllTokenInfos(ctx context.Context, ids []*token.ID) ([]
 }
 
 func (db *TokenStore) getLedgerToken(ctx context.Context, ids []*token.ID) ([][]byte, error) {
-	logger.Debugf("retrieve ledger tokens for [%s]", ids)
+	logger.DebugfContext(ctx, "retrieve ledger tokens for [%s]", ids)
 	if len(ids) == 0 {
 		return [][]byte{}, nil
 	}
@@ -431,7 +432,7 @@ func (db *TokenStore) getLedgerToken(ctx context.Context, ids []*token.ID) ([][]
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	logger.Debugf("retrieve ledger tokens for [%s], retrieved [%d] tokens", ids, len(tokenMap))
+	logger.DebugfContext(ctx, "retrieve ledger tokens for [%s], retrieved [%d] tokens", ids, len(tokenMap))
 
 	tokens := make([][]byte, len(ids))
 	for i, id := range ids {
@@ -530,7 +531,7 @@ func (db *TokenStore) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*to
 					Type:     tok.Type,
 					Quantity: tok.Quantity,
 				}
-				logger.Debugf("set token at location [%s:%s]-[%d]", tok.Type, tok.Quantity, j)
+				logger.DebugfContext(ctx, "set token at location [%s:%s]-[%d]", tok.Type, tok.Quantity, j)
 				found = true
 				break
 			}
@@ -545,7 +546,7 @@ func (db *TokenStore) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*to
 		return nil, err
 	}
 
-	logger.Debugf("found [%d] tokens, expected [%d]", counter, len(inputs))
+	logger.DebugfContext(ctx, "found [%d] tokens, expected [%d]", counter, len(inputs))
 	if err = rows.Err(); err != nil {
 		return tokens, err
 	}
@@ -638,7 +639,7 @@ func (db *TokenStore) WhoDeletedTokens(ctx context.Context, inputs ...*token.ID)
 		}
 		counter++
 	}
-	logger.Debugf("found [%d] records, expected [%d]", counter, len(inputs))
+	logger.DebugfContext(ctx, "found [%d] records, expected [%d]", counter, len(inputs))
 	if err = rows.Err(); err != nil {
 		return nil, isSpent, err
 	}
@@ -673,7 +674,7 @@ func (db *TokenStore) StorePublicParams(ctx context.Context, raw []byte) error {
 	rawHash := hash.Hashable(raw).Raw()
 
 	if pps, err := db.PublicParamsByHash(ctx, rawHash); err == nil && len(pps) > 0 {
-		logger.Debugf("public params [%s] already in the database", logging.Base64(rawHash))
+		logger.DebugfContext(ctx, "public params [%s] already in the database", logging.Base64(rawHash))
 		// no need to update the public parameters
 		return nil
 	}
@@ -682,7 +683,7 @@ func (db *TokenStore) StorePublicParams(ctx context.Context, raw []byte) error {
 		Fields("raw", "raw_hash", "stored_at").
 		Row(raw, rawHash, time.Now().UTC()).
 		Format()
-	logger.Debugf(query, fmt.Sprintf("store public parameters (%d bytes), hash [%s]", len(raw), logging.Base64(rawHash)))
+	logger.DebugfContext(ctx, query, fmt.Sprintf("store public parameters (%d bytes), hash [%s]", len(raw), logging.Base64(rawHash)))
 	_, err := db.writeDB.ExecContext(ctx, query, args...)
 	return err
 }
@@ -914,7 +915,7 @@ func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID stri
 	// read the types from the query result and remove discard those in db.getSupportedTokenFormats()
 
 	supported := collections.NewSet(db.getSupportedTokenFormats()...)
-	logger.Debugf("supported token formats are [%v]", supported)
+	logger.DebugfContext(ctx, "supported token formats are [%v]", supported)
 
 	all := common.NewIterator(rows, func(f *token.Format) error { return rows.Scan(f) })
 	unsupported := iterators.Filter(all, func(f *token.Format) bool { return !supported.Contains(*f) })

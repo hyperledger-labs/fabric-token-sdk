@@ -43,18 +43,18 @@ func RunViewWithTimeout(ctx view.Context, v view.View, timeout time.Duration, op
 func RunView(logger logging.Logger, context view.Context, view view.View, opts ...view.RunViewOption) {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Debugf("panic in RunView: %v", r)
+			logger.DebugfContext(context.Context(), "panic in RunView: %v", r)
 		}
 	}()
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				logger.Debugf("panic in RunView: %v", r)
+				logger.DebugfContext(context.Context(), "panic in RunView: %v", r)
 			}
 		}()
 		_, err := context.RunView(view, opts...)
 		if err != nil {
-			logger.Errorf("failed to run view: %s", err)
+			logger.ErrorfContext(context.Context(), "failed to run view: %s", err)
 		}
 	}()
 }

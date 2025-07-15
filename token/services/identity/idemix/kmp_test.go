@@ -7,10 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
 	"testing"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
@@ -58,6 +60,7 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 		&mockConfig{},
 		0,
 		false,
+		&disabled.Provider{},
 	)
 	assert.NotNil(t, kmp)
 	idConfig := &token.IdentityConfiguration{
@@ -102,7 +105,7 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 }
 
 func signAndVerify(t *testing.T, km membership.KeyManager) {
-	id, _, err := km.Identity(nil)
+	id, _, err := km.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 	signer, err := km.DeserializeSigner(id)
 	assert.NoError(t, err)

@@ -116,11 +116,11 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	defer func() {
 		if e := recover(); e != nil {
 			span.RecordError(fmt.Errorf("recovered from panic: %v", e))
-			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
+			logger.DebugfContext(ctx, "failed finality update for tx [%s]: [%s]", txID, e)
 			if err := t.flm.AddFinalityListener(txID, t.namespace, t.root); err != nil {
 				panic(err)
 			}
-			logger.Debugf("added finality listener for tx [%s]...done", txID)
+			logger.DebugfContext(ctx, "added finality listener for tx [%s]...done", txID)
 		}
 	}()
 
@@ -136,12 +136,11 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	}
 
 	// Fetch the token request hash. Retry in case some other replica committed it shortly before
-	span.AddEvent("fetch_request_hash")
+	logger.DebugfContext(ctx, "fetch token request hash")
 	var tokenRequestHash *driver2.VaultRead
 	var retries int
 	for tokenRequestHash, err = qe.GetState(ctx, t.namespace, key); err == nil && (tokenRequestHash == nil || len(tokenRequestHash.Raw) == 0) && retries < t.maxRetries; tokenRequestHash, err = qe.GetState(ctx, t.namespace, key) {
-		span.AddEvent("retry_fetch_request_hash")
-		logger.Debugf("did not find token request [%s]. retrying...", txID)
+		logger.DebugfContext(ctx, "did not find token request [%s]. retrying...", txID)
 		retries++
 		time.Sleep(t.retryWaitDuration)
 	}
@@ -151,6 +150,6 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	if err != nil {
 		panic(fmt.Sprintf("can't get state [%s][%s]", txID, key))
 	}
-	span.AddEvent("call_root_listener")
+	logger.DebugfContext(ctx, "fetch token request hash done, emit event")
 	t.root.OnStatus(newCtx, txID, status, message, tokenRequestHash.Raw)
 }

@@ -68,7 +68,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 
 	tokenIDs := make([]*token2.ID, 0)
 	for i, transfer := range metadata.Transfers {
-		s.Logger.Debugf("[%s] transfer action [%d] contains [%d] inputs", anchor, i, len(transfer.Inputs))
+		s.Logger.DebugfContext(ctx, "[%s] transfer action [%d] contains [%d] inputs", anchor, i, len(transfer.Inputs))
 		tokenIDs = append(tokenIDs, transfer.TokenIDs()...)
 	}
 
@@ -81,7 +81,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	inputTokens := make([][]*token.Token, len(metadata.Transfers))
 	for i, transfer := range transfers {
 		if err := transfer.Validate(); err != nil {
-			s.Logger.ErrorfContext(ctx, "failed to validate transfer: %v", err)
+			s.Logger.ErrorfContext(ctx, "failed to validate transfer: %s", err)
 			return errors.Wrapf(err, "failed to validate transfer")
 		}
 		inputTokens[i] = make([]*token.Token, len(transfer.Inputs))

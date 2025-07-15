@@ -15,7 +15,6 @@ import (
 	"sync"
 
 	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	logging2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -30,6 +29,8 @@ const (
 	MaxPriority = -1 // smaller numbers, higher priority
 )
 
+var logger = logging.MustGetLogger()
+
 type KeyManagerProvider interface {
 	Get(identityConfig *driver.IdentityConfiguration) (KeyManager, error)
 }
@@ -40,7 +41,7 @@ type KeyManager interface {
 	IsRemote() bool
 	Anonymous() bool
 	IdentityType() identity.Type
-	Identity([]byte) (driver.Identity, []byte, error)
+	Identity(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error)
 }
 
 type LocalIdentityWithPriority struct {
@@ -121,10 +122,14 @@ func (l *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
 	defer l.localIdentitiesMutex.RUnlock()
 
 	for _, label := range []string{string(id), id.String()} {
-		l.logger.Debugf("get local identity by label [%s]", label)
+		l.logger.Debugf("get local identity by label [%s]", hash.Hashable(label))
 		r := l.getLocalIdentity(label)
 		if r == nil {
-			l.logger.Debugf("local identity not found for label [%s][%v]", logging2.Keys(l.localIdentitiesByName), label)
+			l.logger.Debugf(
+				"local identity not found for label [%s] [%v]",
+				logging.Keys(l.localIdentitiesByName),
+				logging.Printable(label),
+			)
 			continue
 		}
 		return r.Name, nil
@@ -148,8 +153,8 @@ func (l *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (idriv
 	if localIdentity == nil {
 		return nil, errors2.Errorf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
 	}
-	return NewIdentityInfo(localIdentity, func() (driver.Identity, []byte, error) {
-		return localIdentity.GetIdentity(auditInfo)
+	return NewIdentityInfo(localIdentity, func(ctx context.Context) (driver.Identity, []byte, error) {
+		return localIdentity.GetIdentity(ctx, auditInfo)
 	}), nil
 }
 
@@ -395,11 +400,11 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 	} else {
 		var auditInfo []byte
 		var err error
-		identity, auditInfo, err = typedIdentityInfo.Get(nil)
+		identity, auditInfo, err = typedIdentityInfo.Get(context.Background(), nil)
 		if err != nil {
 			return errors2.WithMessagef(err, "failed to get identity")
 		}
-		getIdentity = func([]byte) (driver.Identity, []byte, error) {
+		getIdentity = func(context.Context, []byte) (driver.Identity, []byte, error) {
 			return identity, auditInfo, nil
 		}
 	}
@@ -497,7 +502,7 @@ func (l *LocalMembership) storedIdentityConfigurations(ctx context.Context) ([]i
 }
 
 type TypedIdentityInfo struct {
-	GetIdentity  func([]byte) (driver.Identity, []byte, error)
+	GetIdentity  func(context.Context, []byte) (driver.Identity, []byte, error)
 	IdentityType identity.Type
 
 	EnrollmentID     string
@@ -506,30 +511,35 @@ type TypedIdentityInfo struct {
 	BinderService    idriver.BinderService
 }
 
-func (i *TypedIdentityInfo) Get(auditInfo []byte) (driver.Identity, []byte, error) {
-	ctx := context.Background()
+func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
 	// get the identity
-	id, ai, err := i.GetIdentity(auditInfo)
+	logger.DebugfContext(ctx, "fetch identity")
+
+	id, ai, err := i.GetIdentity(ctx, auditInfo)
 	if err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID)
 	}
 	// register the audit info
-	if err := i.IdentityProvider.RegisterAuditInfo(id, ai); err != nil {
+	logger.DebugfContext(ctx, "register audit info")
+	if err := i.IdentityProvider.RegisterAuditInfo(ctx, id, ai); err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 	}
 	// bind the identity to the default FSC node identity
 	if i.BinderService != nil {
+		logger.DebugfContext(ctx, "bind to root identity")
 		if err := i.BinderService.Bind(ctx, i.RootIdentity, id, false); err != nil {
 			return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
 		}
 	}
 	// wrap the backend identity, and bind it
 	if len(i.IdentityType) != 0 {
+		logger.DebugfContext(ctx, "wrap and bind as [%s]", i.IdentityType)
 		typedIdentity, err := identity.WrapWithType(i.IdentityType, id)
 		if err != nil {
 			return nil, nil, errors2.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
 		}
 		if i.BinderService != nil {
+			logger.DebugfContext(ctx, "bind wrapped")
 			if err := i.BinderService.Bind(ctx, id, typedIdentity, true); err != nil {
 				return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
 			}
@@ -538,11 +548,13 @@ func (i *TypedIdentityInfo) Get(auditInfo []byte) (driver.Identity, []byte, erro
 			}
 		} else {
 			// register at the list the audit info
-			if err := i.IdentityProvider.RegisterAuditInfo(typedIdentity, ai); err != nil {
+			logger.DebugfContext(ctx, "register audit infor for wrapped identity")
+			if err := i.IdentityProvider.RegisterAuditInfo(ctx, typedIdentity, ai); err != nil {
 				return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 			}
 		}
 		id = typedIdentity
 	}
+	logger.DebugfContext(ctx, "fetch identity done")
 	return id, ai, nil
 }

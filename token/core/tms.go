@@ -218,7 +218,7 @@ func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) ([]byte, err
 			return ppRaw, nil
 		}
 	}
-	m.logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, debug.Stack())
+	m.logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, string(debug.Stack()))
 	return nil, errors.Errorf("cannot retrive public params for [%s]", opts)
 }
 

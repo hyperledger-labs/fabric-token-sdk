@@ -56,7 +56,7 @@ func (f *fakeRole) MapToIdentity(ctx context.Context, v driver.WalletLookupID) (
 	panic("implement me")
 }
 
-func (f *fakeRole) GetIdentityInfo(id string) (idriver.IdentityInfo, error) {
+func (f *fakeRole) GetIdentityInfo(ctx context.Context, id string) (idriver.IdentityInfo, error) {
 	// TODO implement me
 	panic("implement me")
 }

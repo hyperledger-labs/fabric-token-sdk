@@ -104,7 +104,7 @@ func TSubscribeRead(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier)
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
 	// assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	_, _, err = tx.GetToken(context.TODO(), token.ID{TxId: "tx1"}, true)
+	_, _, err = tx.GetToken(context.Background(), token.ID{TxId: "tx1"}, true)
 	assert.NoError(t, err)
 	assert.NoError(t, tx.Commit())
 

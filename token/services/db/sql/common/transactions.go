@@ -119,7 +119,7 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params driver.Qu
 			return err
 		}
 		r.Amount = big.NewInt(amount)
-		logger.Debugf("movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
+		logger.DebugfContext(ctx, "movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
 		return nil
 	})
 	return iterators.ReadAllPointers(it)
@@ -181,7 +181,7 @@ func (db *TransactionStore) GetStatus(ctx context.Context, txID string) (driver.
 	row := db.readDB.QueryRowContext(ctx, query, args...)
 	if err := row.Scan(&status, &statusMessage); err != nil {
 		if err == sql.ErrNoRows {
-			logger.Debugf("tried to get status for non-existent tx [%s], returning unknown", txID)
+			logger.DebugfContext(ctx, "tried to get status for non-existent tx [%s], returning unknown", txID)
 			return driver.Unknown, "", nil
 		}
 		return driver.Unknown, "", errors.Wrapf(err, "error querying db")
@@ -239,7 +239,7 @@ func (db *TransactionStore) QueryTokenRequests(ctx context.Context, params drive
 }
 
 func (db *TransactionStore) AddTransactionEndorsementAck(ctx context.Context, txID string, endorser token.Identity, sigma []byte) (err error) {
-	logger.Debugf("adding transaction endorse ack record [%s]", txID)
+	logger.DebugfContext(ctx, "adding transaction endorse ack record [%s]", txID)
 
 	now := time.Now().UTC()
 	id, err := uuid.GenerateUUID()
@@ -278,7 +278,7 @@ func (db *TransactionStore) GetTransactionEndorsementAcks(ctx context.Context, t
 		if err := rows.Scan(&endorser, &sigma); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				// not an error for compatibility with badger.
-				logger.Debugf("tried to get status for non-existent tx [%s], returning unknown", txID)
+				logger.DebugfContext(ctx, "tried to get status for non-existent tx [%s], returning unknown", txID)
 				continue
 			}
 			return nil, errors.Wrapf(err, "error querying db")
@@ -440,7 +440,7 @@ func (w *AtomicWrite) AddTransaction(ctx context.Context, rs ...driver.Transacti
 	}
 	rows := make([]common3.Tuple, len(rs))
 	for i, r := range rs {
-		logger.Debugf("adding transaction record [%s:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
+		logger.DebugfContext(ctx, "adding transaction record [%s:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
 		if !r.Amount.IsInt64() {
 			return errors.New("the database driver does not support larger values than int64")
 		}
@@ -462,7 +462,7 @@ func (w *AtomicWrite) AddTransaction(ctx context.Context, rs ...driver.Transacti
 }
 
 func (w *AtomicWrite) AddTokenRequest(ctx context.Context, txID string, tr []byte, applicationMetadata, publicMetadata map[string][]byte, ppHash driver2.PPHash) error {
-	logger.Debugf("adding token request [%s]", txID)
+	logger.DebugfContext(ctx, "adding token request [%s]", txID)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
 	}
@@ -499,7 +499,7 @@ func (w *AtomicWrite) AddMovement(ctx context.Context, rs ...driver.MovementReco
 	now := time.Now().UTC()
 	rows := make([]common3.Tuple, len(rs))
 	for i, r := range rs {
-		logger.Debugf("adding movement record [%s]", r)
+		logger.DebugfContext(ctx, "adding movement record [%s]", r)
 
 		if !r.Amount.IsInt64() {
 			return errors.New("the database driver does not support larger values than int64")
@@ -522,7 +522,7 @@ func (w *AtomicWrite) AddMovement(ctx context.Context, rs ...driver.MovementReco
 }
 
 func (w *AtomicWrite) AddValidationRecord(ctx context.Context, txID string, meta map[string][]byte) error {
-	logger.Debugf("adding validation record [%s]", txID)
+	logger.DebugfContext(ctx, "adding validation record [%s]", txID)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
 	}

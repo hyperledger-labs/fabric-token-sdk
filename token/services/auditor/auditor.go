@@ -78,7 +78,7 @@ func (a *Service) Validate(ctx context.Context, request *token.Request) error {
 // In addition, the Audit locks the enrollment named ids.
 // Release must be invoked in case
 func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream, *token.OutputStream, error) {
-	logger.Debugf("audit transaction [%s]....", tx.ID())
+	logger.DebugfContext(ctx, "audit transaction [%s]....", tx.ID())
 	request := tx.Request()
 	record, err := request.AuditRecord(ctx)
 	if err != nil {
@@ -88,11 +88,11 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 	var eids []string
 	eids = append(eids, record.Inputs.EnrollmentIDs()...)
 	eids = append(eids, record.Outputs.EnrollmentIDs()...)
-	logger.Debugf("audit transaction [%s], acquire locks", tx.ID())
-	if err := a.auditDB.AcquireLocks(string(request.Anchor), eids...); err != nil {
+	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks", tx.ID())
+	if err := a.auditDB.AcquireLocks(ctx, string(request.Anchor), eids...); err != nil {
 		return nil, nil, err
 	}
-	logger.Debugf("audit transaction [%s], acquire locks done", tx.ID())
+	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks done", tx.ID())
 
 	return record.Inputs, record.Outputs, nil
 }
@@ -100,7 +100,7 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 // Append adds the passed transaction to the auditor database.
 // It also releases the locks acquired by Audit.
 func (a *Service) Append(ctx context.Context, tx Transaction) error {
-	defer a.Release(tx)
+	defer a.Release(ctx, tx)
 
 	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
 	if err != nil {
@@ -116,18 +116,18 @@ func (a *Service) Append(ctx context.Context, tx Transaction) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
-	logger.Debugf("register tx status listener for tx [%s] at network [%s]", tx.ID(), tx.Network())
+	logger.DebugfContext(ctx, "register tx status listener for tx [%s] at network [%s]", tx.ID(), tx.Network())
 	var r driver.FinalityListener = common.NewFinalityListener(logger, a.tmsProvider, a.tmsID, a.auditDB, a.tokenDB, a.finalityTracer)
 	if err := net.AddFinalityListener(tx.Namespace(), tx.ID(), r); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
-	logger.Debugf("append done for request [%s]", tx.ID())
+	logger.DebugfContext(ctx, "append done for request [%s]", tx.ID())
 	return nil
 }
 
 // Release releases the lock acquired of the passed transaction.
-func (a *Service) Release(tx Transaction) {
-	a.auditDB.ReleaseLocks(string(tx.Request().Anchor))
+func (a *Service) Release(ctx context.Context, tx Transaction) {
+	a.auditDB.ReleaseLocks(ctx, string(tx.Request().Anchor))
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
@@ -157,6 +157,10 @@ type requestWrapper struct {
 
 func newRequestWrapper(r *token.Request, tms *token.ManagementService) *requestWrapper {
 	return &requestWrapper{r: r, tms: tms}
+}
+
+func (r *requestWrapper) ID() token.RequestAnchor {
+	return r.r.ID()
 }
 
 func (r *requestWrapper) Bytes() ([]byte, error) { return r.r.Bytes() }
@@ -204,4 +208,8 @@ func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record 
 		item.Quantity = q
 	}
 	return nil
+}
+
+func (r *requestWrapper) String() string {
+	return r.r.String()
 }

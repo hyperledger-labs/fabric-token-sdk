@@ -34,9 +34,9 @@ type enrollmentIDUnmarshaler interface {
 type sigService interface {
 	IsMe(ctx context.Context, identity driver.Identity) bool
 	AreMe(ctx context.Context, identities ...driver.Identity) []string
-	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
-	RegisterVerifier(identity driver.Identity, v driver.Verifier) error
-	GetSigner(identity driver.Identity) (driver.Signer, error)
+	RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
+	RegisterVerifier(ctx context.Context, identity driver.Identity, v driver.Verifier) error
+	GetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error)
 	GetSignerInfo(ctx context.Context, identity driver.Identity) ([]byte, error)
 	GetVerifier(identity driver.Identity) (driver.Verifier, error)
 }
@@ -78,33 +78,33 @@ func NewProvider(
 	}
 }
 
-func (p *Provider) RegisterVerifier(identity driver.Identity, v driver.Verifier) error {
-	return p.SigService.RegisterVerifier(identity, v)
+func (p *Provider) RegisterVerifier(ctx context.Context, identity driver.Identity, v driver.Verifier) error {
+	return p.SigService.RegisterVerifier(ctx, identity, v)
 }
 
-func (p *Provider) RegisterAuditInfo(identity driver.Identity, info []byte) error {
-	return p.Storage.StoreIdentityData(context.Background(), identity, info, nil, nil)
+func (p *Provider) RegisterAuditInfo(ctx context.Context, identity driver.Identity, info []byte) error {
+	return p.Storage.StoreIdentityData(ctx, identity, info, nil, nil)
 }
 
 func (p *Provider) GetAuditInfo(ctx context.Context, identity driver.Identity) ([]byte, error) {
 	return p.Storage.GetAuditInfo(ctx, identity)
 }
 
-func (p *Provider) RegisterRecipientData(data *driver.RecipientData) error {
-	return p.Storage.StoreIdentityData(context.Background(), data.Identity, data.AuditInfo, data.TokenMetadata, data.TokenMetadataAuditInfo)
+func (p *Provider) RegisterRecipientData(ctx context.Context, data *driver.RecipientData) error {
+	return p.Storage.StoreIdentityData(ctx, data.Identity, data.AuditInfo, data.TokenMetadata, data.TokenMetadataAuditInfo)
 }
 
-func (p *Provider) RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
+func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
 	defer func() {
 		p.isMeCacheLock.Lock()
 		p.isMeCache[identity.String()] = true
 		p.isMeCacheLock.Unlock()
 	}()
-	return p.SigService.RegisterSigner(identity, signer, verifier, signerInfo)
+	return p.SigService.RegisterSigner(ctx, identity, signer, verifier, signerInfo)
 }
 
 func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []string {
-	p.Logger.Debugf("identity [%s] is me?", identities)
+	p.Logger.DebugfContext(ctx, "identity [%s] is me?", identities)
 
 	result := make([]string, 0)
 	notFound := make([]driver.Identity, 0)
@@ -148,14 +148,14 @@ func (p *Provider) RegisterRecipientIdentity(id driver.Identity) error {
 	return nil
 }
 
-func (p *Provider) GetSigner(identity driver.Identity) (driver.Signer, error) {
+func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
 	found := false
 	defer func() {
 		p.isMeCacheLock.Lock()
 		p.isMeCache[identity.String()] = found
 		p.isMeCacheLock.Unlock()
 	}()
-	signer, err := p.SigService.GetSigner(identity)
+	signer, err := p.SigService.GetSigner(ctx, identity)
 	if err != nil {
 		p.Logger.Warn(err)
 		return nil, errors.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
@@ -178,19 +178,19 @@ func (p *Provider) GetRevocationHandler(identity driver.Identity, auditInfo []by
 
 func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error {
 	if copyAll {
-		p.Logger.Debugf("Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
+		p.Logger.DebugfContext(ctx, "Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
 		setSV := true
-		signer, err := p.GetSigner(longTerm)
+		signer, err := p.GetSigner(ctx, longTerm)
 		if err != nil {
 			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-				p.Logger.Debugf("failed getting signer for [%s][%s][%s]", longTerm, err, debug.Stack())
+				p.Logger.DebugfContext(ctx, "failed getting signer for [%s][%s][%s]", longTerm, err, string(debug.Stack()))
 			}
 			setSV = false
 		}
 		verifier, err := p.SigService.GetVerifier(longTerm)
 		if err != nil {
 			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-				p.Logger.Debugf("failed getting verifier for identity [%s][%s][%s]", longTerm, err, debug.Stack())
+				p.Logger.DebugfContext(ctx, "failed getting verifier for identity [%s][%s][%s]", longTerm, err, string(debug.Stack()))
 			}
 			verifier = nil
 		}
@@ -198,28 +198,28 @@ func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral
 		setAI := true
 		auditInfo, err := p.GetAuditInfo(ctx, longTerm)
 		if err != nil {
-			p.Logger.Debugf("failed getting audit info for [%s][%s]", longTerm, err)
+			p.Logger.DebugfContext(ctx, "failed getting audit info for [%s][%s]", longTerm, err)
 			setAI = false
 		}
 
 		if setSV {
-			signerInfo, err := p.SigService.GetSignerInfo(context.Background(), longTerm)
+			signerInfo, err := p.SigService.GetSignerInfo(ctx, longTerm)
 			if err != nil {
 				return err
 			}
-			if err := p.SigService.RegisterSigner(ephemeral, signer, verifier, signerInfo); err != nil {
+			if err := p.SigService.RegisterSigner(ctx, ephemeral, signer, verifier, signerInfo); err != nil {
 				return err
 			}
 		}
 		if setAI {
-			if err := p.RegisterAuditInfo(ephemeral, auditInfo); err != nil {
+			if err := p.RegisterAuditInfo(ctx, ephemeral, auditInfo); err != nil {
 				return err
 			}
 		}
 	}
 
 	if p.Binder != nil {
-		if err := p.Binder.Bind(context.TODO(), longTerm, ephemeral); err != nil {
+		if err := p.Binder.Bind(ctx, longTerm, ephemeral); err != nil {
 			return err
 		}
 	}

@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	logging2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -40,7 +39,7 @@ func (b *Backend) HasBeenSignedBy(id driver.Identity, verifier driver.Verifier) 
 	sigma := b.Sigs[b.Cursor]
 	b.Cursor++
 
-	b.Logger.Infof("verify signature [%s][%s][%s]", id, logging2.Base64(sigma), utils.Hashable(b.Message))
+	b.Logger.Infof("verify signature [%s][%s][%s]", id, logging.Base64(sigma), utils.Hashable(b.Message))
 
 	return sigma, verifier.Verify(b.Message, sigma)
 }

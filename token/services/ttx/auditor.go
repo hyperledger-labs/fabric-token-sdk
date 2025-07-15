@@ -65,8 +65,8 @@ func (a *TxAuditor) Audit(ctx context.Context, tx *Transaction) (*token.InputStr
 }
 
 // Release unlocks the passed enrollment IDs.
-func (a *TxAuditor) Release(tx *Transaction) {
-	a.auditor.Release(tx)
+func (a *TxAuditor) Release(ctx context.Context, tx *Transaction) {
+	a.auditor.Release(ctx, tx)
 }
 
 // Transactions returns an iterator of transaction records filtered by the given params.
@@ -150,7 +150,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	jsonSession := session2.NewFromSession(context, session)
 	signature, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
-		logger.ErrorfContext(context.Context(), "failed to read audit event: %v", err)
+		logger.ErrorfContext(context.Context(), "failed to read audit event: %s", err)
 		return nil, errors.WithMessage(err, "failed to read audit event")
 	}
 	logger.DebugfContext(context.Context(), "reply received from %s", a.tx.Opts.Auditor)
@@ -248,12 +248,12 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
 		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditorID)
 		if err != nil {
-			logger.Debugf("failed to get auditor verifier for [%s]", auditorID)
+			logger.DebugfContext(context.Context(), "failed to get auditor verifier for [%s]", auditorID)
 			continue
 		}
 		logger.DebugfContext(context.Context(), "Verify auditor signature")
 		if err := v.Verify(signed, signature); err != nil {
-			logger.ErrorfContext(context.Context(), "failed verifying auditor signature [%s][%s][%s]", auditorID, hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
+			logger.ErrorfContext(context.Context(), "failed verifying auditor signature [%s][%s][%s]", auditorID, hash.Hashable(signed), a.tx.TokenRequest.Anchor)
 		} else {
 			logger.DebugfContext(context.Context(), "auditor signature verified [%s][%s][%s]", auditorID, base64.StdEncoding.EncodeToString(signature), hash.Hashable(signed))
 			return auditorID, nil
@@ -306,7 +306,7 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting auditor identity for node [%s]", context.Me())
 	}
-	signer, err := a.w.GetSigner(aid)
+	signer, err := a.w.GetSigner(context.Context(), aid)
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting signing identity for auditor identity [%s]", aid)
 	}
@@ -343,7 +343,7 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	logger.DebugfContext(context.Context(), "Waiting for envelope...transaction received[%s]", a.tx.ID())
 
 	// Processes
-	logger.Debugf("Processes envelope...")
+	logger.DebugfContext(context.Context(), "Processes envelope...")
 	if tx.Payload == nil {
 		return errors.Errorf("expected transaction payload not found")
 	}

@@ -1102,7 +1102,7 @@ func getIdentity(identities []topology.Identity, id string) []byte {
 			// Build an MSP Identity
 			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, nil, topologyIdentity.Opts, keyStore)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			newIdentity, _, err := kmp.Identity(nil)
+			newIdentity, _, err := kmp.Identity(context.Background(), nil)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			wrap, err := identity.WrapWithType(x509.IdentityType, newIdentity)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -1478,7 +1478,7 @@ func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issue
 	keyStore := x509.NewKeyStore(kvs.NewTrackedMemory())
 	kmp, _, err := x509.NewKeyManager(issuerWalletPath, nil, nil, keyStore)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	newIdentity, _, err := kmp.Identity(nil)
+	newIdentity, _, err := kmp.Identity(context.Background(), nil)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	wrap, err := identity.WrapWithType(x509.IdentityType, newIdentity)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())

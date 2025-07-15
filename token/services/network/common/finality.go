@@ -90,17 +90,17 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 		}
 		t.logger.DebugfContext(ctx, "Check token request")
 		if err := t.checkTokenRequest(txID, tr, tokenRequestHash); err != nil {
-			t.logger.ErrorfContext(ctx, "tx [%d], %s", txID, err)
+			t.logger.ErrorfContext(ctx, "tx [%s], %s", txID, err)
 			txStatus = driver.Deleted
 			message = err.Error()
 		} else {
-			t.logger.Debugf("append token request for [%s]", txID)
+			t.logger.DebugfContext(ctx, "append token request for [%s]", txID)
 			if err := t.tokens.Append(ctx, t.tmsID, token.RequestAnchor(txID), tr); err != nil {
 				// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
 				t.logger.ErrorfContext(ctx, "failed to append token request to token db [%s]: [%s]", txID, err)
 				return fmt.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
 			}
-			t.logger.Debugf("append token request for [%s], done", txID)
+			t.logger.DebugfContext(ctx, "append token request for [%s], done", txID)
 		}
 	case network.Invalid:
 		txStatus = driver.Deleted
