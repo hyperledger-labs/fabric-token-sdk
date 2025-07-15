@@ -1052,8 +1052,8 @@ github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huin/goupnp v1.3.0 h1:UvLUlWDNpoUdYzb2TCn+MuTWtcjXKSza2n6CBdQ0xXc=
 github.com/huin/goupnp v1.3.0/go.mod h1:gnGPsThkYa7bFi/KWmEysQRf48l2dvR5bxr2OFckNX8=
-github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250712055240-d1c63cb85554 h1:U5dJp+rFhFAhk7lLNK2xEiml7BCEFZwRqH6SjkFvOP4=
-github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250712055240-d1c63cb85554/go.mod h1:4Dv1VOa7hQJyv+VL/zcZPKmhdA3auIPEql14T7mpnRQ=
+github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250715055750-fbdf11e05540 h1:mK0I2mDpNEiKu5/iIEsA19E0LQnRO3d3IAH+Ygq7t5Q=
+github.com/hyperledger-labs/fabric-smart-client v0.4.1-0.20250715055750-fbdf11e05540/go.mod h1:4Dv1VOa7hQJyv+VL/zcZPKmhdA3auIPEql14T7mpnRQ=
 github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2 h1:w5BGxCYEsc9vjdDEdZGrZ5redvs263RYsdT2tqF7cNk=
 github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2/go.mod h1:LSwfuRgX/5C2uHkdT3hJtBFu/ALxuL7dFj1pmBby2R4=
 github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 h1:B1Nt8hKb//KvgGRprk0h1t4lCnwhE9/ryb1WqfZbV+M=
