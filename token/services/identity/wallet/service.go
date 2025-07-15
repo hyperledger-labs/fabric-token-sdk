@@ -184,8 +184,8 @@ func (s *Service) SpendIDs(ids ...*token.ID) ([]string, error) {
 }
 
 func (s *Service) walletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
-	logger.DebugfContext(ctx, "role [%s] lookup wallet by [%T]", role, id)
-	defer logger.DebugfContext(ctx, "role [%s] lookup wallet by [%T] done", role, id)
+	logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T]", role, id)
+	defer logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T] done", role, id)
 
 	entry := s.Registries[role]
 	registry := entry.Registry

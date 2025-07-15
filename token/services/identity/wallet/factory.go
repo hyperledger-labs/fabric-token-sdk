@@ -73,7 +73,14 @@ func (w *Factory) NewWallet(ctx context.Context, id string, role identity.RoleTy
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to create new owner wallet [%s]", id)
 			}
-			w.Logger.DebugfContext(ctx, "created owner wallet [%s] for identity [%s:%s:%v]", id, info.ID(), info.EnrollmentID(), info.Remote())
+			w.Logger.DebugfContext(
+				ctx,
+				"created owner wallet [%s] for identity [%s:%s:%v]",
+				id,
+				info.ID(),
+				info.EnrollmentID(),
+				info.Remote(),
+			)
 			return newWallet, nil
 		}
 

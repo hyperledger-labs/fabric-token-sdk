@@ -53,7 +53,7 @@ func (r *Role) ID() identity.RoleType {
 
 // GetIdentityInfo returns the identity information for the given identity identifier
 func (r *Role) GetIdentityInfo(ctx context.Context, id string) (idriver.IdentityInfo, error) {
-	r.logger.DebugfContext(ctx, "[%s] getting info for [%s]", r.networkID, id)
+	r.logger.DebugfContext(ctx, "[%s] getting info for [%s]", r.networkID, logging.Printable(id))
 
 	info, err := r.localMembership.GetIdentityInfo(id, nil)
 	if err != nil {
@@ -91,7 +91,7 @@ func (r *Role) mapStringToID(ctx context.Context, v string) (driver.Identity, st
 
 	r.logger.DebugfContext(ctx, "[%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
 		r.networkID,
-		v,
+		logging.Printable(v),
 		hash.Hashable(v),
 		defaultNetworkIdentity,
 		r.nodeIdentity,
