@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 )
 
 const (
@@ -47,22 +48,29 @@ type Transaction struct {
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
 func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transaction, error) {
+	logger := logging.MustGetLogger()
+	logger.DebugfContext(context.Context(), "FTSDK: NewAnonymousTransaction2: M1")
+
 	txOpts, err := CompileOpts(opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed compiling tx options")
 	}
+	logger.DebugfContext(context.Context(), "FTSDK: NewAnonymousTransaction2: M2")
 	tms := token.GetManagementService(
 		context,
 		token.WithTMSID(txOpts.TMSID),
 	)
+	logger.DebugfContext(context.Context(), "FTSDK: NewAnonymousTransaction2: M3")
 	net := network.GetInstance(context, tms.Network(), tms.Channel())
 	if net == nil {
 		return nil, errors.New("failed to get network")
 	}
+	logger.DebugfContext(context.Context(), "FTSDK: NewAnonymousTransaction2: M4")
 	id, err := net.AnonymousIdentity()
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed getting anonymous identity for transaction")
 	}
+	logger.DebugfContext(context.Context(), "FTSDK: NewAnonymousTransaction2: M5")
 
 	return NewTransaction(context, id, opts...)
 }

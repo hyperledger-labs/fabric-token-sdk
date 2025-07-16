@@ -9,6 +9,7 @@ package endorsement
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
@@ -38,6 +39,8 @@ type RequestApprovalView struct {
 }
 
 func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
+	var logger = logging.MustGetLogger()
+	logger.DebugfContext(context.Context(), "RequestApprovalView.Call: M1")
 	_, tx, err := endorser.NewTransaction(
 		context,
 		fabric2.WithCreator(r.TxID.Creator),
@@ -47,11 +50,13 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessagef(err, "failed to create endorser transaction")
 	}
 
+	logger.DebugfContext(context.Context(), "RequestApprovalView.Call: M2")
 	tms := token2.GetManagementService(context, token2.WithTMSID(r.TMSID))
 	if tms == nil {
 		return nil, errors.Errorf("no token management service for [%s]", r.TMSID)
 	}
 	tx.SetProposal(tms.Namespace(), "", InvokeFunction)
+	logger.DebugfContext(context.Context(), "RequestApprovalView.Call: M3")
 	if err := tx.EndorseProposal(); err != nil {
 		return nil, errors.WithMessagef(err, "failed to endorse proposal")
 	}
@@ -72,7 +77,7 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		}
 	}
 
-	logger.DebugfContext(context.Context(), "Request Endorsement on tx [%s] to [%v]...", tx.ID(), r.Endorsers)
+	logger.Debugf("Request Endorsement on tx [%s] to [%v]...", tx.ID(), r.Endorsers)
 	_, err = context.RunView(endorser.NewParallelCollectEndorsementsOnProposalView(
 		tx,
 		r.Endorsers...,

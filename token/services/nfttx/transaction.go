@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 )
 
 var logger = logging.MustGetLogger()
@@ -34,6 +35,8 @@ type Transaction struct {
 }
 
 func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, error) {
+	logger := logging.MustGetLogger()
+	logger.DebugfContext(sp.Context(), "FTSDK: NewAnonymousTransaction3: M1")
 	// convert opts to ttx.TxOption
 	txOpts := make([]ttx.TxOption, len(opts))
 	for i, opt := range opts {

@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 )
 
 const (
@@ -96,10 +97,14 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption)
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
 func NewAnonymousTransaction(sp view.Context, opts ...ttx.TxOption) (*Transaction, error) {
+	logger := logging.MustGetLogger()
+	logger.DebugfContext(sp.Context(), "FTSDK: NewAnonymousTransaction1: M1")
+
 	tx, err := ttx.NewAnonymousTransaction(sp, opts...)
 	if err != nil {
 		return nil, err
 	}
+	logger.DebugfContext(sp.Context(), "FTSDK: NewAnonymousTransaction1: M2")
 	return &Transaction{
 		Transaction: tx,
 		Binder:      endpoint.GetService(sp),
