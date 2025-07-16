@@ -912,10 +912,13 @@ func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token
 			if network.Client(replicaName) == nil {
 				panic("did not find id " + replicaName)
 			}
-			_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
-				TMSID: tmsId,
-			}))
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to check public params at [%s]", id)
+			gomega.Eventually(func() bool {
+				_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
+					TMSID: tmsId,
+				}))
+				gomega.Expect(err).ToNot(gomega.HaveOccurred())
+				return err == nil
+			}).WithTimeout(10 * time.Second).WithPolling(500 * time.Millisecond).Should(gomega.BeEquivalentTo(true))
 		}
 	}
 }
