@@ -83,7 +83,7 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 		tms.PublicParametersManager().PublicParamsHash(),
 		"public params do not match [%s]!=[%s]",
 		base64.StdEncoding.EncodeToString(fetchedPPRawHash),
-		string(tms.PublicParametersManager().PublicParamsHash()),
+		base64.StdEncoding.EncodeToString(tms.PublicParametersManager().PublicParamsHash()),
 	)
 
 	return nil, nil

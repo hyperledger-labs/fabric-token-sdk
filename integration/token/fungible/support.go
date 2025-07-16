@@ -44,6 +44,11 @@ import (
 	"github.com/prometheus/common/model"
 )
 
+const (
+	eventualCheckTimeout = 30 * time.Second
+	eventualCheckPolling = 1 * time.Second
+)
+
 var (
 	RestartEnabled = true
 )
@@ -270,19 +275,21 @@ func CheckBalance(network *integration.Infrastructure, ref *token3.NodeReference
 }
 
 func CheckBalanceForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64, tmsID *token2.TMSID) {
-	res, err := network.Client(ref.ReplicaName()).CallView("balance", common.JSONMarshall(&views.BalanceQuery{
-		Wallet: wallet,
-		Type:   typ,
-		TMSID:  tmsID,
-	}))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	b := &views.Balance{}
-	common.JSONUnmarshal(res.([]byte), b)
-	gomega.Expect(b.Type).To(gomega.BeEquivalentTo(typ))
-	q, err := token.ToQuantity(b.Quantity, 64)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	expectedQ := token.NewQuantityFromUInt64(expected)
-	gomega.Expect(expectedQ.Cmp(q)).To(gomega.BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+	gomega.Eventually(func(g gomega.Gomega, network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64, tmsID *token2.TMSID) {
+		res, err := network.Client(ref.ReplicaName()).CallView("balance", common.JSONMarshall(&views.BalanceQuery{
+			Wallet: wallet,
+			Type:   typ,
+			TMSID:  tmsID,
+		}))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		b := &views.Balance{}
+		common.JSONUnmarshal(res.([]byte), b)
+		g.Expect(b.Type).To(gomega.BeEquivalentTo(typ))
+		q, err := token.ToQuantity(b.Quantity, 64)
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		expectedQ := token.NewQuantityFromUInt64(expected)
+		g.Expect(expectedQ.Cmp(q)).To(gomega.BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+	}).WithArguments(network, ref, wallet, typ, expected, tmsID).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
 }
 
 func CheckCoOwnedBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64) {
@@ -290,19 +297,21 @@ func CheckCoOwnedBalance(network *integration.Infrastructure, ref *token3.NodeRe
 }
 
 func CheckCoOwnedBalanceForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64, tmsID *token2.TMSID) {
-	res, err := network.Client(ref.ReplicaName()).CallView("CoOwnedBalance", common.JSONMarshall(&views.CoOwnedBalanceQuery{
-		Wallet: wallet,
-		Type:   typ,
-		TMSID:  tmsID,
-	}))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	b := &views.Balance{}
-	common.JSONUnmarshal(res.([]byte), b)
-	gomega.Expect(b.Type).To(gomega.BeEquivalentTo(typ))
-	q, err := token.ToQuantity(b.Quantity, 64)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	expectedQ := token.NewQuantityFromUInt64(expected)
-	gomega.Expect(expectedQ.Cmp(q)).To(gomega.BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+	gomega.Eventually(func(g gomega.Gomega, network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64, tmsID *token2.TMSID) {
+		res, err := network.Client(ref.ReplicaName()).CallView("CoOwnedBalance", common.JSONMarshall(&views.CoOwnedBalanceQuery{
+			Wallet: wallet,
+			Type:   typ,
+			TMSID:  tmsID,
+		}))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		b := &views.Balance{}
+		common.JSONUnmarshal(res.([]byte), b)
+		g.Expect(b.Type).To(gomega.BeEquivalentTo(typ))
+		q, err := token.ToQuantity(b.Quantity, 64)
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		expectedQ := token.NewQuantityFromUInt64(expected)
+		g.Expect(expectedQ.Cmp(q)).To(gomega.BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+	}).WithArguments(network, ref, wallet, typ, expected, tmsID).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
 }
 
 func CheckHolding(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected int64, auditor *token3.NodeReference) {
@@ -310,20 +319,22 @@ func CheckHolding(network *integration.Infrastructure, ref *token3.NodeReference
 }
 
 func CheckHoldingForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected int64, auditor *token3.NodeReference, tmsID *token2.TMSID) {
-	eIDBoxed, err := network.Client(ref.ReplicaName()).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
-		Wallet: wallet,
-		TMSID:  tmsID,
-	}))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	eID := common.JSONUnmarshalString(eIDBoxed)
-	holdingBoxed, err := network.Client(auditor.ReplicaName()).CallView("holding", common.JSONMarshall(&views.CurrentHolding{
-		EnrollmentID: eID,
-		TokenType:    typ,
-	}))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	holding, err := strconv.Atoi(common.JSONUnmarshalString(holdingBoxed))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	gomega.Expect(holding).To(gomega.Equal(int(expected)))
+	gomega.Eventually(func(g gomega.Gomega, network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected int64, auditor *token3.NodeReference, tmsID *token2.TMSID) {
+		eIDBoxed, err := network.Client(ref.ReplicaName()).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
+			Wallet: wallet,
+			TMSID:  tmsID,
+		}))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		eID := common.JSONUnmarshalString(eIDBoxed)
+		holdingBoxed, err := network.Client(auditor.ReplicaName()).CallView("holding", common.JSONMarshall(&views.CurrentHolding{
+			EnrollmentID: eID,
+			TokenType:    typ,
+		}))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		holding, err := strconv.Atoi(common.JSONUnmarshalString(holdingBoxed))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		g.Expect(holding).To(gomega.Equal(int(expected)))
+	}).WithArguments(network, ref, wallet, typ, expected, auditor, tmsID).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
 }
 
 func CheckSpending(network *integration.Infrastructure, id *token3.NodeReference, wallet string, tokenType token.Type, auditor *token3.NodeReference, expected uint64) {
@@ -331,23 +342,25 @@ func CheckSpending(network *integration.Infrastructure, id *token3.NodeReference
 }
 
 func CheckSpendingForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, tokenType token.Type, auditor *token3.NodeReference, expected uint64, tmsId *token2.TMSID) {
-	// check spending
-	// first get the enrollment id
-	eIDBoxed, err := network.Client(id.ReplicaName()).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
-		Wallet: wallet,
-		TMSID:  tmsId,
-	}))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	eID := common.JSONUnmarshalString(eIDBoxed)
-	spendingBoxed, err := network.Client(auditor.ReplicaName()).CallView("spending", common.JSONMarshall(&views.CurrentSpending{
-		EnrollmentID: eID,
-		TokenType:    tokenType,
-		TMSID:        tmsId,
-	}))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	spending, err := strconv.ParseUint(common.JSONUnmarshalString(spendingBoxed), 10, 64)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	gomega.Expect(spending).To(gomega.Equal(expected))
+	gomega.Eventually(func(g gomega.Gomega, network *integration.Infrastructure, id *token3.NodeReference, wallet string, tokenType token.Type, auditor *token3.NodeReference, expected uint64, tmsId *token2.TMSID) {
+		// check spending
+		// first get the enrollment id
+		eIDBoxed, err := network.Client(id.ReplicaName()).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
+			Wallet: wallet,
+			TMSID:  tmsId,
+		}))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		eID := common.JSONUnmarshalString(eIDBoxed)
+		spendingBoxed, err := network.Client(auditor.ReplicaName()).CallView("spending", common.JSONMarshall(&views.CurrentSpending{
+			EnrollmentID: eID,
+			TokenType:    tokenType,
+			TMSID:        tmsId,
+		}))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		spending, err := strconv.ParseUint(common.JSONUnmarshalString(spendingBoxed), 10, 64)
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		g.Expect(spending).To(gomega.Equal(expected))
+	}).WithArguments(network, id, wallet, tokenType, auditor, expected, tmsId).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
 }
 
 func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ token.Type, issuer *token3.NodeReference) *token.IssuedTokens {
@@ -912,10 +925,12 @@ func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token
 			if network.Client(replicaName) == nil {
 				panic("did not find id " + replicaName)
 			}
-			_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
-				TMSID: tmsId,
-			}))
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to check public params at [%s]", id)
+			gomega.Eventually(func(g gomega.Gomega, replicaName string, tmsId *token2.TMSID, id *token3.NodeReference) {
+				_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
+					TMSID: tmsId,
+				}))
+				g.Expect(err).NotTo(gomega.HaveOccurred(), "failed to check public params at [%s]", id)
+			}).WithArguments(replicaName, tmsId, id).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
 		}
 	}
 }
@@ -979,14 +994,18 @@ func UpdatePublicParamsAndWait(network *integration.Infrastructure, publicParams
 		if node.Id() == "custodian" {
 			continue
 		}
-		gomega.Eventually(GetPublicParams).WithArguments(network, node).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(gomega.Equal(publicParams))
+		checkPublicParams(network, node, publicParams)
 	}
 }
 
-func GetPublicParams(network *integration.Infrastructure, id *token3.NodeReference) []byte {
-	pp, err := network.Client(id.ReplicaName()).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParams{}))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	return pp.([]byte)
+func checkPublicParams(network *integration.Infrastructure, id *token3.NodeReference, expectedPP []byte) {
+	gomega.Eventually(func(g gomega.Gomega, network *integration.Infrastructure, id *token3.NodeReference, expectedPP []byte) {
+		pp, err := network.Client(id.ReplicaName()).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParams{}))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		ppByte, ok := pp.([]byte)
+		g.Expect(ok).To(gomega.BeTrue())
+		g.Expect(ppByte).To(gomega.Equal(expectedPP))
+	}).WithArguments(network, id, expectedPP).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
 }
 
 func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReference, wallet string, walletType int) bool {
