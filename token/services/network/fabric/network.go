@@ -8,6 +8,7 @@ package fabric
 
 import (
 	"context"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -385,7 +386,7 @@ type setupListener struct {
 }
 
 func (s *setupListener) OnStatus(ctx context.Context, key string, value []byte) {
-	logger.Infof("update TMS [%s] with key-value [%s][%s]", s.TMSID, key, utils.Hashable(value))
+	logger.Infof("update TMS [%s] with key-value [%s][%s], requested by [%s]", s.TMSID, key, utils.Hashable(value), string(debug.Stack()))
 	tsmProvider := s.GetTMSProvider()
 	if err := tsmProvider.Update(s.TMSID, value); err != nil {
 		logger.Warnf("failed to update TMS [%s]: [%v]", key, err)
