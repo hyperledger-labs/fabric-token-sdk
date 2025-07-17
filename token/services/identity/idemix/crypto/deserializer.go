@@ -27,13 +27,15 @@ type Deserializer struct {
 	VerType         bccsp.VerificationType
 	NymEID          []byte
 	RhNym           []byte
+	SchemaManager   SchemaManager
+	Schema          string
 }
 
-func (c *Deserializer) Deserialize(raw []byte, checkValidity bool) (*DeserializedIdentity, error) {
-	return c.DeserializeAgainstNymEID(raw, checkValidity, nil)
+func (d *Deserializer) Deserialize(raw []byte) (*DeserializedIdentity, error) {
+	return d.DeserializeAgainstNymEID(raw, nil)
 }
 
-func (c *Deserializer) DeserializeAgainstNymEID(identity []byte, checkValidity bool, nymEID []byte) (*DeserializedIdentity, error) {
+func (d *Deserializer) DeserializeAgainstNymEID(identity []byte, nymEID []byte) (*DeserializedIdentity, error) {
 	if len(identity) == 0 {
 		return nil, errors.Errorf("empty identity")
 	}
@@ -46,8 +48,13 @@ func (c *Deserializer) DeserializeAgainstNymEID(identity []byte, checkValidity b
 		return nil, errors.Errorf("unable to deserialize idemix identity: pseudonym's public key is empty")
 	}
 
+	// match schema
+	if serialized.Schema != d.Schema {
+		return nil, errors.Errorf("unable to deserialize idemix identity: schema does not match [%s]!=[%s]", serialized.Schema, d.Schema)
+	}
+
 	// Import NymPublicKey
-	NymPublicKey, err := c.Csp.KeyImport(
+	NymPublicKey, err := d.Csp.KeyImport(
 		serialized.NymPublicKey,
 		&bccsp.IdemixNymPublicKeyImportOpts{Temporary: true},
 	)
@@ -55,28 +62,27 @@ func (c *Deserializer) DeserializeAgainstNymEID(identity []byte, checkValidity b
 		return nil, errors.WithMessage(err, "failed to import nym public key")
 	}
 
-	idemix := c
+	idemix := d
 	if len(nymEID) != 0 {
 		idemix = &Deserializer{
-			Name:            c.Name,
-			Ipk:             c.Ipk,
-			Csp:             c.Csp,
-			IssuerPublicKey: c.IssuerPublicKey,
-			RevocationPK:    c.RevocationPK,
-			Epoch:           c.Epoch,
-			VerType:         c.VerType,
+			Name:            d.Name,
+			Ipk:             d.Ipk,
+			Csp:             d.Csp,
+			IssuerPublicKey: d.IssuerPublicKey,
+			RevocationPK:    d.RevocationPK,
+			Epoch:           d.Epoch,
+			VerType:         d.VerType,
 			NymEID:          nymEID,
+			SchemaManager:   d.SchemaManager,
 		}
 	}
 
-	id, err := NewIdentity(idemix, NymPublicKey, serialized.Proof, c.VerType)
+	id, err := NewIdentity(idemix, NymPublicKey, serialized.Proof, d.VerType, d.SchemaManager, d.Schema)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot deserialize")
 	}
-	if checkValidity {
-		if err := id.Validate(); err != nil {
-			return nil, errors.Wrap(err, "cannot deserialize, invalid identity")
-		}
+	if err := id.Validate(); err != nil {
+		return nil, errors.Wrap(err, "cannot deserialize, invalid identity")
 	}
 
 	return &DeserializedIdentity{
@@ -85,12 +91,14 @@ func (c *Deserializer) DeserializeAgainstNymEID(identity []byte, checkValidity b
 	}, nil
 }
 
-func (c *Deserializer) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
+func (d *Deserializer) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
 	ai, err := DeserializeAuditInfo(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))
 	}
-	ai.Csp = c.Csp
-	ai.IssuerPublicKey = c.IssuerPublicKey
+	ai.Csp = d.Csp
+	ai.IssuerPublicKey = d.IssuerPublicKey
+	ai.SchemaManager = d.SchemaManager
+	ai.Schema = d.Schema
 	return ai, nil
 }

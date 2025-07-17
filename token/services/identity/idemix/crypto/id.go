@@ -27,14 +27,21 @@ type Identity struct {
 	// AssociationProof contains cryptographic proof that this identity is valid.
 	AssociationProof []byte
 	VerificationType bccsp.VerificationType
+
+	// Schema related fields
+	SchemaManager SchemaManager
+	Schema        Schema
 }
 
-func NewIdentity(idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, verificationType bccsp.VerificationType) (*Identity, error) {
-	id := &Identity{}
-	id.Idemix = idemix
-	id.NymPublicKey = nymPublicKey
-	id.AssociationProof = proof
-	id.VerificationType = verificationType
+func NewIdentity(idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, verificationType bccsp.VerificationType, schemaManager SchemaManager, schema Schema) (*Identity, error) {
+	id := &Identity{
+		Idemix:           idemix,
+		NymPublicKey:     nymPublicKey,
+		AssociationProof: proof,
+		VerificationType: verificationType,
+		SchemaManager:    schemaManager,
+		Schema:           schema,
+	}
 	return id, nil
 }
 
@@ -143,9 +150,11 @@ func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
 }
 
 type NymSignatureVerifier struct {
-	CSP   bccsp.BCCSP
-	IPK   bccsp.Key
-	NymPK bccsp.Key
+	CSP           bccsp.BCCSP
+	IPK           bccsp.Key
+	NymPK         bccsp.Key
+	SchemaManager SchemaManager
+	Schema        Schema
 }
 
 func (v *NymSignatureVerifier) Verify(message, sigma []byte) error {

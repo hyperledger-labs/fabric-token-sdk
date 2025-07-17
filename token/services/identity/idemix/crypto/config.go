@@ -42,12 +42,14 @@ type SignerConfig struct {
 	Role int `protobuf:"varint,4,opt,name=role,json=role" json:"role,omitempty"`
 	// EnrollmentID contains the enrollment id of this signer
 	EnrollmentID string `protobuf:"bytes,5,opt,name=enrollment_id,json=enrollmentId" json:"enrollment_id,omitempty"`
-	// CRI contains a serialized Credential Revocation Information
+	// CRI contains a serialized CredentialRevocationInformation
 	CredentialRevocationInformation []byte `protobuf:"bytes,6,opt,name=credential_revocation_information,json=credentialRevocationInformation,proto3" json:"credential_revocation_information,omitempty"`
 	// RevocationHandle is the handle used to single out this credential and determine its revocation status
 	RevocationHandle string `protobuf:"bytes,7,opt,name=revocation_handle,json=revocationHandle,proto3" json:"revocation_handle,omitempty"`
 	// CurveID specifies the name of the Idemix curve to use, defaults to 'amcl.Fp256bn'
 	CurveID string `protobuf:"bytes,8,opt,name=curve_id,json=curveID" json:"curveID,omitempty"`
+	// Schema contains the version of the schema used by this credential
+	Schema string `protobuf:"bytes,9,opt,name=schema,json=schema" json:"schema,omitempty"`
 }
 
 const (
@@ -145,6 +147,7 @@ func NewFabricCAIdemixConfig(issuerPublicKey []byte, dir string) (*Config, error
 			EnrollmentId:                    si.EnrollmentID,
 			CredentialRevocationInformation: si.CredentialRevocationInformation,
 			RevocationHandle:                si.RevocationHandle,
+			Schema:                          si.Schema,
 		}
 	} else {
 		if !os.IsNotExist(errors.Cause(err)) {

@@ -11,12 +11,12 @@ import (
 
 	"github.com/IBM/idemix/bccsp/keystore"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
-	memory "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
+	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 )
 
 func NewInMemory() (KVS, error) {
-	return kvs.New(utils.MustGet(memory.NewDriver().NewKVS("")), "", kvs.DefaultCacheSize)
+	return kvs.New(utils.MustGet(mem.NewDriver().NewKVS("")), "", kvs.DefaultCacheSize)
 }
 
 func Keystore(kvs KVS) keystore.KVS {
