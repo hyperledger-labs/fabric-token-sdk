@@ -127,7 +127,7 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 	}
 
 	key := tmsKey(opts)
-	m.logger.Debugf("update tms for [%s] with key [%s]", opts, key)
+	m.logger.Infof("update tms for [%v] with key [%s]", opts, key)
 
 	m.lock.Lock()
 	defer m.lock.Unlock()

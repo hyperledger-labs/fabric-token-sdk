@@ -567,6 +567,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	FinalityWithTimeout(network, bob, tx3, 20*time.Second)
 	SetTransactionOwnersStatus(network, txID3, ttx.Deleted, token3.AllNames(alice, bob)...)
 
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+
 	// Restart
 	CheckOwnerStore(network, nil, alice, bob)
 	CheckOwnerStore(network, nil, issuer, charlie, manager)
@@ -575,6 +577,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckOwnerStore(network, nil, alice, bob)
 	CheckOwnerStore(network, nil, issuer, charlie, manager)
 	CheckAuditorStore(network, auditor, "", nil)
+
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
 	// Addition transfers
 	TransferCash(network, issuer, "", "USD", 50, issuer, auditor)

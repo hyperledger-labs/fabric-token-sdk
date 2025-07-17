@@ -9,10 +9,13 @@ package core
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
 	"github.com/pkg/errors"
 )
+
+var logger = logging.MustGetLogger()
 
 type Config interface {
 	ID() driver.TMSID
@@ -118,7 +121,15 @@ func (s *TokenDriverService) NewTokenService(tmsID driver.TMSID, publicParams []
 		return nil, err
 	}
 	if driver, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
-		return driver.NewTokenService(tmsID, publicParams)
+		tms, err := driver.NewTokenService(tmsID, publicParams)
+		if err != nil {
+			return nil, err
+		}
+		logger.Infof(
+			"new token service with ID [%s] and public params hash [%s]",
+			tmsID,
+			logging.Base64(tms.PublicParamsManager().PublicParamsHash()),
+		)
 	}
 	return nil, errors.Errorf("no token driver named '%s' found", DriverIdentifierFromPP(pp))
 }

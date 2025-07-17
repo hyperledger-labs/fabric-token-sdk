@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
-	"encoding/base64"
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
@@ -16,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -82,8 +82,8 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 		fetchedPPRawHash,
 		tms.PublicParametersManager().PublicParamsHash(),
 		"public params do not match [%s]!=[%s]",
-		base64.StdEncoding.EncodeToString(fetchedPPRawHash),
-		base64.StdEncoding.EncodeToString(tms.PublicParametersManager().PublicParamsHash()),
+		logging.Base64(fetchedPPRawHash),
+		logging.Base64(tms.PublicParametersManager().PublicParamsHash()),
 	)
 
 	return nil, nil
