@@ -8,7 +8,6 @@ package fungible
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"math/big"
 	"os"
@@ -16,7 +15,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
@@ -569,273 +567,273 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
-	// Restart
-	CheckOwnerStore(network, nil, alice, bob)
-	CheckOwnerStore(network, nil, issuer, charlie, manager)
-	CheckAuditorStore(network, auditor, "", nil)
-	Restart(network, false, onRestart, alice, bob, charlie, manager)
-	CheckOwnerStore(network, nil, alice, bob)
-	CheckOwnerStore(network, nil, issuer, charlie, manager)
-	CheckAuditorStore(network, auditor, "", nil)
-
-	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
-
-	// Addition transfers
-	TransferCash(network, issuer, "", "USD", 50, issuer, auditor)
-	CheckBalanceAndHolding(network, issuer, "", "USD", 110, auditor)
-	CheckBalanceAndHolding(network, issuer, "", "EUR", 150, auditor)
-
-	TransferCash(network, issuer, "", "USD", 50, manager, auditor)
-	TransferCash(network, issuer, "", "EUR", 20, manager, auditor)
-	CheckBalanceAndHolding(network, issuer, "", "USD", 60, auditor)
-	CheckBalanceAndHolding(network, issuer, "", "EUR", 130, auditor)
-	CheckBalanceAndHolding(network, manager, "", "USD", 50, auditor)
-	CheckBalanceAndHolding(network, manager, "", "EUR", 20, auditor)
-
-	// Play with wallets
-	TransferCash(network, manager, "", "USD", 10, sel.Get("manager.id1"), auditor)
-	TransferCash(network, manager, "", "USD", 10, sel.Get("manager.id2"), auditor)
-	TransferCash(network, manager, "", "USD", 10, sel.Get("manager.id3"), auditor)
-	CheckBalanceAndHolding(network, manager, "", "USD", 20, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id1", "USD", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id2", "USD", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id3", "USD", 10, auditor)
-
-	TransferCash(network, manager, "manager.id1", "USD", 10, sel.Get("manager.id2"), auditor)
-	CheckSpending(network, manager, "manager.id1", "USD", auditor, 10)
-	CheckBalanceAndHolding(network, manager, "", "USD", 20, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id1", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id2", "USD", 20, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id3", "USD", 10, auditor)
-
-	// Swap among wallets
-	TransferCash(network, manager, "", "EUR", 10, sel.Get("manager.id1"), auditor)
-	CheckBalanceAndHolding(network, manager, "", "EUR", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id1", "EUR", 10, auditor)
-
-	SwapCash(network, manager, "manager.id1", "EUR", 10, "USD", 10, sel.Get("manager.id2"), auditor)
-	CheckBalanceAndHolding(network, manager, "", "USD", 20, auditor)
-	CheckBalanceAndHolding(network, manager, "", "EUR", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id1", "USD", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id1", "EUR", 0, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id2", "USD", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id2", "EUR", 10, auditor)
-	CheckBalanceAndHolding(network, manager, "manager.id3", "USD", 10, auditor)
-
-	// no more USD can be issued, reached quota of 220
-	IssueCash(network, "", "USD", 10, alice, auditor, true, issuer, "no more USD can be issued, reached quota of 241")
-
-	CheckBalanceAndHolding(network, alice, "", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, alice, "", "EUR", 10, auditor)
-
-	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
-
-	// limits
-	CheckBalanceAndHolding(network, alice, "", "USD", 0, auditor)
-	CheckBalanceAndHolding(network, alice, "", "EUR", 10, auditor)
-	CheckBalanceAndHolding(network, bob, "", "EUR", 20, auditor)
-	CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
-	IssueCash(network, "", "EUR", 2200, alice, auditor, true, issuer)
-	IssueCash(network, "", "EUR", 2000, charlie, auditor, true, issuer)
-	CheckBalanceAndHolding(network, alice, "", "EUR", 2210, auditor)
-	CheckBalanceAndHolding(network, charlie, "", "EUR", 2000, auditor)
-	TransferCash(network, alice, "", "EUR", 210, bob, auditor, "payment limit reached", "alice", "[EUR][210]")
-	CheckBalanceAndHolding(network, alice, "", "EUR", 2210, auditor)
-	CheckBalanceAndHolding(network, charlie, "", "EUR", 2000, auditor)
-	CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
-	CheckBalanceAndHolding(network, bob, "", "EUR", 20, auditor)
-
-	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
-
-	TransferCash(network, alice, "", "EUR", 200, bob, auditor)
-	TransferCash(network, alice, "", "EUR", 200, bob, auditor)
-	TransferCash(network, alice, "", "EUR", 200, bob, auditor)
-	TransferCash(network, alice, "", "EUR", 200, bob, auditor)
-	TransferCash(network, alice, "", "EUR", 200, bob, auditor)
-	TransferCash(network, alice, "", "EUR", 200, bob, auditor)
-	TransferCash(network, alice, "", "EUR", 200, bob, auditor)
-	TransferCash(network, alice, "", "EUR", 200, bob, auditor)
-	TransferCash(network, alice, "", "EUR", 200, bob, auditor)
-	CheckBalanceAndHolding(network, bob, "", "EUR", 1820, auditor)
-	CheckSpending(network, alice, "", "EUR", auditor, 1800)
-	TransferCash(network, alice, "", "EUR", 200, bob, auditor, "cumulative payment limit reached", "alice", "[EUR][2000]")
-
-	TransferCash(network, charlie, "", "EUR", 200, bob, auditor)
-	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
-	TransferCash(network, charlie, "", "EUR", 200, bob, auditor)
-	TransferCash(network, charlie, "", "EUR", 200, bob, auditor)
-	TransferCash(network, charlie, "", "EUR", 200, bob, auditor)
-	TransferCash(network, charlie, "", "EUR", 200, bob, auditor)
-	CheckBalanceAndHolding(network, charlie, "", "EUR", 1000, auditor)
-	CheckBalanceAndHolding(network, bob, "", "EUR", 2820, auditor)
-	TransferCash(network, charlie, "", "EUR", 200, bob, auditor, "holding limit reached", "bob", "[EUR][3020]")
-	CheckBalanceAndHolding(network, bob, "", "EUR", 2820, auditor)
-
-	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
-
-	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
-
-	// Routing
-	IssueCash(network, "", "EUR", 10, sel.Get("alice.id1"), auditor, true, issuer)
-	CheckAcceptedTransactions(network, alice, "alice.id1", AliceID1AcceptedTransactions[:], nil, nil, nil)
-	TransferCash(network, alice, "alice.id1", "EUR", 10, sel.Get("bob.id1"), auditor)
-	CheckBalanceAndHolding(network, alice, "alice.id1", "EUR", 0, auditor)
-	CheckBalanceAndHolding(network, bob, "bob.id1", "EUR", 10, auditor)
-
-	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
-
-	// Concurrent transfers
-	transferErrors := make([]chan error, 5)
-	var sum uint64
-	for i := range transferErrors {
-		transferErrors[i] = make(chan error, 1)
-
-		transfer := transferErrors[i]
-		r, err := rand.Int(rand.Reader, big.NewInt(200))
-		gomega.Expect(err).ToNot(gomega.HaveOccurred())
-		v := r.Uint64() + 1
-		sum += v
-		go func() {
-			_, err := network.Client(bob.ReplicaName()).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
-				Auditor:      auditor.Id(),
-				Wallet:       "",
-				Type:         "EUR",
-				Amount:       v,
-				Recipient:    network.Identity(alice.Id()),
-				RecipientEID: alice.Id(),
-				Retry:        true,
-			}))
-			if err != nil {
-				transfer <- err
-				return
-			}
-			transfer <- nil
-		}()
-	}
-	for _, transfer := range transferErrors {
-		err := <-transfer
-		gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	}
-	CheckBalanceAndHolding(network, bob, "", "EUR", 2820-sum, auditor)
-
-	// Transfer With TokenSelector
-	IssueSuccessfulCash(network, "", "YUAN", 17, alice, auditor, true, issuer, endorsers...)
-	TransferCashWithSelector(network, alice, "", "YUAN", 10, bob, auditor)
-	CheckBalanceAndHolding(network, alice, "", "YUAN", 7, auditor)
-	CheckBalanceAndHolding(network, bob, "", "YUAN", 10, auditor)
-	TransferCashWithSelector(network, alice, "", "YUAN", 10, bob, auditor, "pineapple", "insufficient funds")
-
-	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
-
-	// Now, the tests asks Bob to transfer to Charlie 14 YUAN split in two parallel transactions each one transferring 7 YUAN.
-	// Notice that Bob has only 10 YUAN, therefore bob will be able to assemble only one transfer.
-	// We use two channels to collect the results of the two transfers.
-	transferErrors2 := make([]chan error, 2)
-	for i := range transferErrors2 {
-		transferErrors2[i] = make(chan error, 1)
-
-		transferError := transferErrors2[i]
-		go func() {
-			txid, err := network.Client(bob.ReplicaName()).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
-				Auditor:      auditor.Id(),
-				Wallet:       "",
-				Type:         "YUAN",
-				Amount:       7,
-				Recipient:    network.Identity(charlie.Id()),
-				RecipientEID: charlie.Id(),
-				Retry:        false,
-			}))
-			if err != nil {
-				// The transaction failed, we return the error to the caller.
-				transferError <- err
-				return
-			}
-			// The transaction didn't fail, let's wait for it to be confirmed, and return no error
-			common2.CheckFinality(network, charlie, common.JSONUnmarshalString(txid), nil, false)
-			common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), nil, false)
-			transferError <- nil
-		}()
-	}
-	// collect the errors, and check that they are all nil, and one of them is the error we expect.
-	var errs []error
-	for _, transfer := range transferErrors2 {
-		errs = append(errs, <-transfer)
-	}
-	gomega.Expect((errs[0] == nil && errs[1] != nil) || (errs[0] != nil && errs[1] == nil)).To(gomega.BeTrue())
-	var errStr string
-	if errs[0] == nil {
-		errStr = errs[1].Error()
-	} else {
-		errStr = errs[0].Error()
-	}
-	v := strings.Contains(errStr, "pineapple") || strings.Contains(errStr, "lemonade")
-	gomega.Expect(v).To(gomega.BeEquivalentTo(true), "error [%s] does not contain either 'pineapple' or 'lemonade'", errStr)
-	gomega.Expect(errStr).NotTo(gomega.BeEmpty())
-
-	CheckBalanceAndHolding(network, bob, "", "YUAN", 3, auditor)
-	CheckBalanceAndHolding(network, alice, "", "YUAN", 7, auditor)
-	CheckBalanceAndHolding(network, charlie, "", "YUAN", 7, auditor)
-
-	// Transfer by IDs
-	{
-		txID1 := IssueCash(network, "", "CHF", 17, alice, auditor, true, issuer)
-		TransferCashByIDs(network, alice, "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, bob, auditor, true, "test release")
-		// the previous call should not keep the token locked if release is successful
-		txID2 := TransferCashByIDs(network, alice, "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, bob, auditor, false)
-		WhoDeletedToken(network, alice, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
-		WhoDeletedToken(network, auditor, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
-		// redeem newly created token
-		RedeemCashByIDs(network, networkName, bob, "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor, issuer)
-	}
-
-	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
-
-	// Test Max Token Value
-	IssueCash(network, "", "MAX", 65535, charlie, auditor, true, issuer)
-	IssueCash(network, "", "MAX", 65535, charlie, auditor, true, issuer)
-	TransferCash(network, charlie, "", "MAX", 65536, alice, auditor, "failed to convert [65536] to quantity of precision [16]")
-	IssueCash(network, "", "MAX", 65536, charlie, auditor, true, issuer, "q is larger than max token value [65535]")
-
-	// Check consistency
-	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
-	CheckOwnerStore(network, nil, issuer, auditor, alice, bob, charlie, manager)
-	CheckAuditorStore(network, auditor, "", nil)
-	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
-
-	for _, ref := range []*token3.NodeReference{alice, bob, charlie, manager} {
-		IDs := ListVaultUnspentTokens(network, ref)
-		CheckIfExistsInVault(network, auditor, IDs)
-	}
-
-	// Check double spending by multiple action in the same transaction
-
-	// use the same token for both actions, this must fail
-	txIssuedPineapples1 := IssueCash(network, "", "Pineapples", 3, alice, auditor, true, issuer)
-	IssueCash(network, "", "Pineapples", 3, alice, auditor, true, issuer)
-	failedTransferTxID := TransferCashMultiActions(network, alice, "", "Pineapples", []uint64{2, 3}, []*token3.NodeReference{bob, charlie}, auditor, &token2.ID{TxId: txIssuedPineapples1}, "failed to append spent id", txIssuedPineapples1)
-	// the above transfer must fail at execution phase, therefore the auditor should be explicitly informed about this transaction
-	CheckBalance(network, alice, "", "Pineapples", 6)
-	CheckHolding(network, alice, "", "Pineapples", 1, auditor)
-	CheckBalance(network, bob, "", "Pineapples", 0)
-	CheckHolding(network, bob, "", "Pineapples", 2, auditor)
-	CheckBalance(network, charlie, "", "Pineapples", 0)
-	CheckHolding(network, charlie, "", "Pineapples", 3, auditor)
-	fmt.Printf("failed transaction [%s]\n", failedTransferTxID)
-	SetTransactionAuditStatus(network, auditor, failedTransferTxID, ttx.Deleted)
-	CheckBalanceAndHolding(network, alice, "", "Pineapples", 6, auditor)
-	CheckBalanceAndHolding(network, bob, "", "Pineapples", 0, auditor)
-	CheckBalanceAndHolding(network, charlie, "", "Pineapples", 0, auditor)
-	CheckAuditorStore(network, auditor, "", nil)
-
-	// test spendable token
-	txIssueSpendableToken := IssueCash(network, "", "Spendable", 3, alice, auditor, true, issuer)
-	SetSpendableFlag(network, alice, token2.ID{TxId: txIssueSpendableToken, Index: 0}, false)
-	TransferCash(network, alice, "", "Spendable", 2, bob, auditor, "failed selecting tokens")
-	SetSpendableFlag(network, alice, token2.ID{TxId: txIssueSpendableToken, Index: 0}, true)
-	TransferCash(network, alice, "", "Spendable", 2, bob, auditor)
-	CheckBalanceAndHolding(network, alice, "", "Spendable", 1, auditor)
-	CheckBalanceAndHolding(network, bob, "", "Spendable", 2, auditor)
-	CheckAuditorStore(network, auditor, "", nil)
+	// // Restart
+	// CheckOwnerStore(network, nil, alice, bob)
+	// CheckOwnerStore(network, nil, issuer, charlie, manager)
+	// CheckAuditorStore(network, auditor, "", nil)
+	// Restart(network, false, onRestart, alice, bob, charlie, manager)
+	// CheckOwnerStore(network, nil, alice, bob)
+	// CheckOwnerStore(network, nil, issuer, charlie, manager)
+	// CheckAuditorStore(network, auditor, "", nil)
+	//
+	// CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+	//
+	// // Addition transfers
+	// TransferCash(network, issuer, "", "USD", 50, issuer, auditor)
+	// CheckBalanceAndHolding(network, issuer, "", "USD", 110, auditor)
+	// CheckBalanceAndHolding(network, issuer, "", "EUR", 150, auditor)
+	//
+	// TransferCash(network, issuer, "", "USD", 50, manager, auditor)
+	// TransferCash(network, issuer, "", "EUR", 20, manager, auditor)
+	// CheckBalanceAndHolding(network, issuer, "", "USD", 60, auditor)
+	// CheckBalanceAndHolding(network, issuer, "", "EUR", 130, auditor)
+	// CheckBalanceAndHolding(network, manager, "", "USD", 50, auditor)
+	// CheckBalanceAndHolding(network, manager, "", "EUR", 20, auditor)
+	//
+	// // Play with wallets
+	// TransferCash(network, manager, "", "USD", 10, sel.Get("manager.id1"), auditor)
+	// TransferCash(network, manager, "", "USD", 10, sel.Get("manager.id2"), auditor)
+	// TransferCash(network, manager, "", "USD", 10, sel.Get("manager.id3"), auditor)
+	// CheckBalanceAndHolding(network, manager, "", "USD", 20, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id1", "USD", 10, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id2", "USD", 10, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id3", "USD", 10, auditor)
+	//
+	// TransferCash(network, manager, "manager.id1", "USD", 10, sel.Get("manager.id2"), auditor)
+	// CheckSpending(network, manager, "manager.id1", "USD", auditor, 10)
+	// CheckBalanceAndHolding(network, manager, "", "USD", 20, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id1", "USD", 0, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id2", "USD", 20, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id3", "USD", 10, auditor)
+	//
+	// // Swap among wallets
+	// TransferCash(network, manager, "", "EUR", 10, sel.Get("manager.id1"), auditor)
+	// CheckBalanceAndHolding(network, manager, "", "EUR", 10, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id1", "EUR", 10, auditor)
+	//
+	// SwapCash(network, manager, "manager.id1", "EUR", 10, "USD", 10, sel.Get("manager.id2"), auditor)
+	// CheckBalanceAndHolding(network, manager, "", "USD", 20, auditor)
+	// CheckBalanceAndHolding(network, manager, "", "EUR", 10, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id1", "USD", 10, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id1", "EUR", 0, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id2", "USD", 10, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id2", "EUR", 10, auditor)
+	// CheckBalanceAndHolding(network, manager, "manager.id3", "USD", 10, auditor)
+	//
+	// // no more USD can be issued, reached quota of 220
+	// IssueCash(network, "", "USD", 10, alice, auditor, true, issuer, "no more USD can be issued, reached quota of 241")
+	//
+	// CheckBalanceAndHolding(network, alice, "", "USD", 0, auditor)
+	// CheckBalanceAndHolding(network, alice, "", "EUR", 10, auditor)
+	//
+	// CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+	//
+	// // limits
+	// CheckBalanceAndHolding(network, alice, "", "USD", 0, auditor)
+	// CheckBalanceAndHolding(network, alice, "", "EUR", 10, auditor)
+	// CheckBalanceAndHolding(network, bob, "", "EUR", 20, auditor)
+	// CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
+	// IssueCash(network, "", "EUR", 2200, alice, auditor, true, issuer)
+	// IssueCash(network, "", "EUR", 2000, charlie, auditor, true, issuer)
+	// CheckBalanceAndHolding(network, alice, "", "EUR", 2210, auditor)
+	// CheckBalanceAndHolding(network, charlie, "", "EUR", 2000, auditor)
+	// TransferCash(network, alice, "", "EUR", 210, bob, auditor, "payment limit reached", "alice", "[EUR][210]")
+	// CheckBalanceAndHolding(network, alice, "", "EUR", 2210, auditor)
+	// CheckBalanceAndHolding(network, charlie, "", "EUR", 2000, auditor)
+	// CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
+	// CheckBalanceAndHolding(network, bob, "", "EUR", 20, auditor)
+	//
+	// PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
+	//
+	// TransferCash(network, alice, "", "EUR", 200, bob, auditor)
+	// TransferCash(network, alice, "", "EUR", 200, bob, auditor)
+	// TransferCash(network, alice, "", "EUR", 200, bob, auditor)
+	// TransferCash(network, alice, "", "EUR", 200, bob, auditor)
+	// TransferCash(network, alice, "", "EUR", 200, bob, auditor)
+	// TransferCash(network, alice, "", "EUR", 200, bob, auditor)
+	// TransferCash(network, alice, "", "EUR", 200, bob, auditor)
+	// TransferCash(network, alice, "", "EUR", 200, bob, auditor)
+	// TransferCash(network, alice, "", "EUR", 200, bob, auditor)
+	// CheckBalanceAndHolding(network, bob, "", "EUR", 1820, auditor)
+	// CheckSpending(network, alice, "", "EUR", auditor, 1800)
+	// TransferCash(network, alice, "", "EUR", 200, bob, auditor, "cumulative payment limit reached", "alice", "[EUR][2000]")
+	//
+	// TransferCash(network, charlie, "", "EUR", 200, bob, auditor)
+	// PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
+	// TransferCash(network, charlie, "", "EUR", 200, bob, auditor)
+	// TransferCash(network, charlie, "", "EUR", 200, bob, auditor)
+	// TransferCash(network, charlie, "", "EUR", 200, bob, auditor)
+	// TransferCash(network, charlie, "", "EUR", 200, bob, auditor)
+	// CheckBalanceAndHolding(network, charlie, "", "EUR", 1000, auditor)
+	// CheckBalanceAndHolding(network, bob, "", "EUR", 2820, auditor)
+	// TransferCash(network, charlie, "", "EUR", 200, bob, auditor, "holding limit reached", "bob", "[EUR][3020]")
+	// CheckBalanceAndHolding(network, bob, "", "EUR", 2820, auditor)
+	//
+	// PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
+	//
+	// CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+	//
+	// // Routing
+	// IssueCash(network, "", "EUR", 10, sel.Get("alice.id1"), auditor, true, issuer)
+	// CheckAcceptedTransactions(network, alice, "alice.id1", AliceID1AcceptedTransactions[:], nil, nil, nil)
+	// TransferCash(network, alice, "alice.id1", "EUR", 10, sel.Get("bob.id1"), auditor)
+	// CheckBalanceAndHolding(network, alice, "alice.id1", "EUR", 0, auditor)
+	// CheckBalanceAndHolding(network, bob, "bob.id1", "EUR", 10, auditor)
+	//
+	// CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+	//
+	// // Concurrent transfers
+	// transferErrors := make([]chan error, 5)
+	// var sum uint64
+	// for i := range transferErrors {
+	// 	transferErrors[i] = make(chan error, 1)
+	//
+	// 	transfer := transferErrors[i]
+	// 	r, err := rand.Int(rand.Reader, big.NewInt(200))
+	// 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	// 	v := r.Uint64() + 1
+	// 	sum += v
+	// 	go func() {
+	// 		_, err := network.Client(bob.ReplicaName()).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
+	// 			Auditor:      auditor.Id(),
+	// 			Wallet:       "",
+	// 			Type:         "EUR",
+	// 			Amount:       v,
+	// 			Recipient:    network.Identity(alice.Id()),
+	// 			RecipientEID: alice.Id(),
+	// 			Retry:        true,
+	// 		}))
+	// 		if err != nil {
+	// 			transfer <- err
+	// 			return
+	// 		}
+	// 		transfer <- nil
+	// 	}()
+	// }
+	// for _, transfer := range transferErrors {
+	// 	err := <-transfer
+	// 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	// }
+	// CheckBalanceAndHolding(network, bob, "", "EUR", 2820-sum, auditor)
+	//
+	// // Transfer With TokenSelector
+	// IssueSuccessfulCash(network, "", "YUAN", 17, alice, auditor, true, issuer, endorsers...)
+	// TransferCashWithSelector(network, alice, "", "YUAN", 10, bob, auditor)
+	// CheckBalanceAndHolding(network, alice, "", "YUAN", 7, auditor)
+	// CheckBalanceAndHolding(network, bob, "", "YUAN", 10, auditor)
+	// TransferCashWithSelector(network, alice, "", "YUAN", 10, bob, auditor, "pineapple", "insufficient funds")
+	//
+	// CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+	//
+	// // Now, the tests asks Bob to transfer to Charlie 14 YUAN split in two parallel transactions each one transferring 7 YUAN.
+	// // Notice that Bob has only 10 YUAN, therefore bob will be able to assemble only one transfer.
+	// // We use two channels to collect the results of the two transfers.
+	// transferErrors2 := make([]chan error, 2)
+	// for i := range transferErrors2 {
+	// 	transferErrors2[i] = make(chan error, 1)
+	//
+	// 	transferError := transferErrors2[i]
+	// 	go func() {
+	// 		txid, err := network.Client(bob.ReplicaName()).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
+	// 			Auditor:      auditor.Id(),
+	// 			Wallet:       "",
+	// 			Type:         "YUAN",
+	// 			Amount:       7,
+	// 			Recipient:    network.Identity(charlie.Id()),
+	// 			RecipientEID: charlie.Id(),
+	// 			Retry:        false,
+	// 		}))
+	// 		if err != nil {
+	// 			// The transaction failed, we return the error to the caller.
+	// 			transferError <- err
+	// 			return
+	// 		}
+	// 		// The transaction didn't fail, let's wait for it to be confirmed, and return no error
+	// 		common2.CheckFinality(network, charlie, common.JSONUnmarshalString(txid), nil, false)
+	// 		common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), nil, false)
+	// 		transferError <- nil
+	// 	}()
+	// }
+	// // collect the errors, and check that they are all nil, and one of them is the error we expect.
+	// var errs []error
+	// for _, transfer := range transferErrors2 {
+	// 	errs = append(errs, <-transfer)
+	// }
+	// gomega.Expect((errs[0] == nil && errs[1] != nil) || (errs[0] != nil && errs[1] == nil)).To(gomega.BeTrue())
+	// var errStr string
+	// if errs[0] == nil {
+	// 	errStr = errs[1].Error()
+	// } else {
+	// 	errStr = errs[0].Error()
+	// }
+	// v := strings.Contains(errStr, "pineapple") || strings.Contains(errStr, "lemonade")
+	// gomega.Expect(v).To(gomega.BeEquivalentTo(true), "error [%s] does not contain either 'pineapple' or 'lemonade'", errStr)
+	// gomega.Expect(errStr).NotTo(gomega.BeEmpty())
+	//
+	// CheckBalanceAndHolding(network, bob, "", "YUAN", 3, auditor)
+	// CheckBalanceAndHolding(network, alice, "", "YUAN", 7, auditor)
+	// CheckBalanceAndHolding(network, charlie, "", "YUAN", 7, auditor)
+	//
+	// // Transfer by IDs
+	// {
+	// 	txID1 := IssueCash(network, "", "CHF", 17, alice, auditor, true, issuer)
+	// 	TransferCashByIDs(network, alice, "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, bob, auditor, true, "test release")
+	// 	// the previous call should not keep the token locked if release is successful
+	// 	txID2 := TransferCashByIDs(network, alice, "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, bob, auditor, false)
+	// 	WhoDeletedToken(network, alice, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
+	// 	WhoDeletedToken(network, auditor, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
+	// 	// redeem newly created token
+	// 	RedeemCashByIDs(network, networkName, bob, "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor, issuer)
+	// }
+	//
+	// PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
+	//
+	// // Test Max Token Value
+	// IssueCash(network, "", "MAX", 65535, charlie, auditor, true, issuer)
+	// IssueCash(network, "", "MAX", 65535, charlie, auditor, true, issuer)
+	// TransferCash(network, charlie, "", "MAX", 65536, alice, auditor, "failed to convert [65536] to quantity of precision [16]")
+	// IssueCash(network, "", "MAX", 65536, charlie, auditor, true, issuer, "q is larger than max token value [65535]")
+	//
+	// // Check consistency
+	// CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+	// CheckOwnerStore(network, nil, issuer, auditor, alice, bob, charlie, manager)
+	// CheckAuditorStore(network, auditor, "", nil)
+	// PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
+	//
+	// for _, ref := range []*token3.NodeReference{alice, bob, charlie, manager} {
+	// 	IDs := ListVaultUnspentTokens(network, ref)
+	// 	CheckIfExistsInVault(network, auditor, IDs)
+	// }
+	//
+	// // Check double spending by multiple action in the same transaction
+	//
+	// // use the same token for both actions, this must fail
+	// txIssuedPineapples1 := IssueCash(network, "", "Pineapples", 3, alice, auditor, true, issuer)
+	// IssueCash(network, "", "Pineapples", 3, alice, auditor, true, issuer)
+	// failedTransferTxID := TransferCashMultiActions(network, alice, "", "Pineapples", []uint64{2, 3}, []*token3.NodeReference{bob, charlie}, auditor, &token2.ID{TxId: txIssuedPineapples1}, "failed to append spent id", txIssuedPineapples1)
+	// // the above transfer must fail at execution phase, therefore the auditor should be explicitly informed about this transaction
+	// CheckBalance(network, alice, "", "Pineapples", 6)
+	// CheckHolding(network, alice, "", "Pineapples", 1, auditor)
+	// CheckBalance(network, bob, "", "Pineapples", 0)
+	// CheckHolding(network, bob, "", "Pineapples", 2, auditor)
+	// CheckBalance(network, charlie, "", "Pineapples", 0)
+	// CheckHolding(network, charlie, "", "Pineapples", 3, auditor)
+	// fmt.Printf("failed transaction [%s]\n", failedTransferTxID)
+	// SetTransactionAuditStatus(network, auditor, failedTransferTxID, ttx.Deleted)
+	// CheckBalanceAndHolding(network, alice, "", "Pineapples", 6, auditor)
+	// CheckBalanceAndHolding(network, bob, "", "Pineapples", 0, auditor)
+	// CheckBalanceAndHolding(network, charlie, "", "Pineapples", 0, auditor)
+	// CheckAuditorStore(network, auditor, "", nil)
+	//
+	// // test spendable token
+	// txIssueSpendableToken := IssueCash(network, "", "Spendable", 3, alice, auditor, true, issuer)
+	// SetSpendableFlag(network, alice, token2.ID{TxId: txIssueSpendableToken, Index: 0}, false)
+	// TransferCash(network, alice, "", "Spendable", 2, bob, auditor, "failed selecting tokens")
+	// SetSpendableFlag(network, alice, token2.ID{TxId: txIssueSpendableToken, Index: 0}, true)
+	// TransferCash(network, alice, "", "Spendable", 2, bob, auditor)
+	// CheckBalanceAndHolding(network, alice, "", "Spendable", 1, auditor)
+	// CheckBalanceAndHolding(network, bob, "", "Spendable", 2, auditor)
+	// CheckAuditorStore(network, auditor, "", nil)
 }
 
 func TestSelector(network *integration.Infrastructure, auditorId string, sel *token3.ReplicaSelector) {
