@@ -27,39 +27,39 @@ import (
 func TestNewTokensService(t *testing.T) {
 	tests := []struct {
 		name          string
-		init          func() (logging.Logger, *setup.PublicParams, token2.IdentityDeserializer, error)
+		init          func() (*setup.PublicParams, token2.IdentityDeserializer, error)
 		check         func(pp *setup.PublicParams, ts *token2.TokensService) error
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name: "publicParams cannot be nil",
-			init: func() (logging.Logger, *setup.PublicParams, token2.IdentityDeserializer, error) {
-				return nil, nil, nil, nil
+			init: func() (*setup.PublicParams, token2.IdentityDeserializer, error) {
+				return nil, nil, nil
 			},
 			wantErr:       true,
 			expectedError: "publicParams cannot be nil",
 		},
 		{
 			name: "identityDeserializer cannot be nil",
-			init: func() (logging.Logger, *setup.PublicParams, token2.IdentityDeserializer, error) {
+			init: func() (*setup.PublicParams, token2.IdentityDeserializer, error) {
 				pp, err := setup.Setup(32, nil, math.FP256BN_AMCL)
 				if err != nil {
-					return nil, nil, nil, err
+					return nil, nil, err
 				}
-				return nil, pp, nil, nil
+				return pp, nil, nil
 			},
 			wantErr:       true,
 			expectedError: "identityDeserializer cannot be nil",
 		},
 		{
 			name: "success",
-			init: func() (logging.Logger, *setup.PublicParams, token2.IdentityDeserializer, error) {
+			init: func() (*setup.PublicParams, token2.IdentityDeserializer, error) {
 				pp, err := setup.Setup(32, []byte("issuer public key"), math.FP256BN_AMCL)
 				if err != nil {
-					return nil, nil, nil, err
+					return nil, nil, err
 				}
-				return nil, pp, &mock.IdentityDeserializer{}, nil
+				return pp, &mock.IdentityDeserializer{}, nil
 			},
 			check: func(pp *setup.PublicParams, ts *token2.TokensService) error {
 				// check pp
@@ -103,9 +103,10 @@ func TestNewTokensService(t *testing.T) {
 			wantErr: false,
 		},
 	}
+	logger := logging.MustGetLogger()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			logger, pp, deserializer, err := tt.init()
+			pp, deserializer, err := tt.init()
 			assert.NoError(t, err)
 			ts, err := token2.NewTokensService(logger, pp, deserializer)
 			if tt.wantErr {
