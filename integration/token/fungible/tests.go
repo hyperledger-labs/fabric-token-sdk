@@ -624,6 +624,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, alice, "", "USD", 0, auditor)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 10, auditor)
 
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+
 	// limits
 	CheckBalanceAndHolding(network, alice, "", "USD", 0, auditor)
 	CheckBalanceAndHolding(network, alice, "", "EUR", 10, auditor)
@@ -667,12 +669,16 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 
 	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
 
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+
 	// Routing
 	IssueCash(network, "", "EUR", 10, sel.Get("alice.id1"), auditor, true, issuer)
 	CheckAcceptedTransactions(network, alice, "alice.id1", AliceID1AcceptedTransactions[:], nil, nil, nil)
 	TransferCash(network, alice, "alice.id1", "EUR", 10, sel.Get("bob.id1"), auditor)
 	CheckBalanceAndHolding(network, alice, "alice.id1", "EUR", 0, auditor)
 	CheckBalanceAndHolding(network, bob, "bob.id1", "EUR", 10, auditor)
+
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
 	// Concurrent transfers
 	transferErrors := make([]chan error, 5)
@@ -714,6 +720,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckBalanceAndHolding(network, alice, "", "YUAN", 7, auditor)
 	CheckBalanceAndHolding(network, bob, "", "YUAN", 10, auditor)
 	TransferCashWithSelector(network, alice, "", "YUAN", 10, bob, auditor, "pineapple", "insufficient funds")
+
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
 	// Now, the tests asks Bob to transfer to Charlie 14 YUAN split in two parallel transactions each one transferring 7 YUAN.
 	// Notice that Bob has only 10 YUAN, therefore bob will be able to assemble only one transfer.

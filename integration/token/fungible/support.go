@@ -9,6 +9,7 @@ package fungible
 import (
 	"context"
 	"encoding/json"
+	errors2 "errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -920,18 +921,34 @@ func GetTXStatus(network *integration.Infrastructure, id *token3.NodeReference, 
 }
 
 func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token2.TMSID, ids ...*token3.NodeReference) {
+	var errs []error
 	for _, id := range ids {
 		for _, replicaName := range id.AllNames() {
 			if network.Client(replicaName) == nil {
 				panic("did not find id " + replicaName)
 			}
-			gomega.Eventually(func(g gomega.Gomega, replicaName string, tmsId *token2.TMSID, id *token3.NodeReference) {
+
+			for i := 0; i < int(eventualCheckTimeout/time.Second); i++ {
 				_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
 					TMSID: tmsId,
 				}))
-				g.Expect(err).NotTo(gomega.HaveOccurred(), "failed to check public params at [%s]", id)
-			}).WithArguments(replicaName, tmsId, id).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
+				if err == nil {
+					break
+				}
+				errs = append(errs, errors.WithMessagef(err, "failed to check public params at [%s]", id))
+				time.Sleep(eventualCheckPolling)
+			}
+
+			// gomega.Eventually(func(g gomega.Gomega, replicaName string, tmsId *token2.TMSID, id *token3.NodeReference) {
+			// 	_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
+			// 		TMSID: tmsId,
+			// 	}))
+			// 	g.Expect(err).NotTo(gomega.HaveOccurred(), "failed to check public params at [%s]", id)
+			// }).WithArguments(replicaName, tmsId, id).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
 		}
+	}
+	if len(errs) != 0 {
+		gomega.Expect(errors2.Join(errs...)).ToNot(gomega.HaveOccurred(), "failed to check public params")
 	}
 }
 
