@@ -116,15 +116,16 @@ func (*DefaultManager) SignerOpts(schema string) (*bccsp.IdemixSignerOpts, error
 	case "w3c-v0.0.1":
 		var idemixAttrs []bccsp.IdemixAttribute
 		for i := range attributeNames {
-			if i == 25 {
+			switch i {
+			case 25:
 				idemixAttrs = append(idemixAttrs, bccsp.IdemixAttribute{
 					Type: bccsp.IdemixHiddenAttribute,
 				})
-			} else if i == 24 {
+			case 24:
 				idemixAttrs = append(idemixAttrs, bccsp.IdemixAttribute{
 					Type: bccsp.IdemixHiddenAttribute,
 				})
-			} else {
+			default:
 				idemixAttrs = append(idemixAttrs, bccsp.IdemixAttribute{
 					Type: bccsp.IdemixHiddenAttribute,
 				})
