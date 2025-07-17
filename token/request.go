@@ -21,8 +21,12 @@ import (
 )
 
 const (
+	// TransferMetadataPrefix is the prefix for the metadata of a transfer action
 	TransferMetadataPrefix = meta.TransferMetadataPrefix
-	IssueMetadataPrefix    = meta.IssueMetadataPrefix
+	// IssueMetadataPrefix is the prefix for the metadata of an issue action
+	IssueMetadataPrefix = meta.IssueMetadataPrefix
+	// PublicMetadataPrefix is the prefix for the metadata that will be published on the ledger without further validation
+	PublicMetadataPrefix = meta.PublicMetadataPrefix
 )
 
 type Binder interface {
@@ -112,6 +116,21 @@ func WithTokenSelector(selector Selector) TransferOption {
 // WithTransferMetadata sets transfer action metadata
 func WithTransferMetadata(key string, value []byte) TransferOption {
 	return WithTransferAttribute(TransferMetadataPrefix+key, value)
+
+}
+
+// WithPublicTransferMetadata adds any data to the public ledger that may be relevant to the application.
+// It is also made available to the participants as part of the TransactionRecord.
+// The transaction fails if the key already exists on the ledger. The value is not validated.
+func WithPublicTransferMetadata(key string, value []byte) TransferOption {
+	return WithTransferMetadata(PublicMetadataPrefix+key, value)
+}
+
+// WithPublicIssueMetadata adds any data to the public ledger that may be relevant to the application.
+// It is also made available to the participants as part of the TransactionRecord.
+// The transaction fails if the key already exists on the ledger. The value is not validated.
+func WithPublicIssueMetadata(key string, value []byte) IssueOption {
+	return WithIssueMetadata(PublicMetadataPrefix+key, value)
 }
 
 // WithTokenIDs sets the tokens ids to transfer
@@ -320,7 +339,7 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 		return nil, errors.Wrap(err, "failed preparing transfer")
 	}
 
-	r.TokenService.logger.DebugfContext(ctx, "Prepare Transfer Action [id:%s,ins:%d,outs:%d]", r.Anchor, len(tokenIDs), len(outputTokens))
+	r.TokenService.logger.DebugfContext(ctx, "Prepare Transfer Action [id:%s,ins:%d,outs:%d,attr:%d]", r.Anchor, len(tokenIDs), len(outputTokens), len(opt.Attributes))
 
 	ts := r.TokenService.tms.TransferService()
 

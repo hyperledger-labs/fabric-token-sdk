@@ -1,0 +1,25 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+package common
+
+import (
+	"strings"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+)
+
+// TransferApplicationDataValidate accepts any metadata in the "pub" namespace.
+// This gives the user of the Token SDK the option to attach public data to the token transaction.
+func TransferApplicationDataValidate[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](ctx *Context[P, T, TA, IA, DS]) error {
+	for key := range ctx.TransferAction.GetMetadata() {
+		if strings.HasPrefix(key, meta.PublicMetadataPrefix) {
+			ctx.CountMetadataKey(key)
+		}
+	}
+	return nil
+}
