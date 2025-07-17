@@ -130,6 +130,7 @@ func (s *TokenDriverService) NewTokenService(tmsID driver.TMSID, publicParams []
 			tmsID,
 			logging.Base64(tms.PublicParamsManager().PublicParamsHash()),
 		)
+		return tms, nil
 	}
 	return nil, errors.Errorf("no token driver named '%s' found", DriverIdentifierFromPP(pp))
 }
