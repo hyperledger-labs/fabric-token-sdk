@@ -9,6 +9,7 @@ package fungible
 import (
 	"context"
 	"encoding/json"
+	errors2 "errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -45,7 +46,9 @@ import (
 )
 
 var (
-	RestartEnabled = true
+	RestartEnabled       = true
+	eventualCheckTimeout = 30 * time.Second
+	eventualCheckPolling = 1 * time.Second
 )
 
 type TransactionRecord struct {
@@ -270,19 +273,21 @@ func CheckBalance(network *integration.Infrastructure, ref *token3.NodeReference
 }
 
 func CheckBalanceForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64, tmsID *token2.TMSID) {
-	res, err := network.Client(ref.ReplicaName()).CallView("balance", common.JSONMarshall(&views.BalanceQuery{
-		Wallet: wallet,
-		Type:   typ,
-		TMSID:  tmsID,
-	}))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	b := &views.Balance{}
-	common.JSONUnmarshal(res.([]byte), b)
-	gomega.Expect(b.Type).To(gomega.BeEquivalentTo(typ))
-	q, err := token.ToQuantity(b.Quantity, 64)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	expectedQ := token.NewQuantityFromUInt64(expected)
-	gomega.Expect(expectedQ.Cmp(q)).To(gomega.BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+	gomega.Eventually(func(g gomega.Gomega, network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64, tmsID *token2.TMSID) {
+		res, err := network.Client(ref.ReplicaName()).CallView("balance", common.JSONMarshall(&views.BalanceQuery{
+			Wallet: wallet,
+			Type:   typ,
+			TMSID:  tmsID,
+		}))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		b := &views.Balance{}
+		common.JSONUnmarshal(res.([]byte), b)
+		g.Expect(b.Type).To(gomega.BeEquivalentTo(typ))
+		q, err := token.ToQuantity(b.Quantity, 64)
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		expectedQ := token.NewQuantityFromUInt64(expected)
+		g.Expect(expectedQ.Cmp(q)).To(gomega.BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+	}).WithArguments(network, ref, wallet, typ, expected, tmsID).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
 }
 
 func CheckCoOwnedBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64) {
@@ -310,20 +315,22 @@ func CheckHolding(network *integration.Infrastructure, ref *token3.NodeReference
 }
 
 func CheckHoldingForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected int64, auditor *token3.NodeReference, tmsID *token2.TMSID) {
-	eIDBoxed, err := network.Client(ref.ReplicaName()).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
-		Wallet: wallet,
-		TMSID:  tmsID,
-	}))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	eID := common.JSONUnmarshalString(eIDBoxed)
-	holdingBoxed, err := network.Client(auditor.ReplicaName()).CallView("holding", common.JSONMarshall(&views.CurrentHolding{
-		EnrollmentID: eID,
-		TokenType:    typ,
-	}))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	holding, err := strconv.Atoi(common.JSONUnmarshalString(holdingBoxed))
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	gomega.Expect(holding).To(gomega.Equal(int(expected)))
+	gomega.Eventually(func(g gomega.Gomega, network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected int64, auditor *token3.NodeReference, tmsID *token2.TMSID) {
+		eIDBoxed, err := network.Client(ref.ReplicaName()).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
+			Wallet: wallet,
+			TMSID:  tmsID,
+		}))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		eID := common.JSONUnmarshalString(eIDBoxed)
+		holdingBoxed, err := network.Client(auditor.ReplicaName()).CallView("holding", common.JSONMarshall(&views.CurrentHolding{
+			EnrollmentID: eID,
+			TokenType:    typ,
+		}))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		holding, err := strconv.Atoi(common.JSONUnmarshalString(holdingBoxed))
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		g.Expect(holding).To(gomega.Equal(int(expected)))
+	}).WithArguments(network, ref, wallet, typ, expected, auditor, tmsID).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
 }
 
 func CheckSpending(network *integration.Infrastructure, id *token3.NodeReference, wallet string, tokenType token.Type, auditor *token3.NodeReference, expected uint64) {
@@ -907,16 +914,34 @@ func GetTXStatus(network *integration.Infrastructure, id *token3.NodeReference, 
 }
 
 func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token2.TMSID, ids ...*token3.NodeReference) {
+	var errs []error
 	for _, id := range ids {
 		for _, replicaName := range id.AllNames() {
 			if network.Client(replicaName) == nil {
 				panic("did not find id " + replicaName)
 			}
-			_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
-				TMSID: tmsId,
-			}))
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to check public params at [%s]", id)
+
+			for i := 0; i < int(eventualCheckTimeout/time.Second); i++ {
+				_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
+					TMSID: tmsId,
+				}))
+				if err == nil {
+					break
+				}
+				errs = append(errs, errors.WithMessagef(err, "failed to check public params at [%s]", id))
+				time.Sleep(eventualCheckPolling)
+			}
+
+			// gomega.Eventually(func(g gomega.Gomega, replicaName string, tmsId *token2.TMSID, id *token3.NodeReference) {
+			// 	_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
+			// 		TMSID: tmsId,
+			// 	}))
+			// 	g.Expect(err).NotTo(gomega.HaveOccurred(), "failed to check public params at [%s]", id)
+			// }).WithArguments(replicaName, tmsId, id).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
 		}
+	}
+	if len(errs) != 0 {
+		gomega.Expect(errors2.Join(errs...)).ToNot(gomega.HaveOccurred(), "failed to check public params")
 	}
 }
 

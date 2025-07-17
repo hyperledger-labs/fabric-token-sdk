@@ -118,7 +118,7 @@ func (p *deliveryBasedLLMProvider) NewManager(network, channel string) (Listener
 		return nil, err
 	}
 	logger := logging.MustGetLogger()
-	flm, err := events.NewListenerManager[KeyInfo](
+	flm, err := events.NewSequentialListenerManager[KeyInfo](
 		logger,
 		p.config,
 		&finality2.Delivery{
