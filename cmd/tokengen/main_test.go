@@ -15,8 +15,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/slices"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )

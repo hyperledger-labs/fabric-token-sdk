@@ -6,7 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 
 package ttx
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+)
 
 // TxStatus is the status of a transaction
 type TxStatus = driver.TxStatus
