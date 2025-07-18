@@ -84,6 +84,8 @@ func GetCurveAndTranslator(curveID math.CurveID) (*math.Curve, idemix3.Translato
 		tr = &amcl.Fp256bnMiracl{C: curve}
 	case math.BLS12_381_BBS:
 		tr = &amcl.Gurvy{C: curve}
+	case math.BLS12_381_BBS_GURVY:
+		tr = &amcl.Gurvy{C: curve}
 	default:
 		return nil, nil, errors.Errorf("unsupported curve ID: %d", curveID)
 	}
