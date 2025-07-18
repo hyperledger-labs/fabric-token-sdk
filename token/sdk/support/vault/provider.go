@@ -26,7 +26,7 @@ type Provider struct {
 	vaultCache     map[string]driver.Vault
 }
 
-func NewVaultProvider(
+func NewProvider(
 	tokenStoreServiceManager tokens.StoreServiceManager,
 	ttxStoreServiceManager ttx.StoreServiceManager,
 	auditStoreServiceManager auditor.StoreServiceManager,

@@ -9,6 +9,7 @@ package token
 import (
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/logging"
 	"github.com/pkg/errors"
@@ -20,10 +21,7 @@ var logger = logging.MustGetLogger()
 type TMSID = driver.TMSID
 
 // ServiceProvider is used to return instances of a given type
-type ServiceProvider interface {
-	// GetService returns an instance of the given type
-	GetService(v interface{}) (interface{}, error)
-}
+type ServiceProvider = services.Provider
 
 // ManagementService (TMS, for short) is the entry point for the Token API. A TMS is uniquely
 // identified by a network, channel, namespace, and public parameters.

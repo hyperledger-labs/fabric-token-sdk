@@ -13,32 +13,32 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/walletdb"
 )
 
-type DBStorageProvider struct {
+type StorageProvider struct {
 	kvs                         driver.Keystore
 	identityStoreServiceManager identitydb.StoreServiceManager
 	walletStoreServiceManager   walletdb.StoreServiceManager
 }
 
-func NewDBStorageProvider(
+func NewStorageProvider(
 	kvs driver.Keystore,
 	identityStoreServiceManager identitydb.StoreServiceManager,
 	walletStoreServiceManager walletdb.StoreServiceManager,
-) *DBStorageProvider {
-	return &DBStorageProvider{
+) *StorageProvider {
+	return &StorageProvider{
 		kvs:                         kvs,
 		identityStoreServiceManager: identityStoreServiceManager,
 		walletStoreServiceManager:   walletStoreServiceManager,
 	}
 }
 
-func (s *DBStorageProvider) WalletStore(tmsID token.TMSID) (driver.WalletStoreService, error) {
+func (s *StorageProvider) WalletStore(tmsID token.TMSID) (driver.WalletStoreService, error) {
 	return s.walletStoreServiceManager.StoreServiceByTMSId(tmsID)
 }
 
-func (s *DBStorageProvider) IdentityStore(tmsID token.TMSID) (driver.IdentityStoreService, error) {
+func (s *StorageProvider) IdentityStore(tmsID token.TMSID) (driver.IdentityStoreService, error) {
 	return s.identityStoreServiceManager.StoreServiceByTMSId(tmsID)
 }
 
-func (s *DBStorageProvider) Keystore() (driver.Keystore, error) {
+func (s *StorageProvider) Keystore() (driver.Keystore, error) {
 	return s.kvs, nil
 }
