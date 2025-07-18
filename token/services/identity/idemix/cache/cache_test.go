@@ -8,6 +8,7 @@ package cache
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
@@ -32,4 +33,27 @@ func TestIdentityCache(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Identity([]byte("hello world")), identityDescriptor.Identity)
 	assert.Equal(t, []byte("audit"), identityDescriptor.AuditInfo)
+}
+
+func TestIdentityCacheForRace(t *testing.T) {
+	c := NewIdentityCache(func(context.Context, []byte) (driver.Identity, []byte, error) {
+		return []byte("hello world"), []byte("audit"), nil
+	}, 10000, nil, NewMetrics(&disabled.Provider{}))
+
+	numRoutines := 4
+	wg := sync.WaitGroup{}
+	wg.Add(numRoutines)
+	for i := 0; i < numRoutines; i++ {
+		go func() {
+			defer wg.Done()
+
+			for i := 0; i < 100; i++ {
+				id, audit, err := c.Identity(context.Background(), nil)
+				assert.NoError(t, err)
+				assert.Equal(t, driver.Identity([]byte("hello world")), id)
+				assert.Equal(t, []byte("audit"), audit)
+			}
+		}()
+	}
+	wg.Wait()
 }
