@@ -28,7 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/support/identity"
 	network3 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/support/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/support/tms"
-	vault2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/support/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/support/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -39,7 +39,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
+	dbcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/sqlite"
@@ -55,7 +55,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/logging"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/dig"
 )
 
@@ -101,16 +100,19 @@ func (p *SDK) Install() error {
 				new(ttx.NetworkProvider),
 				new(token.Normalizer),
 				new(auditor.NetworkProvider),
-				new(common2.NetworkProvider),
+				new(dbcommon.NetworkProvider),
 				new(tokens.NetworkProvider),
 			),
 		),
+		p.Container().Provide(token.NewTMSNormalizer, dig.As(new(token.TMSNormalizer))),
 
 		// token drivers
 		p.Container().Provide(support.NewTokenDriverService),
-		p.Container().Provide(func(vaultProvider *vault2.Provider) *vault2.PublicParamsStorage {
-			return &vault2.PublicParamsStorage{Provider: vaultProvider}
+		p.Container().Provide(func(vaultProvider *vault.Provider) *vault.PublicParamsStorage {
+			return &vault.PublicParamsStorage{Provider: vaultProvider}
 		}, dig.As(new(core2.PublicParametersStorage))),
+		p.Container().Provide(vault.NewProvider),
+
 		p.Container().Provide(digutils.Identity[driver.ConfigService](), dig.As(new(core.ConfigProvider))),
 		p.Container().Provide(func() logging.Logger { return logging.MustGetLogger() }),
 		p.Container().Provide(core2.NewTMSProvider),
@@ -123,14 +125,13 @@ func (p *SDK) Install() error {
 		p.Container().Provide(selectorProviders[sdriver.Driver(p.ConfigService().GetString("token.selector.driver"))], dig.As(new(token.SelectorManagerProvider))),
 		p.Container().Provide(network3.NewCertificationClientProvider, dig.As(new(token.CertificationClientProvider))),
 		p.Container().Provide(token.NewManagementServiceProvider),
-		p.Container().Provide(token.NewTMSNormalizer, dig.As(new(token.TMSNormalizer))),
 		p.Container().Provide(
 			digutils.Identity[*token.ManagementServiceProvider](),
 			dig.As(
 				new(ttx.TMSProvider),
 				new(tokens.TMSProvider),
 				new(auditor.TokenManagementServiceProvider),
-				new(common2.TokenManagementServiceProvider),
+				new(dbcommon.TokenManagementServiceProvider),
 			),
 		),
 
@@ -147,8 +148,8 @@ func (p *SDK) Install() error {
 		p.Container().Provide(walletdb.NewStoreServiceManager),
 		p.Container().Provide(tokenlockdb.NewStoreServiceManager),
 		p.Container().Provide(func(kvs *kvs.KVS) driver4.Keystore { return kvs2.Keystore(kvs) }),
-		p.Container().Provide(identity.NewDBStorageProvider),
-		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
+		p.Container().Provide(identity.NewStorageProvider),
+		p.Container().Provide(digutils.Identity[*identity.StorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(sqlite.NewNamedDriver, dig.Group("token-db-drivers")),
 		p.Container().Provide(postgres.NewNamedDriver, dig.Group("token-db-drivers")),
 		p.Container().Provide(memory.NewNamedDriver, dig.Group("token-db-drivers")),
@@ -167,8 +168,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(digutils.Identity[*tokens.ServiceManager](), dig.As(new(ttx.TokensServiceManager), new(auditor.TokensServiceManager))),
 
 		p.Container().Provide(ttx.NewServiceManager),
-		p.Container().Provide(vault2.NewVaultProvider),
-		p.Container().Provide(digutils.Identity[*vault2.Provider](), dig.As(new(token.VaultProvider))),
+		p.Container().Provide(digutils.Identity[*vault.Provider](), dig.As(new(token.VaultProvider))),
 		p.Container().Provide(tms.NewPostInitializer),
 		p.Container().Provide(ttx.NewMetrics),
 		p.Container().Provide(func(tokenStoreServiceManager tokendb.StoreServiceManager, notifierManager tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock2.FetcherProvider {
@@ -191,26 +191,27 @@ func (p *SDK) Install() error {
 		return errors.WithMessagef(err, "failed installing dig chain")
 	}
 
-	// Backward compatibility with SP
+	// Register services in services.Registry
 	err = errors2.Join(
-		digutils.Register[*kvs.KVS](p.Container()),
+		// core
 		digutils.Register[*core2.TokenDriverService](p.Container()),
-		digutils.Register[*network.Provider](p.Container()),
 		digutils.Register[*token.ManagementServiceProvider](p.Container()),
+		digutils.Register[driver.ConfigService](p.Container()),
+
+		// storage
+		digutils.Register[*kvs.KVS](p.Container()),
 		digutils.Register[ttxdb.StoreServiceManager](p.Container()),
 		digutils.Register[tokendb.StoreServiceManager](p.Container()),
 		digutils.Register[auditdb.StoreServiceManager](p.Container()),
 		digutils.Register[identitydb.StoreServiceManager](p.Container()),
-		digutils.Register[*vault2.Provider](p.Container()),
-		digutils.Register[driver.ConfigService](p.Container()),
-		digutils.Register[*identity.DBStorageProvider](p.Container()),
+		digutils.Register[*identity.StorageProvider](p.Container()),
+
+		// services
+		digutils.Register[*network.Provider](p.Container()),
 		digutils.Register[*ttx.Metrics](p.Container()),
 		digutils.Register[*auditor.ServiceManager](p.Container()),
-		digutils.Register[*config2.Service](p.Container()),
 		digutils.Register[*ttx.ServiceManager](p.Container()),
 		digutils.Register[*tokens.ServiceManager](p.Container()),
-		digutils.Register[trace.TracerProvider](p.Container()),
-		digutils.Register[metrics.Provider](p.Container()),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting backward comaptibility with SP")

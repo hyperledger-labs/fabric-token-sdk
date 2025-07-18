@@ -1,0 +1,47 @@
+@startuml
+skinparam componentStyle rectangle
+
+title Token SDK Platform Architecture
+
+package "View SDK" {
+  [view.grpc.client.Client]
+  [web.client.Client]
+  [grpc.GRPCServer]
+  [view.grpc.server.Server]
+  [web.server.Server]
+  [view.Manager]
+  [comm.Service]
+  [endpoint.Service]
+  [sig.Service]
+  [id.Provider]
+  [config.Service]
+  [metrics.Provider]
+  [Storage]
+  [tracing.Provider]
+}
+
+package "Token SDK" {
+  [services/ttx] -->  [sig.Service] : Provide
+  [services/ttx] -->  [id.Provider] : Provide
+  [services/ttx] -->  [Storage] : KVS
+  [services/ttx] -->  [endpoint.Service] : Provide
+  [services/ttx] --> [tracing.Provider] : Trace
+  [services/ttx] --> [metrics.Provider] : Measure
+  [services/ttx] --> [view.Manager] : Register View/Stream
+
+  [services/ttx] --> [services/auditor] :  To be defined
+  [services/ttx] --> [services/tokens] :  To be defined
+  [services/ttx] --> [services/storage] :  AuditDB/TTXDB
+  [services/ttx] --> [services/network] : To be defined
+  [services/ttx] --> [services/identity] : To be defined
+
+  [services/auditor] --> [services/network] : To be defined
+  [services/auditor] --> [services/storage] : AuditDB
+  [services/auditor] --> [services/tokens] : To be defined
+
+  [services/tokens] --> [services/network] : To be defined
+  [services/tokens] --> [services/storage] : TokenDB/TokenLockDB/TTXDB
+  [services/tokens] --> [services/tokens] : To be defined
+}
+
+@enduml
