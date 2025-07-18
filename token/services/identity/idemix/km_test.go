@@ -592,9 +592,9 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 }
 
 func TestKeyManagerForRace(t *testing.T) {
-	// testKeyManagerForRace(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
+	testKeyManagerForRace(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
 	testKeyManagerForRace(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
-	// testKeyManagerForRace(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY, true)
+	testKeyManagerForRace(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testKeyManagerForRace(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
