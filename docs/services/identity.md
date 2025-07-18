@@ -81,7 +81,7 @@ We support the following implementations:
 By default, the `identitydb` is used to provide both an implementation to both the `IdentityDB` and `WalletDB`.
 
 To retrieve the implementation of these interfaces, we have the `identity.StorageProvider` interface.
-An implementation for this interface can be found under [`token/sdk/identity`](./../../token/sdk/identity).
+An implementation for this interface can be found under [`token/sdk/identity`](../../token/sdk/support/identity).
 It uses the `identitydb` service for the `IdentityDB` and the `WalletDB`, and the Fabric-Smart-Client's KVS for the `Keystore`.
 
 ### HashiCorp Vault Secrets Engine Support

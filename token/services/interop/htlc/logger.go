@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package htlc
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/logging"
+)
 
 var logger = logging.MustGetLogger()

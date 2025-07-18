@@ -17,7 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
-	slices2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
+	slices2 "github.com/hyperledger-labs/fabric-token-sdk/token/utils/slices"
 )
 
 const (

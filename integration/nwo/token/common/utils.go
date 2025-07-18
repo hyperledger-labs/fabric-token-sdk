@@ -10,7 +10,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/logging"
 )
 
 var logger = logging.MustGetLogger()

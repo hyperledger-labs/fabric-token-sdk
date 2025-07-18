@@ -14,7 +14,7 @@ import (
 	fabpp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/protos"
 	"github.com/pkg/errors"
 )
 

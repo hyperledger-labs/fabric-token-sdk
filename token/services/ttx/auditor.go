@@ -17,26 +17,26 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	auditdb2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
-	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/utils/json/session"
+	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/utils/view"
 	"github.com/pkg/errors"
 )
 
 type TxAuditor struct {
 	w                       *token.AuditorWallet
 	auditor                 *auditor.Service
-	auditDB                 *auditdb.StoreService
+	auditDB                 *auditdb2.StoreService
 	transactionInfoProvider *TransactionInfoProvider
 }
 
 func NewAuditor(sp token.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, error) {
 	backend := auditor.New(sp, w)
-	auditDB, err := auditdb.GetByTMSId(sp, w.TMS().ID())
+	auditDB, err := auditdb2.GetByTMSId(sp, w.TMS().ID())
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func NewAuditor(sp token.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, e
 	return NewTxAuditor(w, backend, auditDB, ttxDB), nil
 }
 
-func NewTxAuditor(w *token.AuditorWallet, backend *auditor.Service, auditDB *auditdb.StoreService, ttxDB *ttxdb.StoreService) *TxAuditor {
+func NewTxAuditor(w *token.AuditorWallet, backend *auditor.Service, auditDB *auditdb2.StoreService, ttxDB *ttxdb.StoreService) *TxAuditor {
 	return &TxAuditor{
 		w:                       w,
 		auditor:                 backend,
@@ -75,12 +75,12 @@ func (a *TxAuditor) Transactions(ctx context.Context, params QueryTransactionsPa
 }
 
 // NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
-func (a *TxAuditor) NewPaymentsFilter() *auditdb.PaymentsFilter {
+func (a *TxAuditor) NewPaymentsFilter() *auditdb2.PaymentsFilter {
 	return a.auditDB.NewPaymentsFilter()
 }
 
 // NewHoldingsFilter returns a programmable filter over the holdings owned by enrollment IDs.
-func (a *TxAuditor) NewHoldingsFilter() *auditdb.HoldingsFilter {
+func (a *TxAuditor) NewHoldingsFilter() *auditdb2.HoldingsFilter {
 	return a.auditDB.NewHoldingsFilter()
 }
 

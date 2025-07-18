@@ -11,8 +11,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/protos"
 	"github.com/pkg/errors"
 )
 
