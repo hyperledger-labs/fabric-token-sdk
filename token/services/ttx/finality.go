@@ -12,9 +12,9 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )

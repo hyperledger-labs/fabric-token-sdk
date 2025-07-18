@@ -13,8 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
-	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/utils/json/session"
+	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/utils/view"
 	"github.com/pkg/errors"
 )
 

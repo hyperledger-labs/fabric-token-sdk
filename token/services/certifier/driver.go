@@ -7,7 +7,7 @@ package certifier
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/drivers"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/drivers"
 )
 
 var holder = drivers.NewHolder[string, driver.Driver]()

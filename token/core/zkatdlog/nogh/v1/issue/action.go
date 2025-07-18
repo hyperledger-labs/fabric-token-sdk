@@ -15,9 +15,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/protos"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/slices"
 )
 
 const ProtocolV1 = 1

@@ -9,8 +9,8 @@ package translator
 import (
 	"crypto/sha256"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/logging"
 	"github.com/pkg/errors"
 )
 
