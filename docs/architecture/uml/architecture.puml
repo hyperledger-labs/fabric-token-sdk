@@ -28,7 +28,6 @@ package "Token SDK" {
   [services/ttx] --> [tracing.Provider] : Trace
   [services/ttx] --> [metrics.Provider] : Measure
   [services/ttx] --> [view.Manager] : Register View/Stream
-
   [services/ttx] --> [services/auditor] :  To be defined
   [services/ttx] --> [services/tokens] :  To be defined
   [services/ttx] --> [services/storage] :  AuditDB/TTXDB
@@ -42,6 +41,22 @@ package "Token SDK" {
   [services/tokens] --> [services/network] : To be defined
   [services/tokens] --> [services/storage] : TokenDB/TokenLockDB/TTXDB
   [services/tokens] --> [services/tokens] : To be defined
+
+  [services/config] --> [config.Service] : Import
+
+  [services/identity] --> [metrics.Provider] : Export
+  [services/identity] --> [services/storage] : DB Ops
+  [services/identity] --> [Storage] : KVS Ops
+
+  [services/interop] --> [endpoint.Service] : Register
+
+  [services/network] --> [view.Manager] : Invoke View
+  [services/network] --> [tracing.Provider] : Trace
+  [services/network] --> [metrics.Provider] : Monitor
+  [services/network] --> [events] : Fire
+
+  [services/storage] --> [Storage] : Use
+  [services/storage] --> [config.Service] : Read
 }
 
 @enduml
