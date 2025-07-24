@@ -51,6 +51,26 @@ func NewReplicationOptions(factor int, names ...string) (*ReplicationOptions, *R
 	}}, &replicationFactors
 }
 
+func NewReplicationOptionsWithExtendedLogging(factor int, names ...string) (*ReplicationOptions, *ReplicaSelector) {
+	if factor < None {
+		panic("wrong factor")
+	}
+	if factor == None {
+		return NoReplication()
+	}
+	replicationFactors := make(ReplicaSelector, len(names))
+	sqlConfigs := make(map[string]*postgres2.ContainerConfig, len(names))
+	for _, name := range names {
+		replicationFactors[name] = factor
+		sqlConfigs[name] = postgres2.DefaultConfig(fmt.Sprintf("%s-db", name))
+		sqlConfigs[name].DbConfig.ExtendedLogging = true
+	}
+	return &ReplicationOptions{ReplicationOptions: &integration.ReplicationOptions{
+		ReplicationFactors: replicationFactors,
+		SQLConfigs:         sqlConfigs,
+	}}, &replicationFactors
+}
+
 type NodeReference struct {
 	name          string
 	replicaIdx    int
