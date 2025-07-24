@@ -15,7 +15,7 @@ import (
 	msp "github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -136,7 +136,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 	}
 
 	curveID := d.DefaultCurveID
-	if dlog.IsAries(tms) {
+	if zkatdlognoghv1.IsAries(tms) {
 		curveID = math3.BLS12_381_BBS
 	}
 

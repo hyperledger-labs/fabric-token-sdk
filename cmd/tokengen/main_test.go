@@ -14,6 +14,8 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtokenv1"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/zkatdlognoghv1"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
@@ -22,7 +24,7 @@ import (
 )
 
 // To run this command, first make sure to install the tokengen tool. To do that run `make tokengen`.
-//go:generate tokengen gen dlog --idemix "./testdata/idemix" --issuers "./testdata/issuers/msp" --auditors "./testdata/auditors/msp" --output "./testdata"
+//go:generate tokengen gen zkatdlognogh.v1 --idemix "./testdata/idemix" --issuers "./testdata/issuers/msp" --auditors "./testdata/auditors/msp" --output "./testdata"
 
 func TestCompile(t *testing.T) {
 	gt := NewGomegaWithT(t)
@@ -45,7 +47,7 @@ func TestGenFullSuccess(t *testing.T) {
 		tokengen,
 		[]string{
 			"gen",
-			"dlog",
+			zkatdlognoghv1.DriverIdentifier,
 			"--idemix",
 			"./testdata/idemix",
 			"--issuers",
@@ -81,13 +83,13 @@ func TestFullUpdate(t *testing.T) {
 		tokengen,
 		[]string{
 			"update",
-			"dlog",
+			zkatdlognoghv1.DriverIdentifier,
 			"--issuers",
 			"./testdata/auditors/msp",
 			"--auditors",
 			"./testdata/issuers/msp",
 			"--input",
-			"./testdata/zkatdlog_pp.json",
+			"./testdata/zkatdlognoghv1_pp.json",
 			"--output",
 			tempOutput,
 		},
@@ -118,11 +120,11 @@ func TestPartialUpdate(t *testing.T) {
 		tokengen,
 		[]string{
 			"update",
-			"dlog",
+			zkatdlognoghv1.DriverIdentifier,
 			"--issuers",
 			"./testdata/auditors/msp",
 			"--input",
-			"./testdata/zkatdlog_pp.json",
+			"./testdata/zkatdlognoghv1_pp.json",
 			"--output",
 			tempOutput,
 		},
@@ -148,7 +150,7 @@ func TestGenFailure(t *testing.T) {
 		ErrMsg string
 	}
 	var tests []T
-	for _, driver := range []string{"fabtoken"} {
+	for _, driver := range []string{fabtokenv1.DriverIdentifier} {
 		tests = append(tests, []T{
 			{
 				Args: []string{
@@ -188,7 +190,7 @@ func TestGenFailure(t *testing.T) {
 		{
 			Args: []string{
 				"gen",
-				"dlog",
+				zkatdlognoghv1.DriverIdentifier,
 				"--issuers", "aOrg1MSP,b",
 			},
 			ErrMsg: "failed to generate public parameters: failed to load issuer public key: failed reading idemix issuer public key [msp/IssuerPublicKey]: open msp/IssuerPublicKey: no such file or directory",
@@ -196,7 +198,7 @@ func TestGenFailure(t *testing.T) {
 		{
 			Args: []string{
 				"gen",
-				"dlog",
+				zkatdlognoghv1.DriverIdentifier,
 				"--idemix", "./testdata/idemix",
 				"--issuers", "Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]",
 			},
@@ -213,10 +215,10 @@ func TestGenFailure(t *testing.T) {
 }
 
 func validateOutputEquivalent(gt *WithT, tempOutput, auditorsMSPdir, issuersMSPdir, idemixMSPdir string) {
-	ppRaw, err := os.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
+	ppRaw, err := os.ReadFile(filepath.Join(tempOutput, "zkatdlognoghv1_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
 
-	pp, err := v1.NewPublicParamsFromBytes(ppRaw, v1.DLogIdentifier, v1.ProtocolV1)
+	pp, err := v1.NewPublicParamsFromBytes(ppRaw, v1.DLogNoGHDriverName, v1.ProtocolV1)
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(pp.Validate()).NotTo(HaveOccurred())
 

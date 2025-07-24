@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabtoken
+package fabtokenv1
 
 import (
 	"fmt"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtokenv1"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 
 	"github.com/pkg/errors"
@@ -44,7 +45,7 @@ func Cmd() *cobra.Command {
 }
 
 var cobraCommand = &cobra.Command{
-	Use:   "fabtoken",
+	Use:   fabtokenv1.DriverIdentifier,
 	Short: "Gen FabToken public parameters.",
 	Long:  `Generates FabToken public parameters.`,
 	RunE: func(cmd *cobra.Command, args []string) error {

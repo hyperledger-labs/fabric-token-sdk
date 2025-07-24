@@ -43,7 +43,7 @@ Usage:
   tokengen certifier-keygen [flags]
 
 Flags:
-  -d, --driver string   driver (dlog) (default "dlog")
+  -d, --driver string   driver (zkatdlognogh.v1) (default "zkatdlognogh.v1")
   -h, --help            help for certifier-keygen
   -o, --output string   output folder (default ".")
   -p, --pppath string   path to the public parameters file
@@ -53,19 +53,19 @@ Flags:
 
 The `tokengen gen` command has two subcommands, as follows:
 
-- fatoken: generates the public parameters for the fabtoken driver
-- dlog: generates the public parameters for the dlog driver
+- fabtoken.v1: generates the public parameters for the fabtoken driver
+- zkatdlog.v1: generates the public parameters for the zkatdlog.v1 driver
 
-## tokengen gen fabtoken
+## tokengen gen fabtoken.v1
 
 ```
 Usage:
-  tokengen gen fabtoken [flags]
+  tokengen gen fabtoken.v1 [flags]
 
 Flags:
   -a, --auditors strings   list of auditor MSP directories containing the corresponding auditor certificate
       --cc                 generate chaincode package
-  -h, --help               help for fabtoken
+  -h, --help               help for fabtoken.v1
   -s, --issuers strings    list of issuer MSP directories containing the corresponding issuer certificate
   -o, --output string      output folder (default ".")
 
@@ -73,36 +73,36 @@ Flags:
 
 The public parameters are stored in the output folder with name `fabtoken_pp.json`.
 
-### tokengen gen dlog
+### tokengen gen zkatdlog.v1
 
 ```
 Usage:
-  tokengen gen dlog [flags]
+  tokengen gen zkatdlog.v1 [flags]
 
 Flags:
   -a, --auditors strings   list of auditor MSP directories containing the corresponding auditor certificate
   -b, --base int           base is used to define the maximum quantity a token can contain as Base^Exponent (default 100)
       --cc                 generate chaincode package
   -e, --exponent int       exponent is used to define the maximum quantity a token can contain as Base^Exponent (default 2)
-  -h, --help               help for dlog
+  -h, --help               help for zkatdlog.v1
   -i, --idemix string      idemix msp dir
   -s, --issuers strings    list of issuer MSP directories containing the corresponding issuer certificate
   -o, --output string      output folder (default ".")
 ``` 
 
-The public parameters are stored in the output folder with name `zkatdlog_pp.json`.
+The public parameters are stored in the output folder with name `zkatdlognoghv1_pp.json`.
 
-### tokengen update dlog
+### tokengen update zkatdlog.v1
 
-This command takes an existing `zkatdlog_pp.json` and allows you to update the issuer and/or auditor certificates, while keeping the public parameters intact.
+This command takes an existing `zkatdlognoghv1_pp.json` and allows you to update the issuer and/or auditor certificates, while keeping the public parameters intact.
 
 ```
 Usage:
-  tokengen update dlog [flags]
+  tokengen update zkatdlog.v1 [flags]
 
 Flags:
   -a, --auditors strings   list of auditor MSP directories containing the corresponding auditor certificate
-  -h, --help               help for dlog
+  -h, --help               help for zkatdlog.v1
   -i, --input string       path of the public param file
   -s, --issuers strings    list of issuer MSP directories containing the corresponding issuer certificate
   -o, --output string      output folder (default ".")

@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	DLogIdentifier = "zkatdlog"
-	ProtocolV1     = 1
+	DLogNoGHDriverName = "zkatdlognogh"
+	ProtocolV1         = 1
 )
 
 var (
@@ -195,7 +195,7 @@ func NewPublicParamsFromBytes(
 }
 
 func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return NewWith(DLogIdentifier, ProtocolV1, bitLength, idemixIssuerPK, idemixCurveID)
+	return NewWith(DLogNoGHDriverName, ProtocolV1, bitLength, idemixIssuerPK, idemixCurveID)
 }
 
 func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriverVersion, bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {

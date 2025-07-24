@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/endorser"
@@ -201,7 +201,7 @@ func Topology(opts common.Opts) []api.Topology {
 		tms.Namespace = "token-chaincode"
 		tms.Transient = true
 		if tmsOpts.Aries {
-			dlog.WithAries(tms)
+			zkatdlognoghv1.WithAries(tms)
 		}
 		tms.SetTokenGenPublicParams(tmsOpts.PublicParamsGenArgs...)
 		if !opts.NoAuditor {

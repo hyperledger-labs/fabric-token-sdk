@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/artifactgen"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 )
@@ -116,7 +117,7 @@ func Topology(tokenSDKDriver string, sdks ...node.SDK) []api.Topology {
 }
 
 func main() {
-	if err := artifactgen.WriteTopologies("fungible.yaml", Topology("dlog", &tokensdk.SDK{}), 0766); err != nil {
+	if err := artifactgen.WriteTopologies("fungible.yaml", Topology(zkatdlognoghv1.DriverIdentifier, &tokensdk.SDK{}), 0766); err != nil {
 		panic(err)
 	}
 }

@@ -11,6 +11,7 @@ import (
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/zkatdlognoghv1"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
@@ -20,7 +21,7 @@ import (
 )
 
 var _ = Describe("DLog end to end", func() {
-	BeforeEach(func() { token.Drivers = append(token.Drivers, "dlog") })
+	BeforeEach(func() { token.Drivers = append(token.Drivers, zkatdlognoghv1.DriverIdentifier) })
 
 	for _, t := range integration2.AllTestTypes {
 		Describe("HTLC Single Fabric Network", t.Label, func() {
@@ -52,7 +53,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 	ts := token2.NewTestSuite(integration2.ZKATDLogInteropHTLC.StartPortForNode, interop.HTLCSingleFabricNetworkTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
-		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&fdlog.SDK{}},
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 	}))
@@ -64,7 +65,7 @@ func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names 
 	ts := token2.NewTestSuite(integration2.ZKATDLogInteropHTLCTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
-		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&fdlog.SDK{}},
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 	}))
@@ -76,7 +77,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 	ts := token2.NewTestSuite(integration2.ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
-		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog"},
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&fdlog.SDK{}},
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 		FinalityType: config.Committer,
