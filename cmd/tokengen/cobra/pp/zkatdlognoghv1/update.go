@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package dlog
+package zkatdlognoghv1
 
 import (
 	"fmt"
@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/zkatdlognoghv1"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -44,7 +45,7 @@ func UpdateCmd() *cobra.Command {
 }
 
 var cmd = &cobra.Command{
-	Use:   "dlog",
+	Use:   zkatdlognoghv1.DriverIdentifier,
 	Short: "Update certs in the public parameters file.",
 	Long:  "Update certs in the public parameters file without changing the parameters themselves.",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -78,7 +79,7 @@ func Update(args *UpdateArgs) error {
 		return errors.Wrapf(err, "failed to read input file at [%s]", args.InputFile)
 	}
 
-	pp, err := v1.NewPublicParamsFromBytes(oldraw, v1.DLogIdentifier, v1.ProtocolV1)
+	pp, err := v1.NewPublicParamsFromBytes(oldraw, v1.DLogNoGHDriverName, v1.ProtocolV1)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal pp from [%s]", args.InputFile)
 	}
@@ -103,9 +104,9 @@ func Update(args *UpdateArgs) error {
 	if err != nil {
 		return errors.Wrap(err, "failed serializing public parameters")
 	}
-	path := filepath.Join(args.OutputDir, "zkatdlog_pp.json")
+	path := filepath.Join(args.OutputDir, "zkatdlognoghv1_pp.json")
 	if _, err := os.Stat(path); err == nil {
-		return errors.New("zkatdlog_pp.json exists in current directory. Specify another output folder with -o")
+		return errors.New("zkatdlognoghv1_pp.json exists in current directory. Specify another output folder with -o")
 	}
 	if err := os.WriteFile(path, raw, 0755); err != nil {
 		return errors.Wrap(err, "failed writing public parameters to file")

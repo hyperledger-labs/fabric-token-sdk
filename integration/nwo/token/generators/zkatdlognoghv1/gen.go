@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package dlog
+package zkatdlognoghv1
 
 import (
 	"fmt"
@@ -22,14 +22,20 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/commands"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtokenv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+)
+
+var (
+	DriverIdentifier = string(core.DriverIdentifier(dlognoghv1.DLogNoGHDriverName, dlognoghv1.ProtocolV1))
 )
 
 // WithAries notify the backend to use aries as crypto provider when possible
@@ -49,7 +55,7 @@ func IsAries(tms *topology.TMS) bool {
 var logger = logging.MustGetLogger()
 
 type CryptoMaterialGenerator struct {
-	FabTokenGenerator *fabtoken.CryptoMaterialGenerator
+	FabTokenGenerator *fabtokenv1.CryptoMaterialGenerator
 
 	TokenPlatform     generators.TokenPlatform
 	DefaultCurve      string
@@ -61,7 +67,7 @@ type CryptoMaterialGenerator struct {
 
 func NewCryptoMaterialGenerator(tokenPlatform generators.TokenPlatform, defaultCurveID math3.CurveID, builder api.Builder) *CryptoMaterialGenerator {
 	return &CryptoMaterialGenerator{
-		FabTokenGenerator: fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
+		FabTokenGenerator: fabtokenv1.NewCryptoMaterialGenerator(tokenPlatform, builder),
 		TokenPlatform:     tokenPlatform,
 		EventuallyTimeout: 10 * time.Minute,
 		DefaultCurve:      CurveIDToString(defaultCurveID),
@@ -70,7 +76,7 @@ func NewCryptoMaterialGenerator(tokenPlatform generators.TokenPlatform, defaultC
 
 func NewCryptoMaterialGeneratorWithCurveIdentifier(tokenPlatform generators.TokenPlatform, curveID string, builder api.Builder) *CryptoMaterialGenerator {
 	return &CryptoMaterialGenerator{
-		FabTokenGenerator: fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
+		FabTokenGenerator: fabtokenv1.NewCryptoMaterialGenerator(tokenPlatform, builder),
 		TokenPlatform:     tokenPlatform,
 		EventuallyTimeout: 10 * time.Minute,
 		DefaultCurve:      curveID,

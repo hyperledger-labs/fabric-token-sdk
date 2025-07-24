@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	DLogIdentifier = v1.DLogIdentifier
+	DLogIdentifier = v1.DLogNoGHDriverName
 	ProtocolV2     = 2
 )
 

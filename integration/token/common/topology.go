@@ -10,7 +10,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtokenv1"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	"github.com/onsi/gomega"
@@ -47,11 +48,11 @@ type Opts struct {
 
 func SetDefaultParams(tms *topology.TMS, opts TMSOpts) {
 	switch opts.TokenSDKDriver {
-	case "dlog":
+	case zkatdlognoghv1.DriverIdentifier:
 		if opts.Aries {
-			dlog.WithAries(tms)
+			zkatdlognoghv1.WithAries(tms)
 		}
-	case "fabtoken":
+	case fabtokenv1.DriverIdentifier:
 		// no nothig
 	default:
 		gomega.Expect(false).To(gomega.BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", opts.TokenSDKDriver)
