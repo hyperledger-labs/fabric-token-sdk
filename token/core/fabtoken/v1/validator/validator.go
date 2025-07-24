@@ -48,7 +48,14 @@ type Context = common.Context[*setup.PublicParams, *actions.Output, *actions.Tra
 
 type Validator = common.Validator[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer]
 
-func NewValidator(logger logging.Logger, pp *setup.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
+func NewValidator(
+	logger logging.Logger,
+	pp *setup.PublicParams,
+	deserializer driver.Deserializer,
+	extraTransferValidators []ValidateTransferFunc,
+	extraIssuerValidators []ValidateIssueFunc,
+	extraAuditorValidators []ValidateAuditingFunc,
+) *Validator {
 	transferValidators := []ValidateTransferFunc{
 		TransferActionValidate,
 		TransferSignatureValidate,
@@ -56,16 +63,18 @@ func NewValidator(logger logging.Logger, pp *setup.PublicParams, deserializer dr
 		TransferHTLCValidate,
 		common.TransferApplicationDataValidate[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer],
 	}
-	transferValidators = append(transferValidators, extraValidators...)
+	transferValidators = append(transferValidators, extraTransferValidators...)
 
 	issueValidators := []ValidateIssueFunc{
 		IssueValidate,
 		common.IssueApplicationDataValidate[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer],
 	}
+	issueValidators = append(issueValidators, extraIssuerValidators...)
 
 	auditingValidators := []ValidateAuditingFunc{
 		common.AuditingSignaturesValidate[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer],
 	}
+	auditingValidators = append(auditingValidators, extraAuditorValidators...)
 
 	return common.NewValidator[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer](
 		logger,
