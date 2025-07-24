@@ -44,6 +44,23 @@ type PublicParams struct {
 
 // Setup initializes PublicParams
 func Setup(precision uint64) (*PublicParams, error) {
+	return NewWith(FabTokenDriverName, ProtocolV1, precision)
+}
+
+// NewPublicParamsFromBytes deserializes the raw bytes into public parameters
+// The resulting public parameters are labeled with the passed label
+func NewPublicParamsFromBytes(raw []byte, driverName driver.TokenDriverName, driverVersion driver.TokenDriverVersion) (*PublicParams, error) {
+	params := &PublicParams{}
+	params.DriverName = driverName
+	params.DriverVersion = driverVersion
+	if err := params.Deserialize(raw); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
+	}
+	return params, nil
+}
+
+// NewWith returns a new instance of the public parameters using the given arguments
+func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriverVersion, precision uint64) (*PublicParams, error) {
 	if precision > 64 {
 		return nil, errors.Errorf("invalid precision [%d], must be smaller or equal than 64", precision)
 	}
@@ -51,22 +68,11 @@ func Setup(precision uint64) (*PublicParams, error) {
 		return nil, errors.New("invalid precision, should be greater than 0")
 	}
 	return &PublicParams{
-		DriverName:        FabTokenDriverName,
-		DriverVersion:     ProtocolV1,
+		DriverName:        driverName,
+		DriverVersion:     driverVersion,
 		QuantityPrecision: precision,
 		MaxToken:          uint64(1<<precision) - 1,
 	}, nil
-}
-
-// NewPublicParamsFromBytes deserializes the raw bytes into public parameters
-// The resulting public parameters are labeled with the passed label
-func NewPublicParamsFromBytes(raw []byte, driverName driver.TokenDriverName) (*PublicParams, error) {
-	params := &PublicParams{}
-	params.DriverName = driverName
-	if err := params.Deserialize(raw); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
-	}
-	return params, nil
 }
 
 // TokenDriverName return the token driver name this public params refer to
