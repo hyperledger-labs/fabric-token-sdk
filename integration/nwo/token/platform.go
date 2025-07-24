@@ -22,10 +22,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/context"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtokenv1"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/zkatdlognoghv1"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
+	fabtokenv2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/pp/fabtokenv1"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/pp/zkatdlognoghv1"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -83,7 +84,7 @@ func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platf
 		TokenGenPath:           DefaultTokenGenPath,
 		NetworkHandlers:        map[string]NetworkHandler{},
 	}
-	p.PublicParamsGenerators[fabtokenv1.DriverIdentifier] = common2.NewFabTokenPublicParamsGenerator()
+	p.PublicParamsGenerators[fabtokenv1.DriverIdentifier] = fabtokenv2.NewFabTokenPublicParamsGenerator()
 	p.PublicParamsGenerators[zkatdlognoghv1.DriverIdentifier] = common2.NewDLogPublicParamsGenerator(math3.BN254)
 
 	return p
