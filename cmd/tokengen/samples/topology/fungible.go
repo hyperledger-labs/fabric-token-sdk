@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/artifactgen"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/zkatdlognoghv1"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 )
