@@ -592,13 +592,26 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 }
 
 func TestKeyManagerForRace(t *testing.T) {
-	testKeyManagerForRace(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testKeyManagerForRace(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
-	testKeyManagerForRace(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY, true)
+	t.Run("FP256BN_AMCL", func(t *testing.T) {
+		keyManager, cleanup := setupKeyManager(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
+		defer cleanup()
+		runIdentityConcurrently(t, t.Context(), keyManager)
+	})
+
+	t.Run("BLS12_381_BBS", func(t *testing.T) {
+		keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+		defer cleanup()
+		runIdentityConcurrently(t, t.Context(), keyManager)
+	})
+
+	t.Run("BLS12_381_BBS_GURVY", func(t *testing.T) {
+		keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY, true)
+		defer cleanup()
+		runIdentityConcurrently(t, t.Context(), keyManager)
+	})
 }
 
-func testKeyManagerForRace(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
-	// prepare
+func setupKeyManager(t assert.TestingT, configPath string, curveID math.CurveID, aries bool) (*KeyManager, func()) {
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"}))
@@ -630,16 +643,24 @@ func testKeyManagerForRace(t *testing.T, configPath string, curveID math.CurveID
 	assert.Equal(t, tracker.PutCounter, 1)
 	assert.Equal(t, tracker.GetCounter, 0)
 
+	return keyManager, func() {
+		// cleanup
+	}
+}
+
+func runIdentityConcurrently(t assert.TestingT, ctx context.Context, keyManager *KeyManager) {
 	numRoutines := 4
-	wg := sync.WaitGroup{}
+	var wg sync.WaitGroup
 	wg.Add(numRoutines)
-	for i := 0; i < numRoutines; i++ {
+	for range numRoutines {
 		go func() {
 			defer wg.Done()
 
-			for i := 0; i < 10; i++ {
-				_, _, err := keyManager.Identity(context.Background(), nil)
-				assert.NoError(t, err)
+			for range 10 {
+				newId, newRaw, err2 := keyManager.Identity(ctx, nil)
+				assert.NoError(t, err2)
+				assert.NotNil(t, newId)
+				assert.NotEmpty(t, newRaw)
 			}
 		}()
 	}
