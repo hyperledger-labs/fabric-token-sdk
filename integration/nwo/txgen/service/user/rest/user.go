@@ -22,7 +22,7 @@ import (
 	c "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model/constants"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils"
 )
 
 var operationTypeMap = map[c.ApiRequestType]metrics.OperationType{

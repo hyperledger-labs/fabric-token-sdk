@@ -13,8 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/logging"
 )
 
 var logger = logging.MustGetLogger()

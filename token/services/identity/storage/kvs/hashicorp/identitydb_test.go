@@ -11,9 +11,9 @@ import (
 	"testing"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/dbtest"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs/hashicorp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/dbtest"
 	"github.com/stretchr/testify/assert"
 )
 

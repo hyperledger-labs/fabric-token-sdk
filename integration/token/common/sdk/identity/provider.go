@@ -8,9 +8,9 @@ package identity
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
 
 type KVSStorageProvider struct {

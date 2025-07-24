@@ -22,10 +22,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/logging"
 	"github.com/pkg/errors"
 )
 

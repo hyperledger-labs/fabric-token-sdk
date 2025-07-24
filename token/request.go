@@ -14,8 +14,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )

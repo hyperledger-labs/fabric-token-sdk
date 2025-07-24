@@ -14,7 +14,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
