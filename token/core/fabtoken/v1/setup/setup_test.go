@@ -32,9 +32,9 @@ func TestNewPublicParamsFromBytes_Valid(t *testing.T) {
 	assert.NoError(t, err)
 	raw, err := pp.Serialize()
 	assert.NoError(t, err)
-	pp2, err := NewPublicParamsFromBytes(raw, "fabtoken")
+	pp2, err := NewPublicParamsFromBytes(raw, FabTokenDriverName, ProtocolV1)
 	assert.NoError(t, err)
-	assert.Equal(t, driver.TokenDriverName("fabtoken"), pp2.DriverName)
+	assert.Equal(t, FabTokenDriverName, pp2.DriverName)
 	assert.Equal(t, ProtocolV1, pp2.DriverVersion)
 	assert.Equal(t, uint64(32), pp2.QuantityPrecision)
 	assert.Equal(t, uint64(4294967295), pp2.MaxToken)
@@ -45,7 +45,7 @@ func TestNewPublicParamsFromBytes_Valid(t *testing.T) {
 
 func TestPublicParams_Validate_Valid(t *testing.T) {
 	pp := &PublicParams{
-		DriverName:        "fabtoken",
+		DriverName:        FabTokenDriverName,
 		QuantityPrecision: 32,
 		MaxToken:          1<<32 - 1,
 		IssuerIDs:         []driver.Identity{[]byte("issuer1"), []byte("issuer2")},
@@ -56,7 +56,7 @@ func TestPublicParams_Validate_Valid(t *testing.T) {
 
 func TestPublicParams_Validate_InvalidPrecision(t *testing.T) {
 	pp := &PublicParams{
-		DriverName:        "fabtoken",
+		DriverName:        FabTokenDriverName,
 		QuantityPrecision: 65,
 		MaxToken:          1<<64 - 1,
 	}
@@ -67,7 +67,7 @@ func TestPublicParams_Validate_InvalidPrecision(t *testing.T) {
 
 func TestPublicParams_Validate_InvalidMaxToken(t *testing.T) {
 	pp := &PublicParams{
-		DriverName:        "fabtoken",
+		DriverName:        FabTokenDriverName,
 		QuantityPrecision: 32,
 		MaxToken:          1 << 32,
 	}
