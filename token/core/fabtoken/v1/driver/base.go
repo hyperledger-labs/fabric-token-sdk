@@ -37,7 +37,7 @@ func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", string(core.DriverIdentifierFromPP(pp)))
 	deserializer := NewDeserializer()
-	return validator.NewValidator(logger, pp.(*core2.PublicParams), deserializer), nil
+	return validator.NewValidator(logger, pp.(*core2.PublicParams), deserializer, nil, nil, nil), nil
 }
 
 func (d *base) newWalletService(
