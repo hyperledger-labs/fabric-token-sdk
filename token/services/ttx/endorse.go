@@ -116,9 +116,8 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	}
 
 	// 2. Audit
-	var auditors []view.Identity
 	if !c.Opts.SkipAuditing {
-		auditors, err = c.requestAudit(context)
+		_, err := c.requestAudit(context)
 		if err != nil {
 			return nil, errors.WithMessage(err, "failed requesting auditing")
 		}
@@ -135,7 +134,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	// Distribute Env to all parties
 	distributionList := append(IssueDistributionList(c.tx.TokenRequest), TransferDistributionList(c.tx.TokenRequest)...)
 	logger.DebugfContext(context.Context(), "Distribute envelope to %d involved parties", len(distributionList))
-	if err := c.distributeEnvToParties(context, env, distributionList, auditors); err != nil {
+	if err := c.distributeEnvToParties(context, env, distributionList, nil); err != nil {
 		logger.ErrorfContext(context.Context(), "failed distributing envelope: %s", err)
 		return nil, errors.WithMessage(err, "failed distributing envelope")
 	}
@@ -421,7 +420,7 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 		return errors.Wrapf(err, "failed adding transaction %s to the token transaction database", c.tx.ID())
 	}
 
-	logger.DebugfContext(context.Context(), "Start distributing to %d parties", len(finalDistributionList))
+	logger.DebugfContext(context.Context(), "start distributing to %d parties", len(finalDistributionList))
 	for i, entry := range finalDistributionList {
 		// If it is me, no need to open a remote connection. Just store the envelope locally.
 		if entry.IsMe && !entry.Auditor {
