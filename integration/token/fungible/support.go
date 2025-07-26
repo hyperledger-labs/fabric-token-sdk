@@ -479,7 +479,7 @@ func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *Wa
 		common2.CheckFinality(network, receiver, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
 
-		signers := []string{auditor.Id()}
+		var signers []string
 		if receiver.Id() != sender.Id() {
 			signers = append(signers, receiver.Id())
 		}
@@ -525,7 +525,7 @@ func TransferCashToExternalWallet(network *integration.Infrastructure, wmp *Wall
 		common2.CheckFinality(network, receiver, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
 
-		signers := []string{auditor.Id()}
+		var signers []string
 		if receiver.Id() != sender.Id() {
 			signers = append(signers, receiver.Id())
 		}
@@ -587,7 +587,7 @@ func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wm
 		common2.CheckFinality(network, receiver, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
 
-		signers := []string{auditor.Id()}
+		var signers []string
 		if receiver != sender {
 			signers = append(signers, receiver.Id())
 		}
@@ -636,8 +636,7 @@ func TransferCashMultiActions(network *integration.Infrastructure, sender *token
 	if len(expectedErrorMsgs) == 0 {
 		txID := common.JSONUnmarshalString(txidBoxed)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		signers := []string{auditor.Id()}
-
+		var signers []string
 		for _, receiver := range receivers {
 			common2.CheckFinality(network, receiver, txID, nil, false)
 			if receiver.Id() != sender.Id() {
