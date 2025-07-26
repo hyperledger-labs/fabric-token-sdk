@@ -411,7 +411,7 @@ func TransferCashForTMSID(network *integration.Infrastructure, sender *token3.No
 		common2.CheckFinality(network, receiver, txID, tmsId, false)
 		common2.CheckFinality(network, auditor, txID, tmsId, false)
 
-		signers := []string{auditor.Id()}
+		var signers []string
 		if !strings.Contains(receiver.Id(), sender.Id()) {
 			signers = append(signers, strings.Split(receiver.Id(), ".")[0])
 		}
