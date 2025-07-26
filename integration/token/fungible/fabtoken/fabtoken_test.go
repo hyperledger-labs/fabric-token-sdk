@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
+	gfabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
@@ -44,8 +45,8 @@ func UpdatePublicParams(network *integration.Infrastructure, selector *token2.Re
 	auditorId := fungible.GetAuditorIdentity(tms, "newAuditor")
 	issuerId := fungible.GetIssuerIdentity(tms, "newIssuer")
 	publicParam := fabtokenv1.PublicParams{
-		DriverName:        "fabtoken",
-		DriverVersion:     1,
+		DriverName:        fabtokenv1.FabTokenDriverName,
+		DriverVersion:     fabtokenv1.ProtocolV1,
 		QuantityPrecision: uint64(64),
 		Auditor:           auditorId,
 		IssuerIDs:         []driver.Identity{issuerId},
@@ -63,7 +64,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 		common.Opts{
 			Backend:         "fabric",
 			CommType:        commType,
-			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken", Aries: true},
+			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: gfabtokenv1.DriverIdentifier, Aries: true},
 			SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 			ReplicationOpts: opts,
 			WebEnabled:      true, // Needed for the Remote Wallet with websockets

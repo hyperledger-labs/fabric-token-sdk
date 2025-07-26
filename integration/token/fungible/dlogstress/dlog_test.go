@@ -9,6 +9,7 @@ package dlog
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
@@ -41,7 +42,7 @@ func newTestSuite(backend string) (*token.TestSuite, *token.ReplicaSelector) {
 	ts := token.NewTestSuite(StartPortDlog, topology.Topology(
 		common.Opts{
 			Backend:         backend,
-			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "dlog", Aries: true},
+			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier, Aries: true},
 			ReplicationOpts: opts,
 			CommType:        fsc.LibP2P,
 			FSCLogSpec:      "token-sdk=debug:info",

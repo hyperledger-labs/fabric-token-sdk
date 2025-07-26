@@ -11,9 +11,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
-	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
+	dlogdriver "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +27,7 @@ var output string
 func KeyPairGenCmd() *cobra.Command {
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
-	flags.StringVarP(&driver, "driver", "d", "dlog", "driver (dlog)")
+	flags.StringVarP(&driver, "driver", "d", zkatdlognoghv1.DriverIdentifier, "driver (dlog)")
 	flags.StringVarP(&ppPath, "pppath", "p", "", "path to the public parameters file")
 	flags.StringVarP(&output, "output", "o", ".", "output folder")
 
@@ -56,7 +57,7 @@ func keyPairGen(args []string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed reading public parameters from [%s]", ppPath)
 	}
-	s := driver2.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
+	s := driver2.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlogdriver.NewPPMFactory())
 	pp, err := s.PublicParametersFromBytes(ppRaw)
 	if err != nil {
 		return errors.Wrapf(err, "failed unmarshalling public parameters loaded from [%s], len [%d]", ppPath, len(ppRaw))

@@ -11,6 +11,7 @@ import (
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
@@ -19,7 +20,7 @@ import (
 )
 
 var _ = Describe("FabToken end to end", func() {
-	BeforeEach(func() { token.Drivers = append(token.Drivers, "fabtoken") })
+	BeforeEach(func() { token.Drivers = append(token.Drivers, fabtokenv1.DriverIdentifier) })
 
 	for _, t := range integration2.AllTestTypes {
 		Describe("HTLC Single Fabric Network", t.Label, func() {
@@ -51,7 +52,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 	ts := token2.NewTestSuite(integration2.FabTokenInteropHTLC.StartPortForNode, interop.HTLCSingleFabricNetworkTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
-		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: fabtokenv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 		FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 	}))
@@ -63,7 +64,7 @@ func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names 
 	ts := token2.NewTestSuite(integration2.FabTokenInteropHTLCTwoFabricNetworks.StartPortForNode, interop.HTLCTwoFabricNetworksTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
-		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: fabtokenv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 	}))
 	return ts, selector
@@ -74,7 +75,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 	ts := token2.NewTestSuite(integration2.FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode, interop.HTLCNoCrossClaimTopology(common.Opts{
 		CommType:        commType,
 		ReplicationOpts: opts,
-		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: fabtokenv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 		FinalityType:    "committer",
 	}))

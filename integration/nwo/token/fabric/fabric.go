@@ -19,8 +19,8 @@ import (
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -52,11 +52,11 @@ func NewNetworkHandler(tokenPlatform common2.TokenPlatform, builder api2.Builder
 			TokenPlatform:     tokenPlatform,
 			EventuallyTimeout: 10 * time.Minute,
 			CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
-				"fabtoken": fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
-				"dlog":     dlog.NewCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
+				fabtokenv1.DriverIdentifier:     fabtokenv1.NewCryptoMaterialGenerator(tokenPlatform, builder),
+				zkatdlognoghv1.DriverIdentifier: zkatdlognoghv1.NewCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
 			},
 			CASupports: map[string]common2.CAFactory{
-				"dlog": common2.NewIdemixCASupport,
+				zkatdlognoghv1.DriverIdentifier: common2.NewIdemixCASupport,
 			},
 		},
 		Entries: map[string]*Entry{},

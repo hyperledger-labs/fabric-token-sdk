@@ -12,6 +12,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fall"
@@ -26,7 +28,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, 64, []common.TMSOpts{
 				{
 					Alias:               "dlog-32bits",
-					TokenSDKDriver:      "dlog",
+					TokenSDKDriver:      zkatdlognoghv1.DriverIdentifier,
 					PublicParamsGenArgs: []string{"32"},
 				},
 			}, t.ReplicationFactor, "alice", "bob", "charlie")
@@ -39,7 +41,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, 32, []common.TMSOpts{
 				{
 					Alias:               "dlog-32bits",
-					TokenSDKDriver:      "dlog",
+					TokenSDKDriver:      zkatdlognoghv1.DriverIdentifier,
 					PublicParamsGenArgs: []string{"32"},
 				},
 			}, t.ReplicationFactor, "alice", "bob", "charlie")
@@ -52,12 +54,12 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, 32, []common.TMSOpts{
 				{
 					Alias:               "dlog-32bits",
-					TokenSDKDriver:      "dlog",
+					TokenSDKDriver:      zkatdlognoghv1.DriverIdentifier,
 					PublicParamsGenArgs: []string{"32"},
 				},
 				{
 					Alias:               "dlog-32bits-bis",
-					TokenSDKDriver:      "dlog",
+					TokenSDKDriver:      zkatdlognoghv1.DriverIdentifier,
 					PublicParamsGenArgs: []string{"32"},
 				},
 			}, t.ReplicationFactor, "alice", "bob", "charlie")
@@ -75,7 +77,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, fabtokenPrecision int, extr
 		CommType:        commType,
 		SDKs:            []nodepkg.SDK{&fall.SDK{}},
 		ReplicationOpts: opts,
-		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken", PublicParamsGenArgs: []string{strconv.Itoa(fabtokenPrecision)}},
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: fabtokenv1.DriverIdentifier, PublicParamsGenArgs: []string{strconv.Itoa(fabtokenPrecision)}},
 		ExtraTMSs:       extraTMSs,
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 	}))

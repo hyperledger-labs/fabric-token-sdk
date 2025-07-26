@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
@@ -139,7 +140,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 		common.Opts{
 			Backend:             "fabric",
 			CommType:            commType,
-			DefaultTMSOpts:      common.TMSOpts{TokenSDKDriver: "dlog", Aries: mask&Aries > 0},
+			DefaultTMSOpts:      common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier, Aries: mask&Aries > 0},
 			NoAuditor:           mask&NoAuditor > 0,
 			AuditorAsIssuer:     mask&AuditorAsIssuer > 0,
 			HSM:                 mask&HSM > 0,
