@@ -8,7 +8,6 @@ package common
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -42,26 +40,6 @@ type NetworkHandler struct {
 	ColorIndex        int
 }
 
-func (p *NetworkHandler) TTXDBSQLDataSourceDir(uniqueName string) string {
-	return p.dbsqlDataSourceDir(uniqueName, "ttxdb")
-}
-
-func (p *NetworkHandler) TokensDBSQLDataSourceDir(uniqueName string) string {
-	return p.dbsqlDataSourceDir(uniqueName, "tokensdb")
-}
-
-func (p *NetworkHandler) AuditDBSQLDataSourceDir(uniqueName string) string {
-	return p.dbsqlDataSourceDir(uniqueName, "auditdb")
-}
-
-func (p *NetworkHandler) IdentityDBSQLDataSourceDir(uniqueName string) string {
-	return p.dbsqlDataSourceDir(uniqueName, "identitydb")
-}
-
-func (p *NetworkHandler) dbsqlDataSourceDir(uniqueName string, dirName string) string {
-	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", uniqueName, dirName)
-}
-
 func (p *NetworkHandler) HelperConfigPath() string {
 	return filepath.Join(p.TokenPlatform.TokenDir(), "helper-config.yaml")
 }
@@ -79,25 +57,9 @@ func (p *NetworkHandler) FSCNodeKVSDir(uniqueName string) string {
 }
 
 func (p *NetworkHandler) DeleteDBs(node *sfcnode.Node) {
-	for _, uniqueName := range node.ReplicaUniqueNames() {
-		for _, path := range []string{p.TokensDBSQLDataSourceDir(uniqueName)} {
-			logger.Infof("remove all [%s]", path)
-			gomega.Expect(os.RemoveAll(path)).ToNot(gomega.HaveOccurred())
-			gomega.Expect(os.MkdirAll(path, 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", path)
-		}
-	}
+	// nothing to do here
 }
 
 func (p *NetworkHandler) CopyDBsTo(node *sfcnode.Node, to string) {
-	gomega.Expect(os.MkdirAll(to, 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", to)
-	for _, uniqueName := range node.ReplicaUniqueNames() {
-		for _, path := range []string{p.TokensDBSQLDataSourceDir(uniqueName), p.TTXDBSQLDataSourceDir(uniqueName)} {
-			elements := filepath.SplitList(path)
-			lastElement := elements[len(elements)-1]
-			destination := filepath.Join(to, uniqueName, lastElement)
-			gomega.Expect(os.MkdirAll(destination, 0775)).ToNot(gomega.HaveOccurred(), "failed to create [%s]", destination)
-
-			gomega.Expect(CopyDir(path, destination)).ToNot(gomega.HaveOccurred(), "failed to copy [%s] to [%s]", path, destination)
-		}
-	}
+	// nothing to do here
 }
