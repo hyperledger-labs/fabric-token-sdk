@@ -8,6 +8,7 @@ package validator
 
 import (
 	"bytes"
+	"context"
 	"time"
 
 	math "github.com/IBM/mathlib"
@@ -22,11 +23,11 @@ import (
 )
 
 // TransferActionValidate validates the transfer action
-func TransferActionValidate(ctx *Context) error {
+func TransferActionValidate(c context.Context, ctx *Context) error {
 	return ctx.TransferAction.Validate()
 }
 
-func TransferSignatureValidate(ctx *Context) error {
+func TransferSignatureValidate(c context.Context, ctx *Context) error {
 	// recall that TransferActionValidate has been called before this function
 	var signatures [][]byte
 
@@ -47,7 +48,7 @@ func TransferSignatureValidate(ctx *Context) error {
 			return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
 		}
 		ctx.Logger.Debugf("signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(tok.Owner, verifier)
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(c, tok.Owner, verifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
 		}
@@ -77,7 +78,7 @@ func TransferSignatureValidate(ctx *Context) error {
 			return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
 		}
 
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(issuer, issuerVerifier)
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(c, issuer, issuerVerifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
 		}
@@ -87,7 +88,7 @@ func TransferSignatureValidate(ctx *Context) error {
 	return nil
 }
 
-func TransferUpgradeWitnessValidate(ctx *Context) error {
+func TransferUpgradeWitnessValidate(c context.Context, ctx *Context) error {
 	// recall that TransferActionValidate has been called before this function
 
 	for _, input := range ctx.TransferAction.Inputs {
@@ -119,7 +120,7 @@ func TransferUpgradeWitnessValidate(ctx *Context) error {
 	return nil
 }
 
-func TransferZKProofValidate(ctx *Context) error {
+func TransferZKProofValidate(c context.Context, ctx *Context) error {
 	in := make([]*math.G1, len(ctx.InputTokens))
 	for i, tok := range ctx.InputTokens {
 		in[i] = tok.Data
@@ -135,7 +136,7 @@ func TransferZKProofValidate(ctx *Context) error {
 	return nil
 }
 
-func TransferHTLCValidate(ctx *Context) error {
+func TransferHTLCValidate(c context.Context, ctx *Context) error {
 	now := time.Now()
 
 	for i, in := range ctx.InputTokens {

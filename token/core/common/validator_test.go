@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -26,7 +27,7 @@ func TestAnchorInContext(t *testing.T) {
 		nil,
 		nil,
 		[]ValidateTransferFunc[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
-			func(ctx *Context[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
+			func(c context.Context, ctx *Context[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
 				if anchor != ctx.Anchor {
 					return fmt.Errorf("transfer, anchor does not match, expected %s, got %s", anchor, ctx.Anchor)
 				}
@@ -34,7 +35,7 @@ func TestAnchorInContext(t *testing.T) {
 			},
 		},
 		[]ValidateIssueFunc[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
-			func(ctx *Context[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
+			func(c context.Context, ctx *Context[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
 				if anchor != ctx.Anchor {
 					return fmt.Errorf("issue, anchor does not match, expected %s, got %s", anchor, ctx.Anchor)
 				}
@@ -42,7 +43,7 @@ func TestAnchorInContext(t *testing.T) {
 			},
 		},
 		[]ValidateAuditingFunc[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
-			func(ctx *Context[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
+			func(c context.Context, ctx *Context[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
 				if anchor != ctx.Anchor {
 					return fmt.Errorf("audit, anchor does not match, expected %s, got %s", anchor, ctx.Anchor)
 				}
@@ -52,23 +53,24 @@ func TestAnchorInContext(t *testing.T) {
 	)
 
 	// check anchor in the context for an issue action
-	err := v.VerifyIssue(anchor, nil, &mock.IssueAction{}, nil, nil, nil)
+	ctx := context.Background()
+	err := v.VerifyIssue(ctx, anchor, nil, &mock.IssueAction{}, nil, nil, nil)
 	require.NoError(t, err)
-	err = v.VerifyIssue(anotherAnchor, nil, &mock.IssueAction{}, nil, nil, nil)
+	err = v.VerifyIssue(ctx, anotherAnchor, nil, &mock.IssueAction{}, nil, nil, nil)
 	require.Error(t, err)
 	assert.EqualError(t, err, "issue, anchor does not match, expected hello world, got another anchor")
 
 	// check anchor in the context for a transfer action
-	err = v.VerifyTransfer(anchor, nil, &mock.TransferAction{}, nil, nil, nil)
+	err = v.VerifyTransfer(ctx, anchor, nil, &mock.TransferAction{}, nil, nil, nil)
 	require.NoError(t, err)
-	err = v.VerifyTransfer(anotherAnchor, nil, &mock.TransferAction{}, nil, nil, nil)
+	err = v.VerifyTransfer(ctx, anotherAnchor, nil, &mock.TransferAction{}, nil, nil, nil)
 	require.Error(t, err)
 	assert.EqualError(t, err, "transfer, anchor does not match, expected hello world, got another anchor")
 
 	// check anchor in the context for a transfer action
-	err = v.VerifyAuditing(anchor, nil, nil, nil, nil)
+	err = v.VerifyAuditing(ctx, anchor, nil, nil, nil, nil)
 	require.NoError(t, err)
-	err = v.VerifyAuditing(anotherAnchor, nil, nil, nil, nil)
+	err = v.VerifyAuditing(ctx, anotherAnchor, nil, nil, nil, nil)
 	require.Error(t, err)
 	assert.EqualError(t, err, "audit, anchor does not match, expected hello world, got another anchor")
 }

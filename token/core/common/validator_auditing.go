@@ -7,13 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
 	"slices"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
-func AuditingSignaturesValidate[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](ctx *Context[P, T, TA, IA, DS]) error {
+func AuditingSignaturesValidate[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](c context.Context, ctx *Context[P, T, TA, IA, DS]) error {
 	if len(ctx.PP.Auditors()) == 0 {
 		// enforce no auditor signatures are attached
 		if len(ctx.TokenRequest.AuditorSignatures) != 0 {
@@ -34,7 +35,7 @@ func AuditingSignaturesValidate[P driver.PublicParameters, T any, TA driver.Tran
 		if err != nil {
 			return errors.Wrapf(err, "failed to deserialize auditor's public key")
 		}
-		_, err = ctx.SignatureProvider.HasBeenSignedBy(auditor, verifier)
+		_, err = ctx.SignatureProvider.HasBeenSignedBy(c, auditor, verifier)
 		if err != nil {
 			return errors.Wrap(err, "failed to verify auditor's signature")
 		}

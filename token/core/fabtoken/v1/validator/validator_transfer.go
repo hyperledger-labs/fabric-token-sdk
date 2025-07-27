@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
+	"context"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
@@ -20,12 +21,12 @@ import (
 )
 
 // TransferActionValidate validates the transfer action
-func TransferActionValidate(ctx *Context) error {
+func TransferActionValidate(c context.Context, ctx *Context) error {
 	return ctx.TransferAction.Validate()
 }
 
 // TransferSignatureValidate validates the signatures for the inputs spent by an action
-func TransferSignatureValidate(ctx *Context) error {
+func TransferSignatureValidate(c context.Context, ctx *Context) error {
 	if len(ctx.TransferAction.Inputs) == 0 {
 		return errors.Errorf("invalid number of token inputs, expected at least 1")
 	}
@@ -43,7 +44,7 @@ func TransferSignatureValidate(ctx *Context) error {
 		}
 		ctx.Logger.Debugf("signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
 
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(owner, verifier)
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(c, owner, verifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
 		}
@@ -72,7 +73,7 @@ func TransferSignatureValidate(ctx *Context) error {
 			return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
 		}
 
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(issuer, issuerVerifier)
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(c, issuer, issuerVerifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
 		}
@@ -84,7 +85,7 @@ func TransferSignatureValidate(ctx *Context) error {
 }
 
 // TransferBalanceValidate checks that the sum of the inputs is equal to the sum of the outputs
-func TransferBalanceValidate(ctx *Context) error {
+func TransferBalanceValidate(c context.Context, ctx *Context) error {
 	if ctx.TransferAction.NumOutputs() == 0 {
 		return errors.New("there is no output")
 	}
@@ -132,7 +133,7 @@ func TransferBalanceValidate(ctx *Context) error {
 }
 
 // TransferHTLCValidate checks the validity of the HTLC scripts, if any
-func TransferHTLCValidate(ctx *Context) error {
+func TransferHTLCValidate(c context.Context, ctx *Context) error {
 	now := time.Now()
 
 	for i, in := range ctx.InputTokens {
