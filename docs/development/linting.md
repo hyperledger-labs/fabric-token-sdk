@@ -14,5 +14,5 @@ To run the linter for the project, just run
 make lint
 ```
 
-To change the configuration of the linter, check the [`.golangci.yml`](./../../.golangci.yml).
+To change the configuration of the linter, check the `.golangci.yml` (To be included soon).
 This configuration is also used by our CI.

@@ -1,6 +1,6 @@
 # Storage
 
-For an introduction into the concepts of Database, Persistence, Driver, Store, read [this documentation](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/db-driver.md).
+For an introduction into the concepts of Database, Persistence, Driver, Store, read [this documentation](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/platform/view/db-driver.md).
 
 The project utilizes the following layers of abstraction on top of the database layer:
 * `Store`: executes the SQL queries. A `Store` is only used from within the `StoreService` of the same kind.
@@ -33,7 +33,6 @@ This system leverages several stores, each with a specific purpose:
   The `identitydb` plays a crucial role in managing user identities and wallets within the network.
   It securely stores wallet configurations, identity-related audit information, and so on, enabling secure interactions with the token system.
   The `identitydb.StoreService` is located under [`token/services/identitydb`](./../../token/services/identitydb).
-  It is used by the `identity` service via its interfaces. Please, refer to the [`identity service`](identity.md) for more information about the storage part.
 
 ## Configuration
 
