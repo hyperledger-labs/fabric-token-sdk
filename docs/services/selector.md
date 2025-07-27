@@ -25,4 +25,4 @@ We currently support two selector types:
 - `Simple`: It is mostly used for testing.  
 - [`Sherdlock`](./selector/sherdlock.md): This is a fast selector that works well in replication settings too.
 
-The selector service is locate under [`token/services/selector`](./../../token/services/selector).
+The selector service is locate under [`token/services/selector`](../../token/services/tokens/selector).

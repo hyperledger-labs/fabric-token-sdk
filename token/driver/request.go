@@ -12,9 +12,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/protos"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/slices"
 	"github.com/pkg/errors"
 )
 

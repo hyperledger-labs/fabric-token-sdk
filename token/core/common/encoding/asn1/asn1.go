@@ -11,7 +11,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils"
 )
 
 type Serializer interface {

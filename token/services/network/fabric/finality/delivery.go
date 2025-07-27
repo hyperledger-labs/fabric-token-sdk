@@ -10,7 +10,7 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/utils/logging"
 )
 
 type Delivery struct {
