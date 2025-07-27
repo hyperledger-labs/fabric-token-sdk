@@ -15,7 +15,7 @@ More specifically, the API definition should include
     - URL / rest endpoints
     - Header definitions (Auth token, Content-Type (e.g. application/JSON))
     - Payload specification (Mandatory/optional fields)
-    - Paramter specification (filter attributes etc.)
+    - Parameter specification (filter attributes etc.)
     - (optional) Min/Max values to be enforced
     - (optional) Min/Max string length, etc.
 - Response definition
