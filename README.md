@@ -61,12 +61,6 @@ FABRIC_VERSION=2.5 make download-fabric
 ```
 
 If you want to provide your own versions of the fabric binaries then just set `FAB_BINS` to the directory where all the fabric binaries are stored.
-  
-# Utilities
-
-- [`tokengen`](./cmd/tokengen/README.md) is an utility for generating Fabric Token-SDK material.
-  It is provided as a means of preconfiguring public parameters, token chaincode, and so.
-  It would normally not be used in the operation of a production network.
 
 # Additional Resources
 
@@ -107,17 +101,9 @@ The Fabric Token SDK has evolved beyond its initial focus on Hyperledger Fabric.
 
 With a robust Fabric Token SDK, developing secure and efficient enterprise-grade tokenized applications becomes a reality, offering flexibility for developers to choose the platform that best suits their needs.
 
-# Testing Philosophy
+# Development
 
-[Write tests. Not too many. Mostly Integration](https://kentcdodds.com/blog/write-tests)
-
-We also believe that when developing new functions running tests is preferable than running the application to verify the code is working as expected.
-
-For more information about our integration tests, look [`here`](./docs/itests.md).
-
-# Versioning
-
-We use [`SemVer`](https://semver.org/) for versioning. For the versions available, see the [`tags on this repository`](https://github.com/hyperledger-labs/fabric-token-sdk/tags).
+For additional information about the development of the Token SDK, visit this [`section`](./docs/development/development.md).
 
 # License
 
