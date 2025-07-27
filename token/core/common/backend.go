@@ -41,7 +41,7 @@ func (b *Backend) HasBeenSignedBy(ctx context.Context, id driver.Identity, verif
 	sigma := b.Sigs[b.Cursor]
 	b.Cursor++
 
-	b.Logger.Infof(ctx, "verify signature [%s][%s][%s]", id, logging.Base64(sigma), utils.Hashable(b.Message))
+	b.Logger.Debugf(ctx, "verify signature [%s][%s][%s]", id, logging.Base64(sigma), utils.Hashable(b.Message))
 
 	return sigma, verifier.Verify(b.Message, sigma)
 }
