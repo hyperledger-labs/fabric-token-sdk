@@ -116,28 +116,26 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	}
 
 	// 2. Audit
-	var auditors []view.Identity
 	if !c.Opts.SkipAuditing {
-		auditors, err = c.requestAudit(context)
+		_, err := c.requestAudit(context)
 		if err != nil {
 			return nil, errors.WithMessage(err, "failed requesting auditing")
 		}
 	}
 	// 3. Endorse and return the transaction envelope
-	var env *network.Envelope
 	if !c.Opts.SkipApproval {
 		logger.DebugfContext(context.Context(), "Request approval from endorser")
-		env, err = c.requestApproval(context)
+		_, err = c.requestApproval(context)
 		if err != nil {
 			return nil, errors.WithMessage(err, "failed requesting approval")
 		}
 	}
 	// Distribute Env to all parties
 	distributionList := append(IssueDistributionList(c.tx.TokenRequest), TransferDistributionList(c.tx.TokenRequest)...)
-	logger.DebugfContext(context.Context(), "Distribute envelope to %d involved parties", len(distributionList))
-	if err := c.distributeEnvToParties(context, env, distributionList, auditors); err != nil {
-		logger.ErrorfContext(context.Context(), "failed distributing envelope: %s", err)
-		return nil, errors.WithMessage(err, "failed distributing envelope")
+	logger.DebugfContext(context.Context(), "distribute tx to [%d] involved parties", len(distributionList))
+	if err := c.distributeTxToParties(context, distributionList, nil); err != nil {
+		logger.ErrorfContext(context.Context(), "failed distributing tx: %s", err)
+		return nil, errors.WithMessage(err, "failed distributing tx")
 	}
 
 	// Cleanup audit
@@ -385,19 +383,11 @@ func (c *CollectEndorsementsView) cleanupAudit(context view.Context) error {
 	return nil
 }
 
-func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
+func (c *CollectEndorsementsView) distributeTxToParties(context view.Context, distributionList []view.Identity, auditors []view.Identity) error {
 	logger.DebugfContext(context.Context(), "Start distribute to parties")
 	if c.Opts.SkipDistributeEnv {
 		logger.DebugfContext(context.Context(), "Skip distribute envelopes")
 		return nil
-	}
-
-	if !c.Opts.SkipApproval {
-		// perform sanity checks
-		if env == nil {
-			return errors.New("transaction envelope is empty")
-		}
-		logger.DebugfContext(context.Context(), "distribute env [%s]", env)
 	}
 
 	// TODO: double check that the transaction is valid
@@ -421,7 +411,7 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 		return errors.Wrapf(err, "failed adding transaction %s to the token transaction database", c.tx.ID())
 	}
 
-	logger.DebugfContext(context.Context(), "Start distributing to %d parties", len(finalDistributionList))
+	logger.DebugfContext(context.Context(), "start distributing to %d parties", len(finalDistributionList))
 	for i, entry := range finalDistributionList {
 		// If it is me, no need to open a remote connection. Just store the envelope locally.
 		if entry.IsMe && !entry.Auditor {
@@ -454,7 +444,7 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 		// This operation might be retried, but this requires a change of protocol to make sure the recipient can always receive.
 		// It could be done by using a new context.
 		logger.DebugfContext(context.Context(), "Distribute to %s", entry.EID)
-		if err := c.distributeEvnToParty(context, &entry, txRaw, owner); err != nil {
+		if err := c.distributeTxToParty(context, &entry, txRaw, owner); err != nil {
 			return errors.Wrapf(err, "failed distribute evn of tx [%s] to party [%s:%s]", c.tx.ID(), entry.EID, entry.ID)
 		}
 		logger.DebugfContext(context.Context(), "Done distributing to %s", entry.EID)
@@ -463,7 +453,7 @@ func (c *CollectEndorsementsView) distributeEnvToParties(context view.Context, e
 	return nil
 }
 
-func (c *CollectEndorsementsView) distributeEvnToParty(context view.Context, entry *distributionListEntry, txRaw []byte, owner *TxOwner) error {
+func (c *CollectEndorsementsView) distributeTxToParty(context view.Context, entry *distributionListEntry, txRaw []byte, owner *TxOwner) error {
 	// Open a session to the party. and send the transaction.
 	session, err := c.getSession(context, entry.ID)
 	if err != nil {
@@ -553,14 +543,14 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		// - extract the corresponding long term identity
 		// If the long term identity has not been added yet, add it to the list.
 		// If the party is me or an auditor, no need to extract the enrollment ID.
-		logger.DebugfContext(context.Context(), "distribute env to [%s]?", party)
+		logger.DebugfContext(context.Context(), "distribute tx to [%s]?", party)
 
 		isMe := mine.Contains(party.UniqueID())
 		if !isMe {
 			// check if there is a wallet that contains that identity
 			isMe = c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), party) != nil
 		}
-		logger.DebugfContext(context.Context(), "distribute env to [%s], it is me [%v].", party, isMe)
+		logger.DebugfContext(context.Context(), "distribute tx to [%s], it is me [%v].", party, isMe)
 		var longTermIdentity view.Identity
 		var err error
 		// if it is me, no need to resolve, get directly the default identity
@@ -608,7 +598,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 	// check the auditors
 	for _, party := range auditors {
 		isMe := mine.Contains(party.UniqueID())
-		logger.DebugfContext(context.Context(), "distribute env to auditor [%s], it is me [%v].", party, isMe)
+		logger.DebugfContext(context.Context(), "distribute tx to auditor [%s], it is me [%v].", party, isMe)
 		var longTermIdentity view.Identity
 		var err error
 		// if it is me, no need to resolve, get directly the default identity
