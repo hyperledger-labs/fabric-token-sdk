@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
@@ -16,7 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
-	"github.com/pkg/errors"
+
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
 type RecipientData = token.RecipientData
@@ -139,7 +139,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 	var err error
 	tms := token.GetManagementService(context, token.WithTMSID(f.TMSID))
 	if tms == nil {
-		return nil, fmt.Errorf("failed getting token management service [%s]", f.TMSID)
+		return nil, errors.Errorf("failed getting token management service [%s]", f.TMSID)
 	}
 	multiSig := len(f.Recipients) > 1
 	for i, recipient := range f.Recipients {
@@ -160,7 +160,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 			continue
 		}
 		if w == nil {
-			return nil, fmt.Errorf("wallet [%s] not found", string(recipient.Identity))
+			return nil, errors.Errorf("wallet [%s] not found", string(recipient.Identity))
 		}
 		results[i], err = w.GetRecipientIdentity(context.Context())
 		if err != nil {
@@ -313,11 +313,11 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	logger.DebugfContext(context.Context(), "Respond request recipient identity using wallet [%s]", wallet)
 	tms := token.GetManagementService(context, token.WithTMSID(recipientRequest.TMSID))
 	if tms == nil {
-		return nil, fmt.Errorf("failed getting token management service [%s]", recipientRequest.TMSID)
+		return nil, errors.Errorf("failed getting token management service [%s]", recipientRequest.TMSID)
 	}
 	w := tms.WalletManager().OwnerWallet(context.Context(), wallet)
 	if w == nil {
-		return nil, fmt.Errorf("wallet [%s:%s] not found", wallet, recipientRequest.TMSID)
+		return nil, errors.Errorf("wallet [%s:%s] not found", wallet, recipientRequest.TMSID)
 	}
 
 	var recipientData *RecipientData
@@ -328,7 +328,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		recipientData = recipientRequest.RecipientData
 		recipientIdentity = recipientData.Identity
 		if !w.Contains(recipientIdentity) {
-			return nil, fmt.Errorf("cannot find identity [%s] in wallet [%s:%s]", recipientIdentity, wallet, recipientRequest.TMSID)
+			return nil, errors.Errorf("cannot find identity [%s] in wallet [%s:%s]", recipientIdentity, wallet, recipientRequest.TMSID)
 		}
 		// TODO: check the other values too
 	} else {
@@ -416,14 +416,14 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 		return errors.Wrapf(err, "failed to unwrap multisig identity")
 	}
 	if !ok {
-		return fmt.Errorf("expected multisig identity")
+		return errors.Errorf("expected multisig identity")
 	}
 	ok, auditInfos, err := multisig.UnwrapAuditInfo(multisigRecipientData.RecipientData.AuditInfo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unwrap multisig audit info")
 	}
 	if !ok {
-		return fmt.Errorf("expected multisig audit info")
+		return errors.Errorf("expected multisig audit info")
 	}
 	for i, identity := range multisigIdentities {
 		if identity.Equal(recipientIdentity) {
@@ -500,7 +500,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 
 		w := ts.WalletManager().OwnerWallet(context.Context(), f.Wallet)
 		if w == nil {
-			return nil, fmt.Errorf("wallet [%s:%s] not found", f.Wallet, f.TMSID)
+			return nil, errors.Errorf("wallet [%s:%s] not found", f.Wallet, f.TMSID)
 		}
 		localRecipientData, err := w.GetRecipientData(context.Context())
 		if err != nil {
@@ -585,7 +585,7 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	}
 	w := ts.WalletManager().OwnerWallet(context.Context(), wallet)
 	if w == nil {
-		return nil, fmt.Errorf("wallet [%s] not found", wallet)
+		return nil, errors.Errorf("wallet [%s] not found", wallet)
 	}
 
 	recipientData, err := w.GetRecipientData(context.Context())
