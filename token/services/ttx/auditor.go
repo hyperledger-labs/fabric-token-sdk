@@ -12,8 +12,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/sig"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -327,54 +325,6 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 		return errors.WithMessagef(err, "failed sending back auditor signature")
 	}
 	logger.DebugfContext(context.Context(), "Signing and sending back transaction...done [%s]", a.tx.ID())
-
-	if err := a.waitEnvelope(context); err != nil {
-		return errors.WithMessagef(err, "failed obtaining auditor signature")
-	}
-	return nil
-}
-
-func (a *AuditApproveView) waitEnvelope(context view.Context) error {
-	logger.DebugfContext(context.Context(), "Waiting for envelope... [%s]", a.tx.ID())
-	tx, err := ReceiveTransaction(context, WithNoTransactionVerification())
-	if err != nil {
-		return errors.Wrapf(err, "failed to receive transaction with network envelope")
-	}
-	logger.DebugfContext(context.Context(), "Waiting for envelope...transaction received[%s]", a.tx.ID())
-
-	// Processes
-	logger.DebugfContext(context.Context(), "Processes envelope...")
-	if tx.Payload == nil {
-		return errors.Errorf("expected transaction payload not found")
-	}
-	// Ack for distribution
-	// Send the signature back
-
-	idProvider, err := id.GetProvider(context)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get identity provider")
-	}
-	defaultIdentity := idProvider.DefaultIdentity()
-	logger.DebugfContext(context.Context(), "auditor signing ack response [%s] with identity [%s]", hash.Hashable(tx.FromRaw), defaultIdentity)
-	sigService, err := sig.GetService(context)
-	if err != nil {
-		return errors.WithMessagef(err, "failed getting sig service")
-	}
-	signer, err := sigService.GetSigner(defaultIdentity)
-	if err != nil {
-		return errors.WithMessagef(err, "failed getting signing identity for [%s]", defaultIdentity)
-	}
-
-	sigma, err := signer.Sign(tx.FromRaw)
-	if err != nil {
-		return errors.WithMessage(err, "failed to sign ack response")
-	}
-	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
-
-	if err := context.Session().Send(sigma); err != nil {
-		return errors.WithMessage(err, "failed sending ack")
-	}
-	logger.DebugfContext(context.Context(), "Waiting for envelope...done [%s]", a.tx.ID())
 
 	return nil
 }
