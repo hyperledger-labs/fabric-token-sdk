@@ -15,7 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
-	"github.com/pkg/errors"
+
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
 type RecipientData = token.RecipientData
@@ -158,7 +159,9 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 			results[i] = recipient.RecipientData.Identity
 			continue
 		}
-
+		if w == nil {
+			return nil, errors.Errorf("wallet [%s] not found", string(recipient.Identity))
+		}
 		results[i], err = w.GetRecipientIdentity(context.Context())
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get recipient identity")
@@ -497,7 +500,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 
 		w := ts.WalletManager().OwnerWallet(context.Context(), f.Wallet)
 		if w == nil {
-			return nil, errors.WithMessagef(err, "failed getting wallet [%s]", f.Wallet)
+			return nil, errors.Errorf("wallet [%s:%s] not found", f.Wallet, f.TMSID)
 		}
 		localRecipientData, err := w.GetRecipientData(context.Context())
 		if err != nil {
@@ -581,6 +584,10 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		wallet = string(request.WalletID)
 	}
 	w := ts.WalletManager().OwnerWallet(context.Context(), wallet)
+	if w == nil {
+		return nil, errors.Errorf("wallet [%s] not found", wallet)
+	}
+
 	recipientData, err := w.GetRecipientData(context.Context())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting recipient data, wallet [%s]", w.ID())
