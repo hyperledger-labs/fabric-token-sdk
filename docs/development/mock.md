@@ -1,8 +1,11 @@
 # Generation Mock Files
 
-`app/services/info/mock` directory contains mock auto-generated files.
-The generation directives can be found, for example at `app/services/info/dbs.go`:
+We use `counterfeiter` to generate mocks. 
+
+For example, `token/driver/mock` contains mock auto-generated files for the Driver API..
+The generation directives can be found close to the interface that needs to be mocked, for example at `token/driver/transfer.go`:
 ```
-//go:generate counterfeiter -o mock/userdb.go -fake-name UserDB . UserDB
+//go:generate counterfeiter -o mock/ts.go -fake-name TransferService . TransferService
 ```
-To regenerate all mock files, go to `app/services/info/` and run `go generate`.
+To regenerate all mock files, go to `token/driver` and run `go generate`.
+The same applies to other packages containing the `//go:generate` directive. 
