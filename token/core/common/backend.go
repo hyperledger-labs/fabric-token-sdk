@@ -39,7 +39,7 @@ func (b *Backend) HasBeenSignedBy(id driver.Identity, verifier driver.Verifier) 
 	sigma := b.Sigs[b.Cursor]
 	b.Cursor++
 
-	b.Logger.Infof("verify signature [%s][%s][%s]", id, logging.Base64(sigma), utils.Hashable(b.Message))
+	b.Logger.Debugf("verify signature [%s][%s][%s]", id, logging.Base64(sigma), utils.Hashable(b.Message))
 
 	return sigma, verifier.Verify(b.Message, sigma)
 }
