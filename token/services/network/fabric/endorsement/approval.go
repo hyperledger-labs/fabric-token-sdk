@@ -38,6 +38,8 @@ type RequestApprovalView struct {
 }
 
 func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
+	logger.DebugfContext(context.Context(), "request approval...")
+
 	_, tx, err := endorser.NewTransaction(
 		context,
 		fabric2.WithCreator(r.TxID.Creator),
@@ -72,7 +74,7 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		}
 	}
 
-	logger.DebugfContext(context.Context(), "Request Endorsement on tx [%s] to [%v]...", tx.ID(), r.Endorsers)
+	logger.DebugfContext(context.Context(), "request endorsement on tx [%s] to [%v]...", tx.ID(), r.Endorsers)
 	_, err = context.RunView(endorser.NewParallelCollectEndorsementsOnProposalView(
 		tx,
 		r.Endorsers...,
@@ -80,17 +82,16 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to collect endorsements")
 	}
-	logger.DebugfContext(context.Context(), "Request Endorsement on tx [%s] to [%v]...done", tx.ID(), r.Endorsers)
-
-	rws, err := tx.RWSet()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get rws")
-	}
-	rws.Done()
-	logger.DebugfContext(context.Context(), "[%s] found [%d] nss [%v]", tx.ID(), len(rws.Namespaces()), rws.Namespaces())
+	logger.DebugfContext(context.Context(), "request endorsement done")
 
 	// Return envelope
-	return tx.Envelope()
+	env, err := tx.Envelope()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to retrieve envelope for endorsement")
+	}
+	logger.DebugfContext(context.Context(), "envelope ready")
+
+	return env, nil
 }
 
 type Translator interface {
