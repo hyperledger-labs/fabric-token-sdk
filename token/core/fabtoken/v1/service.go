@@ -54,6 +54,9 @@ func NewService(
 		tokensService,
 		tokensUpgradeService,
 		authorization,
+		func() (driver.Validator, error) {
+			return validator.NewValidator(logger, ppm.PublicParams(context.Background()), deserializer, nil, nil, nil), nil
+		},
 	)
 	if err != nil {
 		return nil, err
@@ -63,8 +66,4 @@ func NewService(
 		Service: root,
 	}
 	return s, nil
-}
-
-func (s *Service) Validator() (driver.Validator, error) {
-	return validator.NewValidator(s.Logger, s.PublicParametersManager.PublicParams(context.Background()), s.Deserializer(), nil, nil, nil), nil
 }

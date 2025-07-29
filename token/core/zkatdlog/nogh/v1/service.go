@@ -17,7 +17,6 @@ import (
 
 type Service struct {
 	*common.Service[*setup.PublicParams]
-	validator *validator.Validator
 }
 
 func NewTokenService(
@@ -49,18 +48,16 @@ func NewTokenService(
 		tokensService,
 		tokensUpgradeService,
 		authorization,
+		func() (driver.Validator, error) {
+			return validator, nil
+		},
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	s := &Service{
-		Service:   root,
-		validator: validator,
+		Service: root,
 	}
 	return s, nil
-}
-
-func (s *Service) Validator() (driver.Validator, error) {
-	return s.validator, nil
 }
