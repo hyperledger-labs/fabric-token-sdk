@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
@@ -39,6 +40,7 @@ type identityTables struct {
 	IdentityConfigurations string
 	IdentityInfo           string
 	Signers                string
+	KeyStore               string
 }
 
 type IdentityStore struct {
@@ -81,6 +83,7 @@ func NewIdentityStore(readDB, writeDB *sql.DB, tables TableNames, signerInfoCach
 			IdentityConfigurations: tables.IdentityConfigurations,
 			IdentityInfo:           tables.IdentityInfo,
 			Signers:                tables.Signers,
+			KeyStore:               tables.KeyStore,
 		},
 		signerInfoCache,
 		auditInfoCache,
@@ -306,24 +309,37 @@ func (db *IdentityStore) Close() error {
 	return common2.Close(db.readDB, db.writeDB)
 }
 
-type IdentityConfigurationIterator struct {
-	rows              *sql.Rows
-	configurationType string
+func (db *IdentityStore) Put(id string, state interface{}) error {
+	raw, err := json.Marshal(state)
+	if err != nil {
+		return errors.Wrapf(err, "cannot marshal state with id [%s]", id)
+	}
+	query, args := q.InsertInto(db.table.KeyStore).
+		Fields("key", "value").
+		Row(id, raw).
+		Format()
+	logger.Debug(query, args)
+
+	_, err = db.writeDB.Exec(query, args...)
+	return err
 }
 
-func (w *IdentityConfigurationIterator) Close() error {
-	return w.rows.Close()
-}
+func (db *IdentityStore) Get(id string, state interface{}) error {
+	query, args := q.Select().
+		FieldsByName("value").
+		From(q.Table(db.table.KeyStore)).
+		Where(cond.Eq("key", id)).
+		Format(db.ci)
+	raw, err := common.QueryUnique[[]byte](db.readDB, query, args...)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(raw, state); err != nil {
+		return errors.Wrapf(err, "failed retrieving state [%s], cannot unmarshal state", id)
+	}
 
-func (w *IdentityConfigurationIterator) HasNext() bool {
-	return w.rows.Next()
-}
-
-func (w *IdentityConfigurationIterator) Next() (driver.IdentityConfiguration, error) {
-	var c driver.IdentityConfiguration
-	c.Type = w.configurationType
-	err := w.rows.Scan(&c.ID, &c.URL, &c.Config, &c.Raw)
-	return c, err
+	logger.Debugf("got state [%s,%s] successfully", id)
+	return nil
 }
 
 func (db *IdentityStore) GetSchema() string {
@@ -357,6 +373,12 @@ func (db *IdentityStore) GetSchema() string {
 			info BYTEA
 		);
 		CREATE INDEX IF NOT EXISTS idx_signers_%s ON %s ( identity_hash );
+
+		CREATE TABLE IF NOT EXISTS %s (
+			key TEXT NOT NULL,
+			val BYTEA NOT NULL,
+			PRIMARY KEY (key)
+		);
 		`,
 		db.table.IdentityConfigurations,
 		db.table.IdentityConfigurations, db.table.IdentityConfigurations,
@@ -365,5 +387,26 @@ func (db *IdentityStore) GetSchema() string {
 		db.table.IdentityInfo, db.table.IdentityInfo,
 		db.table.Signers,
 		db.table.Signers, db.table.Signers,
+		db.table.KeyStore,
 	)
+}
+
+type IdentityConfigurationIterator struct {
+	rows              *sql.Rows
+	configurationType string
+}
+
+func (w *IdentityConfigurationIterator) Close() error {
+	return w.rows.Close()
+}
+
+func (w *IdentityConfigurationIterator) HasNext() bool {
+	return w.rows.Next()
+}
+
+func (w *IdentityConfigurationIterator) Next() (driver.IdentityConfiguration, error) {
+	var c driver.IdentityConfiguration
+	c.Type = w.configurationType
+	err := w.rows.Scan(&c.ID, &c.URL, &c.Config, &c.Raw)
+	return c, err
 }

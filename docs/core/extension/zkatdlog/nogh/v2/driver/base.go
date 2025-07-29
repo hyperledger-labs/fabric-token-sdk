@@ -73,7 +73,7 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
-	baseKeyStore, err := storageProvider.Keystore()
+	baseKeyStore, err := storageProvider.Keystore(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open keystore for tms [%s]", tmsID)
 	}
@@ -90,7 +90,7 @@ func (d *base) newWalletService(
 	// we have one key manager for fabtoken and one for each idemix issuer public key
 	kmps := make([]membership.KeyManagerProvider, 0, len(pp.IdemixIssuerPublicKeys)+1)
 	for _, key := range pp.IdemixIssuerPublicKeys {
-		backend, err := storageProvider.Keystore()
+		backend, err := storageProvider.Keystore(tmsID)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get new keystore backend")
 		}

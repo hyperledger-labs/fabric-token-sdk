@@ -14,18 +14,15 @@ import (
 )
 
 type DBStorageProvider struct {
-	kvs                         driver.Keystore
 	identityStoreServiceManager identitydb.StoreServiceManager
 	walletStoreServiceManager   walletdb.StoreServiceManager
 }
 
 func NewDBStorageProvider(
-	kvs driver.Keystore,
 	identityStoreServiceManager identitydb.StoreServiceManager,
 	walletStoreServiceManager walletdb.StoreServiceManager,
 ) *DBStorageProvider {
 	return &DBStorageProvider{
-		kvs:                         kvs,
 		identityStoreServiceManager: identityStoreServiceManager,
 		walletStoreServiceManager:   walletStoreServiceManager,
 	}
@@ -39,6 +36,6 @@ func (s *DBStorageProvider) IdentityStore(tmsID token.TMSID) (driver.IdentitySto
 	return s.identityStoreServiceManager.StoreServiceByTMSId(tmsID)
 }
 
-func (s *DBStorageProvider) Keystore() (driver.Keystore, error) {
-	return s.kvs, nil
+func (s *DBStorageProvider) Keystore(tmsID token.TMSID) (driver.Keystore, error) {
+	return s.identityStoreServiceManager.StoreServiceByTMSId(tmsID)
 }

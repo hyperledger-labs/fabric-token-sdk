@@ -18,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/committer"
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
@@ -38,8 +37,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -140,7 +137,6 @@ func (p *SDK) Install() error {
 		p.Container().Provide(identitydb.NewStoreServiceManager),
 		p.Container().Provide(walletdb.NewStoreServiceManager),
 		p.Container().Provide(tokenlockdb.NewStoreServiceManager),
-		p.Container().Provide(func(kvs *kvs.KVS) idriver.Keystore { return kvs2.Keystore(kvs) }),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(NewAuditorCheckServiceProvider),
@@ -181,7 +177,6 @@ func (p *SDK) Install() error {
 
 	// Backward compatibility with SP
 	err = errors2.Join(
-		digutils.Register[*kvs.KVS](p.Container()),
 		digutils.Register[*core2.TokenDriverService](p.Container()),
 		digutils.Register[*network.Provider](p.Container()),
 		digutils.Register[*token.ManagementServiceProvider](p.Container()),
