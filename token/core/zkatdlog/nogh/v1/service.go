@@ -9,7 +9,6 @@ package v1
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -32,7 +31,7 @@ func NewTokenService(
 	tokensService driver.TokensService,
 	tokensUpgradeService driver.TokensUpgradeService,
 	authorization driver.Authorization,
-	validator *validator.Validator,
+	validator driver.Validator,
 ) (*Service, error) {
 	root, err := common.NewTokenService[*setup.PublicParams](
 		logger,
