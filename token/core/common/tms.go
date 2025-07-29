@@ -35,7 +35,7 @@ type Service[T driver.PublicParameters] struct {
 	tokensService           driver.TokensService
 	tokensUpgradeService    driver.TokensUpgradeService
 	authorization           driver.Authorization
-	validatorFactory        ValidatorFactory
+	validator               driver.Validator
 }
 
 func NewTokenService[T driver.PublicParameters](
@@ -52,7 +52,7 @@ func NewTokenService[T driver.PublicParameters](
 	tokensService driver.TokensService,
 	tokensUpgradeService driver.TokensUpgradeService,
 	authorization driver.Authorization,
-	validatorFactory ValidatorFactory,
+	validator driver.Validator,
 ) (*Service[T], error) {
 	s := &Service[T]{
 		Logger:                  logger,
@@ -68,7 +68,7 @@ func NewTokenService[T driver.PublicParameters](
 		tokensService:           tokensService,
 		tokensUpgradeService:    tokensUpgradeService,
 		authorization:           authorization,
-		validatorFactory:        validatorFactory,
+		validator:               validator,
 	}
 	return s, nil
 }
@@ -125,7 +125,7 @@ func (s *Service[T]) Authorization() driver.Authorization {
 }
 
 func (s *Service[T]) Validator() (driver.Validator, error) {
-	return s.validatorFactory()
+	return s.validator, nil
 }
 
 // Done releases all the resources allocated by this service

@@ -48,9 +48,7 @@ func NewTokenService(
 		tokensService,
 		tokensUpgradeService,
 		authorization,
-		func() (driver.Validator, error) {
-			return validator, nil
-		},
+		validator,
 	)
 	if err != nil {
 		return nil, err

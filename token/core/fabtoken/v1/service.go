@@ -11,7 +11,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -39,6 +38,7 @@ func NewService(
 	tokensService driver.TokensService,
 	tokensUpgradeService driver.TokensUpgradeService,
 	authorization driver.Authorization,
+	validator driver.Validator,
 ) (*Service, error) {
 	root, err := common.NewTokenService[*setup.PublicParams](
 		logger,
@@ -54,9 +54,7 @@ func NewService(
 		tokensService,
 		tokensUpgradeService,
 		authorization,
-		func() (driver.Validator, error) {
-			return validator.NewValidator(logger, ppm.PublicParams(context.Background()), deserializer, nil, nil, nil), nil
-		},
+		validator,
 	)
 	if err != nil {
 		return nil, err
