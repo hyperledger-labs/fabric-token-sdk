@@ -173,10 +173,10 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
-	expectedID := string(core.DriverIdentifier(FabTokenDriverName, ProtocolV1))
+	expectedID := string(core.DriverIdentifier(p.DriverName, p.DriverVersion))
 	if container.Identifier != expectedID {
 		return errors.Errorf(
-			"invalid identifier, expecting [%s]], got [%s]",
+			"invalid identifier, expecting [%s], got [%s]",
 			expectedID,
 			container.Identifier,
 		)

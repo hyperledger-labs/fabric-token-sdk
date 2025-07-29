@@ -472,9 +472,9 @@ func (p *PublicParams) String() string {
 }
 
 func (p *PublicParams) Validate() error {
-	if p.DriverVersion != ProtocolV1 {
-		return errors.Errorf("invalid version [%d], expected [%d]", p.DriverVersion, ProtocolV1)
-	}
+	// if p.DriverVersion != ProtocolV1 {
+	// 	return errors.Errorf("invalid version [%d], expected [%d]", p.DriverVersion, ProtocolV1)
+	// }
 	if int(p.Curve) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(p.Curve), len(mathlib.Curves)-1)
 	}
