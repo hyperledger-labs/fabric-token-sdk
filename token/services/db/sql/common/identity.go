@@ -11,7 +11,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
@@ -48,7 +47,6 @@ type IdentityStore struct {
 	table   identityTables
 	ci      common3.CondInterpreter
 
-	signerCacheLock sync.RWMutex
 	signerInfoCache cache[bool]
 	auditInfoCache  cache[[]byte]
 }
@@ -223,8 +221,6 @@ func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) e
 		}
 	}
 
-	db.signerCacheLock.Lock()
-	defer db.signerCacheLock.Unlock()
 	db.signerInfoCache.Add(h, true)
 
 	logger.DebugfContext(ctx, "store signer info done")
@@ -240,7 +236,6 @@ func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriv
 	result := make([]string, 0)
 	notFound := make([]string, 0)
 
-	db.signerCacheLock.RLock()
 	for _, idHash := range idHashes {
 		if v, ok := db.signerInfoCache.Get(idHash); !ok {
 			notFound = append(notFound, idHash)
@@ -249,15 +244,11 @@ func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriv
 		}
 	}
 	if len(notFound) == 0 {
-		defer db.signerCacheLock.RUnlock()
 		return result, nil
 	}
-	db.signerCacheLock.RUnlock()
 
 	idHashes = notFound
 	notFound = make([]string, 0)
-	db.signerCacheLock.Lock()
-	defer db.signerCacheLock.Unlock()
 	for _, idHash := range idHashes {
 		if v, ok := db.signerInfoCache.Get(idHash); !ok {
 			notFound = append(notFound, idHash)
