@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package identitydb
+package keystoredb
 
 import (
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
@@ -17,14 +17,14 @@ import (
 type StoreServiceManager db.StoreServiceManager[*StoreService]
 
 func NewStoreServiceManager(cp cdriver.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
-	return db.NewStoreServiceManager(config.NewService(cp), "identitydb.persistence", drivers.NewIdentity, newStoreService)
+	return db.NewStoreServiceManager(config.NewService(cp), "keystoredb.persistence", drivers.NewKeyStore, newStoreService)
 }
 
 // StoreService is a database that stores identity related information
 type StoreService struct {
-	driver.IdentityStore
+	driver.KeyStore
 }
 
-func newStoreService(p driver.IdentityStore) (*StoreService, error) {
-	return &StoreService{IdentityStore: p}, nil
+func newStoreService(p driver.KeyStore) (*StoreService, error) {
+	return &StoreService{KeyStore: p}, nil
 }

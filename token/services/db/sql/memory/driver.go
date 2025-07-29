@@ -38,6 +38,10 @@ func (d *Driver) NewIdentity(_ driver2.PersistenceName, params ...string) (drive
 	return d.Identity.Get(mem.Op.GetConfig(params...))
 }
 
+func (d *Driver) NewKeyStore(_ driver2.PersistenceName, params ...string) (driver.KeyStore, error) {
+	return d.KeyStore.Get(mem.Op.GetConfig(params...))
+}
+
 func (d *Driver) NewToken(_ driver2.PersistenceName, params ...string) (driver.TokenStore, error) {
 	return d.Token.Get(mem.Op.GetConfig(params...))
 }

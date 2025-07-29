@@ -45,6 +45,7 @@ import (
 	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/keystoredb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -135,6 +136,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(auditdb.NewStoreServiceManager),
 		p.Container().Provide(digutils.Identity[auditdb.StoreServiceManager](), dig.As(new(auditor.StoreServiceManager))),
 		p.Container().Provide(identitydb.NewStoreServiceManager),
+		p.Container().Provide(keystoredb.NewStoreServiceManager),
 		p.Container().Provide(walletdb.NewStoreServiceManager),
 		p.Container().Provide(tokenlockdb.NewStoreServiceManager),
 		p.Container().Provide(identity.NewDBStorageProvider),
@@ -184,6 +186,7 @@ func (p *SDK) Install() error {
 		digutils.Register[tokendb.StoreServiceManager](p.Container()),
 		digutils.Register[auditdb.StoreServiceManager](p.Container()),
 		digutils.Register[identitydb.StoreServiceManager](p.Container()),
+		digutils.Register[keystoredb.StoreServiceManager](p.Container()),
 		digutils.Register[*vault.Provider](p.Container()),
 		digutils.Register[driver.ConfigService](p.Container()),
 		digutils.Register[*identity.DBStorageProvider](p.Container()),
