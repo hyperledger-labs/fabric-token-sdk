@@ -881,6 +881,9 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionStore) {
 
 	for i, vr := range exp {
 		assert.Equal(t, vr.TxID, all[i].TxID, fmt.Sprintf("%v", all[i]))
+		if len(all[i].TokenRequest) == 0 {
+			all[i].TokenRequest = []byte{}
+		}
 		assert.Equal(t, vr.TokenRequest, all[i].TokenRequest, fmt.Sprintf("%v - %d", all[i], len(all[i].TokenRequest)))
 		assert.Equal(t, vr.Metadata, all[i].Metadata, fmt.Sprintf("%v", all[i]))
 		assert.Equal(t, vr.Status, all[i].Status, fmt.Sprintf("%v", all[i]))
