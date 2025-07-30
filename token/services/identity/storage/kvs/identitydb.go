@@ -219,13 +219,20 @@ type IdentityConfigurationsIterator struct {
 	kvs.Iterator
 }
 
-func (w *IdentityConfigurationsIterator) Next() (driver.IdentityConfiguration, error) {
+func (w *IdentityConfigurationsIterator) Next() (*driver.IdentityConfiguration, error) {
+	if !w.Iterator.HasNext() {
+		return nil, nil
+	}
 	idConfig := &driver.IdentityConfiguration{}
 	_, err := w.Iterator.Next(idConfig)
 	if err != nil {
-		return driver.IdentityConfiguration{}, err
+		return nil, err
 	}
-	return *idConfig, nil
+	return idConfig, nil
+}
+
+func (w *IdentityConfigurationsIterator) Close() {
+	_ = w.Iterator.Close()
 }
 
 func mergeIDURL(id string, url string) string {

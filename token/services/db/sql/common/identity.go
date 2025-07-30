@@ -353,17 +353,17 @@ type IdentityConfigurationIterator struct {
 	configurationType string
 }
 
-func (w *IdentityConfigurationIterator) Close() error {
-	return w.rows.Close()
+func (w *IdentityConfigurationIterator) Close() {
+	_ = w.rows.Close()
 }
 
-func (w *IdentityConfigurationIterator) HasNext() bool {
-	return w.rows.Next()
-}
+func (w *IdentityConfigurationIterator) Next() (*driver.IdentityConfiguration, error) {
+	if !w.rows.Next() {
+		return nil, nil
+	}
 
-func (w *IdentityConfigurationIterator) Next() (driver.IdentityConfiguration, error) {
 	var c driver.IdentityConfiguration
 	c.Type = w.configurationType
 	err := w.rows.Scan(&c.ID, &c.URL, &c.Config, &c.Raw)
-	return c, err
+	return &c, err
 }

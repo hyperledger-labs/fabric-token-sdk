@@ -54,11 +54,10 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 
 	it, err := db.IteratorConfigurations(ctx, expected.Type)
 	assert.NoError(t, err)
-	assert.True(t, it.HasNext())
 	c, err := it.Next()
 	assert.NoError(t, err)
-	assert.True(t, reflect.DeepEqual(expected, c))
-	assert.NoError(t, it.Close())
+	assert.True(t, reflect.DeepEqual(expected, *c))
+	it.Close()
 
 	exists, err := db.ConfigurationExists(ctx, expected.ID, expected.Type, expected.URL)
 	assert.NoError(t, err)
@@ -66,7 +65,9 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 
 	_, err = db.IteratorConfigurations(ctx, "no core")
 	assert.NoError(t, err)
-	assert.False(t, it.HasNext())
+	next, err := it.Next()
+	assert.NoError(t, err)
+	assert.Nil(t, next)
 
 	exists, err = db.ConfigurationExists(ctx, "pineapple", "no core", expected.URL)
 	assert.NoError(t, err)
