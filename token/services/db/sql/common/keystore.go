@@ -11,10 +11,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
+	dcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
+	qcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/pkg/errors"
 )
@@ -27,10 +27,10 @@ type KeystoreStore struct {
 	readDB  *sql.DB
 	writeDB *sql.DB
 	table   keystoreTables
-	ci      common3.CondInterpreter
+	ci      qcommon.CondInterpreter
 }
 
-func newKeystoreStore(readDB, writeDB *sql.DB, tables keystoreTables, ci common3.CondInterpreter) *KeystoreStore {
+func newKeystoreStore(readDB, writeDB *sql.DB, tables keystoreTables, ci qcommon.CondInterpreter) *KeystoreStore {
 	return &KeystoreStore{
 		readDB:  readDB,
 		writeDB: writeDB,
@@ -39,7 +39,7 @@ func newKeystoreStore(readDB, writeDB *sql.DB, tables keystoreTables, ci common3
 	}
 }
 
-func NewKeystoreStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*KeystoreStore, error) {
+func NewKeystoreStore(readDB, writeDB *sql.DB, tables TableNames, ci qcommon.CondInterpreter) (*KeystoreStore, error) {
 	return newKeystoreStore(
 		readDB,
 		writeDB,
@@ -55,17 +55,23 @@ func (db *KeystoreStore) CreateSchema() error {
 }
 
 func (db *KeystoreStore) Close() error {
-	return common2.Close(db.readDB, db.writeDB)
+	return dcommon.Close(db.readDB, db.writeDB)
 }
 
-func (db *KeystoreStore) Put(id string, state interface{}) error {
+func (db *KeystoreStore) Put(key string, state interface{}) error {
+	if state == nil {
+		return errors.New("cannot store nil state")
+	}
+	if len(key) == 0 {
+		return errors.New("cannot store empty key")
+	}
 	raw, err := json.Marshal(state)
 	if err != nil {
-		return errors.Wrapf(err, "cannot marshal state with id [%s]", id)
+		return errors.Wrapf(err, "cannot marshal state with key [%s]", key)
 	}
 	query, args := q.InsertInto(db.table.KeyStore).
 		Fields("key", "val").
-		Row(id, raw).
+		Row(key, raw).
 		Format()
 	logger.Debug(query, args)
 
@@ -73,21 +79,24 @@ func (db *KeystoreStore) Put(id string, state interface{}) error {
 	return err
 }
 
-func (db *KeystoreStore) Get(id string, state interface{}) error {
+func (db *KeystoreStore) Get(key string, state interface{}) error {
 	query, args := q.Select().
 		FieldsByName("val").
 		From(q.Table(db.table.KeyStore)).
-		Where(cond.Eq("key", id)).
+		Where(cond.Eq("key", key)).
 		Format(db.ci)
 	raw, err := common.QueryUnique[[]byte](db.readDB, query, args...)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed retrieving key [%s]", key)
+	}
+	if len(raw) == 0 {
+		return errors.Errorf("key [%s] does not exist", key)
 	}
 	if err := json.Unmarshal(raw, state); err != nil {
-		return errors.Wrapf(err, "failed retrieving state [%s], cannot unmarshal state", id)
+		return errors.Wrapf(err, "failed retrieving key [%s], cannot unmarshal state", key)
 	}
 
-	logger.Debugf("got state [%s,%s] successfully", id)
+	logger.Debugf("got key [%s] successfully", key)
 	return nil
 }
 

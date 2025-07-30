@@ -52,6 +52,13 @@ func TestIdentity(t *testing.T) {
 	dbtest.IdentityTest(t, func(name string) driver.Driver { return NewDriver(postgresCfg(pgConnStr, name)) })
 }
 
+func TestKeyStore(t *testing.T) {
+	terminate, pgConnStr := startContainer(t)
+	defer terminate()
+
+	dbtest.KeyStoreTest(t, func(name string) driver.Driver { return NewDriver(postgresCfg(pgConnStr, name)) })
+}
+
 func postgresCfg(pgConnStr string, name string) *mock.ConfigProvider {
 	return multiplexed.MockTypeConfig(postgres.Persistence, postgres.Config{
 		DataSource:   pgConnStr,
