@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	DLogIdentifier = v1.DLogNoGHDriverName
-	ProtocolV2     = 2
+	DLogNoGHDriverName = v1.DLogNoGHDriverName
+	ProtocolV2         = 2
 )
 
 // PublicParams are identical to the v1's public parameters. What changes is the driver version.
@@ -29,5 +29,5 @@ func NewPublicParamsFromBytes(
 }
 
 func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return v1.NewWith(DLogIdentifier, ProtocolV2, bitLength, idemixIssuerPK, idemixCurveID)
+	return v1.NewWith(DLogNoGHDriverName, ProtocolV2, bitLength, idemixIssuerPK, idemixCurveID)
 }
