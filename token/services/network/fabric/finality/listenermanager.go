@@ -35,11 +35,6 @@ func NewListenerManagerProvider(fnsp *fabric.NetworkServiceProvider, tracerProvi
 			LRUSize:                 lmConfig.DeliveryLRUSize(),
 			LRUBuffer:               lmConfig.DeliveryLRUBuffer(),
 		})
-	case config.Committer:
-		return NewCommitterBasedFLMProvider(fnsp, tracerProvider, keyTranslator, CommitterListenerManagerConfig{
-			MaxRetries:        lmConfig.CommitterMaxRetries(),
-			RetryWaitDuration: lmConfig.CommitterRetryWaitDuration(),
-		})
 	}
 	panic("unknown config type: " + lmConfig.Type())
 }
