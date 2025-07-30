@@ -23,11 +23,9 @@ func (n *NoCache[T]) GetOrLoad(key string, loader func() (T, error)) (T, bool, e
 }
 
 func (n *NoCache[T]) Add(key string, value T) {
-	return
 }
 
 func (n *NoCache[T]) Delete(key string) {
-	return
 }
 
 func Zero[T any]() T {
