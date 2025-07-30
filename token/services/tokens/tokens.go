@@ -395,7 +395,6 @@ func (t *Service) parse(
 
 	// parse the outputs
 	for _, output := range os.Outputs() {
-
 		// if this is a redeem, then skip
 		if len(output.Token.Owner) == 0 {
 			logger.DebugfContext(ctx, "output [%s:%d] is a redeem", requestAnchor, output.Index)
@@ -451,5 +450,5 @@ func (t *Service) parse(
 			logger.DebugfContext(ctx, "done parsing write key [%s]", output.ID(requestAnchor))
 		}
 	}
-	return
+	return toSpend, toAppend, err
 }

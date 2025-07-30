@@ -311,7 +311,7 @@ func (db *TokenStore) ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]
 
 		// the result is expected to be in order of the ids
 		found := false
-		for i := 0; i < len(ids); i++ {
+		for i := range ids {
 			if ids[i].Equal(id) {
 				tokens[i] = &tok
 				found = true
@@ -369,7 +369,7 @@ func (db *TokenStore) GetTokenOutputs(ctx context.Context, ids []*token.ID, call
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(ids); i++ {
+	for i := range ids {
 		if err := callback(ids[i], tokens[i]); err != nil {
 			return err
 		}
@@ -524,7 +524,7 @@ func (db *TokenStore) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*to
 	err = iterators.ForEach(it, func(tok *token.UnspentToken) error {
 		// put in the right position
 		found := false
-		for j := 0; j < len(inputs); j++ {
+		for j := range inputs {
 			if inputs[j].Equal(tok.Id) {
 				tokens[j] = &token.Token{
 					Owner:    tok.Owner,
@@ -920,7 +920,6 @@ func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID stri
 	all := common.NewIterator(rows, func(f *token.Format) error { return rows.Scan(f) })
 	unsupported := iterators.Filter(all, func(f *token.Format) bool { return !supported.Contains(*f) })
 	return iterators.ReadAllValues(unsupported)
-
 }
 
 type TokenTransaction struct {

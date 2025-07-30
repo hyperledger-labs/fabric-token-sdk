@@ -417,7 +417,7 @@ func (p *PublicParams) GenerateRangeProofParameters(bitLength uint64) error {
 	p.RangeProofParams.LeftGenerators = make([]*mathlib.G1, bitLength)
 	p.RangeProofParams.RightGenerators = make([]*mathlib.G1, bitLength)
 
-	for i := uint64(0); i < bitLength; i++ {
+	for i := range bitLength {
 		p.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.FormatUint(2*(i+1), 10)))
 		p.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.FormatUint(2*(i+1)+1, 10)))
 	}

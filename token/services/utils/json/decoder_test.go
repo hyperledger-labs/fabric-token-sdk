@@ -60,7 +60,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 	jsonData := []byte(`{"name": "benchmark"}`)
 
 	b.Run("With DisallowUnknownFields", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			var result TestStruct
 			err := UnmarshalWithDisallowUnknownFields(jsonData, &result)
 			if err != nil {
@@ -70,7 +70,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 	})
 
 	b.Run("Standard json.Unmarshal", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			var result TestStruct
 			err := json.Unmarshal(jsonData, &result)
 			if err != nil {

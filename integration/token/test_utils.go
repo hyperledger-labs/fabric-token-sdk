@@ -43,7 +43,6 @@ func NewReplicationOptions(factor int, names ...string) (*ReplicationOptions, *R
 	for _, name := range names {
 		replicationFactors[name] = factor
 		sqlConfigs[name] = postgres2.DefaultConfig(fmt.Sprintf("%s-db", name))
-
 	}
 	return &ReplicationOptions{ReplicationOptions: &integration.ReplicationOptions{
 		ReplicationFactors: replicationFactors,
@@ -74,7 +73,7 @@ func (r *NodeReference) AllNames() []string {
 		return []string{r.name}
 	}
 	replicaNames := make([]string, 0)
-	for idx := 0; idx < r.totalReplicas; idx++ {
+	for idx := range r.totalReplicas {
 		replicaNames = append(replicaNames, replicaName(r.name, idx))
 	}
 	return replicaNames
@@ -138,7 +137,6 @@ func (s *TestSuite) TearDown() {
 }
 
 func (s *TestSuite) Setup() {
-
 	// Create the integration ii
 	network, err := s.generator()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())

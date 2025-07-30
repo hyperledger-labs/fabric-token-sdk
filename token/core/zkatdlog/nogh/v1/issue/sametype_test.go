@@ -23,6 +23,7 @@ func TestSameTypeProof(t *testing.T) {
 }
 
 func prepareTokens(t *testing.T, pp []*math.G1) []*math.G1 {
+	t.Helper()
 	curve := math.Curves[1]
 	rand, err := curve.Rand()
 	assert.NoError(t, err)
@@ -30,20 +31,21 @@ func prepareTokens(t *testing.T, pp []*math.G1) []*math.G1 {
 	bf := make([]*math.Zr, 2)
 	values := make([]uint64, 2)
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		bf[i] = curve.NewRandomZr(rand)
 	}
 	values[0] = 100
 	values[1] = 50
 
 	tokens := make([]*math.G1, len(values))
-	for i := 0; i < len(values); i++ {
+	for i := range values {
 		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp, curve)
 	}
 	return tokens
 }
 
 func GetSameTypeProverAndVerifier(t *testing.T) (*issue.SameTypeProver, *issue.SameTypeVerifier) {
+	t.Helper()
 	pp := preparePedersenParameters(t)
 	curve := math.Curves[1]
 
@@ -58,13 +60,14 @@ func GetSameTypeProverAndVerifier(t *testing.T) (*issue.SameTypeProver, *issue.S
 }
 
 func preparePedersenParameters(t *testing.T) []*math.G1 {
+	t.Helper()
 	curve := math.Curves[1]
 	rand, err := curve.Rand()
 	assert.NoError(t, err)
 
 	pp := make([]*math.G1, 3)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		pp[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
 	}
 	return pp

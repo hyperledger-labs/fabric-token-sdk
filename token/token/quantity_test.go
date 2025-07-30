@@ -102,7 +102,7 @@ func TestHex(t *testing.T) {
 
 func TestOverflow(t *testing.T) {
 	half := uint64(math.MaxUint64 / 2)
-	assert.Equal(t, uint64(math.MaxUint64), uint64(half+half+1))
+	assert.Equal(t, uint64(math.MaxUint64), half+half+1)
 
 	a, err := token.ToQuantity(ToHex(1), 64)
 	assert.NoError(t, err)

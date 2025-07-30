@@ -140,7 +140,7 @@ func (r *BaseRunner) initCustomerState(suiteConfig model.SuiteConfig) txgen.Erro
 func (r *BaseRunner) runSuite(suite model.SuiteConfig) {
 	wg := conc.NewWaitGroup()
 	r.logger.Infof("========================== Start suite %s ==========================", suite.Name)
-	for i := 0; i < suite.Iterations; i++ {
+	for i := range suite.Iterations {
 		for _, testCase := range suite.Cases {
 			wg.Go(func() {
 				result := r.testCaseRunner.Run(&testCase, r.customers, &TestCaseSettings{

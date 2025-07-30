@@ -104,5 +104,4 @@ func IsScript(selector SelectFunction) iterators.Predicate[*token.UnspentToken] 
 		}
 		return pickItem
 	}
-
 }

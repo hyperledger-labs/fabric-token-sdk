@@ -102,7 +102,7 @@ func (m *Service) Enabled() bool {
 	return m.enabled
 }
 
-// LookupNamespace searches for a configuration configuration that matches the given network and channel, and
+// LookupNamespace searches for a configuration that matches the given network and channel, and
 // return its namespace.
 // If no matching configuration is found, an error is returned.
 // If multiple matching configurations are found, an error is returned.
@@ -168,7 +168,7 @@ type loader struct {
 }
 
 func (m *loader) load() (map[string]Configuration, error) {
-	//load
+	// load
 	var boxedConfig map[interface{}]interface{}
 	if err := m.cp.UnmarshalKey("token.tms", &boxedConfig); err != nil {
 		return nil, errors.WithMessagef(err, "cannot load token-sdk configurations")

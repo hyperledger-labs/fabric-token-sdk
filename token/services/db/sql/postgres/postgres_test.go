@@ -61,6 +61,7 @@ func postgresCfg(pgConnStr string, name string) *mock.ConfigProvider {
 }
 
 func startContainer(t *testing.T) (func(), string) {
+	t.Helper()
 	cfg := postgres.DefaultConfig("test-db")
 	terminate, err := postgres.StartPostgresWithFmt([]*postgres.ContainerConfig{cfg})
 	assert.NoError(t, err)

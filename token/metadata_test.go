@@ -29,6 +29,7 @@ func TestMetadata_TestFilterBy(t *testing.T) {
 }
 
 func testFilterByCase0(t *testing.T) {
+	t.Helper()
 	// Case:
 	// - Two transfers. One from Alice to Bob and one from Charlie to Dave.
 
@@ -188,6 +189,7 @@ func testFilterByCase0(t *testing.T) {
 }
 
 func testFilterByCase1(t *testing.T) {
+	t.Helper()
 	// Case:
 	// - Two issues. One for Alice and one for Bob.
 
@@ -325,22 +327,25 @@ func testFilterByCase1(t *testing.T) {
 }
 
 func assertEqualIssueMetadata(t *testing.T, original, filtered *driver.IssueMetadata) {
+	t.Helper()
 	assert.Equal(t, original, filtered)
 }
 
 func assertEmptyIssueMetadata(t *testing.T, original, filtered *driver.IssueMetadata) {
+	t.Helper()
 	// check equal issuer
 	assert.Equal(t, original.Issuer, filtered.Issuer)
 	// assert that the lengths are the same
 	assert.Len(t, original.Outputs, len(filtered.Outputs))
 
 	// assert that the token info is empty
-	for i := 0; i < len(original.Outputs); i++ {
+	for i := range len(original.Outputs) {
 		assert.Empty(t, filtered.Outputs[i])
 	}
 }
 
 func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.TransferMetadata) {
+	t.Helper()
 	// assert tokenIDs, senders and senderAuditInfos are empty
 	for _, input := range filtered.Inputs {
 		assert.Nil(t, input.TokenID)
@@ -349,12 +354,13 @@ func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.Transf
 
 	// assert that the lengths are the same
 	assert.Len(t, original.Outputs, len(filtered.Outputs))
-	for i := 0; i < len(original.Outputs); i++ {
+	for i := range len(original.Outputs) {
 		assert.Empty(t, filtered.Outputs[i])
 	}
 }
 
 func assertEqualTransferMetadata(t *testing.T, original, filtered *driver.TransferMetadata, noInputs bool) {
+	t.Helper()
 	for i, input := range original.Inputs {
 		if noInputs {
 			assert.Nil(t, filtered.Inputs[i].TokenID)
@@ -368,7 +374,6 @@ func assertEqualTransferMetadata(t *testing.T, original, filtered *driver.Transf
 }
 
 func TestMetadata_TestMatchTransferAction(t *testing.T) {
-
 	transferActionWithIssuer := &mock.TransferAction{}
 	mockIssuer := identity.Identity{0x1, 0x2, 0x3}
 	transferActionWithIssuer.GetIssuerReturns(mockIssuer)

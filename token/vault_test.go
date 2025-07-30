@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -26,7 +25,7 @@ func TestQueryEngine_IsMine(t *testing.T) {
 	mockQE.IsMineReturns(true, nil)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	isMine, err := queryEngine.IsMine(context.Background(), expectedID)
+	isMine, err := queryEngine.IsMine(t.Context(), expectedID)
 
 	assert.NoError(t, err)
 	assert.True(t, isMine)
@@ -38,7 +37,7 @@ func TestQueryEngine_IsMine_Error(t *testing.T) {
 	mockQE.IsMineReturns(false, expectedErr)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	isMine, err := queryEngine.IsMine(context.Background(), nil)
+	isMine, err := queryEngine.IsMine(t.Context(), nil)
 
 	assert.Error(t, err)
 	assert.False(t, isMine)
@@ -56,25 +55,25 @@ func TestQueryEngine_ListAuditTokens(t *testing.T) {
 	mockQE.ListAuditTokensReturns(expectedTokens, nil)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	tokens, err := queryEngine.ListAuditTokens(context.Background(), expectedIDs...)
+	tokens, err := queryEngine.ListAuditTokens(t.Context(), expectedIDs...)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
 	mockQE.ListAuditTokensReturnsOnCall(0, nil, errors.New("pending transactions"))
 	mockQE.ListAuditTokensReturnsOnCall(1, expectedTokens, nil)
 
-	tokens, err = queryEngine.ListAuditTokens(context.Background(), expectedIDs...)
+	tokens, err = queryEngine.ListAuditTokens(t.Context(), expectedIDs...)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
 	mockQE.ListAuditTokensReturns(nil, errors.New("pending transactions"))
 
-	tokens, err = queryEngine.ListAuditTokens(context.Background(), expectedIDs...)
+	tokens, err = queryEngine.ListAuditTokens(t.Context(), expectedIDs...)
 	assert.Error(t, err)
 	assert.Nil(t, tokens)
 	assert.EqualError(t, err, "failed to get audit tokens: pending transactions")
 }
 
 func TestQueryEngine_ListAuditTokens_IsPendingTrue(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	mockQE := &mock.QueryEngine{}
 	expectedIDs := []*token.ID{{TxId: "a_transaction", Index: 0}}
 	expectedTokens := []*token.Token{{
@@ -98,7 +97,7 @@ func TestQueryEngine_ListAuditTokens_IsPendingTrue(t *testing.T) {
 }
 
 func TestQueryEngine_ListAuditTokens_IsPendingTrueNumRetries(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	mockQE := &mock.QueryEngine{}
 	expectedIDs := []*token.ID{{TxId: "a_transaction", Index: 0}}
 	mockQE.ListAuditTokensReturnsOnCall(0, nil, errors.New("not found"))
@@ -130,7 +129,7 @@ func TestQueryEngine_UnspentTokensIterator_Error(t *testing.T) {
 	mockQE.UnspentTokensIteratorReturns(nil, expectedErr)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	iterator, err := queryEngine.UnspentTokensIterator(context.Background())
+	iterator, err := queryEngine.UnspentTokensIterator(t.Context())
 	assert.Error(t, err)
 	assert.Nil(t, iterator)
 	assert.Equal(t, expectedErr, err)
@@ -142,7 +141,7 @@ func TestQueryEngine_ListUnspentTokens(t *testing.T) {
 	mockQE.ListUnspentTokensReturns(expectedUnspentTokens, nil)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	unspentTokens, err := queryEngine.ListUnspentTokens(context.Background())
+	unspentTokens, err := queryEngine.ListUnspentTokens(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, expectedUnspentTokens, unspentTokens)
 }
@@ -153,7 +152,7 @@ func TestQueryEngine_ListUnspentTokens_Error(t *testing.T) {
 	mockQE.ListUnspentTokensReturns(nil, expectedErr)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	unspentTokens, err := queryEngine.ListUnspentTokens(context.Background())
+	unspentTokens, err := queryEngine.ListUnspentTokens(t.Context())
 	assert.Error(t, err)
 	assert.Nil(t, unspentTokens)
 	assert.Equal(t, expectedErr, err)
@@ -165,7 +164,7 @@ func TestQueryEngine_ListHistoryIssuedTokens(t *testing.T) {
 	mockQE.ListHistoryIssuedTokensReturns(expectedIssuedTokens, nil)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	issuedTokens, err := queryEngine.ListHistoryIssuedTokens(context.Background())
+	issuedTokens, err := queryEngine.ListHistoryIssuedTokens(t.Context())
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedIssuedTokens, issuedTokens)
@@ -177,7 +176,7 @@ func TestQueryEngine_ListHistoryIssuedTokens_Error(t *testing.T) {
 	mockQE.ListHistoryIssuedTokensReturns(nil, expectedErr)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	issuedTokens, err := queryEngine.ListHistoryIssuedTokens(context.Background())
+	issuedTokens, err := queryEngine.ListHistoryIssuedTokens(t.Context())
 
 	assert.Error(t, err)
 	assert.Nil(t, issuedTokens)
@@ -190,7 +189,7 @@ func TestQueryEngine_PublicParams(t *testing.T) {
 	mockQE.PublicParamsReturns(expectedParams, nil)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	params, err := queryEngine.PublicParams(context.Background())
+	params, err := queryEngine.PublicParams(t.Context())
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedParams, params)
@@ -202,7 +201,7 @@ func TestQueryEngine_PublicParams_Error(t *testing.T) {
 	mockQE.PublicParamsReturns(nil, expectedErr)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	params, err := queryEngine.PublicParams(context.Background())
+	params, err := queryEngine.PublicParams(t.Context())
 
 	assert.Error(t, err)
 	assert.Nil(t, params)
@@ -219,7 +218,7 @@ func TestQueryEngine_GetTokens(t *testing.T) {
 	mockQE.GetTokensReturns(expectedTokens, nil)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	tokens, err := queryEngine.GetTokens(context.Background(), nil)
+	tokens, err := queryEngine.GetTokens(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
 }
@@ -231,7 +230,7 @@ func TestQueryEngine_GetTokens_Error(t *testing.T) {
 	mockQE.GetTokensReturns(nil, expectedErr)
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
-	tokens, err := queryEngine.GetTokens(context.Background(), nil)
+	tokens, err := queryEngine.GetTokens(t.Context(), nil)
 	assert.Error(t, err)
 	assert.Nil(t, tokens)
 	assert.Equal(t, expectedErr, err)
@@ -243,7 +242,7 @@ func TestCertificationStorage_Exists(t *testing.T) {
 	mockStorage.ExistsReturns(true)
 
 	certStorage := &CertificationStorage{c: mockStorage}
-	exists := certStorage.Exists(context.Background(), id)
+	exists := certStorage.Exists(t.Context(), id)
 	assert.True(t, exists, "Expected certification to exist")
 	assert.Equal(t, 1, mockStorage.ExistsCallCount(), "Exists method should be called once")
 	_, id = mockStorage.ExistsArgsForCall(0)
@@ -256,7 +255,7 @@ func TestCertificationStorage_Exists_NotExist(t *testing.T) {
 	mockStorage.ExistsReturns(false)
 
 	certStorage := &CertificationStorage{c: mockStorage}
-	exists := certStorage.Exists(context.Background(), expectedID)
+	exists := certStorage.Exists(t.Context(), expectedID)
 	assert.False(t, exists, "Expected certification not to exist")
 	assert.Equal(t, 1, mockStorage.ExistsCallCount(), "Exists method should be called once")
 	_, id := mockStorage.ExistsArgsForCall(0)
@@ -272,7 +271,7 @@ func TestCertificationStorage_Store(t *testing.T) {
 	mockStorage.StoreReturns(nil)
 
 	certStorage := &CertificationStorage{c: mockStorage}
-	err := certStorage.Store(context.Background(), certifications)
+	err := certStorage.Store(t.Context(), certifications)
 	assert.NoError(t, err, "Expected no error while storing certifications")
 	assert.Equal(t, 1, mockStorage.StoreCallCount(), "Store method should be called once")
 	_, id := mockStorage.StoreArgsForCall(0)
@@ -289,7 +288,7 @@ func TestCertificationStorage_Store_Error(t *testing.T) {
 	mockStorage.StoreReturns(mockErr)
 
 	certStorage := &CertificationStorage{c: mockStorage}
-	err := certStorage.Store(context.Background(), certifications)
+	err := certStorage.Store(t.Context(), certifications)
 	assert.Error(t, err, "Expected an error while storing certifications")
 	assert.EqualError(t, err, mockErr.Error(), "Expected the same error returned by the storage")
 	assert.Equal(t, 1, mockStorage.StoreCallCount(), "Store method should be called once")

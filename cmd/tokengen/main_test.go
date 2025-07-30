@@ -37,8 +37,7 @@ func TestGenFullSuccess(t *testing.T) {
 	gt.Expect(err).NotTo(HaveOccurred())
 	defer gexec.CleanupBuildArtifacts()
 
-	tempOutput, err := os.MkdirTemp("", "tokengen-test")
-	gt.Expect(err).NotTo(HaveOccurred())
+	tempOutput := t.TempDir()
 	defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
 
 	testGenRun(
@@ -73,8 +72,7 @@ func TestFullUpdate(t *testing.T) {
 	gt.Expect(err).NotTo(HaveOccurred())
 	defer gexec.CleanupBuildArtifacts()
 
-	tempOutput, err := os.MkdirTemp("", "tokengen-update-test")
-	gt.Expect(err).NotTo(HaveOccurred())
+	tempOutput := t.TempDir()
 	defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
 
 	// Switching the auditor and issuer certs to test the update function
@@ -110,8 +108,7 @@ func TestPartialUpdate(t *testing.T) {
 	gt.Expect(err).NotTo(HaveOccurred())
 	defer gexec.CleanupBuildArtifacts()
 
-	tempOutput, err := os.MkdirTemp("", "tokengen-update-test")
-	gt.Expect(err).NotTo(HaveOccurred())
+	tempOutput := t.TempDir()
 	defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
 
 	// Only changing the issuer cert to also use the auditor cert.

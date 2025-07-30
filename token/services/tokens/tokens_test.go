@@ -45,7 +45,7 @@ func (md mdMock) SpentTokenID() []*token2.ID {
 }
 
 func TestParse(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	tokens := &Service{
 		TMSProvider: nil,
 		Storage:     &DBStorage{},

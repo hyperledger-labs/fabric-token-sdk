@@ -27,7 +27,7 @@ func derToPrivateKey(der []byte) (key interface{}, err error) {
 	}
 
 	if key, err = x509.ParseECPrivateKey(der); err == nil {
-		return
+		return key, nil
 	}
 
 	return nil, errors.New("invalid key type. The DER must contain an ecdsa.PrivateKey")

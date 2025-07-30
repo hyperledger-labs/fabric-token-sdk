@@ -190,7 +190,7 @@ func CheckOwnerStore(network *integration.Infrastructure, tmsID token.TMSID, exp
 			var errorMessages []string
 			common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
 
-			gomega.Expect(len(errorMessages)).To(gomega.Equal(len(expectedErrors)), "expected %d error messages from [%s], got [% v]", len(expectedErrors), id, errorMessages)
+			gomega.Expect(errorMessages).To(gomega.HaveLen(len(expectedErrors)), "expected %d error messages from [%s], got [% v]", len(expectedErrors), id, errorMessages)
 			for _, expectedError := range expectedErrors {
 				found := false
 				for _, message := range errorMessages {
@@ -219,7 +219,7 @@ func CheckAuditorStore(network *integration.Infrastructure, tmsID token.TMSID, a
 	} else {
 		var errorMessages []string
 		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-		gomega.Expect(len(errorMessages)).To(gomega.Equal(0), "expected 0 error messages, got [% v]", errorMessages)
+		gomega.Expect(errorMessages).To(gomega.BeEmpty(), "expected 0 error messages, got [% v]", errorMessages)
 	}
 }
 
@@ -230,7 +230,7 @@ func PruneInvalidUnspentTokens(network *integration.Infrastructure, tmsID token.
 
 		var deleted []*token2.ID
 		common.JSONUnmarshal(eIDBoxed.([]byte), &deleted)
-		gomega.Expect(len(deleted)).To(gomega.BeZero())
+		gomega.Expect(deleted).To(gomega.BeEmpty())
 	}
 }
 
@@ -242,7 +242,7 @@ func ListVaultUnspentTokens(network *integration.Infrastructure, tmsID token.TMS
 	common.JSONUnmarshal(res.([]byte), unspentTokens)
 	count := unspentTokens.Count()
 	var IDs []*token2.ID
-	for i := 0; i < count; i++ {
+	for i := range count {
 		tok := unspentTokens.At(i)
 		IDs = append(IDs, &tok.Id)
 	}

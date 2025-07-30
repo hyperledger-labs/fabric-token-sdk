@@ -151,7 +151,7 @@ func (l *Ledger) Status(id string) (ValidationCode, string, error) {
 	if err != nil {
 		return 0, "", err
 	}
-	return ValidationCode(vc), "", nil
+	return vc, "", nil
 }
 
 // Network provides access to the remote network

@@ -277,7 +277,7 @@ func (s *TransferService) VerifyTransfer(ctx context.Context, action driver.Tran
 	// get commitments from outputs
 	pp := s.PublicParametersManager.PublicParams(ctx)
 	com := make([]*math.G1, len(tr.Outputs))
-	for i := 0; i < len(tr.Outputs); i++ {
+	for i := range len(tr.Outputs) {
 		com[i] = tr.Outputs[i].Data
 
 		if outputMetadata[i] == nil || len(outputMetadata[i].OutputMetadata) == 0 {
@@ -331,7 +331,7 @@ func (s *TransferService) prepareInputs(ctx context.Context, loadedTokens []Load
 
 func getTokenData(tokens []*token.Token) []*math.G1 {
 	tokenData := make([]*math.G1, len(tokens))
-	for i := 0; i < len(tokens); i++ {
+	for i := range tokens {
 		tokenData[i] = tokens[i].Data
 	}
 	return tokenData

@@ -76,16 +76,16 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 			tokenRequestRaw, err := t.ttxDB.GetTokenRequest(ctx, txID)
 			if err != nil {
 				t.logger.ErrorfContext(ctx, "failed retrieving token request [%s]: [%s]", txID, err)
-				return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+				return fmt.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
 			}
 			t.logger.DebugfContext(ctx, "Read token request")
 			tms, err := t.tmsProvider.GetManagementService(token.WithTMSID(t.tmsID))
 			if err != nil {
-				return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+				return fmt.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
 			}
 			tr, err = tms.NewFullRequestFromBytes(tokenRequestRaw)
 			if err != nil {
-				return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+				return fmt.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
 			}
 		}
 		t.logger.DebugfContext(ctx, "Check token request")
@@ -98,7 +98,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 			if err := t.tokens.Append(ctx, t.tmsID, token.RequestAnchor(txID), tr); err != nil {
 				// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
 				t.logger.ErrorfContext(ctx, "failed to append token request to token db [%s]: [%s]", txID, err)
-				return fmt.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
+				return fmt.Errorf("failed to append token request to token db [%s]: [%w]", txID, err)
 			}
 			t.logger.DebugfContext(ctx, "append token request for [%s], done", txID)
 		}
@@ -107,7 +107,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 	}
 	if err := t.ttxDB.SetStatus(ctx, txID, txStatus, message); err != nil {
 		t.logger.ErrorfContext(ctx, "<message> [%s]: [%s]", txID, err)
-		return fmt.Errorf("<message> [%s]: [%s]", txID, err)
+		return fmt.Errorf("<message> [%s]: [%w]", txID, err)
 	}
 	t.logger.DebugfContext(ctx, "tx status changed for tx [%s]: [%s] done", txID, status)
 	return nil

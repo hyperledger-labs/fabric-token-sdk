@@ -176,7 +176,7 @@ func CheckAuditedTransactions(network *integration.Infrastructure, auditor *toke
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	var txs []*ttxdb.TransactionRecord
 	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
-	gomega.Expect(len(txs)).To(gomega.Equal(len(expected)), "expected [%v] transactions, got [%v]. Params: start [%v], end [%v]", expected, txs, start, end)
+	gomega.Expect(txs).To(gomega.HaveLen(len(expected)), "expected [%v] transactions, got [%v]. Params: start [%v], end [%v]", expected, txs, start, end)
 	for i, tx := range txs {
 		fmt.Printf("tx %d: %+v\n", i, tx)
 		fmt.Printf("expected %d: %+v\n", i, expected[i])
@@ -212,7 +212,7 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id *token3.N
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	var txs []*ttxdb.TransactionRecord
 	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
-	gomega.Expect(len(txs)).To(gomega.Equal(len(expected)), "expected [%v] transactions, got [%v]. Params [%v]", expected, txs, params)
+	gomega.Expect(txs).To(gomega.HaveLen(len(expected)), "expected [%v] transactions, got [%v]. Params [%v]", expected, txs, params)
 	for i, tx := range txs {
 		fmt.Printf("tx %d: %+v\n", i, tx)
 		fmt.Printf("expected %d: %+v\n", i, expected[i])
@@ -610,7 +610,7 @@ func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wm
 }
 
 func TransferCashMultiActions(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amounts []uint64, receivers []*token3.NodeReference, auditor *token3.NodeReference, tokenID *token.ID, expectedErrorMsgs ...string) string {
-	gomega.Expect(len(amounts) > 1).To(gomega.BeTrue())
+	gomega.Expect(len(amounts)).To(gomega.BeNumerically(">", 1))
 	gomega.Expect(len(receivers)).To(gomega.BeEquivalentTo(len(amounts)))
 	transfer := &views.Transfer{
 		Auditor:      auditor.Id(),
@@ -934,7 +934,7 @@ func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token
 				panic("did not find id " + replicaName)
 			}
 
-			for i := 0; i < int(eventualCheckTimeout/time.Second); i++ {
+			for range eventualCheckTimeout / time.Second {
 				_, err := network.Client(replicaName).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
 					TMSID: tmsId,
 				}))
@@ -1057,7 +1057,7 @@ func CheckOwnerStore(network *integration.Infrastructure, errorCheck func([]stri
 			if errorCheck != nil {
 				gomega.Expect(errorCheck(errorMessages)).NotTo(gomega.HaveOccurred(), "failed to check errors")
 			} else {
-				gomega.Expect(len(errorMessages)).To(gomega.BeZero(), "expected zero errors, got [%v]", errorMessages)
+				gomega.Expect(errorMessages).To(gomega.BeEmpty(), "expected zero errors, got [%v]", errorMessages)
 			}
 		}
 	}
@@ -1074,7 +1074,7 @@ func CheckAuditorStore(network *integration.Infrastructure, auditor *token3.Node
 	if errorCheck != nil {
 		gomega.Expect(errorCheck(errorMessages)).NotTo(gomega.HaveOccurred(), "failed to check errors")
 	} else {
-		gomega.Expect(len(errorMessages)).To(gomega.BeZero(), "expected zero errors, got [%v]", errorMessages)
+		gomega.Expect(errorMessages).To(gomega.BeEmpty(), "expected zero errors, got [%v]", errorMessages)
 	}
 }
 
@@ -1085,7 +1085,7 @@ func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...*toke
 
 		var deleted []*token.ID
 		common.JSONUnmarshal(eIDBoxed.([]byte), &deleted)
-		gomega.Expect(len(deleted)).To(gomega.BeZero(), "expected 0 tokens to be deleted at [%s], got [%d]", id, len(deleted))
+		gomega.Expect(deleted).To(gomega.BeEmpty(), "expected 0 tokens to be deleted at [%s], got [%d]", id, len(deleted))
 	}
 }
 
@@ -1097,7 +1097,7 @@ func ListVaultUnspentTokens(network *integration.Infrastructure, id *token3.Node
 	common.JSONUnmarshal(res.([]byte), unspentTokens)
 	count := unspentTokens.Count()
 	var IDs []*token.ID
-	for i := 0; i < count; i++ {
+	for i := range count {
 		tok := unspentTokens.At(i)
 		IDs = append(IDs, &tok.Id)
 	}
@@ -1336,7 +1336,7 @@ func DisableRestart() {
 
 func CheckLocalMetrics(ii *integration.Infrastructure, user string, viewName string) {
 	metrics, err := ii.WebClient(user).Metrics()
-	gomega.Expect(err).To(gomega.BeNil())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	gomega.Expect(metrics).NotTo(gomega.BeEmpty())
 
 	var sum float64
@@ -1354,14 +1354,14 @@ func CheckLocalMetrics(ii *integration.Infrastructure, user string, viewName str
 
 func CheckPrometheusMetrics(ii *integration.Infrastructure, viewName string) {
 	cli, err := ii.NWO.PrometheusAPI()
-	gomega.Expect(err).To(gomega.BeNil())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	metric := model.Metric{
 		"__name__": model.LabelValue("fsc_view_operations"),
 		"view":     model.LabelValue(viewName),
 	}
 	val, warnings, err := cli.Query(context.Background(), metric.String(), time.Now())
 	gomega.Expect(warnings).To(gomega.BeEmpty())
-	gomega.Expect(err).To(gomega.BeNil())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	gomega.Expect(val.Type()).To(gomega.Equal(model.ValVector))
 
 	logger.Infof("Received prometheus metrics for view [%s]: %s", viewName, val)
@@ -1410,7 +1410,7 @@ func MultiSigLockCash(network *integration.Infrastructure, sender *token3.NodeRe
 func MultiSigLockCashForTMSID(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, receivers []*token3.NodeReference, auditor *token3.NodeReference, tmsId *token2.TMSID) string {
 	identities := make([]view.Identity, len(receivers))
 	eids := make([]string, len(receivers))
-	for i := 0; i < len(receivers); i++ {
+	for i := range receivers {
 		eids[i] = receivers[i].Id()
 		identities[i] = network.Identity(eids[i])
 	}
@@ -1426,7 +1426,6 @@ func MultiSigLockCashForTMSID(network *integration.Infrastructure, sender *token
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	txID := common.JSONUnmarshalString(txidBoxed)
 	return txID
-
 }
 
 func MultiSigSpendCash(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, receiver *token3.NodeReference, auditor *token3.NodeReference) string {
@@ -1444,7 +1443,6 @@ func MultiSigSpendCashForTMSID(network *integration.Infrastructure, sender *toke
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	txID := common.JSONUnmarshalString(txidBoxed)
 	return txID
-
 }
 
 func BindIssuerNetworkAndSigningIdentities(network *integration.Infrastructure, issuer *token3.NodeReference, issuerPublicKey []byte, onNodes ...*token3.NodeReference) {

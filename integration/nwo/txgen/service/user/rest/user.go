@@ -89,7 +89,7 @@ func (u *restUser) Withdraw(value txgen.Amount) txgen.Error {
 
 	u.logger.Debugf("Withdraw %s for %s\n", form.Encode(), u.username)
 
-	request, _ := http.NewRequest("POST", urlStr, strings.NewReader(form.Encode()))
+	request, _ := http.NewRequest(http.MethodPost, urlStr, strings.NewReader(form.Encode()))
 	request.Header.Add(c.HeaderContentType, c.ApplicationUrlEncoded)
 
 	_, err := u.doRequest(request, c.WithdrawRequest)
@@ -102,7 +102,7 @@ func (u *restUser) GetBalance() (txgen.Amount, txgen.Error) {
 	}
 
 	urlStr := fmt.Sprintf("%s/zkat/balance?user=%s", u.endpoint, u.username)
-	request, _ := http.NewRequest("GET", urlStr, nil)
+	request, _ := http.NewRequest(http.MethodGet, urlStr, nil)
 
 	respBody, apiErr := u.doRequest(request, c.BalanceRequest)
 	if apiErr != nil {
@@ -137,7 +137,7 @@ func (u *restUser) Transfer(value txgen.Amount, recipient model.Username, nonce 
 
 	urlStr := fmt.Sprintf("%s/zkat/payments/transfer", u.endpoint)
 	form := newTransferForm(value, nonce, recipient)
-	request, _ := http.NewRequest("POST", urlStr, strings.NewReader(form.Encode()))
+	request, _ := http.NewRequest(http.MethodPost, urlStr, strings.NewReader(form.Encode()))
 	request.Header.Add(c.HeaderContentType, c.ApplicationUrlEncoded)
 
 	_, err := u.doRequest(request, c.PaymentTransferRequest)
@@ -153,7 +153,7 @@ func (u *restUser) InitiateTransfer(value txgen.Amount, nonce txgen.UUID) txgen.
 	urlStr := fmt.Sprintf("%s/zkat/payments/initiation", u.endpoint)
 	form := newTransferForm(value, nonce, u.username)
 
-	request, _ := http.NewRequest("POST", urlStr, strings.NewReader(form.Encode()))
+	request, _ := http.NewRequest(http.MethodPost, urlStr, strings.NewReader(form.Encode()))
 	request.Header.Add(c.HeaderContentType, c.ApplicationUrlEncoded)
 
 	_, err := u.doRequest(request, c.PaymentInitiationRequest)

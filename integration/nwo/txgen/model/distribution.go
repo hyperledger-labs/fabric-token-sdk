@@ -25,7 +25,7 @@ func (d *Distribution) GetAmounts(total api.Amount) ([]api.Amount, api.Error) {
 	}
 
 	msg := fmt.Sprintf("Unknown type in distribution: %s", *d)
-	//logging.Logger.Errorf(msg)
+	// logging.Logger.Errorf(msg)
 
 	return nil, api.NewBadRequestError(nil, msg)
 }
@@ -92,7 +92,7 @@ func (d *Distribution) convertToIntegers(input []string) ([]api.Amount, api.Erro
 		num, err := strconv.Atoi(v)
 		if err != nil {
 			msg := fmt.Sprintf("Can't convert %s to intereger", v)
-			//logging.Logger.Errorf(msg)
+			// logging.Logger.Errorf(msg)
 			return nil, api.NewBadRequestError(nil, msg)
 		}
 		ints[i] = api.Amount(num)

@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"context"
 	"database/sql"
 	driver2 "database/sql/driver"
 	"math/big"
@@ -42,7 +41,7 @@ func TestGetTokenRequest(t *testing.T, store transactionsStoreConstructor) {
 		WithArgs(input).
 		WillReturnRows(mockDB.NewRows([]string{"request"}).AddRow(output))
 
-	info, err := store(db).GetTokenRequest(context.Background(), input)
+	info, err := store(db).GetTokenRequest(t.Context(), input)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -83,7 +82,7 @@ func TestQueryMovements(t *testing.T, store transactionsStoreConstructor, traits
 		WithArgs(record.EnrollmentID, record.TokenType, record.Status, 0, 1).
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "enrollment_id", "token_type", "amount", "status"}).AddRow(output...))
 
-	info, err := store(db).QueryMovements(context.Background(),
+	info, err := store(db).QueryMovements(t.Context(),
 		driver.QueryMovementsParams{
 			EnrollmentIDs:     []string{record.EnrollmentID},
 			TokenTypes:        []token.Type{record.TokenType},
@@ -120,7 +119,7 @@ func TestQueryTransactions(t *testing.T, store transactionsStoreConstructor) {
 			"FROM TRANSACTIONS LEFT JOIN REQUESTS ON TRANSACTIONS.tx_id = REQUESTS.tx_id ORDER BY stored_at ASC").
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "action_type", "sender_eid", "recipient_eid", "token_type", "amount", "status", "application_metadata", "public_metadata", "stored_at"}).AddRow(output...))
 
-	info, err := store(db).QueryTransactions(context.Background(),
+	info, err := store(db).QueryTransactions(t.Context(),
 		driver.QueryTransactionsParams{
 			IDs: []string{}}, pagination.None())
 
@@ -144,7 +143,7 @@ func TestGetStatus(t *testing.T, store transactionsStoreConstructor) {
 		WithArgs(input).
 		WillReturnRows(mockDB.NewRows([]string{"status", "status_message"}).AddRow(output...))
 
-	status, statusMessage, err := store(db).GetStatus(context.Background(), input)
+	status, statusMessage, err := store(db).GetStatus(t.Context(), input)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -189,7 +188,7 @@ func TestQueryValidations(t *testing.T, store transactionsStoreConstructor, trai
 		WithArgs(timeFrom, timeTo, driver.Deleted, driver.Unknown).
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "metadata", "status", "stored_at"}).AddRow(output...))
 
-	it, err := store(db).QueryValidations(context.Background(),
+	it, err := store(db).QueryValidations(t.Context(),
 		driver.QueryValidationRecordsParams{
 			From:     &timeFrom,
 			To:       &timeTo,
@@ -228,7 +227,7 @@ func TestQueryTokenRequests(t *testing.T, store transactionsStoreConstructor, tr
 		WithArgs(driver.Deleted, driver.Unknown).
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "status"}).AddRow(output...))
 
-	it, err := store(db).QueryTokenRequests(context.Background(),
+	it, err := store(db).QueryTokenRequests(t.Context(),
 		driver.QueryTokenRequestsParams{
 			Statuses: []driver.TxStatus{driver.Deleted, driver.Unknown},
 		},
@@ -261,7 +260,7 @@ func TestGetTransactionEndorsementAcks(t *testing.T, store transactionsStoreCons
 		WithArgs(inputID).
 		WillReturnRows(mockDB.NewRows([]string{"endorser", "sigma"}).AddRow(output...))
 
-	acks, err := store(db).GetTransactionEndorsementAcks(context.Background(), inputID)
+	acks, err := store(db).GetTransactionEndorsementAcks(t.Context(), inputID)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -284,7 +283,7 @@ func TestAddTransactionEndorsementAck(t *testing.T, store transactionsStoreConst
 		WithArgs(uuid, txID, eID, sigma, now).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = store(db).AddTransactionEndorsementAck(context.Background(), txID, eID, sigma)
+	err = store(db).AddTransactionEndorsementAck(t.Context(), txID, eID, sigma)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -303,7 +302,7 @@ func TestSetStatus(t *testing.T, store transactionsStoreConstructor) {
 		WithArgs(status, message, txID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = store(db).SetStatus(context.Background(), txID, status, message)
+	err = store(db).SetStatus(t.Context(), txID, status, message)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -340,7 +339,7 @@ func TestAWAddTransaction(t *testing.T, store transactionsStoreConstructor) {
 
 	aw, err := store(db).BeginAtomicWrite()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Expect(aw.AddTransaction(context.Background(), input)).To(gomega.Succeed())
+	gomega.Expect(aw.AddTransaction(t.Context(), input)).To(gomega.Succeed())
 	gomega.Expect(aw.Commit()).To(gomega.Succeed())
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
@@ -367,7 +366,7 @@ func TestAWAddTokenRequest(t *testing.T, store transactionsStoreConstructor) {
 
 	aw, err := store(db).BeginAtomicWrite()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Expect(aw.AddTokenRequest(context.Background(), txID, tr, nil, nil, ppHash)).To(gomega.Succeed())
+	gomega.Expect(aw.AddTokenRequest(t.Context(), txID, tr, nil, nil, ppHash)).To(gomega.Succeed())
 	gomega.Expect(aw.Commit()).To(gomega.Succeed())
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
@@ -397,7 +396,7 @@ func TestAWAddMovement(t *testing.T, store transactionsStoreConstructor) {
 
 	aw, err := store(db).BeginAtomicWrite()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Expect(aw.AddMovement(context.Background(), input)).To(gomega.Succeed())
+	gomega.Expect(aw.AddMovement(t.Context(), input)).To(gomega.Succeed())
 	gomega.Expect(aw.Commit()).To(gomega.Succeed())
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
@@ -420,7 +419,7 @@ func TestAWAddValidationRecord(t *testing.T, store transactionsStoreConstructor)
 
 	aw, err := store(db).BeginAtomicWrite()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Expect(aw.AddValidationRecord(context.Background(), txID, nil)).To(gomega.Succeed())
+	gomega.Expect(aw.AddValidationRecord(t.Context(), txID, nil)).To(gomega.Succeed())
 	gomega.Expect(aw.Commit()).To(gomega.Succeed())
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())

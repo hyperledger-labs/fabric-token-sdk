@@ -135,7 +135,7 @@ func createTransfer(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMeta
 	Expect(err).NotTo(HaveOccurred())
 
 	metadata := &driver.TransferMetadata{}
-	for i := 0; i < len(transfer.Inputs); i++ {
+	for range len(transfer.Inputs) {
 		metadata.Inputs = append(metadata.Inputs, &driver.TransferInputMetadata{
 			TokenID: nil,
 			Senders: []*driver.AuditableIdentity{
@@ -147,7 +147,7 @@ func createTransfer(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMeta
 		})
 	}
 
-	for i := 0; i < len(transfer.Outputs); i++ {
+	for i := range len(transfer.Outputs) {
 		marshalledMeta, err := meta[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		metadata.Outputs = append(metadata.Outputs, &driver.TransferOutputMetadata{
@@ -163,9 +163,7 @@ func createTransfer(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMeta
 	}
 
 	tokns := make([][]*token.Token, 1)
-	for i := 0; i < len(inputs); i++ {
-		tokns[0] = append(tokns[0], inputs[i])
-	}
+	tokns[0] = append(tokns[0], inputs...)
 	return transfer, metadata, tokns
 }
 
@@ -177,7 +175,7 @@ func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer.Action, *driv
 	inf[0].Value = c.NewZrFromInt(15)
 	marshalledInfo := make([][]byte, len(inf))
 	var err error
-	for i := 0; i < len(inf); i++ {
+	for i := range inf {
 		marshalledInfo[i], err = inf[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 	}
@@ -185,7 +183,7 @@ func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer.Action, *driv
 	Expect(err).NotTo(HaveOccurred())
 
 	metadata := &driver.TransferMetadata{}
-	for i := 0; i < len(transfer.Inputs); i++ {
+	for range len(transfer.Inputs) {
 		metadata.Inputs = append(metadata.Inputs, &driver.TransferInputMetadata{
 			TokenID: nil,
 			Senders: []*driver.AuditableIdentity{
@@ -197,7 +195,7 @@ func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer.Action, *driv
 		})
 	}
 
-	for i := 0; i < len(transfer.Outputs); i++ {
+	for i := range len(transfer.Outputs) {
 		marshalledMeta, err := inf[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		metadata.Outputs = append(metadata.Outputs, &driver.TransferOutputMetadata{
@@ -213,9 +211,7 @@ func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer.Action, *driv
 	}
 
 	tokns := make([][]*token.Token, 1)
-	for i := 0; i < len(inputs); i++ {
-		tokns[0] = append(tokns[0], inputs[i])
-	}
+	tokns[0] = append(tokns[0], inputs...)
 
 	return transfer, metadata, tokns
 }

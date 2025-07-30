@@ -69,7 +69,7 @@ func NewLedgerTokenLoader[T any](logger logging.Logger, _ trace.TracerProvider, 
 // GetTokenOutputs takes an array of token identifiers (txID, index) and returns the corresponding token outputs
 func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*token.ID) (map[string]T, error) {
 	var err error
-	for i := 0; i < s.NumRetries; i++ {
+	for i := range s.NumRetries {
 		tokens := make(map[string]T, len(ids))
 		counter := 0
 		err = s.TokenVault.GetTokenOutputs(ctx, ids, func(id *token.ID, bytes []byte) error {

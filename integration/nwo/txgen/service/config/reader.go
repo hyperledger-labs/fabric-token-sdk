@@ -50,7 +50,7 @@ func Load() (*model.Configuration, api.Error) {
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		appErr := api.NewInternalServerError(
-			fmt.Errorf("cannot unmarshal the configuration file: %s", err),
+			fmt.Errorf("cannot unmarshal the configuration file: %w", err),
 			"Internal Server Error",
 		)
 		return nil, appErr
@@ -69,7 +69,7 @@ func loadConfig(configFile string) api.Error {
 	err := viper.MergeInConfig()
 	if err != nil {
 		return api.NewInternalServerError(
-			fmt.Errorf("couldn't read the config file '%s': %s", configFile, err),
+			fmt.Errorf("couldn't read the config file '%s': %w", configFile, err),
 			"Internal Server Error",
 		)
 	}
@@ -82,7 +82,7 @@ func loadDefaultConfig() api.Error {
 	configuration, err := embeddedFiles.ReadFile("config.yaml")
 	if err != nil {
 		return api.NewInternalServerError(
-			fmt.Errorf("couldn't find the default config file 'config.yaml': %s", err),
+			fmt.Errorf("couldn't find the default config file 'config.yaml': %w", err),
 			"Internal Server Error",
 		)
 	}
@@ -92,7 +92,7 @@ func loadDefaultConfig() api.Error {
 	err = viper.ReadConfig(bytes.NewReader(configuration))
 	if err != nil {
 		return api.NewInternalServerError(
-			fmt.Errorf("couldn't read the default config file 'config.yaml': %s", err),
+			fmt.Errorf("couldn't read the default config file 'config.yaml': %w", err),
 			"Internal Server Error",
 		)
 	}

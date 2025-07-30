@@ -27,7 +27,7 @@ func TestLockEntry(t *testing.T) {
 
 	m[id1] = "a"
 	m[id2] = "b"
-	assert.Equal(t, 1, len(m))
+	assert.Len(t, m, 1)
 	assert.Equal(t, "b", m[id1])
 	assert.Equal(t, "b", m[id2])
 }

@@ -107,7 +107,7 @@ func (v *Verifier) Verify(proofRaw []byte) error {
 			} else {
 				commitmentToType := proof.TypeAndSum.CommitmentToType.Copy()
 				coms := make([]*math.G1, len(v.TypeAndSum.Outputs))
-				for i := 0; i < len(v.TypeAndSum.Outputs); i++ {
+				for i := range len(v.TypeAndSum.Outputs) {
 					coms[i] = v.TypeAndSum.Outputs[i].Copy()
 					coms[i].Sub(commitmentToType)
 				}
@@ -138,7 +138,7 @@ func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []
 	p := &Prover{}
 	inW := make([]*token.Metadata, len(inputWitness))
 	outW := make([]*token.Metadata, len(outputWitness))
-	for i := 0; i < len(inputWitness); i++ {
+	for i := range inputWitness {
 		if inputWitness[i] == nil || inputWitness[i].BlindingFactor == nil {
 			return nil, errors.New("invalid token witness")
 		}
@@ -154,7 +154,7 @@ func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []
 		return nil, err
 	}
 	typeBF := c.NewRandomZr(rand)
-	for i := 0; i < len(outputWitness); i++ {
+	for i := range outputWitness {
 		if outputWitness[i] == nil || outputWitness[i].BlindingFactor == nil {
 			return nil, errors.New("invalid token witness")
 		}
@@ -173,7 +173,7 @@ func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []
 	if len(inputWitness) != 1 || len(outputWitness) != 1 {
 		coms := make([]*math.G1, len(outputs))
 		// The range prover takes as input commitments outputs[i]/commitmentToType
-		for i := 0; i < len(outputs); i++ {
+		for i := range outputs {
 			coms[i] = outputs[i].Copy()
 			coms[i].Sub(commitmentToType)
 		}
@@ -190,7 +190,6 @@ func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []
 			pp.RangeProofParams.NumberOfRounds,
 			math.Curves[pp.Curve],
 		)
-
 	}
 	return p, nil
 }

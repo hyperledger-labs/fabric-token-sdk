@@ -439,6 +439,7 @@ func TestIn(t *testing.T) {
 }
 
 func compareArgs(t *testing.T, expected, actual []any) {
+	t.Helper()
 	assert.Len(t, actual, len(expected))
 	// assert.Equal(t, tc.expectedArgs, actualArgs)
 

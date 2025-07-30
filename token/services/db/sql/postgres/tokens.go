@@ -23,5 +23,4 @@ func NewTokenStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenStore
 
 func NewTokenNotifier(dbs *common2.RWDB, tableNames common.TableNames, dataSource string) (*TokenNotifier, error) {
 	return postgres.NewNotifier(dbs.WriteDB, tableNames.Tokens, dataSource, postgres.AllOperations, *postgres.NewSimplePrimaryKey("tx_id"), *postgres.NewSimplePrimaryKey("idx")), nil
-
 }

@@ -139,6 +139,7 @@ func TestUnwrapAuditInfo_Error(t *testing.T) {
 }
 
 func identities(t *testing.T, names ...string) []token.Identity {
+	t.Helper()
 	ids := make([]token.Identity, len(names))
 	for i, name := range names {
 		ids[i] = wrapIdentity(t, name)
@@ -147,6 +148,7 @@ func identities(t *testing.T, names ...string) []token.Identity {
 }
 
 func wrapIdentity(t *testing.T, name string) token.Identity {
+	t.Helper()
 	id, err := identity.WrapWithType("name", []byte(name))
 	assert.NoError(t, err)
 	return id

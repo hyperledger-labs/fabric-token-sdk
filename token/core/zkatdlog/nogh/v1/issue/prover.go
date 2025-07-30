@@ -59,7 +59,7 @@ func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*P
 
 	values := make([]uint64, len(tw))
 	blindingFactors := make([]*math.Zr, len(tw))
-	for i := 0; i < len(tw); i++ {
+	for i := range tw {
 		if tw[i] == nil || tw[i].BlindingFactor == nil {
 			return nil, errors.New("invalid token witness")
 		}
@@ -71,7 +71,7 @@ func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*P
 		blindingFactors[i] = c.ModSub(tw[i].BlindingFactor, p.SameType.blindingFactor, c.GroupOrder)
 	}
 	coms := make([]*math.G1, len(tokens))
-	for i := 0; i < len(tokens); i++ {
+	for i := range tokens {
 		coms[i] = tokens[i].Copy()
 		coms[i].Sub(commitmentToType)
 	}

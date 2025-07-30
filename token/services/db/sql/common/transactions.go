@@ -180,7 +180,7 @@ func (db *TransactionStore) GetStatus(ctx context.Context, txID string) (driver.
 
 	row := db.readDB.QueryRowContext(ctx, query, args...)
 	if err := row.Scan(&status, &statusMessage); err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			logger.DebugfContext(ctx, "tried to get status for non-existent tx [%s], returning unknown", txID)
 			return driver.Unknown, "", nil
 		}
@@ -428,7 +428,7 @@ func (w *AtomicWrite) Rollback() {
 		logger.Debug("nothing to roll back")
 		return
 	}
-	if err := w.txn.Rollback(); err != nil && err != sql.ErrTxDone {
+	if err := w.txn.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
 		logger.Errorf("error rolling back (ignoring...): %s", err.Error())
 	}
 	w.txn = nil
@@ -549,7 +549,6 @@ func ttxDBError(err error) error {
 	logger.Error(err)
 	e := strings.ToLower(err.Error())
 	if strings.Contains(e, "foreign key constraint") {
-
 		return driver.ErrTokenRequestDoesNotExist
 	}
 	return err

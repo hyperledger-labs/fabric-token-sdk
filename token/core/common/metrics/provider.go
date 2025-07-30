@@ -65,7 +65,6 @@ func recoverFromDuplicate(recovered any) {
 		return
 	}
 	panic(recovered)
-
 }
 
 func AllLabelNames(extraLabels ...MetricLabel) []MetricLabel {

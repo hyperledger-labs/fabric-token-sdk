@@ -96,7 +96,6 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 }
 
 func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
-
 	requestsToBeSigned, err := requestsToBeSigned(context.Context(), s.tx.TokenRequest)
 	if err != nil {
 		return errors.Wrapf(err, "failed collecting requests of signature")
@@ -104,7 +103,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 	logger.DebugfContext(context.Context(), "respond to signature requests [%s][%d]", s.tx.ID(), len(requestsToBeSigned))
 
 	session := context.Session()
-	for i := 0; i < len(requestsToBeSigned); i++ {
+	for i := range requestsToBeSigned {
 		logger.DebugfContext(context.Context(), "Sign request no %d", i)
 		signatureRequest := &SignatureRequest{}
 
@@ -118,7 +117,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			if kvss, err := context.GetService(&kvs.KVS{}); err != nil {
 				return errors.Wrap(err, "failed to get KVS from context")
 			} else if err := kvss.(*kvs.KVS).Get(context.Context(), k, &srStr); err != nil {
-				return errors.Wrap(err, "failed to to store signature request")
+				return errors.Wrap(err, "failed to store signature request")
 			}
 			srRaw, err := base64.StdEncoding.DecodeString(srStr)
 			if err != nil {

@@ -57,7 +57,7 @@ func (s *QueryExecutor) QueryByKey(ctx context.Context, state interface{}, key s
 		value: value,
 	}, "1")
 	if err != nil {
-		if errors.Cause(err) == ErrNoResults {
+		if errors.Is(errors.Cause(err), ErrNoResults) {
 			return ErrNoResults
 		}
 		return errors.Wrap(err, "failed to filter")

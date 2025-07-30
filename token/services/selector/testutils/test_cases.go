@@ -57,7 +57,7 @@ func TestSufficientTokensBigDenominationsOneReplica(t *testing.T, replica Enhanc
 	err := storeTokens(replica, unspentTokens)
 	assert.NoError(t, err)
 
-	// The replica asks for CHF1, CHF1, ..., CHF1 for 100 times (total CHF100)
+	// The replica asks for CHF1, ..., CHF1 for 100 times (total CHF100)
 	item := newToken(1)
 	errs := parallelSelect(t, []EnhancedManager{replica}, collections.Repeat(item, 100))
 	assert.Empty(t, errs)
@@ -83,7 +83,7 @@ func TestInsufficientTokensOneReplica(t *testing.T, replica EnhancedManager) {
 	err := storeTokens(replica, unspentTokens)
 	assert.NoError(t, err)
 
-	// The replica asks for CHF1, CHF1, CHF1 (total CHF3)
+	// The replica asks for CHF1, CHF1 (total CHF3)
 	item = newToken(1)
 	errs := parallelSelect(t, []EnhancedManager{replica}, collections.Repeat(item, 3))
 	assert.Len(t, errs, 1)
@@ -108,7 +108,7 @@ func TestInsufficientTokensManyReplicas(t *testing.T, replicas []EnhancedManager
 	err := storeTokens(replicas[0], unspentTokens)
 	assert.NoError(t, err)
 
-	// Each replica asks for CHF3, CHF3, CHF3, and CHF3 (total CHF 240)
+	// Each replica asks for CHF3, and CHF3 (total CHF 240)
 	item = newToken(3)
 	errs := parallelSelect(t, replicas, collections.Repeat(item, 4))
 	assert.NotEmpty(t, errs)
@@ -186,6 +186,7 @@ func newTxID() string {
 }
 
 func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token.Quantity) []error {
+	t.Helper()
 	errCh := make(chan error, 100)
 	errs := make([]error, 0)
 	var errMu sync.Mutex
@@ -206,14 +207,14 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 			assert.NoError(t, err)
 			go func() {
 				defer utils.IgnoreErrorWithOneArg(replica.Close, txID)
-				tokens, sum, err := sel.Select(context.Background(), defaultTokenFilter, quantity.Hex(), defaultCurrency)
+				tokens, sum, err := sel.Select(t.Context(), defaultTokenFilter, quantity.Hex(), defaultCurrency)
 				if err != nil {
 					errCh <- err
 				} else {
 					assert.NotNil(t, sum)
 					change := sum.Sub(quantity)
 					assert.GreaterOrEqual(t, change.ToBigInt().Int64(), int64(0))
-					assert.Greater(t, len(tokens), 0)
+					assert.NotEmpty(t, tokens)
 					assert.NoError(t, deleteTokensAndStoreChange(replica, tokens, change))
 				}
 				if tokenSum, err := replica.TokenSum(); err == nil {

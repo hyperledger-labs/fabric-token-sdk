@@ -24,7 +24,7 @@ type ActionDeserializer struct{}
 
 func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*actions.IssueAction, []*actions.TransferAction, error) {
 	issueActions := make([]*actions.IssueAction, len(tr.Issues))
-	for i := 0; i < len(tr.Issues); i++ {
+	for i := range len(tr.Issues) {
 		ia := &actions.IssueAction{}
 		if err := ia.Deserialize(tr.Issues[i]); err != nil {
 			return nil, nil, err
@@ -33,7 +33,7 @@ func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*act
 	}
 
 	transferActions := make([]*actions.TransferAction, len(tr.Transfers))
-	for i := 0; i < len(tr.Transfers); i++ {
+	for i := range len(tr.Transfers) {
 		ta := &actions.TransferAction{}
 		if err := ta.Deserialize(tr.Transfers[i]); err != nil {
 			return nil, nil, err

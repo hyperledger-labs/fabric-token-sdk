@@ -68,7 +68,7 @@ func FuzzSerialization(f *testing.F) {
 		if err != nil {
 			t.Errorf("failed to deserialize token [owner: %s, putData: %v]: [%v]", owner, putData, err)
 		}
-		assert.Equal(t, len(token.Owner), len(token2.Owner), "owner mismatch [owner: %s, putData: %v]", owner, putData)
+		assert.Len(t, token2.Owner, len(token.Owner), "owner mismatch [owner: %s, putData: %v]", owner, putData)
 		assert.Equal(t, token.Data, token2.Data)
 	})
 }

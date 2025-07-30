@@ -23,7 +23,7 @@ import (
 
 func TestGetWallet(t *testing.T) {
 	cp := &mock.ConfigProvider{}
-	ctx := context.Background()
+	ctx := t.Context()
 	cp.IsSetReturns(false)
 	kvsStorage, err := kvs2.NewInMemory()
 	assert.NoError(t, err)

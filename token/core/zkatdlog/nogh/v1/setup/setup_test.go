@@ -61,8 +61,8 @@ func TestComputeMaxTokenValue(t *testing.T) {
 }
 
 func TestNewG1(t *testing.T) {
-	for i := 0; i < len(math3.Curves); i++ {
+	for i := range len(math3.Curves) {
 		c := math3.Curves[i]
-		assert.Equal(t, c.NewG1().IsInfinity(), true)
+		assert.True(t, c.NewG1().IsInfinity())
 	}
 }

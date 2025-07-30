@@ -231,7 +231,6 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 		identities = append(identities, id)
 	}
 	return identities
-
 }
 
 func (d *CryptoMaterialGenerator) GenerateCryptoConfig(output string, layout *Layout) {

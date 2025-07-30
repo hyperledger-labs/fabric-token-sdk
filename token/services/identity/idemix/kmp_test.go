@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
-	"context"
 	"testing"
 
 	math "github.com/IBM/mathlib"
@@ -44,6 +43,7 @@ func TestNewKeyManagerProvider(t *testing.T) {
 }
 
 func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	t.Helper()
 	backend, err := kvs.NewInMemory()
 	assert.NoError(t, err)
 	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs.NewIdentityStore(backend, token.TMSID{Network: "pineapple"}))
@@ -105,7 +105,8 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 }
 
 func signAndVerify(t *testing.T, km membership.KeyManager) {
-	id, _, err := km.Identity(context.Background(), nil)
+	t.Helper()
+	id, _, err := km.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	signer, err := km.DeserializeSigner(id)
 	assert.NoError(t, err)
@@ -118,6 +119,7 @@ func signAndVerify(t *testing.T, km membership.KeyManager) {
 }
 
 func checkRawContent(t *testing.T, ipk []byte, raw []byte) {
+	t.Helper()
 	conf, err := crypto.NewConfigFromRaw(ipk, raw)
 	assert.NoError(t, err)
 	assert.NotNil(t, conf)
