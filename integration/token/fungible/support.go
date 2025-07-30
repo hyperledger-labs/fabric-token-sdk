@@ -43,6 +43,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/onsi/gomega"
+	"github.com/prometheus/common/model"
 )
 
 var (
@@ -1355,9 +1356,16 @@ func CheckLocalMetrics(ii *integration.Infrastructure, user string, viewName str
 func CheckPrometheusMetrics(ii *integration.Infrastructure, viewName string) {
 	cli, err := ii.NWO.PrometheusReporter()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	ops, err := cli.GetViewOperations("", viewName)
+
+	vector, err := cli.GetVector(model.Metric{
+		"__name__": "fsc_view_operations",
+		"view":     model.LabelValue(viewName),
+	})
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Expect(ops).ToNot(gomega.BeZero())
+	gomega.Expect(vector).NotTo(gomega.BeEmpty())
+	for _, v := range vector {
+		gomega.Expect(v.Value).NotTo(gomega.Equal(model.SampleValue(0)))
+	}
 }
 
 func TokensUpgrade(network *integration.Infrastructure, wpm *WalletManagerProvider, user *token3.NodeReference, wallet string, typ token.Type, auditor *token3.NodeReference, issuer *token3.NodeReference, expectedErrorMsgs ...string) string {
