@@ -93,8 +93,9 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 
 	var getIdentityFunc func(context.Context, []byte) (driver.Identity, []byte, error)
 	if keyManager.IsRemote() {
+		id := identityConfig.ID
 		getIdentityFunc = func(context.Context, []byte) (driver.Identity, []byte, error) {
-			return nil, nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms")
+			return nil, nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms on wallet [%v]", id)
 		}
 	} else {
 		getIdentityFunc = cache.NewIdentityCache(

@@ -90,11 +90,7 @@ func (d *base) newWalletService(
 	// we have one key manager for fabtoken and one for each idemix issuer public key
 	kmps := make([]membership.KeyManagerProvider, 0, len(pp.IdemixIssuerPublicKeys)+1)
 	for _, key := range pp.IdemixIssuerPublicKeys {
-		backend, err := storageProvider.Keystore(tmsID)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get new keystore backend")
-		}
-		keyStore, err := msp2.NewKeyStore(key.Curve, backend)
+		keyStore, err := msp2.NewKeyStore(key.Curve, baseKeyStore)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
 		}
