@@ -45,7 +45,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 	CheckBalanceWithLockedAndHolding(network, alice, "", USD, 120, 0, 0, -1)
 
 	h := ListIssuerHistory(network, "", USD)
-	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Count()).To(gomega.BeNumerically(">", 0))
 	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(gomega.BeEquivalentTo(0))
 	gomega.Expect(h.ByType(USD).Count()).To(gomega.BeEquivalentTo(h.Count()))
 
@@ -60,12 +60,12 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 	CheckBalanceWithLockedAndHolding(network, bob, "", EUR, 30, 0, 0, -1)
 
 	h = ListIssuerHistory(network, "", USD)
-	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Count()).To(gomega.BeNumerically(">", 0))
 	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(gomega.BeEquivalentTo(0))
 	gomega.Expect(h.ByType(USD).Count()).To(gomega.BeEquivalentTo(h.Count()))
 
 	h = ListIssuerHistory(network, "", EUR)
-	gomega.Expect(h.Count() > 0).To(gomega.BeTrue())
+	gomega.Expect(h.Count()).To(gomega.BeNumerically(">", 0))
 	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(30))).To(gomega.BeEquivalentTo(0))
 	gomega.Expect(h.ByType(EUR).Count()).To(gomega.BeEquivalentTo(h.Count()))
 

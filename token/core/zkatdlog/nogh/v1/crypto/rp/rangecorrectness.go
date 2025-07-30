@@ -93,7 +93,7 @@ func NewRangeCorrectnessProver(
 func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
 	rc := &RangeCorrectness{}
 	rc.Proofs = make([]*RangeProof, len(p.Commitments))
-	for i := 0; i < len(p.Commitments); i++ {
+	for i := range len(p.Commitments) {
 		bp := NewRangeProver(
 			p.Commitments[i],
 			p.Values[i],
@@ -144,14 +144,13 @@ func NewRangeCorrectnessVerifier(
 		NumberOfRounds:     rounds,
 		Curve:              curve,
 	}
-
 }
 
 func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 	if len(rc.Proofs) != len(v.Commitments) {
 		return errors.New("invalid range proof")
 	}
-	for i := 0; i < len(rc.Proofs); i++ {
+	for i := range len(rc.Proofs) {
 		if rc.Proofs[i] == nil {
 			return errors.Errorf("invalid range proof: nil proof at index %d", i)
 		}

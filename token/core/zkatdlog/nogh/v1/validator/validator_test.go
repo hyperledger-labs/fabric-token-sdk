@@ -134,7 +134,7 @@ var _ = Describe("validator", func() {
 		metadata.Transfers = []*driver.TransferMetadata{trmetadata.Transfers[0]}
 
 		tokns := make([][]*tokn.Token, 1)
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			tokns[0] = append(tokns[0], inputsForTransfer[i])
 		}
 		err = auditor.Check(context.Background(), ar, metadata, tokns, "2")
@@ -161,7 +161,7 @@ var _ = Describe("validator", func() {
 			It("succeeds", func() {
 				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), fakeLedger.GetStateStub, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(len(actions)).To(Equal(1))
+				Expect(actions).To(HaveLen(1))
 			})
 		})
 
@@ -196,7 +196,7 @@ var _ = Describe("validator", func() {
 			It("succeeds", func() {
 				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(len(actions)).To(Equal(1))
+				Expect(actions).To(HaveLen(1))
 			})
 		})
 		Context("validator is called correctly with a redeem action", func() {
@@ -231,7 +231,7 @@ var _ = Describe("validator", func() {
 			It("succeeds", func() {
 				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(len(actions)).To(Equal(1))
+				Expect(actions).To(HaveLen(1))
 			})
 		})
 		Context("enginve is called correctly with atomic swap", func() {
@@ -268,7 +268,7 @@ var _ = Describe("validator", func() {
 			It("succeeds", func() {
 				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "2", raw)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(len(actions)).To(Equal(1))
+				Expect(actions).To(HaveLen(1))
 			})
 
 			Context("when the sender's signature is not valid: wrong txID", func() {
@@ -341,7 +341,7 @@ func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*trans
 
 func prepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
 	tokens := make([]*math.G1, len(values))
-	for i := 0; i < len(values); i++ {
+	for i := range values {
 		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
 	}
 	return tokens
@@ -460,7 +460,7 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 			AuditInfo: issuerIdentity,
 		},
 	}
-	for i := 0; i < len(issue.Outputs); i++ {
+	for i := range len(issue.Outputs) {
 		marshalledinf, err := inf[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		metadata.Outputs = append(metadata.Outputs, &driver.IssueOutputMetadata{
@@ -503,7 +503,6 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 }
 
 func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *crypto.AuditInfo, id []byte, owners [][]byte, issuer *issue2.Issuer, issuerIdentity []byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
-
 	signers := make([]driver.Signer, 2)
 	signers[0] = signer
 	signers[1] = signer
@@ -516,7 +515,7 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	inBF := make([]*math.Zr, 2)
 	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		inBF[i] = c.NewRandomZr(rand)
 	}
 	outvalues := make([]uint64, 2)
@@ -553,14 +552,14 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	Expect(err).NotTo(HaveOccurred())
 
 	marshalledInfo := make([][]byte, len(metas))
-	for i := 0; i < len(metas); i++ {
+	for i := range metas {
 		marshalledInfo[i], err = metas[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 	}
 	auditInfoRaw, err := auditInfo.Bytes()
 	Expect(err).NotTo(HaveOccurred())
 	metadata := &driver.TransferMetadata{}
-	for i := 0; i < len(transfer2.Inputs); i++ {
+	for range len(transfer2.Inputs) {
 		metadata.Inputs = append(metadata.Inputs, &driver.TransferInputMetadata{
 			TokenID: nil,
 			Senders: []*driver.AuditableIdentity{
@@ -573,7 +572,7 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	for i := 0; i < len(transfer2.Outputs); i++ {
+	for i := range len(transfer2.Outputs) {
 		marshalledinf, err := metas[i].Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		metadata.Outputs = append(metadata.Outputs, &driver.TransferOutputMetadata{
@@ -589,7 +588,7 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	}
 
 	tokns := make([][]*tokn.Token, 1)
-	for i := 0; i < len(tokens); i++ {
+	for i := range tokens {
 		tokns[0] = append(tokns[0], tokens[i])
 	}
 
@@ -761,7 +760,6 @@ func IsLowS(k *ecdsa.PublicKey, s *big.Int) (bool, error) {
 	}
 
 	return s.Cmp(halfOrder) != 1, nil
-
 }
 
 func ToLowS(k *ecdsa.PublicKey, s *big.Int) (*big.Int, bool, error) {

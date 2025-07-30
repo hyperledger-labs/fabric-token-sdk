@@ -89,7 +89,6 @@ type SameTypeProver struct {
 
 // NewSameTypeProver returns a SameTypeProver for the passed parameters
 func NewSameTypeProver(ttype token2.Type, bf *math.Zr, com *math.G1, pp []*math.G1, c *math.Curve) *SameTypeProver {
-
 	return &SameTypeProver{
 		tokenType:        ttype,
 		blindingFactor:   bf,
@@ -125,7 +124,6 @@ func (p *SameTypeProver) Prove() (*SameType, error) {
 	proof.BlindingFactor = p.Curve.ModMul(chal, p.blindingFactor, p.Curve.GroupOrder)
 	proof.BlindingFactor = p.Curve.ModAdd(proof.BlindingFactor, p.randomness.blindingFactor, p.Curve.GroupOrder)
 	return proof, nil
-
 }
 
 // computeCommitment compute the commitmentsto the randomness used in the same type proof

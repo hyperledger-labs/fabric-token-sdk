@@ -60,7 +60,7 @@ func TestGetOwnerAuditInfo_Success(t *testing.T) {
 	rawIdentity := []byte("valid_raw_identity")
 	provider := &mockAuditInfoProvider{}
 
-	auditInfo, err := deserializer.GetAuditInfo(context.Background(), id, Multisig, rawIdentity, provider)
+	auditInfo, err := deserializer.GetAuditInfo(t.Context(), id, Multisig, rawIdentity, provider)
 	require.NoError(t, err)
 	assert.NotNil(t, auditInfo)
 }
@@ -73,7 +73,7 @@ func TestGetAuditInfo_InvalidType(t *testing.T) {
 	rawIdentity := []byte("valid_raw_identity")
 	provider := &mockAuditInfoProvider{}
 
-	auditInfo, err := deserializer.GetAuditInfo(context.Background(), id, identity.Type("InvalidType"), rawIdentity, provider)
+	auditInfo, err := deserializer.GetAuditInfo(t.Context(), id, identity.Type("InvalidType"), rawIdentity, provider)
 	require.Error(t, err)
 	assert.Nil(t, auditInfo)
 }

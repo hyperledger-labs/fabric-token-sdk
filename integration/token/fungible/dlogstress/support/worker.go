@@ -37,7 +37,7 @@ func NewPool(label string, numWorkers int) *Pool {
 
 	pool.wg.Add(numWorkers)
 	pool.stop.Store(false)
-	for i := 0; i < numWorkers; i++ {
+	for range numWorkers {
 		go func() {
 			counter := atomic.Int64{}
 			var taskDurations []time.Duration

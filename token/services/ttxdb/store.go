@@ -286,7 +286,7 @@ func (d *StoreService) GetStatus(ctx context.Context, txID string) (TxStatus, st
 	logger.DebugfContext(ctx, "get status [%s]...", txID)
 	status, message, err := d.db.GetStatus(ctx, txID)
 	if err != nil {
-		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)
+		return Unknown, "", errors.Wrapf(err, "failed getting status [%s]", txID)
 	}
 	logger.DebugfContext(ctx, "got status [%s][%s]", txID, status)
 	return status, message, nil
@@ -403,7 +403,7 @@ func TransactionRecords(ctx context.Context, record *token.AuditRecord, timestam
 	}
 	logger.DebugfContext(ctx, "parsed transactions for tx [%s]", record.Anchor)
 
-	return
+	return txs, err
 }
 
 // Movements converts an AuditRecord to MovementRecords for storage in the database.
@@ -438,7 +438,7 @@ func Movements(ctx context.Context, record *token.AuditRecord, created time.Time
 	}
 	logger.DebugfContext(ctx, "finished to parse sent movements for tx [%s]", record.Anchor)
 
-	return
+	return mv, err
 }
 
 // joinIOEIDs joins enrollment IDs of inputs and outputs

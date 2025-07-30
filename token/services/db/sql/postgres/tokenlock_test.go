@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
-	"context"
 	"database/sql"
 	driver2 "database/sql/driver"
 	"testing"
@@ -74,7 +73,7 @@ func TestCleanup(t *testing.T) {
 		WithArgs(input).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err = mockTokenLockStorePostgress(db).Cleanup(context.Background(), time.Second)
+	err = mockTokenLockStorePostgress(db).Cleanup(t.Context(), time.Second)
 
 	Expect(mockDB.ExpectationsWereMet()).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())

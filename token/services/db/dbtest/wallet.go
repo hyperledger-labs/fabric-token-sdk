@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
-	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -37,7 +36,7 @@ var walletCases = []struct {
 }
 
 func TDuplicate(t *testing.T, db driver.WalletStore) {
-	ctx := context.Background()
+	ctx := t.Context()
 	id := []byte{254, 0, 155, 1}
 
 	err := db.StoreIdentity(ctx, id, "eID", "duplicate", 0, []byte("meta"))
@@ -56,7 +55,7 @@ func TDuplicate(t *testing.T, db driver.WalletStore) {
 }
 
 func TWalletIdentities(t *testing.T, db driver.WalletStore) {
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.NoError(t, db.StoreIdentity(ctx, []byte("alice"), "eID", "alice_wallet", 0, nil))
 	assert.NoError(t, db.StoreIdentity(ctx, []byte("alice"), "eID", "alice_wallet", 1, nil))
 	assert.NoError(t, db.StoreIdentity(ctx, []byte("bob"), "eID", "bob_wallet", 0, nil))

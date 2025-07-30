@@ -58,7 +58,7 @@ func TestOutputStream_Filter(t *testing.T) {
 }
 
 func TestInputStream_IsAnyMine(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	qs := new(MockQueryService)
 	is := NewInputStream(qs, []*Input{}, 0)
 

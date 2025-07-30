@@ -132,10 +132,10 @@ func prepareInputsForZKTransfer(pp *v1.PublicParams) ([]*token.Metadata, []*toke
 	outBF := make([]*math.Zr, 2)
 	inValues := make([]uint64, 2)
 	outValues := make([]uint64, 2)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		inBF[i] = c.NewRandomZr(rand)
 	}
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		outBF[i] = c.NewRandomZr(rand)
 	}
 	ttype := token2.Type("ABC")
@@ -167,10 +167,10 @@ func prepareInvalidInputsForZKTransfer(pp *v1.PublicParams) ([]*token.Metadata, 
 	outBF := make([]*math.Zr, 2)
 	inValues := make([]uint64, 2)
 	outValues := make([]uint64, 2)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		inBF[i] = c.NewRandomZr(rand)
 	}
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		outBF[i] = c.NewRandomZr(rand)
 	}
 	ttype := token2.Type("ABC")

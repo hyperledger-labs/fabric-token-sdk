@@ -243,7 +243,6 @@ func (l *LocalMembership) Load(identities []*idriver.ConfiguredIdentity, targets
 				defaultIdentity.Default = true
 			}
 			l.logger.Warnf("default identity is [%s]", l.getDefaultIdentifier())
-
 		} else {
 			l.logger.Warnf("cannot set default identity, no identity available")
 		}

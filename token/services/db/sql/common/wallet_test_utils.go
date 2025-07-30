@@ -6,7 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"context"
 	"database/sql"
 	"testing"
 
@@ -31,7 +30,7 @@ func TestGetWalletID(t *testing.T, store walletStoreConstructor) {
 		WithArgs(tokenID.UniqueID(), roleID).
 		WillReturnRows(mockDB.NewRows([]string{"request"}).AddRow(output))
 
-	actualWalletID, err := store(db).GetWalletID(context.Background(), tokenID, roleID)
+	actualWalletID, err := store(db).GetWalletID(t.Context(), tokenID, roleID)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -50,7 +49,7 @@ func TestGetWalletIDs(t *testing.T, store walletStoreConstructor) {
 		WithArgs(roleID).
 		WillReturnRows(mockDB.NewRows([]string{"wallet_id"}).AddRow(output))
 
-	actualWalletIDs, err := store(db).GetWalletIDs(context.Background(), roleID)
+	actualWalletIDs, err := store(db).GetWalletIDs(t.Context(), roleID)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -71,7 +70,7 @@ func TestLoadMeta(t *testing.T, store walletStoreConstructor) {
 		WithArgs(tokenID.UniqueID(), walletID, roleID).
 		WillReturnRows(mockDB.NewRows([]string{"meta"}).AddRow(output))
 
-	actual, err := store(db).LoadMeta(context.Background(), tokenID, walletID, roleID)
+	actual, err := store(db).LoadMeta(t.Context(), tokenID, walletID, roleID)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -91,7 +90,7 @@ func TestIdentityExists(t *testing.T, store walletStoreConstructor) {
 		WithArgs(tokenID.UniqueID(), walletID, roleID).
 		WillReturnRows(mockDB.NewRows([]string{"wallet_id"}).AddRow(walletID))
 
-	exists := store(db).IdentityExists(context.Background(), tokenID, walletID, roleID)
+	exists := store(db).IdentityExists(t.Context(), tokenID, walletID, roleID)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -119,7 +118,7 @@ func TestStoreIdentity(t *testing.T, store walletStoreConstructor) {
 		WithArgs(tokenID.UniqueID(), []uint8(nil), walletID, roleID, sqlmock.AnyArg(), eID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = store(db).StoreIdentity(context.Background(), tokenID, eID, walletID, roleID, nil)
+	err = store(db).StoreIdentity(t.Context(), tokenID, eID, walletID, roleID, nil)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())

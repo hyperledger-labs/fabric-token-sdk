@@ -54,14 +54,13 @@ func NewSender(signers []driver.Signer, tokens []*token.Token, ids []*token2.ID,
 // GenerateZKTransfer produces a Action and an array of ValidationRecords
 // that corresponds to the openings of the newly created outputs
 func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners [][]byte) (*Action, []*token.Metadata, error) {
-
 	if len(values) != len(owners) {
 		return nil, nil, errors.Errorf("cannot generate transfer: number of values [%d] does not match number of recipients [%d]", len(values), len(owners))
 	}
 	logger.DebugfContext(ctx, "Get token data for %d inputs", len(s.Inputs))
 	in := getTokenData(s.Inputs)
 	intw := make([]*token.Metadata, len(s.InputInformation))
-	for i := 0; i < len(s.InputInformation); i++ {
+	for i := range len(s.InputInformation) {
 		if s.InputInformation[0].Type != s.InputInformation[i].Type {
 			return nil, nil, errors.New("cannot generate transfer: please choose inputs of the same token type")
 		}
@@ -118,7 +117,7 @@ func (s *Sender) SignTokenActions(raw []byte) ([][]byte, error) {
 
 func getTokenData(tokens []*token.Token) []*math.G1 {
 	tokenData := make([]*math.G1, len(tokens))
-	for i := 0; i < len(tokens); i++ {
+	for i := range tokens {
 		tokenData[i] = tokens[i].Data
 	}
 	return tokenData

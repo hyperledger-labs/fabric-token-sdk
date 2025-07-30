@@ -335,7 +335,7 @@ func assertEmptyIssueMetadata(t *testing.T, original, filtered *driver.IssueMeta
 	assert.Len(t, original.Outputs, len(filtered.Outputs))
 
 	// assert that the token info is empty
-	for i := 0; i < len(original.Outputs); i++ {
+	for i := range len(original.Outputs) {
 		assert.Empty(t, filtered.Outputs[i])
 	}
 }
@@ -349,7 +349,7 @@ func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.Transf
 
 	// assert that the lengths are the same
 	assert.Len(t, original.Outputs, len(filtered.Outputs))
-	for i := 0; i < len(original.Outputs); i++ {
+	for i := range len(original.Outputs) {
 		assert.Empty(t, filtered.Outputs[i])
 	}
 }
@@ -368,7 +368,6 @@ func assertEqualTransferMetadata(t *testing.T, original, filtered *driver.Transf
 }
 
 func TestMetadata_TestMatchTransferAction(t *testing.T) {
-
 	transferActionWithIssuer := &mock.TransferAction{}
 	mockIssuer := identity.Identity{0x1, 0x2, 0x3}
 	transferActionWithIssuer.GetIssuerReturns(mockIssuer)

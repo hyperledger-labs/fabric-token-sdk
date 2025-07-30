@@ -118,7 +118,6 @@ func TestPublicParameters_Auditors(t *testing.T) {
 
 	expectedAuditors := []Identity{[]byte("auditor1"), []byte("auditor2")}
 	assert.Equal(t, expectedAuditors, auditors)
-
 }
 
 func TestPublicParametersManager_PublicParameters(t *testing.T) {
@@ -132,7 +131,6 @@ func TestPublicParametersManager_PublicParameters(t *testing.T) {
 	pp := ppm.PublicParameters()
 
 	assert.NotNil(t, pp)
-
 }
 
 func TestPublicParametersManager_PublicParameters_Nil(t *testing.T) {

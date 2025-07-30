@@ -156,7 +156,7 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 		// register the new service
 		m.services[key] = newService
 	}
-	return
+	return err
 }
 
 func (m *TMSProvider) Configurations() ([]driver.Configuration, error) {
@@ -219,7 +219,7 @@ func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) ([]byte, err
 		}
 	}
 	m.logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, string(debug.Stack()))
-	return nil, errors.Errorf("cannot retrive public params for [%s]", opts)
+	return nil, errors.Errorf("cannot retrieve public params for [%s]", opts)
 }
 
 func (m *TMSProvider) ppFromOpts(opts *driver.ServiceOptions) ([]byte, error) {

@@ -42,12 +42,12 @@ func prepareInputsForZKIssue(pp *v1.PublicParams) ([]*token.Metadata, []*math.G1
 	curve := math.Curves[pp.Curve]
 	rand, _ := curve.Rand()
 	bf := make([]*math.Zr, len(values))
-	for i := 0; i < len(values); i++ {
+	for i := range values {
 		bf[i] = math.Curves[pp.Curve].NewRandomZr(rand)
 	}
 
 	tokens := make([]*math.G1, len(values))
-	for i := 0; i < len(values); i++ {
+	for i := range values {
 		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve)
 	}
 	return token.NewMetadata(pp.Curve, "ABC", values, bf), tokens

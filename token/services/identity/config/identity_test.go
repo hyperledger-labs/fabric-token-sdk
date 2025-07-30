@@ -56,7 +56,7 @@ func TestIdentitiesForRole(t *testing.T) {
 
 	identities, err := identityConfig.IdentitiesForRole(idriver.OwnerRole)
 	assert.NoError(t, err, "failed getting identities for owner role")
-	assert.Equal(t, 1, len(identities), "should have 1 owner identity")
+	assert.Len(t, identities, 1, "should have 1 owner identity")
 	for i, identity := range identities {
 		index := i + 1
 		assert.Equal(t, fmt.Sprintf("owner%d", index), identity.ID, "id should have been owner%d", index)
@@ -66,7 +66,7 @@ func TestIdentitiesForRole(t *testing.T) {
 
 	identities, err = identityConfig.IdentitiesForRole(idriver.IssuerRole)
 	assert.NoError(t, err, "failed getting identities for issuer role")
-	assert.Equal(t, 2, len(identities), "should have 2 issuer identity")
+	assert.Len(t, identities, 2, "should have 2 issuer identity")
 	iss, err := crypto.ToBCCSPOpts(identities[1].Opts)
 	assert.NoError(t, err, "failed converting to bccsp opts")
 	assert.Equal(t, "SW", iss.Default)
@@ -75,13 +75,13 @@ func TestIdentitiesForRole(t *testing.T) {
 
 	identities, err = identityConfig.IdentitiesForRole(idriver.AuditorRole)
 	assert.NoError(t, err, "failed getting identities for auditor role")
-	assert.Equal(t, 3, len(identities), "should have 3 auditor identity")
+	assert.Len(t, identities, 3, "should have 3 auditor identity")
 
 	identities, err = identityConfig.IdentitiesForRole(idriver.CertifierRole)
 	assert.NoError(t, err, "failed getting identities for certifier role")
-	assert.Equal(t, 4, len(identities), "should have 4 certifier identity")
+	assert.Len(t, identities, 4, "should have 4 certifier identity")
 
 	_, err = identityConfig.IdentitiesForRole(1234)
 	assert.Error(t, err, "should throw identity for invalid role (1234)")
-	assert.Equal(t, err.Error(), "unknown role [1234]", "should throw identity for invalid role (1234)")
+	assert.Equal(t, "unknown role [1234]", err.Error(), "should throw identity for invalid role (1234)")
 }

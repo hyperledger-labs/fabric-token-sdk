@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
-	"context"
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
@@ -62,8 +61,8 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
 	assert.Equal(t, IdentityType, keyManager.IdentityType())
 	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
-	assert.Equal(t, tracker.PutCounter, 1)
-	assert.Equal(t, tracker.GetCounter, 0)
+	assert.Equal(t, 1, tracker.PutCounter)
+	assert.Equal(t, 0, tracker.GetCounter)
 
 	// the config has been updated, load a new key manager
 	assert.NotEmpty(t, config.Signer.Ski)
@@ -75,8 +74,8 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
 	assert.Equal(t, IdentityType, keyManager.IdentityType())
 	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
-	assert.Equal(t, tracker.PutCounter, 1) // this is still 1 because the key is loaded using the SKI
-	assert.Equal(t, tracker.GetCounter, 1) // one get for the user key
+	assert.Equal(t, 1, tracker.PutCounter) // this is still 1 because the key is loaded using the SKI
+	assert.Equal(t, 1, tracker.GetCounter) // one get for the user key
 	assert.Equal(t, tracker.GetHistory[0].Key, hex.EncodeToString(config.Signer.Ski))
 
 	// load a new key manager again
@@ -89,8 +88,8 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
 	assert.Equal(t, IdentityType, keyManager.IdentityType())
 	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
-	assert.Equal(t, tracker.PutCounter, 1) // this is still 1 because the key is loaded using the SKI
-	assert.Equal(t, tracker.GetCounter, 2) // another get for the user key
+	assert.Equal(t, 1, tracker.PutCounter) // this is still 1 because the key is loaded using the SKI
+	assert.Equal(t, 2, tracker.GetCounter) // another get for the user key
 	assert.Equal(t, tracker.GetHistory[1].Key, hex.EncodeToString(config.Signer.Ski))
 
 	// invalid sig type
@@ -98,8 +97,8 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 	assert.Error(t, err)
 	assert.EqualError(t, err, "unsupported signature type -1")
 
-	assert.Equal(t, tracker.PutCounter, 1)
-	assert.Equal(t, tracker.GetCounter, 3) // another get
+	assert.Equal(t, 1, tracker.PutCounter)
+	assert.Equal(t, 3, tracker.GetCounter) // another get
 	assert.Equal(t, tracker.GetHistory[2].Key, hex.EncodeToString(config.Signer.Ski))
 
 	// no config
@@ -114,8 +113,8 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 	assert.EqualError(t, err, "no signer information found")
 
 	// nothing changed
-	assert.Equal(t, tracker.PutCounter, 1)
-	assert.Equal(t, tracker.GetCounter, 3)
+	assert.Equal(t, 1, tracker.PutCounter)
+	assert.Equal(t, 3, tracker.GetCounter)
 }
 
 func TestIdentityWithEidRhNymPolicy(t *testing.T) {
@@ -150,7 +149,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NotNil(t, keyManager)
 
 	// get an identity and check it
-	id, audit, err := keyManager.Identity(context.Background(), nil)
+	id, audit, err := keyManager.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
@@ -159,7 +158,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.True(t, strings.HasPrefix(info, "Idemix: [alice]"))
 
 	// get another identity and compare the info
-	id2, audit2, err := keyManager.Identity(context.Background(), audit)
+	id2, audit2, err := keyManager.Identity(t.Context(), audit)
 	assert.NoError(t, err)
 	assert.NotNil(t, id2)
 	assert.NotNil(t, audit2)
@@ -178,7 +177,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, auditInfo2.Match(id))
 	assert.NoError(t, auditInfo2.Match(id2))
 
-	assert.Equal(t, tracker.GetCounter, 3)
+	assert.Equal(t, 3, tracker.GetCounter)
 
 	// deserialize an invalid signer
 	_, err = keyManager.DeserializeSigner(nil)
@@ -187,11 +186,11 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.Error(t, err)
 	_, err = keyManager.DeserializeSigner([]byte{0, 1, 2})
 	assert.Error(t, err)
-	assert.Equal(t, tracker.GetCounter, 3)
+	assert.Equal(t, 3, tracker.GetCounter)
 	// deserialize a valid signer
 	signer, err := keyManager.DeserializeSigner(id)
 	assert.NoError(t, err)
-	assert.Equal(t, tracker.GetCounter, 5) // this is due the call to Sign used to test if the signer belong to this key manager
+	assert.Equal(t, 5, tracker.GetCounter) // this is due the call to Sign used to test if the signer belong to this key manager
 	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[4].Key)
 
 	// deserialize an invalid verifier
@@ -206,7 +205,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, err)
 
 	// get the signer from the sigService as well
-	signer2, err := sigService.GetSigner(context.Background(), id)
+	signer2, err := sigService.GetSigner(t.Context(), id)
 	assert.NoError(t, err)
 	assert.NotNil(t, signer2)
 
@@ -214,7 +213,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	sigma, err := signer.Sign([]byte("hello world!!!"))
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
-	assert.Equal(t, tracker.GetCounter, 7)
+	assert.Equal(t, 7, tracker.GetCounter)
 	assert.Equal(t, tracker.GetHistory[3].Key, tracker.GetHistory[5].Key)
 	assert.Equal(t, tracker.GetHistory[3].Value, tracker.GetHistory[5].Value)
 	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[6].Key)
@@ -223,7 +222,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	sigma, err = signer2.Sign([]byte("hello world!!!"))
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
-	assert.Equal(t, tracker.GetCounter, 9)
+	assert.Equal(t, 9, tracker.GetCounter)
 	assert.Equal(t, tracker.GetHistory[3].Key, tracker.GetHistory[7].Key)
 	assert.Equal(t, tracker.GetHistory[3].Value, tracker.GetHistory[7].Value)
 	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[8].Key)
@@ -255,7 +254,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err := p.Identity(context.Background(), nil)
+	id, audit, err := p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -277,7 +276,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(context.Background(), nil)
+	id, audit, err = p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -299,7 +298,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(context.Background(), nil)
+	id, audit, err = p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -348,11 +347,11 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	assert.NoError(t, err)
 	assert.NotNil(t, p2)
 
-	id, audit, err := p.Identity(context.Background(), nil)
+	id, audit, err := p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
-	id2, audit2, err := p2.Identity(context.Background(), nil)
+	id2, audit2, err := p2.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id2)
 	assert.NotNil(t, audit2)
@@ -403,10 +402,10 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 
 	// keyManager and keyManager2 use the same key store
 
-	id, _, err := keyManager.Identity(context.Background(), nil)
+	id, _, err := keyManager.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 
-	id2, _, err := keyManager2.Identity(context.Background(), nil)
+	id2, _, err := keyManager2.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 
 	// This must work
@@ -460,7 +459,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err := p.Identity(context.Background(), nil)
+	id, audit, err := p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -482,7 +481,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(context.Background(), nil)
+	id, audit, err = p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -504,7 +503,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(context.Background(), nil)
+	id, audit, err = p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -543,7 +542,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 
 	// get an identity with its own audit info from the provider
 	// id is in its serialized form
-	id, audit, err := p.Identity(context.Background(), nil)
+	id, audit, err := p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
@@ -572,7 +571,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(context.Background(), nil)
+	id, audit, err = p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)

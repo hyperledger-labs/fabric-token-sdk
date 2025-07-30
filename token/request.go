@@ -116,7 +116,6 @@ func WithTokenSelector(selector Selector) TransferOption {
 // WithTransferMetadata sets transfer action metadata
 func WithTransferMetadata(key string, value []byte) TransferOption {
 	return WithTransferAttribute(TransferMetadataPrefix+key, value)
-
 }
 
 // WithPublicTransferMetadata adds any data to the public ledger that may be relevant to the application.
@@ -1246,7 +1245,7 @@ func (r *Request) AuditRecord(ctx context.Context) (*AuditRecord, error) {
 		return nil, errors.Errorf("public paramenters not set")
 	}
 	precision := pp.Precision()
-	for i := 0; i < len(ids); i++ {
+	for i := range ids {
 		in := inputs.At(i)
 		if toks[i] == nil {
 			return nil, errors.Errorf("failed to audit inputs: nil input at [%d]th input", i)

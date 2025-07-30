@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"context"
 	"database/sql"
 	"testing"
 
@@ -32,7 +31,7 @@ func TestLock(t *testing.T, store tokenLockStoreConstructor) {
 		WithArgs(trID, tokenID.TxId, tokenID.Index, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err = store(db).Lock(context.Background(), &tokenID, trID)
+	err = store(db).Lock(t.Context(), &tokenID, trID)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -50,7 +49,7 @@ func TestUnlockByTxID(t *testing.T, store tokenLockStoreConstructor) {
 		WithArgs(consumerTxID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err = store(db).UnlockByTxID(context.Background(), consumerTxID)
+	err = store(db).UnlockByTxID(t.Context(), consumerTxID)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())

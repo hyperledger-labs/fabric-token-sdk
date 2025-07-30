@@ -57,7 +57,6 @@ func (h *histogram) Observe(v float64) {
 		h.sum += v
 		h.n++
 	})
-
 }
 func (h *histogram) Min() float64 { return h.min }
 func (h *histogram) Max() float64 { return h.max }

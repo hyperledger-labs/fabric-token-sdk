@@ -9,9 +9,10 @@ package logging
 import (
 	"strings"
 
+	"slices"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
-	"golang.org/x/exp/slices"
 )
 
 const loggerNameSeparator = "."

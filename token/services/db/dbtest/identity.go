@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -41,7 +40,7 @@ var IdentityCases = []struct {
 }
 
 func TConfigurations(t *testing.T, db driver.IdentityStore) {
-	ctx := context.Background()
+	ctx := t.Context()
 	expected := driver.IdentityConfiguration{
 		ID:     "pineapple",
 		Type:   "core",
@@ -82,7 +81,7 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 }
 
 func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
-	ctx := context.Background()
+	ctx := t.Context()
 	id := []byte("alice")
 	auditInfo := []byte("alice_audit_info")
 	tokMeta := []byte("tok_meta")
@@ -108,7 +107,7 @@ func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
 	n := 100
 	wg.Add(n)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(i int) {
 			tSignerInfo(t, db, i)
 			t.Log(i)
@@ -117,16 +116,16 @@ func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
 	}
 	wg.Wait()
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		alice := []byte(fmt.Sprintf("alice_%d", i))
-		exists, err := db.SignerInfoExists(context.Background(), alice)
+		exists, err := db.SignerInfoExists(t.Context(), alice)
 		assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
 		assert.True(t, exists)
 	}
 }
 
 func tSignerInfo(t *testing.T, db driver.IdentityStore, index int) {
-	ctx := context.Background()
+	ctx := t.Context()
 	alice := []byte(fmt.Sprintf("alice_%d", index))
 	bob := []byte(fmt.Sprintf("bob_%d", index))
 	signerInfo := []byte("signer_info")

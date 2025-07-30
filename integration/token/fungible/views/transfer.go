@@ -77,7 +77,6 @@ type TransferView struct {
 }
 
 func (t *TransferView) Call(context view.Context) (txID interface{}, err error) {
-
 	// As a first step operation, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
@@ -271,7 +270,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 		var ids []*token.ID
 		var sum token.Quantity
 
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			// Select the request amount of tokens of the given type
 			ids, sum, err = selector.Select(context.Context(), ttx.GetWallet(context, t.Wallet), amount.Decimal(), t.Type)
 			// If an error occurs and retry has been asked, then wait first a bit

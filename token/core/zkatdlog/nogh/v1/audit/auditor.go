@@ -175,7 +175,6 @@ func (a *Auditor) Check(
 
 // CheckTransferRequests verifies that the commitments in transfer inputs and outputs match the information provided in the clear.
 func (a *Auditor) CheckTransferRequests(inputs [][]*InspectableToken, outputsFromTransfer [][]*InspectableToken, txID driver.TokenRequestAnchor) error {
-
 	for k, transferred := range outputsFromTransfer {
 		err := a.InspectOutputs(transferred)
 		if err != nil {
@@ -352,7 +351,7 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 			return nil, nil, errors.Errorf("number of inputs does not match the number of senders [%d]!=[%d]", len(transferMetadata.Inputs), len(inputs[k]))
 		}
 		auditableInputs[k] = make([]*InspectableToken, len(transferMetadata.Inputs))
-		for i := 0; i < len(transferMetadata.Inputs); i++ {
+		for i := range len(transferMetadata.Inputs) {
 			var err error
 			if inputs[k][i] == nil {
 				return nil, nil, errors.Errorf("input[%d][%d] is nil", k, i)
@@ -371,7 +370,7 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 			return nil, nil, errors.Errorf("number of outputs does not match the number of output metadata [%d]!=[%d]", len(ta.Outputs), len(transferMetadata.Outputs))
 		}
 		outputs[k] = make([]*InspectableToken, len(ta.Outputs))
-		for i := 0; i < len(ta.Outputs); i++ {
+		for i := range len(ta.Outputs) {
 			if ta.Outputs[i] == nil {
 				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
 			}

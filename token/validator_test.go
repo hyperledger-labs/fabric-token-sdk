@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
@@ -44,7 +43,7 @@ func TestValidator_UnmarshallAndVerify(t *testing.T) {
 	mockValidator := validator.backend.(*mock.Validator)
 	mockValidator.VerifyTokenRequestFromRawReturns(expectedActions, nil, nil)
 
-	actions, err := validator.UnmarshallAndVerify(context.TODO(), mockLedger, RequestAnchor(anchor), raw)
+	actions, err := validator.UnmarshallAndVerify(t.Context(), mockLedger, RequestAnchor(anchor), raw)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedActions, actions)
@@ -62,7 +61,7 @@ func TestValidator_UnmarshallAndVerifyWithMetadata(t *testing.T) {
 	expectedMetadata := map[string][]byte{"key1": []byte("value1"), "key2": []byte("value2")}
 	mockValidator := validator.backend.(*mock.Validator)
 	mockValidator.VerifyTokenRequestFromRawReturns(expectedActions, expectedMetadata, nil)
-	actions, metadata, err := validator.UnmarshallAndVerifyWithMetadata(context.TODO(), mockLedger, RequestAnchor(anchor), raw)
+	actions, metadata, err := validator.UnmarshallAndVerifyWithMetadata(t.Context(), mockLedger, RequestAnchor(anchor), raw)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedActions, actions)
@@ -95,7 +94,7 @@ func TestValidator_UnmarshallAndVerify_Error(t *testing.T) {
 
 	mockValidator := validator.backend.(*mock.Validator)
 	mockValidator.VerifyTokenRequestFromRawReturns(nil, nil, errors.New("mocked error"))
-	actions, err := validator.UnmarshallAndVerify(context.TODO(), mockLedger, RequestAnchor(anchor), raw)
+	actions, err := validator.UnmarshallAndVerify(t.Context(), mockLedger, RequestAnchor(anchor), raw)
 
 	assert.Error(t, err)
 	assert.Nil(t, actions)
@@ -111,7 +110,7 @@ func TestValidator_UnmarshallAndVerifyWithMetadata_Error(t *testing.T) {
 
 	mockValidator := validator.backend.(*mock.Validator)
 	mockValidator.VerifyTokenRequestFromRawReturns(nil, nil, errors.New("mocked error"))
-	actions, metadata, err := validator.UnmarshallAndVerifyWithMetadata(context.TODO(), mockLedger, RequestAnchor(anchor), raw)
+	actions, metadata, err := validator.UnmarshallAndVerifyWithMetadata(t.Context(), mockLedger, RequestAnchor(anchor), raw)
 	assert.Error(t, err)
 	assert.Nil(t, actions)
 	assert.Nil(t, metadata)

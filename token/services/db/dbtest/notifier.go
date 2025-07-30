@@ -67,8 +67,8 @@ func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
 	assert.NoError(t, tx.Commit())
 
 	assert2.Eventually(t, func() bool { return len(*result) == 2 }, time.Second, 20*time.Millisecond)
@@ -79,9 +79,9 @@ func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNo
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
-	assert.NoError(t, tx.Delete(context.TODO(), token.ID{TxId: "tx1", Index: 1}, "alice"))
+	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
+	assert.NoError(t, tx.Delete(t.Context(), token.ID{TxId: "tx1", Index: 1}, "alice"))
 	assert.NoError(t, tx.Commit())
 
 	assert2.Eventually(t, func() bool { return len(*result) == 3 }, time.Second, 20*time.Millisecond)
@@ -92,8 +92,8 @@ func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.Token
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
 
 	assert2.Eventually(t, func() bool { return len(*result) == 0 }, time.Second, 20*time.Millisecond)
 }
@@ -104,7 +104,7 @@ func TSubscribeRead(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier)
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
 	// assert.NoError(t, tx.StoreToken(context.TODO(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	_, _, err = tx.GetToken(context.Background(), token.ID{TxId: "tx1"}, true)
+	_, _, err = tx.GetToken(t.Context(), token.ID{TxId: "tx1"}, true)
 	assert.NoError(t, err)
 	assert.NoError(t, tx.Commit())
 

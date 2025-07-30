@@ -113,7 +113,7 @@ func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...
 
 	var resultBoxed interface{}
 	var err error
-	for i := 0; i < cc.maxAttempts; i++ {
+	for i := range cc.maxAttempts {
 		resultBoxed, err = cc.viewManager.InitiateView(NewCertificationRequestView(cc.channel, cc.namespace, cc.certifiers[0], toBeCertified...))
 		if err != nil {
 			logger.Errorf("failed to request certification [%s], try again [%d] after [%s]...", err, i, cc.waitTime)

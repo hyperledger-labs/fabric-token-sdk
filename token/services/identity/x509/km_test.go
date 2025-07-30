@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
-	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
@@ -30,7 +29,7 @@ func TestDeserializer(t *testing.T) {
 	assert.NoError(t, err)
 
 	for _, provider := range []*KeyManager{fullIdentityProvider, fullIdentityProvider2} {
-		id, auditInfo, err := provider.Identity(context.Background(), nil)
+		id, auditInfo, err := provider.Identity(t.Context(), nil)
 		assert.NoError(t, err)
 		eID := provider.EnrollmentID()
 		ai := &AuditInfo{}
@@ -50,12 +49,11 @@ func TestDeserializer(t *testing.T) {
 		assert.NoError(t, err)
 
 		// check again a verifying identity
-		verifyingIdentity, _, err := verifyingIdentityProvider.Identity(context.Background(), nil)
+		verifyingIdentity, _, err := verifyingIdentityProvider.Identity(t.Context(), nil)
 		assert.NoError(t, err)
 		verifier2, err := provider.DeserializeVerifier(verifyingIdentity)
 		assert.NoError(t, err)
 		err = verifier2.Verify([]byte("hello worlds"), sigma)
 		assert.NoError(t, err)
 	}
-
 }

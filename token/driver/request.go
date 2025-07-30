@@ -446,7 +446,6 @@ func (t *TransferMetadata) Receivers() []Identity {
 		}
 	}
 	return res
-
 }
 
 func (t *TransferMetadata) Senders() []Identity {
@@ -461,7 +460,6 @@ func (t *TransferMetadata) Senders() []Identity {
 		}
 	}
 	return res
-
 }
 
 func (t *TransferMetadata) TokenIDs() []*token.ID {

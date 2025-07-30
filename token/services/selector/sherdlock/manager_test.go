@@ -70,7 +70,7 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 	terminate, pgConnStr := startContainer(t)
 	replicas := make([]testutils.EnhancedManager, number)
 
-	for i := 0; i < number; i++ {
+	for i := range number {
 		replica, err := createManager(pgConnStr, backoff, maxRetries)
 		assert.NoError(t, err)
 		replicas[i] = replica

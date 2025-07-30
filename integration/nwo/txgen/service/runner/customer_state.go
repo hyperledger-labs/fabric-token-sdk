@@ -19,7 +19,7 @@ type customerState struct {
 	ReceivedAmount  api.Amount
 	StartingAmount  api.Amount
 	WithdrawnAmount api.Amount
-	//Transactions    map[string]int // TODO think better how to store transactions
+	// Transactions    map[string]int // TODO think better how to store transactions
 }
 
 func (p *customerState) AddWithdrawn(m api.Amount) {
