@@ -220,7 +220,7 @@ type IdentityConfigurationsIterator struct {
 }
 
 func (w *IdentityConfigurationsIterator) Next() (*driver.IdentityConfiguration, error) {
-	if !w.Iterator.HasNext() {
+	if !w.HasNext() {
 		return nil, nil
 	}
 	idConfig := &driver.IdentityConfiguration{}

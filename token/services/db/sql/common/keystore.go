@@ -7,10 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 
+	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	dcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
@@ -76,18 +79,27 @@ func (db *KeystoreStore) Put(key string, state interface{}) error {
 	logger.Debug(query, args)
 
 	_, err = db.writeDB.Exec(query, args...)
+	if err != nil {
+		if errors2.HasCause(err, driver.UniqueKeyViolation) {
+			// then check that raw is equal to what is stored
+			rawFromDB, err := db.GetRaw(key)
+			if err != nil {
+				return err
+			}
+			if bytes.Equal(rawFromDB, raw) {
+				// It might be that this key was already inserted before
+				return nil
+			}
+			return errors.Wrapf(err, "key exists already and the value does not match")
+		}
+	}
 	return err
 }
 
 func (db *KeystoreStore) Get(key string, state interface{}) error {
-	query, args := q.Select().
-		FieldsByName("val").
-		From(q.Table(db.table.KeyStore)).
-		Where(cond.Eq("key", key)).
-		Format(db.ci)
-	raw, err := common.QueryUnique[[]byte](db.readDB, query, args...)
+	raw, err := db.GetRaw(key)
 	if err != nil {
-		return errors.Wrapf(err, "failed retrieving key [%s]", key)
+		return err
 	}
 	if len(raw) == 0 {
 		return errors.Errorf("key [%s] does not exist", key)
@@ -98,6 +110,19 @@ func (db *KeystoreStore) Get(key string, state interface{}) error {
 
 	logger.Debugf("got key [%s] successfully", key)
 	return nil
+}
+
+func (db *KeystoreStore) GetRaw(key string) ([]byte, error) {
+	query, args := q.Select().
+		FieldsByName("val").
+		From(q.Table(db.table.KeyStore)).
+		Where(cond.Eq("key", key)).
+		Format(db.ci)
+	raw, err := common.QueryUnique[[]byte](db.readDB, query, args...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed retrieving key [%s]", key)
+	}
+	return raw, nil
 }
 
 func (db *KeystoreStore) GetSchema() string {

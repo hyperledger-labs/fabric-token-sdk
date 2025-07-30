@@ -18,17 +18,14 @@ type DBStorageProvider struct {
 	identityStoreServiceManager identitydb.StoreServiceManager
 	walletStoreServiceManager   walletdb.StoreServiceManager
 	keyStoreStoreServiceManager keystoredb.StoreServiceManager
-	kvs                         driver.Keystore
 }
 
 func NewDBStorageProvider(
-	kvs driver.Keystore,
 	identityStoreServiceManager identitydb.StoreServiceManager,
 	walletStoreServiceManager walletdb.StoreServiceManager,
 	keyStoreStoreServiceManager keystoredb.StoreServiceManager,
 ) *DBStorageProvider {
 	return &DBStorageProvider{
-		kvs:                         kvs,
 		identityStoreServiceManager: identityStoreServiceManager,
 		walletStoreServiceManager:   walletStoreServiceManager,
 		keyStoreStoreServiceManager: keyStoreStoreServiceManager,
