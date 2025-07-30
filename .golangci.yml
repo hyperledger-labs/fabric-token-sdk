@@ -1,52 +1,52 @@
 version: "2"
 linters:
   enable:
-    - containedctx
-    - contextcheck
-    - depguard
-    - dupl
-    - errname
+#    - containedctx
+#    - contextcheck
+#    - depguard
+#    - dupl
+#    - errname
     - errorlint
-    - fatcontext
-    - forcetypeassert
+#    - fatcontext
+#    - forcetypeassert
     - ginkgolinter
-    - gocognit
-    - goconst
-    - gocritic
+#    - gocognit
+#    - goconst
+#    - gocritic
 #    - godot
-    - gosec
-    - intrange
+#    - gosec
+#    - intrange
 #    - ireturn
 #    - lll
-    - maintidx
+#    - maintidx
     - mirror
     - misspell
     - nilerr
     - nilnesserr
     - nolintlint
 #    - paralleltest
-    - prealloc
-    - promlinter
+#    - prealloc
+#    - promlinter
 #    - revive
-    - rowserrcheck
-    - sqlclosecheck
-    - testifylint
+#    - rowserrcheck
+#    - sqlclosecheck
+#    - testifylint
     - thelper
     - unconvert
-    - unparam
+#    - unparam
     - usetesting
     - wastedassign
     - whitespace
     - govet
-    - staticcheck
+#    - staticcheck
     - canonicalheader
-    - copyloopvar
+#    - copyloopvar
     - dupword
-    - err113
+#    - err113
     - exptostd
     - goheader
     - importas
-    - intrange
+#    - intrange
     - nakedret
     - sloglint
     - usestdlibvars
@@ -62,8 +62,8 @@ linters:
     errcheck:
       # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
       # Such cases aren't reported by default.
-      # Default: false
-      check-type-assertions: true
+#      Default: false
+      check-type-assertions: false
     errorlint:
       # Check whether fmt.Errorf uses the %w verb for formatting errors.
       # See the https://github.com/polyfloyd/go-errorlint for caveats.

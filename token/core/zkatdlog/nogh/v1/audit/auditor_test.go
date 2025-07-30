@@ -163,9 +163,7 @@ func createTransfer(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMeta
 	}
 
 	tokns := make([][]*token.Token, 1)
-	for i := range inputs {
-		tokns[0] = append(tokns[0], inputs[i])
-	}
+	tokns[0] = append(tokns[0], inputs...)
 	return transfer, metadata, tokns
 }
 
@@ -213,9 +211,7 @@ func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer.Action, *driv
 	}
 
 	tokns := make([][]*token.Token, 1)
-	for i := range inputs {
-		tokns[0] = append(tokns[0], inputs[i])
-	}
+	tokns[0] = append(tokns[0], inputs...)
 
 	return transfer, metadata, tokns
 }

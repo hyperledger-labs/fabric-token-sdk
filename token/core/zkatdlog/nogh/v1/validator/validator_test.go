@@ -587,9 +587,7 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	}
 
 	tokns := make([][]*tokn.Token, 1)
-	for i := range tokens {
-		tokns[0] = append(tokns[0], tokens[i])
-	}
+	tokns[0] = append(tokns[0], tokens...)
 
 	if issuerIdentity != nil {
 		metadata.Issuer = driver.Identity(issuerIdentity)
