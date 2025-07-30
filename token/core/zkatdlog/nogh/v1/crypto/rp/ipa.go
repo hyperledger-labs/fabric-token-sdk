@@ -183,7 +183,7 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 
 	LArray := make([]*mathlib.G1, p.NumberOfRounds)
 	RArray := make([]*mathlib.G1, p.NumberOfRounds)
-	for i := range uint64(p.NumberOfRounds) {
+	for i := range p.NumberOfRounds {
 		// in each round the size of the vector is reduced by 2
 		n := len(leftGen) / 2
 		leftIP := innerProduct(left[:n], right[n:], p.Curve)
@@ -303,7 +303,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 	var rightGen []*mathlib.G1
 	leftGen = v.LeftGenerators
 	rightGen = v.RightGenerators
-	for i := range uint64(v.NumberOfRounds) {
+	for i := range v.NumberOfRounds {
 		// check well-formedness
 		if proof.L[i] == nil || proof.R[i] == nil {
 			return errors.New("invalid IPA proof: nil elements")

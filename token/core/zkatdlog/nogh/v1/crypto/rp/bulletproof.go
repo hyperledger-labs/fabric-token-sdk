@@ -275,7 +275,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 	rho := p.Curve.NewRandomZr(rand)
 	eta := p.Curve.NewRandomZr(rand)
-	for i := range uint64(p.BitLength) {
+	for i := range p.BitLength {
 		b := 1 << i & p.value
 		if b > 0 {
 			b = 1
