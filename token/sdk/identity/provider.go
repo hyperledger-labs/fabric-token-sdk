@@ -44,6 +44,5 @@ func (s *DBStorageProvider) IdentityStore(tmsID token.TMSID) (driver.IdentitySto
 }
 
 func (s *DBStorageProvider) Keystore(tmsID token.TMSID) (driver.Keystore, error) {
-	return s.kvs, nil
-	// return s.keyStoreStoreServiceManager.StoreServiceByTMSId(tmsID)
+	return s.keyStoreStoreServiceManager.StoreServiceByTMSId(tmsID)
 }

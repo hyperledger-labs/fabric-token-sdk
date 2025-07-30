@@ -64,7 +64,7 @@ func (db *KeystoreStore) Put(id string, state interface{}) error {
 		return errors.Wrapf(err, "cannot marshal state with id [%s]", id)
 	}
 	query, args := q.InsertInto(db.table.KeyStore).
-		Fields("key", "value").
+		Fields("key", "val").
 		Row(id, raw).
 		Format()
 	logger.Debug(query, args)
@@ -75,7 +75,7 @@ func (db *KeystoreStore) Put(id string, state interface{}) error {
 
 func (db *KeystoreStore) Get(id string, state interface{}) error {
 	query, args := q.Select().
-		FieldsByName("value").
+		FieldsByName("val").
 		From(q.Table(db.table.KeyStore)).
 		Where(cond.Eq("key", id)).
 		Format(db.ci)
