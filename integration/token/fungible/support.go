@@ -25,12 +25,13 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	tplatform "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	gfabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -1484,11 +1485,11 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	}
 	var pp PP
 	switch genericPP.Identifier {
-	case string(core.DriverIdentifier(dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)):
-		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)
+	case zkatdlognoghv1.DriverIdentifier:
+		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogNoGHDriverName, dlognoghv1.ProtocolV1)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	case string(core.DriverIdentifier(fabtokenv1.FabTokenDriverName, fabtokenv1.ProtocolV1)):
-		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.FabTokenDriverName)
+	case gfabtokenv1.DriverIdentifier:
+		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.FabTokenDriverName, fabtokenv1.ProtocolV1)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	default:
 		gomega.Expect(false).To(gomega.BeTrue(), "unknown pp identifier [%s]", genericPP.Identifier)
@@ -1536,11 +1537,11 @@ func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issue
 	}
 	var pp PP
 	switch genericPP.Identifier {
-	case string(core.DriverIdentifier(dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)):
-		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogIdentifier, dlognoghv1.ProtocolV1)
+	case zkatdlognoghv1.DriverIdentifier:
+		pp, err = dlognoghv1.NewPublicParamsFromBytes(ppBytes, dlognoghv1.DLogNoGHDriverName, dlognoghv1.ProtocolV1)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	case string(core.DriverIdentifier(fabtokenv1.FabTokenDriverName, fabtokenv1.ProtocolV1)):
-		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.FabTokenDriverName)
+	case gfabtokenv1.DriverIdentifier:
+		pp, err = fabtokenv1.NewPublicParamsFromBytes(ppBytes, fabtokenv1.FabTokenDriverName, fabtokenv1.ProtocolV1)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	default:
 		gomega.Expect(false).To(gomega.BeTrue(), "unknown pp identitfier [%s]", genericPP.Identifier)

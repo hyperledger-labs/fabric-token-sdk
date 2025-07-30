@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -134,6 +135,14 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
+	validator := validator.NewValidator(
+		logger,
+		publicParamsManager.PublicParams(context.Background()),
+		deserializer,
+		nil,
+		nil,
+		nil,
+	)
 	service, err := v1.NewService(
 		logger,
 		ws,
@@ -147,6 +156,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		tokensService,
 		&v1.TokensUpgradeService{},
 		authorization,
+		validator,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")

@@ -14,6 +14,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
+type ValidatorFactory = func() (driver.Validator, error)
+
 type PublicParametersManager[T driver.PublicParameters] interface {
 	driver.PublicParamsManager
 	PublicParams(ctx context.Context) T
@@ -33,6 +35,7 @@ type Service[T driver.PublicParameters] struct {
 	tokensService           driver.TokensService
 	tokensUpgradeService    driver.TokensUpgradeService
 	authorization           driver.Authorization
+	validator               driver.Validator
 }
 
 func NewTokenService[T driver.PublicParameters](
@@ -49,6 +52,7 @@ func NewTokenService[T driver.PublicParameters](
 	tokensService driver.TokensService,
 	tokensUpgradeService driver.TokensUpgradeService,
 	authorization driver.Authorization,
+	validator driver.Validator,
 ) (*Service[T], error) {
 	s := &Service[T]{
 		Logger:                  logger,
@@ -64,6 +68,7 @@ func NewTokenService[T driver.PublicParameters](
 		tokensService:           tokensService,
 		tokensUpgradeService:    tokensUpgradeService,
 		authorization:           authorization,
+		validator:               validator,
 	}
 	return s, nil
 }
@@ -117,6 +122,10 @@ func (s *Service[T]) TokensUpgradeService() driver.TokensUpgradeService {
 
 func (s *Service[T]) Authorization() driver.Authorization {
 	return s.authorization
+}
+
+func (s *Service[T]) Validator() (driver.Validator, error) {
+	return s.validator, nil
 }
 
 // Done releases all the resources allocated by this service
