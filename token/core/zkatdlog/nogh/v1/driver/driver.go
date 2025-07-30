@@ -55,7 +55,7 @@ func NewDriver(
 	vaultProvider *vault.Provider,
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
-		Name: core.DriverIdentifier(v1setup.DLogIdentifier, v1setup.ProtocolV1),
+		Name: core.DriverIdentifier(v1setup.DLogNoGHDriverName, v1setup.ProtocolV1),
 		Driver: &Driver{
 			base:             &base{},
 			metricsProvider:  metricsProvider,
@@ -99,7 +99,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 
 	ppm, err := common.NewPublicParamsManager[*setup.PublicParams](
 		&PublicParamsDeserializer{},
-		v1setup.DLogIdentifier,
+		v1setup.DLogNoGHDriverName,
 		v1setup.ProtocolV1,
 		publicParams,
 	)

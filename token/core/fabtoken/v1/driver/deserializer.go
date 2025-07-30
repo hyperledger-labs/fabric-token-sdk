@@ -35,7 +35,7 @@ func NewDeserializer() *Deserializer {
 type PublicParamsDeserializer struct{}
 
 func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, name driver.TokenDriverName, version driver.TokenDriverVersion) (*v1.PublicParams, error) {
-	return v1.NewPublicParamsFromBytes(raw, name)
+	return v1.NewPublicParamsFromBytes(raw, name, version)
 }
 
 // EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token

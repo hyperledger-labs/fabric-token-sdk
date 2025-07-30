@@ -18,7 +18,7 @@ type PPMFactory struct{ *base }
 
 func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {
 	return core.NamedFactory[driver.PPMFactory]{
-		Name:   core.DriverIdentifier(v2.DLogIdentifier, v2.ProtocolV2),
+		Name:   core.DriverIdentifier(v2.DLogNoGHDriverName, v2.ProtocolV2),
 		Driver: &PPMFactory{},
 	}
 }

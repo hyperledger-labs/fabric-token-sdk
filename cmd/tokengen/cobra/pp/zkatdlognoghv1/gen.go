@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package dlog
+package zkatdlognoghv1
 
 import (
 	"fmt"
@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -77,7 +78,7 @@ func Cmd() *cobra.Command {
 }
 
 var cobraCommand = &cobra.Command{
-	Use:   "dlog",
+	Use:   zkatdlognoghv1.DriverIdentifier,
 	Short: "Gen ZKAT DLog public parameters.",
 	Long:  `Generates ZKAT DLog public parameters.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -142,7 +143,7 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
-	path := filepath.Join(args.OutputDir, "zkatdlog_pp.json")
+	path := filepath.Join(args.OutputDir, "zkatdlognoghv1_pp.json")
 	if err := os.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}

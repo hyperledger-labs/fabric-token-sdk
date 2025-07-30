@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/ffabtoken"
@@ -33,7 +34,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 	ts := token.NewTestSuite(StartPortDlog, nft.Topology(common.Opts{
 		Backend:         "fabric",
 		CommType:        commType,
-		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: "fabtoken"},
+		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: fabtokenv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 		ReplicationOpts: opts,
 	}))

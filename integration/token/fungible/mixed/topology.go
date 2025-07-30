@@ -17,11 +17,17 @@ import (
 	auditor3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/auditor"
 	issuer3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/issuer"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/party"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
+	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+)
+
+var (
+	DLogDriver     = string(core.DriverIdentifier(dlognoghv1.DLogNoGHDriverName, dlognoghv1.ProtocolV1))
+	FabtokenDriver = string(core.DriverIdentifier(fabtokenv1.FabTokenDriverName, fabtokenv1.ProtocolV1))
 )
 
 const (
-	DLogDriver        = "dlog"
-	FabtokenDriver    = "fabtoken"
 	DLogNamespace     = "dlog-token-chaincode"
 	FabTokenNamespace = "fabtoken-token-chaincode"
 )

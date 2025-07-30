@@ -23,7 +23,7 @@ func TestSerialization(t *testing.T) {
 	ser, err := pp.Serialize()
 	assert.NoError(t, err)
 
-	pp2, err := NewPublicParamsFromBytes(ser, DLogIdentifier, ProtocolV1)
+	pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
 	assert.NoError(t, err)
 
 	ser2, err := pp2.Serialize()

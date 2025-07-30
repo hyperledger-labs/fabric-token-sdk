@@ -24,7 +24,7 @@ type WalletServiceFactory struct {
 
 func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.NamedFactory[driver.WalletServiceFactory] {
 	return core.NamedFactory[driver.WalletServiceFactory]{
-		Name:   core.DriverIdentifier(v2.DLogIdentifier, v2.ProtocolV2),
+		Name:   core.DriverIdentifier(v2.DLogNoGHDriverName, v2.ProtocolV2),
 		Driver: &WalletServiceFactory{storageProvider: storageProvider},
 	}
 }

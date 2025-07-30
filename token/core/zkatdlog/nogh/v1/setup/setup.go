@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	DLogIdentifier = "zkatdlog"
-	ProtocolV1     = 1
+	DLogNoGHDriverName = "zkatdlognogh"
+	ProtocolV1         = 1
 )
 
 var (
@@ -195,7 +195,7 @@ func NewPublicParamsFromBytes(
 }
 
 func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return NewWith(DLogIdentifier, ProtocolV1, bitLength, idemixIssuerPK, idemixCurveID)
+	return NewWith(DLogNoGHDriverName, ProtocolV1, bitLength, idemixIssuerPK, idemixCurveID)
 }
 
 func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriverVersion, bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
@@ -472,9 +472,9 @@ func (p *PublicParams) String() string {
 }
 
 func (p *PublicParams) Validate() error {
-	if p.DriverVersion != ProtocolV1 {
-		return errors.Errorf("invalid version [%d], expected [%d]", p.DriverVersion, ProtocolV1)
-	}
+	// if p.DriverVersion != ProtocolV1 {
+	// 	return errors.Errorf("invalid version [%d], expected [%d]", p.DriverVersion, ProtocolV1)
+	// }
 	if int(p.Curve) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(p.Curve), len(mathlib.Curves)-1)
 	}
