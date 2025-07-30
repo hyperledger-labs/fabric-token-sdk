@@ -444,7 +444,6 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.Signi
 
 func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte) (*driver.TokenRequest, *driver.TokenRequestMetadata) {
 	id, auditInfo, _ := getIdemixInfo("./testdata/idemix")
-	ir := &driver.TokenRequest{}
 	owners := make([][]byte, 1)
 	owners[0] = id
 	values := []uint64{40}
@@ -479,7 +478,7 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 	Expect(err).NotTo(HaveOccurred())
 
 	// sign token request
-	ir = &driver.TokenRequest{Issues: [][]byte{raw}}
+	ir := &driver.TokenRequest{Issues: [][]byte{raw}}
 	raw, err = ir.MarshalToMessageToSign([]byte("1"))
 	Expect(err).NotTo(HaveOccurred())
 
