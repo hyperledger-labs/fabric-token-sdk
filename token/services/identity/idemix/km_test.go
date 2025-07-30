@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	idemix2 "github.com/IBM/idemix"
@@ -596,4 +597,80 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	sigma, err = signer.Sign([]byte("hello world!!!"))
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
+}
+
+func TestKeyManagerForRace(t *testing.T) {
+	t.Run("FP256BN_AMCL", func(t *testing.T) {
+		keyManager, cleanup := setupKeyManager(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
+		defer cleanup()
+		runIdentityConcurrently(t, t.Context(), keyManager)
+	})
+
+	t.Run("BLS12_381_BBS", func(t *testing.T) {
+		keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+		defer cleanup()
+		runIdentityConcurrently(t, t.Context(), keyManager)
+	})
+
+	t.Run("BLS12_381_BBS_GURVY", func(t *testing.T) {
+		keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY, true)
+		defer cleanup()
+		runIdentityConcurrently(t, t.Context(), keyManager)
+	})
+}
+
+func setupKeyManager(t assert.TestingT, configPath string, curveID math.CurveID, aries bool) (*KeyManager, func()) {
+	kvs, err := kvs2.NewInMemory()
+	assert.NoError(t, err)
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"}))
+	config, err := crypto2.NewConfig(configPath)
+	assert.NoError(t, err)
+	tracker := kvs2.NewTrackedMemoryFrom(kvs)
+	keyStore, err := crypto2.NewKeyStore(curveID, tracker)
+	assert.NoError(t, err)
+	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
+	assert.NoError(t, err)
+
+	// check that version is enforced
+	config.Version = 0
+	_, err = NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	assert.Error(t, err)
+	assert.EqualError(t, err, "unsupported protocol version [0]")
+	config.Version = crypto2.ProtobufProtocolVersionV1
+
+	// new key manager loaded from file
+	assert.Empty(t, config.Signer.Ski)
+	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	assert.NoError(t, err)
+	assert.NotNil(t, keyManager)
+	assert.False(t, keyManager.IsRemote())
+	assert.True(t, keyManager.Anonymous())
+	assert.Equal(t, "alice", keyManager.EnrollmentID())
+	assert.Equal(t, IdentityType, keyManager.IdentityType())
+	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
+	assert.Equal(t, tracker.PutCounter, 1)
+	assert.Equal(t, tracker.GetCounter, 0)
+
+	return keyManager, func() {
+		// cleanup
+	}
+}
+
+func runIdentityConcurrently(t assert.TestingT, ctx context.Context, keyManager *KeyManager) {
+	numRoutines := 4
+	var wg sync.WaitGroup
+	wg.Add(numRoutines)
+	for range numRoutines {
+		go func() {
+			defer wg.Done()
+
+			for range 10 {
+				newId, newRaw, err2 := keyManager.Identity(ctx, nil)
+				assert.NoError(t, err2)
+				assert.NotNil(t, newId)
+				assert.NotEmpty(t, newRaw)
+			}
+		}()
+	}
+	wg.Wait()
 }
