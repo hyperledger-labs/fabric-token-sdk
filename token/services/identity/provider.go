@@ -10,8 +10,8 @@ import (
 	"context"
 	"runtime/debug"
 	"slices"
-	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -46,6 +46,11 @@ type storage interface {
 	StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 }
 
+type cache[T any] interface {
+	Get(key string) (T, bool)
+	Add(key string, value T)
+}
+
 // Provider implements the driver.IdentityProvider interface.
 // Provider handles the long-term identities on top of which wallets are defined.
 type Provider struct {
@@ -55,8 +60,7 @@ type Provider struct {
 	Storage    storage
 
 	enrollmentIDUnmarshaler enrollmentIDUnmarshaler
-	isMeCacheLock           sync.RWMutex
-	isMeCache               map[string]bool
+	isMeCache               cache[bool]
 }
 
 // NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
@@ -74,7 +78,7 @@ func NewProvider(
 		SigService:              sigService,
 		Binder:                  binder,
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
-		isMeCache:               make(map[string]bool),
+		isMeCache:               secondcache.NewTyped[bool](1000),
 	}
 }
 
@@ -96,9 +100,7 @@ func (p *Provider) RegisterRecipientData(ctx context.Context, data *driver.Recip
 
 func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
 	defer func() {
-		p.isMeCacheLock.Lock()
-		p.isMeCache[identity.String()] = true
-		p.isMeCacheLock.Unlock()
+		p.isMeCache.Add(identity.String(), true)
 	}()
 	return p.SigService.RegisterSigner(ctx, identity, signer, verifier, signerInfo)
 }
@@ -109,29 +111,20 @@ func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []s
 	result := make([]string, 0)
 	notFound := make([]driver.Identity, 0)
 
-	p.isMeCacheLock.RLock()
 	for _, id := range identities {
-		if isMe, ok := p.isMeCache[id.UniqueID()]; !ok {
+		if isMe, ok := p.isMeCache.Get(id.UniqueID()); !ok {
 			notFound = append(notFound, id)
 		} else if isMe {
 			result = append(result, id.UniqueID())
 		}
 	}
 	if len(notFound) == 0 {
-		defer p.isMeCacheLock.RUnlock()
 		return result
 	}
-	p.isMeCacheLock.RUnlock()
-
-	p.isMeCacheLock.Lock()
-
-	// TODO: Look up cache under write lock
-
-	defer p.isMeCacheLock.Unlock()
 
 	found := p.SigService.AreMe(ctx, notFound...)
 	for _, id := range notFound {
-		p.isMeCache[id.UniqueID()] = slices.Contains(found, id.UniqueID())
+		p.isMeCache.Add(id.UniqueID(), slices.Contains(found, id.UniqueID()))
 	}
 	return append(result, found...)
 }
@@ -142,18 +135,14 @@ func (p *Provider) IsMe(ctx context.Context, identity driver.Identity) bool {
 
 func (p *Provider) RegisterRecipientIdentity(id driver.Identity) error {
 	p.Logger.Debugf("Registering identity [%s]", id)
-	p.isMeCacheLock.Lock()
-	p.isMeCache[id.String()] = false
-	p.isMeCacheLock.Unlock()
+	p.isMeCache.Add(id.String(), false)
 	return nil
 }
 
 func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
 	found := false
 	defer func() {
-		p.isMeCacheLock.Lock()
-		p.isMeCache[identity.String()] = found
-		p.isMeCacheLock.Unlock()
+		p.isMeCache.Add(identity.String(), found)
 	}()
 	signer, err := p.SigService.GetSigner(ctx, identity)
 	if err != nil {
