@@ -26,6 +26,7 @@ func TestIssue(t *testing.T) {
 }
 
 func prepareZKIssue(t *testing.T) (*issue2.Prover, *issue2.Verifier) {
+	t.Helper()
 	pp, err := v1.Setup(32, nil, math.BN254)
 	assert.NoError(t, err)
 	tw, tokens := prepareInputsForZKIssue(pp)

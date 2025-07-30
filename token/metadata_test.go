@@ -29,6 +29,7 @@ func TestMetadata_TestFilterBy(t *testing.T) {
 }
 
 func testFilterByCase0(t *testing.T) {
+	t.Helper()
 	// Case:
 	// - Two transfers. One from Alice to Bob and one from Charlie to Dave.
 
@@ -188,6 +189,7 @@ func testFilterByCase0(t *testing.T) {
 }
 
 func testFilterByCase1(t *testing.T) {
+	t.Helper()
 	// Case:
 	// - Two issues. One for Alice and one for Bob.
 
@@ -325,10 +327,12 @@ func testFilterByCase1(t *testing.T) {
 }
 
 func assertEqualIssueMetadata(t *testing.T, original, filtered *driver.IssueMetadata) {
+	t.Helper()
 	assert.Equal(t, original, filtered)
 }
 
 func assertEmptyIssueMetadata(t *testing.T, original, filtered *driver.IssueMetadata) {
+	t.Helper()
 	// check equal issuer
 	assert.Equal(t, original.Issuer, filtered.Issuer)
 	// assert that the lengths are the same
@@ -341,6 +345,7 @@ func assertEmptyIssueMetadata(t *testing.T, original, filtered *driver.IssueMeta
 }
 
 func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.TransferMetadata) {
+	t.Helper()
 	// assert tokenIDs, senders and senderAuditInfos are empty
 	for _, input := range filtered.Inputs {
 		assert.Nil(t, input.TokenID)
@@ -355,6 +360,7 @@ func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.Transf
 }
 
 func assertEqualTransferMetadata(t *testing.T, original, filtered *driver.TransferMetadata, noInputs bool) {
+	t.Helper()
 	for i, input := range original.Inputs {
 		if noInputs {
 			assert.Nil(t, filtered.Inputs[i].TokenID)

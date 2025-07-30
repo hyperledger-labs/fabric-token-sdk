@@ -18,6 +18,7 @@ import (
 )
 
 func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
+	t.Helper()
 	for _, c := range tokenLockDBCases {
 		driver := cfgProvider(c.Name)
 		tokenLockDB, err := driver.NewTokenLock("", c.Name)

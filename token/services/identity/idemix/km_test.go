@@ -32,6 +32,7 @@ func TestNewKeyManager(t *testing.T) {
 }
 
 func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	t.Helper()
 	// prepare
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
@@ -123,6 +124,7 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 }
 
 func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	t.Helper()
 	// prepare
 	registry := view.NewServiceProvider()
 	kvs, err := kvs2.NewInMemory()
@@ -235,6 +237,7 @@ func TestIdentityStandard(t *testing.T) {
 }
 
 func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	t.Helper()
 	registry := view.NewServiceProvider()
 
 	kvs, err := kvs2.NewInMemory()
@@ -319,6 +322,7 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 }
 
 func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	t.Helper()
 	registry := view.NewServiceProvider()
 
 	kvs, err := kvs2.NewInMemory()
@@ -374,6 +378,7 @@ func TestKeyManager_DeserializeSigner(t *testing.T) {
 }
 
 func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	t.Helper()
 	// prepare
 	registry := view.NewServiceProvider()
 	kvs, err := kvs2.NewInMemory()

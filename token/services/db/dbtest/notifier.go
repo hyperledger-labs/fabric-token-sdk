@@ -63,6 +63,7 @@ func collectDBEvents(db driver.TokenNotifier) (*[]dbEvent, error) {
 }
 
 func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
+	t.Helper()
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
@@ -75,6 +76,7 @@ func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier
 }
 
 func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
+	t.Helper()
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
@@ -88,6 +90,7 @@ func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNo
 }
 
 func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
+	t.Helper()
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
@@ -99,6 +102,7 @@ func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.Token
 }
 
 func TSubscribeRead(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
+	t.Helper()
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()

@@ -14,6 +14,7 @@ import (
 )
 
 func WalletTest(t *testing.T, cfgProvider cfgProvider) {
+	t.Helper()
 	for _, c := range walletCases {
 		driver := cfgProvider(c.Name)
 		db, err := driver.NewWallet("", c.Name)
@@ -36,6 +37,7 @@ var walletCases = []struct {
 }
 
 func TDuplicate(t *testing.T, db driver.WalletStore) {
+	t.Helper()
 	ctx := t.Context()
 	id := []byte{254, 0, 155, 1}
 
@@ -55,6 +57,7 @@ func TDuplicate(t *testing.T, db driver.WalletStore) {
 }
 
 func TWalletIdentities(t *testing.T, db driver.WalletStore) {
+	t.Helper()
 	ctx := t.Context()
 	assert.NoError(t, db.StoreIdentity(ctx, []byte("alice"), "eID", "alice_wallet", 0, nil))
 	assert.NoError(t, db.StoreIdentity(ctx, []byte("alice"), "eID", "alice_wallet", 1, nil))

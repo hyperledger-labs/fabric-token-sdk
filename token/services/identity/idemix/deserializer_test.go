@@ -27,6 +27,7 @@ func TestNewDeserializer(t *testing.T) {
 }
 
 func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	t.Helper()
 	// init
 	backend, err := kvs2.NewInMemory()
 	assert.NoError(t, err)

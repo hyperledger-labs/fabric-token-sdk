@@ -24,6 +24,7 @@ import (
 type cfgProvider func(string) driver.Driver
 
 func TokensTest(t *testing.T, cfgProvider cfgProvider) {
+	t.Helper()
 	for _, c := range tokensCases {
 		t.Run(c.Name, func(xt *testing.T) {
 			driver := cfgProvider(c.Name)
@@ -67,6 +68,7 @@ var tokensCases = []struct {
 }
 
 func TTokenTransaction(t *testing.T, db TestTokenDB) {
+	t.Helper()
 	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
 		t.Fatal(err)
@@ -134,6 +136,7 @@ func TTokenTransaction(t *testing.T, db TestTokenDB) {
 }
 
 func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
+	t.Helper()
 	for i := range 20 {
 		tr := driver.TokenRecord{
 			TxID:           fmt.Sprintf("tx%d", i),
@@ -263,6 +266,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 }
 
 func getTokensBy(t *testing.T, db TestTokenDB, ownerEID string, typ token.Type) []*token.UnspentToken {
+	t.Helper()
 	it, err := db.UnspentTokensIteratorBy(t.Context(), ownerEID, typ)
 	assert.NoError(t, err)
 
@@ -273,6 +277,7 @@ func getTokensBy(t *testing.T, db TestTokenDB, ownerEID string, typ token.Type) 
 }
 
 func TDeleteAndMine(t *testing.T, db TestTokenDB) {
+	t.Helper()
 	ctx := t.Context()
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
@@ -353,6 +358,7 @@ func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 
 // // ListAuditTokens returns the audited tokens associated to the passed ids
 func TListAuditTokens(t *testing.T, db TestTokenDB) {
+	t.Helper()
 	ctx := t.Context()
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
@@ -426,6 +432,7 @@ func TListAuditTokens(t *testing.T, db TestTokenDB) {
 }
 
 func TListIssuedTokens(t *testing.T, db TestTokenDB) {
+	t.Helper()
 	ctx := t.Context()
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
@@ -512,6 +519,7 @@ func TListIssuedTokens(t *testing.T, db TestTokenDB) {
 // GetTokenMetadata retrieves the token information for the passed ids.
 // For each id, the callback is invoked to unmarshal the token information
 func TGetTokenInfos(t *testing.T, db TestTokenDB) {
+	t.Helper()
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -614,6 +622,7 @@ func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 }
 
 func TDeleteMultiple(t *testing.T, db TestTokenDB) {
+	t.Helper()
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -669,6 +678,7 @@ func TDeleteMultiple(t *testing.T, db TestTokenDB) {
 }
 
 func TPublicParams(t *testing.T, db TestTokenDB) {
+	t.Helper()
 	ctx := t.Context()
 	b := []byte("test bytes")
 	bHash := hash.Hashable(b).Raw()
@@ -705,6 +715,7 @@ func TPublicParams(t *testing.T, db TestTokenDB) {
 }
 
 func TCertification(t *testing.T, db TestTokenDB) {
+	t.Helper()
 	ctx := t.Context()
 	wg := sync.WaitGroup{}
 	wg.Add(40)
@@ -779,6 +790,7 @@ func TCertification(t *testing.T, db TestTokenDB) {
 }
 
 func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
+	t.Helper()
 	ctx := t.Context()
 	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
@@ -920,6 +932,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 }
 
 func TTokenTypes(t *testing.T, db TestTokenDB) {
+	t.Helper()
 	tx, err := db.NewTokenDBTransaction()
 	assert.NoError(t, err)
 	tx1 := driver.TokenRecord{
@@ -1021,6 +1034,7 @@ func TTokenTypes(t *testing.T, db TestTokenDB) {
 }
 
 func consumeSpendableTokensIterator(t *testing.T, it tdriver.SpendableTokensIterator, tokenType token.Type, count int) {
+	t.Helper()
 	defer it.Close()
 	for range count {
 		tok, err := it.Next()
@@ -1033,6 +1047,7 @@ func consumeSpendableTokensIterator(t *testing.T, it tdriver.SpendableTokensIter
 }
 
 func assertEqual(t *testing.T, r driver.TokenRecord, d driver.TokenDetails) {
+	t.Helper()
 	assert.Equal(t, r.TxID, d.TxID)
 	assert.Equal(t, r.Index, d.Index)
 	assert.Equal(t, r.Amount, d.Amount)

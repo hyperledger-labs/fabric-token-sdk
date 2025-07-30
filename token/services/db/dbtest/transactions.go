@@ -25,6 +25,7 @@ import (
 )
 
 func TransactionsTest(t *testing.T, cfgProvider cfgProvider) {
+	t.Helper()
 	for _, c := range tokenTransactionDBCases {
 		driver := cfgProvider(c.Name)
 		db, err := driver.NewOwnerTransaction("", c.Name)
@@ -42,20 +43,21 @@ var tokenTransactionDBCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.TokenTransactionStore)
 }{
-	// {"FailsIfRequestDoesNotExist", TFailsIfRequestDoesNotExist},
-	// {"Status", TStatus},
-	// {"StoresTimestamp", TStoresTimestamp},
-	// {"Movements", TMovements},
-	// {"Transaction", TTransaction},
-	// {"TokenRequest", TTokenRequest},
-	// {"AllowsSameTxID", TAllowsSameTxID},
-	// {"Rollback", TRollback},
+	{"FailsIfRequestDoesNotExist", TFailsIfRequestDoesNotExist},
+	{"Status", TStatus},
+	{"StoresTimestamp", TStoresTimestamp},
+	{"Movements", TMovements},
+	{"Transaction", TTransaction},
+	{"TokenRequest", TTokenRequest},
+	{"AllowsSameTxID", TAllowsSameTxID},
+	{"Rollback", TRollback},
 	{"TransactionQueries", TTransactionQueries},
-	// {"ValidationRecordQueries", TValidationRecordQueries},
-	// {"TEndorserAcks", TEndorserAcks},
+	{"ValidationRecordQueries", TValidationRecordQueries},
+	{"TEndorserAcks", TEndorserAcks},
 }
 
 func TFailsIfRequestDoesNotExist(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	ctx := t.Context()
 	tx := driver.TransactionRecord{
 		TxID:         "tx1",
@@ -94,6 +96,7 @@ func TFailsIfRequestDoesNotExist(t *testing.T, db driver.TokenTransactionStore) 
 }
 
 func TStatus(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	ctx := t.Context()
 	tx := driver.TransactionRecord{
 		TxID:         "tx1",
@@ -152,6 +155,7 @@ func TStatus(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TStoresTimestamp(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
@@ -183,6 +187,7 @@ func TStoresTimestamp(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TMovements(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
@@ -249,6 +254,7 @@ func TMovements(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TTransaction(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	ctx := t.Context()
 	var txs []driver.TransactionRecord
 
@@ -372,6 +378,7 @@ func TTransaction(t *testing.T, db driver.TokenTransactionStore) {
 const explanation = "transactions [%s]=[%s]"
 
 func assertTxEqual(t *testing.T, exp *driver.TransactionRecord, act *driver.TransactionRecord) {
+	t.Helper()
 	if act == nil {
 		t.Errorf("expected tx %q, got nil", exp.TxID)
 		return
@@ -396,6 +403,7 @@ func assertTxEqual(t *testing.T, exp *driver.TransactionRecord, act *driver.Tran
 }
 
 func TTokenRequest(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
@@ -501,6 +509,7 @@ func TTokenRequest(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TAllowsSameTxID(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	ctx := t.Context()
 
 	// bob sends 10 to alice
@@ -539,6 +548,7 @@ func TAllowsSameTxID(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TRollback(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
@@ -571,6 +581,7 @@ func TRollback(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TTransactionQueries(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	now := time.Now()
 	justBefore := now.Add(-time.Millisecond)
 	justAfter := now.Add(time.Millisecond)
@@ -809,6 +820,7 @@ func TTransactionQueries(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func getTransactions(t *testing.T, db driver.TokenTransactionStore, params driver.QueryTransactionsParams) []*driver.TransactionRecord {
+	t.Helper()
 	records, err := db.QueryTransactions(t.Context(), params, pagination.None())
 	assert.NoError(t, err)
 	txs, err := iterators.ReadAllPointers(records.Items)
@@ -817,6 +829,7 @@ func getTransactions(t *testing.T, db driver.TokenTransactionStore, params drive
 }
 
 func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	beforeTx := time.Now().UTC().Add(-1 * time.Second)
 	ctx := t.Context()
 	exp := []driver.ValidationRecord{
@@ -898,6 +911,7 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func getValidationRecords(t *testing.T, db driver.TokenTransactionStore, params driver.QueryValidationRecordsParams) []*driver.ValidationRecord {
+	t.Helper()
 	records, err := db.QueryValidations(t.Context(), params)
 	assert.NoError(t, err)
 	txs, err := iterators.ReadAllPointers(records)
@@ -906,6 +920,7 @@ func getValidationRecords(t *testing.T, db driver.TokenTransactionStore, params 
 }
 
 func TEndorserAcks(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	ctx := t.Context()
 	createTestTransaction(t, db, "1")
 	wg := sync.WaitGroup{}
@@ -931,6 +946,7 @@ func TEndorserAcks(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func createTestTransaction(t *testing.T, db driver.TokenTransactionStore, txID string) {
+	t.Helper()
 	w, err := db.BeginAtomicWrite()
 	if err != nil {
 		t.Fatalf("error creating transaction while trying to test something else: %s", err)

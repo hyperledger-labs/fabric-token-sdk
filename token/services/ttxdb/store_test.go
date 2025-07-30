@@ -41,6 +41,7 @@ func TestDB(t *testing.T) {
 }
 
 func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.StoreService) {
+	t.Helper()
 	ctx := t.Context()
 	wg := sync.WaitGroup{}
 	n := 100

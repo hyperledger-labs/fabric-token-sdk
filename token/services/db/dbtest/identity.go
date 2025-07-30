@@ -17,6 +17,7 @@ import (
 )
 
 func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
+	t.Helper()
 	for _, c := range IdentityCases {
 		driver := cfgProvider(c.Name)
 		db, err := driver.NewIdentity("", c.Name)
@@ -40,6 +41,7 @@ var IdentityCases = []struct {
 }
 
 func TConfigurations(t *testing.T, db driver.IdentityStore) {
+	t.Helper()
 	ctx := t.Context()
 	expected := driver.IdentityConfiguration{
 		ID:     "pineapple",
@@ -81,6 +83,7 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 }
 
 func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
+	t.Helper()
 	ctx := t.Context()
 	id := []byte("alice")
 	auditInfo := []byte("alice_audit_info")
@@ -99,10 +102,12 @@ func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
 }
 
 func TSignerInfo(t *testing.T, db driver.IdentityStore) {
+	t.Helper()
 	tSignerInfo(t, db, 0)
 }
 
 func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
+	t.Helper()
 	wg := sync.WaitGroup{}
 	n := 100
 	wg.Add(n)
@@ -125,6 +130,7 @@ func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
 }
 
 func tSignerInfo(t *testing.T, db driver.IdentityStore, index int) {
+	t.Helper()
 	ctx := t.Context()
 	alice := []byte(fmt.Sprintf("alice_%d", index))
 	bob := []byte(fmt.Sprintf("bob_%d", index))

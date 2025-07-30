@@ -23,6 +23,7 @@ func TestSameTypeProof(t *testing.T) {
 }
 
 func prepareTokens(t *testing.T, pp []*math.G1) []*math.G1 {
+	t.Helper()
 	curve := math.Curves[1]
 	rand, err := curve.Rand()
 	assert.NoError(t, err)
@@ -44,6 +45,7 @@ func prepareTokens(t *testing.T, pp []*math.G1) []*math.G1 {
 }
 
 func GetSameTypeProverAndVerifier(t *testing.T) (*issue.SameTypeProver, *issue.SameTypeVerifier) {
+	t.Helper()
 	pp := preparePedersenParameters(t)
 	curve := math.Curves[1]
 
@@ -58,6 +60,7 @@ func GetSameTypeProverAndVerifier(t *testing.T) (*issue.SameTypeProver, *issue.S
 }
 
 func preparePedersenParameters(t *testing.T) []*math.G1 {
+	t.Helper()
 	curve := math.Curves[1]
 	rand, err := curve.Rand()
 	assert.NoError(t, err)
