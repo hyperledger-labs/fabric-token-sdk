@@ -43,7 +43,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/onsi/gomega"
-	"github.com/prometheus/common/model"
 )
 
 var (
@@ -1354,25 +1353,11 @@ func CheckLocalMetrics(ii *integration.Infrastructure, user string, viewName str
 }
 
 func CheckPrometheusMetrics(ii *integration.Infrastructure, viewName string) {
-	cli, err := ii.NWO.PrometheusAPI()
+	cli, err := ii.NWO.PrometheusReporter()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	metric := model.Metric{
-		"__name__": model.LabelValue("fsc_view_operations"),
-		"view":     model.LabelValue(viewName),
-	}
-	val, warnings, err := cli.Query(context.Background(), metric.String(), time.Now())
-	gomega.Expect(warnings).To(gomega.BeEmpty())
+	ops, err := cli.GetViewOperations("", viewName)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Expect(val.Type()).To(gomega.Equal(model.ValVector))
-
-	logger.Infof("Received prometheus metrics for view [%s]: %s", viewName, val)
-
-	vector, ok := val.(model.Vector)
-	gomega.Expect(ok).To(gomega.BeTrue())
-	gomega.Expect(vector).NotTo(gomega.BeEmpty())
-	for _, v := range vector {
-		gomega.Expect(v.Value).NotTo(gomega.Equal(model.SampleValue(0)))
-	}
+	gomega.Expect(ops).ToNot(gomega.BeZero())
 }
 
 func TokensUpgrade(network *integration.Infrastructure, wpm *WalletManagerProvider, user *token3.NodeReference, wallet string, typ token.Type, auditor *token3.NodeReference, issuer *token3.NodeReference, expectedErrorMsgs ...string) string {
