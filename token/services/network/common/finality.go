@@ -70,7 +70,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 		txStatus = driver.Confirmed
 		t.logger.DebugfContext(ctx, "get token request for [%s]", txID)
 
-		tr := t.tokens.GetCachedTokenRequest(txID)
+		tr, msgToSign := t.tokens.GetCachedTokenRequest(txID)
 		if tr == nil {
 			// load it
 			tokenRequestRaw, err := t.ttxDB.GetTokenRequest(ctx, txID)
@@ -87,9 +87,13 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 			if err != nil {
 				return fmt.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
 			}
+			msgToSign, err = tr.MarshalToSign()
+			if err != nil {
+				return fmt.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
+			}
 		}
 		t.logger.DebugfContext(ctx, "Check token request")
-		if err := t.checkTokenRequest(txID, tr, tokenRequestHash); err != nil {
+		if err := t.checkTokenRequest(txID, msgToSign, tokenRequestHash); err != nil {
 			t.logger.ErrorfContext(ctx, "tx [%s], %s", txID, err)
 			txStatus = driver.Deleted
 			message = err.Error()
@@ -113,11 +117,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 	return nil
 }
 
-func (t *FinalityListener) checkTokenRequest(txID string, request *token.Request, reference []byte) error {
-	trToSign, err := request.MarshalToSign()
-	if err != nil {
-		return errors.Errorf("can't get request hash '%s'", txID)
-	}
+func (t *FinalityListener) checkTokenRequest(txID string, trToSign []byte, reference []byte) error {
 	if base64.StdEncoding.EncodeToString(reference) != hash.Hashable(trToSign).String() {
 		t.logger.Errorf("tx [%s], tr hashes [%s][%s]", txID, base64.StdEncoding.EncodeToString(reference), hash.Hashable(trToSign))
 		// no further processing of the tokens of these transactions

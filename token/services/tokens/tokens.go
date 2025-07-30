@@ -46,9 +46,10 @@ type Cache interface {
 }
 
 type CacheEntry struct {
-	Request  *token.Request
-	ToSpend  []*token2.ID
-	ToAppend []TokenToAppend
+	Request   *token.Request
+	ToSpend   []*token2.ID
+	ToAppend  []TokenToAppend
+	MsgToSign []byte
 }
 
 // Service is the interface for the token service
@@ -147,20 +148,25 @@ func (t *Service) CacheRequest(ctx context.Context, tmsID token.TMSID, request *
 	}
 	logger.DebugfContext(ctx, "cache request [%s]", request.ID())
 	// append to cache
+	msgToSign, err := request.MarshalToSign()
+	if err != nil {
+		return errors.WithMessagef(err, "failed to marshal token request [%s]", request.ID())
+	}
 	t.RequestsCache.Add(string(request.Anchor), &CacheEntry{
-		Request:  request,
-		ToSpend:  toSpend,
-		ToAppend: toAppend,
+		Request:   request,
+		ToSpend:   toSpend,
+		ToAppend:  toAppend,
+		MsgToSign: msgToSign,
 	})
 	return nil
 }
 
-func (t *Service) GetCachedTokenRequest(txID string) *token.Request {
+func (t *Service) GetCachedTokenRequest(txID string) (*token.Request, []byte) {
 	res, ok := t.RequestsCache.Get(txID)
 	if !ok {
-		return nil
+		return nil, nil
 	}
-	return res.Request
+	return res.Request, res.MsgToSign
 }
 
 // AppendTransaction appends the content of the passed transaction to the token db.
