@@ -27,8 +27,7 @@ type ListenerManagerConfig interface {
 type ManagerType string
 
 const (
-	Committer ManagerType = "committer"
-	Delivery  ManagerType = "delivery"
+	Delivery ManagerType = "delivery"
 )
 
 func NewListenerManagerConfig(configService driver.ConfigService) *serviceListenerManagerConfig {
@@ -43,7 +42,7 @@ func (c *serviceListenerManagerConfig) Type() ManagerType {
 	if v := ManagerType(c.c.GetString("token.finality.type")); len(v) > 0 {
 		return v
 	}
-	return Committer
+	return Delivery
 }
 
 func (c *serviceListenerManagerConfig) CommitterMaxRetries() int {
@@ -95,9 +94,6 @@ func (c *serviceListenerManagerConfig) DeliveryListenerTimeout() time.Duration {
 func (c *serviceListenerManagerConfig) String() string {
 	if c.Type() == Delivery {
 		return fmt.Sprintf("Delivery [mapperParalellism: %d, lru: (%d, %d), listenerTimeout: %v]", c.DeliveryMapperParallelism(), c.DeliveryLRUSize(), c.DeliveryLRUBuffer(), c.DeliveryListenerTimeout())
-	}
-	if c.Type() == Committer {
-		return fmt.Sprintf("Committer [retries: (%d, %v)]", c.CommitterMaxRetries(), c.CommitterRetryWaitDuration())
 	}
 	return fmt.Sprintf("Invalid config type: [%s]", c.Type())
 }
