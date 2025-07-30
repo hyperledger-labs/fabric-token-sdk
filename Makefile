@@ -20,6 +20,7 @@ install-tools:
 # Thanks for great inspiration https://marcofranssen.nl/manage-go-tools-via-go-modules
 	@echo Installing tools from tools/tools.go
 	@cd tools; cat tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %
+	@$(MAKE) install-linter-tool
 
 .PHONY: download-fabric
 download-fabric:
@@ -138,3 +139,13 @@ txgen:
 .PHONY: clean-all-containers
 clean-all-containers:
 	@if [ -n "$$(docker ps -aq)" ]; then docker rm -f $$(docker ps -aq); else echo "No containers to remove"; fi
+
+.PHONY: lint
+lint:
+	@echo "Running Go Linters..."
+	golangci-lint run --color=always --timeout=4m
+
+.PHONY: install-linter-tool
+install-linter-tool:
+	@echo "Installing golangci Linter"
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.1.6
