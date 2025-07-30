@@ -12,7 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -95,7 +95,7 @@ func ReceiveTerms(context view.Context) (*Terms, error) {
 
 func (v *termsReceiverView) Call(context view.Context) (interface{}, error) {
 	terms := &Terms{}
-	if err := session.JSON(context).Receive(terms); err != nil {
+	if err := jsession.FromContext(context).Receive(terms); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling terms")
 	}
 	return terms, nil

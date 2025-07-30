@@ -71,7 +71,8 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 }
 
 type ViewManager interface {
-	InitiateView(view view.View, ctx context.Context) (interface{}, error)
+	Context() context.Context
+	InitiateView(ctx context.Context, view view.View) (interface{}, error)
 }
 
 type ViewRegistry interface {

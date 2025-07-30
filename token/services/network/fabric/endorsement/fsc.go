@@ -111,12 +111,14 @@ func (e *FSCService) Endorse(context view.Context, requestRaw []byte, signer vie
 	}
 	logger.DebugfContext(context.Context(), "request approval via fts endrosers with policy [%s]: [%d]...", e.PolicyType, len(endorsers))
 
-	envBoxed, err := e.ViewManager.InitiateView(&RequestApprovalView{
-		TMSID:      e.TmsID,
-		RequestRaw: requestRaw,
-		TxID:       txID,
-		Endorsers:  endorsers,
-	}, context.Context())
+	envBoxed, err := e.ViewManager.InitiateView(
+		context.Context(),
+		&RequestApprovalView{
+			TMSID:      e.TmsID,
+			RequestRaw: requestRaw,
+			TxID:       txID,
+			Endorsers:  endorsers,
+		})
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to request approval")
 	}

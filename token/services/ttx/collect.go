@@ -10,7 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/jsession"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -92,7 +92,7 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	party := actionTransfer.From
 	logger.DebugfContext(context.Context(), "collect remote from [%s]", party)
 
-	session, err := session2.NewJSON(context, context.Initiator(), party)
+	session, err := jsession.NewJSON(context, context.Initiator(), party)
 	if err != nil {
 		return errors.Wrap(err, "failed getting session")
 	}
@@ -177,7 +177,7 @@ func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// actions
-	s := session2.JSON(context)
+	s := jsession.FromContext(context)
 	actions := &Actions{}
 	if err := s.Receive(actions); err != nil {
 		return nil, errors.Wrap(err, "failed receiving actions")
