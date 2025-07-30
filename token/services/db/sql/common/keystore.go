@@ -27,22 +27,24 @@ type keystoreTables struct {
 }
 
 type KeystoreStore struct {
-	readDB  *sql.DB
-	writeDB *sql.DB
-	table   keystoreTables
-	ci      qcommon.CondInterpreter
+	readDB       *sql.DB
+	writeDB      *sql.DB
+	errorWrapper driver.SQLErrorWrapper
+	table        keystoreTables
+	ci           qcommon.CondInterpreter
 }
 
-func newKeystoreStore(readDB, writeDB *sql.DB, tables keystoreTables, ci qcommon.CondInterpreter) *KeystoreStore {
+func newKeystoreStore(readDB, writeDB *sql.DB, tables keystoreTables, ci qcommon.CondInterpreter, errorWrapper driver.SQLErrorWrapper) *KeystoreStore {
 	return &KeystoreStore{
-		readDB:  readDB,
-		writeDB: writeDB,
-		table:   tables,
-		ci:      ci,
+		readDB:       readDB,
+		writeDB:      writeDB,
+		table:        tables,
+		ci:           ci,
+		errorWrapper: errorWrapper,
 	}
 }
 
-func NewKeystoreStore(readDB, writeDB *sql.DB, tables TableNames, ci qcommon.CondInterpreter) (*KeystoreStore, error) {
+func NewKeystoreStore(readDB, writeDB *sql.DB, tables TableNames, ci qcommon.CondInterpreter, errorWrapper driver.SQLErrorWrapper) (*KeystoreStore, error) {
 	return newKeystoreStore(
 		readDB,
 		writeDB,
@@ -50,6 +52,7 @@ func NewKeystoreStore(readDB, writeDB *sql.DB, tables TableNames, ci qcommon.Con
 			KeyStore: tables.KeyStore,
 		},
 		ci,
+		errorWrapper,
 	), nil
 }
 
@@ -80,7 +83,7 @@ func (db *KeystoreStore) Put(key string, state interface{}) error {
 
 	_, err = db.writeDB.Exec(query, args...)
 	if err != nil {
-		if errors2.HasCause(err, driver.UniqueKeyViolation) {
+		if errors2.HasCause(db.errorWrapper.WrapError(err), driver.UniqueKeyViolation) {
 			// then check that raw is equal to what is stored
 			rawFromDB, err := db.GetRaw(key)
 			if err != nil {

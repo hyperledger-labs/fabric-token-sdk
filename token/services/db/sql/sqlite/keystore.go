@@ -15,5 +15,5 @@ import (
 type KeystoreStore = common.KeystoreStore
 
 func NewKeystoreStore(dbs *common2.RWDB, tableNames common.TableNames) (*KeystoreStore, error) {
-	return common.NewKeystoreStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter())
+	return common.NewKeystoreStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter(), &sqlite.ErrorMapper{})
 }
