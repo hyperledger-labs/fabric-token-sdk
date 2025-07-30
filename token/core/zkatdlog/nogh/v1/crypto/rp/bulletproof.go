@@ -216,7 +216,6 @@ func NewRangeProver(
 		BitLength:            bitLength,
 		Curve:                curve,
 	}
-
 }
 
 // Prove produces a RangeProof that shows that a committed value
@@ -234,7 +233,7 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 	yInv.InvModP(p.Curve.GroupOrder)
 
 	rightGeneratorsPrime := make([]*math.G1, len(p.RightGenerators))
-	for i := 0; i < len(p.RightGenerators); i++ {
+	for i := range len(p.RightGenerators) {
 		// compute 1/y^i
 		yInv2i := yInv.PowMod(p.Curve.NewZrFromInt(int64(i)))
 		// compute the new generators H'_i = H_i^{1/y^i}
@@ -276,7 +275,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 	rho := p.Curve.NewRandomZr(rand)
 	eta := p.Curve.NewRandomZr(rand)
-	for i := uint64(0); i < p.BitLength; i++ {
+	for i := range p.BitLength {
 		b := 1 << i & p.value
 		if b > 0 {
 			b = 1
@@ -318,7 +317,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	// z^2
 	zSquare := z.PowMod(p.Curve.NewZrFromInt(2))
 	var y2i *math.Zr
-	for i := 0; i < len(left); i++ {
+	for i := range left {
 		// compute L_i - z
 		leftPrime[i] = p.Curve.ModSub(left[i], z, p.Curve.GroupOrder)
 		// compute R_i + z
@@ -441,7 +440,6 @@ func NewRangeVerifier(
 		BitLength:            bitLength,
 		Curve:                curve,
 	}
-
 }
 
 // Verify enable a rangeVerifier to checks the validity of a RangeProof
@@ -540,7 +538,7 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 	com := rp.Data.D.Mul(x)
 	com.Add(rp.Data.C)
 	rightGeneratorsPrime := make([]*math.G1, len(v.RightGenerators))
-	for i := 0; i < len(v.LeftGenerators); i++ {
+	for i := range len(v.LeftGenerators) {
 		com.Sub(v.LeftGenerators[i].Mul(z))
 		// 1/y^i
 		yInv2i := yPow[i].Copy()

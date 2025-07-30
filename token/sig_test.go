@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
@@ -84,7 +83,7 @@ func TestSignatureService_GetSigner(t *testing.T) {
 	ip.GetSignerReturns(expectedSigner, nil)
 
 	id := []byte("identity")
-	signer, err := service.GetSigner(context.Background(), id)
+	signer, err := service.GetSigner(t.Context(), id)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedSigner, signer)
@@ -105,7 +104,7 @@ func TestSignatureService_RegisterSigner(t *testing.T) {
 
 	ip.RegisterSignerReturns(nil)
 
-	err := service.RegisterSigner(context.Background(), id, signer, verifier)
+	err := service.RegisterSigner(t.Context(), id, signer, verifier)
 
 	assert.NoError(t, err)
 }
@@ -122,7 +121,7 @@ func TestSignatureService_IsMe(t *testing.T) {
 	ip.IsMeReturns(true)
 
 	id := []byte("identity")
-	isMe := service.IsMe(context.Background(), id)
+	isMe := service.IsMe(t.Context(), id)
 
 	assert.True(t, isMe)
 }

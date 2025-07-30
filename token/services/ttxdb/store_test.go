@@ -41,20 +41,21 @@ func TestDB(t *testing.T) {
 }
 
 func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.StoreService) {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 	wg := sync.WaitGroup{}
 	n := 100
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(i int) {
 			assert.NoError(t, db1.AddTransactionEndorsementAck(ctx, "1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
 			acks, err := db1.GetTransactionEndorsementAcks(ctx, "1")
 			assert.NoError(t, err)
-			assert.True(t, len(acks) != 0)
+			assert.NotEmpty(t, acks)
 			assert.NoError(t, db2.AddTransactionEndorsementAck(ctx, "2", []byte(fmt.Sprintf("bob_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
 			acks, err = db2.GetTransactionEndorsementAcks(ctx, "2")
 			assert.NoError(t, err)
-			assert.True(t, len(acks) != 0)
+			assert.NotEmpty(t, acks)
 
 			wg.Done()
 		}(i)
@@ -64,14 +65,14 @@ func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.StoreService) {
 	acks, err := db1.GetTransactionEndorsementAcks(ctx, "1")
 	assert.NoError(t, err)
 	assert.Len(t, acks, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("alice_%d", i)).String()])
 	}
 
 	acks, err = db2.GetTransactionEndorsementAcks(ctx, "2")
 	assert.NoError(t, err)
 	assert.Len(t, acks, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("bob_%d", i)).String()])
 	}
 }
@@ -84,7 +85,7 @@ func (qs qsMock) IsMine(ctx context.Context, id *token2.ID) (bool, error) {
 
 func TestTransactionRecords(t *testing.T) {
 	now := time.Now()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Transfer
 	input := simpleTransfer()
@@ -171,7 +172,7 @@ func TestTransactionRecords(t *testing.T) {
 
 func TestMovementRecords(t *testing.T) {
 	now := time.Now()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Transfer
 	input := simpleTransfer()

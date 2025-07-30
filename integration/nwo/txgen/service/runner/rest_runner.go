@@ -66,7 +66,6 @@ func (s *RestRunner) Start(ctx context.Context) error {
 			s.logger.Infof("Pushed %d suites to the stack.", len(request.Suites))
 			c.IndentedJSON(http.StatusOK, request)
 		}
-
 	})
 	go func() {
 		s.logger.Infof("Listening on %s/suites for new suites", s.address)

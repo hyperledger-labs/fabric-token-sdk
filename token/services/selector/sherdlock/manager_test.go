@@ -67,10 +67,11 @@ func TestInsufficientTokensManyReplicas(t *testing.T) {
 // Set up
 
 func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries int) ([]testutils.EnhancedManager, func()) {
+	t.Helper()
 	terminate, pgConnStr := startContainer(t)
 	replicas := make([]testutils.EnhancedManager, number)
 
-	for i := 0; i < number; i++ {
+	for i := range number {
 		replica, err := createManager(pgConnStr, backoff, maxRetries)
 		assert.NoError(t, err)
 		replicas[i] = replica
@@ -100,6 +101,7 @@ func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (tes
 }
 
 func startContainer(t *testing.T) (func(), string) {
+	t.Helper()
 	cfg := postgres2.DefaultConfig(t.Name())
 	terminate, err := postgres2.StartPostgresWithFmt([]*postgres2.ContainerConfig{cfg})
 	assert.NoError(t, err)

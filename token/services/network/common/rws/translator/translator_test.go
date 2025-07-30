@@ -50,7 +50,7 @@ var _ = Describe("Translator", func() {
 		faketransfer = &mock.TransferAction{}
 		// serial numbers
 		sn = make([]string, 3)
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			sn[i] = "sn" + strconv.Itoa(i)
 		}
 	})
@@ -151,12 +151,12 @@ var _ = Describe("Translator", func() {
 		})
 		When("created tokens cannot be added", func() {
 			BeforeEach(func() {
-				fakeRWSet.SetStateReturnsOnCall(1, errors.New("camel camel"))
+				fakeRWSet.SetStateReturnsOnCall(1, errors.New("camel"))
 			})
 			It("transfer fails", func() {
 				err := writer.Write(faketransfer)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("camel camel"))
+				Expect(err.Error()).To(ContainSubstring("camel"))
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(2))
 
 			})

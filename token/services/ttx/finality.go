@@ -66,7 +66,6 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 }
 
 func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, timeout time.Duration) (interface{}, error) {
-
 	logger.DebugfContext(ctx.Context(), "Listen to finality of [%s]", txID)
 
 	c := ctx.Context()

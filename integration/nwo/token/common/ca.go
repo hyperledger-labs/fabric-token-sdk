@@ -215,7 +215,7 @@ func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, er
 	cmd := common.NewCommand(fabricCAClientExePath, registerCommand)
 	sess, err := i.StartSession(cmd, registerCommand.SessionName())
 	if err != nil {
-		return
+		return res, err
 	}
 	gomega.Eventually(sess, i.EventuallyTimeout).Should(gexec.Exit(0))
 
@@ -230,13 +230,13 @@ func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, er
 	cmd = common.NewCommand(fabricCAClientExePath, enrollCommand)
 	sess, err = i.StartSession(cmd, enrollCommand.SessionName())
 	if err != nil {
-		return
+		return res, err
 	}
 	gomega.Eventually(sess, i.EventuallyTimeout).Should(gexec.Exit(0))
 
 	res.ID = owner
 	res.URL = userOutput
-	return
+	return res, err
 }
 
 func (i *IdemixCASupport) GenerateConfiguration() error {

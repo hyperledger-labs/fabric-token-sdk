@@ -142,11 +142,11 @@ func NewTypeAndSumWitness(bf *math.Zr, in, out []*token.Metadata, c *math.Curve)
 	outValues := make([]*math.Zr, len(out))
 	inBF := make([]*math.Zr, len(in))
 	outBF := make([]*math.Zr, len(out))
-	for i := 0; i < len(in); i++ {
+	for i := range in {
 		inValues[i] = in[i].Value
 		inBF[i] = in[i].BlindingFactor
 	}
-	for i := 0; i < len(out); i++ {
+	for i := range out {
 		outValues[i] = out[i].Value
 		outBF[i] = out[i].BlindingFactor
 	}
@@ -204,13 +204,13 @@ func (p *TypeAndSumProver) Prove() (*TypeAndSumProof, error) {
 	// sum = \prod (inputs[i]/commitmentToType)/ \prod (outputs[i]/commitmentToType)
 	// sum = G_2^r
 	sum := p.Curve.NewG1()
-	for i := 0; i < len(p.Inputs); i++ {
+	for i := range len(p.Inputs) {
 		// compute in = inputs[i]/commitmentToType
 		inputs[i] = p.Inputs[i].Copy()
 		inputs[i].Sub(p.CommitmentToType)
 		sum.Add(inputs[i])
 	}
-	for i := 0; i < len(p.Outputs); i++ {
+	for i := range len(p.Outputs) {
 		// compute out = outputs[i]/commitmentToType
 		outputs[i] = p.Outputs[i].Copy()
 		outputs[i].Sub(p.CommitmentToType)
@@ -248,7 +248,7 @@ func (p *TypeAndSumProver) computeProof(randomness *TypeAndSumProofRandomness, c
 	stp.InputBlindingFactors = make([]*math.Zr, len(p.Inputs))
 	sumBF := p.Curve.NewZrFromInt(0)
 	// generate zk proof for input values and corresponding blinding factors
-	for i := 0; i < len(p.Inputs); i++ {
+	for i := range len(p.Inputs) {
 		stp.InputValues[i] = p.Curve.ModMul(chal, p.witness.inValues[i], p.Curve.GroupOrder)
 		stp.InputValues[i] = p.Curve.ModAdd(stp.InputValues[i], randomness.inValues[i], p.Curve.GroupOrder)
 
@@ -260,7 +260,7 @@ func (p *TypeAndSumProver) computeProof(randomness *TypeAndSumProofRandomness, c
 
 	// we don't generate proof that outputs[i]/commitmentToType = G_1^vG_2^r as this is taken care of by
 	// range proofs
-	for i := 0; i < len(p.Outputs); i++ {
+	for i := range len(p.Outputs) {
 		t := p.Curve.ModSub(p.witness.outBlindingFactors[i], p.witness.typeBlindingFactor, p.Curve.GroupOrder)
 		sumBF = p.Curve.ModSub(sumBF, t, p.Curve.GroupOrder)
 	}
@@ -295,7 +295,7 @@ func (p *TypeAndSumProver) computeCommitments() (*TypeAndSumProofCommitments, *T
 	randomness.inBF = make([]*math.Zr, len(p.Inputs))
 	commitments.Inputs = make([]*math.G1, len(p.Inputs))
 
-	for i := 0; i < len(p.Inputs); i++ {
+	for i := range len(p.Inputs) {
 		// randomness to prove input values
 		randomness.inValues[i] = p.Curve.NewRandomZr(rand)
 		// randomness to prove input blinding factors
@@ -343,7 +343,7 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 
 	inComs := make([]*math.G1, len(inputs))
 
-	for i := 0; i < len(v.Inputs); i++ {
+	for i := range len(v.Inputs) {
 		if stp.InputValues[i] == nil {
 			return errors.New("invalid sum and type proof")
 		}
@@ -356,7 +356,7 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 		inComs[i].Sub(inputs[i].Mul(stp.Challenge))
 	}
 
-	for i := 0; i < len(v.Outputs); i++ {
+	for i := range len(v.Outputs) {
 		outputs[i] = v.Outputs[i].Copy()
 		outputs[i].Sub(stp.CommitmentToType)
 		sum.Sub(outputs[i])

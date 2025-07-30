@@ -195,6 +195,7 @@ func (r *WalletRegistry) GetIdentityMetadata(ctx context.Context, identity drive
 func (r *WalletRegistry) GetWalletID(ctx context.Context, identity driver.Identity) (string, error) {
 	wID, err := r.Storage.GetWalletID(ctx, identity, int(r.Role.ID()))
 	if err != nil {
+		//nolint:nilerr
 		return "", nil
 	}
 	r.Logger.DebugfContext(ctx, "wallet [%s] is bound to identity [%s]", wID, identity)

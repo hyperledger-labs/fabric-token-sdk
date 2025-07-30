@@ -51,7 +51,7 @@ func (s *EscrowAuth) IsMine(ctx context.Context, tok *token3.Token) (string, []s
 		return "", nil, false
 	}
 	var ids []string
-	for i := 0; i < len(escrow.Identities); i++ {
+	for i := range len(escrow.Identities) {
 		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s] as an escrow co-owner?", view.Identity(tok.Owner), tok.Type, tok.Quantity)
 		if wallet, err := s.WalletService.OwnerWallet(ctx, escrow.Identities[i]); err == nil {
 			logger.DebugfContext(ctx, "Is Mine [%s,%s,%s] as an escrow co-owner? Yes", view.Identity(tok.Owner), tok.Type, tok.Quantity)

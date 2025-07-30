@@ -25,7 +25,7 @@ func TestGetTMSs(t *testing.T) {
 	// compare the TMSs obtained from Configurations with the corresponding TMSs obtained from ConfigurationFor
 	tmss, err := tokenSDKConfig.Configurations()
 	assert.NoError(t, err)
-	assert.Equal(t, 2, len(tmss))
+	assert.Len(t, tmss, 2)
 	for _, tms := range tmss {
 		tms2, err := tokenSDKConfig.ConfigurationFor(tms.ID().Network, tms.ID().Channel, tms.ID().Namespace)
 		assert.NoError(t, err)

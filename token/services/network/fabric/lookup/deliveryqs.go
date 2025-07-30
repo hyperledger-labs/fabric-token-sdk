@@ -157,5 +157,4 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 		return
 	}
 	logger.DebugfContext(ctx, "finished scanning blocks starting from [%d]", startingBlock)
-
 }

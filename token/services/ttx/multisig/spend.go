@@ -145,7 +145,7 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 		counter++
 	}
 
-	for i := 0; i < counter; i++ {
+	for range counter {
 		logger.DebugfContext(context.Context(), "Wait for answer")
 		// TODO: put a timeout
 		a := <-answerChannel

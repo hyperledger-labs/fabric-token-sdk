@@ -42,7 +42,7 @@ func BenchmarkActionMarshalling(b *testing.B) {
 	b.Run("With Protos", func(b *testing.B) {
 		rand, err := curve.Rand()
 		assert.NoError(b, err, "failed to get random number")
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			b.StopTimer()
 			action := randomAction(curve, rand, b)
 			b.StartTimer()
@@ -54,7 +54,7 @@ func BenchmarkActionMarshalling(b *testing.B) {
 	b.Run("With json", func(b *testing.B) {
 		rand, err := curve.Rand()
 		assert.NoError(b, err, "failed to get random number")
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			b.StopTimer()
 			action := randomAction(curve, rand, b)
 			b.StartTimer()

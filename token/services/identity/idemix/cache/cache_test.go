@@ -19,12 +19,12 @@ func TestIdentityCache(t *testing.T) {
 	c := NewIdentityCache(func(context.Context, []byte) (driver.Identity, []byte, error) {
 		return []byte("hello world"), []byte("audit"), nil
 	}, 100, nil, NewMetrics(&disabled.Provider{}))
-	id, audit, err := c.Identity(context.Background(), nil)
+	id, audit, err := c.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Identity([]byte("hello world")), id)
 	assert.Equal(t, []byte("audit"), audit)
 
-	id, audit, err = c.Identity(context.Background(), nil)
+	id, audit, err = c.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Identity([]byte("hello world")), id)
 	assert.Equal(t, []byte("audit"), audit)

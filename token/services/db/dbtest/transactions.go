@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -26,6 +25,7 @@ import (
 )
 
 func TransactionsTest(t *testing.T, cfgProvider cfgProvider) {
+	t.Helper()
 	for _, c := range tokenTransactionDBCases {
 		driver := cfgProvider(c.Name)
 		db, err := driver.NewOwnerTransaction("", c.Name)
@@ -43,21 +43,22 @@ var tokenTransactionDBCases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.TokenTransactionStore)
 }{
-	// {"FailsIfRequestDoesNotExist", TFailsIfRequestDoesNotExist},
-	// {"Status", TStatus},
-	// {"StoresTimestamp", TStoresTimestamp},
-	// {"Movements", TMovements},
-	// {"Transaction", TTransaction},
-	// {"TokenRequest", TTokenRequest},
-	// {"AllowsSameTxID", TAllowsSameTxID},
-	// {"Rollback", TRollback},
+	{"FailsIfRequestDoesNotExist", TFailsIfRequestDoesNotExist},
+	{"Status", TStatus},
+	{"StoresTimestamp", TStoresTimestamp},
+	{"Movements", TMovements},
+	{"Transaction", TTransaction},
+	{"TokenRequest", TTokenRequest},
+	{"AllowsSameTxID", TAllowsSameTxID},
+	{"Rollback", TRollback},
 	{"TransactionQueries", TTransactionQueries},
-	// {"ValidationRecordQueries", TValidationRecordQueries},
-	// {"TEndorserAcks", TEndorserAcks},
+	{"ValidationRecordQueries", TValidationRecordQueries},
+	{"TEndorserAcks", TEndorserAcks},
 }
 
 func TFailsIfRequestDoesNotExist(t *testing.T, db driver.TokenTransactionStore) {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 	tx := driver.TransactionRecord{
 		TxID:         "tx1",
 		ActionType:   driver.Transfer,
@@ -95,7 +96,8 @@ func TFailsIfRequestDoesNotExist(t *testing.T, db driver.TokenTransactionStore) 
 }
 
 func TStatus(t *testing.T, db driver.TokenTransactionStore) {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 	tx := driver.TransactionRecord{
 		TxID:         "tx1",
 		ActionType:   driver.Transfer,
@@ -136,7 +138,7 @@ func TStatus(t *testing.T, db driver.TokenTransactionStore) {
 	assert.Len(t, mvs, 1)
 	assert.Equal(t, driver.Pending, mvs[0].Status, "movement status should be pending")
 
-	assert.NoError(t, db.SetStatus(context.TODO(), "tx1", driver.Confirmed, "message"))
+	assert.NoError(t, db.SetStatus(t.Context(), "tx1", driver.Confirmed, "message"))
 	s, mess, err = db.GetStatus(ctx, "tx1")
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Confirmed, s, "status should be changed to confirmed")
@@ -153,7 +155,8 @@ func TStatus(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TStoresTimestamp(t *testing.T, db driver.TokenTransactionStore) {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
 	assert.NoError(t, w.AddTokenRequest(ctx, "tx1", []byte(""), map[string][]byte{}, nil, driver2.PPHash("tr")))
@@ -184,7 +187,8 @@ func TStoresTimestamp(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TMovements(t *testing.T, db driver.TokenTransactionStore) {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
 	assert.NoError(t, w.AddTokenRequest(ctx, "0", []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
@@ -236,13 +240,13 @@ func TMovements(t *testing.T, db driver.TokenTransactionStore) {
 	assert.NoError(t, err)
 	assert.Len(t, records, 1)
 
-	assert.NoError(t, db.SetStatus(context.TODO(), "2", driver.Confirmed, "message"))
+	assert.NoError(t, db.SetStatus(t.Context(), "2", driver.Confirmed, "message"))
 	records, err = db.QueryMovements(ctx, driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Pending}, SearchDirection: driver.FromLast, MovementDirection: driver.Received, NumRecords: 3})
 	assert.NoError(t, err)
 	assert.Len(t, records, 2)
 
 	// setting same status twice should not change the results
-	assert.NoError(t, db.SetStatus(context.TODO(), "2", driver.Confirmed, ""))
+	assert.NoError(t, db.SetStatus(t.Context(), "2", driver.Confirmed, ""))
 
 	records, err = db.QueryMovements(ctx, driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Confirmed}})
 	assert.NoError(t, err)
@@ -250,7 +254,8 @@ func TMovements(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TTransaction(t *testing.T, db driver.TokenTransactionStore) {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 	var txs []driver.TransactionRecord
 
 	t0 := time.Now()
@@ -273,9 +278,9 @@ func TTransaction(t *testing.T, db driver.TokenTransactionStore) {
 
 	pm := map[string][]byte{"key": []byte("val")}
 
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		now := time.Now()
-		ctx := context.Background()
+		ctx := t.Context()
 		tr := driver.TransactionRecord{
 			TxID:         fmt.Sprintf("tx%d", i),
 			ActionType:   driver.Issue,
@@ -329,10 +334,10 @@ func TTransaction(t *testing.T, db driver.TokenTransactionStore) {
 	assert.Empty(t, tr)
 
 	// update status
-	assert.NoError(t, db.SetStatus(context.TODO(), "tx2", driver.Confirmed, "pineapple"))
-	assert.NoError(t, db.SetStatus(context.TODO(), "tx3", driver.Confirmed, ""))
+	assert.NoError(t, db.SetStatus(t.Context(), "tx2", driver.Confirmed, "pineapple"))
+	assert.NoError(t, db.SetStatus(t.Context(), "tx3", driver.Confirmed, ""))
 
-	status, message, err := db.GetStatus(context.Background(), "tx2")
+	status, message, err := db.GetStatus(t.Context(), "tx2")
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Confirmed, status)
 	assert.Equal(t, "pineapple", message)
@@ -373,6 +378,7 @@ func TTransaction(t *testing.T, db driver.TokenTransactionStore) {
 const explanation = "transactions [%s]=[%s]"
 
 func assertTxEqual(t *testing.T, exp *driver.TransactionRecord, act *driver.TransactionRecord) {
+	t.Helper()
 	if act == nil {
 		t.Errorf("expected tx %q, got nil", exp.TxID)
 		return
@@ -397,7 +403,8 @@ func assertTxEqual(t *testing.T, exp *driver.TransactionRecord, act *driver.Tran
 }
 
 func TTokenRequest(t *testing.T, db driver.TokenTransactionStore) {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
 	tr1 := []byte("arbitrary bytes")
@@ -407,7 +414,7 @@ func TTokenRequest(t *testing.T, db driver.TokenTransactionStore) {
 	err = w.AddTokenRequest(ctx, "id2", tr2, map[string][]byte{}, nil, []byte("tr"))
 	assert.NoError(t, err)
 	assert.NoError(t, w.Commit())
-	assert.NoError(t, db.SetStatus(context.TODO(), "id2", driver.Confirmed, ""))
+	assert.NoError(t, db.SetStatus(t.Context(), "id2", driver.Confirmed, ""))
 
 	trq, err := db.GetTokenRequest(ctx, "id1")
 	assert.NoError(t, err)
@@ -502,7 +509,8 @@ func TTokenRequest(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TAllowsSameTxID(t *testing.T, db driver.TokenTransactionStore) {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 
 	// bob sends 10 to alice
 	tr1 := driver.TransactionRecord{
@@ -540,7 +548,8 @@ func TAllowsSameTxID(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TRollback(t *testing.T, db driver.TokenTransactionStore) {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
 	assert.NoError(t, w.AddTokenRequest(ctx, "1", []byte("arbitrary bytes"), map[string][]byte{}, nil, driver2.PPHash("tr")))
@@ -572,11 +581,12 @@ func TRollback(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func TTransactionQueries(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	now := time.Now()
 	justBefore := now.Add(-time.Millisecond)
 	justAfter := now.Add(time.Millisecond)
 	lastYear := now.AddDate(-1, 0, 0)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tr := []driver.TransactionRecord{
 		{
@@ -797,7 +807,7 @@ func TTransactionQueries(t *testing.T, db driver.TokenTransactionStore) {
 	assert.NoError(t, w.Commit())
 	for _, r := range tr {
 		if r.Status != driver.Pending {
-			assert.NoError(t, db.SetStatus(context.TODO(), r.TxID, r.Status, ""))
+			assert.NoError(t, db.SetStatus(t.Context(), r.TxID, r.Status, ""))
 		}
 	}
 
@@ -810,7 +820,8 @@ func TTransactionQueries(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func getTransactions(t *testing.T, db driver.TokenTransactionStore, params driver.QueryTransactionsParams) []*driver.TransactionRecord {
-	records, err := db.QueryTransactions(context.Background(), params, pagination.None())
+	t.Helper()
+	records, err := db.QueryTransactions(t.Context(), params, pagination.None())
 	assert.NoError(t, err)
 	txs, err := iterators.ReadAllPointers(records.Items)
 	assert.NoError(t, err)
@@ -818,8 +829,9 @@ func getTransactions(t *testing.T, db driver.TokenTransactionStore, params drive
 }
 
 func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionStore) {
+	t.Helper()
 	beforeTx := time.Now().UTC().Add(-1 * time.Second)
-	ctx := context.Background()
+	ctx := t.Context()
 	exp := []driver.ValidationRecord{
 		{
 			TxID:         "1",
@@ -861,7 +873,7 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionStore) {
 	assert.NoError(t, w.Commit(), "Commit")
 	for _, e := range exp {
 		if e.Status != driver.Pending {
-			assert.NoError(t, db.SetStatus(context.TODO(), e.TxID, e.Status, ""))
+			assert.NoError(t, db.SetStatus(t.Context(), e.TxID, e.Status, ""))
 		}
 	}
 	all := getValidationRecords(t, db, driver.QueryValidationRecordsParams{})
@@ -869,6 +881,9 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionStore) {
 
 	for i, vr := range exp {
 		assert.Equal(t, vr.TxID, all[i].TxID, fmt.Sprintf("%v", all[i]))
+		if len(all[i].TokenRequest) == 0 {
+			all[i].TokenRequest = []byte{}
+		}
 		assert.Equal(t, vr.TokenRequest, all[i].TokenRequest, fmt.Sprintf("%v - %d", all[i], len(all[i].TokenRequest)))
 		assert.Equal(t, vr.Metadata, all[i].Metadata, fmt.Sprintf("%v", all[i]))
 		assert.Equal(t, vr.Status, all[i].Status, fmt.Sprintf("%v", all[i]))
@@ -899,7 +914,8 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionStore) {
 }
 
 func getValidationRecords(t *testing.T, db driver.TokenTransactionStore, params driver.QueryValidationRecordsParams) []*driver.ValidationRecord {
-	records, err := db.QueryValidations(context.Background(), params)
+	t.Helper()
+	records, err := db.QueryValidations(t.Context(), params)
 	assert.NoError(t, err)
 	txs, err := iterators.ReadAllPointers(records)
 	assert.NoError(t, err)
@@ -907,12 +923,13 @@ func getValidationRecords(t *testing.T, db driver.TokenTransactionStore, params 
 }
 
 func TEndorserAcks(t *testing.T, db driver.TokenTransactionStore) {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 	createTestTransaction(t, db, "1")
 	wg := sync.WaitGroup{}
 	n := 100
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(i int) {
 			assert.NoError(t, db.AddTransactionEndorsementAck(ctx, "1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
 			acks, err := db.GetTransactionEndorsementAcks(ctx, "1")
@@ -926,17 +943,18 @@ func TEndorserAcks(t *testing.T, db driver.TokenTransactionStore) {
 	acks, err := db.GetTransactionEndorsementAcks(ctx, "1")
 	assert.NoError(t, err)
 	assert.Len(t, acks, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("alice_%d", i)).String()])
 	}
 }
 
 func createTestTransaction(t *testing.T, db driver.TokenTransactionStore, txID string) {
+	t.Helper()
 	w, err := db.BeginAtomicWrite()
 	if err != nil {
 		t.Fatalf("error creating transaction while trying to test something else: %s", err)
 	}
-	if err := w.AddTokenRequest(context.Background(), txID, []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")); err != nil {
+	if err := w.AddTokenRequest(t.Context(), txID, []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")); err != nil {
 		t.Fatalf("error creating token request while trying to test something else: %s", err)
 	}
 	tr1 := driver.TransactionRecord{
@@ -949,7 +967,7 @@ func createTestTransaction(t *testing.T, db driver.TokenTransactionStore, txID s
 		Timestamp:    time.Now().Local().UTC(),
 		Status:       driver.Pending,
 	}
-	if err := w.AddTransaction(context.Background(), tr1); err != nil {
+	if err := w.AddTransaction(t.Context(), tr1); err != nil {
 		t.Fatalf("error creating transaction while trying to test something else: %s", err)
 	}
 	if err := w.Commit(); err != nil {

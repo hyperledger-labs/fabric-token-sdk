@@ -95,7 +95,7 @@ func (t *Token) Validate(checkOwner bool) error {
 func computeTokens(tw []*Metadata, pp []*math.G1, c *math.Curve) ([]*math.G1, error) {
 	tokens := make([]*math.G1, len(tw))
 	var err error
-	for i := 0; i < len(tw); i++ {
+	for i := range tw {
 		hash := c.HashToZr([]byte(tw[i].Type))
 		tokens[i], err = commit([]*math.Zr{hash, tw[i].Value, tw[i].BlindingFactor}, pp, c)
 		if err != nil {

@@ -64,7 +64,7 @@ var _ = Describe("Sender", func() {
 		inBF = make([]*math.Zr, 3)
 		rand, err := c.Rand()
 		Expect(err).NotTo(HaveOccurred())
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			inBF[i] = c.NewRandomZr(rand)
 		}
 		outvalues = make([]uint64, 2)
@@ -104,7 +104,7 @@ var _ = Describe("Sender", func() {
 
 				sig, err := sender.SignTokenActions(raw)
 				Expect(fakeSigningIdentity.SignCallCount()).To(Equal(3))
-				Expect(len(sig)).To(Equal(3))
+				Expect(sig).To(HaveLen(3))
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -132,7 +132,7 @@ var _ = Describe("Sender", func() {
 
 func PrepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
 	tokens := make([]*math.G1, len(values))
-	for i := 0; i < len(values); i++ {
+	for i := range values {
 		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
 	}
 	return tokens

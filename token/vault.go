@@ -77,7 +77,7 @@ func (q *QueryEngine) ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]
 	var tokens []*token.Token
 	var err error
 
-	for i := 0; i < q.NumRetries; i++ {
+	for i := range q.NumRetries {
 		tokens, err = q.qe.ListAuditTokens(ctx, ids...)
 
 		if err != nil {

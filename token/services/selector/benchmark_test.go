@@ -61,8 +61,8 @@ func BenchmarkSelectorSingle(b *testing.B) {
 		setup(&s)
 		b.ResetTimer()
 		b.Run(s.name, func(b *testing.B) {
-			for n := 0; n < b.N; n++ {
-				ids, _, err := s.selector.Select(context.Background(), s.filter, testutils.SelectQuantity, testutils.TokenType)
+			for range b.N {
+				ids, _, err := s.selector.Select(b.Context(), s.filter, testutils.SelectQuantity, testutils.TokenType)
 				if err != nil {
 					b.Error("unexpected error", err)
 				}
@@ -100,7 +100,7 @@ func BenchmarkSelectorParallel(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					// select
-					ids, _, err := s.selector.Select(context.Background(), s.filter, testutils.SelectQuantity, testutils.TokenType)
+					ids, _, err := s.selector.Select(b.Context(), s.filter, testutils.SelectQuantity, testutils.TokenType)
 					if err != nil {
 						b.Error("unexpected error", err)
 					}
@@ -118,11 +118,9 @@ func BenchmarkSelectorParallel(b *testing.B) {
 		cleanup(&s)
 		wg.Wait()
 	}
-
 }
 
 func setup(s *Setting) {
-
 	walletID := "wallet0"
 	walletOwner := []byte(walletID)
 
@@ -137,7 +135,7 @@ func setup(s *Setting) {
 
 	// populate walletOwner
 	qs := testutils.NewMockQueryService()
-	for i := 0; i < s.tokens; i++ {
+	for i := range s.tokens {
 		q := token2.NewOneQuantity(testutils.TokenQuantityPrecision)
 		t := &token2.UnspentToken{
 			Id:       token2.ID{TxId: strconv.Itoa(i), Index: 0},

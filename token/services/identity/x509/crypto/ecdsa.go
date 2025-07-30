@@ -84,7 +84,6 @@ func IsLowS(k *ecdsa.PublicKey, s *big.Int) (bool, error) {
 	}
 
 	return s.Cmp(halfOrder) != 1, nil
-
 }
 
 // PemDecodeKey takes bytes and returns a Go key

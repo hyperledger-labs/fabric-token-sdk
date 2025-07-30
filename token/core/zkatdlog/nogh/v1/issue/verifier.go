@@ -44,7 +44,7 @@ func (v *Verifier) Verify(proof []byte) error {
 	// verify RangeCorrectness proof
 	commitmentToType := tp.SameType.CommitmentToType.Copy()
 	coms := make([]*math.G1, len(v.SameType.Tokens))
-	for i := 0; i < len(v.SameType.Tokens); i++ {
+	for i := range len(v.SameType.Tokens) {
 		coms[i] = v.SameType.Tokens[i].Copy()
 		coms[i].Sub(commitmentToType)
 	}

@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
@@ -81,7 +80,7 @@ func TestCertificationClient_IsCertified(t *testing.T) {
 	certificationClient.IsCertifiedReturns(true)
 
 	id := &token.ID{TxId: "a_transaction", Index: 0}
-	isCertified := client.IsCertified(context.Background(), id)
+	isCertified := client.IsCertified(t.Context(), id)
 
 	assert.True(t, isCertified)
 }
@@ -96,7 +95,7 @@ func TestCertificationClient_RequestCertification(t *testing.T) {
 	certificationClient.RequestCertificationReturns(nil)
 
 	ids := []*token.ID{{TxId: "a_transaction", Index: 0}}
-	err := client.RequestCertification(context.Background(), ids...)
+	err := client.RequestCertification(t.Context(), ids...)
 
 	assert.NoError(t, err)
 }
@@ -127,7 +126,7 @@ func TestCertificationClient_RequestCertification_Error(t *testing.T) {
 	certificationClient.RequestCertificationReturns(errors.New("mocked error"))
 
 	ids := []*token.ID{{TxId: "a_transaction", Index: 0}}
-	err := client.RequestCertification(context.Background(), ids...)
+	err := client.RequestCertification(t.Context(), ids...)
 
 	assert.Error(t, err)
 }

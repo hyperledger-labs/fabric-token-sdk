@@ -44,8 +44,8 @@ var _ = Describe("Input/Output well formedness", func() {
 				Expect(proof.Challenge).NotTo(BeNil())
 				Expect(proof.EqualityOfSum).NotTo(BeNil())
 				Expect(proof.Type).NotTo(BeNil())
-				Expect(len(proof.InputBlindingFactors)).To(Equal(2))
-				Expect(len(proof.InputValues)).To(Equal(2))
+				Expect(proof.InputBlindingFactors).To(HaveLen(2))
+				Expect(proof.InputValues).To(HaveLen(2))
 			})
 		})
 	})
@@ -151,7 +151,7 @@ func preparePedersenParameters(c *math.Curve) []*math.G1 {
 
 	pp := make([]*math.G1, 3)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		pp[i] = c.GenG1.Mul(c.NewRandomZr(rand))
 	}
 	return pp
@@ -165,10 +165,10 @@ func prepareIOCProver(pp []*math.G1, c *math.Curve) (*transfer.TypeAndSumWitness
 	outBF := make([]*math.Zr, 3)
 	inValues := make([]uint64, 2)
 	outValues := make([]uint64, 3)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		inBF[i] = c.NewRandomZr(rand)
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		outBF[i] = c.NewRandomZr(rand)
 	}
 	ttype := token2.Type("ABC")
@@ -204,14 +204,12 @@ func prepareInputsOutputs(inValues, outValues []uint64, inBF, outBF []*math.Zr, 
 		inputs[i] = pp[0].Mul(c.HashToZr([]byte(ttype)))
 		inputs[i].Add(pp[1].Mul(c.NewZrFromInt(int64(inValues[i]))))
 		inputs[i].Add(pp[2].Mul(inBF[i]))
-
 	}
 
 	for i := 0; i < len(outputs); i++ {
 		outputs[i] = pp[0].Mul(c.HashToZr([]byte(ttype)))
 		outputs[i].Add(pp[1].Mul(c.NewZrFromInt(int64(outValues[i]))))
 		outputs[i].Add(pp[2].Mul(outBF[i]))
-
 	}
 	return inputs, outputs
 }

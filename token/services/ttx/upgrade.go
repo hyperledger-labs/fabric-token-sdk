@@ -80,7 +80,6 @@ func RequestTokensUpgradeForRecipient(context view.Context, issuer view.Identity
 }
 
 func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, error) {
-
 	logger.DebugfContext(context.Context(), "Respond request recipient identity using wallet [%s]", r.Wallet)
 
 	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)

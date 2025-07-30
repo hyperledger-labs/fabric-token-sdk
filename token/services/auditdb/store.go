@@ -244,7 +244,7 @@ func (d *StoreService) GetStatus(ctx context.Context, txID string) (TxStatus, st
 	logger.DebugfContext(ctx, "get status [%s]...", txID)
 	status, message, err := d.db.GetStatus(ctx, txID)
 	if err != nil {
-		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)
+		return Unknown, "", errors.Wrapf(err, "failed getting status [%s]", txID)
 	}
 	logger.DebugfContext(ctx, "Got status [%s][%s]", txID, status)
 	return status, message, nil
