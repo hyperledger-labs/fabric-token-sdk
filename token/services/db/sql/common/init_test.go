@@ -33,7 +33,7 @@ func TestGetTableNames(t *testing.T) {
 		IdentityInfo:           "fsc_id_info",
 		Signers:                "fsc_id_signers",
 		TokenLocks:             "fsc_tkn_locks",
-		KeyStore:               "fsc_keystore",
+		KeyStore:               "fsc_key_store",
 	}, names)
 
 	names, err = GetTableNames("valid_prefix")

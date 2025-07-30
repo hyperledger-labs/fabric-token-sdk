@@ -14,7 +14,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/keystoredb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,7 +23,7 @@ func TestDB(t *testing.T) {
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 
-	manager := identitydb.NewStoreServiceManager(cp, multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp, sqlite2.NewDbProvider())))
+	manager := keystoredb.NewStoreServiceManager(cp, multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp, sqlite2.NewDbProvider())))
 	_, err = manager.StoreServiceByTMSId(token2.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 }
