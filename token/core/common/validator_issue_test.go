@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
@@ -85,7 +84,7 @@ func TestIssueApplicationDataValidate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx, check := tt.context()
-			err := IssueApplicationDataValidate(context.Background(), ctx)
+			err := IssueApplicationDataValidate(t.Context(), ctx)
 			if tt.err {
 				assert.Error(t, err)
 				assert.EqualError(t, err, tt.errMsg)

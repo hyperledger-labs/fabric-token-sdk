@@ -53,7 +53,7 @@ func TestAnchorInContext(t *testing.T) {
 	)
 
 	// check anchor in the context for an issue action
-	ctx := context.Background()
+	ctx := t.Context()
 	err := v.VerifyIssue(ctx, anchor, nil, &mock.IssueAction{}, nil, nil, nil)
 	require.NoError(t, err)
 	err = v.VerifyIssue(ctx, anotherAnchor, nil, &mock.IssueAction{}, nil, nil, nil)
