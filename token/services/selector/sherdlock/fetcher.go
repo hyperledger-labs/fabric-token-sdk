@@ -173,14 +173,14 @@ func newCachedFetcher(tokenDB TokenDB, freshnessInterval time.Duration, maxQueri
 	}
 }
 
-func (f *cachedFetcher) update() {
+func (f *cachedFetcher) update(ctx context.Context) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if !f.isCacheStale() && !f.isCacheOverused() {
-		logger.Debugf("Cache renewed in the meantime by another process")
+		logger.DebugfContext(ctx, "Cache renewed in the meantime by another process")
 		return
 	}
-	logger.Debugf("Renew token cache")
+	logger.DebugfContext(ctx, "Renew token cache")
 	it, err := f.tokenDB.SpendableTokensIteratorBy(context.Background(), "", "")
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
@@ -191,7 +191,7 @@ func (f *cachedFetcher) update() {
 	m := map[string][]*token2.UnspentTokenInWallet{}
 	for t, err := it.Next(); err == nil && t != nil; t, err = it.Next() {
 		key := tokenKey(t.WalletID, t.Type)
-		logger.Debugf("Adding token with key [%s]", key)
+		logger.DebugfContext(ctx, "Adding token with key [%s]", key)
 		m[key] = append(m[key], t)
 	}
 	its := map[string]permutatableIterator[*token2.UnspentTokenInWallet]{}
@@ -208,13 +208,13 @@ func (f *cachedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID st
 	defer atomic.AddUint32(&f.queriesResponded, 1)
 	if f.isCacheOverused() {
 		logger.DebugfContext(ctx, "Overused data. Soft refresh (in the background)...")
-		go f.update()
+		go f.update(context.Background())
 	}
 	f.mu.RLock()
 	if f.isCacheStale() {
 		f.mu.RUnlock()
 		logger.DebugfContext(ctx, "Stale data. Hard refresh (now)...")
-		f.update()
+		f.update(ctx)
 		f.mu.RLock()
 	}
 

@@ -203,7 +203,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			TxID:    txIDRaw,
 			Signer:  signerIdentity,
 		}
-		logger.Debugf("collecting signature [%d] on request from [%s]", i, signerIdentity)
+		logger.DebugfContext(context.Context(), "collecting signature [%d] on request from [%s]", i, signerIdentity)
 
 		// Case: the identity is a multi-sig identity
 		ok, multiSigners, err := multisig.Unwrap(signerIdentity)

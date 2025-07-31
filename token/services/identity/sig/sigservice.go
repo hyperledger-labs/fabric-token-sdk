@@ -292,7 +292,7 @@ func (o *Service) GetSignerInfo(ctx context.Context, identity driver.Identity) (
 	return o.storage.GetSignerInfo(ctx, identity)
 }
 
-func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error) {
+func (o *Service) GetVerifier(ctx context.Context, identity driver.Identity) (driver.Verifier, error) {
 	idHash := identity.UniqueID()
 
 	// check cache
@@ -327,7 +327,7 @@ func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error)
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
 	}
-	logger.Debugf("add deserialized verifier for [%s]:[%s]", idHash, logging.Identifier(verifier))
+	logger.DebugfContext(ctx, "add deserialized verifier for [%s]:[%s]", idHash, logging.Identifier(verifier))
 	o.verifiers[idHash] = entry
 	return verifier, nil
 }

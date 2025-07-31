@@ -54,5 +54,5 @@ type IdentityProvider interface {
 	Bind(ctx context.Context, longTerm Identity, ephemeral Identity, copyAll bool) error
 
 	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
-	RegisterRecipientIdentity(id Identity) error
+	RegisterRecipientIdentity(ctx context.Context, id Identity) error
 }

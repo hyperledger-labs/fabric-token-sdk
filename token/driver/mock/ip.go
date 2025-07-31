@@ -131,10 +131,11 @@ type IdentityProvider struct {
 	registerRecipientDataReturnsOnCall map[int]struct {
 		result1 error
 	}
-	RegisterRecipientIdentityStub        func(driver.Identity) error
+	RegisterRecipientIdentityStub        func(context.Context, driver.Identity) error
 	registerRecipientIdentityMutex       sync.RWMutex
 	registerRecipientIdentityArgsForCall []struct {
-		arg1 driver.Identity
+		arg1 context.Context
+		arg2 driver.Identity
 	}
 	registerRecipientIdentityReturns struct {
 		result1 error
@@ -767,18 +768,19 @@ func (fake *IdentityProvider) RegisterRecipientDataReturnsOnCall(i int, result1 
 	}{result1}
 }
 
-func (fake *IdentityProvider) RegisterRecipientIdentity(arg1 driver.Identity) error {
+func (fake *IdentityProvider) RegisterRecipientIdentity(arg1 context.Context, arg2 driver.Identity) error {
 	fake.registerRecipientIdentityMutex.Lock()
 	ret, specificReturn := fake.registerRecipientIdentityReturnsOnCall[len(fake.registerRecipientIdentityArgsForCall)]
 	fake.registerRecipientIdentityArgsForCall = append(fake.registerRecipientIdentityArgsForCall, struct {
-		arg1 driver.Identity
-	}{arg1})
+		arg1 context.Context
+		arg2 driver.Identity
+	}{arg1, arg2})
 	stub := fake.RegisterRecipientIdentityStub
 	fakeReturns := fake.registerRecipientIdentityReturns
-	fake.recordInvocation("RegisterRecipientIdentity", []interface{}{arg1})
+	fake.recordInvocation("RegisterRecipientIdentity", []interface{}{arg1, arg2})
 	fake.registerRecipientIdentityMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -792,17 +794,17 @@ func (fake *IdentityProvider) RegisterRecipientIdentityCallCount() int {
 	return len(fake.registerRecipientIdentityArgsForCall)
 }
 
-func (fake *IdentityProvider) RegisterRecipientIdentityCalls(stub func(driver.Identity) error) {
+func (fake *IdentityProvider) RegisterRecipientIdentityCalls(stub func(context.Context, driver.Identity) error) {
 	fake.registerRecipientIdentityMutex.Lock()
 	defer fake.registerRecipientIdentityMutex.Unlock()
 	fake.RegisterRecipientIdentityStub = stub
 }
 
-func (fake *IdentityProvider) RegisterRecipientIdentityArgsForCall(i int) driver.Identity {
+func (fake *IdentityProvider) RegisterRecipientIdentityArgsForCall(i int) (context.Context, driver.Identity) {
 	fake.registerRecipientIdentityMutex.RLock()
 	defer fake.registerRecipientIdentityMutex.RUnlock()
 	argsForCall := fake.registerRecipientIdentityArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *IdentityProvider) RegisterRecipientIdentityReturns(result1 error) {

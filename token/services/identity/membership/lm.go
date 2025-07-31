@@ -117,15 +117,15 @@ func (l *LocalMembership) IsMe(ctx context.Context, id driver.Identity) bool {
 	return l.signerService.IsMe(ctx, id)
 }
 
-func (l *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
+func (l *LocalMembership) GetIdentifier(ctx context.Context, id driver.Identity) (string, error) {
 	l.localIdentitiesMutex.RLock()
 	defer l.localIdentitiesMutex.RUnlock()
 
 	for _, label := range []string{string(id), id.String()} {
-		l.logger.Debugf("get local identity by label [%s]", hash.Hashable(label))
-		r := l.getLocalIdentity(label)
+		l.logger.DebugfContext(ctx, "get local identity by label [%s]", hash.Hashable(label))
+		r := l.getLocalIdentity(ctx, label)
 		if r == nil {
-			l.logger.Debugf(
+			l.logger.DebugfContext(ctx,
 				"local identity not found for label [%s] [%v]",
 				logging.Keys(l.localIdentitiesByName),
 				logging.Printable(label),
@@ -144,12 +144,12 @@ func (l *LocalMembership) GetDefaultIdentifier() string {
 	return l.getDefaultIdentifier()
 }
 
-func (l *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (idriver.IdentityInfo, error) {
+func (l *LocalMembership) GetIdentityInfo(ctx context.Context, label string, auditInfo []byte) (idriver.IdentityInfo, error) {
 	l.localIdentitiesMutex.RLock()
 	defer l.localIdentitiesMutex.RUnlock()
 
-	l.logger.Debugf("get identity info by label [%s][%s]", label, hash.Hashable(label))
-	localIdentity := l.getLocalIdentity(label)
+	l.logger.DebugfContext(ctx, "get identity info by label [%s][%s]", label, hash.Hashable(label))
+	localIdentity := l.getLocalIdentity(ctx, label)
 	if localIdentity == nil {
 		return nil, errors2.Errorf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
 	}
@@ -302,7 +302,7 @@ func (l *LocalMembership) registerLocalIdentity(ctx context.Context, identityCon
 	var errs []error
 	var keyManager KeyManager
 	var priority int
-	l.logger.Debugf("try to load identity with [%d] key managers [%v]", len(l.KeyManagerProviders), l.KeyManagerProviders)
+	l.logger.DebugfContext(ctx, "try to load identity with [%d] key managers [%v]", len(l.KeyManagerProviders), l.KeyManagerProviders)
 	for i, p := range l.KeyManagerProviders {
 		var err error
 		keyManager, err = p.Get(identityConfig)
@@ -322,20 +322,20 @@ func (l *LocalMembership) registerLocalIdentity(ctx context.Context, identityCon
 		)
 	}
 
-	l.logger.Debugf("append local identity for [%s]", identityConfig.ID)
+	l.logger.DebugfContext(ctx, "append local identity for [%s]", identityConfig.ID)
 	if err := l.addLocalIdentity(identityConfig, keyManager, defaultIdentity, priority); err != nil {
 		return errors2.Wrapf(err, "failed to add local identity for [%s]", identityConfig.ID)
 	}
 
 	if exists, _ := l.identityDB.ConfigurationExists(ctx, identityConfig.ID, l.IdentityType, identityConfig.URL); !exists {
-		l.logger.Debugf("does the configuration already exists for [%s]? no, add it", identityConfig.ID)
+		l.logger.DebugfContext(ctx, "does the configuration already exists for [%s]? no, add it", identityConfig.ID)
 		// enforce type
 		identityConfig.Type = l.IdentityType
 		if err := l.identityDB.AddConfiguration(ctx, *identityConfig); err != nil {
 			return err
 		}
 	}
-	l.logger.Debugf("added local identity for id [%s], remote [%v]", identityConfig.ID+"@"+keyManager.EnrollmentID(), keyManager.IsRemote())
+	l.logger.DebugfContext(ctx, "added local identity for id [%s], remote [%v]", identityConfig.ID+"@"+keyManager.EnrollmentID(), keyManager.IsRemote())
 	return nil
 }
 
@@ -463,11 +463,11 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 	return nil
 }
 
-func (l *LocalMembership) getLocalIdentity(label string) *LocalIdentity {
-	l.logger.Debugf("get local identity by label [%s]", hash.Hashable(label))
+func (l *LocalMembership) getLocalIdentity(ctx context.Context, label string) *LocalIdentity {
+	l.logger.DebugfContext(ctx, "get local identity by label [%s]", hash.Hashable(label))
 	identities, ok := l.localIdentitiesByName[label]
 	if ok {
-		l.logger.Debugf("get local identity by name found with label [%s]", hash.Hashable(label))
+		l.logger.DebugfContext(ctx, "get local identity by name found with label [%s]", hash.Hashable(label))
 		return identities[0].Identity
 	}
 	identity, ok := l.localIdentitiesByIdentity[label]
@@ -475,7 +475,7 @@ func (l *LocalMembership) getLocalIdentity(label string) *LocalIdentity {
 		return identity
 	}
 
-	l.logger.Debugf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
+	l.logger.DebugfContext(ctx, "local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
 	return nil
 }
 

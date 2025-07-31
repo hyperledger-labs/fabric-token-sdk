@@ -38,7 +38,7 @@ type sigService interface {
 	RegisterVerifier(ctx context.Context, identity driver.Identity, v driver.Verifier) error
 	GetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error)
 	GetSignerInfo(ctx context.Context, identity driver.Identity) ([]byte, error)
-	GetVerifier(identity driver.Identity) (driver.Verifier, error)
+	GetVerifier(ctx context.Context, identity driver.Identity) (driver.Verifier, error)
 }
 
 type storage interface {
@@ -135,8 +135,8 @@ func (p *Provider) IsMe(ctx context.Context, identity driver.Identity) bool {
 	return len(p.AreMe(ctx, identity)) > 0
 }
 
-func (p *Provider) RegisterRecipientIdentity(id driver.Identity) error {
-	p.Logger.Debugf("Registering identity [%s]", id)
+func (p *Provider) RegisterRecipientIdentity(ctx context.Context, id driver.Identity) error {
+	p.Logger.DebugfContext(ctx, "Registering identity [%s]", id)
 	p.isMeCache.Add(id.UniqueID(), false)
 	return nil
 }
@@ -178,7 +178,7 @@ func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral
 			}
 			setSV = false
 		}
-		verifier, err := p.SigService.GetVerifier(longTerm)
+		verifier, err := p.SigService.GetVerifier(ctx, longTerm)
 		if err != nil {
 			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
 				p.Logger.DebugfContext(ctx, "failed getting verifier for identity [%s][%s][%s]", longTerm, err, string(debug.Stack()))

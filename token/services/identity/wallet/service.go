@@ -103,7 +103,7 @@ func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *driver.Re
 	}
 
 	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
-	if err := s.IdentityProvider.RegisterRecipientIdentity(data.Identity); err != nil {
+	if err := s.IdentityProvider.RegisterRecipientIdentity(ctx, data.Identity); err != nil {
 		return errors.Wrapf(err, "failed to register recipient identity")
 	}
 
