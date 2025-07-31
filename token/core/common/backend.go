@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -32,14 +34,14 @@ func NewBackend(logger logging.Logger, ledger driver.GetStateFnc, message []byte
 
 // HasBeenSignedBy checks if a given Message has been signed by the signing identity matching
 // the passed verifier
-func (b *Backend) HasBeenSignedBy(id driver.Identity, verifier driver.Verifier) ([]byte, error) {
+func (b *Backend) HasBeenSignedBy(ctx context.Context, id driver.Identity, verifier driver.Verifier) ([]byte, error) {
 	if b.Cursor >= len(b.Sigs) {
 		return nil, errors.New("invalid state, insufficient number of signatures")
 	}
 	sigma := b.Sigs[b.Cursor]
 	b.Cursor++
 
-	b.Logger.Debugf("verify signature [%s][%s][%s]", id, logging.Base64(sigma), utils.Hashable(b.Message))
+	b.Logger.Debugf(ctx, "verify signature [%s][%s][%s]", id, logging.Base64(sigma), utils.Hashable(b.Message))
 
 	return sigma, verifier.Verify(b.Message, sigma)
 }

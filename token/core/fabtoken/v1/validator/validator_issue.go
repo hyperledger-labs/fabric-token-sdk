@@ -8,13 +8,14 @@ package validator
 
 import (
 	"bytes"
+	"context"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-func IssueValidate(ctx *Context) error {
+func IssueValidate(c context.Context, ctx *Context) error {
 	action := ctx.IssueAction
 
 	if err := action.Validate(); err != nil {
@@ -58,7 +59,7 @@ func IssueValidate(ctx *Context) error {
 		return errors.Wrapf(err, "failed getting verifier for issuer identity [%s]", action.Issuer.String())
 	}
 	// verify if the token request concatenated with the anchor was signed by the issuer
-	if _, err := ctx.SignatureProvider.HasBeenSignedBy(action.Issuer, verifier); err != nil {
+	if _, err := ctx.SignatureProvider.HasBeenSignedBy(c, action.Issuer, verifier); err != nil {
 		return errors.Wrapf(err, "failed verifying signature")
 	}
 	return nil

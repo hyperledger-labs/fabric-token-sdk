@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
+	"context"
 	"slices"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
@@ -16,7 +17,7 @@ import (
 
 var logger = logging.MustGetLogger()
 
-func IssueValidate(ctx *Context) error {
+func IssueValidate(c context.Context, ctx *Context) error {
 	action := ctx.IssueAction
 
 	if err := action.Validate(); err != nil {
@@ -43,7 +44,7 @@ func IssueValidate(ctx *Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for issuer [%s]", action.Issuer.String())
 	}
-	if _, err := ctx.SignatureProvider.HasBeenSignedBy(action.Issuer, verifier); err != nil {
+	if _, err := ctx.SignatureProvider.HasBeenSignedBy(c, action.Issuer, verifier); err != nil {
 		return errors.Wrapf(err, "failed verifying signature")
 	}
 	return nil
