@@ -25,6 +25,7 @@ import (
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 	"github.com/pkg/errors"
 )
 
@@ -69,6 +70,17 @@ func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables TableNames, ci commo
 		tables,
 		secondcache.NewTyped[bool](1000),
 		secondcache.NewTyped[[]byte](1000),
+		ci,
+	)
+}
+
+func NewNoCacheIdentityStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*IdentityStore, error) {
+	return NewIdentityStore(
+		readDB,
+		writeDB,
+		tables,
+		cache2.NewNoCache[bool](),
+		cache2.NewNoCache[[]byte](),
 		ci,
 	)
 }
