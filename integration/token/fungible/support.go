@@ -1354,21 +1354,14 @@ func CheckLocalMetrics(ii *integration.Infrastructure, user string, viewName str
 }
 
 func CheckPrometheusMetrics(ii *integration.Infrastructure, viewName string) {
-	cli, err := ii.NWO.PrometheusAPI()
+	cli, err := ii.NWO.PrometheusReporter()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	metric := model.Metric{
-		"__name__": model.LabelValue("fsc_view_operations"),
+
+	vector, err := cli.GetVector(model.Metric{
+		"__name__": "fsc_view_operations",
 		"view":     model.LabelValue(viewName),
-	}
-	val, warnings, err := cli.Query(context.Background(), metric.String(), time.Now())
-	gomega.Expect(warnings).To(gomega.BeEmpty())
+	})
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Expect(val.Type()).To(gomega.Equal(model.ValVector))
-
-	logger.Infof("Received prometheus metrics for view [%s]: %s", viewName, val)
-
-	vector, ok := val.(model.Vector)
-	gomega.Expect(ok).To(gomega.BeTrue())
 	gomega.Expect(vector).NotTo(gomega.BeEmpty())
 	for _, v := range vector {
 		gomega.Expect(v.Value).NotTo(gomega.Equal(model.SampleValue(0)))
