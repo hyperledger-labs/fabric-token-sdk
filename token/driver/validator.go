@@ -31,7 +31,7 @@ type Ledger interface {
 
 type SignatureProvider interface {
 	// HasBeenSignedBy returns true and the verified signature if the provider contains a valid signature for the passed identity and verifier
-	HasBeenSignedBy(id Identity, verifier Verifier) ([]byte, error)
+	HasBeenSignedBy(c context.Context, id Identity, verifier Verifier) ([]byte, error)
 	// Signatures returns the signatures inside this provider
 	Signatures() [][]byte
 }

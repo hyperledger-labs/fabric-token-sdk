@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
@@ -37,7 +38,7 @@ type SignatureProvider struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *SignatureProvider) HasBeenSignedBy(arg1 identity.Identity, arg2 driver.Verifier) ([]byte, error) {
+func (fake *SignatureProvider) HasBeenSignedBy(ctx context.Context, arg1 identity.Identity, arg2 driver.Verifier) ([]byte, error) {
 	fake.hasBeenSignedByMutex.Lock()
 	ret, specificReturn := fake.hasBeenSignedByReturnsOnCall[len(fake.hasBeenSignedByArgsForCall)]
 	fake.hasBeenSignedByArgsForCall = append(fake.hasBeenSignedByArgsForCall, struct {

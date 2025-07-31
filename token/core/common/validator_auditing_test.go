@@ -178,7 +178,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx, check := tt.context()
-			err := AuditingSignaturesValidate(ctx)
+			err := AuditingSignaturesValidate(t.Context(), ctx)
 			if tt.err {
 				assert.Error(t, err)
 				assert.EqualError(t, err, tt.errMsg)
