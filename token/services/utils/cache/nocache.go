@@ -6,15 +6,21 @@ SPDX-License-Identifier: Apache-2.0
 
 package cache
 
+import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+)
+
+// NoCache implements a dummy cache that does nothing
 type NoCache[T any] struct {
 }
 
+// NewNoCache returns a new instance of NoCache
 func NewNoCache[T any]() *NoCache[T] {
 	return &NoCache[T]{}
 }
 
 func (n *NoCache[T]) Get(key string) (T, bool) {
-	return Zero[T](), false
+	return utils.Zero[T](), false
 }
 
 func (n *NoCache[T]) GetOrLoad(key string, loader func() (T, error)) (T, bool, error) {
@@ -26,9 +32,4 @@ func (n *NoCache[T]) Add(key string, value T) {
 }
 
 func (n *NoCache[T]) Delete(key string) {
-}
-
-func Zero[T any]() T {
-	var result T
-	return result
 }

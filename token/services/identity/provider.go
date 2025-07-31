@@ -100,7 +100,7 @@ func (p *Provider) RegisterRecipientData(ctx context.Context, data *driver.Recip
 
 func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
 	defer func() {
-		p.isMeCache.Add(identity.String(), true)
+		p.isMeCache.Add(identity.UniqueID(), true)
 	}()
 	return p.SigService.RegisterSigner(ctx, identity, signer, verifier, signerInfo)
 }
@@ -112,10 +112,11 @@ func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []s
 	notFound := make([]driver.Identity, 0)
 
 	for _, id := range identities {
-		if isMe, ok := p.isMeCache.Get(id.UniqueID()); !ok {
+		uniqueID := id.UniqueID()
+		if isMe, ok := p.isMeCache.Get(uniqueID); !ok {
 			notFound = append(notFound, id)
 		} else if isMe {
-			result = append(result, id.UniqueID())
+			result = append(result, uniqueID)
 		}
 	}
 	if len(notFound) == 0 {
@@ -124,7 +125,8 @@ func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []s
 
 	found := p.SigService.AreMe(ctx, notFound...)
 	for _, id := range notFound {
-		p.isMeCache.Add(id.UniqueID(), slices.Contains(found, id.UniqueID()))
+		uniqueID := id.UniqueID()
+		p.isMeCache.Add(uniqueID, slices.Contains(found, uniqueID))
 	}
 	return append(result, found...)
 }
@@ -135,14 +137,14 @@ func (p *Provider) IsMe(ctx context.Context, identity driver.Identity) bool {
 
 func (p *Provider) RegisterRecipientIdentity(id driver.Identity) error {
 	p.Logger.Debugf("Registering identity [%s]", id)
-	p.isMeCache.Add(id.String(), false)
+	p.isMeCache.Add(id.UniqueID(), false)
 	return nil
 }
 
 func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
 	found := false
 	defer func() {
-		p.isMeCache.Add(identity.String(), found)
+		p.isMeCache.Add(identity.UniqueID(), found)
 	}()
 	signer, err := p.SigService.GetSigner(ctx, identity)
 	if err != nil {
