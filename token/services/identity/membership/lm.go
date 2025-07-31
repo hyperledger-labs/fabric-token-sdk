@@ -511,11 +511,9 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 		return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 	}
 	// bind the identity to the default FSC node identity
-	if i.BinderService != nil {
-		logger.DebugfContext(ctx, "bind to root identity")
-		if err := i.BinderService.Bind(ctx, i.RootIdentity, id, false); err != nil {
-			return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
-		}
+	logger.DebugfContext(ctx, "bind to root identity")
+	if err := i.BinderService.Bind(ctx, i.RootIdentity, id, false); err != nil {
+		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
 	}
 	// wrap the backend identity, and bind it
 	if len(i.IdentityType) != 0 {
@@ -524,20 +522,9 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 		if err != nil {
 			return nil, nil, errors2.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
 		}
-		if i.BinderService != nil {
-			logger.DebugfContext(ctx, "bind wrapped")
-			if err := i.BinderService.Bind(ctx, id, typedIdentity, true); err != nil {
-				return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
-			}
-			if err := i.BinderService.Bind(ctx, i.RootIdentity, typedIdentity, false); err != nil {
-				return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, i.RootIdentity)
-			}
-		} else {
-			// register at the list the audit info
-			logger.DebugfContext(ctx, "register audit infor for wrapped identity")
-			if err := i.IdentityProvider.RegisterAuditInfo(ctx, typedIdentity, ai); err != nil {
-				return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
-			}
+		logger.DebugfContext(ctx, "bind wrapped")
+		if err := i.BinderService.Bind(ctx, i.RootIdentity, typedIdentity, true); err != nil {
+			return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, i.RootIdentity)
 		}
 		id = typedIdentity
 	}
