@@ -114,7 +114,10 @@ func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurati
 	if err != nil {
 		return nil, err
 	}
-	return &IdentityConfigurationIterator{rows: rows, configurationType: configurationType}, nil
+	return common.NewIterator(rows, func(c *driver.IdentityConfiguration) error {
+		c.Type = configurationType
+		return rows.Scan(&c.ID, &c.URL, &c.Config, &c.Raw)
+	}), nil
 }
 
 func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url string) (bool, error) {
@@ -346,24 +349,4 @@ func (db *IdentityStore) GetSchema() string {
 		db.table.Signers,
 		db.table.Signers, db.table.Signers,
 	)
-}
-
-type IdentityConfigurationIterator struct {
-	rows              *sql.Rows
-	configurationType string
-}
-
-func (w *IdentityConfigurationIterator) Close() {
-	_ = w.rows.Close()
-}
-
-func (w *IdentityConfigurationIterator) Next() (*driver.IdentityConfiguration, error) {
-	if !w.rows.Next() {
-		return nil, nil
-	}
-
-	var c driver.IdentityConfiguration
-	c.Type = w.configurationType
-	err := w.rows.Scan(&c.ID, &c.URL, &c.Config, &c.Raw)
-	return &c, err
 }

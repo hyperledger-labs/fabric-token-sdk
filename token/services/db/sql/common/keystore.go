@@ -57,7 +57,7 @@ func NewKeystoreStore(readDB, writeDB *sql.DB, tables TableNames, ci qcommon.Con
 }
 
 func (db *KeystoreStore) CreateSchema() error {
-	return common.InitSchema(db.writeDB, []string{db.GetSchema()}...)
+	return common.InitSchema(db.writeDB, db.GetSchema())
 }
 
 func (db *KeystoreStore) Close() error {
@@ -82,19 +82,17 @@ func (db *KeystoreStore) Put(key string, state interface{}) error {
 	logger.Debug(query, args)
 
 	_, err = db.writeDB.Exec(query, args...)
-	if err != nil {
-		if errors2.HasCause(db.errorWrapper.WrapError(err), driver.UniqueKeyViolation) {
-			// then check that raw is equal to what is stored
-			rawFromDB, err := db.GetRaw(key)
-			if err != nil {
-				return err
-			}
-			if bytes.Equal(rawFromDB, raw) {
-				// It might be that this key was already inserted before
-				return nil
-			}
-			return errors.Wrapf(err, "key exists already and the value does not match")
+	if err != nil && errors2.HasCause(db.errorWrapper.WrapError(err), driver.UniqueKeyViolation) {
+		// then check that raw is equal to what is stored
+		rawFromDB, err := db.GetRaw(key)
+		if err != nil {
+			return err
 		}
+		if bytes.Equal(rawFromDB, raw) {
+			// It might be that this key was already inserted before. The node is restarting, for example.
+			return nil
+		}
+		return errors.Wrapf(err, "key exists already and the value does not match")
 	}
 	return err
 }
