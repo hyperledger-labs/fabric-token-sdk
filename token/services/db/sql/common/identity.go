@@ -11,7 +11,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
@@ -48,7 +47,6 @@ type IdentityStore struct {
 	table   identityTables
 	ci      common3.CondInterpreter
 
-	signerCacheLock sync.RWMutex
 	signerInfoCache cache[bool]
 	auditInfoCache  cache[[]byte]
 }
@@ -116,7 +114,10 @@ func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurati
 	if err != nil {
 		return nil, err
 	}
-	return &IdentityConfigurationIterator{rows: rows, configurationType: configurationType}, nil
+	return common.NewIterator(rows, func(c *driver.IdentityConfiguration) error {
+		c.Type = configurationType
+		return rows.Scan(&c.ID, &c.URL, &c.Config, &c.Raw)
+	}), nil
 }
 
 func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url string) (bool, error) {
@@ -223,8 +224,6 @@ func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) e
 		}
 	}
 
-	db.signerCacheLock.Lock()
-	defer db.signerCacheLock.Unlock()
 	db.signerInfoCache.Add(h, true)
 
 	logger.DebugfContext(ctx, "store signer info done")
@@ -240,7 +239,6 @@ func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriv
 	result := make([]string, 0)
 	notFound := make([]string, 0)
 
-	db.signerCacheLock.RLock()
 	for _, idHash := range idHashes {
 		if v, ok := db.signerInfoCache.Get(idHash); !ok {
 			notFound = append(notFound, idHash)
@@ -249,15 +247,11 @@ func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriv
 		}
 	}
 	if len(notFound) == 0 {
-		defer db.signerCacheLock.RUnlock()
 		return result, nil
 	}
-	db.signerCacheLock.RUnlock()
 
 	idHashes = notFound
 	notFound = make([]string, 0)
-	db.signerCacheLock.Lock()
-	defer db.signerCacheLock.Unlock()
 	for _, idHash := range idHashes {
 		if v, ok := db.signerInfoCache.Get(idHash); !ok {
 			notFound = append(notFound, idHash)
@@ -308,31 +302,11 @@ func (db *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]
 		From(q.Table(db.table.Signers)).
 		Where(cond.Eq("identity_hash", token.Identity(identity).UniqueID())).
 		Format(db.ci)
-	return common.QueryUnique[[]byte](db.readDB, query, args...)
+	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
 
 func (db *IdentityStore) Close() error {
 	return common2.Close(db.readDB, db.writeDB)
-}
-
-type IdentityConfigurationIterator struct {
-	rows              *sql.Rows
-	configurationType string
-}
-
-func (w *IdentityConfigurationIterator) Close() error {
-	return w.rows.Close()
-}
-
-func (w *IdentityConfigurationIterator) HasNext() bool {
-	return w.rows.Next()
-}
-
-func (w *IdentityConfigurationIterator) Next() (driver.IdentityConfiguration, error) {
-	var c driver.IdentityConfiguration
-	c.Type = w.configurationType
-	err := w.rows.Scan(&c.ID, &c.URL, &c.Config, &c.Raw)
-	return c, err
 }
 
 func (db *IdentityStore) GetSchema() string {

@@ -32,6 +32,7 @@ type Driver struct {
 	TokenNotifier lazy.Provider[postgres.Config, *TokenNotifier]
 	AuditTx       lazy.Provider[postgres.Config, *AuditTransactionStore]
 	OwnerTx       lazy.Provider[postgres.Config, *TransactionStore]
+	KeyStore      lazy.Provider[postgres.Config, *KeystoreStore]
 }
 
 func NewNamedDriver(config driver.Config, dbProvider postgres.DbProvider) driver.NamedDriver {
@@ -56,6 +57,7 @@ func NewDriverWithDbProvider(config driver.Config, dbProvider postgres.DbProvide
 		TokenNotifier: newTokenNotifierProvider(dbProvider),
 		AuditTx:       newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore),
 		OwnerTx:       newProviderWithKeyMapper(dbProvider, NewTransactionStore),
+		KeyStore:      newProviderWithKeyMapper(dbProvider, NewKeystoreStore),
 	}
 }
 
@@ -81,6 +83,14 @@ func (d *Driver) NewIdentity(name driver2.PersistenceName, params ...string) (dr
 		return nil, err
 	}
 	return d.Identity.Get(*opts)
+}
+
+func (d *Driver) NewKeyStore(name driver2.PersistenceName, params ...string) (driver.KeyStore, error) {
+	opts, err := d.cp.GetOpts(name, params...)
+	if err != nil {
+		return nil, err
+	}
+	return d.KeyStore.Get(*opts)
 }
 
 func (d *Driver) NewToken(name driver2.PersistenceName, params ...string) (driver.TokenStore, error) {

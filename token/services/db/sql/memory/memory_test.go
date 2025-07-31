@@ -29,6 +29,10 @@ func TestIdentity(t *testing.T) {
 	dbtest.IdentityTest(t, func(string) driver.Driver { return NewDriver() })
 }
 
+func TestKeyStore(t *testing.T) {
+	dbtest.KeyStoreTest(t, func(string) driver.Driver { return NewDriver() })
+}
+
 func TestWallet(t *testing.T) {
 	dbtest.WalletTest(t, func(string) driver.Driver { return NewDriver() })
 }

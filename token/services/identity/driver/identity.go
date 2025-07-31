@@ -9,17 +9,12 @@ package driver
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-type Iterator[T any] interface {
-	HasNext() bool
-	Close() error
-	Next() (T, error)
-}
-
-type IdentityConfigurationIterator = Iterator[IdentityConfiguration]
+type IdentityConfigurationIterator = iterators.Iterator[*IdentityConfiguration]
 
 type WalletID = string
 

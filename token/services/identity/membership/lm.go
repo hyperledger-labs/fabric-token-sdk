@@ -222,7 +222,7 @@ func (l *LocalMembership) Load(identities []*idriver.ConfiguredIdentity, targets
 
 	// load identities from configuration
 	for i, identityConfiguration := range ics {
-		l.logger.Debugf("load identity configuration [%+v]", identityConfiguration)
+		l.logger.Infof("load identity configuration [%+v]", identityConfiguration)
 		if err := l.registerIdentityConfiguration(context.Background(), &identityConfiguration, defaults[i]); err != nil {
 			// we log the error so the user can fix it but it shouldn't stop the loading of the service.
 			l.logger.Errorf("failed loading identity with err [%s]", err)
@@ -484,20 +484,7 @@ func (l *LocalMembership) storedIdentityConfigurations(ctx context.Context) ([]i
 	if err != nil {
 		return nil, errors2.WithMessagef(err, "failed to get registered identities from kvs")
 	}
-	defer func() {
-		err := it.Close()
-		l.logger.Errorf("failed to close identity configurations iterator: %v", err)
-	}()
-	// copy the iterator
-	items := make([]idriver.IdentityConfiguration, 0)
-	for it.HasNext() {
-		item, err := it.Next()
-		if err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, nil
+	return collections.ReadAll[idriver.IdentityConfiguration](it)
 }
 
 type TypedIdentityInfo struct {

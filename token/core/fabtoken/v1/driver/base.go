@@ -58,7 +58,7 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
-	baseKeyStore, err := storageProvider.Keystore()
+	baseKeyStore, err := storageProvider.Keystore(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open keystore for tms [%s]", tmsID)
 	}

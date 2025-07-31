@@ -10,24 +10,25 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/keystoredb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/walletdb"
 )
 
 type DBStorageProvider struct {
-	kvs                         driver.Keystore
 	identityStoreServiceManager identitydb.StoreServiceManager
 	walletStoreServiceManager   walletdb.StoreServiceManager
+	keyStoreStoreServiceManager keystoredb.StoreServiceManager
 }
 
 func NewDBStorageProvider(
-	kvs driver.Keystore,
 	identityStoreServiceManager identitydb.StoreServiceManager,
 	walletStoreServiceManager walletdb.StoreServiceManager,
+	keyStoreStoreServiceManager keystoredb.StoreServiceManager,
 ) *DBStorageProvider {
 	return &DBStorageProvider{
-		kvs:                         kvs,
 		identityStoreServiceManager: identityStoreServiceManager,
 		walletStoreServiceManager:   walletStoreServiceManager,
+		keyStoreStoreServiceManager: keyStoreStoreServiceManager,
 	}
 }
 
@@ -39,6 +40,6 @@ func (s *DBStorageProvider) IdentityStore(tmsID token.TMSID) (driver.IdentitySto
 	return s.identityStoreServiceManager.StoreServiceByTMSId(tmsID)
 }
 
-func (s *DBStorageProvider) Keystore() (driver.Keystore, error) {
-	return s.kvs, nil
+func (s *DBStorageProvider) Keystore(tmsID token.TMSID) (driver.Keystore, error) {
+	return s.keyStoreStoreServiceManager.StoreServiceByTMSId(tmsID)
 }

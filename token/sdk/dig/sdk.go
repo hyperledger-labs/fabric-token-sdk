@@ -38,8 +38,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	driver4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -48,6 +46,7 @@ import (
 	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/keystoredb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -138,9 +137,9 @@ func (p *SDK) Install() error {
 		p.Container().Provide(auditdb.NewStoreServiceManager),
 		p.Container().Provide(digutils.Identity[auditdb.StoreServiceManager](), dig.As(new(auditor.StoreServiceManager))),
 		p.Container().Provide(identitydb.NewStoreServiceManager),
+		p.Container().Provide(keystoredb.NewStoreServiceManager),
 		p.Container().Provide(walletdb.NewStoreServiceManager),
 		p.Container().Provide(tokenlockdb.NewStoreServiceManager),
-		p.Container().Provide(func(kvs *kvs.KVS) driver4.Keystore { return kvs2.Keystore(kvs) }),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(NewAuditorCheckServiceProvider),
@@ -189,6 +188,7 @@ func (p *SDK) Install() error {
 		digutils.Register[tokendb.StoreServiceManager](p.Container()),
 		digutils.Register[auditdb.StoreServiceManager](p.Container()),
 		digutils.Register[identitydb.StoreServiceManager](p.Container()),
+		digutils.Register[keystoredb.StoreServiceManager](p.Container()),
 		digutils.Register[*vault.Provider](p.Container()),
 		digutils.Register[driver.ConfigService](p.Container()),
 		digutils.Register[*identity.DBStorageProvider](p.Container()),

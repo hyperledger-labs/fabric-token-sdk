@@ -29,4 +29,6 @@ type Driver interface {
 	NewAuditTransaction(driver.PersistenceName, ...string) (AuditTransactionStore, error)
 
 	NewOwnerTransaction(driver.PersistenceName, ...string) (TokenTransactionStore, error)
+
+	NewKeyStore(name driver.PersistenceName, params ...string) (KeyStore, error)
 }
