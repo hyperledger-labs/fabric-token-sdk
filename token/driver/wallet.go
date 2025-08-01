@@ -226,11 +226,11 @@ type AuditInfoProvider interface {
 // get signature verifiers
 type Deserializer interface {
 	// GetOwnerVerifier returns the verifier associated to the passed owner identity
-	GetOwnerVerifier(id Identity) (Verifier, error)
+	GetOwnerVerifier(ctx context.Context, id Identity) (Verifier, error)
 	// GetIssuerVerifier returns the verifier associated to the passed issuer identity
-	GetIssuerVerifier(id Identity) (Verifier, error)
+	GetIssuerVerifier(ctx context.Context, id Identity) (Verifier, error)
 	// GetAuditorVerifier returns the verifier associated to the passed auditor identity
-	GetAuditorVerifier(id Identity) (Verifier, error)
+	GetAuditorVerifier(ctx context.Context, id Identity) (Verifier, error)
 	// Recipients returns the recipient identities from the given serialized representation
 	Recipients(raw Identity) ([]Identity, error)
 	// GetAuditInfoMatcher returns an identity matcher for the passed identity and audit data

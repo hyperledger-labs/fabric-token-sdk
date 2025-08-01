@@ -269,7 +269,7 @@ func (a *DefaultCheckers) CheckTokenSpendability(ctx context.Context) ([]string,
 			continue
 		}
 		for _, recipient := range recipients {
-			_, err = sigService.OwnerVerifier(recipient)
+			_, err = sigService.OwnerVerifier(ctx, recipient)
 			if err != nil {
 				errorMessages = append(errorMessages, fmt.Sprintf("failed to verify recipient [%s][%s][%s], [%s]", tok.ID, recipient, tok.Format, err))
 			}

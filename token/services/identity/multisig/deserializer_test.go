@@ -24,7 +24,7 @@ func TestDeserializeVerifier_Success(t *testing.T) {
 	id := &MultiIdentity{Identities: []token.Identity{[]byte("valid_multisig_identity")}}
 	idRaw, err := id.Bytes()
 	require.NoError(t, err)
-	verifier, err := deserializer.DeserializeVerifier(Multisig, idRaw)
+	verifier, err := deserializer.DeserializeVerifier(t.Context(), Multisig, idRaw)
 
 	require.NoError(t, err)
 	assert.NotNil(t, verifier)
@@ -35,7 +35,7 @@ func TestDeserializeVerifier_InvalidMultisigIdentity(t *testing.T) {
 	deserializer := NewTypedIdentityDeserializer(verifierDES, nil)
 	id := []byte("invalid")
 
-	verifier, err := deserializer.DeserializeVerifier(Multisig, id)
+	verifier, err := deserializer.DeserializeVerifier(t.Context(), Multisig, id)
 	require.Error(t, err)
 	assert.Nil(t, verifier)
 }
@@ -47,7 +47,7 @@ func TestDeserializeVerifier_InvalidIdentity(t *testing.T) {
 	idRaw, err := id.Bytes()
 	require.NoError(t, err)
 
-	verifier, err := deserializer.DeserializeVerifier(Multisig, idRaw)
+	verifier, err := deserializer.DeserializeVerifier(t.Context(), Multisig, idRaw)
 	require.Error(t, err)
 	assert.Nil(t, verifier)
 }
@@ -114,7 +114,7 @@ func TestRecipients_InvalidRaw(t *testing.T) {
 
 type mockVerifierDES struct{}
 
-func (m *mockVerifierDES) DeserializeVerifier(id token.Identity) (driver.Verifier, error) {
+func (m *mockVerifierDES) DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
 	if string(id) == "valid_multisig_identity" {
 		return &mockVerifier{}, nil
 	}

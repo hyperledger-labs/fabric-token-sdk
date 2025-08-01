@@ -31,7 +31,7 @@ type (
 //go:generate counterfeiter -o mock/des.go -fake-name Deserializer . Deserializer
 
 type Deserializer interface {
-	GetOwnerVerifier(id driver.Identity) (driver.Verifier, error)
+	GetOwnerVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
 }
 
 //go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
@@ -236,7 +236,7 @@ func (s *Service) checkUpgradeProof(ch driver.TokensUpgradeChallenge, proofRaw d
 		return nil, false, errors.Wrap(err, "failed to process ledgerTokens")
 	}
 	for i, token := range tokens {
-		verifier, err := s.Deserializer.GetOwnerVerifier(token.Owner)
+		verifier, err := s.Deserializer.GetOwnerVerifier(context.Background(), token.Owner)
 		if err != nil {
 			return nil, false, errors.Wrapf(err, "failed to get owner verifier")
 		}

@@ -19,7 +19,7 @@ type MatcherDeserializer interface {
 // VerifierDeserializer is the interface for verifiers' deserializer.
 // A verifier checks the validity of a signature against the identity associated with the verifier
 type VerifierDeserializer interface {
-	DeserializeVerifier(id driver.Identity) (driver.Verifier, error)
+	DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
 }
 
 // AuditMatcherProvider provides audit related deserialization functionalities
@@ -62,16 +62,16 @@ func NewDeserializer(
 	}
 }
 
-func (d *Deserializer) GetOwnerVerifier(id driver.Identity) (driver.Verifier, error) {
-	return d.ownerDeserializer.DeserializeVerifier(id)
+func (d *Deserializer) GetOwnerVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+	return d.ownerDeserializer.DeserializeVerifier(ctx, id)
 }
 
-func (d *Deserializer) GetIssuerVerifier(id driver.Identity) (driver.Verifier, error) {
-	return d.issuerDeserializer.DeserializeVerifier(id)
+func (d *Deserializer) GetIssuerVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+	return d.issuerDeserializer.DeserializeVerifier(ctx, id)
 }
 
-func (d *Deserializer) GetAuditorVerifier(id driver.Identity) (driver.Verifier, error) {
-	return d.auditorDeserializer.DeserializeVerifier(id)
+func (d *Deserializer) GetAuditorVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+	return d.auditorDeserializer.DeserializeVerifier(ctx, id)
 }
 
 func (d *Deserializer) Recipients(id driver.Identity) ([]driver.Identity, error) {

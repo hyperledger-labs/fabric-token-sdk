@@ -220,7 +220,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	if err != nil {
 		return err
 	}
-	verifier, err := sigService.OwnerVerifier(script.Sender)
+	verifier, err := sigService.OwnerVerifier(t.Context, script.Sender)
 	if err != nil {
 		return err
 	}
@@ -286,7 +286,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 	if err != nil {
 		return err
 	}
-	recipientVerifier, err := sigService.OwnerVerifier(script.Recipient)
+	recipientVerifier, err := sigService.OwnerVerifier(t.Context, script.Recipient)
 	if err != nil {
 		return err
 	}

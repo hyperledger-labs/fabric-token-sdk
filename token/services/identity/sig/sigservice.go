@@ -266,7 +266,7 @@ func (o *Service) deserializeSigner(ctx context.Context, identity driver.Identit
 		return nil, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
 	}
 	var err error
-	signer, err := o.deserializer.DeserializeSigner(identity)
+	signer, err := o.deserializer.DeserializeSigner(ctx, identity)
 	if err == nil {
 		return signer, nil
 	}
@@ -317,7 +317,7 @@ func (o *Service) GetVerifier(ctx context.Context, identity driver.Identity) (dr
 		return nil, errors.Errorf("cannot find verifier for [%s], no deserializer set", identity)
 	}
 	var err error
-	verifier, err := o.deserializer.DeserializeVerifier(identity)
+	verifier, err := o.deserializer.DeserializeVerifier(ctx, identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing identity for verifier %v", identity)
 	}

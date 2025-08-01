@@ -244,7 +244,7 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 	logger.DebugfContext(context.Context(), "Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor, hash.Hashable(signed), a.tx.ID())
 
 	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
-		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditorID)
+		v, err := a.tx.TokenService().SigService().AuditorVerifier(context.Context(), auditorID)
 		if err != nil {
 			logger.DebugfContext(context.Context(), "failed to get auditor verifier for [%s]", auditorID)
 			continue

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sig
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -31,20 +32,20 @@ func (d *MultiplexDeserializer) AddDeserializer(newD idriver.Deserializer) {
 	d.deserializersMutex.Unlock()
 }
 
-func (d *MultiplexDeserializer) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer idriver.Deserializer) (driver.Verifier, error) {
-		return deserializer.DeserializeVerifier(raw)
+func (d *MultiplexDeserializer) DeserializeVerifier(ctx context.Context, raw []byte) (driver.Verifier, error) {
+	return deserialize(ctx, d.threadSafeCopyDeserializers(), func(deserializer idriver.Deserializer) (driver.Verifier, error) {
+		return deserializer.DeserializeVerifier(ctx, raw)
 	})
 }
 
-func (d *MultiplexDeserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
-	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer idriver.Deserializer) (driver.Signer, error) {
-		return deserializer.DeserializeSigner(raw)
+func (d *MultiplexDeserializer) DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error) {
+	return deserialize(ctx, d.threadSafeCopyDeserializers(), func(deserializer idriver.Deserializer) (driver.Signer, error) {
+		return deserializer.DeserializeSigner(ctx, raw)
 	})
 }
 
 func (d *MultiplexDeserializer) Info(raw []byte, auditInfo []byte) (string, error) {
-	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer idriver.Deserializer) (string, error) {
+	return deserialize(context.Background(), d.threadSafeCopyDeserializers(), func(deserializer idriver.Deserializer) (string, error) {
 		return deserializer.Info(raw, auditInfo)
 	})
 }
@@ -57,19 +58,19 @@ func (d *MultiplexDeserializer) threadSafeCopyDeserializers() []idriver.Deserial
 	return res
 }
 
-func deserialize[V any](copyDeserial []idriver.Deserializer, extractor func(idriver.Deserializer) (V, error)) (V, error) {
+func deserialize[V any](ctx context.Context, copyDeserial []idriver.Deserializer, extractor func(idriver.Deserializer) (V, error)) (V, error) {
 	var defaultV V
 	var errs []error
 
 	for _, des := range copyDeserial {
-		logger.Debugf("trying signer deserialization with [%s]", des)
+		logger.DebugfContext(ctx, "trying signer deserialization with [%s]", des)
 		v, err := extractor(des)
 		if err == nil {
-			logger.Debugf("trying signer deserialization with [%s] succeeded", des)
+			logger.DebugfContext(ctx, "trying signer deserialization with [%s] succeeded", des)
 			return v, nil
 		}
 
-		logger.Debugf("trying signer deserialization with [%s] failed [%s]", des, err)
+		logger.DebugfContext(ctx, "trying signer deserialization with [%s] failed [%s]", des, err)
 		errs = append(errs, err)
 	}
 

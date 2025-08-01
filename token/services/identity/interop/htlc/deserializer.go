@@ -18,7 +18,7 @@ import (
 )
 
 type deserializer interface {
-	DeserializeVerifier(id driver.Identity) (driver.Verifier, error)
+	DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
 	MatchIdentity(id driver.Identity, ai []byte) error
 }
 
@@ -30,7 +30,7 @@ func NewTypedIdentityDeserializer(deserializer deserializer) *TypedIdentityDeser
 	return &TypedIdentityDeserializer{deserializer: deserializer}
 }
 
-func (t *TypedIdentityDeserializer) DeserializeVerifier(typ identity.Type, raw []byte) (driver.Verifier, error) {
+func (t *TypedIdentityDeserializer) DeserializeVerifier(ctx context.Context, typ identity.Type, raw []byte) (driver.Verifier, error) {
 	if typ != htlc.ScriptType {
 		return nil, errors.Errorf("cannot deserializer type [%s], expected [%s]", typ, htlc.ScriptType)
 	}
@@ -41,11 +41,11 @@ func (t *TypedIdentityDeserializer) DeserializeVerifier(typ identity.Type, raw [
 		return nil, errors.Errorf("failed to unmarshal TypedIdentity as an htlc script")
 	}
 	v := &htlc.Verifier{}
-	v.Sender, err = t.deserializer.DeserializeVerifier(script.Sender)
+	v.Sender, err = t.deserializer.DeserializeVerifier(ctx, script.Sender)
 	if err != nil {
 		return nil, errors.Errorf("failed to unmarshal the identity of the sender in the htlc script")
 	}
-	v.Recipient, err = t.deserializer.DeserializeVerifier(script.Recipient)
+	v.Recipient, err = t.deserializer.DeserializeVerifier(ctx, script.Recipient)
 	if err != nil {
 		return nil, errors.Errorf("failed to unmarshal the identity of the recipient in the htlc script")
 	}
@@ -112,18 +112,18 @@ func NewAuditDeserializer(auditInfoDeserializer driver2.AuditInfoDeserializer) *
 	return &AuditDeserializer{AuditInfoDeserializer: auditInfoDeserializer}
 }
 
-func (a *AuditDeserializer) DeserializeAuditInfo(bytes []byte) (driver2.AuditInfo, error) {
+func (a *AuditDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
 	si := &ScriptInfo{}
-	err := json.Unmarshal(bytes, si)
+	err := json.Unmarshal(raw, si)
 	if err != nil || (len(si.Sender) == 0 && len(si.Recipient) == 0) {
-		return nil, errors.Errorf("ivalid audit info, failed unmarshal [%s][%d][%d]", string(bytes), len(si.Sender), len(si.Recipient))
+		return nil, errors.Errorf("ivalid audit info, failed unmarshal [%s][%d][%d]", string(raw), len(si.Sender), len(si.Recipient))
 	}
 	if len(si.Recipient) == 0 {
 		return nil, errors.Errorf("no recipient defined")
 	}
-	ai, err := a.AuditInfoDeserializer.DeserializeAuditInfo(si.Recipient)
+	ai, err := a.AuditInfoDeserializer.DeserializeAuditInfo(ctx, si.Recipient)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", bytes)
+		return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
 	}
 	return ai, nil
 }

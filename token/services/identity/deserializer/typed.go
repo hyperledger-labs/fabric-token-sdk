@@ -21,7 +21,7 @@ import (
 var logger = logging.MustGetLogger()
 
 type TypedVerifierDeserializer interface {
-	DeserializeVerifier(typ identity.Type, raw []byte) (driver.Verifier, error)
+	DeserializeVerifier(ctx context.Context, typ identity.Type, raw []byte) (driver.Verifier, error)
 	Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error)
 	GetAuditInfo(ctx context.Context, id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error)
 	GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
@@ -49,7 +49,7 @@ func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ st
 	v.deserializers[typ] = append(v.deserializers[typ], d)
 }
 
-func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
+func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
 	si, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
@@ -58,10 +58,10 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(id driver.Ident
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
 	}
-	logger.Debugf("Deserializing [%s] with type [%s]", id, si.Type)
+	logger.DebugfContext(ctx, "deserializing [%s] with type [%s]", id, si.Type)
 	var errs []error
 	for _, deserializer := range dess {
-		verifier, err := deserializer.DeserializeVerifier(si.Type, si.Identity)
+		verifier, err := deserializer.DeserializeVerifier(ctx, si.Type, si.Identity)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -177,8 +177,8 @@ func NewTypedIdentityVerifierDeserializer(verifierDeserializer common.VerifierDe
 	return &TypedIdentityVerifierDeserializer{VerifierDeserializer: verifierDeserializer, MatcherDeserializer: matcherDeserializer}
 }
 
-func (t *TypedIdentityVerifierDeserializer) DeserializeVerifier(typ identity.Type, raw []byte) (driver.Verifier, error) {
-	return t.VerifierDeserializer.DeserializeVerifier(raw)
+func (t *TypedIdentityVerifierDeserializer) DeserializeVerifier(ctx context.Context, typ identity.Type, raw []byte) (driver.Verifier, error) {
+	return t.VerifierDeserializer.DeserializeVerifier(ctx, raw)
 }
 
 func (t *TypedIdentityVerifierDeserializer) Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error) {

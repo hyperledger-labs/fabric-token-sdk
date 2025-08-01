@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
@@ -16,7 +18,7 @@ import (
 // IdentityDeserializer takes an identity and returns an ECDSA verifier
 type IdentityDeserializer struct{}
 
-func (d *IdentityDeserializer) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
+func (d *IdentityDeserializer) DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
 	return crypto.DeserializeVerifier(id)
 }
 
@@ -49,12 +51,12 @@ func (a *AuditInfoMatcher) Match(id []byte) error {
 
 type AuditInfoDeserializer struct{}
 
-func (a *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
+func (a *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
 	ai := &AuditInfo{}
 	err := ai.FromBytes(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal")
 	}
-	logger.Debugf("audit info [%s]", string(raw))
+	logger.DebugfContext(ctx, "audit info [%s]", string(raw))
 	return ai, nil
 }

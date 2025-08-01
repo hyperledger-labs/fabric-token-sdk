@@ -32,7 +32,7 @@ const (
 var logger = logging.MustGetLogger()
 
 type KeyManagerProvider interface {
-	Get(identityConfig *driver.IdentityConfiguration) (KeyManager, error)
+	Get(ctx context.Context, identityConfig *driver.IdentityConfiguration) (KeyManager, error)
 }
 
 type KeyManager interface {
@@ -305,7 +305,7 @@ func (l *LocalMembership) registerLocalIdentity(ctx context.Context, identityCon
 	l.logger.DebugfContext(ctx, "try to load identity with [%d] key managers [%v]", len(l.KeyManagerProviders), l.KeyManagerProviders)
 	for i, p := range l.KeyManagerProviders {
 		var err error
-		keyManager, err = p.Get(identityConfig)
+		keyManager, err = p.Get(ctx, identityConfig)
 		if err == nil && keyManager != nil && len(keyManager.EnrollmentID()) != 0 {
 			priority = i
 			break

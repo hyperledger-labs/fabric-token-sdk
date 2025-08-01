@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package deserializer
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
@@ -68,7 +70,7 @@ func (e *EIDRHDeserializer) getAuditInfo(id driver.Identity, auditInfo []byte) (
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
 	}
-	res, err := d.DeserializeAuditInfo(auditInfo)
+	res, err := d.DeserializeAuditInfo(context.Background(), auditInfo)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to deserialize audit info for identity type [%s]", si.Type)
 	}

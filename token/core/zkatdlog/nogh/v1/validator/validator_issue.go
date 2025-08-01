@@ -40,7 +40,7 @@ func IssueValidate(c context.Context, ctx *Context) error {
 	}
 	logger.Debugf("Found issue owner [%s]", action.Issuer)
 
-	verifier, err := ctx.Deserializer.GetIssuerVerifier(action.Issuer)
+	verifier, err := ctx.Deserializer.GetIssuerVerifier(c, action.Issuer)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for issuer [%s]", action.Issuer.String())
 	}

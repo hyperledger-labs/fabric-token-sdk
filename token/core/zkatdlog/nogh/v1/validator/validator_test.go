@@ -433,7 +433,7 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.Signi
 	err = auditInfo.Match(id)
 	Expect(err).NotTo(HaveOccurred())
 
-	signer, err := p.DeserializeSigningIdentity(id)
+	signer, err := p.DeserializeSigningIdentity(context.Background(), id)
 	Expect(err).NotTo(HaveOccurred())
 
 	id, err = identity.WrapWithType(idemix2.IdentityType, id)
@@ -795,6 +795,6 @@ func (d *Deserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []by
 	return &Deserializer{auditInfo: auditInfo}, nil
 }
 
-func (d *Deserializer) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
+func (d *Deserializer) DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
 	panic("implement me")
 }

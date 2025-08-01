@@ -17,7 +17,7 @@ import (
 )
 
 type VerifierDES interface {
-	DeserializeVerifier(id driver.Identity) (driver.Verifier, error)
+	DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
 }
 
 type AuditInfoMatcher interface {
@@ -92,16 +92,16 @@ func (d *TypedIdentityDeserializer) GetAuditInfoMatcher(owner driver.Identity, a
 	return &InfoMatcher{AuditInfoMatcher: matchers}, nil
 }
 
-func (d *TypedIdentityDeserializer) DeserializeVerifier(typ identity.Type, id []byte) (driver.Verifier, error) {
+func (d *TypedIdentityDeserializer) DeserializeVerifier(ctx context.Context, typ identity.Type, raw []byte) (driver.Verifier, error) {
 	multisigIdentity := &MultiIdentity{}
-	err := multisigIdentity.Deserialize(id)
+	err := multisigIdentity.Deserialize(raw)
 	if err != nil {
 		return nil, errors.New("failed to unmarshal multisig identity")
 	}
 	verifier := &Verifier{}
 	verifier.Verifiers = make([]driver.Verifier, len(multisigIdentity.Identities))
 	for k, i := range multisigIdentity.Identities {
-		verifier.Verifiers[k], err = d.VerifierDeserializer.DeserializeVerifier(i)
+		verifier.Verifiers[k], err = d.VerifierDeserializer.DeserializeVerifier(ctx, i)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to unmarshal multisig identity")
 		}
@@ -121,7 +121,7 @@ func (d *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.
 type AuditInfoDeserializer struct {
 }
 
-func (a *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
+func (a *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
 	ei := &AuditInfo{}
 	err := json.Unmarshal(raw, ei)
 	if err != nil {

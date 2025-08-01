@@ -38,7 +38,7 @@ func TestDeserializer(t *testing.T) {
 		assert.Equal(t, eID, ai.EID)
 		assert.Equal(t, "auditor.org1.example.com", eID)
 		des := &IdentityDeserializer{}
-		verifier, err := des.DeserializeVerifier(id)
+		verifier, err := des.DeserializeVerifier(t.Context(), id)
 		assert.NoError(t, err)
 		signingIdentity := provider.SigningIdentity()
 		assert.NotNil(t, signingIdentity)
@@ -51,7 +51,7 @@ func TestDeserializer(t *testing.T) {
 		// check again a verifying identity
 		verifyingIdentity, _, err := verifyingIdentityProvider.Identity(t.Context(), nil)
 		assert.NoError(t, err)
-		verifier2, err := provider.DeserializeVerifier(verifyingIdentity)
+		verifier2, err := provider.DeserializeVerifier(t.Context(), verifyingIdentity)
 		assert.NoError(t, err)
 		err = verifier2.Verify([]byte("hello worlds"), sigma)
 		assert.NoError(t, err)

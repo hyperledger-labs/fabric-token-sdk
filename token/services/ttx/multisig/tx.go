@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
-	"context"
-
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -26,7 +24,7 @@ func Wrap(tx *ttx.Transaction) *Transaction {
 }
 
 // Lock locks the given amount of tokens of the given type in the sender's wallet and transfers them to the recipient.
-func (t *Transaction) Lock(ctx context.Context, senderWallet *token2.OwnerWallet, tokenType token.Type, amount uint64, recipient token2.Identity, opts ...token2.TransferOption) error {
+func (t *Transaction) Lock(senderWallet *token2.OwnerWallet, tokenType token.Type, amount uint64, recipient token2.Identity, opts ...token2.TransferOption) error {
 	return t.Transfer(
 		senderWallet,
 		tokenType,

@@ -95,8 +95,8 @@ func NewDeserializerWithBCCSP(
 	}, nil
 }
 
-func (d *Deserializer) DeserializeVerifier(raw driver.Identity) (driver.Verifier, error) {
-	identity, err := d.Deserialize(raw)
+func (d *Deserializer) DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+	identity, err := d.Deserialize(ctx, id)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to deserialize identity")
 	}
@@ -133,7 +133,7 @@ func (i *Deserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
 	return nil, errors.New("not supported")
 }
 
-func (i *Deserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
+func (i *Deserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
 	return i.Deserializer.DeserializeAuditInfo(raw)
 }
 
@@ -164,7 +164,7 @@ func (i *Deserializer) Info(id []byte, auditInfoRaw []byte) (string, error) {
 		if err != nil {
 			return "", errors.WithMessagef(err, "failed to get audit info matcher")
 		}
-		ai, err := i.DeserializeAuditInfo(auditInfoRaw)
+		ai, err := i.DeserializeAuditInfo(context.Background(), auditInfoRaw)
 		if err != nil {
 			return "", errors.Wrapf(err, "failed to deserialize audit info")
 		}
@@ -180,7 +180,7 @@ func (i *Deserializer) String() string {
 
 type AuditInfoDeserializer struct{}
 
-func (c *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (driver2.AuditInfo, error) {
+func (c *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
 	ai, err := crypto2.DeserializeAuditInfo(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))
