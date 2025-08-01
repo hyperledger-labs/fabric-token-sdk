@@ -523,8 +523,8 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 			return nil, nil, errors2.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
 		}
 		logger.DebugfContext(ctx, "bind wrapped")
-		if err := i.BinderService.Bind(ctx, i.RootIdentity, typedIdentity, true); err != nil {
-			return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, i.RootIdentity)
+		if err := i.BinderService.Bind(ctx, id, typedIdentity, true); err != nil {
+			return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
 		}
 		id = typedIdentity
 	}
