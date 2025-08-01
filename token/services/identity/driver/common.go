@@ -22,14 +22,13 @@ type NetworkBinderService interface {
 	Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error
 }
 
-type BinderService interface {
-	Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error
-}
-
 type IdentityProvider interface {
 	// RegisterAuditInfo binds the passed audit info to the passed identity
 	RegisterAuditInfo(ctx context.Context, identity driver.Identity, info []byte) error
 
 	// GetAuditInfo returns the audit info associated to the passed identity, nil if not found
 	GetAuditInfo(ctx context.Context, identity driver.Identity) ([]byte, error)
+
+	// Bind an ephemeral identity to another identity
+	Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error
 }
