@@ -23,6 +23,7 @@ type NetworkBinderService interface {
 }
 
 type IdentityProvider interface {
+	SigService
 	// RegisterAuditInfo binds the passed audit info to the passed identity
 	RegisterAuditInfo(ctx context.Context, identity driver.Identity, info []byte) error
 

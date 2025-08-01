@@ -78,12 +78,21 @@ type LocalMembership struct {
 	DefaultAnonymous          bool
 }
 
-func NewLocalMembership(logger logging.Logger, config idriver.Config, defaultNetworkIdentity driver.Identity, signerService idriver.SigService, deserializerManager idriver.DeserializerManager, identityDB idriver.IdentityStoreService, identityType string, defaultAnonymous bool, identityProvider idriver.IdentityProvider, keyManagerProviders ...KeyManagerProvider) *LocalMembership {
+func NewLocalMembership(
+	logger logging.Logger,
+	config idriver.Config,
+	defaultNetworkIdentity driver.Identity,
+	deserializerManager idriver.DeserializerManager,
+	identityDB idriver.IdentityStoreService,
+	identityType string,
+	defaultAnonymous bool,
+	identityProvider idriver.IdentityProvider,
+	keyManagerProviders ...KeyManagerProvider,
+) *LocalMembership {
 	return &LocalMembership{
 		logger:                    logger.Named(identityType),
 		config:                    config,
 		defaultNetworkIdentity:    defaultNetworkIdentity,
-		signerService:             signerService,
 		deserializerManager:       deserializerManager,
 		identityDB:                identityDB,
 		localIdentitiesByName:     map[string][]LocalIdentityWithPriority{},
