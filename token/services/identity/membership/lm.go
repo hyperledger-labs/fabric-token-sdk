@@ -62,7 +62,6 @@ var PriorityComparison = func(a, b LocalIdentityWithPriority) int {
 type LocalMembership struct {
 	config                 idriver.Config
 	defaultNetworkIdentity driver.Identity
-	signerService          idriver.SigService
 	deserializerManager    idriver.DeserializerManager
 	identityDB             idriver.IdentityStoreService
 	KeyManagerProviders    []KeyManagerProvider
@@ -109,7 +108,7 @@ func (l *LocalMembership) DefaultNetworkIdentity() driver.Identity {
 }
 
 func (l *LocalMembership) IsMe(ctx context.Context, id driver.Identity) bool {
-	return l.signerService.IsMe(ctx, id)
+	return l.IdentityProvider.IsMe(ctx, id)
 }
 
 func (l *LocalMembership) GetIdentifier(ctx context.Context, id driver.Identity) (string, error) {
