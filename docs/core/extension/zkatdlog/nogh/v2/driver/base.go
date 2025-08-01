@@ -85,7 +85,16 @@ func (d *base) newWalletService(
 	}
 
 	// Prepare roles
-	roleFactory := role.NewFactory(logger, tmsID, identityConfig, fscIdentity, networkDefaultIdentity, identityProvider, identityProvider, storageProvider, deserializerManager)
+	roleFactory := role.NewFactory(
+		logger,
+		tmsID,
+		identityConfig,
+		fscIdentity,
+		networkDefaultIdentity,
+		identityProvider,
+		storageProvider,
+		deserializerManager,
+	)
 	// owner role
 	// we have one key manager for fabtoken and one for each idemix issuer public key
 	kmps := make([]membership.KeyManagerProvider, 0, len(pp.IdemixIssuerPublicKeys)+1)
