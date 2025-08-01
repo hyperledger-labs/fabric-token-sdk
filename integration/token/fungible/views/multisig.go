@@ -69,7 +69,7 @@ func (lv *MultiSigLockView) Call(context view.Context) (txID interface{}, err er
 	assert.NoError(err, "failed creating transaction")
 
 	// lock
-	err = multisig.Wrap(tx).Lock(context.Context(), senderWallet, lv.Type, lv.Amount, recipient)
+	err = multisig.Wrap(tx).Lock(senderWallet, lv.Type, lv.Amount, recipient)
 	assert.NoError(err, "failed adding transfer action [%d:%v]", lv.Amount, recipient)
 
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))

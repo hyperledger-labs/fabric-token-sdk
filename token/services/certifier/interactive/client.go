@@ -129,7 +129,7 @@ func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...
 	if !ok {
 		return errors.Errorf("invalid type, expected map[token.ID][]byte")
 	}
-	if err := cc.certificationStorage.Store(context.Background(), certifications); err != nil {
+	if err := cc.certificationStorage.Store(ctx, certifications); err != nil {
 		return err
 	}
 	return nil

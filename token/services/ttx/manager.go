@@ -93,7 +93,7 @@ func (m *ServiceManager) ServiceByTMSId(tmsID token.TMSID) (*Service, error) {
 }
 
 // RestoreTMS restores the ttxdb corresponding to the passed TMS ID.
-func (m *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
+func (m *ServiceManager) RestoreTMS(ctx context.Context, tmsID token.TMSID) error {
 	net, err := m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
@@ -104,7 +104,7 @@ func (m *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	it, err := db.ttxStoreService.TokenRequests(context.Background(), ttxdb.QueryTokenRequestsParams{Statuses: []TxStatus{driver.Pending}})
+	it, err := db.ttxStoreService.TokenRequests(ctx, ttxdb.QueryTokenRequestsParams{Statuses: []TxStatus{driver.Pending}})
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}

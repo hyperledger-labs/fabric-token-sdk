@@ -26,7 +26,7 @@ func TestSignatureService_AuditorVerifier(t *testing.T) {
 	deserializer.GetAuditorVerifierReturns(expectedVerifier, nil)
 
 	id := []byte("auditor_identity")
-	verifier, err := service.AuditorVerifier(id)
+	verifier, err := service.AuditorVerifier(t.Context(), id)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedVerifier, verifier)
@@ -45,7 +45,7 @@ func TestSignatureService_IssuerVerifier(t *testing.T) {
 	deserializer.GetIssuerVerifierReturns(expectedVerifier, nil)
 
 	id := []byte("issuer_identity")
-	verifier, err := service.IssuerVerifier(id)
+	verifier, err := service.IssuerVerifier(t.Context(), id)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedVerifier, verifier)
@@ -64,7 +64,7 @@ func TestSignatureService_OwnerVerifier(t *testing.T) {
 	deserializer.GetOwnerVerifierReturns(expectedVerifier, nil)
 
 	id := []byte("owner_identity")
-	verifier, err := service.OwnerVerifier(id)
+	verifier, err := service.OwnerVerifier(t.Context(), id)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedVerifier, verifier)

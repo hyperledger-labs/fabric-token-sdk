@@ -201,7 +201,7 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 	// Prepare a bidirectional channel
 	// Give to the responder view the right channel, and keep for
 	// AuditingViewInitiator the left channel.
-	biChannel, err := NewLocalBidirectionalChannel("", context.ID(), "", nil)
+	biChannel, err := NewLocalBidirectionalChannel(context.Context(), "", context.ID(), "", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating session")
 	}
@@ -244,7 +244,7 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 	logger.DebugfContext(context.Context(), "Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor, hash.Hashable(signed), a.tx.ID())
 
 	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
-		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditorID)
+		v, err := a.tx.TokenService().SigService().AuditorVerifier(context.Context(), auditorID)
 		if err != nil {
 			logger.DebugfContext(context.Context(), "failed to get auditor verifier for [%s]", auditorID)
 			continue
@@ -321,7 +321,7 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	}
 
 	logger.DebugfContext(context.Context(), "auditor sending sigma back", hash.Hashable(sigma))
-	if err := context.Session().Send(sigma); err != nil {
+	if err := context.Session().SendWithContext(context.Context(), sigma); err != nil {
 		return errors.WithMessagef(err, "failed sending back auditor signature")
 	}
 	logger.DebugfContext(context.Context(), "Signing and sending back transaction...done [%s]", a.tx.ID())

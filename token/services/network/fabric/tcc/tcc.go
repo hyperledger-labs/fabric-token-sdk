@@ -80,7 +80,7 @@ func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) *pb.Response {
 	}
 
 	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
-	if err := w.Write(&SetupAction{SetupParameters: ppRaw}); err != nil {
+	if err := w.Write(context.Background(), &SetupAction{SetupParameters: ppRaw}); err != nil {
 		return shim.Error(err.Error())
 	}
 
@@ -236,8 +236,9 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 
 	// Write
 	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
+	ctx := context.Background()
 	for _, action := range actions {
-		err = w.Write(action)
+		err = w.Write(ctx, action)
 		if err != nil {
 			return shim.Error("failed to write token action: " + err.Error())
 		}
@@ -283,7 +284,7 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 		translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()),
 		&keys.Translator{},
 	)
-	res, err := w.QueryTokens(ids)
+	res, err := w.QueryTokens(context.Background(), ids)
 	if err != nil {
 		logger.Errorf("failed query tokens [%v]: [%s]", ids, err)
 		return shim.Error(fmt.Sprintf("failed query tokens [%v]: [%s]", ids, err))
@@ -311,7 +312,7 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 	logger.Debugf("check if tokens are spent [%v]...", ids)
 
 	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
-	res, err := w.AreTokensSpent(ids, cc.PublicParameters.GraphHiding())
+	res, err := w.AreTokensSpent(context.Background(), ids, cc.PublicParameters.GraphHiding())
 	if err != nil {
 		logger.Errorf("failed to check if tokens are spent [%v]: [%s]", ids, err)
 		return shim.Error(fmt.Sprintf("failed to check if tokens are spent [%v]: [%s]", ids, err))

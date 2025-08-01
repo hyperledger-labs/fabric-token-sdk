@@ -126,7 +126,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 
 	var isRedeem bool
 	// get sender
-	pp := s.PublicParametersManager.PublicParams(ctx)
+	pp := s.PublicParametersManager.PublicParams()
 	sender, err := transfer.NewSender(nil, prepareInputs.Tokens(), ids, prepareInputs.Metadata(), pp)
 	if err != nil {
 		return nil, nil, err
@@ -275,7 +275,7 @@ func (s *TransferService) VerifyTransfer(ctx context.Context, action driver.Tran
 	}
 
 	// get commitments from outputs
-	pp := s.PublicParametersManager.PublicParams(ctx)
+	pp := s.PublicParametersManager.PublicParams()
 	com := make([]*math.G1, len(tr.Outputs))
 	for i := range len(tr.Outputs) {
 		com[i] = tr.Outputs[i].Data

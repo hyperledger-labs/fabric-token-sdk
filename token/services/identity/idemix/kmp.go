@@ -60,7 +60,7 @@ func NewKeyManagerProvider(
 	}
 }
 
-func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
+func (l *KeyManagerProvider) Get(ctx context.Context, identityConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	var conf *crypto2.Config
 	var err error
 	if len(identityConfig.Raw) != 0 {

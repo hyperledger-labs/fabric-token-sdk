@@ -112,7 +112,7 @@ func (s *SetSpendableFlagView) Call(context view.Context) (interface{}, error) {
 	tokens, err := tokens.GetService(context, tms.ID())
 	assert.NoError(err, "failed getting tokens")
 
-	err = tokens.SetSpendableFlag(s.Spendable, &s.TokenID)
+	err = tokens.SetSpendableFlag(context.Context(), s.Spendable, &s.TokenID)
 	assert.NoError(err, "failed setting spendable flag")
 
 	return nil, nil

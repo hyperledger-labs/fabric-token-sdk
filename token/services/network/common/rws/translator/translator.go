@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package translator
 
 import (
+	"context"
 	"crypto/sha256"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -41,21 +42,21 @@ func New(txID string, rws ExRWSet, keyTranslator KeyTranslator) *Translator {
 
 // Write checks that transactions are correct wrt. the most recent rwset state.
 // Write checks are ones that shall be done sequentially, since transactions within a block may introduce dependencies.
-func (t *Translator) Write(action interface{}) error {
-	logger.Debugf("checking transaction with txID '%s'", t.TxID)
+func (t *Translator) Write(ctx context.Context, action any) error {
+	logger.DebugfContext(ctx, "checking transaction with txID '%s'", t.TxID)
 
 	err := t.checkProcess(action)
 	if err != nil {
 		return err
 	}
 
-	logger.Debugf("committing transaction with txID '%s'", t.TxID)
-	err = t.commitProcess(action)
+	logger.DebugfContext(ctx, "committing transaction with txID '%s'", t.TxID)
+	err = t.commitProcess(ctx, action)
 	if err != nil {
 		logger.Errorf("error committing transaction with txID '%s': %s", t.TxID, err)
 		return err
 	}
-	logger.Debugf("successfully processed transaction with txID '%s'", t.TxID)
+	logger.DebugfContext(ctx, "successfully processed transaction with txID '%s'", t.TxID)
 	return nil
 }
 
@@ -122,7 +123,7 @@ func (t *Translator) AddPublicParamsDependency() error {
 	return nil
 }
 
-func (t *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
+func (t *Translator) QueryTokens(ctx context.Context, ids []*token.ID) ([][]byte, error) {
 	var res [][]byte
 	var errs []error
 	for _, id := range ids {
@@ -132,7 +133,7 @@ func (t *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 			continue
 			// return nil, errors.Errorf("error creating output ID: %s", err)
 		}
-		logger.Debugf("query state [%s:%s]", id, outputID)
+		logger.DebugfContext(ctx, "query state [%s:%s]", id, outputID)
 		bytes, err := t.RWSet.GetState(outputID)
 		if err != nil {
 			errs = append(errs, errors.Wrapf(err, "failed getting output for [%s]", outputID))
@@ -154,11 +155,11 @@ func (t *Translator) GetTransferMetadataSubKey(k string) (string, error) {
 	return t.KeyTranslator.GetTransferMetadataSubKey(k)
 }
 
-func (t *Translator) AreTokensSpent(ids []string, graphHiding bool) ([]bool, error) {
+func (t *Translator) AreTokensSpent(ctx context.Context, ids []string, graphHiding bool) ([]bool, error) {
 	res := make([]bool, len(ids))
 	if graphHiding {
 		for i, id := range ids {
-			logger.Debugf("check serial number %s\n", id)
+			logger.DebugfContext(ctx, "check serial number %s\n", id)
 			k, err := t.KeyTranslator.CreateInputSNKey(id)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to generate key for id [%s]", id)
@@ -171,7 +172,7 @@ func (t *Translator) AreTokensSpent(ids []string, graphHiding bool) ([]bool, err
 		}
 	} else {
 		for i, id := range ids {
-			logger.Debugf("check state %s\n", id)
+			logger.DebugfContext(ctx, "check state %s\n", id)
 			v, err := t.RWSet.GetState(id)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to get output %s", id)
@@ -227,24 +228,24 @@ func (t *Translator) checkTransfer(transferAction TransferAction) error {
 	return nil
 }
 
-func (t *Translator) commitProcess(action interface{}) error {
-	logger.Debugf("committing action with txID '%s'", t.TxID)
-	err := t.commitAction(action)
+func (t *Translator) commitProcess(ctx context.Context, action interface{}) error {
+	logger.DebugfContext(ctx, "committing action with txID '%s'", t.TxID)
+	err := t.commitAction(ctx, action)
 	if err != nil {
 		logger.Errorf("error committing action with txID '%s': %s", t.TxID, err)
 		return err
 	}
 
-	logger.Debugf("action with txID '%s' committed successfully", t.TxID)
+	logger.DebugfContext(ctx, "action with txID '%s' committed successfully", t.TxID)
 	return nil
 }
 
-func (t *Translator) commitAction(tokenAction interface{}) (err error) {
+func (t *Translator) commitAction(ctx context.Context, tokenAction interface{}) (err error) {
 	switch action := tokenAction.(type) {
 	case IssueAction:
-		err = t.commitIssueAction(action)
+		err = t.commitIssueAction(ctx, action)
 	case TransferAction:
-		err = t.commitTransferAction(action)
+		err = t.commitTransferAction(ctx, action)
 	case SetupAction:
 		err = t.commitSetupAction(action)
 	}
@@ -287,7 +288,7 @@ func (t *Translator) commitSetupAction(setup SetupAction) error {
 	return nil
 }
 
-func (t *Translator) commitIssueAction(issueAction IssueAction) error {
+func (t *Translator) commitIssueAction(ctx context.Context, issueAction IssueAction) error {
 	base := t.counter
 	graphNonHiding := !issueAction.IsGraphHiding()
 
@@ -319,7 +320,7 @@ func (t *Translator) commitIssueAction(issueAction IssueAction) error {
 	}
 
 	// spend inputs
-	err = t.spendInputs(issueAction)
+	err = t.spendInputs(ctx, issueAction)
 	if err != nil {
 		return err
 	}
@@ -345,7 +346,7 @@ func (t *Translator) commitIssueAction(issueAction IssueAction) error {
 
 // commitTransferAction is called for both transfer and redeem transactions
 // Check the owner of each output to determine how to generate the key
-func (t *Translator) commitTransferAction(transferAction TransferAction) error {
+func (t *Translator) commitTransferAction(ctx context.Context, transferAction TransferAction) error {
 	base := t.counter
 	graphNonHiding := !transferAction.IsGraphHiding()
 
@@ -380,7 +381,7 @@ func (t *Translator) commitTransferAction(transferAction TransferAction) error {
 	}
 
 	// spend inputs
-	err := t.spendInputs(transferAction)
+	err := t.spendInputs(ctx, transferAction)
 	if err != nil {
 		return err
 	}
@@ -433,7 +434,7 @@ func (t *Translator) checkInputs(action ActionWithInputs) error {
 	return nil
 }
 
-func (t *Translator) spendInputs(action ActionWithInputs) error {
+func (t *Translator) spendInputs(ctx context.Context, action ActionWithInputs) error {
 	// we need to delete the serial numbers and the outputs, if any
 	// recall that the read dependencies are added during the checking phase
 	ids := action.GetInputs()
@@ -448,7 +449,7 @@ func (t *Translator) spendInputs(action ActionWithInputs) error {
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}
-			logger.Debugf("delete serial number [%s]\n", id)
+			logger.DebugfContext(ctx, "delete serial number [%s]\n", id)
 			if err := t.RWSet.DeleteState(id); err != nil {
 				return errors.Wrapf(err, "failed to delete output %s", id)
 			}
@@ -457,7 +458,7 @@ func (t *Translator) spendInputs(action ActionWithInputs) error {
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed creating output ID [%v]", input)
 			}
-			logger.Debugf("delete serial number [%s]\n", id)
+			logger.DebugfContext(ctx, "delete serial number [%s]\n", id)
 			if err := t.RWSet.DeleteState(id); err != nil {
 				return errors.Wrapf(err, "failed to delete output %s", id)
 			}
@@ -472,7 +473,7 @@ func (t *Translator) spendInputs(action ActionWithInputs) error {
 	// we must also write any serial number
 	sns := action.GetSerialNumbers()
 	for _, id := range sns {
-		logger.Debugf("add serial number %s\n", id)
+		logger.DebugfContext(ctx, "add serial number %s\n", id)
 		k, err := t.KeyTranslator.CreateInputSNKey(id)
 		if err != nil {
 			return errors.Wrapf(err, "failed to generate key for id [%s]", id)

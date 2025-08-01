@@ -327,7 +327,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		// check it exists and return it back
 		recipientData = recipientRequest.RecipientData
 		recipientIdentity = recipientData.Identity
-		if !w.Contains(recipientIdentity) {
+		if !w.Contains(context.Context(), recipientIdentity) {
 			return nil, errors.Errorf("cannot find identity [%s] in wallet [%s:%s]", recipientIdentity, wallet, recipientRequest.TMSID)
 		}
 		// TODO: check the other values too

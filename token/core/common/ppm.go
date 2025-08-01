@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"context"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/pkg/errors"
@@ -69,7 +67,7 @@ func (v *PublicParamsManager[T]) NewCertifierKeyPair() ([]byte, []byte, error) {
 	return nil, nil, errors.Errorf("not supported")
 }
 
-func (v *PublicParamsManager[T]) PublicParams(ctx context.Context) T {
+func (v *PublicParamsManager[T]) PublicParams() T {
 	return v.publicParameters
 }
 

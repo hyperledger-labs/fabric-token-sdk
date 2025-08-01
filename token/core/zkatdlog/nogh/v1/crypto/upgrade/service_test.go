@@ -141,7 +141,7 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts, err := upgrade.NewService(nil, 16, nil, tt.getIdentityProvider())
 			assert.NoError(t, err)
-			res, err := ts.GenUpgradeProof(tt.ch, tt.ledgerTokens, tt.witness)
+			res, err := ts.GenUpgradeProof(t.Context(), tt.ch, tt.ledgerTokens, tt.witness)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.EqualError(t, err, tt.errMsg)
@@ -382,7 +382,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 			ts, err := upgrade.NewService(nil, 16, tt.getDeserializer(), nil)
 			assert.NoError(t, err)
 			proof := tt.proof()
-			res, err := ts.CheckUpgradeProof(tt.ch, proof, tt.ledgerTokens)
+			res, err := ts.CheckUpgradeProof(t.Context(), tt.ch, proof, tt.ledgerTokens)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.EqualError(t, err, tt.errMsg)
@@ -391,7 +391,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				assert.Equal(t, tt.expected, res)
 			}
 
-			_, err = ts.ProcessTokensUpgradeRequest(&driver.TokenUpgradeRequest{
+			_, err = ts.ProcessTokensUpgradeRequest(t.Context(), &driver.TokenUpgradeRequest{
 				Challenge: tt.ch,
 				Tokens:    tt.ledgerTokens,
 				Proof:     proof,

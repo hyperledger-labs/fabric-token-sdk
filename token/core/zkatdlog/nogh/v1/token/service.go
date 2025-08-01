@@ -43,7 +43,7 @@ type TokensService struct {
 
 func NewTokensService(logger logging.Logger, publicParametersManager common.PublicParametersManager[*setup.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
 	// compute supported tokens
-	pp := publicParametersManager.PublicParams(context.Background())
+	pp := publicParametersManager.PublicParams()
 	maxPrecision := pp.RangeProofParams.BitLength
 
 	// dlog without graph hiding
@@ -100,11 +100,11 @@ func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity
 // We assume here that the format of the output is the default output format supported
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer
-func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
+func (s *TokensService) Deobfuscate(ctx context.Context, output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
 	// we support fabtoken.Type and comm.Type
 
 	// try first comm type
-	tok, issuer, recipients, format, err := s.deobfuscateAsCommType(context.Background(), output, outputMetadata)
+	tok, issuer, recipients, format, err := s.deobfuscateAsCommType(ctx, output, outputMetadata)
 	if err == nil {
 		return tok, issuer, recipients, format, nil
 	}
@@ -174,11 +174,11 @@ func (s *TokensService) DeserializeToken(ctx context.Context, outputFormat token
 	if !ok {
 		return nil, nil, nil, errors.Errorf("unsupported token format [%s]", outputFormat)
 	}
-	fabToken, value, err := ParseFabtokenToken(outputRaw, precision, s.PublicParametersManager.PublicParams(ctx).RangeProofParams.BitLength)
+	fabToken, value, err := ParseFabtokenToken(outputRaw, precision, s.PublicParametersManager.PublicParams().RangeProofParams.BitLength)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to unmarshal fabtoken token")
 	}
-	pp := s.PublicParametersManager.PublicParams(ctx)
+	pp := s.PublicParametersManager.PublicParams()
 	curve := math2.Curves[pp.Curve]
 	tokens, meta, err := GetTokensWithWitness([]uint64{value}, fabToken.Type, pp.PedersenGenerators, curve)
 	if err != nil {
@@ -227,7 +227,7 @@ func (s *TokensService) deserializeCommToken(ctx context.Context, outputRaw []by
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to deserialize token metadata [%d][%v]", len(metadataRaw), metadataRaw)
 	}
-	pp := s.PublicParametersManager.PublicParams(ctx)
+	pp := s.PublicParametersManager.PublicParams()
 
 	tok, err := output.ToClear(metadata, pp)
 	if err != nil {
@@ -244,7 +244,7 @@ func (s *TokensService) getOutput(ctx context.Context, outputRaw []byte, checkOw
 	if checkOwner && len(output.Owner) == 0 {
 		return nil, errors.Errorf("token owner not found in output")
 	}
-	if err := math.CheckElement(output.Data, s.PublicParametersManager.PublicParams(ctx).Curve); err != nil {
+	if err := math.CheckElement(output.Data, s.PublicParametersManager.PublicParams().Curve); err != nil {
 		return nil, errors.Wrap(err, "data in invalid in output")
 	}
 	return output, nil

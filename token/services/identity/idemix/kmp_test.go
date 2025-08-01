@@ -67,7 +67,7 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 		ID:  "alice",
 		URL: configPath,
 	}
-	km, err := kmp.Get(idConfig)
+	km, err := kmp.Get(t.Context(), idConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, km)
 	assert.NotNil(t, idConfig.Raw)
@@ -76,7 +76,7 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 	checkRawContent(t, config.Ipk, idConfig.Raw)
 
 	idConfig.URL = ""
-	km, err = kmp.Get(idConfig)
+	km, err = kmp.Get(t.Context(), idConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, km)
 	assert.NotNil(t, idConfig.Raw)
@@ -84,7 +84,7 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 	checkRawContent(t, config.Ipk, idConfig.Raw)
 	assert.Equal(t, configRaw, idConfig.Raw)
 
-	km, err = kmp.Get(idConfig)
+	km, err = kmp.Get(t.Context(), idConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, km)
 	assert.NotNil(t, idConfig.Raw)
@@ -99,7 +99,7 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 	config2Raw, err := proto.Marshal(config2)
 	assert.NoError(t, err)
 	idConfig.Raw = config2Raw
-	_, err = kmp.Get(idConfig)
+	_, err = kmp.Get(t.Context(), idConfig)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "unsupported protocol version: 0")
 }
@@ -108,12 +108,12 @@ func signAndVerify(t *testing.T, km membership.KeyManager) {
 	t.Helper()
 	id, _, err := km.Identity(t.Context(), nil)
 	assert.NoError(t, err)
-	signer, err := km.DeserializeSigner(id)
+	signer, err := km.DeserializeSigner(t.Context(), id)
 	assert.NoError(t, err)
 	msg := []byte("message")
 	sigma, err := signer.Sign(msg)
 	assert.NoError(t, err)
-	verifier, err := km.DeserializeVerifier(id)
+	verifier, err := km.DeserializeVerifier(t.Context(), id)
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify(msg, sigma))
 }

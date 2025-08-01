@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -18,8 +20,8 @@ type TokensService struct {
 }
 
 // Deobfuscate processes the passed output and metadata to derive a token.Token, its issuer (if any), and its token format
-func (t *TokensService) Deobfuscate(output []byte, outputMetadata []byte) (*token.Token, Identity, []Identity, token.Format, error) {
-	return t.ts.Deobfuscate(output, outputMetadata)
+func (t *TokensService) Deobfuscate(ctx context.Context, output []byte, outputMetadata []byte) (*token.Token, Identity, []Identity, token.Format, error) {
+	return t.ts.Deobfuscate(ctx, output, outputMetadata)
 }
 
 // NewUpgradeChallenge generates a new upgrade challenge
@@ -28,8 +30,8 @@ func (t *TokensService) NewUpgradeChallenge() ([]byte, error) {
 }
 
 // GenUpgradeProof generates an upgrade proof for the given challenge and tokens
-func (t *TokensService) GenUpgradeProof(id []byte, tokens []token.LedgerToken) ([]byte, error) {
-	return t.tus.GenUpgradeProof(id, tokens, nil)
+func (t *TokensService) GenUpgradeProof(ctx context.Context, id []byte, tokens []token.LedgerToken) ([]byte, error) {
+	return t.tus.GenUpgradeProof(ctx, id, tokens, nil)
 }
 
 // SupportedTokenFormats returns the supported token formats

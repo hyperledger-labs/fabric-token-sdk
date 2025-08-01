@@ -197,12 +197,12 @@ func (t *Service) DeleteTokens(ctx context.Context, ids ...*token2.ID) (err erro
 	return t.DeleteTokensBy(ctx, string(debug.Stack()), ids...)
 }
 
-func (t *Service) SetSpendableFlag(value bool, ids ...*token2.ID) error {
+func (t *Service) SetSpendableFlag(ctx context.Context, value bool, ids ...*token2.ID) error {
 	tx, err := t.Storage.NewTransaction()
 	if err != nil {
 		return errors.Wrapf(err, "failed initiating transaction")
 	}
-	if err := tx.SetSpendableFlag(context.TODO(), value, ids); err != nil {
+	if err := tx.SetSpendableFlag(ctx, value, ids); err != nil {
 		if err2 := tx.Rollback(); err2 != nil {
 			logger.Errorf("failed rolling back transaction that set spendable flag [%s]", err2)
 		}
@@ -211,12 +211,12 @@ func (t *Service) SetSpendableFlag(value bool, ids ...*token2.ID) error {
 	return tx.Commit()
 }
 
-func (t *Service) SetSpendableBySupportedTokenTypes(types []token2.Format) error {
+func (t *Service) SetSpendableBySupportedTokenTypes(ctx context.Context, types []token2.Format) error {
 	tx, err := t.Storage.NewTransaction()
 	if err != nil {
 		return errors.WithMessagef(err, "error creating new transaction")
 	}
-	if err := tx.SetSpendableBySupportedTokenTypes(context.TODO(), types); err != nil {
+	if err := tx.SetSpendableBySupportedTokenTypes(ctx, types); err != nil {
 		if err2 := tx.Rollback(); err2 != nil {
 			logger.Errorf("error rolling back transaction: %v", err2)
 		}

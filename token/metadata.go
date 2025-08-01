@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
 	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
@@ -49,18 +50,18 @@ func (m *Metadata) SpentTokenID() []*token.ID {
 // - The returned metadata will contain only the outputs whose owner has the given enrollment IDs;
 // - The senders are included if and only if there is at least one output whose owner has the given enrollment IDs.
 // Application metadata is always included
-func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
+func (m *Metadata) FilterBy(ctx context.Context, eIDs ...string) (*Metadata, error) {
 	if len(eIDs) == 0 {
 		return m, nil
 	}
 
 	eIDSet := collections.NewSet(eIDs...)
 
-	issues, err := m.filterIssues(m.TokenRequestMetadata.Issues, eIDSet)
+	issues, err := m.filterIssues(ctx, m.TokenRequestMetadata.Issues, eIDSet)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed filtering issues")
 	}
-	transfers, err := m.filterTransfers(m.TokenRequestMetadata.Transfers, eIDSet)
+	transfers, err := m.filterTransfers(ctx, m.TokenRequestMetadata.Transfers, eIDSet)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed filtering transfers")
 	}
@@ -84,7 +85,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 	return clone, nil
 }
 
-func (m *Metadata) filterIssues(issues []*driver.IssueMetadata, eIDSet collections.Set[string]) ([]*driver.IssueMetadata, error) {
+func (m *Metadata) filterIssues(ctx context.Context, issues []*driver.IssueMetadata, eIDSet collections.Set[string]) ([]*driver.IssueMetadata, error) {
 	cloned := make([]*driver.IssueMetadata, 0, len(issues))
 	for _, issue := range m.TokenRequestMetadata.Issues {
 		clone := &driver.IssueMetadata{
@@ -96,7 +97,7 @@ func (m *Metadata) filterIssues(issues []*driver.IssueMetadata, eIDSet collectio
 
 		counter := 0
 		for _, output := range issue.Outputs {
-			if found, err := m.contains(output.Receivers, eIDSet); err != nil {
+			if found, err := m.contains(ctx, output.Receivers, eIDSet); err != nil {
 				return nil, errors.WithMessagef(err, "failed checking receivers")
 			} else if found {
 				clone.Outputs = append(clone.Outputs, output)
@@ -112,7 +113,7 @@ func (m *Metadata) filterIssues(issues []*driver.IssueMetadata, eIDSet collectio
 	return cloned, nil
 }
 
-func (m *Metadata) filterTransfers(issues []*driver.TransferMetadata, eIDSet collections.Set[string]) ([]*driver.TransferMetadata, error) {
+func (m *Metadata) filterTransfers(ctx context.Context, issues []*driver.TransferMetadata, eIDSet collections.Set[string]) ([]*driver.TransferMetadata, error) {
 	cloned := make([]*driver.TransferMetadata, 0, len(issues))
 	for _, transfer := range m.TokenRequestMetadata.Transfers {
 		clone := &driver.TransferMetadata{
@@ -125,7 +126,7 @@ func (m *Metadata) filterTransfers(issues []*driver.TransferMetadata, eIDSet col
 		// if the receiver has the given enrollment ID, add it. Otherwise, add empty entries
 		counter := 0
 		for _, output := range transfer.Outputs {
-			if found, err := m.contains(output.Receivers, eIDSet); err != nil {
+			if found, err := m.contains(ctx, output.Receivers, eIDSet); err != nil {
 				return nil, errors.WithMessagef(err, "failed checking receivers")
 			} else if found {
 				clone.Outputs = append(clone.Outputs, output)
@@ -154,10 +155,10 @@ func (m *Metadata) filterTransfers(issues []*driver.TransferMetadata, eIDSet col
 	return cloned, nil
 }
 
-func (m *Metadata) contains(receivers []*driver.AuditableIdentity, eIDSet collections.Set[string]) (bool, error) {
+func (m *Metadata) contains(ctx context.Context, receivers []*driver.AuditableIdentity, eIDSet collections.Set[string]) (bool, error) {
 	for _, receiver := range receivers {
 		// If the receiver has the given enrollment ID, add it
-		recipientEID, err := m.WalletService.GetEnrollmentID(receiver.Identity, receiver.AuditInfo)
+		recipientEID, err := m.WalletService.GetEnrollmentID(ctx, receiver.Identity, receiver.AuditInfo)
 		if err != nil {
 			return false, errors.Wrap(err, "failed getting enrollment ID")
 		}

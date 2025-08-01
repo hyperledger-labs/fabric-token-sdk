@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package endorsement
 
 import (
+	"context"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
@@ -97,7 +98,7 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 type Translator interface {
 	AddPublicParamsDependency() error
 	CommitTokenRequest(raw []byte, storeHash bool) ([]byte, error)
-	Write(action any) error
+	Write(ctx context.Context, action any) error
 }
 
 type TranslatorProviderFunc = func(txID string, namespace string, rws *fabric2.RWSet) (Translator, error)
@@ -181,7 +182,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 
 	// write actions into the transaction
 	logger.DebugfContext(context.Context(), "Translate TX [%s]", tx.ID())
-	err = r.translate(tms, tx, validationMetadata, rws, actions...)
+	err = r.translate(context.Context(), tms, tx, validationMetadata, rws, actions...)
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +197,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 }
 
 func (r *RequestApprovalResponderView) translate(
+	ctx context.Context,
 	tms *token2.ManagementService,
 	tx *endorser.Transaction,
 	validationMetadata map[string][]byte,
@@ -209,7 +211,7 @@ func (r *RequestApprovalResponderView) translate(
 		return errors.Wrapf(err, "failed to get translator for tx [%s]", tx.ID())
 	}
 	for _, action := range actions {
-		if err := w.Write(action); err != nil {
+		if err := w.Write(ctx, action); err != nil {
 			return errors.Wrapf(err, "failed to write token action for tx [%s]", txID)
 		}
 	}

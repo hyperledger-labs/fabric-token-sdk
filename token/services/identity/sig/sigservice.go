@@ -266,7 +266,7 @@ func (o *Service) deserializeSigner(ctx context.Context, identity driver.Identit
 		return nil, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
 	}
 	var err error
-	signer, err := o.deserializer.DeserializeSigner(identity)
+	signer, err := o.deserializer.DeserializeSigner(ctx, identity)
 	if err == nil {
 		return signer, nil
 	}
@@ -292,7 +292,7 @@ func (o *Service) GetSignerInfo(ctx context.Context, identity driver.Identity) (
 	return o.storage.GetSignerInfo(ctx, identity)
 }
 
-func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error) {
+func (o *Service) GetVerifier(ctx context.Context, identity driver.Identity) (driver.Verifier, error) {
 	idHash := identity.UniqueID()
 
 	// check cache
@@ -317,7 +317,7 @@ func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error)
 		return nil, errors.Errorf("cannot find verifier for [%s], no deserializer set", identity)
 	}
 	var err error
-	verifier, err := o.deserializer.DeserializeVerifier(identity)
+	verifier, err := o.deserializer.DeserializeVerifier(ctx, identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing identity for verifier %v", identity)
 	}
@@ -327,7 +327,7 @@ func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error)
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
 	}
-	logger.Debugf("add deserialized verifier for [%s]:[%s]", idHash, logging.Identifier(verifier))
+	logger.DebugfContext(ctx, "add deserialized verifier for [%s]:[%s]", idHash, logging.Identifier(verifier))
 	o.verifiers[idHash] = entry
 	return verifier, nil
 }

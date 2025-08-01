@@ -40,7 +40,7 @@ func NewDriver() *Driver {
 	return &Driver{}
 }
 
-func (d *Driver) NewCertificationClient(tms *token.ManagementService) (driver.CertificationClient, error) {
+func (d *Driver) NewCertificationClient(ctx context.Context, tms *token.ManagementService) (driver.CertificationClient, error) {
 	return &CertificationClient{}, nil
 }
 

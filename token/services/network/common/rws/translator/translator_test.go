@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package translator_test
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
@@ -62,7 +63,7 @@ var _ = Describe("Translator", func() {
 		})
 		When("issue action is valid", func() {
 			It("succeeds", func() {
-				err := writer.Write(fakeissue)
+				err := writer.Write(context.Background(), fakeissue)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(4))
@@ -88,7 +89,7 @@ var _ = Describe("Translator", func() {
 				fakeRWSet.SetStateReturnsOnCall(1, errors.New("flying monkeys"))
 			})
 			It("issue fails", func() {
-				err := writer.Write(fakeissue)
+				err := writer.Write(context.Background(), fakeissue)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("flying monkeys"))
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(2))
@@ -116,7 +117,7 @@ var _ = Describe("Translator", func() {
 		})
 		When("transfer is valid", func() {
 			It("succeeds", func() {
-				err := writer.Write(faketransfer)
+				err := writer.Write(context.Background(), faketransfer)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(4))
 
@@ -154,7 +155,7 @@ var _ = Describe("Translator", func() {
 				fakeRWSet.SetStateReturnsOnCall(1, errors.New("camel"))
 			})
 			It("transfer fails", func() {
-				err := writer.Write(faketransfer)
+				err := writer.Write(context.Background(), faketransfer)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("camel"))
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(2))
@@ -166,7 +167,7 @@ var _ = Describe("Translator", func() {
 				fakeRWSet.GetStateReturnsOnCall(2, nil, nil)
 			})
 			It("transfer fails", func() {
-				err := writer.Write(faketransfer)
+				err := writer.Write(context.Background(), faketransfer)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid transfer: input must exist: state [tns:\u0000osn\u000036b5ff4beb43fa740b74993c3f0886e3343360342b128a1954efa458aca77029\u0000] does not exist for [0]"))
 				Expect(fakeRWSet.GetStateCallCount()).To(Equal(3))
@@ -197,7 +198,7 @@ var _ = Describe("Translator", func() {
 		})
 		When("transfer is valid", func() {
 			It("succeeds", func() {
-				err := writer.Write(faketransfer)
+				err := writer.Write(context.Background(), faketransfer)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(5))
 
@@ -242,7 +243,7 @@ var _ = Describe("Translator", func() {
 				fakeRWSet.GetStateReturnsOnCall(2, []byte(strconv.FormatBool(true)), nil)
 			})
 			It("transfer fails", func() {
-				err := writer.Write(faketransfer)
+				err := writer.Write(context.Background(), faketransfer)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid transfer: serial number must not exist: state [tns:sn2] already exists for [0]"))
 				Expect(fakeRWSet.GetStateCallCount()).To(Equal(3))
@@ -256,7 +257,7 @@ var _ = Describe("Translator", func() {
 				fakeRWSet.SetStateReturnsOnCall(3, errors.Errorf("flying zebras"))
 			})
 			It("transfer fails", func() {
-				err := writer.Write(faketransfer)
+				err := writer.Write(context.Background(), faketransfer)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("flying zebras"))
 				Expect(err.Error()).To(ContainSubstring("failed to add serial number " + sn[1]))

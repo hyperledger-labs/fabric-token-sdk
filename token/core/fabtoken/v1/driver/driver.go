@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"context"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -104,7 +102,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
 
-	pp := publicParamsManager.PublicParams(context.Background())
+	pp := publicParamsManager.PublicParams()
 	logger.Infof("new token driver for tms id [%s] with label and version [%s:%s]: [%s]", tmsID, pp.TokenDriverName(), pp.TokenDriverVersion(), pp)
 
 	networkLocalMembership := n.LocalMembership()
@@ -117,7 +115,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		logger,
 		d.identityProvider.DefaultIdentity(),
 		networkLocalMembership.DefaultIdentity(),
-		publicParamsManager.PublicParams(context.Background()),
+		publicParamsManager.PublicParams(),
 		false,
 	)
 	if err != nil {
@@ -127,17 +125,17 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	ip := ws.IdentityProvider
 
 	authorization := common.NewAuthorizationMultiplexer(
-		common.NewTMSAuthorization(logger, publicParamsManager.PublicParams(context.Background()), ws),
+		common.NewTMSAuthorization(logger, publicParamsManager.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
 		multisig.NewEscrowAuth(ws),
 	)
-	tokensService, err := v1.NewTokensService(publicParamsManager.PublicParams(context.Background()), deserializer)
+	tokensService, err := v1.NewTokensService(publicParamsManager.PublicParams(), deserializer)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
 	validator := validator.NewValidator(
 		logger,
-		publicParamsManager.PublicParams(context.Background()),
+		publicParamsManager.PublicParams(),
 		deserializer,
 		nil,
 		nil,

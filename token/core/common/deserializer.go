@@ -13,19 +13,19 @@ import (
 )
 
 type MatcherDeserializer interface {
-	GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
+	GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
 // VerifierDeserializer is the interface for verifiers' deserializer.
 // A verifier checks the validity of a signature against the identity associated with the verifier
 type VerifierDeserializer interface {
-	DeserializeVerifier(id driver.Identity) (driver.Verifier, error)
+	DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
 }
 
 // AuditMatcherProvider provides audit related deserialization functionalities
 type AuditMatcherProvider interface {
 	MatcherDeserializer
-	MatchIdentity(id driver.Identity, ai []byte) error
+	MatchIdentity(ctx context.Context, id driver.Identity, ai []byte) error
 	GetAuditInfo(ctx context.Context, id driver.Identity, p driver.AuditInfoProvider) ([]byte, error)
 }
 
@@ -62,28 +62,28 @@ func NewDeserializer(
 	}
 }
 
-func (d *Deserializer) GetOwnerVerifier(id driver.Identity) (driver.Verifier, error) {
-	return d.ownerDeserializer.DeserializeVerifier(id)
+func (d *Deserializer) GetOwnerVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+	return d.ownerDeserializer.DeserializeVerifier(ctx, id)
 }
 
-func (d *Deserializer) GetIssuerVerifier(id driver.Identity) (driver.Verifier, error) {
-	return d.issuerDeserializer.DeserializeVerifier(id)
+func (d *Deserializer) GetIssuerVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+	return d.issuerDeserializer.DeserializeVerifier(ctx, id)
 }
 
-func (d *Deserializer) GetAuditorVerifier(id driver.Identity) (driver.Verifier, error) {
-	return d.auditorDeserializer.DeserializeVerifier(id)
+func (d *Deserializer) GetAuditorVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+	return d.auditorDeserializer.DeserializeVerifier(ctx, id)
 }
 
 func (d *Deserializer) Recipients(id driver.Identity) ([]driver.Identity, error) {
 	return d.recipientExtractor.Recipients(id)
 }
 
-func (d *Deserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
-	return d.auditMatcherProvider.GetAuditInfoMatcher(owner, auditInfo)
+func (d *Deserializer) GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+	return d.auditMatcherProvider.GetAuditInfoMatcher(ctx, owner, auditInfo)
 }
 
-func (d *Deserializer) MatchIdentity(id driver.Identity, ai []byte) error {
-	return d.auditMatcherProvider.MatchIdentity(id, ai)
+func (d *Deserializer) MatchIdentity(ctx context.Context, id driver.Identity, ai []byte) error {
+	return d.auditMatcherProvider.MatchIdentity(ctx, id, ai)
 }
 
 func (d *Deserializer) GetAuditInfo(ctx context.Context, id driver.Identity, p driver.AuditInfoProvider) ([]byte, error) {

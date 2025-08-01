@@ -209,7 +209,7 @@ func (s *collectActionsResponderView) Call(context view.Context) (interface{}, e
 		return nil, errors.Wrap(err, "failed marshalling ephemeral transaction")
 	}
 
-	err = context.Session().Send(response)
+	err = context.Session().SendWithContext(context.Context(), response)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending back response")
 	}

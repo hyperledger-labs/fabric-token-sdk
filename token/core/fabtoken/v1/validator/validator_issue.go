@@ -54,7 +54,7 @@ func IssueValidate(c context.Context, ctx *Context) error {
 	}
 
 	// deserialize verifier for the issuer
-	verifier, err := ctx.Deserializer.GetIssuerVerifier(action.Issuer)
+	verifier, err := ctx.Deserializer.GetIssuerVerifier(c, action.Issuer)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for issuer identity [%s]", action.Issuer.String())
 	}

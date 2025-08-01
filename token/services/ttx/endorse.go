@@ -42,7 +42,7 @@ type ExternalWalletSigner interface {
 	Done() error
 }
 
-type verifierGetterFunc func(identity view.Identity) (token.Verifier, error)
+type verifierGetterFunc func(ctx context.Context, identity view.Identity) (token.Verifier, error)
 
 type SignatureRequest struct {
 	TX      []byte
@@ -203,7 +203,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			TxID:    txIDRaw,
 			Signer:  signerIdentity,
 		}
-		logger.Debugf("collecting signature [%d] on request from [%s]", i, signerIdentity)
+		logger.DebugfContext(context.Context(), "collecting signature [%d] on request from [%s]", i, signerIdentity)
 
 		// Case: the identity is a multi-sig identity
 		ok, multiSigners, err := multisig.Unwrap(signerIdentity)
@@ -308,7 +308,7 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, errors.Wrap(err, "failed reading message")
 	}
-	verifier, err := verifierGetter(party)
+	verifier, err := verifierGetter(context.Context(), party)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
 	}

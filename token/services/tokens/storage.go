@@ -110,7 +110,7 @@ func (t *transaction) DeleteToken(ctx context.Context, tokenID token2.ID, delete
 	logger.DebugfContext(ctx, "Notify owners")
 	for _, owner := range owners {
 		logger.DebugfContext(ctx, "post new delete-token event [%s:%s]", tokenID, owner)
-		t.Notify(DeleteToken, t.tmsID, owner, tok.Type, tokenID.TxId, tokenID.Index)
+		t.Notify(ctx, DeleteToken, t.tmsID, owner, tok.Type, tokenID.TxId, tokenID.Index)
 	}
 	return nil
 }
@@ -157,15 +157,15 @@ func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error 
 		if len(id) == 0 {
 			continue
 		}
-		t.Notify(AddToken, t.tmsID, id, tta.tok.Type, tta.txID, tta.index)
+		t.Notify(ctx, AddToken, t.tmsID, id, tta.tok.Type, tta.txID, tta.index)
 	}
 
 	return nil
 }
 
-func (t *transaction) Notify(topic string, tmsID token.TMSID, walletID string, tokenType token2.Type, txID string, index uint64) {
+func (t *transaction) Notify(ctx context.Context, topic string, tmsID token.TMSID, walletID string, tokenType token2.Type, txID string, index uint64) {
 	if t.notifier == nil {
-		logger.Warnf("cannot notify others!")
+		logger.WarnfContext(ctx, "cannot notify others!")
 		return
 	}
 
@@ -177,7 +177,7 @@ func (t *transaction) Notify(topic string, tmsID token.TMSID, walletID string, t
 		Index:     index,
 	})
 
-	logger.Debugf("Publish new event %v", e)
+	logger.DebugfContext(ctx, "publish new event %v", e)
 	t.notifier.Publish(e)
 }
 

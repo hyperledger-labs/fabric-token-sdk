@@ -24,11 +24,11 @@ type StorageProvider = idriver.StorageProvider
 // enrollmentIDUnmarshaler decodes an enrollment ID form an audit info
 type enrollmentIDUnmarshaler interface {
 	// GetEnrollmentID returns the enrollment ID from the audit info
-	GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error)
+	GetEnrollmentID(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error)
 	// GetRevocationHandler returns the revocation handle from the audit info
-	GetRevocationHandler(identity driver.Identity, auditInfo []byte) (string, error)
+	GetRevocationHandler(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error)
 	// GetEIDAndRH returns both enrollment ID and revocation handle
-	GetEIDAndRH(identity driver.Identity, auditInfo []byte) (string, string, error)
+	GetEIDAndRH(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, string, error)
 }
 
 type sigService interface {
@@ -38,7 +38,7 @@ type sigService interface {
 	RegisterVerifier(ctx context.Context, identity driver.Identity, v driver.Verifier) error
 	GetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error)
 	GetSignerInfo(ctx context.Context, identity driver.Identity) ([]byte, error)
-	GetVerifier(identity driver.Identity) (driver.Verifier, error)
+	GetVerifier(ctx context.Context, identity driver.Identity) (driver.Verifier, error)
 }
 
 type storage interface {
@@ -135,8 +135,8 @@ func (p *Provider) IsMe(ctx context.Context, identity driver.Identity) bool {
 	return len(p.AreMe(ctx, identity)) > 0
 }
 
-func (p *Provider) RegisterRecipientIdentity(id driver.Identity) error {
-	p.Logger.Debugf("Registering identity [%s]", id)
+func (p *Provider) RegisterRecipientIdentity(ctx context.Context, id driver.Identity) error {
+	p.Logger.DebugfContext(ctx, "Registering identity [%s]", id)
 	p.isMeCache.Add(id.UniqueID(), false)
 	return nil
 }
@@ -155,16 +155,16 @@ func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (dri
 	return signer, nil
 }
 
-func (p *Provider) GetEIDAndRH(identity driver.Identity, auditInfo []byte) (string, string, error) {
-	return p.enrollmentIDUnmarshaler.GetEIDAndRH(identity, auditInfo)
+func (p *Provider) GetEIDAndRH(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, string, error) {
+	return p.enrollmentIDUnmarshaler.GetEIDAndRH(ctx, identity, auditInfo)
 }
 
-func (p *Provider) GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error) {
-	return p.enrollmentIDUnmarshaler.GetEnrollmentID(identity, auditInfo)
+func (p *Provider) GetEnrollmentID(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
+	return p.enrollmentIDUnmarshaler.GetEnrollmentID(ctx, identity, auditInfo)
 }
 
-func (p *Provider) GetRevocationHandler(identity driver.Identity, auditInfo []byte) (string, error) {
-	return p.enrollmentIDUnmarshaler.GetRevocationHandler(identity, auditInfo)
+func (p *Provider) GetRevocationHandler(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
+	return p.enrollmentIDUnmarshaler.GetRevocationHandler(ctx, identity, auditInfo)
 }
 
 func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error {
@@ -178,7 +178,7 @@ func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral
 			}
 			setSV = false
 		}
-		verifier, err := p.SigService.GetVerifier(longTerm)
+		verifier, err := p.SigService.GetVerifier(ctx, longTerm)
 		if err != nil {
 			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
 				p.Logger.DebugfContext(ctx, "failed getting verifier for identity [%s][%s][%s]", longTerm, err, string(debug.Stack()))
