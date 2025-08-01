@@ -168,6 +168,11 @@ func (p *Provider) GetRevocationHandler(ctx context.Context, identity driver.Ide
 }
 
 func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error {
+	if ephemeral.Equal(longTerm) {
+		// no action required
+		return nil
+	}
+
 	if copyAll {
 		p.Logger.DebugfContext(ctx, "Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
 		setSV := true

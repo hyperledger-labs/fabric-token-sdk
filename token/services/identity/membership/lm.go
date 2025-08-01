@@ -65,7 +65,6 @@ type LocalMembership struct {
 	signerService          idriver.SigService
 	deserializerManager    idriver.DeserializerManager
 	identityDB             idriver.IdentityStoreService
-	binderService          idriver.BinderService
 	KeyManagerProviders    []KeyManagerProvider
 	IdentityType           string
 	IdentityProvider       idriver.IdentityProvider
@@ -79,19 +78,7 @@ type LocalMembership struct {
 	DefaultAnonymous          bool
 }
 
-func NewLocalMembership(
-	logger logging.Logger,
-	config idriver.Config,
-	defaultNetworkIdentity driver.Identity,
-	signerService idriver.SigService,
-	deserializerManager idriver.DeserializerManager,
-	identityDB idriver.IdentityStoreService,
-	binderService idriver.BinderService,
-	identityType string,
-	defaultAnonymous bool,
-	identityProvider idriver.IdentityProvider,
-	keyManagerProviders ...KeyManagerProvider,
-) *LocalMembership {
+func NewLocalMembership(logger logging.Logger, config idriver.Config, defaultNetworkIdentity driver.Identity, signerService idriver.SigService, deserializerManager idriver.DeserializerManager, identityDB idriver.IdentityStoreService, identityType string, defaultAnonymous bool, identityProvider idriver.IdentityProvider, keyManagerProviders ...KeyManagerProvider) *LocalMembership {
 	return &LocalMembership{
 		logger:                    logger.Named(identityType),
 		config:                    config,
@@ -101,7 +88,6 @@ func NewLocalMembership(
 		identityDB:                identityDB,
 		localIdentitiesByName:     map[string][]LocalIdentityWithPriority{},
 		localIdentitiesByIdentity: map[string]*LocalIdentity{},
-		binderService:             binderService,
 		IdentityType:              identityType,
 		KeyManagerProviders:       keyManagerProviders,
 		DefaultAnonymous:          defaultAnonymous,
@@ -392,7 +378,6 @@ func (l *LocalMembership) addLocalIdentity(ctx context.Context, config *driver.I
 		EnrollmentID:     keyManager.EnrollmentID(),
 		RootIdentity:     l.defaultNetworkIdentity,
 		IdentityProvider: l.IdentityProvider,
-		BinderService:    l.binderService,
 	}
 	if keyManager.Anonymous() {
 		getIdentity = typedIdentityInfo.Get
@@ -452,10 +437,8 @@ func (l *LocalMembership) addLocalIdentity(ctx context.Context, config *driver.I
 	if !keyManager.Anonymous() {
 		l.logger.Debugf("adding identity mapping for [%s]", identity)
 		l.localIdentitiesByIdentity[identity.String()] = localIdentity
-		if l.binderService != nil {
-			if err := l.binderService.Bind(ctx, l.defaultNetworkIdentity, identity, false); err != nil {
-				return errors2.WithMessagef(err, "cannot bind identity for [%s,%s]", identity, eID)
-			}
+		if err := l.IdentityProvider.Bind(ctx, l.defaultNetworkIdentity, identity, false); err != nil {
+			return errors2.WithMessagef(err, "cannot bind identity for [%s,%s]", identity, eID)
 		}
 	}
 
@@ -494,7 +477,6 @@ type TypedIdentityInfo struct {
 	EnrollmentID     string
 	RootIdentity     driver.Identity
 	IdentityProvider idriver.IdentityProvider
-	BinderService    idriver.BinderService
 }
 
 func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
@@ -505,6 +487,15 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 	if err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID)
 	}
+	typedIdentity := id
+	if len(i.IdentityType) != 0 {
+		logger.DebugfContext(ctx, "wrap and bind as [%s]", i.IdentityType)
+		typedIdentity, err = identity.WrapWithType(i.IdentityType, id)
+		if err != nil {
+			return nil, nil, errors2.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
+		}
+	}
+
 	// register the audit info
 	logger.DebugfContext(ctx, "register audit info")
 	if err := i.IdentityProvider.RegisterAuditInfo(ctx, id, ai); err != nil {
@@ -512,22 +503,12 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 	}
 	// bind the identity to the default FSC node identity
 	logger.DebugfContext(ctx, "bind to root identity")
-	if err := i.BinderService.Bind(ctx, i.RootIdentity, id, false); err != nil {
+	if err := i.IdentityProvider.Bind(ctx, i.RootIdentity, id, false); err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
 	}
-	// wrap the backend identity, and bind it
-	if len(i.IdentityType) != 0 {
-		logger.DebugfContext(ctx, "wrap and bind as [%s]", i.IdentityType)
-		typedIdentity, err := identity.WrapWithType(i.IdentityType, id)
-		if err != nil {
-			return nil, nil, errors2.Wrapf(err, "failed to wrap identity [%s]", i.IdentityType)
-		}
-		logger.DebugfContext(ctx, "bind wrapped")
-		if err := i.BinderService.Bind(ctx, id, typedIdentity, true); err != nil {
-			return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
-		}
-		id = typedIdentity
+	logger.DebugfContext(ctx, "bind wrapped")
+	if err := i.IdentityProvider.Bind(ctx, id, typedIdentity, true); err != nil {
+		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
 	}
-	logger.DebugfContext(ctx, "fetch identity done")
-	return id, ai, nil
+	return typedIdentity, ai, nil
 }

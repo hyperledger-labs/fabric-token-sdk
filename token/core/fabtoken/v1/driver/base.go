@@ -71,7 +71,7 @@ func (d *base) newWalletService(
 
 	// Prepare roles
 	keyStore := x509.NewKeyStore(baseKeyStore)
-	roleFactory := role.NewFactory(logger, tmsID, identityConfig, fscIdentity, networkDefaultIdentity, identityProvider, identityProvider, identityProvider, storageProvider, deserializerManager)
+	roleFactory := role.NewFactory(logger, tmsID, identityConfig, fscIdentity, networkDefaultIdentity, identityProvider, identityProvider, storageProvider, deserializerManager)
 	role, err := roleFactory.NewRole(identity.OwnerRole, false, nil, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create owner role")
