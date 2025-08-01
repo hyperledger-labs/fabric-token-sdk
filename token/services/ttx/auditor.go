@@ -321,7 +321,7 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	}
 
 	logger.DebugfContext(context.Context(), "auditor sending sigma back", hash.Hashable(sigma))
-	if err := context.Session().Send(sigma); err != nil {
+	if err := context.Session().SendWithContext(context.Context(), sigma); err != nil {
 		return errors.WithMessagef(err, "failed sending back auditor signature")
 	}
 	logger.DebugfContext(context.Context(), "Signing and sending back transaction...done [%s]", a.tx.ID())

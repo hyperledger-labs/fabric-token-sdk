@@ -71,7 +71,7 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	// Send the signature back
 	session := context.Session()
 	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
-	if err := session.Send(sigma); err != nil {
+	if err := session.SendWithContext(context.Context(), sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
 
@@ -154,7 +154,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 		}
 		logger.DebugfContext(context.Context(), "Send back signature...")
 
-		err = session.Send(sigma)
+		err = session.SendWithContext(context.Context(), sigma)
 		if err != nil {
 			return errors.Wrapf(err, "failed sending signature back")
 		}
